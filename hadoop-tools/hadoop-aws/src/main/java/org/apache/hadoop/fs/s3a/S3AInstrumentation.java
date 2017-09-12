@@ -139,7 +139,9 @@ public class S3AInstrumentation {
       COMMITTER_COMMITS_ABORTED,
       COMMITTER_COMMITS_REVERTED,
       S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
-      S3GUARD_METADATASTORE_INITIALIZATION
+      S3GUARD_METADATASTORE_INITIALIZATION,
+      S3GUARD_METADATASTORE_RETRY,
+      S3GUARD_METADATASTORE_THROTTLED
   };
 
 
@@ -944,6 +946,14 @@ public class S3AInstrumentation {
 
     public void storeClosed() {
 
+    }
+
+    public void throttled() {
+      incrementCounter(S3GUARD_METADATASTORE_THROTTLED, 1);
+    }
+
+    public void retrying() {
+      incrementCounter(S3GUARD_METADATASTORE_RETRY, 1);
     }
   }
 

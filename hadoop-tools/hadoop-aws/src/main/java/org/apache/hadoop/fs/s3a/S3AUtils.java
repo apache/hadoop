@@ -23,6 +23,10 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
+import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
@@ -35,8 +39,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
-import org.apache.http.conn.ConnectTimeoutException;
 
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
@@ -109,6 +113,10 @@ public final class S3AUtils {
    * {@link AmazonClientException} passed in, and any status codes included
    * in the operation. That is: HTTP error codes are examined and can be
    * used to build a more specific response.
+   *
+   * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
+   * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
+   * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
    * @param operation operation
    * @param path path operated on (must not be null)
    * @param exception amazon exception raised
@@ -147,6 +155,9 @@ public final class S3AUtils {
       }
       return new AWSClientIOException(message, exception);
     } else {
+      if (exception instanceof AmazonDynamoDBException) {
+        // special handling for dynamo DB exceptions
+      }
       IOException ioe;
       AmazonServiceException ase = (AmazonServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
@@ -204,6 +215,8 @@ public final class S3AUtils {
         ioe = new AWSServiceThrottledException(message, ase);
         break;
 
+      // internal error
+      case 500:
       default:
         // no specific exit code. Choose an IOE subclass based on the class
         // of the caught exception
@@ -272,15 +285,53 @@ public final class S3AUtils {
     InterruptedIOException ioe;
     if (innerCause instanceof SocketTimeoutException) {
       ioe = new SocketTimeoutException(message);
-    } else if (innerCause instanceof ConnectTimeoutException) {
-      // any connection failure
-      ioe = new ConnectTimeoutException(message);
     } else {
-      // any other exception
-      ioe = new InterruptedIOException(message);
+      String name = innerCause.getClass().getName();
+      if (name.endsWith(".ConnectTimeoutException")
+          || name.endsWith("$ConnectTimeoutException")) {
+        // TCP connection http timeout from the shaded or unshaded filenames
+        // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException
+        ioe = new ConnectTimeoutException(message);
+      } else {
+        // any other exception
+        ioe = new InterruptedIOException(message);
+      }
     }
     ioe.initCause(exception);
     return ioe;
+  }
+
+  /**
+   * Is the exception and instance of a throttling exception
+   * @param ex
+   * @return
+   */
+  public static boolean isThrottleException(Exception ex) {
+    return ex instanceof AWSServiceThrottledException
+        || ex instanceof ProvisionedThroughputExceededException
+        || ex instanceof LimitExceededException;
+  }
+
+  /**
+   * Translate a DynamoDB exception into an IOException.
+   * @param operation operation which failed
+   * @param ex exception
+   * @return an exception to throw.
+   */
+  public static IOException translateDynamoDBException(String  operation,
+      AmazonDynamoDBException ex) {
+    String message = String.format("%s: %s",
+        operation != null? operation : "",
+        ex.toString());
+
+    if (isThrottleException(ex)) {
+      return new AWSServiceThrottledException(message, ex);
+    }
+    if (ex instanceof ResourceNotFoundException) {
+      return (FileNotFoundException) new FileNotFoundException(message)
+          .initCause(ex);
+    }
+    return new AWSServiceIOException(message, ex);
   }
 
   /**

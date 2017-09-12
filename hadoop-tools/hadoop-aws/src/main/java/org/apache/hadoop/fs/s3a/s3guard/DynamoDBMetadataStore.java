@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -69,6 +70,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.S3ALambda;
+import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -211,6 +215,20 @@ public class DynamoDBMetadataStore implements MetadataStore {
   private RetryPolicy dataAccessRetryPolicy;
   private S3AInstrumentation.S3GuardInstrumentation instrumentation;
 
+  /** Owner FS: only valid if configured with an owner FS. */
+  private S3AFileSystem owner;
+
+  /**
+   * Count of retries.
+   */
+  private final AtomicInteger retryCount = new AtomicInteger(0);
+
+  /** lambda-wrapper for IO. Until configured properly, use try-once. */
+  private S3ALambda invoke = new S3ALambda(RetryPolicies.TRY_ONCE_THEN_FAIL,
+      S3ALambda.NO_OP, S3ALambda.CATCH_LOG);
+  /** Data access wrapper, which can have its own policies */
+  private S3ALambda dataAccess;
+
   /**
    * A utility function to create DynamoDB instance.
    * @param conf the file system configuration
@@ -235,25 +253,30 @@ public class DynamoDBMetadataStore implements MetadataStore {
   public void initialize(FileSystem fs) throws IOException {
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
         "DynamoDBMetadataStore only supports S3A filesystem.");
-    final S3AFileSystem s3afs = (S3AFileSystem) fs;
-    instrumentation = s3afs.getInstrumentation().getS3GuardInstrumentation();
-    final String bucket = s3afs.getBucket();
-    String confRegion = s3afs.getConf().getTrimmed(S3GUARD_DDB_REGION_KEY);
+    owner = (S3AFileSystem) fs;
+    instrumentation = owner.getInstrumentation().getS3GuardInstrumentation();
+    final String bucket = owner.getBucket();
+    conf = owner.getConf();
+    String confRegion = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
     if (!StringUtils.isEmpty(confRegion)) {
       region = confRegion;
       LOG.debug("Overriding S3 region with configured DynamoDB region: {}",
           region);
     } else {
-      region = s3afs.getBucketLocation();
+      region = owner.getBucketLocation();
       LOG.debug("Inferring DynamoDB region from S3 bucket: {}", region);
     }
-    username = s3afs.getUsername();
-    conf = s3afs.getConf();
+    username = owner.getUsername();
     dynamoDB = createDynamoDB(conf, region);
 
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
-    setMaxRetries(conf);
+    initDataAccessRetries(conf);
+
+    // set up a full retry policy
+    invoke = new S3ALambda(new S3ARetryPolicy(conf),
+        this::handleRetry,
+        S3ALambda.CATCH_LOG);
 
     initTable();
 
@@ -295,7 +318,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     dynamoDB = createDynamoDB(conf, region);
 
     username = UserGroupInformation.getCurrentUser().getShortUserName();
-    setMaxRetries(conf);
+    initDataAccessRetries(conf);
 
     initTable();
   }
@@ -306,12 +329,15 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * between each attempt of {@link #MIN_RETRY_SLEEP_MSEC} milliseconds.
    * @param config
    */
-  private void setMaxRetries(Configuration config) {
+  private void initDataAccessRetries(Configuration config) {
     int maxRetries = config.getInt(S3GUARD_DDB_MAX_RETRIES,
         S3GUARD_DDB_MAX_RETRIES_DEFAULT);
     dataAccessRetryPolicy = RetryPolicies
         .exponentialBackoffRetry(maxRetries, MIN_RETRY_SLEEP_MSEC,
             TimeUnit.MILLISECONDS);
+    dataAccess = new S3ALambda(dataAccessRetryPolicy,
+        this::handleRetry,
+        S3ALambda.CATCH_LOG);
   }
 
   @Override
@@ -332,9 +358,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param tombstone flag to create a tombstone marker
    * @throws IOException I/O error.
    */
-  private void innerDelete(Path path, boolean tombstone)
+  private void innerDelete(final Path path, boolean tombstone)
       throws IOException {
-    path = checkPath(path);
+    checkPath(path);
     LOG.debug("Deleting from table {} in region {}: {}",
         tableName, region, path);
 
@@ -343,23 +369,21 @@ public class DynamoDBMetadataStore implements MetadataStore {
       LOG.debug("Skip deleting root directory as it does not exist in table");
       return;
     }
-
-    try {
-      if (tombstone) {
-        Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
-            PathMetadata.tombstone(path));
-        table.putItem(item);
-      } else {
-        table.deleteItem(pathToKey(path));
-      }
-    } catch (AmazonClientException e) {
-      throw translateException("delete", path, e);
+    if (tombstone) {
+      Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
+          PathMetadata.tombstone(path));
+      invoke.retry("put tombstone", path.toString(), true,
+          () -> table.putItem(item));
+    } else {
+      PrimaryKey key = pathToKey(path);
+      invoke.retry("delete key", path.toString(), true,
+          () -> table.deleteItem(key));
     }
   }
 
   @Override
   public void deleteSubtree(Path path) throws IOException {
-    path = checkPath(path);
+    checkPath(path);
     LOG.debug("Deleting subtree from table {} in region {}: {}",
         tableName, region, path);
 
@@ -390,45 +414,55 @@ public class DynamoDBMetadataStore implements MetadataStore {
   @Override
   public PathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
       throws IOException {
-    path = checkPath(path);
+    checkPath(path);
     LOG.debug("Get from table {} in region {}: {}", tableName, region, path);
+    return invoke.once("get", path,
+        () -> innerGet(path, wantEmptyDirectoryFlag));
+  }
 
-    try {
-      final PathMetadata meta;
-      if (path.isRoot()) {
-        // Root does not persist in the table
-        meta = new PathMetadata(makeDirStatus(username, path));
-      } else {
-        final Item item = getConsistentItem(pathToKey(path));
-        meta = itemToPathMetadata(item, username);
-        LOG.debug("Get from table {} in region {} returning for {}: {}",
-            tableName, region, path, meta);
-      }
-
-      if (wantEmptyDirectoryFlag && meta != null) {
-        final FileStatus status = meta.getFileStatus();
-        // for directory, we query its direct children to determine isEmpty bit
-        if (status.isDirectory()) {
-          final QuerySpec spec = new QuerySpec()
-              .withHashKey(pathToParentKeyAttribute(path))
-              .withConsistentRead(true)
-              .withFilterExpression(IS_DELETED + " = :false")
-              .withValueMap(deleteTrackingValueMap);
-          final ItemCollection<QueryOutcome> items = table.query(spec);
-          boolean hasChildren = items.iterator().hasNext();
-          // When this class has support for authoritative
-          // (fully-cached) directory listings, we may also be able to answer
-          // TRUE here.  Until then, we don't know if we have full listing or
-          // not, thus the UNKNOWN here:
-          meta.setIsEmptyDirectory(
-              hasChildren ? Tristate.FALSE : Tristate.UNKNOWN);
-        }
-      }
-
-      return meta;
-    } catch (AmazonClientException e) {
-      throw translateException("get", path, e);
+  /**
+   * Inner get operation, as invoked in the retry logic
+   * @param path the path to get
+   * @param wantEmptyDirectoryFlag Set to true to give a hint to the
+   *   MetadataStore that it should try to compute the empty directory flag.
+   * @return metadata for {@code path}, {@code null} if not found
+   * @throws IOException IO problem
+   * @throws AmazonClientException dynamo DB level problem
+   */
+  private PathMetadata innerGet(Path path, boolean wantEmptyDirectoryFlag)
+      throws IOException {
+    final PathMetadata meta;
+    if (path.isRoot()) {
+      // Root does not persist in the table
+      meta = new PathMetadata(makeDirStatus(username, path));
+    } else {
+      final Item item = getConsistentItem(pathToKey(path));
+      meta = itemToPathMetadata(item, username);
+      LOG.debug("Get from table {} in region {} returning for {}: {}",
+          tableName, region, path, meta);
     }
+
+    if (wantEmptyDirectoryFlag && meta != null) {
+      final FileStatus status = meta.getFileStatus();
+      // for directory, we query its direct children to determine isEmpty bit
+      if (status.isDirectory()) {
+        final QuerySpec spec = new QuerySpec()
+            .withHashKey(pathToParentKeyAttribute(path))
+            .withConsistentRead(true)
+            .withFilterExpression(IS_DELETED + " = :false")
+            .withValueMap(deleteTrackingValueMap);
+        final ItemCollection<QueryOutcome> items = table.query(spec);
+        boolean hasChildren = items.iterator().hasNext();
+        // When this class has support for authoritative
+        // (fully-cached) directory listings, we may also be able to answer
+        // TRUE here.  Until then, we don't know if we have full listing or
+        // not, thus the UNKNOWN here:
+        meta.setIsEmptyDirectory(
+            hasChildren ? Tristate.FALSE : Tristate.UNKNOWN);
+      }
+    }
+
+    return meta;
   }
 
   /**
@@ -445,35 +479,37 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
-  public DirListingMetadata listChildren(Path path) throws IOException {
-    path = checkPath(path);
+  public DirListingMetadata listChildren(final Path path) throws IOException {
+    checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
 
     // find the children in the table
-    try {
-      final QuerySpec spec = new QuerySpec()
-          .withHashKey(pathToParentKeyAttribute(path))
-          .withConsistentRead(true); // strictly consistent read
-      final ItemCollection<QueryOutcome> items = table.query(spec);
+    return invoke.once("listChildren", path,
+        () -> {
+          final QuerySpec spec = new QuerySpec()
+              .withHashKey(pathToParentKeyAttribute(path))
+              .withConsistentRead(true); // strictly consistent read
+          final ItemCollection<QueryOutcome> items = table.query(spec);
 
-      final List<PathMetadata> metas = new ArrayList<>();
-      for (Item item : items) {
-        PathMetadata meta = itemToPathMetadata(item, username);
-        metas.add(meta);
-      }
-      LOG.trace("Listing table {} in region {} for {} returning {}",
-          tableName, region, path, metas);
+          final List<PathMetadata> metas = new ArrayList<>();
+          for (Item item : items) {
+            PathMetadata meta = itemToPathMetadata(item, username);
+            metas.add(meta);
+          }
+          LOG.trace("Listing table {} in region {} for {} returning {}",
+              tableName, region, path, metas);
 
-      return (metas.isEmpty() && get(path) == null)
-          ? null
-          : new DirListingMetadata(path, metas, false);
-    } catch (AmazonClientException e) {
-      // failure, including the path not being present
-      throw translateException("listChildren", path, e);
-    }
+          return (metas.isEmpty() && get(path) == null)
+              ? null
+              : new DirListingMetadata(path, metas, false);
+        });
   }
 
-  // build the list of all parent entries.
+  /**
+   * build the list of all parent entries.
+   * @param pathsToCreate
+   * @return the full ancestry paths
+   */
   Collection<PathMetadata> completeAncestry(
       Collection<PathMetadata> pathsToCreate) {
     // Key on path to allow fast lookup
@@ -527,11 +563,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
       }
     }
 
-    try {
-      processBatchWriteRequest(null, pathMetadataToItem(newItems));
-    } catch (AmazonClientException e) {
-      throw translateException("move", (String) null, e);
-    }
+    invoke.once("move", tableName,
+        () -> processBatchWriteRequest(null, pathMetadataToItem(newItems)));
   }
 
   /**
@@ -575,10 +608,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
       // Check for unprocessed keys in case of exceeding provisioned throughput
       Map<String, List<WriteRequest>> unprocessed = res.getUnprocessedItems();
       int retryCount = 0;
-      while (unprocessed.size() > 0) {
+      while (!unprocessed.isEmpty()) {
         retryBackoff(retryCount++);
-        res = dynamoDB.batchWriteItemUnprocessed(unprocessed);
-        unprocessed = res.getUnprocessedItems();
+        final Map<String, List<WriteRequest>> p = unprocessed;
+        unprocessed = dataAccess.retry("batchWrite", "", true,
+            () ->
+              dynamoDB.batchWriteItemUnprocessed(p).getUnprocessedItems()
+             );
       }
     }
   }
@@ -680,20 +716,20 @@ public class DynamoDBMetadataStore implements MetadataStore {
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
 
     // directory path
-    PathMetadata p = new PathMetadata(makeDirStatus(meta.getPath(), username),
+    Path path = meta.getPath();
+    PathMetadata p = new PathMetadata(makeDirStatus(path, username),
         meta.isEmpty(), false);
 
     // First add any missing ancestors...
-    final Collection<PathMetadata> metasToPut = fullPathsToPut(p);
+    final Collection<PathMetadata> metasToPut = invoke.retry(
+        "paths to put", path.toString(), true,
+        () -> fullPathsToPut(p));
 
     // next add all children of the directory
     metasToPut.addAll(meta.getListing());
 
-    try {
-      processBatchWriteRequest(null, pathMetadataToItem(metasToPut));
-    } catch (AmazonClientException e) {
-      throw translateException("put", (String) null, e);
-    }
+    invoke.once("put", path,
+        () -> processBatchWriteRequest(null, pathMetadataToItem(metasToPut)));
   }
 
   @Override
@@ -731,7 +767,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       throw new InterruptedIOException("Table " + tableName
           + " in region " + region + " has not been deleted");
     } catch (AmazonClientException e) {
-      throw translateException("destroy", (String) null, e);
+      throw translateException("destroy", tableName, e);
     }
   }
 
@@ -848,7 +884,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       }
 
     } catch (AmazonClientException e) {
-      throw translateException("initTable", (String) null, e);
+      throw translateException("initTable", tableName, e);
     }
   }
 
@@ -913,15 +949,16 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param t table to block on.
    * @throws IOException IO problems
    * @throws InterruptedIOException if the wait was interrupted
+   * @throws IllegalArgumentException if an exception was raised in the waiter
    */
-  private void waitForTableActive(Table t) throws IOException {
+  private void waitForTableActive(Table t) throws InterruptedIOException {
     try {
       t.waitForActive();
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while waiting for table {} in region {} active",
           tableName, region, e);
       Thread.currentThread().interrupt();
-      throw (IOException) new InterruptedIOException("DynamoDB table '"
+      throw (InterruptedIOException) new InterruptedIOException("DynamoDB table '"
           + tableName + "' is not active yet in region " + region).initCause(e);
     }
   }
@@ -967,22 +1004,26 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /**
    * Provision the table with given read and write capacity units.
+   * Call will fail if the table is busy, or the new values match the current
+   * ones.
+   * @param readCapacity read units
+   * @param writeCapacity write units
+   * @throws IOException on a failure
    */
   void provisionTable(Long readCapacity, Long writeCapacity)
       throws IOException {
     final ProvisionedThroughput toProvision = new ProvisionedThroughput()
         .withReadCapacityUnits(readCapacity)
         .withWriteCapacityUnits(writeCapacity);
-    try {
-      final ProvisionedThroughputDescription p =
-          table.updateTable(toProvision).getProvisionedThroughput();
-      LOG.info("Provision table {} in region {}: readCapacityUnits={}, "
-              + "writeCapacityUnits={}",
-          tableName, region, p.getReadCapacityUnits(),
-          p.getWriteCapacityUnits());
-    } catch (AmazonClientException e) {
-      throw translateException("provisionTable", (String) null, e);
-    }
+    invoke.retry("provisionTable", tableName, true,
+        () -> {
+          final ProvisionedThroughputDescription p =
+              table.updateTable(toProvision).getProvisionedThroughput();
+          LOG.info("Provision table {} in region {}: readCapacityUnits={}, "
+                  + "writeCapacityUnits={}",
+              tableName, region, p.getReadCapacityUnits(),
+              p.getWriteCapacityUnits());
+        });
   }
 
   Table getTable() {
@@ -999,8 +1040,11 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   /**
-   * Validates a path object; it must be absolute, and contain a host
+   * Validates a path object; it must be absolute, have an s3a:/// scheme
+   * and contain a host
    * (bucket) component.
+   * @param path path to check
+   * @return the path passed in
    */
   private Path checkPath(Path path) {
     Preconditions.checkNotNull(path);
@@ -1100,6 +1144,26 @@ public class DynamoDBMetadataStore implements MetadataStore {
       return Long.parseLong(k);
     } else {
       return defVal;
+    }
+  }
+
+  /**
+   * Callback from {@link S3ALambda} when an operation is retried.
+   * @param ex exception
+   * @param retries number of retries
+   * @param idempotent is the method idempotent
+   */
+  void handleRetry(Exception ex, int retries, boolean idempotent) {
+    retryCount.incrementAndGet();
+    if (instrumentation != null) {
+      if (S3AUtils.isThrottleException(ex)) {
+        instrumentation.throttled();
+      } else {
+        instrumentation.retrying();
+      }
+    }
+    if (owner != null) {
+      owner.metastoreOperationRetried(ex, retries, idempotent);
     }
   }
 

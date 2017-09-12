@@ -540,10 +540,11 @@ public class Listing {
      * initial set of results/fail if there was a problem talking to the bucket.
      * @param listPath path of the listing
      * @param request initial request to make
-     * */
+     * @throws IOException if listObjects raises one.
+     */
     ObjectListingIterator(
         Path listPath,
-        S3ListRequest request) {
+        S3ListRequest request) throws IOException {
       this.listPath = listPath;
       this.maxKeys = owner.getMaxKeys();
       this.objects = owner.listObjects(request);

@@ -298,13 +298,13 @@ public final class S3ATestUtils {
    * @return the exception, if it is of the expected class
    * @throws Exception the exception passed in.
    */
-  public static Exception verifyExceptionClass(Class clazz,
+  public static <E extends Throwable> E verifyExceptionClass(Class<E> clazz,
       Exception ex)
       throws Exception {
     if (!(ex.getClass().equals(clazz))) {
       throw ex;
     }
-    return ex;
+    return (E)ex;
   }
 
   /**

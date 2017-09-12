@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
@@ -76,10 +75,8 @@ public class WriteOperationHelper {
       LoggerFactory.getLogger(WriteOperationHelper.class);
   private final S3AFileSystem owner;
   private final String key;
-  private final S3ALambda calls;
-
+  private final S3ALambda invoke;
   private final S3ALambda.Retrying onRetry;
-  private final AtomicInteger retryCount = new AtomicInteger(0);
 
   /**
    * Constructor.
@@ -88,29 +85,21 @@ public class WriteOperationHelper {
    */
   protected WriteOperationHelper(S3AFileSystem owner, String key) {
     checkArgument(key != null, "No key");
-    calls = new S3ALambda(new S3ARetryPolicy(owner.getConf()));
     this.owner = owner;
     this.key = key;
-    onRetry = this::operationRetried;
+    this.onRetry = this::operationRetried;
+    this.invoke = new S3ALambda(new S3ARetryPolicy(owner.getConf()), onRetry,
+        S3ALambda.CATCH_LOG);
   }
 
   /**
-   * Callback when an operation is retried.
+   * Callback from {@link S3ALambda} when an operation is retried.
    * @param ex exception
    * @param retries number of retries
    * @param idempotent is the method idempotent
    */
   void operationRetried(Exception ex, int retries, boolean idempotent) {
-    retryCount.incrementAndGet();
-    owner.operationRetried(ex);
-  }
-
-  /**
-   * Number of retries performed by this operation helper.
-   * @return a counter &gt;= 0
-   */
-  public int getRetryCount() {
-    return retryCount.get();
+    owner.operationRetried(ex, retries, idempotent);
   }
 
   /**
@@ -130,7 +119,7 @@ public class WriteOperationHelper {
       S3ALambda.Operation<T> operation)
       throws IOException {
 
-    return calls.retry(action, path, idempotent, operation, onRetry);
+    return invoke.retry(action, path, idempotent, operation);
   }
 
   /**
@@ -246,9 +235,9 @@ public class WriteOperationHelper {
       List<PartETag> partETags,
       long length,
       S3ALambda.Retrying retrying) throws IOException {
-    return calls.retry("Completing multipart commit", destination,
+    return invoke.retry("Completing multipart commit", destination,
         true,
-        () -> {
+        retrying, () -> {
           // a copy of the list is required, so that the AWS SDK doesn't
           // attempt to sort an unmodifiable list.
           CompleteMultipartUploadResult result =
@@ -259,8 +248,8 @@ public class WriteOperationHelper {
                       new ArrayList<>(partETags)));
           finishedWrite(destination, length);
           return result;
-        },
-        retrying);
+        }
+    );
   }
 
   /**
@@ -314,7 +303,7 @@ public class WriteOperationHelper {
       S3ALambda.Retrying retrying)
       throws IOException {
     LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
-    calls.retry("aborting multipart commit", destKey, true,
+    invoke.retry("aborting multipart commit", destKey, true,
         () -> owner.getAmazonS3Client().abortMultipartUpload(
             new AbortMultipartUploadRequest(owner.getBucket(),
                 destKey,
@@ -449,7 +438,7 @@ public class WriteOperationHelper {
   public UploadResult uploadObject(PutObjectRequest putObjectRequest)
       throws IOException {
     // no retry; rely on xfer manager logic
-    return calls.execute("put",
+    return invoke.once("put",
         putObjectRequest.getKey(),
         () -> owner.executePut(putObjectRequest, null));
   }
@@ -460,7 +449,7 @@ public class WriteOperationHelper {
    * @param destKey destination key
    */
   public void revertCommit(String destKey) throws IOException {
-    calls.retry("revert commit", destKey, true,
+    invoke.retry("revert commit", destKey, true,
         () -> {
           Path destPath = owner.keyToQualifiedPath(destKey);
           owner.deleteObjectAtPath(destPath,

@@ -281,6 +281,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
     deleteObject(key);
   }
 
+  @Override
+  void maybeCreateFakeParentDirectory(Path path)
+      throws IOException, AmazonClientException {
+    // no-op
+  }
+
   private static class EmptyIterator implements
       RemoteIterator<LocatedFileStatus> {
     @Override

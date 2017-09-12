@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -149,7 +150,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   }
 
   private void removeKeys(S3AFileSystem fileSystem, String... keys)
-      throws InvalidRequestException {
+      throws IOException {
     List<DeleteObjectsRequest.KeyVersion> request = new ArrayList<>(
         keys.length);
     for (String key : keys) {

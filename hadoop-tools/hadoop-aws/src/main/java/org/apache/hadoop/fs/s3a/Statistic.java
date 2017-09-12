@@ -183,10 +183,13 @@ public enum Statistic {
       "s3guard metadata store put one metadata path request"),
   S3GUARD_METADATASTORE_PUT_PATH_LATENCY(
       "s3guard_metadatastore_put_path_latency",
-      "s3guard metadata store put one metadata path lantency"),
+      "s3guard metadata store put one metadata path latency"),
   S3GUARD_METADATASTORE_INITIALIZATION("s3guard_metadatastore_initialization",
-      "s3guard metadata store initialization times");
-
+      "s3guard metadata store initialization times"),
+  S3GUARD_METADATASTORE_RETRY("s3guard_metadatastore_retry",
+      "s3guard metadata store retry events"),
+  S3GUARD_METADATASTORE_THROTTLED("s3guard_metadatastore_throttled",
+      "s3guard metadata store throttled events");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

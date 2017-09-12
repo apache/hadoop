@@ -44,7 +44,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -56,7 +55,6 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
@@ -107,6 +105,7 @@ import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -143,6 +142,12 @@ public class S3AFileSystem extends FileSystem {
   private Path workingDir;
   private String username;
   private AmazonS3 s3;
+  // initial callback policy is fail-once; it's there just to assist
+  // some mock tests and other codepaths trying to call the low level
+  // APIs on an uninited filesystem.
+  private S3ALambda invoke = new S3ALambda(RetryPolicies.TRY_ONCE_THEN_FAIL,
+      S3ALambda.NO_OP, S3ALambda.CATCH_LOG);
+  private final S3ALambda.Retrying onRetry = this::operationRetried;
   private String bucket;
   private int maxKeys;
   private Listing listing;
@@ -222,6 +227,8 @@ public class S3AFileSystem extends FileSystem {
           S3ClientFactory.class);
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
           .createS3Client(name);
+      invoke = new S3ALambda(new S3ARetryPolicy(getConf()), onRetry,
+          S3ALambda.CATCH_LOG);
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
@@ -337,20 +344,11 @@ public class S3AFileSystem extends FileSystem {
    */
   protected void verifyBucketExists()
       throws FileNotFoundException, IOException {
-    try {
-      if (!s3.doesBucketExist(bucket)) {
-        throw new FileNotFoundException("Bucket " + bucket + " does not exist");
-      }
-    } catch (AmazonS3Exception e) {
-      // this is a sign of a serious startup problem so do dump everything
-      LOG.warn(stringify(e), e);
-      throw translateException("doesBucketExist", bucket, e);
-    } catch (AmazonServiceException e) {
-      // this is a sign of a serious startup problem so do dump everything
-      LOG.warn(stringify(e), e);
-      throw translateException("doesBucketExist", bucket, e);
-    } catch (AmazonClientException e) {
-      throw translateException("doesBucketExist", bucket, e);
+    if (!invoke.retry(
+        "doesBucketExist", bucket,
+        true,
+        () -> s3.doesBucketExist(bucket))) {
+      throw new FileNotFoundException("Bucket " + bucket + " does not exist");
     }
   }
 
@@ -479,7 +477,7 @@ public class S3AFileSystem extends FileSystem {
    * @param client client.
    */
   protected void setAmazonS3Client(AmazonS3 client) {
-    Preconditions.checkNotNull(client != null, "client");
+    Preconditions.checkNotNull(client, "client");
     LOG.debug("Setting S3 client to {}", client);
     s3 = client;
   }
@@ -1138,6 +1136,29 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Callback from {@link S3ALambda} when an operation is retried.
+   * @param ex exception
+   * @param retries number of retries
+   * @param idempotent is the method idempotent
+   */
+  void operationRetried(Exception ex, int retries, boolean idempotent) {
+    operationRetried(ex);
+  }
+
+  /**
+   * Callback from {@link S3ALambda} when an operation against a metastore
+   * is retried.
+   * @param ex exception
+   * @param retries number of retries
+   * @param idempotent is the method idempotent
+   */
+  public void metastoreOperationRetried(Exception ex,
+      int retries,
+      boolean idempotent) {
+    operationRetried(ex);
+  }
+
+  /**
    * Get the storage statistics of this filesystem.
    * @return the storage statistics
    */
@@ -1150,9 +1171,9 @@ public class S3AFileSystem extends FileSystem {
    * Request object metadata; increments counters in the process.
    * @param key key
    * @return the metadata
+   * @throws IOException if the retry invocation raises one (it shouldn't).
    */
-  protected ObjectMetadata getObjectMetadata(String key) {
-    incrementStatistic(OBJECT_METADATA_REQUESTS);
+  protected ObjectMetadata getObjectMetadata(String key) throws IOException {
     GetObjectMetadataRequest request =
         new GetObjectMetadataRequest(bucket, key);
     //SSE-C requires to be filled in if enabled for object metadata
@@ -1160,7 +1181,13 @@ public class S3AFileSystem extends FileSystem {
         StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))){
       request.setSSECustomerKey(generateSSECustomerKey());
     }
-    ObjectMetadata meta = s3.getObjectMetadata(request);
+    ObjectMetadata meta = invoke.retryUntranslated(
+        "GET " + key,
+        true,
+        () -> {
+          incrementStatistic(OBJECT_METADATA_REQUESTS);
+          return s3.getObjectMetadata(request);
+    });
     incrementReadOperations();
     return meta;
   }
@@ -1170,16 +1197,35 @@ public class S3AFileSystem extends FileSystem {
    * in the process.
    * @param request request to initiate
    * @return the results
+   * @throws IOException if the retry invocation raises one (it shouldn't).
    */
-  protected S3ListResult listObjects(S3ListRequest request) {
-    incrementStatistic(OBJECT_LIST_REQUESTS);
+  protected S3ListResult listObjects(S3ListRequest request) throws IOException {
     incrementReadOperations();
+    incrementStatistic(OBJECT_LIST_REQUESTS);
+    validateListArguments(request);
+    return invoke.retryUntranslated(
+        request.toString(),
+        true,
+        () -> {
+          if (useListV1) {
+            Preconditions.checkArgument(request.isV1());
+            return S3ListResult.v1(s3.listObjects(request.getV1()));
+          } else {
+            Preconditions.checkArgument(!request.isV1());
+            return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+          }
+        });
+  }
+
+  /**
+   * Validate the list arguments with this bucket's settings
+   * @param request the request to validate
+   */
+  private void validateListArguments(S3ListRequest request) {
     if (useListV1) {
       Preconditions.checkArgument(request.isV1());
-      return S3ListResult.v1(s3.listObjects(request.getV1()));
     } else {
       Preconditions.checkArgument(!request.isV1());
-      return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
     }
   }
 
@@ -1190,18 +1236,23 @@ public class S3AFileSystem extends FileSystem {
    * @return the next result object
    */
   protected S3ListResult continueListObjects(S3ListRequest request,
-      S3ListResult prevResult) {
-    incrementStatistic(OBJECT_CONTINUE_LIST_REQUESTS);
+      S3ListResult prevResult) throws IOException {
     incrementReadOperations();
-    if (useListV1) {
-      Preconditions.checkArgument(request.isV1());
-      return S3ListResult.v1(s3.listNextBatchOfObjects(prevResult.getV1()));
-    } else {
-      Preconditions.checkArgument(!request.isV1());
-      request.getV2().setContinuationToken(prevResult.getV2()
-          .getNextContinuationToken());
-      return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
-    }
+    validateListArguments(request);
+    return invoke.retryUntranslated(
+        request.toString(),
+        true,
+        () -> {
+          incrementStatistic(OBJECT_CONTINUE_LIST_REQUESTS);
+          if (useListV1) {
+            return S3ListResult.v1(
+                s3.listNextBatchOfObjects(prevResult.getV1()));
+          } else {
+            request.getV2().setContinuationToken(prevResult.getV2()
+                .getNextContinuationToken());
+            return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+          }
+        });
   }
 
   /**
@@ -1232,11 +1283,16 @@ public class S3AFileSystem extends FileSystem {
    */
   @VisibleForTesting
   protected void deleteObject(String key)
-      throws AmazonClientException, InvalidRequestException {
+      throws AmazonClientException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
-    incrementStatistic(OBJECT_DELETE_REQUESTS);
-    s3.deleteObject(bucket, key);
+    invoke.retryUntranslated("Delete "+ bucket + ":/" + key,
+      true,
+        ()-> {
+          incrementStatistic(OBJECT_DELETE_REQUESTS);
+          s3.deleteObject(bucket, key);
+          return null;
+        });
   }
 
   /**
@@ -1394,6 +1450,8 @@ public class S3AFileSystem extends FileSystem {
    * PUT an object directly (i.e. not via the transfer manager).
    * Byte length is calculated from the file length, or, if there is no
    * file, from the content length of the header.
+   *
+   * Retry Policy: none.
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @return the upload initiated
@@ -1437,11 +1495,12 @@ public class S3AFileSystem extends FileSystem {
    * Upload part of a multi-partition file.
    * Increments the write and put counters.
    * <i>Important: this call does not close any input stream in the request.</i>
+   * Retry Policy: none
    * @param request request
    * @return the result of the operation.
    * @throws AmazonClientException on problems
    */
-  public UploadPartResult uploadPart(UploadPartRequest request)
+  UploadPartResult uploadPart(UploadPartRequest request)
       throws AmazonClientException {
     long len = request.getPartSize();
     incrementPutStartStatistics(len);
@@ -1522,7 +1581,7 @@ public class S3AFileSystem extends FileSystem {
   void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean clearKeys, boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
-      InvalidRequestException {
+      IOException {
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
       return;
@@ -2533,7 +2592,7 @@ public class S3AFileSystem extends FileSystem {
     }
     try {
       removeKeys(keysToRemove, false, true);
-    } catch(AmazonClientException | InvalidRequestException e) {
+    } catch(AmazonClientException | IOException e ) {
       instrumentation.errorIgnored();
       if (LOG.isDebugEnabled()) {
         StringBuilder sb = new StringBuilder();
@@ -2962,6 +3021,7 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * Listing all multipart uploads; limited to the first few hundred.
+   * Retry policy: None.
    * @return a listing of multipart uploads.
    * @param prefix prefix to scan for, "" for none
    * @throws IOException IO failure, including any uprated AmazonClientException
@@ -2969,16 +3029,14 @@ public class S3AFileSystem extends FileSystem {
   @InterfaceAudience.Private
   public List<MultipartUpload> listMultipartUploads(String prefix)
       throws IOException {
-    try {
-      ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(
-          bucket);
-      if (!prefix.isEmpty()) {
-        request.setPrefix(prefix);
-      }
-      return s3.listMultipartUploads(request).getMultipartUploads();
-    } catch (AmazonClientException e) {
-      throw translateException("listMultipartUpoloads", prefix, e);
+    ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(
+        bucket);
+    if (!prefix.isEmpty()) {
+      request.setPrefix(prefix);
     }
+
+    return invoke.once("listMultipartUpoloads", prefix,
+        () -> s3.listMultipartUploads(request).getMultipartUploads());
   }
 
   /**

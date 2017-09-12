@@ -19,11 +19,13 @@
 package org.apache.hadoop.test;
 
 import com.google.common.base.Preconditions;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.Time;
 
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 
@@ -571,6 +573,38 @@ public final class LambdaTestUtils {
         LOG.info("Exception calling toString()", e);
         return o.getClass().toString();
       }
+    }
+  }
+
+  /**
+   * Assert that an optional value matches an expected one;
+   * checks include null and empty on the actual value.
+   * @param message message text
+   * @param expected expected value
+   * @param actual actual optional value
+   * @param <T> type
+   */
+  public static <T> void assertOptionalEquals(String message,
+      T expected,
+      Optional<T> actual) {
+    Assert.assertNotNull(message, actual);
+    Assert.assertTrue(message +" -not present", actual.isPresent());
+    Assert.assertEquals(message, expected, actual.get());
+  }
+
+  /**
+   * Assert that an optional value matches an expected one;
+   * checks include null and empty on the actual value.
+   * @param message message text
+   * @param expected expected value
+   * @param actual actual optional value
+   * @param <T> type
+   */
+  public static <T> void assertOptionalUnset(String message,
+      Optional<T> actual) {
+    Assert.assertNotNull(message, actual);
+    if (actual.isPresent()) {
+      Assert.fail("Expected empty option, got " + actual.get().toString());
     }
   }
 

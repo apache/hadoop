@@ -76,8 +76,9 @@ public class CommitOperations {
     Preconditions.checkArgument(fs != null, "null fs");
     this.fs = fs;
     statistics = fs.newCommitterStatistics();
-    lambda = new S3ALambda(new S3ARetryPolicy(fs.getConf()));
     onRetry = (ex, retries, idempotent) -> fs.operationRetried(ex);
+    lambda = new S3ALambda(new S3ARetryPolicy(fs.getConf()), onRetry,
+        S3ALambda.CATCH_LOG);
   }
 
   @Override
@@ -301,10 +302,11 @@ public class CommitOperations {
             outcome = new MaybeIOE(makeIOE(pendingFile.toString(), e));
           }
         } finally {
-          lambda.quietly("ls", pendingFile.toString(),
-              () -> lambda.retry("ls", pendingFile.toString(), true,
-                  () -> fs.delete(pendingFile, false),
-                  onRetry));
+          // quietly try to delete the pending file
+          lambda.quietlyEval("delete", pendingFile.toString(),
+              () -> lambda.retry("delete", pendingFile.toString(), true,
+                  onRetry, () -> fs.delete(pendingFile, false)
+              ));
         }
       }
     }
@@ -321,8 +323,8 @@ public class CommitOperations {
   protected RemoteIterator<LocatedFileStatus> ls(Path path, boolean recursive)
       throws IOException {
     return lambda.retry("ls", path.toString(), true,
-        () -> fs.listFiles(path, recursive),
-        onRetry);
+        onRetry, () -> fs.listFiles(path, recursive)
+    );
   }
 
   /**
@@ -333,8 +335,8 @@ public class CommitOperations {
    */
   protected FileStatus getFileStatus(Path path) throws IOException {
     return lambda.retry("getFileStatus", path.toString(), true,
-        () -> fs.getFileStatus(path),
-        onRetry);
+        onRetry, () -> fs.getFileStatus(path)
+    );
   }
 
   /**

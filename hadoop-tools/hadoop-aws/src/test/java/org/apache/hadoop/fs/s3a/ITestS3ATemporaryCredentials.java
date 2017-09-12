@@ -23,6 +23,7 @@ import java.net.URI;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.services.cognitoidp.model.transform.LambdaConfigTypeJsonUnmarshaller;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenResult;
@@ -30,6 +31,7 @@ import com.amazonaws.services.securitytoken.model.Credentials;
 
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.Test;
 
@@ -113,7 +115,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
       createAndVerifyFile(fs, path("testSTSInvalidToken"), TEST_FILE_SIZE);
       fail("Expected an access exception, but file access to "
           + fs.getUri() + " was allowed: " + fs);
-    } catch (AWSS3IOException ex) {
+    } catch (AWSS3IOException | AWSBadRequestException ex) {
       LOG.info("Expected Exception: {}", ex.toString());
       LOG.debug("Expected Exception: {}", ex, ex);
     }
@@ -125,14 +127,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     conf.set(ACCESS_KEY, "accesskey");
     conf.set(SECRET_KEY, "secretkey");
     conf.set(SESSION_TOKEN, "");
-    TemporaryAWSCredentialsProvider provider
-        = new TemporaryAWSCredentialsProvider(conf);
-    try {
-      AWSCredentials credentials = provider.getCredentials();
-      fail("Expected a CredentialInitializationException,"
-          + " got " + credentials);
-    } catch (CredentialInitializationException expected) {
-      // expected
-    }
+    LambdaTestUtils.intercept(CredentialInitializationException.class,
+        () -> new TemporaryAWSCredentialsProvider(conf).getCredentials());
   }
 }

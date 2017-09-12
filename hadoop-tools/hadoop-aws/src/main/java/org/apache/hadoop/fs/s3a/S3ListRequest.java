@@ -66,4 +66,18 @@ public class S3ListRequest {
   public ListObjectsV2Request getV2() {
     return v2Request;
   }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "list ");
+    if (isV1()) {
+      return String.format("List %s:/%s",
+          v1Request.getBucketName(), v1Request.getPrefix());
+    } else {
+      return String.format("List %s:/%s",
+          v2Request.getBucketName(), v2Request.getPrefix());
+
+    }
+  }
 }

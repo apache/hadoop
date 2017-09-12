@@ -20,20 +20,25 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
+import java.nio.file.AccessDeniedException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.hadoop.net.ConnectTimeoutException;
 
 import static org.apache.hadoop.io.retry.RetryPolicies.*;
 
@@ -46,11 +51,29 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * count and delays for "normal" retries and separately, for throttling;
  * the latter is best handled for longer with an exponential back-off.
  *
- * Those exceptions considered unrecoverable (networking) are failed fast.
+ * <ol>
+ * <li> Those exceptions considered unrecoverable (networking) are failed fast.</li>
+ * <li>All non-IOEs are failed immediately. Assumed: bugs in code, unrecoverable
+ * errors, etc</li>
+ * </ol>
  *
  * For non-idempotent operations, only failures due to throttling or
  * from failures which are known to only arise prior to talking to S3
  * are retried.
+ *
+ * The retry policy is all built around that of the normal IO exceptions,
+ * particularly those extracted from
+ * {@link S3AUtils#translateException(String, Path, AmazonClientException)}.
+ * Because the {@link #shouldRetry(Exception, int, int, boolean)} method
+ * does this translation if an {@code AmazonClientException} is processed,
+ * the policy defined for the IOEs also applies to the original exceptions.
+ *
+ * Put differently: this retry policy aims to work for handlers of the untranslated
+ * exceptions, as well as the translated ones.
+ * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
+ * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
+ * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
+
  */
 public class S3ARetryPolicy implements RetryPolicy {
 
@@ -73,7 +96,8 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // which is wrapped by a rejection of all non-idempotent calls except
     // for specific failures.
-    RetryPolicy maybeRetry = new IdempotencyRetryFilter(fixedRetries);
+    RetryPolicy maybeRetry = new FailNonIOEs(
+        new IdempotencyRetryFilter(fixedRetries));
 
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
@@ -102,9 +126,15 @@ public class S3ARetryPolicy implements RetryPolicy {
     // note this does not pick up subclasses (like socket timeout)
     policyMap.put(InterruptedIOException.class, fail);
     policyMap.put(AWSRedirectException.class, fail);
+    // interesting question: should this be retried ever?
+    policyMap.put(AccessDeniedException.class, fail);
     policyMap.put(FileNotFoundException.class, fail);
     policyMap.put(EOFException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
+
+    // should really be handled by resubmitting to new location;
+    // that's beyond the scope of this retry policy
+    policyMap.put(AWSRedirectException.class, fail);
 
     // throttled requests are can be retried, always
     policyMap.put(AWSServiceThrottledException.class, throttlePolicy);
@@ -120,15 +150,29 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AWSClientIOException.class, maybeRetry);
     policyMap.put(AWSServiceIOException.class, maybeRetry);
     policyMap.put(AWSS3IOException.class, maybeRetry);
+
+    // Dynamo DB exceptions
+    // asking for more than you should get. It's a retry but should be logged
+    // trigger sleep
+    policyMap.put(ProvisionedThroughputExceededException.class, throttlePolicy);
+
+
     retryPolicy = retryByException(maybeRetry, policyMap);
   }
 
   @Override
-  public RetryAction shouldRetry(Exception e,
+  public RetryAction shouldRetry(Exception exception,
       int retries,
       int failovers,
       boolean idempotent) throws Exception {
-    return retryPolicy.shouldRetry(e, retries, failovers, idempotent);
+    Exception ex = exception;
+    if (exception instanceof AmazonClientException) {
+      // uprate the amazon client exception for the purpose of exception
+      // processing.
+      ex = S3AUtils.translateException("", "",
+          (AmazonClientException) exception);
+    }
+    return retryPolicy.shouldRetry(ex, retries, failovers, idempotent);
   }
 
   /**
@@ -161,6 +205,29 @@ public class S3ARetryPolicy implements RetryPolicy {
       sb.append("next=").append(next);
       sb.append('}');
       return sb.toString();
+    }
+  }
+
+  /**
+   * All non-IOE exceptions are failed.
+   */
+  private static final class FailNonIOEs implements RetryPolicy {
+
+    private final RetryPolicy next;
+
+    private FailNonIOEs(RetryPolicy next) {
+      this.next = next;
+    }
+
+    @Override
+    public RetryAction shouldRetry(Exception e,
+        int retries,
+        int failovers,
+        boolean isIdempotentOrAtMostOnce) throws Exception {
+      return
+          e instanceof IOException ?
+              next.shouldRetry(e, retries, failovers, true)
+              : RetryAction.FAIL;
     }
   }
 
