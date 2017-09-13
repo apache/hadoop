@@ -106,6 +106,9 @@ public class BlockDeletingService extends BackgroundService{
       // configured.
       containers = containerManager.chooseContainerForBlockDeletion(
           containerLimitPerInterval);
+      LOG.info("Plan to choose {} containers for block deletion, "
+          + "actually returns {} valid containers.",
+          containerLimitPerInterval, containers.size());
 
       for(ContainerData container : containers) {
         BlockDeletingTask containerTask =
