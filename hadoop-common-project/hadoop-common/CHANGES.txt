@@ -10,6 +10,9 @@ Release 2.7.5 - UNRELEASED
 
     HADOOP-13442. Optimize UGI group lookups. (Daryn Sharp via kihwal, shv)
 
+    HADOOP-14827. Allow StopWatch to accept a Timer parameter for tests.
+    (Erik Krogen via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
