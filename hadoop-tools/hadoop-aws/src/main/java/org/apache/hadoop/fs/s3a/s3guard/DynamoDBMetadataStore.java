@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -218,15 +217,11 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /** Owner FS: only valid if configured with an owner FS. */
   private S3AFileSystem owner;
 
-  /**
-   * Count of retries.
-   */
-  private final AtomicInteger retryCount = new AtomicInteger(0);
-
-  /** lambda-wrapper for IO. Until configured properly, use try-once. */
+  /** Lambda-invoker for IO. Until configured properly, use try-once. */
   private S3ALambda invoke = new S3ALambda(RetryPolicies.TRY_ONCE_THEN_FAIL,
       S3ALambda.NO_OP, S3ALambda.CATCH_LOG);
-  /** Data access wrapper, which can have its own policies */
+
+  /** Data access can have its own policies. */
   private S3ALambda dataAccess;
 
   /**
@@ -416,12 +411,12 @@ public class DynamoDBMetadataStore implements MetadataStore {
       throws IOException {
     checkPath(path);
     LOG.debug("Get from table {} in region {}: {}", tableName, region, path);
-    return invoke.once("get", path,
+    return S3ALambda.once("get", path.toString(),
         () -> innerGet(path, wantEmptyDirectoryFlag));
   }
 
   /**
-   * Inner get operation, as invoked in the retry logic
+   * Inner get operation, as invoked in the retry logic.
    * @param path the path to get
    * @param wantEmptyDirectoryFlag Set to true to give a hint to the
    *   MetadataStore that it should try to compute the empty directory flag.
@@ -484,7 +479,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
 
     // find the children in the table
-    return invoke.once("listChildren", path,
+    return S3ALambda.once("listChildren", path.toString(),
         () -> {
           final QuerySpec spec = new QuerySpec()
               .withHashKey(pathToParentKeyAttribute(path))
@@ -563,7 +558,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       }
     }
 
-    invoke.once("move", tableName,
+    S3ALambda.once("move", tableName,
         () -> processBatchWriteRequest(null, pathMetadataToItem(newItems)));
   }
 
@@ -728,7 +723,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // next add all children of the directory
     metasToPut.addAll(meta.getListing());
 
-    invoke.once("put", path,
+    S3ALambda.once("put", path.toString(),
         () -> processBatchWriteRequest(null, pathMetadataToItem(metasToPut)));
   }
 
@@ -958,8 +953,10 @@ public class DynamoDBMetadataStore implements MetadataStore {
       LOG.warn("Interrupted while waiting for table {} in region {} active",
           tableName, region, e);
       Thread.currentThread().interrupt();
-      throw (InterruptedIOException) new InterruptedIOException("DynamoDB table '"
-          + tableName + "' is not active yet in region " + region).initCause(e);
+      throw (InterruptedIOException)
+          new InterruptedIOException("DynamoDB table '"
+          + tableName + "' is not active yet in region " + region)
+              .initCause(e);
     }
   }
 
@@ -1154,7 +1151,6 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param idempotent is the method idempotent
    */
   void handleRetry(Exception ex, int retries, boolean idempotent) {
-    retryCount.incrementAndGet();
     if (instrumentation != null) {
       if (S3AUtils.isThrottleException(ex)) {
         instrumentation.throttled();

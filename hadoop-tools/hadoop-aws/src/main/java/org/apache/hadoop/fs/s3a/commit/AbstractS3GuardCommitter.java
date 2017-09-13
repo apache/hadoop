@@ -630,8 +630,8 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @param context the JobContext for this commit
    * @return an {@link ExecutorService} or null for the number of threads
    */
-  protected final synchronized
-    ExecutorService buildThreadPool(JobContext context) {
+  protected final synchronized ExecutorService buildThreadPool(
+      JobContext context) {
 
     if (threadPool == null) {
       int numThreads = context.getConfiguration().getInt(

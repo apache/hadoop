@@ -65,7 +65,7 @@ public class CommitOperations {
   /** Statistics. */
   private final S3AInstrumentation.CommitterStatistics statistics;
 
-  private final S3ALambda lambda;
+  private final S3ALambda invoke;
   private final S3ALambda.Retrying onRetry;
 
   /**
@@ -77,7 +77,7 @@ public class CommitOperations {
     this.fs = fs;
     statistics = fs.newCommitterStatistics();
     onRetry = (ex, retries, idempotent) -> fs.operationRetried(ex);
-    lambda = new S3ALambda(new S3ARetryPolicy(fs.getConf()), onRetry,
+    invoke = new S3ALambda(new S3ARetryPolicy(fs.getConf()), onRetry,
         S3ALambda.CATCH_LOG);
   }
 
@@ -303,8 +303,8 @@ public class CommitOperations {
           }
         } finally {
           // quietly try to delete the pending file
-          lambda.quietlyEval("delete", pendingFile.toString(),
-              () -> lambda.retry("delete", pendingFile.toString(), true,
+          S3ALambda.quietlyEval("delete", pendingFile.toString(),
+              () -> invoke.retry("delete", pendingFile.toString(), true,
                   onRetry, () -> fs.delete(pendingFile, false)
               ));
         }
@@ -322,7 +322,7 @@ public class CommitOperations {
    */
   protected RemoteIterator<LocatedFileStatus> ls(Path path, boolean recursive)
       throws IOException {
-    return lambda.retry("ls", path.toString(), true,
+    return invoke.retry("ls", path.toString(), true,
         onRetry, () -> fs.listFiles(path, recursive)
     );
   }
@@ -334,7 +334,7 @@ public class CommitOperations {
    * @throws IOException failure
    */
   protected FileStatus getFileStatus(Path path) throws IOException {
-    return lambda.retry("getFileStatus", path.toString(), true,
+    return invoke.retry("getFileStatus", path.toString(), true,
         onRetry, () -> fs.getFileStatus(path)
     );
   }
@@ -379,7 +379,7 @@ public class CommitOperations {
     Path markerPath = new Path(outputPath, _SUCCESS);
     LOG.debug("Touching success marker for job {}: {}", markerPath,
         successData);
-    lambda.retry("save", markerPath.toString(), true,
+    invoke.retry("save", markerPath.toString(), true,
         () -> successData.save(fs, markerPath, true),
         onRetry);
   }

@@ -503,7 +503,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     }
     clearInconsistency(fs);
 
-    AmazonS3 client = fs.getAmazonS3Client();
+    AmazonS3 client = fs.getAmazonS3ClientForTesting("s3guard");
     String key = fs.pathToKey(root) + "/";
 
     ListObjectsV2Result preDeleteDelimited = client.listObjectsV2(
@@ -541,7 +541,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
   }
 
   private static void clearInconsistency(S3AFileSystem fs) throws Exception {
-    AmazonS3 s3 = fs.getAmazonS3Client();
+    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("s3guard");
     InconsistentAmazonS3Client ic = InconsistentAmazonS3Client.castFrom(s3);
     ic.clearInconsistency();
   }

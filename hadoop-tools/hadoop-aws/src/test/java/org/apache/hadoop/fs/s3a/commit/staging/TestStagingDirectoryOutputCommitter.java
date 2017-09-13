@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
-import java.util.concurrent.Callable;
-
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathExistsException;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
@@ -68,23 +65,13 @@ public class TestStagingDirectoryOutputCommitter
     pathExists(mockS3, OUTPUT_PATH);
     final DirectoryStagingCommitter committer = newJobCommitter();
 
-    intercept((Class<? extends Exception>) PathExistsException.class, null,
+    intercept(PathExistsException.class, null,
         "Should throw an exception because the path exists",
-        new LambdaTestUtils.VoidCallable() {
-          @Override
-          public void call() throws Exception {
-            committer.setupJob(getJob());
-          }
-        });
+        () -> committer.setupJob(getJob()));
 
-    intercept((Class<? extends Exception>) PathExistsException.class, null,
+    intercept(PathExistsException.class, null,
         "Should throw an exception because the path exists",
-        new LambdaTestUtils.VoidCallable() {
-          @Override
-          public void call() throws Exception {
-            committer.commitJob(getJob());
-          }
-        });
+        () -> committer.commitJob(getJob()));
 
     reset(mockS3);
     pathDoesNotExist(mockS3, OUTPUT_PATH);

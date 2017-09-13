@@ -45,11 +45,12 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.S3ALambda.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 
 /**
- * Test the {@link S3ALambda} code
+ * Test the {@link S3ALambda} code.
  */
 @SuppressWarnings("ThrowableNotThrown")
 public class TestS3ALambda extends Assert {
@@ -79,16 +80,17 @@ public class TestS3ALambda extends Assert {
       new S3ARetryPolicy(FAST_RETRY_CONF);
 
   private int retryCount;
-  private S3ALambda lambda = new S3ALambda(RETRY_POLICY,
-      (Exception e, int retries, boolean idempotent) -> retryCount ++,
+  private S3ALambda invoke = new S3ALambda(RETRY_POLICY,
+      (e, retries, idempotent) -> retryCount++,
       S3ALambda.CATCH_LOG);
-  private static final AmazonClientException CLIENT_TIMEOUT_EXCEPTION = new AmazonClientException(
-      new Local.ConnectTimeoutException("timeout"));
+  private static final AmazonClientException CLIENT_TIMEOUT_EXCEPTION =
+      new AmazonClientException(new Local.ConnectTimeoutException("timeout"));
   private static final AmazonServiceException BAD_REQUEST = serviceException(
       AWSBadRequestException.STATUS_CODE,
       "bad request");
 
-  private static AmazonServiceException serviceException(int code, String text) {
+  private static AmazonServiceException serviceException(int code,
+      String text) {
     AmazonServiceException ex = new AmazonServiceException(text);
     ex.setStatusCode(code);
     return ex;
@@ -152,7 +154,7 @@ public class TestS3ALambda extends Assert {
   }
 
   /**
-   * Make an assertion about a retry policy
+   * Make an assertion about a retry policy.
    * @param text text for error message
    * @param policy policy to check against
    * @param expected expected action
@@ -219,7 +221,7 @@ public class TestS3ALambda extends Assert {
   public void testS3LambdaRetryOnThrottle() throws Throwable {
 
     final AtomicInteger counter = new AtomicInteger(0);
-    lambda.retry("test", null, false,
+    invoke.retry("test", null, false,
         () -> {
           if (counter.incrementAndGet() < 5) {
             throw newThrottledException();
@@ -229,23 +231,23 @@ public class TestS3ALambda extends Assert {
 
   /**
    * Non-idempotent operations fail on anything which isn't a throttle
-   * or connectivity problem
+   * or connectivity problem.
    */
   @Test(expected = AWSBadRequestException.class)
   public void testS3LambdaRetryNonIdempotent() throws Throwable {
-    lambda.retry("test", null, false,
+    invoke.retry("test", null, false,
         () -> {
           throw serviceException(400, "bad request");
         });
   }
 
   /**
-   * AWS nested socket problems
+   * AWS nested socket problems.
    */
   @Test
   public void testS3LambdaRetryAWSConnectivity() throws Throwable {
     final AtomicInteger counter = new AtomicInteger(0);
-    lambda.retry("test", null, false,
+    invoke.retry("test", null, false,
         () -> {
           if (counter.incrementAndGet() < RETRY_LIMIT_DEFAULT) {
             throw CLIENT_TIMEOUT_EXCEPTION;
@@ -260,7 +262,7 @@ public class TestS3ALambda extends Assert {
   @Test
   public void testS3LambdaRetryBadRequestIdempotent() throws Throwable {
     final AtomicInteger counter = new AtomicInteger(0);
-    lambda.retry("test", null, true,
+    invoke.retry("test", null, true,
         () -> {
           if (counter.incrementAndGet() < RETRY_LIMIT_DEFAULT) {
             throw BAD_REQUEST;
@@ -291,7 +293,7 @@ public class TestS3ALambda extends Assert {
   }
 
   /**
-   * Interrupted IOEs are not retryable
+   * Interrupted IOEs are not retryable.
    */
   @Test
   public void testInterruptedIOExceptionRetry() throws Throwable {
@@ -345,13 +347,13 @@ public class TestS3ALambda extends Assert {
      */
     private static class ConnectTimeoutException
         extends InterruptedIOException {
-      public ConnectTimeoutException(String s) {
+      ConnectTimeoutException(String s) {
         super(s);
       }
     }
 
     /**
-     * A local exception whose name should not match
+     * A local exception whose name should not match.
      */
     private static class NotAConnectTimeoutException
         extends InterruptedIOException {
@@ -362,7 +364,7 @@ public class TestS3ALambda extends Assert {
 
   @Test
   public void testQuietlyVoid() throws Throwable {
-    Optional<Object> quietly = lambda.quietlyEval("", "", () -> {
+    Optional<Object> quietly = quietlyEval("", "", () -> {
       throw HADOOP_CONNECTION_TIMEOUT_EX;
     });
   }
@@ -370,13 +372,15 @@ public class TestS3ALambda extends Assert {
   @Test
   public void testQuietlyEvalReturnValueSuccess() throws Throwable {
     assertOptionalEquals("quietly", 3,
-        lambda.quietlyEval("", "", () -> 3));
+        quietlyEval("", "", () -> 3));
   }
 
   @Test
   public void testQuietlyEvalReturnValueFail() throws Throwable {
+    // use a variable so IDEs don't warn of numeric overflows
+    int d = 0;
     assertOptionalUnset("quietly",
-        lambda.quietlyEval("", "", () -> 3 / 0));
+        quietlyEval("", "", () -> 3 / d));
   }
 
 

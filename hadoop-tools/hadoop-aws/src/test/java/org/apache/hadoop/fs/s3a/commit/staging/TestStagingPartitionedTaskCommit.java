@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.google.common.collect.Lists;
@@ -35,7 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -96,14 +94,9 @@ public class TestStagingPartitionedTaskCommit
     reset(mockS3);
     pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(0)).getParent());
 
-    intercept((Class<? extends Exception>) PathExistsException.class, null,
+    intercept(PathExistsException.class, null,
         "Expected a PathExistsException as a partition already exists",
-        new LambdaTestUtils.VoidCallable() {
-          @Override
-          public void call() throws IOException {
-            committer.commitTask(getTAC());
-          }
-        });
+        () -> committer.commitTask(getTAC()));
 
     // test success
     reset(mockS3);
@@ -142,12 +135,7 @@ public class TestStagingPartitionedTaskCommit
 
     intercept(PathExistsException.class, null,
         "Should complain because a partition already exists",
-        new LambdaTestUtils.VoidCallable() {
-          @Override
-          public void call() throws IOException {
-            committer.commitTask(getTAC());
-          }
-        });
+        () -> committer.commitTask(getTAC()));
 
     // test success
     reset(mockS3);

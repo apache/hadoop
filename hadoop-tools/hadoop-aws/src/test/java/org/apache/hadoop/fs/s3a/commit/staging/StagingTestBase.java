@@ -225,7 +225,7 @@ public class StagingTestBase {
     }
 
     /**
-     * Setup the mini HDFS cluster
+     * Setup the mini HDFS cluster.
      * @throws IOException Failure
      */
     @BeforeClass

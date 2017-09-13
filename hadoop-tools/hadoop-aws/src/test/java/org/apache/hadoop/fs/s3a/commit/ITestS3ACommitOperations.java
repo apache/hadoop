@@ -301,15 +301,14 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
   }
 
   /**
-   * Perform any validation of paths. Currently check of magic file is
-   * skipped as with the inconsistent FS, it can take time to appear.
+   * Perform any validation of paths.
    * @param magicFilePath path to magic file
-   * @param destFile
+   * @param destFile ultimate destination file
    * @throws IOException
    */
-  private void validateIntermediateAndFinalPaths(Path magicFilePath, Path destFile)
+  private void validateIntermediateAndFinalPaths(Path magicFilePath,
+      Path destFile)
       throws IOException {
-//    assertPathDoesNotExist("magic file was created", magicFilePath);
     assertPathDoesNotExist("dest file was created", destFile);
   }
 

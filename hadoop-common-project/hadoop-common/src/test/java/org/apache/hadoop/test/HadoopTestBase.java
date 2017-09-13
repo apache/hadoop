@@ -34,20 +34,20 @@ import org.junit.rules.Timeout;
 public abstract class HadoopTestBase extends Assert {
 
   /**
-   * System property name to set the test timeout: {@value}
+   * System property name to set the test timeout: {@value}.
    */
   public static final String PROPERTY_TEST_DEFAULT_TIMEOUT =
-    "test.default.timeout";
+      "test.default.timeout";
 
   /**
    * The default timeout (in milliseconds) if the system property
    * {@link #PROPERTY_TEST_DEFAULT_TIMEOUT}
-   * is not set: {@value}
+   * is not set: {@value}.
    */
   public static final int TEST_DEFAULT_TIMEOUT_VALUE = 100000;
 
   /**
-   * The JUnit rule that sets the default timeout for tests
+   * The JUnit rule that sets the default timeout for tests.
    */
   @Rule
   public Timeout defaultTimeout = retrieveTestTimeout();

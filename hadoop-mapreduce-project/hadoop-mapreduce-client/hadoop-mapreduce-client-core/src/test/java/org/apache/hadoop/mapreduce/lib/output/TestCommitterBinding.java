@@ -142,12 +142,12 @@ public class TestCommitterBinding extends Assert {
 
   private static class SimpleCommitter extends PathOutputCommitter {
 
-    public SimpleCommitter(Path outputPath,
+    SimpleCommitter(Path outputPath,
         TaskAttemptContext context) throws IOException {
       super(outputPath, context);
     }
 
-    public SimpleCommitter(Path outputPath,
+    SimpleCommitter(Path outputPath,
         JobContext context) throws IOException {
       super(outputPath, context);
     }

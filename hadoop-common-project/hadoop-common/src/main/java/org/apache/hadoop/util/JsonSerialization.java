@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.util;
 
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,11 +41,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 
 /**
  * Support for marshalling objects to and from JSON.
- *  <p>
+ *
  * It constructs an object mapper as an instance field.
  * and synchronizes access to those methods
  * which use the mapper.
@@ -112,7 +112,7 @@ public class JsonSerialization<T> {
   }
 
   /**
-   * Read from an input stream
+   * Read from an input stream.
    * @param stream stream to read from
    * @return the parsed entity
    * @throws IOException IO problems
@@ -124,7 +124,7 @@ public class JsonSerialization<T> {
   }
 
   /**
-   * Convert from a JSON file.
+   * Load from a JSON text file.
    * @param jsonFile input file
    * @return the parsed JSON
    * @throws IOException IO problems
@@ -132,7 +132,7 @@ public class JsonSerialization<T> {
    * @throws JsonMappingException failure to map from the JSON to this class
    */
   @SuppressWarnings("unchecked")
-  public synchronized T fromFile(File jsonFile)
+  public synchronized T load(File jsonFile)
       throws IOException, JsonParseException, JsonMappingException {
     if (!jsonFile.isFile()) {
       throw new FileNotFoundException("Not a file: " + jsonFile);
@@ -149,6 +149,18 @@ public class JsonSerialization<T> {
   }
 
   /**
+   * Save to a local file. Any existing file is overwritten unless
+   * the OS blocks that.
+   * @param file file
+   * @param path path
+   * @throws IOException IO exception
+   */
+  public void save(File file, T instance) throws
+      IOException {
+    writeJsonAsBytes(instance, new FileOutputStream(file));
+  }
+
+  /**
    * Convert from a JSON file.
    * @param resource input file
    * @return the parsed JSON
@@ -159,9 +171,8 @@ public class JsonSerialization<T> {
   @SuppressWarnings({"IOResourceOpenedButNotSafelyClosed"})
   public synchronized T fromResource(String resource)
       throws IOException, JsonParseException, JsonMappingException {
-    InputStream resStream = null;
-    try {
-      resStream = this.getClass().getResourceAsStream(resource);
+    try (InputStream resStream = this.getClass()
+        .getResourceAsStream(resource)) {
       if (resStream == null) {
         throw new FileNotFoundException(resource);
       }
@@ -169,8 +180,6 @@ public class JsonSerialization<T> {
     } catch (IOException e) {
       LOG.error("Exception while parsing json resource {}", resource, e);
       throw e;
-    } finally {
-      IOUtils.closeStream(resStream);
     }
   }
 
@@ -186,16 +195,26 @@ public class JsonSerialization<T> {
   }
 
   /**
-   * Load from a Hadoop filesystem. JSON parsing and mapping problems
+   * Load from a Hadoop filesystem.
+   * There's a check for data availability after the file is open, by
+   * raising an EOFException if stream.available == 0.
+   * This allows for a meaningful exception without the round trip overhead
+   * of a getFileStatus call before opening the file. It may be brittle
+   * against an FS stream which doesn't return a value here, but the
+   * standard filesystems all do.
+   * JSON parsing and mapping problems
    * are converted to IOEs.
    * @param fs filesystem
    * @param path path
    * @return a loaded object
-   * @throws IOException IO problems
+   * @throws IOException IO or JSON parse problems
    */
   public T load(FileSystem fs, Path path) throws IOException {
-
     try (FSDataInputStream dataInputStream = fs.open(path)) {
+      // throw an EOF exception if there is no data available.
+      if (dataInputStream.available() == 0) {
+        throw new EOFException("No data in " + path);
+      }
       return fromJsonStream(dataInputStream);
     } catch (JsonProcessingException e) {
       throw new IOException(
@@ -223,7 +242,7 @@ public class JsonSerialization<T> {
    * @throws IOException on any failure
    */
   private void writeJsonAsBytes(T instance,
-      DataOutputStream dataOutputStream) throws IOException {
+      OutputStream dataOutputStream) throws IOException {
     try {
       dataOutputStream.write(toBytes(instance));
     } finally {
@@ -243,12 +262,11 @@ public class JsonSerialization<T> {
 
   /**
    * Deserialize from a byte array.
-   * @param path path the data came from
    * @param bytes byte array
    * @throws IOException IO problems
    * @throws EOFException not enough data
    */
-  public T fromBytes(String path, byte[] bytes) throws IOException {
+  public T fromBytes(byte[] bytes) throws IOException {
     return fromJson(new String(bytes, 0, bytes.length, UTF_8));
   }
 

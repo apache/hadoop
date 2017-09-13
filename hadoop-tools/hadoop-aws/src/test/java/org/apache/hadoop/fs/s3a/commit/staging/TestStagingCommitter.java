@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -374,9 +373,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     intercept((Class<? extends Exception>) AWSClientIOException.class,
         "Fail on upload 2", "Should fail during upload",
         () -> {
-            committer.commitTask(tac);
-            return committer.toString();
-          });
+          committer.commitTask(tac);
+          return committer.toString();
+        });
 
     assertEquals("Should have attempted one file upload",
         1, results.getUploads().size());
@@ -404,9 +403,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     intercept((Class<? extends Exception>) AWSClientIOException.class,
         "Fail on upload 5", "Should fail during upload",
         () -> {
-            committer.commitTask(tac);
-            return committer.toString();
-          });
+          committer.commitTask(tac);
+          return committer.toString();
+        });
 
     assertEquals("Should have attempted two file uploads",
         2, results.getUploads().size());
@@ -438,7 +437,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         ()-> {
             committer.commitTask(tac);
             return committer.toString();
-          });
+        });
 
     assertEquals("Should have attempted two file uploads",
         2, results.getUploads().size());

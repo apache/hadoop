@@ -202,6 +202,7 @@ public class WriteOperationHelper {
 
   /**
    * Start the multipart upload process.
+   * Retry policy: retrying, translated.
    * @return the upload result containing the ID
    * @throws IOException IO problem
    */
@@ -222,10 +223,12 @@ public class WriteOperationHelper {
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
    * {@link S3AFileSystem#finishedWrite(String, long)} to update the filesystem.
+   * Retry policy: retrying, translated.
    * @param destination destination of the commit
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
+   * @param retrying retrying callback
    * @return the result of the operation.
    * @throws IOException on problems.
    */
@@ -255,6 +258,7 @@ public class WriteOperationHelper {
   /**
    * This completes a multipart upload to the destination key via
    * {@code finalizeMultipartUpload()}.
+   * Retry policy: retrying, translated.
    * Retries increment the {@code errorCount} counter.
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
@@ -321,9 +325,7 @@ public class WriteOperationHelper {
       throws IOException {
     LOG.debug("Aborting multipart uploads under {}", prefix);
     int count = 0;
-    List<MultipartUpload> multipartUploads =
-        retry("list multipart uploads", prefix, true,
-            () -> owner.listMultipartUploads(prefix));
+    List<MultipartUpload> multipartUploads = owner.listMultipartUploads(prefix);
     LOG.debug("Number of outstanding uploads: {}", multipartUploads.size());
     for (MultipartUpload upload: multipartUploads) {
       try {
@@ -438,7 +440,7 @@ public class WriteOperationHelper {
   public UploadResult uploadObject(PutObjectRequest putObjectRequest)
       throws IOException {
     // no retry; rely on xfer manager logic
-    return invoke.once("put",
+    return S3ALambda.once("put",
         putObjectRequest.getKey(),
         () -> owner.executePut(putObjectRequest, null));
   }

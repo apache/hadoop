@@ -39,7 +39,7 @@ public class S3ALambda {
   private static final Logger LOG = LoggerFactory.getLogger(S3ALambda.class);
 
   /**
-   * Retry policy to use
+   * Retry policy to use.
    */
   private final RetryPolicy retryPolicy;
 
@@ -74,7 +74,7 @@ public class S3ALambda {
    * @return the result of the function call
    * @throws IOException any IOE raised, or translated exception
    */
-  public <T> T once(String action, String path, Operation<T> operation)
+  public static <T> T once(String action, String path, Operation<T> operation)
       throws IOException {
     try {
       return operation.execute();
@@ -84,43 +84,13 @@ public class S3ALambda {
   }
 
   /**
-   * Execute a function, translating any exception into an IOException.
-   * @param action action to execute (used in error messages)
-   * @param path path of work (used in error messages)
-   * @param operation operation to execute
-   * @param <T> type of return value
-   * @return the result of the function call
-   * @throws IOException any IOE raised, or translated exception
-   */
-  public <T> T once(String action, Path path, Operation<T> operation)
-      throws IOException {
-    return once(action, path.toString(), operation);
-  }
-
-  /**
    * Execute an operation with no result.
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
    * @param operation operation to execute
    * @throws IOException any IOE raised, or translated exception
    */
-  public void once(String action, String path, VoidOperation operation)
-      throws IOException {
-    once(action, path,
-        () -> {
-          operation.execute();
-          return null;
-        });
-  }
-
-  /**
-   * Execute an operation with no result.
-   * @param action action to execute (used in error messages)
-   * @param path path of work (used in error messages)
-   * @param operation operation to execute
-   * @throws IOException any IOE raised, or translated exception
-   */
-  public void once(String action, Path path, VoidOperation operation)
+  public static void once(String action, String path, VoidOperation operation)
       throws IOException {
     once(action, path,
         () -> {
@@ -324,7 +294,7 @@ public class S3ALambda {
    * @param path path (for exception construction)
    * @param operation operation
    */
-  public void quietly(String action,
+  public static void quietly(String action,
       String path,
       VoidOperation operation) {
     try {
@@ -342,7 +312,7 @@ public class S3ALambda {
    * @param path path (for exception construction)
    * @param operation operation
    */
-  public <T> Optional<T> quietlyEval(String action,
+  public static <T> Optional<T> quietlyEval(String action,
       String path,
       Operation<T> operation) {
     try {
@@ -354,27 +324,26 @@ public class S3ALambda {
   }
 
   /**
-   * Take an action and path and produce a string for logging
+   * Take an action and path and produce a string for logging.
    * @param action action
    * @param path path (may be null or empty)
    * @return string for logs
    */
-  private String toDescription(String action, String path) {
+  private static String toDescription(String action, String path) {
     return action +
         (StringUtils.isNotEmpty(path) ? (" on " + path) : "");
   }
 
   /**
-   * Take an action and path and produce a string for logging
+   * Take an action and path and produce a string for logging.
    * @param action action
    * @param path path (may be null)
    * @return string for logs
    */
-  private String toDescription(String action, Path path) {
+  private static String toDescription(String action, Path path) {
     return toDescription(action,
         path != null ? path.toString() : "");
   }
-
 
   /**
    * Arbitrary operation throwing an IOException.
@@ -416,7 +385,7 @@ public class S3ALambda {
   public static final Retrying NO_OP = (e, retries, idempotent) -> { };
 
   /**
-   * And the no-op for catching things
+   * And the no-op for catching things.
    */
   public static final Catching CATCH_NO_OP = (t, e) -> {};
 

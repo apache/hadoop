@@ -390,7 +390,7 @@ public class S3AInstrumentation {
   }
 
   /**
-   * Indicate that S3A deleted one or more file.s
+   * Indicate that S3A deleted one or more files.
    * @param count number of files.
    */
   public void fileDeleted(int count) {
@@ -610,9 +610,12 @@ public class S3AInstrumentation {
 
     /**
      * The inner stream was opened.
+     * @return the previous count
      */
-    public void streamOpened() {
+    public long streamOpened() {
+      long count = openOperations;
       openOperations++;
+      return count;
     }
 
     /**

@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 
 import com.google.common.collect.Lists;
 import org.junit.Test;
@@ -34,7 +33,6 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.*;
@@ -153,7 +151,6 @@ public class TestStagingPartitionedJobCommit
 
     PartitionedStagingCommitter committer = newJobCommitter();
 
-//    getWrapperFS().setLogEvents(MockS3AFileSystem.LOG_STACK);
     committer.commitJob(getJob());
     verifyReplaceCommitActions(mockS3);
     verifyCompletion(mockS3);
@@ -226,15 +223,9 @@ public class TestStagingPartitionedJobCommit
     when(mockS3.exists(new Path(OUTPUT_PATH, "dateint=20161115/hour=14")))
         .thenThrow(new IOException(message));
 
-    intercept((Class<? extends Exception>) IOException.class, message,
+    intercept(IOException.class, message,
         "Should throw the fake IOException",
-        (Callable<?>) new Callable<Void>() {
-          @Override
-          public Void call() throws IOException {
-            committer.commitJob(getJob());
-            return null;
-          }
-        });
+        () -> committer.commitJob(getJob()));
 
     verifyExistenceChecked(mockS3, "dateint=20161115/hour=13");
     verifyDeleted(mockS3, "dateint=20161115/hour=13");
@@ -261,12 +252,7 @@ public class TestStagingPartitionedJobCommit
         .thenThrow(new IOException("Fake IOException for delete"));
 
     intercept(IOException.class, null, "Should throw the fake IOException",
-        new LambdaTestUtils.VoidCallable() {
-          @Override
-          public void call() throws IOException {
-            committer.commitJob(getJob());
-          }
-        });
+        () -> committer.commitJob(getJob()));
 
     verifyReplaceCommitActions(mockS3);
     verifyDeleted(mockS3, "dateint=20161116/hour=14");

@@ -113,7 +113,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
-   * Get the log; can be overridden for test case log
+   * Get the log; can be overridden for test case log.
    * @return a log.
    */
   public Logger log() {
@@ -357,7 +357,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
-   * Read a UTF-8 file
+   * Read a UTF-8 file.
    * @param path path to read
    * @return string value
    * @throws IOException IO failure
@@ -387,12 +387,12 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   /**
    * Closeable which can be used to safely close writers in
-   * a try-with-resources block.
+   * a try-with-resources block..
    */
   protected static class CloseWriter implements AutoCloseable{
 
-    final RecordWriter writer;
-    final TaskAttemptContext context;
+    private final RecordWriter writer;
+    private final TaskAttemptContext context;
 
     public CloseWriter(RecordWriter writer,
         TaskAttemptContext context) {

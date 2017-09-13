@@ -42,7 +42,7 @@ public class PathOutputCommitterFactory extends Configured {
   /**
    * Name of the configuration option used to configure the
    * output committer factory to use unless there is a specific
-   * one for a schema
+   * one for a schema.
    */
   public static final String OUTPUTCOMMITTER_FACTORY_CLASS =
       "mapreduce.pathoutputcommitter.factory.class";

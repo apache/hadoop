@@ -138,6 +138,16 @@ public class S3AFileSystem extends FileSystem {
    * Default blocksize as used in blocksize and FS status queries.
    */
   public static final int DEFAULT_BLOCKSIZE = 32 * 1024 * 1024;
+
+  /**
+   * This declared delete as idempotent.
+   * This is an "interesting" topic in past Hadoop FS work.
+   * Essentially: with a single caller, DELETE is idempotent
+   * but in a shared filesystem, it is is very much not so.
+   * Here, on the basis that isn't a filesystem with consistency guarantees,
+   * retryable results in files being deleted.
+  */
+  private static final boolean DELETE_CONSIDERED_IDEMPOTENT = true;
   private URI uri;
   private Path workingDir;
   private String username;
@@ -164,7 +174,8 @@ public class S3AFileSystem extends FileSystem {
   private CannedAccessControlList cannedACL;
   private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
-  private final S3AStorageStatistics storageStatistics = createStorageStatistics();
+  private final S3AStorageStatistics storageStatistics =
+      createStorageStatistics();
   private long readAhead;
   private S3AInputPolicy inputPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -339,6 +350,7 @@ public class S3AFileSystem extends FileSystem {
   /**
    * Verify that the bucket exists. This does not check permissions,
    * not even read access.
+   * Retry policy: retrying, translated.
    * @throws FileNotFoundException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
@@ -493,24 +505,22 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * Get the region of a bucket.
+   * Retry policy: retrying, translated.
    * @param bucketName the name of the bucket
    * @return the region in which a bucket is located
    * @throws IOException on any failure.
    */
   public String getBucketLocation(String bucketName) throws IOException {
-    try {
-      return s3.getBucketLocation(bucketName);
-    } catch (AmazonClientException e) {
-      throw translateException("getBucketLocation()",
-          bucketName, e);
-    }
+    return invoke.retry("getBucketLocation()",
+        bucketName,
+        true,
+        ()-> s3.getBucketLocation(bucketName));
   }
 
   /**
-   * Returns the read ahead range value used by this filesystem
-   * @return
+   * Returns the read ahead range value used by this filesystem.
+   * @return the readahead range
    */
-
   @VisibleForTesting
   long getReadAheadRange() {
     return readAhead;
@@ -685,7 +695,8 @@ public class S3AFileSystem extends FileSystem {
             statistics,
             instrumentation,
             readAhead,
-            inputPolicy));
+            inputPolicy,
+            invoke));
   }
 
   /**
@@ -1169,6 +1180,8 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * Request object metadata; increments counters in the process.
+   *
+   * Retry policy: retry untranslated.
    * @param key key
    * @return the metadata
    * @throws IOException if the retry invocation raises one (it shouldn't).
@@ -1187,7 +1200,7 @@ public class S3AFileSystem extends FileSystem {
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
           return s3.getObjectMetadata(request);
-    });
+        });
     incrementReadOperations();
     return meta;
   }
@@ -1195,6 +1208,8 @@ public class S3AFileSystem extends FileSystem {
   /**
    * Initiate a {@code listObjects} operation, incrementing metrics
    * in the process.
+   *
+   * Retry policy: retry untranslated.
    * @param request request to initiate
    * @return the results
    * @throws IOException if the retry invocation raises one (it shouldn't).
@@ -1218,7 +1233,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Validate the list arguments with this bucket's settings
+   * Validate the list arguments with this bucket's settings.
    * @param request the request to validate
    */
   private void validateListArguments(S3ListRequest request) {
@@ -1231,6 +1246,7 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * List the next set of objects.
+   * Retry policy: retry untranslated.
    * @param request last list objects request to continue
    * @param prevResult last paged result to continue from
    * @return the next result object
@@ -1276,6 +1292,8 @@ public class S3AFileSystem extends FileSystem {
    * <i>does not</i> update the metastore.
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
+   *
+   * Retry policy: retry untranslated; delete considered idempotent.
    * @param key key to blob to delete.
    * @throws AmazonClientException problems working with S3
    * @throws InvalidRequestException if the request was rejected due to
@@ -1287,7 +1305,7 @@ public class S3AFileSystem extends FileSystem {
     blockRootDelete(key);
     incrementWriteOperations();
     invoke.retryUntranslated("Delete "+ bucket + ":/" + key,
-      true,
+        DELETE_CONSIDERED_IDEMPOTENT,
         ()-> {
           incrementStatistic(OBJECT_DELETE_REQUESTS);
           s3.deleteObject(bucket, key);
@@ -1298,6 +1316,7 @@ public class S3AFileSystem extends FileSystem {
   /**
    * Delete an object, also updating the metastore.
    * This call does <i>not</i> create any mock parent entries.
+   * Retry policy: retry untranslated; delete considered idempotent.
    * @param f path path to delete
    * @param key key of entry
    * @param isFile is the path a file (used for instrumentation only)
@@ -1332,17 +1351,22 @@ public class S3AFileSystem extends FileSystem {
    * Perform a bulk object delete operation.
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
    * operation statistics.
+   * Retry policy: retry untranslated; delete considered idempotent.
    * @param deleteRequest keys to delete on the s3-backend
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted.
    * @throws AmazonClientException amazon-layer failure.
    */
   private void deleteObjects(DeleteObjectsRequest deleteRequest)
-      throws MultiObjectDeleteException, AmazonClientException {
+      throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
-    incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
     try {
-      s3.deleteObjects(deleteRequest);
+      invoke.retryUntranslated("delete",
+          DELETE_CONSIDERED_IDEMPOTENT,
+          () -> {
+            incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
+            return s3.deleteObjects(deleteRequest);
+          });
     } catch (MultiObjectDeleteException e) {
       // one or more of the operations failed.
       List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
@@ -1434,6 +1458,7 @@ public class S3AFileSystem extends FileSystem {
    * Because the operation is async, any stream supplied in the request
    * must reference data (files, buffers) which stay valid until the upload
    * completes.
+   * Retry policy: N/A: the transfer manager is performing the upload.
    * @param putObjectRequest the request
    * @return the upload initiated
    */
@@ -1495,7 +1520,8 @@ public class S3AFileSystem extends FileSystem {
    * Upload part of a multi-partition file.
    * Increments the write and put counters.
    * <i>Important: this call does not close any input stream in the request.</i>
-   * Retry Policy: none
+   *
+   * Retry Policy: none.
    * @param request request
    * @return the result of the operation.
    * @throws AmazonClientException on problems
@@ -1565,7 +1591,7 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * A helper method to delete a list of keys on a s3-backend.
-   *
+   * Retry policy: retry untranslated; delete considered idempotent.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param clearKeys clears the keysToDelete-list after processing the list
@@ -1685,7 +1711,6 @@ public class S3AFileSystem extends FileSystem {
             LOG.debug("Got object to delete {}", summary.getKey());
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-              // TODO: HADOOP-13761 S3Guard: retries
               removeKeys(keys, true, false);
             }
           }
@@ -2467,7 +2492,8 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Initiate an MPU.
+   * Initiate a multipart upload from the preconfigured request.
+   * Retry policy: none + untranslated.
    * @param request request to initiate
    * @return the result of the call
    * @throws AmazonClientException on failures inside the AWS SDK
@@ -2592,7 +2618,7 @@ public class S3AFileSystem extends FileSystem {
     }
     try {
       removeKeys(keysToRemove, false, true);
-    } catch(AmazonClientException | IOException e ) {
+    } catch(AmazonClientException | IOException e) {
       instrumentation.errorIgnored();
       if (LOG.isDebugEnabled()) {
         StringBuilder sb = new StringBuilder();
@@ -3021,7 +3047,7 @@ public class S3AFileSystem extends FileSystem {
 
   /**
    * Listing all multipart uploads; limited to the first few hundred.
-   * Retry policy: None.
+   * Retry policy: retry, translated.
    * @return a listing of multipart uploads.
    * @param prefix prefix to scan for, "" for none
    * @throws IOException IO failure, including any uprated AmazonClientException
@@ -3035,7 +3061,7 @@ public class S3AFileSystem extends FileSystem {
       request.setPrefix(prefix);
     }
 
-    return invoke.once("listMultipartUpoloads", prefix,
+    return invoke.retry("listMultipartUpoloads", prefix, true,
         () -> s3.listMultipartUploads(request).getMultipartUploads());
   }
 

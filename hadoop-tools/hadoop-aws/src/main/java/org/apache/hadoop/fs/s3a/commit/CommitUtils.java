@@ -190,7 +190,7 @@ public final class CommitUtils {
 
   /**
    * Take a list of elements and create an S3 key by joining them
-   * with "/" between each one
+   * with "/" between each one.
    * @param elements path elements
    * @return a path which can be used in the AWS API
    */

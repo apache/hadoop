@@ -52,9 +52,10 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * the latter is best handled for longer with an exponential back-off.
  *
  * <ol>
- * <li> Those exceptions considered unrecoverable (networking) are failed fast.</li>
- * <li>All non-IOEs are failed immediately. Assumed: bugs in code, unrecoverable
- * errors, etc</li>
+ * <li> Those exceptions considered unrecoverable (networking) are
+ *    failed fast.</li>
+ * <li>All non-IOEs are failed immediately. Assumed: bugs in code,
+ *    unrecoverable errors, etc</li>
  * </ol>
  *
  * For non-idempotent operations, only failures due to throttling or
@@ -73,7 +74,6 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
  * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
-
  */
 public class S3ARetryPolicy implements RetryPolicy {
 
@@ -129,7 +129,6 @@ public class S3ARetryPolicy implements RetryPolicy {
     // interesting question: should this be retried ever?
     policyMap.put(AccessDeniedException.class, fail);
     policyMap.put(FileNotFoundException.class, fail);
-    policyMap.put(EOFException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 
     // should really be handled by resubmitting to new location;
@@ -141,6 +140,12 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // connectivity problems are retried without worrying about idempotency
     policyMap.put(ConnectTimeoutException.class, connectivityFailure);
+
+    // this can be a sign of an HTTP connection breaking early.
+    // which can be reacted to by another attempt if the request was idempotent.
+    // But: could also be a sign of trying to read past the EOF on a GET,
+    // which isn't going to be recovered from
+    policyMap.put(EOFException.class, maybeRetry);
 
     // policy on a 400/bad request still ambiguous. Given it
     // comes and goes on test runs: try again

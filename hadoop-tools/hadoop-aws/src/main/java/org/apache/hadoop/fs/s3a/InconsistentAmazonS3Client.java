@@ -209,14 +209,14 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   }
 
   @Override
-  public DeleteObjectsResult deleteObjects(DeleteObjectsRequest
-      deleteObjectsRequest)
+  public DeleteObjectsResult deleteObjects(
+      DeleteObjectsRequest deleteObjectsRequest)
       throws AmazonClientException, AmazonServiceException {
-      maybeFail();
-      for (DeleteObjectsRequest.KeyVersion keyVersion :
+    maybeFail();
+    for (DeleteObjectsRequest.KeyVersion keyVersion :
         deleteObjectsRequest.getKeys()) {
-      registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest
-          .getBucketName());
+    registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest
+        .getBucketName());
     }
     return super.deleteObjects(deleteObjectsRequest);
   }

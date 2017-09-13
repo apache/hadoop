@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
@@ -102,6 +104,8 @@ public final class S3AUtils {
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
           + SERVER_SIDE_ENCRYPTION_KEY;
+  private static final String EOF_MESSAGE_IN_XML_PARSER
+      = "Failed to sanitize XML document destined for handler class";
 
 
   private S3AUtils() {
@@ -153,10 +157,16 @@ public final class S3AUtils {
         // interrupted IO, or a socket exception underneath that class
         return translateInterruptedException(exception, innerCause, message);
       }
+      if (signifiesConnectionBroken(exception)) {
+        // call considered an sign of connectivity failure
+        return (EOFException)new EOFException(message).initCause(exception);
+      }
       return new AWSClientIOException(message, exception);
     } else {
       if (exception instanceof AmazonDynamoDBException) {
         // special handling for dynamo DB exceptions
+        return translateDynamoDBException(message,
+            (AmazonDynamoDBException)exception);
       }
       IOException ioe;
       AmazonServiceException ase = (AmazonServiceException) exception;
@@ -262,7 +272,8 @@ public final class S3AUtils {
       return null;
     }
     if (thrown instanceof InterruptedException ||
-        thrown instanceof InterruptedIOException) {
+        thrown instanceof InterruptedIOException ||
+        thrown instanceof AbortedException) {
       return (Exception)thrown;
     }
     // tail recurse
@@ -302,9 +313,9 @@ public final class S3AUtils {
   }
 
   /**
-   * Is the exception and instance of a throttling exception
-   * @param ex
-   * @return
+   * Is the exception an instance of a throttling exception.
+   * @param ex exception to examine
+   * @return true if it is one of the AWS exceptions
    */
   public static boolean isThrottleException(Exception ex) {
     return ex instanceof AWSServiceThrottledException
@@ -313,17 +324,24 @@ public final class S3AUtils {
   }
 
   /**
+   * Cue that an AWS exception is likely to be an EOF Exception based
+   * on the message coming back from an XML/JSON parser. This is likely
+   * to be brittle, so only a hint.
+   * @param ex exception
+   * @return true if this is believed to be a sign the connection was broken.
+   */
+  public static boolean signifiesConnectionBroken(SdkBaseException ex) {
+    return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER);
+  }
+
+  /**
    * Translate a DynamoDB exception into an IOException.
-   * @param operation operation which failed
+   * @param message preformatted message for the exception
    * @param ex exception
    * @return an exception to throw.
    */
-  public static IOException translateDynamoDBException(String  operation,
+  public static IOException translateDynamoDBException(String message,
       AmazonDynamoDBException ex) {
-    String message = String.format("%s: %s",
-        operation != null? operation : "",
-        ex.toString());
-
     if (isThrottleException(ex)) {
       return new AWSServiceThrottledException(message, ex);
     }

@@ -71,7 +71,6 @@ public class JsonSerDeser<T> extends JsonSerialization<T> {
    * @throws NoRecordException if the data is not considered a record: either
    * it is too short or it did not contain the marker string.
    */
-  @Override
   public T fromBytes(String path, byte[] bytes) throws IOException {
     return fromBytes(path, bytes, "");
   }
