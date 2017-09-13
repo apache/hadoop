@@ -123,6 +123,13 @@ public class LocatedFileStatus extends FileStatus {
 
   /**
    * Get the file's block locations
+   *
+   * In HDFS, the returned BlockLocation will have different formats for
+   * replicated and erasure coded file.
+   * Please refer to
+   * {@link FileSystem#getFileBlockLocations(FileStatus, long, long)}
+   * for more details.
+   *
    * @return the file's block locations
    */
   public BlockLocation[] getBlockLocations() {
