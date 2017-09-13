@@ -28,6 +28,34 @@ import org.apache.hadoop.util.StringInterner;
  * Represents the network location of a block, information about the hosts
  * that contain block replicas, and other block metadata (E.g. the file
  * offset associated with the block, length, whether it is corrupt, etc).
+ *
+ * For a single BlockLocation, it will have different meanings for replicated
+ * and erasure coded files.
+ *
+ * If the file is 3-replicated, offset and length of a BlockLocation represent
+ * the absolute value in the file and the hosts are the 3 datanodes that
+ * holding the replicas. Here is an example:
+ * <pre>
+ * BlockLocation(offset: 0, length: BLOCK_SIZE,
+ *   hosts: {"host1:9866", "host2:9866, host3:9866"})
+ * </pre>
+ *
+ * And if the file is erasure-coded, each BlockLocation represents a logical
+ * block groups. Value offset is the offset of a block group in the file and
+ * value length is the total length of a block group. Hosts of a BlockLocation
+ * are the datanodes that holding all the data blocks and parity blocks of a
+ * block group.
+ * Suppose we have a RS_3_2 coded file (3 data units and 2 parity units).
+ * A BlockLocation example will be like:
+ * <pre>
+ * BlockLocation(offset: 0, length: 3 * BLOCK_SIZE, hosts: {"host1:9866",
+ *   "host2:9866","host3:9866","host4:9866","host5:9866"})
+ * </pre>
+ *
+ * Please refer to
+ * {@link FileSystem#getFileBlockLocations(FileStatus, long, long)} or
+ * {@link FileContext#getFileBlockLocations(Path, long, long)}
+ * for more examples.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
