@@ -55,19 +55,19 @@ public final class ErasureCodingWorker {
     this.datanode = datanode;
     this.conf = conf;
 
-    initializeStripedReadThreadPool(conf.getInt(
-        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_KEY,
-        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_THREADS_DEFAULT));
+    initializeStripedReadThreadPool();
     initializeStripedBlkReconstructionThreadPool(conf.getInt(
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_KEY,
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT));
   }
 
-  private void initializeStripedReadThreadPool(int num) {
-    LOG.debug("Using striped reads; pool threads={}", num);
+  private void initializeStripedReadThreadPool() {
+    LOG.debug("Using striped reads");
 
-    stripedReadPool = new ThreadPoolExecutor(1, num, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(),
+    // Essentially, this is a cachedThreadPool.
+    stripedReadPool = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+        60, TimeUnit.SECONDS,
+        new SynchronousQueue<>(),
         new Daemon.DaemonFactory() {
           private final AtomicInteger threadIndex = new AtomicInteger(0);
 
