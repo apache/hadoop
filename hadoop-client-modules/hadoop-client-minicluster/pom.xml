@@ -348,11 +348,6 @@
           <artifactId>jersey-servlet</artifactId>
       <optional>true</optional>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.jdt</groupId>
-      <artifactId>core</artifactId>
-      <optional>true</optional>
-    </dependency>
     <!-- skip org.apache.avro:avro-ipc because it doesn't look like hadoop-common actually uses it -->
     <dependency>
       <groupId>net.sf.kosmosfs</groupId>
@@ -595,6 +590,7 @@
                       <exclude>org.slf4j:slf4j-api</exclude>
                       <exclude>commons-logging:commons-logging</exclude>
                       <exclude>junit:junit</exclude>
+                      <exclude>com.google.code.findbugs:jsr305</exclude>
                       <!-- Keep optional runtime deps out of the shading -->
                       <exclude>org.apache.hadoop:hadoop-yarn-server-timelineservice</exclude>
                       <exclude>log4j:log4j</exclude>
@@ -654,6 +650,41 @@
                         <exclude>objenesis-license.txt</exclude>
                         <exclude>org/hamcrest/**/*.class</exclude>
                         <exclude>org/hamcrest/*.class</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- skip grizzly internals we don't need to run. -->
+                    <filter>
+                      <artifact>org.glassfish.grizzly:grizzly-http-servlet</artifact>
+                      <excludes>
+                        <exclude>catalog.cat</exclude>
+                        <exclude>javaee_5.xsd</exclude>
+                        <exclude>javaee_6.xsd</exclude>
+                        <exclude>javaee_web_services_client_1_2.xsd</exclude>
+                        <exclude>javaee_web_services_client_1_3.xsd</exclude>
+                        <exclude>jsp_2_1.xsd</exclude>
+                        <exclude>jsp_2_2.xsd</exclude>
+                        <exclude>web-app_2_5.xsd</exclude>
+                        <exclude>web-app_3_0.xsd</exclude>
+                        <exclude>web-common_3_0.xsd</exclude>
+                        <exclude>xml.xsd</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
+                      <artifact>org.eclipse.jetty:*</artifact>
+                      <excludes>
+                        <exclude>about.html</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.apache.hadoop:*</artifact>
+                      <excludes>
+                        <!-- No shipping log4j configs in a downstream facing library -->
+                        <exclude>log4j.properties</exclude>
+                        <exclude>container-log4j.properties</exclude>
+                        <!-- keep optional runtime configuration out of the jar; downstream can provide -->
+                        <exclude>capacity-scheduler.xml</exclude>
+                        <exclude>krb5.conf</exclude>
                       </excludes>
                     </filter>
                   </filters>
@@ -738,9 +769,17 @@
                         <exclude>**/pom.xml</exclude>
                       </excludes>
                     </relocation>
+                    <!-- JSRs that haven't made it to inclusion in J2SE -->
                     <relocation>
                       <pattern>javax/el/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.el.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/cache/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.cache.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>
@@ -755,6 +794,13 @@
                     <relocation>
                       <pattern>javax/servlet/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/ws/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.ws.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>
@@ -775,6 +821,11 @@
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
                       </excludes>
+                    </relocation>
+                    <!-- okio declares a top level package instead of nested -->
+                    <relocation>
+                      <pattern>okio/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.okio.</shadedPattern>
                     </relocation>
                   </relocations>
                   <transformers>
