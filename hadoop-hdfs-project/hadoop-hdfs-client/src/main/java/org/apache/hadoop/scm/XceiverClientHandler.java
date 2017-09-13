@@ -18,6 +18,8 @@
 package org.apache.hadoop.scm;
 
 import com.google.common.base.Preconditions;
+import com.sun.tools.javac.util.Pair;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
 
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +39,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-
 /**
  * Netty client handler.
  */
@@ -45,11 +47,13 @@ public class XceiverClientHandler extends
 
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientHandler.class);
   private final ConcurrentMap<String,
-      CompletableFuture<ContainerCommandResponseProto>> responses =
+      Pair<CompletableFuture<ContainerCommandResponseProto>, Long>> responses =
       new ConcurrentHashMap<>();
 
   private final Pipeline pipeline;
   private volatile Channel channel;
+
+  private XceiverClientMetrics metrics;
 
   /**
    * Constructs a client that can communicate to a container server.
@@ -57,6 +61,7 @@ public class XceiverClientHandler extends
   public XceiverClientHandler(Pipeline pipeline) {
     super(false);
     this.pipeline = pipeline;
+    this.metrics = XceiverClientManager.getXceiverClientMetrics();
   }
 
   /**
@@ -76,11 +81,18 @@ public class XceiverClientHandler extends
       ContainerProtos.ContainerCommandResponseProto msg)
       throws Exception {
     Preconditions.checkNotNull(msg);
+    metrics.decrPendingContainerOpsMetrics(msg.getCmdType());
+
     String key = msg.getTraceID();
-    CompletableFuture<ContainerCommandResponseProto> future =
+    Pair<CompletableFuture<ContainerCommandResponseProto>, Long> future =
         responses.remove(key);
+
     if (future != null) {
-      future.complete(msg);
+      future.fst.complete(msg);
+
+      long requestTime = future.snd;
+      metrics.addContainerOpsLatency(msg.getCmdType(),
+          Time.monotonicNowNanos() - requestTime);
     } else {
       LOG.error("A reply received for message that was not queued. trace " +
           "ID: {}", msg.getTraceID());
@@ -130,11 +142,14 @@ public class XceiverClientHandler extends
     if(StringUtils.isEmpty(request.getTraceID())) {
       throw new IllegalArgumentException("Invalid trace ID");
     }
+    metrics.incrPendingContainerOpsMetrics(request.getCmdType());
 
-    CompletableFuture<ContainerCommandResponseProto> response =
-        new CompletableFuture<>();
-
-    CompletableFuture<ContainerCommandResponseProto> previous =
+    CompletableFuture<ContainerCommandResponseProto> future
+        = new CompletableFuture<>();
+    Pair<CompletableFuture<ContainerCommandResponseProto>, Long> response =
+        new Pair<CompletableFuture<ContainerCommandResponseProto>,
+        Long>(future, Time.monotonicNowNanos());
+    Pair<CompletableFuture<ContainerCommandResponseProto>, Long> previous =
         responses.putIfAbsent(request.getTraceID(), response);
 
     if (previous != null) {
@@ -147,6 +162,6 @@ public class XceiverClientHandler extends
     }
 
     channel.writeAndFlush(request);
-    return response;
+    return response.fst;
   }
 }
