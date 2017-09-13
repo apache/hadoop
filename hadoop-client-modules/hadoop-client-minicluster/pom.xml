@@ -75,6 +75,9 @@
       <scope>provided</scope>
     </dependency>
  -->
+    <!-- Anything we're going to include in the relocated jar we list as optional
+         in order to work around MNG-5899
+      -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-minicluster</artifactId>
@@ -282,6 +285,12 @@
       </exclusions>
     </dependency>
 
+    <!-- Add back in Mockito since the hadoop-hdfs test jar needs it. -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <optional>true</optional>
+    </dependency>
     <!-- Add back in the transitive dependencies excluded from hadoop-common in client TODO remove once we have a filter for "is in these artifacts" -->
     <!-- skip javax.servlet:servlet-api because it's in client -->
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
@@ -633,6 +642,18 @@
                       <excludes>
                         <exclude>testjar/*</exclude>
                         <exclude>testshell/*</exclude>
+                      </excludes>
+                    </filter>
+                    <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
+                    <filter>
+                      <artifact>org.mockito:mockito-all</artifact>
+                      <excludes>
+                        <exclude>asm-license.txt</exclude>
+                        <exclude>cglib-license.txt</exclude>
+                        <exclude>hamcrest-license.txt</exclude>
+                        <exclude>objenesis-license.txt</exclude>
+                        <exclude>org/hamcrest/**/*.class</exclude>
+                        <exclude>org/hamcrest/*.class</exclude>
                       </excludes>
                     </filter>
                   </filters>
