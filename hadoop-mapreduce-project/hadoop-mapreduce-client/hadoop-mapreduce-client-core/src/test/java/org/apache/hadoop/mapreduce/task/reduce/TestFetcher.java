@@ -475,7 +475,10 @@ public class TestFetcher {
 
     underTest.copyFromHost(host);
     verify(allErrs).increment(1);
-    verify(ss).copyFailed(map1ID, host, false, false);
+    verify(ss, times(1)).copyFailed(map1ID, host, false, false);
+    verify(ss, times(1)).copyFailed(map2ID, host, false, false);
+    verify(ss, times(1)).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
+    verify(ss, times(1)).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
   }
 
   @Test

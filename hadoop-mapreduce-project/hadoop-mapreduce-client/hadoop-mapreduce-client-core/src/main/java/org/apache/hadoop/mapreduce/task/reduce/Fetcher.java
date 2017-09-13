@@ -278,9 +278,6 @@ class Fetcher<K,V> extends Thread {
       LOG.warn("Connection rejected by the host " + te.host +
           ". Will retry later.");
       scheduler.penalize(host, te.backoff);
-      for (TaskAttemptID left : remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
-      }
     } catch (IOException ie) {
       boolean connectExcpt = ie instanceof ConnectException;
       ioErrs.increment(1);
@@ -292,11 +289,6 @@ class Fetcher<K,V> extends Thread {
       scheduler.hostFailed(host.getHostName());
       for(TaskAttemptID left: remaining) {
         scheduler.copyFailed(left, host, false, connectExcpt);
-      }
-
-      // Add back all the remaining maps, WITHOUT marking them as failed
-      for(TaskAttemptID left: remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
       }
     }
 
@@ -332,12 +324,14 @@ class Fetcher<K,V> extends Thread {
     
     // Construct the url and connect
     URL url = getMapOutputURL(host, maps);
-    DataInputStream input = openShuffleUrl(host, remaining, url);
-    if (input == null) {
-      return;
-    }
+    DataInputStream input = null;
     
     try {
+      input = openShuffleUrl(host, remaining, url);
+      if (input == null) {
+        return;
+      }
+
       // Loop through available map-outputs and fetch them
       // On any error, faildTasks is not null and we exit
       // after putting back the remaining maps to the 
