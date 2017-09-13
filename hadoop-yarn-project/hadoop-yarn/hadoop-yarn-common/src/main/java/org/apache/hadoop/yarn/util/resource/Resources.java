@@ -167,7 +167,7 @@ public class Resources {
   
   public static Resource unbounded() {
     return UNBOUNDED;
-  }
+  }  
 
   public static Resource clone(Resource res) {
     return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute());
@@ -177,6 +177,12 @@ public class Resources {
     lhs.setMemory(lhs.getMemory() + rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
     lhs.setGPUs(lhs.getGPUs() + rhs.getGPUs());
+    
+    // MJTHIS: TODO: make sure if this works well with recovery scenarios
+    assert (lhs.getGPUAttribute() & rhs.getGPUAttribute()) == 0 : "lhs GPU attribute is " +
+            lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
+
+    lhs.setGPUAttribute(lhs.getGPUAttribute() | rhs.getGPUAttribute());    
     return lhs;
   }
 
@@ -184,51 +190,22 @@ public class Resources {
     return addTo(clone(lhs), rhs);
   }
 
-  public static Resource addToWithGPUAttribute(Resource lhs, Resource rhs) {
-    lhs.setMemory(lhs.getMemory() + rhs.getMemory());
-    lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
-    lhs.setGPUs(lhs.getGPUs() + rhs.getGPUs());
-
-    // MJTHIS: TODO: make sure if this works well with recovery scenarios
-    assert (lhs.getGPUAttribute() & rhs.getGPUAttribute()) == 0 : "lhs GPU attribute is " +
-            lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
-
-    lhs.setGPUAttribute(lhs.getGPUAttribute() | rhs.getGPUAttribute());
-
-    return lhs;
-  }
-
-  public static Resource addWithGPUAttribute(Resource lhs, Resource rhs) {
-    return addToWithGPUAttribute(clone(lhs), rhs);
-  }
-
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() - rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
     lhs.setGPUs(lhs.getGPUs() - rhs.getGPUs());
-    return lhs;
-  }
-
-  public static Resource subtract(Resource lhs, Resource rhs) {
-    return subtractFrom(clone(lhs), rhs);
-  }
-
-  public static Resource subtractFromWithGPUAttribute(Resource lhs, Resource rhs) {
-    lhs.setMemory(lhs.getMemory() - rhs.getMemory());
-    lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
-    lhs.setGPUs(lhs.getGPUs() - rhs.getGPUs());
-
+    
     // MJTHIS: TODO: make sure if this works well with recovery scenarios
     assert (lhs.getGPUAttribute() | rhs.getGPUAttribute()) == lhs.getGPUAttribute() : "lhs GPU attribute is " +
             lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
 
     lhs.setGPUAttribute(lhs.getGPUAttribute() & ~rhs.getGPUAttribute());
-
+    
     return lhs;
   }
 
-  public static Resource subtractWithGPUAttribute(Resource lhs, Resource rhs) {
-    return subtractFromWithGPUAttribute(clone(lhs), rhs);
+  public static Resource subtract(Resource lhs, Resource rhs) {
+    return subtractFrom(clone(lhs), rhs);
   }
 
   public static Resource negate(Resource resource) {
@@ -348,35 +325,18 @@ public class Resources {
   }
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
-    return smaller.getMemory() <= bigger.getMemory() &&
+	  boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
         smaller.getVirtualCores() <= bigger.getVirtualCores() &&
         smaller.getGPUs() <= bigger.getGPUs();
+	  if (fitsIn == true) {	     
+		  if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute())
+		  {
+		      fitsIn = false;
+		  }
+	  }
+	  return fitsIn;
   }
 
-  public static boolean fitsInWithGPUAttribute(Resource smaller, Resource bigger, Resource all) {
-    boolean fitsIn = fitsIn(smaller, bigger);
-    if (fitsIn == true) {
-      if (smaller.getGPUAttribute() > 0) {
-        if(searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), true, false) != 0) {
-          return true;
-        }
-        else {
-          return false;
-        }
-      }
-      else {
-        if(searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), false, false) != 0) {
-          return true;
-        }
-        else {
-          return false;
-        }
-      }
-    }
-    else {
-      return false;
-    }
-  }
 
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
@@ -390,68 +350,28 @@ public class Resources {
         Math.max(lhs.getGPUs(), rhs.getGPUs()));
   }
 
-  public static int allocateGPUs(Resource smaller, Resource bigger, Resource all) {
-    if (smaller.getGPUAttribute() > 0) {
-      return searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), true, true);
+  public static int allocateGPUs(Resource smaller, Resource bigger) {
+    if (smaller.getGPUAttribute() > 0) {    	
+    	 if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) == smaller.getGPUAttribute()){    		 
+    		 return smaller.getGPUAttribute();
+    	 }
+    	 else {
+    		 return 0;
+    	 }
     }
     else {
-      return searchGPUs(smaller.getGPUs(), bigger.getGPUAttribute(), all.getGPUAttribute(), false, true);
+    	return allocateGPUsByCount(smaller.getGPUs(), bigger.getGPUAttribute());
     }
   }
 
-  private static synchronized int searchGPUs(int request, int available, int total, boolean locality, boolean allocate)
+  private static int allocateGPUsByCount(int requestCount, int available)
   {
-    assert request <= 32;
-
-    if (locality == false) {
-      if (allocate == false) {
-        return request <= Integer.bitCount(available) ? 1 : 0;
-      }
-      else {
-        int result = allocateGPUs(request, available);
-        assert Integer.bitCount(result) == request;
-        return result;
-      }
-    }
-    else {
-      // Now, just assume that each CPU node has four GPUs.
-      int numGPUsPerNode = 4;
-      int bitmask = 0xF;
-      int span = ((request - 1) / 4) + 1;   // Number of CPU nodes to span
-      int result = 0;
-      int requestPerNode = Math.min(request, numGPUsPerNode);
-
-      for (int i = 0; i < Integer.SIZE / numGPUsPerNode; i++) {
-        int in = available & (bitmask << (i * 4));
-        int out = allocateGPUs(requestPerNode, in);
-        if (Integer.bitCount(out) == requestPerNode) {
-          span--;
-          result = result | out;
-          if (span == 0) {
-            break;
-          }
-        }
-      }
-      if (allocate == false) {
-        return Integer.bitCount(result) == request ? 1 : 0;
-      }
-      else {
-        assert Integer.bitCount(result) == request;
-        return result;
-      }
-    }
-  }
-
-  private static int allocateGPUs(int request, int available)
-  {
-    int result = 0;
-    int pos = 1;
-    while ((Integer.bitCount(result) < request) && (pos != 0)) {
-      if ((pos & available) != 0) {
-        result = result | pos;
-      }
-      pos = pos << 1;
-    }
+    int result = available;
+    int availableCount = Integer.bitCount(available);
+    while(availableCount-- > requestCount)
+    {
+    	result &= result -1;
+    }	
     return result;
   }
 }

@@ -517,7 +517,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // satisfied with GPU locality. If not fitting in, we mostly create a container.
 
     // Can we allocate a container on this node?
-    if (Resources.fitsInWithGPUAttribute(capability, available, node.getTotalResource())) {
+    if (Resources.fitsIn(capability, available)) {
       // Inform the application of the new container for this request
       RMContainer allocatedContainer =
           allocate(type, node, request.getPriority(), request, container);
@@ -535,7 +535,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       }
 
       LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
-      int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
+      int allocated = Resources.allocateGPUs(capability, available);
       LOG.info("Allocated GPUs in bitvector format: " + allocated);
       container.setGPULocation(allocated);
 
@@ -687,8 +687,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // Fail early if the reserved container won't fit.
     // Note that we have an assumption here that there's only one container size
     // per priority.
-    if (!Resources.fitsInWithGPUAttribute(node.getReservedContainer().getReservedResource(),
-        node.getAvailableResource(), node.getTotalResource())) {
+    if (!Resources.fitsIn(node.getReservedContainer().getReservedResource(),
+        node.getAvailableResource())) {
       return Resources.none();
     }
 

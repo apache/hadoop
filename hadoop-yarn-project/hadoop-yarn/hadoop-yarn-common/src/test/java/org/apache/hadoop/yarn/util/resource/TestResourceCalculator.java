@@ -35,7 +35,8 @@ public class TestResourceCalculator {
   public static Collection<ResourceCalculator[]> getParameters() {
     return Arrays.asList(new ResourceCalculator[][] {
         { new DefaultResourceCalculator() },
-        { new DominantResourceCalculator() } });
+        { new DominantResourceCalculator() }, 
+        { new GPUResourceCalculator()} });
   }
 
   public TestResourceCalculator(ResourceCalculator rs) {

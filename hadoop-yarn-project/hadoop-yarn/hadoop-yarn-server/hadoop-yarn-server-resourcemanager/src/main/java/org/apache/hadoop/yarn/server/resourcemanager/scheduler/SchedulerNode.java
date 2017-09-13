@@ -95,7 +95,7 @@ public abstract class SchedulerNode {
    */
   public synchronized void setTotalResource(Resource resource){
     this.totalResourceCapability = resource;
-    this.availableResource = Resources.subtractWithGPUAttribute(totalResourceCapability,
+    this.availableResource = Resources.subtract(totalResourceCapability,
       this.usedResource);
   }
   
@@ -226,8 +226,9 @@ public abstract class SchedulerNode {
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.subtractFromWithGPUAttribute(usedResource, resource);
-    Resources.addToWithGPUAttribute(availableResource, resource);
+
+    Resources.addTo(availableResource, resource);
+    Resources.subtractFrom(usedResource, resource);
 
     //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
     //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
@@ -239,8 +240,9 @@ public abstract class SchedulerNode {
           + rmNode.getNodeAddress());
       return;
     }
-    Resources.addToWithGPUAttribute(usedResource, resource);
-    Resources.subtractFromWithGPUAttribute(availableResource, resource);
+
+    Resources.subtractFrom(availableResource, resource);
+    Resources.addTo(usedResource, resource);
 
     //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
     //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
