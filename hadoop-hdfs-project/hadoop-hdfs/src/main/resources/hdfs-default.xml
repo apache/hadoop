@@ -3049,15 +3049,6 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedread.threads</name>
-  <value>20</value>
-  <description>
-    Number of threads used by the Datanode to read striped block
-    during background reconstruction work.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.ec.reconstruction.stripedread.buffer.size</name>
   <value>65536</value>
   <description>Datanode striped read buffer size.
