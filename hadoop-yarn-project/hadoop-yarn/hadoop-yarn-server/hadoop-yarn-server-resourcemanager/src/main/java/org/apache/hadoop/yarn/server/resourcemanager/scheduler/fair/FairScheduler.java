@@ -151,23 +151,13 @@ public class FairScheduler extends
   // reserved
   public static final Resource CONTAINER_RESERVED = Resources.createResource(-1);
 
-  // How often fair shares are re-calculated (ms)
-  protected long updateInterval;
   private final int UPDATE_DEBUG_FREQUENCY = 25;
   private int updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
-
-  @VisibleForTesting
-  Thread updateThread;
-
-  private final Object updateThreadMonitor = new Object();
 
   @VisibleForTesting
   Thread schedulingThread;
 
   Thread preemptionThread;
-
-  // timeout to join when we stop this service
-  protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
 
   // Aggregate metrics
   FSQueueMetrics rootMetrics;
@@ -292,40 +282,6 @@ public class FairScheduler extends
     return queueMgr;
   }
 
-  // Allows UpdateThread to start processing without waiting till updateInterval
-  void triggerUpdate() {
-    synchronized (updateThreadMonitor) {
-      updateThreadMonitor.notify();
-    }
-  }
-
-  /**
-   * Thread which calls {@link FairScheduler#update()} every
-   * <code>updateInterval</code> milliseconds.
-   */
-  private class UpdateThread extends Thread {
-
-    @Override
-    public void run() {
-      while (!Thread.currentThread().isInterrupted()) {
-        try {
-          synchronized (updateThreadMonitor) {
-            updateThreadMonitor.wait(updateInterval);
-          }
-          long start = getClock().getTime();
-          update();
-          long duration = getClock().getTime() - start;
-          fsOpDurations.addUpdateThreadRunDuration(duration);
-        } catch (InterruptedException ie) {
-          LOG.warn("Update thread interrupted. Exiting.");
-          return;
-        } catch (Exception e) {
-          LOG.error("Exception in fair scheduler UpdateThread", e);
-        }
-      }
-    }
-  }
-
   /**
    * Thread which attempts scheduling resources continuously,
    * asynchronous to the node heartbeats.
@@ -367,7 +323,10 @@ public class FairScheduler extends
    * required resources per job.
    */
   @VisibleForTesting
+  @Override
   public void update() {
+    // Storing start time for fsOpDurations
+    long start = getClock().getTime();
     FSQueue rootQueue = queueMgr.getRootQueue();
 
     // Update demands and fairshares
@@ -402,6 +361,7 @@ public class FairScheduler extends
     } finally {
       readLock.unlock();
     }
+    fsOpDurations.addUpdateThreadRunDuration(getClock().getTime() - start);
   }
 
   public RMContainerTokenSecretManager
@@ -1339,12 +1299,6 @@ public class FairScheduler extends
         throw new IOException("Failed to start FairScheduler", e);
       }
 
-      updateThread = new UpdateThread();
-      updateThread.setName("FairSchedulerUpdateThread");
-      updateThread.setUncaughtExceptionHandler(
-          new RMCriticalThreadUncaughtExceptionHandler(rmContext));
-      updateThread.setDaemon(true);
-
       if (continuousSchedulingEnabled) {
         // start continuous scheduling thread
         schedulingThread = new ContinuousSchedulingThread();
@@ -1391,9 +1345,7 @@ public class FairScheduler extends
   private void startSchedulerThreads() {
     try {
       writeLock.lock();
-      Preconditions.checkNotNull(updateThread, "updateThread is null");
       Preconditions.checkNotNull(allocsLoader, "allocsLoader is null");
-      updateThread.start();
       if (continuousSchedulingEnabled) {
         Preconditions.checkNotNull(schedulingThread,
             "schedulingThread is null");
@@ -1424,10 +1376,6 @@ public class FairScheduler extends
   public void serviceStop() throws Exception {
     try {
       writeLock.lock();
-      if (updateThread != null) {
-        updateThread.interrupt();
-        updateThread.join(THREAD_JOIN_TIMEOUT_MS);
-      }
       if (continuousSchedulingEnabled) {
         if (schedulingThread != null) {
           schedulingThread.interrupt();

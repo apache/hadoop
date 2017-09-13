@@ -817,6 +817,8 @@ public class MockRM extends ResourceManager {
           RMAppAttemptState.SCHEDULED);
     }
 
+    ((AbstractYarnScheduler)getResourceScheduler()).update();
+
     return rmApp;
   }
 
@@ -940,6 +942,7 @@ public class MockRM extends ResourceManager {
   public MockAM sendAMLaunched(ApplicationAttemptId appAttemptId)
       throws Exception {
     MockAM am = new MockAM(getRMContext(), masterService, appAttemptId);
+    ((AbstractYarnScheduler)scheduler).update();
     waitForState(appAttemptId, RMAppAttemptState.ALLOCATED);
     //create and set AMRMToken
     Token<AMRMTokenIdentifier> amrmToken =
@@ -1164,6 +1167,7 @@ public class MockRM extends ResourceManager {
     RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
     LOG.info("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
@@ -1179,6 +1183,7 @@ public class MockRM extends ResourceManager {
     waitForSchedulerAppAttemptAdded(attempt.getAppAttemptId(), rm);
     LOG.info("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
     MockAM am = new MockAM(rm.getRMContext(), rm.masterService,
         attempt.getAppAttemptId());

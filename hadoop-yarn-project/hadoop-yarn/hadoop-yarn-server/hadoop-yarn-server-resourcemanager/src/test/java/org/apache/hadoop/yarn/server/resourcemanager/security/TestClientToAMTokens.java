@@ -86,6 +86,10 @@ import static org.mockito.Mockito.when;
 public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
   private YarnConfiguration conf;
 
+  public TestClientToAMTokens(SchedulerType type) throws IOException {
+    super(type);
+  }
+
   @Before
   public void setup() {
     conf = getConf();

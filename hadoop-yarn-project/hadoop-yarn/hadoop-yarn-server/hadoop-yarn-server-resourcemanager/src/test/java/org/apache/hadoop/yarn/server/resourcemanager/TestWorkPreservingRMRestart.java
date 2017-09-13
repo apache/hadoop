@@ -107,6 +107,10 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   MockRM rm1 = null;
   MockRM rm2 = null;
 
+  public TestWorkPreservingRMRestart(SchedulerType type) throws IOException {
+    super(type);
+  }
+
   @Before
   public void setup() throws UnknownHostException {
     Logger rootLogger = LogManager.getRootLogger();
