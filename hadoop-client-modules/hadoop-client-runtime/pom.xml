@@ -94,6 +94,11 @@
       <artifactId>commons-logging</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <!-- Move log4j to optional, since it is needed for some pieces folks might not use:
          * one of the three custom log4j appenders we have
       -->
@@ -149,6 +154,9 @@
                       <exclude>commons-logging:commons-logging</exclude>
                       <!-- Leave log4j unshaded so downstream users can configure logging. -->
                       <exclude>log4j:log4j</exclude>
+                      <!-- Leave javax APIs that are stable -->
+                      <!-- the jdk ships part of the javax.annotation namespace, so if we want to relocate this we'll have to care it out by class :( -->
+                      <exclude>com.google.code.findbugs:jsr305</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -179,6 +187,28 @@
                       <artifact>com.sun.jersey:*</artifact>
                       <excludes>
                         <exclude>META-INF/services/javax.*</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip french localization -->
+                      <artifact>org.apache.commons:commons-math3</artifact>
+                      <excludes>
+                        <exclude>assets/org/apache/commons/math3/**/*</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
+                      <artifact>org.eclipse.jetty:*</artifact>
+                      <excludes>
+                        <exclude>about.html</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip docs on formats used in kerby -->
+                      <artifact>org.apache.kerby:kerb-util</artifact>
+                      <excludes>
+                        <exclude>keytab.txt</exclude>
+                        <exclude>ccache.txt</exclude>
                       </excludes>
                     </filter>
                   </filters>
@@ -245,6 +275,7 @@
                         <exclude>io/serializations</exclude>
                       </excludes>
                     </relocation>
+                    <!-- JSRs that haven't made it to inclusion in J2SE -->
                     <relocation>
                       <pattern>javax/el/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.el.</shadedPattern>
@@ -253,8 +284,22 @@
                       </excludes>
                     </relocation>
                     <relocation>
+                      <pattern>javax/cache/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.cache.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
                       <pattern>javax/servlet/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/ws/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.ws.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>
@@ -268,6 +313,11 @@
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
                       </excludes>
+                    </relocation>
+                    <!-- okio declares a top level package instead of nested -->
+                    <relocation>
+                      <pattern>okio/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.okio.</shadedPattern>
                     </relocation>
                     <!-- probably not. -->
     <!--
