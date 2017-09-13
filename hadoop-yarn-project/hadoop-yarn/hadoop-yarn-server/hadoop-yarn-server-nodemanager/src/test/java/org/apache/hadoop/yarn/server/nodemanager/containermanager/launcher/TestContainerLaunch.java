@@ -43,12 +43,14 @@ import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.StringUtils;
@@ -534,11 +536,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     userSetEnv.put(Environment.LOGNAME.name(), "user_set_LOGNAME");
     userSetEnv.put(Environment.PWD.name(), "user_set_PWD");
     userSetEnv.put(Environment.HOME.name(), "user_set_HOME");
+    final String userConfDir = "user_set_HADOOP_CONF_DIR";
+    userSetEnv.put(Environment.HADOOP_CONF_DIR.name(), userConfDir);
     containerLaunchContext.setEnvironment(userSetEnv);
 
     File scriptFile = Shell.appendScriptExtension(tmpDir, "scriptFile");
     PrintWriter fileWriter = new PrintWriter(scriptFile);
     File processStartFile =
+        new File(tmpDir, "env_vars.tmp").getAbsoluteFile();
+    final File processFinalFile =
         new File(tmpDir, "env_vars.txt").getAbsoluteFile();
     if (Shell.WINDOWS) {
       fileWriter.println("@echo " + Environment.CONTAINER_ID.$() + "> "
@@ -559,6 +565,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     	  + processStartFile);
       fileWriter.println("@echo " + Environment.HOME.$() + ">> "
           + processStartFile);
+      fileWriter.println("@echo " + Environment.HADOOP_CONF_DIR.$() + ">> "
+          + processStartFile);
       for (String serviceName : containerManager.getAuxServiceMetaData()
           .keySet()) {
         fileWriter.println("@echo %" + AuxiliaryServiceHelper.NM_AUX_SERVICE
@@ -566,6 +574,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
             + processStartFile);
       }
       fileWriter.println("@echo " + cId + ">> " + processStartFile);
+      fileWriter.println("@move /Y " + processStartFile + " "
+          + processFinalFile);
       fileWriter.println("@ping -n 100 127.0.0.1 >nul");
     } else {
       fileWriter.write("\numask 0"); // So that start file is readable by the test
@@ -587,6 +597,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           + processStartFile);
       fileWriter.write("\necho $" + Environment.HOME.name() + " >> "
           + processStartFile);
+      fileWriter.write("\necho $" + Environment.HADOOP_CONF_DIR.name() + " >> "
+          + processStartFile);
       for (String serviceName : containerManager.getAuxServiceMetaData()
           .keySet()) {
         fileWriter.write("\necho $" + AuxiliaryServiceHelper.NM_AUX_SERVICE
@@ -594,6 +606,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
             + processStartFile);
       }
       fileWriter.write("\necho $$ >> " + processStartFile);
+      fileWriter.write("\nmv " + processStartFile + " " + processFinalFile);
       fileWriter.write("\nexec sleep 100");
     }
     fileWriter.close();
@@ -627,13 +640,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         StartContainersRequest.newInstance(list);
     containerManager.startContainers(allRequests);
 
-    int timeoutSecs = 0;
-    while (!processStartFile.exists() && timeoutSecs++ < 20) {
-      Thread.sleep(1000);
-      LOG.info("Waiting for process start-file to be created");
-    }
-    Assert.assertTrue("ProcessStartFile doesn't exist!",
-        processStartFile.exists());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return processFinalFile.exists();
+      }
+    }, 10, 20000);
 
     // Now verify the contents of the file
     List<String> localDirs = dirsHandler.getLocalDirs();
@@ -653,7 +665,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       containerLogDirs.add(logDir + Path.SEPARATOR + relativeContainerLogDir);
     }
     BufferedReader reader =
-        new BufferedReader(new FileReader(processStartFile));
+        new BufferedReader(new FileReader(processFinalFile));
     Assert.assertEquals(cId.toString(), reader.readLine());
     Assert.assertEquals(context.getNodeId().getHost(), reader.readLine());
     Assert.assertEquals(String.valueOf(context.getNodeId().getPort()),
@@ -676,7 +688,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
               YarnConfiguration.NM_USER_HOME_DIR, 
               YarnConfiguration.DEFAULT_NM_USER_HOME_DIR),
         reader.readLine());
-
+    Assert.assertEquals(userConfDir, reader.readLine());
     for (String serviceName : containerManager.getAuxServiceMetaData().keySet()) {
       Assert.assertEquals(
           containerManager.getAuxServiceMetaData().get(serviceName),
@@ -715,6 +727,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     	        YarnConfiguration.DEFAULT_NM_USER_HOME_DIR),
     	containerLaunchContext.getEnvironment()
     		.get(Environment.HOME.name()));
+    Assert.assertEquals(userConfDir, containerLaunchContext.getEnvironment()
+        .get(Environment.HADOOP_CONF_DIR.name()));
 
     // Get the pid of the process
     String pid = reader.readLine().trim();
