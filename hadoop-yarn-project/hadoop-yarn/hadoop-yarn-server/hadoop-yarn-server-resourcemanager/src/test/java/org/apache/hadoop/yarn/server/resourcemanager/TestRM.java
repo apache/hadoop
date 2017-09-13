@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.Before;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -88,6 +90,10 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   private final static int WAIT_SLEEP_MS = 100;
 
   private YarnConfiguration conf;
+
+  public TestRM(SchedulerType type) throws IOException {
+    super(type);
+  }
 
   @Before
   public void setup() {
