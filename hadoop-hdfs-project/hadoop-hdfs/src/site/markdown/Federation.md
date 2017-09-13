@@ -126,7 +126,7 @@ Here is an example configuration with two Namenodes:
     <value>nn-host1:http-port</value>
   </property>
   <property>
-    <name>dfs.namenode.secondaryhttp-address.ns1</name>
+    <name>dfs.namenode.secondary.http-address.ns1</name>
     <value>snn-host1:http-port</value>
   </property>
   <property>
@@ -138,7 +138,7 @@ Here is an example configuration with two Namenodes:
     <value>nn-host2:http-port</value>
   </property>
   <property>
-    <name>dfs.namenode.secondaryhttp-address.ns2</name>
+    <name>dfs.namenode.secondary.http-address.ns2</name>
     <value>snn-host2:http-port</value>
   </property>
 
