@@ -281,11 +281,6 @@ class Fetcher<K,V> extends Thread {
       for(TaskAttemptID left: remaining) {
         scheduler.copyFailed(left, host, false, connectExcpt);
       }
-
-      // Add back all the remaining maps, WITHOUT marking them as failed
-      for(TaskAttemptID left: remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
-      }
     }
 
     return input;
@@ -320,12 +315,14 @@ class Fetcher<K,V> extends Thread {
     
     // Construct the url and connect
     URL url = getMapOutputURL(host, maps);
-    DataInputStream input = openShuffleUrl(host, remaining, url);
-    if (input == null) {
-      return;
-    }
+    DataInputStream input = null;
     
     try {
+      input = openShuffleUrl(host, remaining, url);
+      if (input == null) {
+        return;
+      }
+
       // Loop through available map-outputs and fetch them
       // On any error, faildTasks is not null and we exit
       // after putting back the remaining maps to the 
