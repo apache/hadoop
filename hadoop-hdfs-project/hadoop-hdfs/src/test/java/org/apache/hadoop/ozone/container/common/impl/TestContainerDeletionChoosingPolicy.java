@@ -138,13 +138,19 @@ public class TestContainerDeletionChoosingPolicy {
     int numContainers = 10;
     Random random = new Random();
     Map<String, Integer> name2Count = new HashMap<>();
-    for (int i = 0; i < numContainers; i++) {
+    // create [numContainers + 1] containers
+    for (int i = 0; i <= numContainers; i++) {
       String containerName = OzoneUtils.getRequestID();
       ContainerData data = new ContainerData(containerName);
       containerManager.createContainer(createSingleNodePipeline(containerName),
           data);
       Assert.assertTrue(
           containerManager.getContainerMap().containsKey(containerName));
+
+      // don't create deletion blocks in the last container.
+      if (i == numContainers) {
+        break;
+      }
 
       // create random number of deletion blocks and write to container db
       int deletionBlocks = random.nextInt(numContainers) + 1;
@@ -170,7 +176,9 @@ public class TestContainerDeletionChoosingPolicy {
     Assert.assertEquals(5, result0.size());
 
     List<ContainerData> result1 = containerManager
-        .chooseContainerForBlockDeletion(numContainers);
+        .chooseContainerForBlockDeletion(numContainers + 1);
+    // the empty deletion blocks container should not be chosen
+    Assert.assertEquals(numContainers, result1.size());
 
     // verify the order of return list
     int lastCount = Integer.MAX_VALUE;

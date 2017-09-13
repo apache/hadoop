@@ -31,9 +31,11 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
 import org.apache.hadoop.ozone.container.common.impl.ContainerManagerImpl;
+import org.apache.hadoop.ozone.container.common.impl.RandomContainerDeletionChoosingPolicy;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.container.common.statemachine.background.BlockDeletingService;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.utils.BackgroundService;
@@ -99,6 +101,9 @@ public class TestBlockDeletingService {
 
   private ContainerManager createContainerManager(Configuration conf)
       throws Exception {
+    // use random container choosing policy for testing
+    conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY,
+        RandomContainerDeletionChoosingPolicy.class.getName());
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         containersDir.getAbsolutePath());
     if (containersDir.exists()) {
