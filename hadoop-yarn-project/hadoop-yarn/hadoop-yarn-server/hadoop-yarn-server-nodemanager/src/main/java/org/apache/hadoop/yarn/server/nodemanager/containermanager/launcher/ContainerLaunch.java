@@ -1148,7 +1148,10 @@ public class ContainerLaunch implements Callable<Integer> {
     
     environment.put(Environment.PWD.name(), pwd.toString());
     
-    putEnvIfAbsent(environment, Environment.HADOOP_CONF_DIR.name());
+    putEnvIfNotNull(environment, 
+        Environment.HADOOP_CONF_DIR.name(), 
+        System.getenv(Environment.HADOOP_CONF_DIR.name())
+        );
 
     if (!Shell.WINDOWS) {
       environment.put("JVM_PID", "$$");
