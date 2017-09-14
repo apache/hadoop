@@ -105,7 +105,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       Map<String, BlockContainerInfo>> containers;
   private final int containerProvisionBatchSize;
   private final Random rand;
-  private final ObjectName mxBean;
+  private ObjectName mxBean;
 
 
   /**
@@ -588,7 +588,10 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       deletedBlockLog.close();
     }
     blockDeletingService.shutdown();
-    MBeans.unregister(mxBean);
+    if (mxBean != null) {
+      MBeans.unregister(mxBean);
+      mxBean = null;
+    }
   }
 
   @Override
