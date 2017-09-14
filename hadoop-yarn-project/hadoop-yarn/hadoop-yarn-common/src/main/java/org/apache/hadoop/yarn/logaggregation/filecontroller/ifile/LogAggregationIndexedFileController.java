@@ -392,7 +392,8 @@ public class LogAggregationIndexedFileController
     this.fsDataOStream.writeInt(length);
     byte[] separator = this.uuid.getBytes(Charset.forName("UTF-8"));
     this.fsDataOStream.write(separator);
-    if (logAggregationSuccessfullyInThisCyCle) {
+    if (logAggregationSuccessfullyInThisCyCle &&
+        record.isLogAggregationInRolling()) {
       deleteFileWithRetries(fc, ugi, remoteLogCheckSumFile);
     }
   }
