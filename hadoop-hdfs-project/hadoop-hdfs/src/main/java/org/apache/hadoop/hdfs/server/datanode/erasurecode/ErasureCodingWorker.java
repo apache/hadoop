@@ -55,8 +55,8 @@ public final class ErasureCodingWorker {
 
     initializeStripedReadThreadPool();
     initializeStripedBlkReconstructionThreadPool(conf.getInt(
-        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_BLK_THREADS_KEY,
-        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_BLK_THREADS_DEFAULT));
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_KEY,
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT));
   }
 
   private void initializeStripedReadThreadPool() {

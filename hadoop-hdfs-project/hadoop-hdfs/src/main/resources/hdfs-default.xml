@@ -3046,7 +3046,7 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedblock.threads.size</name>
+  <name>dfs.datanode.ec.reconstruction.threads</name>
   <value>8</value>
   <description>
     Number of threads used by the Datanode for background
