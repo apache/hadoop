@@ -164,9 +164,7 @@ public class TestLogAggregationIndexFileController {
     fileFormat.initializeWriter(context);
 
     fileFormat.write(key1, value);
-    LogAggregationFileControllerContext record = mock(
-        LogAggregationFileControllerContext.class);
-    fileFormat.postWrite(record);
+    fileFormat.postWrite(context);
     fileFormat.closeWriter();
 
     ContainerLogsRequest logRequest = new ContainerLogsRequest();
@@ -267,7 +265,7 @@ public class TestLogAggregationIndexFileController {
     // first write and second write
     fileFormat.initializeWriter(context);
     fileFormat.write(key1, value2);
-    fileFormat.postWrite(record);
+    fileFormat.postWrite(context);
     fileFormat.closeWriter();
     fileFormat.readAggregatedLogsMeta(
             logRequest);
