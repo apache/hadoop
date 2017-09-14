@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.client.params.AbstractClusterBuildingActionArgs;
+import org.apache.hadoop.yarn.service.client.params.ActionCreateArgs;
 import org.apache.hadoop.yarn.service.client.params.ActionDependencyArgs;
 import org.apache.hadoop.yarn.service.client.params.ActionFlexArgs;
 import org.apache.hadoop.yarn.service.client.params.Arguments;
@@ -160,11 +161,14 @@ public class ServiceClient extends CompositeService
       AbstractClusterBuildingActionArgs args) throws IOException {
     File file = args.getFile();
     Path filePath = new Path(file.getAbsolutePath());
-    LOG.info("Loading app json from: " + filePath);
+    LOG.info("Loading service definition from: " + filePath);
     Service service = jsonSerDeser
         .load(FileSystem.getLocal(getConfig()), filePath);
     if (args.lifetime > 0) {
       service.setLifetime(args.lifetime);
+    }
+    if (!StringUtils.isEmpty(args.getServiceName())) {
+      service.setName(args.getServiceName());
     }
     return service;
   }
@@ -182,9 +186,23 @@ public class ServiceClient extends CompositeService
     return EXIT_SUCCESS;
   }
 
-  public int actionCreate(AbstractClusterBuildingActionArgs args)
+  public int actionCreate(ActionCreateArgs args)
       throws IOException, YarnException {
-    actionCreate(loadAppJsonFromLocalFS(args));
+    Service serviceDef;
+    if (args.file != null) {
+      serviceDef = loadAppJsonFromLocalFS(args);
+    } else if (!StringUtils.isEmpty(args.example)) {
+      // create an example service
+      String yarnHome = System
+          .getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
+      args.file = new File(MessageFormat
+          .format("{0}/share/hadoop/yarn/yarn-service-examples/{1}/{2}.json",
+              yarnHome, args.example, args.example));
+      serviceDef = loadAppJsonFromLocalFS(args);
+    } else {
+      throw new YarnException("No service definition provided!");
+    }
+    actionCreate(serviceDef);
     return EXIT_SUCCESS;
   }
 
@@ -213,7 +231,7 @@ public class ServiceClient extends CompositeService
     Map<String, Long> componentCounts =
         new HashMap<>(flexArgs.getComponentMap().size());
     Service persistedService =
-        ServiceApiUtil.loadService(fs, flexArgs.getClusterName());
+        ServiceApiUtil.loadService(fs, flexArgs.getServiceName());
     if (!StringUtils.isEmpty(persistedService.getId())) {
       cachedAppIds.put(persistedService.getName(),
           ApplicationId.fromString(persistedService.getId()));

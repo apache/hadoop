@@ -98,6 +98,13 @@
       <outputDirectory>etc/hadoop</outputDirectory>
     </fileSet>
     <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services/hadoop-yarn-services-core/examples</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/yarn-service-examples</outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services-api/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>

@@ -50,7 +50,7 @@ public abstract class AbstractActionArgs extends ArgOps implements Arguments {
    * get the name: relies on arg 1 being the cluster name in all operations 
    * @return the name argument, null if there is none
    */
-  public String getClusterName() {
+  public String getServiceName() {
     return (parameters.isEmpty()) ? null : parameters.get(0);
   }
 

@@ -42,8 +42,8 @@ public interface Arguments {
   String ARG_DELETE = "--delete";
   String ARG_DEST = "--dest";
   String ARG_DESTDIR = "--destdir";
-  String ARG_FILESYSTEM = "--fs";
-  String ARG_FILESYSTEM_LONG = "--filesystem";
+  String ARG_EXAMPLE = "--example";
+  String ARG_EXAMPLE_SHORT = "-e";
   String ARG_FOLDER = "--folder";
   String ARG_FORCE = "--force";
   String ARG_FORMAT = "--format";

@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.service.client.params;
 
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 
 @Parameters(commandNames = { SliderActions.ACTION_BUILD},
             commandDescription = SliderActions.DESCRIBE_ACTION_BUILD)
@@ -30,7 +31,9 @@ public class ActionBuildArgs extends AbstractClusterBuildingActionArgs {
   }
 
   @Override
-  public int getMinParams() {
-    return 0;
+  public void validate() throws BadCommandArgumentsException {
+    if (file == null) {
+      throw new BadCommandArgumentsException("No service definition provided.");
+    }
   }
 }

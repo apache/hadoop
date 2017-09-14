@@ -24,7 +24,6 @@ import com.beust.jcommander.ParameterDescription;
 import com.beust.jcommander.ParameterException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.utils.SliderUtils;
 import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
@@ -88,7 +87,7 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
    * @return the name argument, null if there is none
    */
   public String getClusterName() {
-    return coreAction.getClusterName();
+    return coreAction.getServiceName();
   }
 
   protected CommonArgs(String[] args) {
@@ -142,10 +141,6 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
     return result;
   }
 
-  public static String usage(CommonArgs serviceArgs) {
-    return usage(serviceArgs, null);
-  }
-
   /**
    * Parse routine -includes registering the action-specific argument classes
    * and postprocess it
@@ -164,14 +159,6 @@ public abstract class CommonArgs extends ArgOps implements SliderActions,
     postProcess();
   }
 
-  /**
-   * Add a command
-   * @param name action
-   * @param arg value
-   */
-  protected void addAction(String name, Object arg) {
-    commander.addCommand(name, arg);
-  }
 
   protected void addActions(Object... actions) {
     for (Object action : actions) {

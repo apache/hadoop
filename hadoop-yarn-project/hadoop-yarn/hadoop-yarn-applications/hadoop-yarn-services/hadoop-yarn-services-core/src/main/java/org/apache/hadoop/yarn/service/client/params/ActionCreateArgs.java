@@ -18,12 +18,18 @@
 
 package org.apache.hadoop.yarn.service.client.params;
 
+import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 
 @Parameters(commandNames = { SliderActions.ACTION_CREATE},
             commandDescription = SliderActions.DESCRIBE_ACTION_CREATE)
 
 public class ActionCreateArgs extends AbstractClusterBuildingActionArgs {
+
+  @Parameter(names = { ARG_EXAMPLE, ARG_EXAMPLE_SHORT },
+      description = "The name of the example service such as sleeper")
+  public String example;
 
   @Override
   public String getActionName() {
@@ -31,8 +37,10 @@ public class ActionCreateArgs extends AbstractClusterBuildingActionArgs {
   }
 
   @Override
-  public int getMinParams() {
-    return 0;
+  public void validate() throws BadCommandArgumentsException {
+    if (file == null && example == null) {
+      throw new BadCommandArgumentsException("No service definition provided.");
+    }
   }
 }
 
