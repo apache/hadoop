@@ -23,15 +23,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Comparator;
+import java.util.Map;
+import org.apache.curator.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FakeSchedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy.DominantResourceFairnessComparator;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -39,10 +46,15 @@ import org.junit.Test;
  * container before sched2
  */
 public class TestDominantResourceFairnessPolicy {
+  @BeforeClass
+  public static void setup() {
+    addResources("test");
+  }
 
   private Comparator<Schedulable> createComparator(int clusterMem,
       int clusterCpu) {
-    DominantResourceFairnessPolicy policy = new DominantResourceFairnessPolicy();
+    DominantResourceFairnessPolicy policy =
+        new DominantResourceFairnessPolicy();
     FSContext fsContext = mock(FSContext.class);
     when(fsContext.getClusterResource()).
         thenReturn(Resources.createResource(clusterMem, clusterCpu));
@@ -51,23 +63,23 @@ public class TestDominantResourceFairnessPolicy {
   }
   
   private Schedulable createSchedulable(int memUsage, int cpuUsage) {
-    return createSchedulable(memUsage, cpuUsage, ResourceWeights.NEUTRAL, 0, 0);
+    return createSchedulable(memUsage, cpuUsage, 1.0f, 0, 0);
   }
   
   private Schedulable createSchedulable(int memUsage, int cpuUsage,
       int minMemShare, int minCpuShare) {
-    return createSchedulable(memUsage, cpuUsage, ResourceWeights.NEUTRAL,
+    return createSchedulable(memUsage, cpuUsage, 1.0f,
         minMemShare, minCpuShare);
   }
   
   private Schedulable createSchedulable(int memUsage, int cpuUsage,
-      ResourceWeights weights) {
+      float weights) {
     return createSchedulable(memUsage, cpuUsage, weights, 0, 0);
   }
 
   
   private Schedulable createSchedulable(int memUsage, int cpuUsage,
-      ResourceWeights weights, int minMemShare, int minCpuShare) {
+      float weights, int minMemShare, int minCpuShare) {
     Resource usage = BuilderUtils.newResource(memUsage, cpuUsage);
     Resource minShare = BuilderUtils.newResource(minMemShare, minCpuShare);
     return new FakeSchedulable(minShare,
@@ -77,94 +89,260 @@ public class TestDominantResourceFairnessPolicy {
   
   @Test
   public void testSameDominantResource() {
-    assertTrue(createComparator(8000, 4).compare(
-        createSchedulable(1000, 1),
-        createSchedulable(2000, 1)) < 0);
+    Comparator c = createComparator(8000, 4);
+    Schedulable s1 = createSchedulable(1000, 1);
+    Schedulable s2 = createSchedulable(2000, 1);
+
+    assertTrue("Comparison didn't return a value less than 0",
+        c.compare(s1, s2) < 0);
   }
   
   @Test
   public void testDifferentDominantResource() {
-    assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(4000, 3),
-        createSchedulable(2000, 5)) < 0);
+    Comparator c = createComparator(8000, 8);
+    Schedulable s1 = createSchedulable(4000, 3);
+    Schedulable s2 = createSchedulable(2000, 5);
+
+    assertTrue("Comparison didn't return a value less than 0",
+        c.compare(s1, s2) < 0);
   }
   
   @Test
   public void testOneIsNeedy() {
-    assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(2000, 5, 0, 6),
-        createSchedulable(4000, 3, 0, 0)) < 0);
+    Comparator c = createComparator(8000, 8);
+    Schedulable s1 = createSchedulable(2000, 5, 0, 6);
+    Schedulable s2 = createSchedulable(4000, 3, 0, 0);
+
+    assertTrue("Comparison didn't return a value less than 0",
+        c.compare(s1, s2) < 0);
   }
   
   @Test
   public void testBothAreNeedy() {
-    assertTrue(createComparator(8000, 100).compare(
-        // dominant share is 2000/8000
-        createSchedulable(2000, 5),
-        // dominant share is 4000/8000
-        createSchedulable(4000, 3)) < 0);
-    assertTrue(createComparator(8000, 100).compare(
-        // dominant min share is 2/3
-        createSchedulable(2000, 5, 3000, 6),
-        // dominant min share is 4/5
-        createSchedulable(4000, 3, 5000, 4)) < 0);
+    Comparator c = createComparator(8000, 100);
+    // dominant share is 2000/8000
+    Schedulable s1 = createSchedulable(2000, 5);
+    // dominant share is 4000/8000
+    Schedulable s2 = createSchedulable(4000, 3);
+
+    assertTrue("Comparison didn't return a value less than 0",
+        c.compare(s1, s2) < 0);
+
+    // dominant min share is 2/3
+    s1 = createSchedulable(2000, 5, 3000, 6);
+    // dominant min share is 4/5
+    s2 = createSchedulable(4000, 3, 5000, 4);
+
+    assertTrue("Comparison didn't return a value less than 0",
+        c.compare(s1, s2) < 0);
   }
   
   @Test
   public void testEvenWeightsSameDominantResource() {
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(3000, 1, new ResourceWeights(2.0f)),
+        createSchedulable(3000, 1, 2.0f),
         createSchedulable(2000, 1)) < 0);
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(1000, 3, new ResourceWeights(2.0f)),
+        createSchedulable(1000, 3, 2.0f),
         createSchedulable(1000, 2)) < 0);
   }
   
   @Test
   public void testEvenWeightsDifferentDominantResource() {
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(1000, 3, new ResourceWeights(2.0f)),
+        createSchedulable(1000, 3, 2.0f),
         createSchedulable(2000, 1)) < 0);
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(3000, 1, new ResourceWeights(2.0f)),
+        createSchedulable(3000, 1, 2.0f),
         createSchedulable(1000, 2)) < 0);
   }
   
   @Test
-  public void testUnevenWeightsSameDominantResource() {
-    assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(3000, 1, new ResourceWeights(2.0f, 1.0f)),
-        createSchedulable(2000, 1)) < 0);
-    assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(1000, 3, new ResourceWeights(1.0f, 2.0f)),
-        createSchedulable(1000, 2)) < 0);
+  public void testSortShares() {
+    float[][] ratios1 = {{0.3f, 2.0f}, {0.2f, 1.0f}, {0.4f, 0.1f}};
+    float[][] ratios2 = {{0.2f, 9.0f}, {0.3f, 2.0f}, {0.25f, 0.1f}};
+    float[][] expected1 = {{0.4f, 0.1f}, {0.3f, 2.0f}, {0.2f, 1.0f}};
+    float[][] expected2 = {{0.3f, 2.0f}, {0.25f, 0.1f}, {0.2f, 9.0f}};
+    DominantResourceFairnessComparator comparator =
+        new DominantResourceFairnessComparator();
+
+    comparator.sortRatios(ratios1, ratios2);
+
+    for (int i = 0; i < ratios1.length; i++) {
+      Assert.assertArrayEquals("The shares array was not sorted into the "
+          + "expected order: incorrect inner array encountered",
+          expected1[i], ratios1[i], 0.00001f);
+      Assert.assertArrayEquals("The shares array was not sorted into the "
+          + "expected order: incorrect inner array encountered",
+          expected2[i], ratios2[i], 0.00001f);
+    }
   }
-  
+
   @Test
-  public void testUnevenWeightsDifferentDominantResource() {
-    assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(1000, 3, new ResourceWeights(1.0f, 2.0f)),
-        createSchedulable(2000, 1)) < 0);
-    assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(3000, 1, new ResourceWeights(2.0f, 1.0f)),
-        createSchedulable(1000, 2)) < 0);
-  }
-  
-  @Test
-  public void testCalculateShares() {
+  public void testCalculateClusterAndFairRatios() {
+    Map<String, Integer> index = ResourceUtils.getResourceTypeIndex();
     Resource used = Resources.createResource(10, 5);
     Resource capacity = Resources.createResource(100, 10);
-    ResourceType[] resourceOrder = new ResourceType[2];
-    ResourceWeights shares = new ResourceWeights();
-    DominantResourceFairnessPolicy.DominantResourceFairnessComparator comparator =
-        new DominantResourceFairnessPolicy.DominantResourceFairnessComparator();
-    comparator.calculateShares(used, capacity, shares, resourceOrder,
-        ResourceWeights.NEUTRAL);
-    
-    assertEquals(.1, shares.getWeight(ResourceType.MEMORY), .00001);
-    assertEquals(.5, shares.getWeight(ResourceType.CPU), .00001);
-    assertEquals(ResourceType.CPU, resourceOrder[0]);
-    assertEquals(ResourceType.MEMORY, resourceOrder[1]);
+    float[][] shares = new float[3][2];
+    DominantResourceFairnessComparator comparator =
+        new DominantResourceFairnessComparator();
+
+    used.setResourceValue("test", 2L);
+    capacity.setResourceValue("test", 5L);
+
+    int dominant = comparator.calculateClusterAndFairRatios(used, capacity,
+        shares, 1.0f);
+
+    assertEquals("Calculated usage ratio for memory (10MB out of 100MB) is "
+        + "incorrect", 0.1,
+        shares[index.get(ResourceInformation.MEMORY_MB.getName())][0], .00001);
+    assertEquals("Calculated usage ratio for vcores (5 out of 10) is "
+        + "incorrect", 0.5,
+        shares[index.get(ResourceInformation.VCORES.getName())][0], .00001);
+    assertEquals("Calculated usage ratio for test resource (2 out of 5) is "
+        + "incorrect", 0.4, shares[index.get("test")][0], .00001);
+    assertEquals("The wrong dominant resource index was returned",
+        index.get(ResourceInformation.VCORES.getName()).intValue(),
+        dominant);
+  }
+
+  @Test
+  public void testCalculateMinShareRatios() {
+    Map<String, Integer> index = ResourceUtils.getResourceTypeIndex();
+    Resource used = Resources.createResource(10, 5);
+    Resource minShares = Resources.createResource(5, 10);
+    float[][] ratios = new float[3][3];
+    DominantResourceFairnessComparator comparator =
+        new DominantResourceFairnessComparator();
+
+    used.setResourceValue("test", 2L);
+    minShares.setResourceValue("test", 0L);
+
+    comparator.calculateMinShareRatios(used, minShares, ratios);
+
+    assertEquals("Calculated min share ratio for memory (10MB out of 5MB) is "
+        + "incorrect", 2.0,
+        ratios[index.get(ResourceInformation.MEMORY_MB.getName())][2], .00001f);
+    assertEquals("Calculated min share ratio for vcores (5 out of 10) is "
+        + "incorrect", 0.5,
+        ratios[index.get(ResourceInformation.VCORES.getName())][2], .00001f);
+    assertEquals("Calculated min share ratio for test resource (0 out of 5) is "
+        + "incorrect", Float.POSITIVE_INFINITY, ratios[index.get("test")][2],
+        0.00001f);
+  }
+
+  @Test
+  public void testCompareShares() {
+    float[][] ratios1 = {
+        {0.4f, 0.1f, 2.0f},
+        {0.3f, 2.0f, 0.1f},
+        {0.2f, 1.0f, 9.0f}
+    };
+    float[][] ratios2 = {
+        {0.3f, 2.0f, 1.0f},
+        {0.2f, 0.1f, 0.5f},
+        {0.2f, 1.0f, 2.0f}
+    };
+    float[][] ratios3 = {
+        {0.3f, 2.0f, 1.0f},
+        {0.2f, 0.1f, 2.0f},
+        {0.1f, 2.0f, 1.0f}
+    };
+    DominantResourceFairnessComparator comparator =
+        new DominantResourceFairnessComparator();
+
+    int ret = comparator.compareRatios(ratios1, ratios2, 0);
+
+    assertEquals("Expected the first array to be larger because the first "
+        + "usage ratio element is larger", 1, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios1, 0);
+
+    assertEquals("Expected the first array to be smaller because the first "
+        + "usage ratio element is smaller", -1, ret);
+
+    ret = comparator.compareRatios(ratios1, ratios1, 0);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios2, 0);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios3, ratios3, 0);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios3, 0);
+
+    assertEquals("Expected the first array to be larger because the last "
+        + "usage ratio element is larger, and all other elements are equal",
+        1, ret);
+
+    ret = comparator.compareRatios(ratios1, ratios2, 1);
+
+    assertEquals("Expected the first array to be smaller because the first "
+        + "fair share ratio element is smaller", -1, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios1, 1);
+
+    assertEquals("Expected the first array to be larger because the first "
+        + "fair share ratio element is larger", 1, ret);
+
+    ret = comparator.compareRatios(ratios1, ratios1, 1);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios2, 1);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios3, ratios3, 1);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios3, 1);
+
+    assertEquals("Expected the first array to be smaller because the last "
+        + "usage ratio element is smaller, and all other elements are equal",
+        -1, ret);
+
+    ret = comparator.compareRatios(ratios1, ratios2, 2);
+
+    assertEquals("Expected the first array to be larger because the first "
+        + "min share ratio element is larger", 1, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios1, 2);
+
+    assertEquals("Expected the first array to be smaller because the first "
+        + "min share ratio element is smaller", -1, ret);
+
+    ret = comparator.compareRatios(ratios1, ratios1, 2);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios2, 2);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios3, ratios3, 2);
+
+    assertEquals("Expected the arrays to be equal, since they're the same "
+        + "array", 0, ret);
+
+    ret = comparator.compareRatios(ratios2, ratios3, 2);
+
+    assertEquals("Expected the first array to be smaller because the second "
+        + "min share ratio element is smaller, and all the first elements are "
+        + "equal", -1, ret);
   }
 
   @Test
@@ -182,5 +360,13 @@ public class TestDominantResourceFairnessPolicy {
     // weights [1/8, 1/3], schedulable1 < schedulable2 since 1/4 < 1/3
     assertTrue(createComparator(8000, 6)
         .compare(schedulable1, schedulable2) < 0);
+  }
+
+  private static void addResources(String... resources) {
+    Configuration conf = new Configuration();
+
+    // Add a third resource to the allowed set
+    conf.set(YarnConfiguration.RESOURCE_TYPES, Joiner.on(',').join(resources));
+    ResourceUtils.resetResourceTypes(conf);
   }
 }

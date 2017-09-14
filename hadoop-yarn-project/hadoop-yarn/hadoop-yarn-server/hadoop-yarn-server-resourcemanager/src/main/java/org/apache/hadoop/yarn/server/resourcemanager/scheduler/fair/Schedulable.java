@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 
 /**
  * A Schedulable represents an entity that can be scheduled such as an
@@ -72,8 +71,15 @@ public interface Schedulable {
   /** Maximum Resource share assigned to the schedulable. */
   Resource getMaxShare();
 
-  /** Job/queue weight in fair sharing. */
-  ResourceWeights getWeights();
+  /**
+   * Job/queue weight in fair sharing. Weights are only meaningful when
+   * compared. A weight of 2.0f has twice the weight of a weight of 1.0f,
+   * which has twice the weight of a weight of 0.5f. A weight of 1.0f is
+   * considered unweighted or a neutral weight. A weight of 0 is no weight.
+   *
+   * @return the weight
+   */
+  float getWeight();
 
   /** Start time for jobs in FIFO queues; meaningless for QueueSchedulables.*/
   long getStartTime();
