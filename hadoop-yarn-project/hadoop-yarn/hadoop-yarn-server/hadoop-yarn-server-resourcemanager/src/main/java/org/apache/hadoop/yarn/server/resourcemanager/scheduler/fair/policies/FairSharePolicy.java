@@ -26,7 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
@@ -42,9 +42,10 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class FairSharePolicy extends SchedulingPolicy {
-  private static final Log LOG = LogFactory.getLog(FairSharePolicy.class);
   @VisibleForTesting
   public static final String NAME = "fair";
+  private static final Log LOG = LogFactory.getLog(FairSharePolicy.class);
+  private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
       new DefaultResourceCalculator();
   private static final FairShareComparator COMPARATOR =
@@ -164,10 +165,11 @@ public class FairSharePolicy extends SchedulingPolicy {
      */
     private int compareFairShareUsage(Schedulable s1, Schedulable s2,
         Resource resourceUsage1, Resource resourceUsage2) {
-      double weight1 = s1.getWeights().getWeight(ResourceType.MEMORY);
-      double weight2 = s2.getWeights().getWeight(ResourceType.MEMORY);
+      double weight1 = s1.getWeight();
+      double weight2 = s2.getWeight();
       double useToWeightRatio1;
       double useToWeightRatio2;
+
       if (weight1 > 0.0 && weight2 > 0.0) {
         useToWeightRatio1 = resourceUsage1.getMemorySize() / weight1;
         useToWeightRatio2 = resourceUsage2.getMemorySize() / weight2;
@@ -213,14 +215,13 @@ public class FairSharePolicy extends SchedulingPolicy {
   @Override
   public void computeShares(Collection<? extends Schedulable> schedulables,
       Resource totalResources) {
-    ComputeFairShares.computeShares(schedulables, totalResources, ResourceType.MEMORY);
+    ComputeFairShares.computeShares(schedulables, totalResources, MEMORY);
   }
 
   @Override
   public void computeSteadyShares(Collection<? extends FSQueue> queues,
       Resource totalResources) {
-    ComputeFairShares.computeSteadyShares(queues, totalResources,
-        ResourceType.MEMORY);
+    ComputeFairShares.computeSteadyShares(queues, totalResources, MEMORY);
   }
 
   @Override

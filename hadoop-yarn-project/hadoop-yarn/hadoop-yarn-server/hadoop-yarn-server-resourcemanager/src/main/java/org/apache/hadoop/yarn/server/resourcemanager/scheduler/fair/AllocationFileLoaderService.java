@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.Clock;
@@ -232,7 +231,7 @@ public class AllocationFileLoaderService extends AbstractService {
     Map<String, Integer> queueMaxApps = new HashMap<>();
     Map<String, Integer> userMaxApps = new HashMap<>();
     Map<String, Float> queueMaxAMShares = new HashMap<>();
-    Map<String, ResourceWeights> queueWeights = new HashMap<>();
+    Map<String, Float> queueWeights = new HashMap<>();
     Map<String, SchedulingPolicy> queuePolicies = new HashMap<>();
     Map<String, Long> minSharePreemptionTimeouts = new HashMap<>();
     Map<String, Long> fairSharePreemptionTimeouts = new HashMap<>();
@@ -455,7 +454,7 @@ public class AllocationFileLoaderService extends AbstractService {
       Map<String, Integer> queueMaxApps,
       Map<String, Integer> userMaxApps,
       Map<String, Float> queueMaxAMShares,
-      Map<String, ResourceWeights> queueWeights,
+      Map<String, Float> queueWeights,
       Map<String, SchedulingPolicy> queuePolicies,
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Long> fairSharePreemptionTimeouts,
@@ -523,7 +522,7 @@ public class AllocationFileLoaderService extends AbstractService {
       } else if ("weight".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         double val = Double.parseDouble(text);
-        queueWeights.put(queueName, new ResourceWeights((float)val));
+        queueWeights.put(queueName, (float)val);
       } else if ("minSharePreemptionTimeout".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         long val = Long.parseLong(text) * 1000L;

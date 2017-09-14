@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.security.AccessRequest;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -71,7 +70,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   
   protected SchedulingPolicy policy = SchedulingPolicy.DEFAULT_POLICY;
 
-  protected ResourceWeights weights;
+  protected float weights;
   protected Resource minShare;
   private ConfigurableResource maxShare;
   protected int maxRunningApps;
@@ -141,12 +140,12 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.policy = policy;
   }
 
-  public void setWeights(ResourceWeights weights){
+  public void setWeights(float weights) {
     this.weights = weights;
   }
 
   @Override
-  public ResourceWeights getWeights() {
+  public float getWeight() {
     return weights;
   }
 
@@ -449,7 +448,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public String toString() {
     return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
-        getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
+        getName(), getDemand(), getResourceUsage(), fairShare, getWeight());
   }
   
   @Override

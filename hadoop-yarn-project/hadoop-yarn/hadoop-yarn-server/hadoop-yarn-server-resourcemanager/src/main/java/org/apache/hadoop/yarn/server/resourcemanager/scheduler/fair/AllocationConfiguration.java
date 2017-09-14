@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -47,7 +46,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   // Maximum amount of resources for each queue's ad hoc children
   private final Map<String, ConfigurableResource> maxChildQueueResources;
   // Sharing weights for each queue
-  private final Map<String, ResourceWeights> queueWeights;
+  private final Map<String, Float> queueWeights;
   
   // Max concurrent running applications for each queue and for each user; in addition,
   // for users that have no max specified, we use the userMaxJobsDefault.
@@ -109,7 +108,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
       Map<String, ConfigurableResource> maxQueueResources,
       Map<String, ConfigurableResource> maxChildQueueResources,
       Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
-      Map<String, ResourceWeights> queueWeights,
+      Map<String, Float> queueWeights,
       Map<String, Float> queueMaxAMShares, int userMaxAppsDefault,
       int queueMaxAppsDefault, ConfigurableResource queueMaxResourcesDefault,
       float queueMaxAMShareDefault,
@@ -249,9 +248,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     return !nonPreemptableQueues.contains(queueName);
   }
 
-  private ResourceWeights getQueueWeight(String queue) {
-    ResourceWeights weight = queueWeights.get(queue);
-    return (weight == null) ? ResourceWeights.NEUTRAL : weight;
+  private float getQueueWeight(String queue) {
+    Float weight = queueWeights.get(queue);
+    return (weight == null) ? 1.0f : weight;
   }
 
   public int getUserMaxApps(String user) {
