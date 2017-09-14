@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.FileChecksum;
@@ -645,56 +644,4 @@ class JsonUtilClient {
     }
   }
 
-  static BlockLocation[] toBlockLocationArray(Map<?, ?> json)
-      throws IOException{
-    final Map<?, ?> rootmap =
-        (Map<?, ?>)json.get(BlockLocation.class.getSimpleName() + "s");
-    final List<?> array = JsonUtilClient.getList(rootmap,
-        BlockLocation.class.getSimpleName());
-
-    Preconditions.checkNotNull(array);
-    final BlockLocation[] locations = new BlockLocation[array.size()];
-    int i = 0;
-    for (Object object : array) {
-      final Map<?, ?> m = (Map<?, ?>) object;
-      locations[i++] = JsonUtilClient.toBlockLocation(m);
-    }
-    return locations;
-  }
-
-  /** Convert a Json map to BlockLocation. **/
-  static BlockLocation toBlockLocation(Map<?, ?> m)
-      throws IOException{
-    if(m == null) {
-      return null;
-    }
-
-    long length = ((Number) m.get("length")).longValue();
-    long offset = ((Number) m.get("offset")).longValue();
-    boolean corrupt = Boolean.
-        getBoolean(m.get("corrupt").toString());
-    String[] storageIds = toStringArray(getList(m, "storageIds"));
-    String[] cachedHosts = toStringArray(getList(m, "cachedHosts"));
-    String[] hosts = toStringArray(getList(m, "hosts"));
-    String[] names = toStringArray(getList(m, "names"));
-    String[] topologyPaths = toStringArray(getList(m, "topologyPaths"));
-    StorageType[] storageTypes = toStorageTypeArray(
-        getList(m, "storageTypes"));
-    return new BlockLocation(names, hosts, cachedHosts,
-        topologyPaths, storageIds, storageTypes,
-        offset, length, corrupt);
-  }
-
-  static String[] toStringArray(List<?> list) {
-    if (list == null) {
-      return null;
-    } else {
-      final String[] array = new String[list.size()];
-      int i = 0;
-      for (Object object : list) {
-        array[i++] = object.toString();
-      }
-      return array;
-    }
-  }
 }
