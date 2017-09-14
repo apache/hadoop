@@ -136,7 +136,10 @@ public final class Constants {
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
 
   // switch to the fast block-by-block upload mechanism
+  // this is the only supported upload mechanism
+  @Deprecated
   public static final String FAST_UPLOAD = "fs.s3a.fast.upload";
+  @Deprecated
   public static final boolean DEFAULT_FAST_UPLOAD = false;
 
   //initial size of memory buffer for a fast upload

@@ -193,7 +193,6 @@
                   <excludes>
                     <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
                     <exclude>**/ITestS3AContractRootDir.java</exclude>
-                    <exclude>**/ITestS3NContractRootDir.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSEC*.java</exclude>
                     <exclude>**/ITestS3AHuge*.java</exclude>
@@ -226,7 +225,6 @@
                   <includes>
                     <include>**/ITestJets3tNativeS3FileSystemContract.java</include>
                     <include>**/ITestS3AContractRootDir.java</include>
-                    <include>**/ITestS3NContractRootDir.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>
                     <include>**/ITestS3AEncryptionSSEC*.java</include>
@@ -427,11 +425,6 @@
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>net.java.dev.jets3t</groupId>
-      <artifactId>jets3t</artifactId>
-      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>

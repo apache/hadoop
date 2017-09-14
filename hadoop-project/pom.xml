@@ -812,11 +812,6 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>net.java.dev.jets3t</groupId>
-        <artifactId>jets3t</artifactId>
-        <version>0.9.0</version>
-      </dependency>
-      <dependency>
         <groupId>com.amazonaws</groupId>
         <artifactId>aws-java-sdk-bundle</artifactId>
         <version>${aws-java-sdk.version}</version>

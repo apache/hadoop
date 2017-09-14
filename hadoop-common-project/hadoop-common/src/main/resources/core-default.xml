@@ -872,30 +872,6 @@
 </property>
 
 <property>
-  <name>fs.s3n.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3n</value>
-  <description>Determines where on the local filesystem the s3n:// filesystem
-  should store files before sending them to S3
-  (or after retrieving them from S3).
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.maxRetries</name>
-  <value>4</value>
-  <description>The maximum number of retries for reading or writing files to S3,
-  before we signal failure to the application.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.sleepTimeSeconds</name>
-  <value>10</value>
-  <description>The number of seconds to sleep between each S3 retry.
-  </description>
-</property>
-
-<property>
   <name>fs.swift.impl</name>
   <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
   <description>The implementation class of the OpenStack Swift Filesystem</description>
@@ -908,56 +884,6 @@
   exit using a JVM shutdown hook. Setting this property to false disables this
   behavior. This is an advanced option that should only be used by server applications
   requiring a more carefully orchestrated shutdown sequence.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.awsAccessKeyId</name>
-  <description>AWS access key ID used by S3 native file system.</description>
-</property>
-
-<property>
-  <name>fs.s3n.awsSecretAccessKey</name>
-  <description>AWS secret key used by S3 native file system.</description>
-</property>
-
-<property>
-  <name>fs.s3n.block.size</name>
-  <value>67108864</value>
-  <description>Block size to use when reading files using the native S3
-  filesystem (s3n: URIs).</description>
-</property>
-
-<property>
-  <name>fs.s3n.multipart.uploads.enabled</name>
-  <value>false</value>
-  <description>Setting this property to true enables multiple uploads to
-  native S3 filesystem. When uploading a file, it is split into blocks
-  if the size is larger than fs.s3n.multipart.uploads.block.size.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.multipart.uploads.block.size</name>
-  <value>67108864</value>
-  <description>The block size for multipart uploads to native S3 filesystem.
-  Default size is 64MB.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.multipart.copy.block.size</name>
-  <value>5368709120</value>
-  <description>The block size for multipart copy in native S3 filesystem.
-  Default size is 5GB.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.server-side-encryption-algorithm</name>
-  <value></value>
-  <description>Specify a server-side encryption algorithm for S3.
-  Unset by default, and the only other currently allowable value is AES256.
   </description>
 </property>
 
@@ -1235,21 +1161,11 @@
 </property>
 
 <property>
-  <name>fs.s3a.fast.upload</name>
-  <value>false</value>
-  <description>
-    Use the incremental block-based fast upload mechanism with
-    the buffering mechanism set in fs.s3a.fast.upload.buffer.
-  </description>
-</property>
-
-<property>
   <name>fs.s3a.fast.upload.buffer</name>
   <value>disk</value>
   <description>
-    The buffering mechanism to use when using S3A fast upload
-    (fs.s3a.fast.upload=true). Values: disk, array, bytebuffer.
-    This configuration option has no effect if fs.s3a.fast.upload is false.
+    The buffering mechanism to for data being written.
+    Values: disk, array, bytebuffer.
 
     "disk" will use the directories listed in fs.s3a.buffer.dir as
     the location(s) to save data prior to being uploaded.
@@ -1800,42 +1716,6 @@
 <property>
   <name>file.replication</name>
   <value>1</value>
-  <description>Replication factor</description>
-</property>
-
-<!-- s3native File System -->
-
-<property>
-  <name>s3native.stream-buffer-size</name>
-  <value>4096</value>
-  <description>The size of buffer to stream files.
-  The size of this buffer should probably be a multiple of hardware
-  page size (4096 on Intel x86), and it determines how much data is
-  buffered during read and write operations.</description>
-</property>
-
-<property>
-  <name>s3native.bytes-per-checksum</name>
-  <value>512</value>
-  <description>The number of bytes per checksum.  Must not be larger than
-  s3native.stream-buffer-size</description>
-</property>
-
-<property>
-  <name>s3native.client-write-packet-size</name>
-  <value>65536</value>
-  <description>Packet size for clients to write</description>
-</property>
-
-<property>
-  <name>s3native.blocksize</name>
-  <value>67108864</value>
-  <description>Block size</description>
-</property>
-
-<property>
-  <name>s3native.replication</name>
-  <value>3</value>
   <description>Replication factor</description>
 </property>
 
