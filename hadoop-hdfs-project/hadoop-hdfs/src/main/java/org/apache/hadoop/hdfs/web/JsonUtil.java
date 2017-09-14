@@ -470,37 +470,4 @@ public class JsonUtil {
   public static String toJsonString(BlockStoragePolicy storagePolicy) {
     return toJsonString(BlockStoragePolicy.class, toJsonMap(storagePolicy));
   }
-
-  public static Map<String, Object> toJsonMap(BlockLocation[] locations)
-      throws IOException {
-    if(locations == null) {
-      return null;
-    }
-    final Map<String, Object> m = new TreeMap<String, Object>();
-    Object[] blockLocations = new Object[locations.length];
-    for(int i=0; i<locations.length; i++) {
-      blockLocations[i] = toJsonMap(locations[i]);
-    }
-    m.put(BlockLocation.class.getSimpleName(), blockLocations);
-    return m;
-  }
-
-  public static Map<String, Object> toJsonMap(
-      final BlockLocation blockLocation) throws IOException {
-    if (blockLocation == null) {
-      return null;
-    }
-
-    final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put("length", blockLocation.getLength());
-    m.put("offset", blockLocation.getOffset());
-    m.put("corrupt", blockLocation.isCorrupt());
-    m.put("storageTypes", toJsonArray(blockLocation.getStorageTypes()));
-    m.put("storageIds", blockLocation.getStorageIds());
-    m.put("cachedHosts", blockLocation.getCachedHosts());
-    m.put("hosts", blockLocation.getHosts());
-    m.put("names", blockLocation.getNames());
-    m.put("topologyPaths", blockLocation.getTopologyPaths());
-    return m;
-  }
 }
