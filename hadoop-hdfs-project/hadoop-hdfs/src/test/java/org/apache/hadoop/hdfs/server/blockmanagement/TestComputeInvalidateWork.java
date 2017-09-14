@@ -24,7 +24,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -70,8 +69,6 @@ public class TestComputeInvalidateWork {
     ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
     conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        ecPolicy.getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES)
         .build();
     cluster.waitActive();
@@ -84,6 +81,7 @@ public class TestComputeInvalidateWork {
     // Create a striped file
     Path ecDir = new Path("/ec");
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
     fs.mkdirs(ecDir);
     fs.getClient().setErasureCodingPolicy(ecDir.toString(), ecPolicy.getName());
     ecFile = new Path(ecDir, "ec-file");

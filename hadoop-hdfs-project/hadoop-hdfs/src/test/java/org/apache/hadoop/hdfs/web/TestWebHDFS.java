@@ -519,13 +519,12 @@ public class TestWebHDFS {
   public void testWebHdfsErasureCodingFiles() throws Exception {
     MiniDFSCluster cluster = null;
     final Configuration conf = WebHdfsTestUtil.createConf();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        SystemErasureCodingPolicies.getByID(
-            SystemErasureCodingPolicies.XOR_2_1_POLICY_ID).getName());
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.enableErasureCodingPolicy(SystemErasureCodingPolicies.getByID(
+          SystemErasureCodingPolicies.XOR_2_1_POLICY_ID).getName());
       final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
           .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
 

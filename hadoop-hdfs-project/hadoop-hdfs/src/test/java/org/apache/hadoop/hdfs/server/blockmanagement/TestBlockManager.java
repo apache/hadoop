@@ -1368,8 +1368,6 @@ public class TestBlockManager {
     Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
@@ -1382,6 +1380,8 @@ public class TestBlockManager {
       final Path ecDir = new Path("/ec");
       final Path testFileUnsatisfied = new Path(ecDir, "test1");
       final Path testFileSatisfied = new Path(ecDir, "test2");
+      dfs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       cluster.getFileSystem().getClient().mkdirs(ecDir.toString(), null, true);
       cluster.getFileSystem().getClient()
           .setErasureCodingPolicy(ecDir.toString(),

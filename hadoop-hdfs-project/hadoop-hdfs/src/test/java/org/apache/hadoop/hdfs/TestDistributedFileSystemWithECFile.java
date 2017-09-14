@@ -59,11 +59,11 @@ public class TestDistributedFileSystemWithECFile {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     fileContext = FileContext.getFileContext(cluster.getURI(0), conf);
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs.mkdirs(new Path("/ec"));
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/ec",
         StripedFileTestUtil.getDefaultECPolicy().getName());

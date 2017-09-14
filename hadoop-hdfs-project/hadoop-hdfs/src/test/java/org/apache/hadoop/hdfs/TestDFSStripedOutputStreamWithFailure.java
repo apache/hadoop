@@ -216,10 +216,10 @@ public class TestDFSStripedOutputStreamWithFailure {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
-    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
+    DFSTestUtil.enableAllECPolicies(dfs);
     dfs.mkdirs(dir);
     dfs.setErasureCodingPolicy(dir, ecPolicy.getName());
   }

@@ -241,11 +241,11 @@ public class TestFSImage {
   @Test
   public void testSaveAndLoadStripedINodeFile() throws IOException{
     Configuration conf = new Configuration();
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
+      DFSTestUtil.enableAllECPolicies(cluster.getFileSystem());
       testSaveAndLoadStripedINodeFile(cluster.getNamesystem(), conf, false);
     } finally {
       if (cluster != null) {
@@ -262,11 +262,11 @@ public class TestFSImage {
   public void testSaveAndLoadStripedINodeFileUC() throws IOException {
     // construct a INode with StripedBlock for saving and loading
     Configuration conf = new Configuration();
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
+      DFSTestUtil.enableAllECPolicies(cluster.getFileSystem());
       testSaveAndLoadStripedINodeFile(cluster.getNamesystem(), conf, true);
     } finally {
       if (cluster != null) {
@@ -462,13 +462,13 @@ public class TestFSImage {
     final int BLOCK_SIZE = 8 * 1024 * 1024;
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
           .build();
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.enableAllECPolicies(fs);
       Path parentDir = new Path("/ec-10-4");
       Path childDir = new Path(parentDir, "ec-3-2");
       ErasureCodingPolicy ec32Policy = SystemErasureCodingPolicies
@@ -732,13 +732,13 @@ public class TestFSImage {
   public void testSaveAndLoadFileUnderReplicationPolicyDir()
       throws IOException {
     Configuration conf = new Configuration();
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
       FSNamesystem fsn = cluster.getNamesystem();
       DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.enableAllECPolicies(fs);
       ErasureCodingPolicy replicaPolicy =
           SystemErasureCodingPolicies.getReplicationPolicy();
       ErasureCodingPolicy defaultEcPolicy =

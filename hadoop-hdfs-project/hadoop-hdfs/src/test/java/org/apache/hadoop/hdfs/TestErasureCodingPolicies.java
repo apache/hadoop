@@ -77,13 +77,13 @@ public class TestErasureCodingPolicies {
     ecPolicy = getEcPolicy();
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).
         numDataNodes(ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()).
         build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     namesystem = cluster.getNamesystem();
+    DFSTestUtil.enableAllECPolicies(fs);
   }
 
   @After
@@ -206,8 +206,6 @@ public class TestErasureCodingPolicies {
 
     // Verify that policies are successfully loaded even when policies
     // are disabled
-    cluster.getConfiguration(0).set(
-        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, "");
     cluster.restartNameNodes();
     cluster.waitActive();
 

@@ -71,7 +71,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -289,12 +288,13 @@ public class DFSTestUtil {
     Whitebox.setInternalState(fsn.getFSDirectory(), "editLog", newLog);
   }
 
-  public static void enableAllECPolicies(Configuration conf) {
-    // Enable all the available EC policies
-    String policies = SystemErasureCodingPolicies.getPolicies().stream()
-        .map(ErasureCodingPolicy::getName)
-        .collect(Collectors.joining(","));
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, policies);
+  public static void enableAllECPolicies(DistributedFileSystem fs)
+      throws IOException {
+    // Enable all available EC policies
+    for (ErasureCodingPolicy ecPolicy :
+        SystemErasureCodingPolicies.getPolicies()) {
+      fs.enableErasureCodingPolicy(ecPolicy.getName());
+    }
   }
 
   /** class MyFile contains enough information to recreate the contents of
