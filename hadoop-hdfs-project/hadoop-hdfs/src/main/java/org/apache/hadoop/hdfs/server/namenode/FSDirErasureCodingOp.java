@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
@@ -80,11 +79,10 @@ final class FSDirErasureCodingOp {
               .collect(Collectors.joining(", "));
       final String message = String.format("Policy '%s' does not match any " +
               "enabled erasure" +
-              " coding policies: [%s]. The set of enabled erasure coding " +
-              "policies can be configured at '%s'.",
+              " coding policies: [%s]. An erasure coding policy can be" +
+              " enabled by enableErasureCodingPolicy API.",
           ecPolicyName,
-          sysPolicies,
-          DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY
+          sysPolicies
       );
       throw new HadoopIllegalArgumentException(message);
     }

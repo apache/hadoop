@@ -458,8 +458,6 @@ public class TestFSEditLogLoader {
   public void testAddNewStripedBlock() throws IOException{
     // start a cluster
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        testECPolicy.getName());
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -467,6 +465,7 @@ public class TestFSEditLogLoader {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       FSNamesystem fns = cluster.getNamesystem();
+      fs.enableErasureCodingPolicy(testECPolicy.getName());
 
       String testDir = "/ec";
       String testFile = "testfile_001";
@@ -533,8 +532,6 @@ public class TestFSEditLogLoader {
   public void testUpdateStripedBlocks() throws IOException{
     // start a cluster
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        testECPolicy.getName());
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -542,6 +539,7 @@ public class TestFSEditLogLoader {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       FSNamesystem fns = cluster.getNamesystem();
+      fs.enableErasureCodingPolicy(testECPolicy.getName());
 
       String testDir = "/ec";
       String testFile = "testfile_002";

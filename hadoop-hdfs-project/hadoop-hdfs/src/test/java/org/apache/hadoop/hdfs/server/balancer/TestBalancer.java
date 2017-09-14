@@ -1981,8 +1981,6 @@ public class TestBalancer {
     for (int i = 0; i < numOfDatanodes; i++) {
       racks[i] = "/rack" + (i % numOfRacks);
     }
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .racks(racks)
@@ -1993,6 +1991,8 @@ public class TestBalancer {
       cluster.waitActive();
       client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
+      client.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       client.setErasureCodingPolicy("/",
           StripedFileTestUtil.getDefaultECPolicy().getName());
 

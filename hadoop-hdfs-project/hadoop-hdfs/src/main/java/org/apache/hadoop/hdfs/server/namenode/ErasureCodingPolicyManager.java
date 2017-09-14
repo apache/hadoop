@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -101,15 +100,10 @@ public final class ErasureCodingPolicyManager {
   private ErasureCodingPolicyManager() {}
 
   public void init(Configuration conf) {
-    // Populate the list of enabled policies from configuration
-    final String[] enablePolicyNames = conf.getTrimmedStrings(
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
+    // Load erasure coding default policy
     final String defaultPolicyName = conf.getTrimmed(
             DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
             DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
-    final String[] policyNames =
-            (String[]) ArrayUtils.add(enablePolicyNames, defaultPolicyName);
     this.policiesByName = new TreeMap<>();
     this.policiesByID = new TreeMap<>();
     this.enabledPoliciesByName = new TreeMap<>();
@@ -129,11 +123,8 @@ public final class ErasureCodingPolicyManager {
       policiesByID.put(policy.getId(), policy);
     }
 
-    for (String policyName : policyNames) {
-      if (policyName.trim().isEmpty()) {
-        continue;
-      }
-      ErasureCodingPolicy ecPolicy = policiesByName.get(policyName);
+    if (!defaultPolicyName.trim().isEmpty()) {
+      ErasureCodingPolicy ecPolicy = policiesByName.get(defaultPolicyName);
       if (ecPolicy == null) {
         String names = policiesByName.values()
             .stream().map(ErasureCodingPolicy::getName)
@@ -141,8 +132,8 @@ public final class ErasureCodingPolicyManager {
         String msg = String.format("EC policy '%s' specified at %s is not a "
                 + "valid policy. Please choose from list of available "
                 + "policies: [%s]",
-            policyName,
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+            defaultPolicyName,
+            DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
             names);
         throw new HadoopIllegalArgumentException(msg);
       }
