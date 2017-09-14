@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 
@@ -47,7 +46,7 @@ public class ComputeFairShares {
    */
   public static void computeShares(
       Collection<? extends Schedulable> schedulables, Resource totalResources,
-      ResourceType type) {
+      String type) {
     computeSharesInternal(schedulables, totalResources, type, false);
   }
 
@@ -62,7 +61,7 @@ public class ComputeFairShares {
    */
   public static void computeSteadyShares(
       Collection<? extends FSQueue> queues, Resource totalResources,
-      ResourceType type) {
+      String type) {
     computeSharesInternal(queues, totalResources, type, true);
   }
 
@@ -110,9 +109,9 @@ public class ComputeFairShares {
    */
   private static void computeSharesInternal(
       Collection<? extends Schedulable> allSchedulables,
-      Resource totalResources, ResourceType type, boolean isSteadyShare) {
+      Resource totalResources, String type, boolean isSteadyShare) {
 
-    Collection<Schedulable> schedulables = new ArrayList<Schedulable>();
+    Collection<Schedulable> schedulables = new ArrayList<>();
     int takenResources = handleFixedFairShares(
         allSchedulables, schedulables, isSteadyShare, type);
 
@@ -124,7 +123,7 @@ public class ComputeFairShares {
     // have met all Schedulables' max shares.
     int totalMaxShare = 0;
     for (Schedulable sched : schedulables) {
-      long maxShare = getResourceValue(sched.getMaxShare(), type);
+      long maxShare = sched.getMaxShare().getResourceValue(type);
       totalMaxShare = (int) Math.min(maxShare + (long)totalMaxShare,
           Integer.MAX_VALUE);
       if (totalMaxShare == Integer.MAX_VALUE) {
@@ -132,7 +131,7 @@ public class ComputeFairShares {
       }
     }
 
-    long totalResource = Math.max((getResourceValue(totalResources, type) -
+    long totalResource = Math.max((totalResources.getResourceValue(type) -
         takenResources), 0);
     totalResource = Math.min(totalMaxShare, totalResource);
 
@@ -159,13 +158,15 @@ public class ComputeFairShares {
     }
     // Set the fair shares based on the value of R we've converged to
     for (Schedulable sched : schedulables) {
+      Resource target;
+
       if (isSteadyShare) {
-        setResourceValue(computeShare(sched, right, type),
-            ((FSQueue) sched).getSteadyFairShare(), type);
+        target = ((FSQueue) sched).getSteadyFairShare();
       } else {
-        setResourceValue(
-            computeShare(sched, right, type), sched.getFairShare(), type);
+        target = sched.getFairShare();
       }
+
+      target.setResourceValue(type, (long)computeShare(sched, right, type));
     }
   }
 
@@ -174,7 +175,7 @@ public class ComputeFairShares {
    * w2rRatio, for use in the computeFairShares algorithm as described in #
    */
   private static int resourceUsedWithWeightToResourceRatio(double w2rRatio,
-      Collection<? extends Schedulable> schedulables, ResourceType type) {
+      Collection<? extends Schedulable> schedulables, String type) {
     int resourcesTaken = 0;
     for (Schedulable sched : schedulables) {
       int share = computeShare(sched, w2rRatio, type);
@@ -188,10 +189,10 @@ public class ComputeFairShares {
    * weight-to-resource ratio w2rRatio.
    */
   private static int computeShare(Schedulable sched, double w2rRatio,
-      ResourceType type) {
-    double share = sched.getWeights().getWeight(type) * w2rRatio;
-    share = Math.max(share, getResourceValue(sched.getMinShare(), type));
-    share = Math.min(share, getResourceValue(sched.getMaxShare(), type));
+      String type) {
+    double share = sched.getWeight() * w2rRatio;
+    share = Math.max(share, sched.getMinShare().getResourceValue(type));
+    share = Math.min(share, sched.getMaxShare().getResourceValue(type));
     return (int) share;
   }
 
@@ -203,7 +204,7 @@ public class ComputeFairShares {
   private static int handleFixedFairShares(
       Collection<? extends Schedulable> schedulables,
       Collection<Schedulable> nonFixedSchedulables,
-      boolean isSteadyShare, ResourceType type) {
+      boolean isSteadyShare, String type) {
     int totalResource = 0;
 
     for (Schedulable sched : schedulables) {
@@ -211,11 +212,15 @@ public class ComputeFairShares {
       if (fixedShare < 0) {
         nonFixedSchedulables.add(sched);
       } else {
-        setResourceValue(fixedShare,
-            isSteadyShare
-                ? ((FSQueue)sched).getSteadyFairShare()
-                : sched.getFairShare(),
-            type);
+        Resource target;
+
+        if (isSteadyShare) {
+          target = ((FSQueue)sched).getSteadyFairShare();
+        } else {
+          target = sched.getFairShare();
+        }
+
+        target.setResourceValue(type, fixedShare);
         totalResource = (int) Math.min((long)totalResource + (long)fixedShare,
             Integer.MAX_VALUE);
       }
@@ -230,10 +235,10 @@ public class ComputeFairShares {
    * or the Schedulable is not active for instantaneous fairshare.
    */
   private static long getFairShareIfFixed(Schedulable sched,
-      boolean isSteadyShare, ResourceType type) {
+      boolean isSteadyShare, String type) {
 
     // Check if maxShare is 0
-    if (getResourceValue(sched.getMaxShare(), type) <= 0) {
+    if (sched.getMaxShare().getResourceValue(type) <= 0) {
       return 0;
     }
 
@@ -244,35 +249,11 @@ public class ComputeFairShares {
     }
 
     // Check if weight is 0
-    if (sched.getWeights().getWeight(type) <= 0) {
-      long minShare = getResourceValue(sched.getMinShare(), type);
+    if (sched.getWeight() <= 0) {
+      long minShare = sched.getMinShare().getResourceValue(type);
       return (minShare <= 0) ? 0 : minShare;
     }
 
     return -1;
-  }
-
-  private static long getResourceValue(Resource resource, ResourceType type) {
-    switch (type) {
-    case MEMORY:
-      return resource.getMemorySize();
-    case CPU:
-      return resource.getVirtualCores();
-    default:
-      throw new IllegalArgumentException("Invalid resource");
-    }
-  }
-  
-  private static void setResourceValue(long val, Resource resource, ResourceType type) {
-    switch (type) {
-    case MEMORY:
-      resource.setMemorySize(val);
-      break;
-    case CPU:
-      resource.setVirtualCores((int)val);
-      break;
-    default:
-      throw new IllegalArgumentException("Invalid resource");
-    }
   }
 }
