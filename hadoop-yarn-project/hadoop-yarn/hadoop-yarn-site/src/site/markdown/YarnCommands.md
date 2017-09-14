@@ -76,28 +76,32 @@ Usage `yarn service [sub-command] [service-name] [options]`
 
 * `build`:  Build a service with its specifications, but do not start it.
     ```
-    Usage: yarn service build --file [file]
-    ```
+    Usage: yarn service build [service-name] --file [file]
+    Fields:
+    service-name     Optional. If specified, it will override the name in the service definition.
 
-  | COMMAND\_OPTIONS | Description |
-  |:---- |:---- |
-  | --file or -f | The local path to the service definition file |
+    Options:
+      --file,-f      The local path to the service definition file
+    ```
 
 * `create`:  create a service, it's equivalent to first invoke build and then start.
    ```
-   Usage: yarn service create --file [file]
+   Usage: yarn service create [service-name] --file [file]
+   Fields:
+    service-name    Optional. If specified, it will override the name in the service definition.
+
+   Options:
+    --file,-f       The local path to the service definition file.
+    --example,-e    The name of the example service such as:
+                    Sleeper      A simple service that launches a few non-docker sleep containers on YARN.
    ```
-  | COMMAND\_OPTIONS | Description |
-  |:---- |:---- |
-  | --file or -f | The local path to the service definition file |
 
 * `dependency`:  Yarn service framework dependency (libraries) management.
   ```
   Usage: yarn service dependency [options]
+  Option:
+     --upload      Pre-upload the dependency jars onto HDFS to expediate service launch process.
   ```
-  | COMMAND\_OPTIONS | Description |
-  |:---- |:---- |
-  | --upload | Pre-upload the dependency jars onto HDFS to expediate service launch process. |
 
 * `destroy`:  Destroy a stopped service, service must be stopped first before destroying.
   ```
@@ -106,10 +110,10 @@ Usage `yarn service [sub-command] [service-name] [options]`
 * `flex`:   Flex a service's component by increasing or decreasing the number of containers.
   ```
   Usage: yarn service flex [service-name] --component [component-name] [count]
+  Options:
+    --component [component-name] [count]
+            Specifies the component name and its number of containers. e.g. +1 incr by 1, -2 decr by 2, and 3 makes final count 3.
   ```
-  | COMMAND\_OPTIONS | Description |
-  |:---- |:---- |
-  | --component [component-name] [count] | Specifies the component name and its number of containers. e.g. +1 incr by 1, -2 decr by 2, and 3 makes final count 3.|
 * `status`:  Get the status of a service.
   ```
   Usage: yarn service status [service-name]

@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.service.client.params;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.utils.SliderUtils;
 import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 import org.apache.hadoop.yarn.service.exceptions.ErrorStrings;
@@ -104,49 +102,8 @@ public class ClientArgs extends CommonArgs {
     return actionDependencyArgs;
   }
 
-  public ActionDestroyArgs getActionDestroyArgs() {
-    return actionDestroyArgs;
-  }
-
-  public ActionExistsArgs getActionExistsArgs() {
-    return actionExistsArgs;
-  }
-
   public ActionFlexArgs getActionFlexArgs() {
     return actionFlexArgs;
-  }
-
-  public ActionFreezeArgs getActionFreezeArgs() {
-    return actionFreezeArgs;
-  }
-
-  public ActionListArgs getActionListArgs() {
-    return actionListArgs;
-  }
-
-
-  public ActionRegistryArgs getActionRegistryArgs() {
-    return actionRegistryArgs;
-  }
-
-  public ActionResolveArgs getActionResolveArgs() {
-    return actionResolveArgs;
-  }
-
-  public ActionResourceArgs getActionResourceArgs() {
-    return actionResourceArgs;
-  }
-
-  public ActionStatusArgs getActionStatusArgs() {
-    return actionStatusArgs;
-  }
-
-  public ActionThawArgs getActionThawArgs() {
-    return actionThawArgs;
-  }
-
-  public ActionTokensArgs getActionTokenArgs() {
-    return actionTokenArgs;
   }
 
   /**
@@ -227,7 +184,6 @@ public class ClientArgs extends CommonArgs {
       case ACTION_UPDATE:
         bindCoreAction(actionUpdateArgs);
         break;
-
       default:
         throw new BadCommandArgumentsException(ErrorStrings.ERROR_UNKNOWN_ACTION
         + " " + action);

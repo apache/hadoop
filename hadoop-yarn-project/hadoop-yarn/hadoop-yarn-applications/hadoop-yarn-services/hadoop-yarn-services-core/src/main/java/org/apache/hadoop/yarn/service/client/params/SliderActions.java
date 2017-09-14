@@ -30,7 +30,6 @@ public interface SliderActions {
   String ACTION_UPGRADE = "upgrade";
   String ACTION_DESTROY = "destroy";
   String ACTION_EXISTS = "exists";
-  String ACTION_EXAMPLES = "examples";
   String ACTION_FLEX = "flex";
   String ACTION_STOP = "stop";
   String ACTION_HELP = "help";
@@ -59,7 +58,6 @@ public interface SliderActions {
         "Destroy a stopped service, service must be stopped first before destroying.";
   String DESCRIBE_ACTION_EXISTS =
             "Probe for a service running";
-  String DESCRIBE_ACTION_EXAMPLES = "Run an example service on YARN";
   String DESCRIBE_ACTION_FLEX = "Flex a service's component by increasing or decreasing the number of containers.";
   String DESCRIBE_ACTION_FREEZE =
               "Stop a running service";

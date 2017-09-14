@@ -43,7 +43,14 @@ Below is a simple service definition that launches sleep containers on YARN by w
     ]
 }
 ```
-
+User can simply run a pre-built example service on YARN using below command:
+```
+yarn service create [service-name] --example [example-name]
+```
+e.g. Below command launches a `sleeper` service named as `my-sleeper` on YARN.
+```
+yarn service create my-sleeper --example sleeper
+```
 For launching docker based services using YARN Service framework, please refer to [API doc](YarnServiceAPI.md).
 
 ## Manage services on YARN via CLI

@@ -28,7 +28,7 @@ import java.io.File;
  */
 public abstract class AbstractClusterBuildingActionArgs
     extends AbstractActionArgs {
-  @Parameter(names = { ARG_FILE, ARG_FILE_SHORT },  required = true,
+  @Parameter(names = { ARG_FILE, ARG_FILE_SHORT },
       description = "The path to the service definition file in JSON format.")
   public File file;
 
