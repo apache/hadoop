@@ -78,6 +78,8 @@ public class TestDatanodeProtocolRetryPolicy {
   ArrayList<StorageLocation> locations = new ArrayList<StorageLocation>();
   private final static String CLUSTER_ID = "testClusterID";
   private final static String POOL_ID = "BP-TEST";
+  private final static InetSocketAddress NN_ADDR = new InetSocketAddress(
+      "localhost", 5020);
   private static DatanodeRegistration datanodeRegistration =
       DFSTestUtil.getLocalDatanodeRegistration();
 
@@ -99,7 +101,7 @@ public class TestDatanodeProtocolRetryPolicy {
     conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
     FileSystem.setDefaultUri(conf,
-        "hdfs://localhost:5020");
+        "hdfs://" + NN_ADDR.getHostName() + ":" + NN_ADDR.getPort());
     File dataDir = new File(DATA_DIR);
     FileUtil.fullyDelete(dataDir);
     dataDir.mkdirs();
@@ -226,7 +228,7 @@ public class TestDatanodeProtocolRetryPolicy {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
-        Assert.assertEquals("localhost:9840", nnAddr.toString());
+        Assert.assertEquals(NN_ADDR, nnAddr);
         return namenode;
       }
     };

@@ -318,7 +318,7 @@ public class BackupNode extends NameNode {
 
   private NamespaceInfo handshake(Configuration conf) throws IOException {
     // connect to name node
-    InetSocketAddress nnAddress = NameNode.getServiceAddress(conf);
+    InetSocketAddress nnAddress = NameNode.getServiceAddress(conf, true);
     this.namenode = NameNodeProxies.createNonHAProxy(conf, nnAddress,
         NamenodeProtocol.class, UserGroupInformation.getCurrentUser(),
         true).getProxy();
