@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,312 +18,48 @@
 
 package org.apache.hadoop.fs.s3native;
 
-import java.io.BufferedOutputStream;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
-import java.security.DigestOutputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BufferedFSInputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_BUFFER_DIR_DEFAULT;
-import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_BUFFER_DIR_KEY;
-import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_MAX_RETRIES_DEFAUL;
-import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_MAX_RETRIES_KEY;
-import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_SLEEP_TIME_DEFAULT;
-import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_SLEEP_TIME_KEY;
-import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.addDeprecatedConfigKeys;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Progressable;
 
 /**
- * A {@link FileSystem} for reading and writing files stored on
- * <a href="http://aws.amazon.com/s3">Amazon S3</a>.
- * This implementation stores files on S3 in their native form so they can be
- * read by other S3 tools.
- * <p>
- * A note about directories. S3 of course has no "native" support for them.
- * The idiom we choose then is: for any directory created by this class,
- * we use an empty object "#{dirpath}_$folder$" as a marker.
- * Further, to interoperate with other S3 tools, we also accept the following:
- * <ul>
- *   <li>an object "#{dirpath}/' denoting a directory marker</li>
- *   <li>
- *     if there exists any objects with the prefix "#{dirpath}/", then the
- *     directory is said to exist
- *   </li>
- *   <li>
- *     if both a file with the name of a directory and a marker for that
- *     directory exists, then the *file masks the directory*, and the directory
- *     is never returned.
- *   </li>
- * </ul>
+ * This is a stub filesystem purely present to fail meaningfully when
+ * someone who explicitly declares
+ * {@code fs.s3n.impl=org.apache.hadoop.fs.s3native.NativeS3FileSystem}
+ * and then tries to create a filesystem off an s3n:// URL.
+ *
+ * The {@link #initialize(URI, Configuration)} method will throw
+ * an IOException informing the user of their need to migrate.
+ * @deprecated Replaced by the S3A client.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class NativeS3FileSystem extends FileSystem {
+public final class NativeS3FileSystem extends FileSystem {
   
   public static final Logger LOG =
       LoggerFactory.getLogger(NativeS3FileSystem.class);
-  
-  private static final String FOLDER_SUFFIX = "_$folder$";
-  static final String PATH_DELIMITER = Path.SEPARATOR;
-  private static final int S3_MAX_LISTING_LENGTH = 1000;
 
-  static {
-    // Add the deprecated config keys
-    addDeprecatedConfigKeys();
-  }
+  /**
+   * Message in thrown exceptions: {@value}.
+   */
+  private static final String UNSUPPORTED =
+      "The s3n:// client to Amazon S3 is no longer available:"
+          + " please migrate to the s3a:// client";
 
-  static class NativeS3FsInputStream extends FSInputStream {
-    
-    private NativeFileSystemStore store;
-    private Statistics statistics;
-    private InputStream in;
-    private final String key;
-    private long pos = 0;
-    
-    public NativeS3FsInputStream(NativeFileSystemStore store, Statistics statistics, InputStream in, String key) {
-      Preconditions.checkNotNull(in, "Null input stream");
-      this.store = store;
-      this.statistics = statistics;
-      this.in = in;
-      this.key = key;
-    }
-    
-    @Override
-    public synchronized int read() throws IOException {
-      int result;
-      try {
-        result = in.read();
-      } catch (IOException e) {
-        LOG.info("Received IOException while reading '{}', attempting to reopen",
-            key);
-        LOG.debug("{}", e, e);
-        try {
-          reopen(pos);
-          result = in.read();
-        } catch (EOFException eof) {
-          LOG.debug("EOF on input stream read: {}", eof, eof);
-          result = -1;
-        }
-      } 
-      if (result != -1) {
-        pos++;
-      }
-      if (statistics != null && result != -1) {
-        statistics.incrementBytesRead(1);
-      }
-      return result;
-    }
-    @Override
-    public synchronized int read(byte[] b, int off, int len)
-      throws IOException {
-      if (in == null) {
-        throw new EOFException("Cannot read closed stream");
-      }
-      int result = -1;
-      try {
-        result = in.read(b, off, len);
-      } catch (EOFException eof) {
-        throw eof;
-      } catch (IOException e) {
-        LOG.info( "Received IOException while reading '{}'," +
-                  " attempting to reopen.", key);
-        reopen(pos);
-        result = in.read(b, off, len);
-      }
-      if (result > 0) {
-        pos += result;
-      }
-      if (statistics != null && result > 0) {
-        statistics.incrementBytesRead(result);
-      }
-      return result;
-    }
-
-    @Override
-    public synchronized void close() throws IOException {
-      closeInnerStream();
-    }
-
-    /**
-     * Close the inner stream if not null. Even if an exception
-     * is raised during the close, the field is set to null
-     */
-    private void closeInnerStream() {
-      IOUtils.closeStream(in);
-      in = null;
-    }
-
-    /**
-     * Reopen a new input stream with the specified position
-     * @param pos the position to reopen a new stream
-     * @throws IOException
-     */
-    private synchronized void reopen(long pos) throws IOException {
-        LOG.debug("Reopening key '{}' for reading at position '{}", key, pos);
-        InputStream newStream = store.retrieve(key, pos);
-        updateInnerStream(newStream, pos);
-    }
-
-    /**
-     * Update inner stream with a new stream and position
-     * @param newStream new stream -must not be null
-     * @param newpos new position
-     * @throws IOException IO exception on a failure to close the existing
-     * stream.
-     */
-    private synchronized void updateInnerStream(InputStream newStream, long newpos) throws IOException {
-      Preconditions.checkNotNull(newStream, "Null newstream argument");
-      closeInnerStream();
-      in = newStream;
-      this.pos = newpos;
-    }
-
-    @Override
-    public synchronized void seek(long newpos) throws IOException {
-      if (newpos < 0) {
-        throw new EOFException(
-            FSExceptionMessages.NEGATIVE_SEEK);
-      }
-      if (pos != newpos) {
-        // the seek is attempting to move the current position
-        reopen(newpos);
-      }
-    }
-
-    @Override
-    public synchronized long getPos() throws IOException {
-      return pos;
-    }
-    @Override
-    public boolean seekToNewSource(long targetPos) throws IOException {
-      return false;
-    }
-  }
-  
-  private class NativeS3FsOutputStream extends OutputStream {
-    
-    private Configuration conf;
-    private String key;
-    private File backupFile;
-    private OutputStream backupStream;
-    private MessageDigest digest;
-    private boolean closed;
-    private LocalDirAllocator lDirAlloc;
-    
-    public NativeS3FsOutputStream(Configuration conf,
-        NativeFileSystemStore store, String key, Progressable progress,
-        int bufferSize) throws IOException {
-      this.conf = conf;
-      this.key = key;
-      this.backupFile = newBackupFile();
-      LOG.info("OutputStream for key '" + key + "' writing to tempfile '" + this.backupFile + "'");
-      try {
-        this.digest = MessageDigest.getInstance("MD5");
-        this.backupStream = new BufferedOutputStream(new DigestOutputStream(
-            new FileOutputStream(backupFile), this.digest));
-      } catch (NoSuchAlgorithmException e) {
-        LOG.warn("Cannot load MD5 digest algorithm," +
-            "skipping message integrity check.", e);
-        this.backupStream = new BufferedOutputStream(
-            new FileOutputStream(backupFile));
-      }
-    }
-
-    private File newBackupFile() throws IOException {
-      if (conf.get(S3_NATIVE_BUFFER_DIR_KEY, null) != null) {
-        lDirAlloc = new LocalDirAllocator(S3_NATIVE_BUFFER_DIR_KEY);
-      } else {
-        lDirAlloc = new LocalDirAllocator(S3_NATIVE_BUFFER_DIR_DEFAULT);
-      }
-      File result = lDirAlloc.createTmpFileForWrite("output-", LocalDirAllocator.SIZE_UNKNOWN, conf);
-      result.deleteOnExit();
-      return result;
-    }
-    
-    @Override
-    public void flush() throws IOException {
-      backupStream.flush();
-    }
-    
-    @Override
-    public synchronized void close() throws IOException {
-      if (closed) {
-        return;
-      }
-
-      backupStream.close();
-      LOG.info("OutputStream for key '{}' closed. Now beginning upload", key);
-      
-      try {
-        byte[] md5Hash = digest == null ? null : digest.digest();
-        store.storeFile(key, backupFile, md5Hash);
-      } finally {
-        if (!backupFile.delete()) {
-          LOG.warn("Could not delete temporary s3n file: " + backupFile);
-        }
-        super.close();
-        closed = true;
-      } 
-      LOG.info("OutputStream for key '{}' upload complete", key);
-    }
-
-    @Override
-    public void write(int b) throws IOException {
-      backupStream.write(b);
-    }
-
-    @Override
-    public void write(byte[] b, int off, int len) throws IOException {
-      backupStream.write(b, off, len);
-    }
-  }
-  
-  private URI uri;
-  private NativeFileSystemStore store;
-  private Path workingDir;
-  
   public NativeS3FileSystem() {
-    // set store in initialize()
-  }
-  
-  public NativeS3FileSystem(NativeFileSystemStore store) {
-    this.store = store;
   }
 
   /**
@@ -336,504 +72,77 @@ public class NativeS3FileSystem extends FileSystem {
     return "s3n";
   }
 
+  /**
+   * Always fail to initialize.
+   * @throws IOException always.
+   */
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
-    if (store == null) {
-      store = createDefaultStore(conf);
-    }
-    store.initialize(uri, conf);
-    setConf(conf);
-    this.uri = S3xLoginHelper.buildFSURI(uri);
-    this.workingDir =
-      new Path("/user", System.getProperty("user.name")).makeQualified(this.uri, this.getWorkingDirectory());
-  }
-  
-  private static NativeFileSystemStore createDefaultStore(Configuration conf) {
-    NativeFileSystemStore store = new Jets3tNativeFileSystemStore();
-    
-    RetryPolicy basePolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-        conf.getInt(S3_NATIVE_MAX_RETRIES_KEY, S3_NATIVE_MAX_RETRIES_DEFAUL),
-        conf.getLong(S3_NATIVE_SLEEP_TIME_KEY, S3_NATIVE_SLEEP_TIME_DEFAULT),
-        TimeUnit.SECONDS);
-    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
-      new HashMap<Class<? extends Exception>, RetryPolicy>();
-    exceptionToPolicyMap.put(IOException.class, basePolicy);
-    exceptionToPolicyMap.put(S3Exception.class, basePolicy);
-    
-    RetryPolicy methodPolicy = RetryPolicies.retryByException(
-        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
-    Map<String, RetryPolicy> methodNameToPolicyMap =
-      new HashMap<String, RetryPolicy>();
-    methodNameToPolicyMap.put("storeFile", methodPolicy);
-    methodNameToPolicyMap.put("rename", methodPolicy);
-    
-    return (NativeFileSystemStore)
-      RetryProxy.create(NativeFileSystemStore.class, store,
-          methodNameToPolicyMap);
-  }
-  
-  private static String pathToKey(Path path) {
-    if (path.toUri().getScheme() != null && path.toUri().getPath().isEmpty()) {
-      // allow uris without trailing slash after bucket to refer to root,
-      // like s3n://mybucket
-      return "";
-    }
-    if (!path.isAbsolute()) {
-      throw new IllegalArgumentException("Path must be absolute: " + path);
-    }
-    String ret = path.toUri().getPath().substring(1); // remove initial slash
-    if (ret.endsWith("/") && (ret.indexOf("/") != ret.length() - 1)) {
-      ret = ret.substring(0, ret.length() -1);
-  }
-    return ret;
-  }
-  
-  private static Path keyToPath(String key) {
-    return new Path("/" + key);
-  }
-  
-  private Path makeAbsolute(Path path) {
-    if (path.isAbsolute()) {
-      return path;
-    }
-    return new Path(workingDir, path);
-  }
-
-  /**
-   * Check that a Path belongs to this FileSystem.
-   * Unlike the superclass, this version does not look at authority,
-   * only hostnames.
-   * @param path to check
-   * @throws IllegalArgumentException if there is an FS mismatch
-   */
-  @Override
-  protected void checkPath(Path path) {
-    S3xLoginHelper.checkPath(getConf(), getUri(), path, getDefaultPort());
-  }
-
-  @Override
-  protected URI canonicalizeUri(URI rawUri) {
-    return S3xLoginHelper.canonicalizeUri(rawUri, getDefaultPort());
-  }
-
-  /** This optional operation is not yet supported. */
-  @Override
-  public FSDataOutputStream append(Path f, int bufferSize,
-      Progressable progress) throws IOException {
-    throw new UnsupportedOperationException("Append is not supported "
-        + "by NativeS3FileSystem");
-  }
-  
-  @Override
-  public FSDataOutputStream create(Path f, FsPermission permission,
-      boolean overwrite, int bufferSize, short replication, long blockSize,
-      Progressable progress) throws IOException {
-
-    if (exists(f) && !overwrite) {
-      throw new FileAlreadyExistsException("File already exists: " + f);
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Creating new file '" + f + "' in S3");
-    }
-    Path absolutePath = makeAbsolute(f);
-    String key = pathToKey(absolutePath);
-    return new FSDataOutputStream(new NativeS3FsOutputStream(getConf(), store,
-        key, progress, bufferSize), statistics);
-  }
-  
-  @Override
-  public boolean delete(Path f, boolean recurse) throws IOException {
-    FileStatus status;
-    try {
-      status = getFileStatus(f);
-    } catch (FileNotFoundException e) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Delete called for '" + f +
-            "' but file does not exist, so returning false");
-      }
-      return false;
-    }
-    Path absolutePath = makeAbsolute(f);
-    String key = pathToKey(absolutePath);
-    if (status.isDirectory()) {
-      if (!recurse && listStatus(f).length > 0) {
-        throw new IOException("Can not delete " + f + " as is a not empty directory and recurse option is false");
-      }
-
-      createParent(f);
-
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Deleting directory '" + f  + "'");
-      }
-      String priorLastKey = null;
-      do {
-        PartialListing listing = store.list(key, S3_MAX_LISTING_LENGTH, priorLastKey, true);
-        for (FileMetadata file : listing.getFiles()) {
-          store.delete(file.getKey());
-        }
-        priorLastKey = listing.getPriorLastKey();
-      } while (priorLastKey != null);
-
-      try {
-        store.delete(key + FOLDER_SUFFIX);
-      } catch (FileNotFoundException e) {
-        //this is fine, we don't require a marker
-      }
-    } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Deleting file '" + f + "'");
-      }
-      createParent(f);
-      store.delete(key);
-    }
-    return true;
+    throw new IOException(UNSUPPORTED);
   }
 
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    Path absolutePath = makeAbsolute(f);
-    String key = pathToKey(absolutePath);
-    
-    if (key.length() == 0) { // root always exists
-      return newDirectory(absolutePath);
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("getFileStatus retrieving metadata for key '" + key + "'");
-    }
-    FileMetadata meta = store.retrieveMetadata(key);
-    if (meta != null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("getFileStatus returning 'file' for key '" + key + "'");
-      }
-      return newFile(meta, absolutePath);
-    }
-    if (store.retrieveMetadata(key + FOLDER_SUFFIX) != null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("getFileStatus returning 'directory' for key '" + key +
-            "' as '" + key + FOLDER_SUFFIX + "' exists");
-      }
-      return newDirectory(absolutePath);
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("getFileStatus listing key '" + key + "'");
-    }
-    PartialListing listing = store.list(key, 1);
-    if (listing.getFiles().length > 0 ||
-        listing.getCommonPrefixes().length > 0) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("getFileStatus returning 'directory' for key '" + key +
-            "' as it has contents");
-      }
-      return newDirectory(absolutePath);
-    }
-    
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("getFileStatus could not find key '" + key + "'");
-    }
-    throw new FileNotFoundException("No such file or directory '" + absolutePath + "'");
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
 
   @Override
   public URI getUri() {
-    return uri;
-  }
-
-  /**
-   * <p>
-   * If <code>f</code> is a file, this method will make a single call to S3.
-   * If <code>f</code> is a directory, this method will make a maximum of
-   * (<i>n</i> / 1000) + 2 calls to S3, where <i>n</i> is the total number of
-   * files and directories contained directly in <code>f</code>.
-   * </p>
-   */
-  @Override
-  public FileStatus[] listStatus(Path f) throws IOException {
-
-    Path absolutePath = makeAbsolute(f);
-    String key = pathToKey(absolutePath);
-    
-    if (key.length() > 0) {
-      FileMetadata meta = store.retrieveMetadata(key);
-      if (meta != null) {
-        return new FileStatus[] { newFile(meta, absolutePath) };
-      }
-    }
-    
-    URI pathUri = absolutePath.toUri();
-    Set<FileStatus> status = new TreeSet<FileStatus>();
-    String priorLastKey = null;
-    do {
-      PartialListing listing = store.list(key, S3_MAX_LISTING_LENGTH, priorLastKey, false);
-      for (FileMetadata fileMetadata : listing.getFiles()) {
-        Path subpath = keyToPath(fileMetadata.getKey());
-        String relativePath = pathUri.relativize(subpath.toUri()).getPath();
-
-        if (fileMetadata.getKey().equals(key + "/")) {
-          // this is just the directory we have been asked to list
-        }
-        else if (relativePath.endsWith(FOLDER_SUFFIX)) {
-          status.add(newDirectory(new Path(
-              absolutePath,
-              relativePath.substring(0, relativePath.indexOf(FOLDER_SUFFIX)))));
-        }
-        else {
-          status.add(newFile(fileMetadata, subpath));
-        }
-      }
-      for (String commonPrefix : listing.getCommonPrefixes()) {
-        Path subpath = keyToPath(commonPrefix);
-        String relativePath = pathUri.relativize(subpath.toUri()).getPath();
-        // sometimes the common prefix includes the base dir (HADOOP-13830).
-        // avoid that problem by detecting it and keeping it out
-        // of the list
-        if (!relativePath.isEmpty()) {
-          status.add(newDirectory(new Path(absolutePath, relativePath)));
-        }
-      }
-      priorLastKey = listing.getPriorLastKey();
-    } while (priorLastKey != null);
-    
-    if (status.isEmpty() &&
-        key.length() > 0 &&
-        store.retrieveMetadata(key + FOLDER_SUFFIX) == null) {
-      throw new FileNotFoundException("File " + f + " does not exist.");
-    }
-    
-    return status.toArray(new FileStatus[status.size()]);
-  }
-  
-  private FileStatus newFile(FileMetadata meta, Path path) {
-    return new FileStatus(meta.getLength(), false, 1, getDefaultBlockSize(),
-        meta.getLastModified(), path.makeQualified(this.getUri(), this.getWorkingDirectory()));
-  }
-  
-  private FileStatus newDirectory(Path path) {
-    return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this.getUri(), this.getWorkingDirectory()));
-  }
-
-  @Override
-  public boolean mkdirs(Path f, FsPermission permission) throws IOException {
-    Path absolutePath = makeAbsolute(f);
-    List<Path> paths = new ArrayList<Path>();
-    do {
-      paths.add(0, absolutePath);
-      absolutePath = absolutePath.getParent();
-    } while (absolutePath != null);
-    
-    boolean result = true;
-    for (Path path : paths) {
-      result &= mkdir(path);
-    }
-    return result;
-  }
-  
-  private boolean mkdir(Path f) throws IOException {
-    try {
-      FileStatus fileStatus = getFileStatus(f);
-      if (fileStatus.isFile()) {
-        throw new FileAlreadyExistsException(String.format(
-            "Can't make directory for path '%s' since it is a file.", f));
-
-      }
-    } catch (FileNotFoundException e) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Making dir '" + f + "' in S3");
-      }
-      String key = pathToKey(f) + FOLDER_SUFFIX;
-      store.storeEmptyFile(key);    
-    }
-    return true;
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
 
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    FileStatus fs = getFileStatus(f); // will throw if the file doesn't exist
-    if (fs.isDirectory()) {
-      throw new FileNotFoundException("'" + f + "' is a directory");
-    }
-    LOG.info("Opening '" + f + "' for reading");
-    Path absolutePath = makeAbsolute(f);
-    String key = pathToKey(absolutePath);
-    return new FSDataInputStream(new BufferedFSInputStream(
-        new NativeS3FsInputStream(store, statistics, store.retrieve(key), key), bufferSize));
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
-  
-  // rename() and delete() use this method to ensure that the parent directory
-  // of the source does not vanish.
-  private void createParent(Path path) throws IOException {
-    Path parent = path.getParent();
-    if (parent != null) {
-      String key = pathToKey(makeAbsolute(parent));
-      if (key.length() > 0) {
-          store.storeEmptyFile(key + FOLDER_SUFFIX);
-      }
-    }
+
+  @Override
+  public FSDataOutputStream create(Path f,
+      FsPermission permission,
+      boolean overwrite,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress) throws IOException {
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
-  
-    
+
+  @Override
+  public FSDataOutputStream append(Path f,
+      int bufferSize,
+      Progressable progress) throws IOException {
+    throw new UnsupportedOperationException(UNSUPPORTED);
+  }
+
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
-
-    String srcKey = pathToKey(makeAbsolute(src));
-    final String debugPreamble = "Renaming '" + src + "' to '" + dst + "' - ";
-
-    if (srcKey.length() == 0) {
-      // Cannot rename root of file system
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble +
-                  "returning false as cannot rename the root of a filesystem");
-      }
-      return false;
-    }
-
-    //get status of source
-    boolean srcIsFile;
-    try {
-      srcIsFile = getFileStatus(src).isFile();
-    } catch (FileNotFoundException e) {
-      //bail out fast if the source does not exist
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble + "returning false as src does not exist");
-      }
-      return false;
-    }
-    // Figure out the final destination
-    String dstKey = pathToKey(makeAbsolute(dst));
-
-    try {
-      boolean dstIsFile = getFileStatus(dst).isFile();
-      if (dstIsFile) {
-        //destination is a file.
-        //you can't copy a file or a directory onto an existing file
-        //except for the special case of dest==src, which is a no-op
-        if(LOG.isDebugEnabled()) {
-          LOG.debug(debugPreamble +
-              "returning without rename as dst is an already existing file");
-        }
-        //exit, returning true iff the rename is onto self
-        return srcKey.equals(dstKey);
-      } else {
-        //destination exists and is a directory
-        if(LOG.isDebugEnabled()) {
-          LOG.debug(debugPreamble + "using dst as output directory");
-        }
-        //destination goes under the dst path, with the name of the
-        //source entry
-        dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
-      }
-    } catch (FileNotFoundException e) {
-      //destination does not exist => the source file or directory
-      //is copied over with the name of the destination
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble + "using dst as output destination");
-      }
-      try {
-        if (getFileStatus(dst.getParent()).isFile()) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug(debugPreamble +
-                "returning false as dst parent exists and is a file");
-          }
-          return false;
-        }
-      } catch (FileNotFoundException ex) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug(debugPreamble +
-              "returning false as dst parent does not exist");
-        }
-        return false;
-      }
-    }
-
-    //rename to self behavior follows Posix rules and is different
-    //for directories and files -the return code is driven by src type
-    if (srcKey.equals(dstKey)) {
-      //fully resolved destination key matches source: fail
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble + "renamingToSelf; returning true");
-      }
-      return true;
-    }
-    if (srcIsFile) {
-      //source is a file; COPY then DELETE
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble +
-            "src is file, so doing copy then delete in S3");
-      }
-      store.copy(srcKey, dstKey);
-      store.delete(srcKey);
-    } else {
-      //src is a directory
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble + "src is directory, so copying contents");
-      }
-      //Verify dest is not a child of the parent
-      if (dstKey.startsWith(srcKey + "/")) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            debugPreamble + "cannot rename a directory to a subdirectory of self");
-        }
-        return false;
-      }
-      //create the subdir under the destination
-      store.storeEmptyFile(dstKey + FOLDER_SUFFIX);
-
-      List<String> keysToDelete = new ArrayList<String>();
-      String priorLastKey = null;
-      do {
-        PartialListing listing = store.list(srcKey, S3_MAX_LISTING_LENGTH, priorLastKey, true);
-        for (FileMetadata file : listing.getFiles()) {
-          keysToDelete.add(file.getKey());
-          store.copy(file.getKey(), dstKey + file.getKey().substring(srcKey.length()));
-        }
-        priorLastKey = listing.getPriorLastKey();
-      } while (priorLastKey != null);
-
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble +
-            "all files in src copied, now removing src files");
-      }
-      for (String key: keysToDelete) {
-        store.delete(key);
-      }
-
-      try {
-        store.delete(srcKey + FOLDER_SUFFIX);
-      } catch (FileNotFoundException e) {
-        //this is fine, we don't require a marker
-      }
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble + "done");
-      }
-    }
-
-    return true;
-  }
-  
-  @Override
-  public long getDefaultBlockSize() {
-    return getConf().getLong("fs.s3n.block.size", 64 * 1024 * 1024);
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
 
-  /**
-   * Set the working directory to the given directory.
-   */
   @Override
-  public void setWorkingDirectory(Path newDir) {
-    workingDir = newDir;
+  public boolean delete(Path f, boolean recursive) throws IOException {
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
-  
+
   @Override
-  public Path getWorkingDirectory() {
-    return workingDir;
+  public FileStatus[] listStatus(Path f)
+      throws IOException {
+    throw new UnsupportedOperationException(UNSUPPORTED);
+  }
+
+  @Override
+  public void setWorkingDirectory(Path new_dir) {
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
 
   @Override
-  public String getCanonicalServiceName() {
-    // Does not support Token
-    return null;
+  public Path getWorkingDirectory() {
+    throw new UnsupportedOperationException(UNSUPPORTED);
+  }
+
+  @Override
+  public boolean mkdirs(Path f, FsPermission permission) throws IOException {
+    throw new UnsupportedOperationException(UNSUPPORTED);
   }
 }

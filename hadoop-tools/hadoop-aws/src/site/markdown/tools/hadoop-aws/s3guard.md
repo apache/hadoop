@@ -107,7 +107,6 @@ It is recommended that you leave the default setting here:
     <name>fs.s3a.metadatastore.authoritative</name>
     <value>false</value>
 </property>
-
 ```
 
 Setting this to `true` is currently an experimental feature.  When true, the
@@ -510,7 +509,6 @@ log4j.logger.com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 # Log all HTTP requests made; includes S3 interaction. This may
 # include sensitive information such as account IDs in HTTP headers.
 log4j.logger.com.amazonaws.request=DEBUG
-
 ```
 
 If all else fails, S3Guard is designed to allow for easy recovery by deleting
@@ -538,7 +536,7 @@ S3Guard tables are created with a version marker, an entry with the primary
 key and child entry of `../VERSION`; the use of a relative path guarantees
 that it will not be resolved.
 
-#### Versioning policy.
+*Versioning policy*
 
 1. The version number of an S3Guard table will only be incremented when
 an incompatible change is made to the table structure —that is, the structure
@@ -557,7 +555,7 @@ in an incompatible manner. The version marker in tables exists to support
 such an option if it ever becomes necessary, by ensuring that all S3Guard
 client can recognise any version mismatch.
 
-### Security
+## Security
 
 All users of the DynamoDB table must have write access to it. This
 effectively means they must have write access to the entire object store.
@@ -569,9 +567,9 @@ are only made after successful file creation, deletion and rename, the
 store is *unlikely* to get out of sync, it is still something which
 merits more testing before it could be considered reliable.
 
-### Troubleshooting
+## Troubleshooting
 
-#### Error: `S3Guard table lacks version marker.`
+### Error: `S3Guard table lacks version marker.`
 
 The table which was intended to be used as a S3guard metadata store
 does not have any version marker indicating that it is a S3Guard table.
@@ -581,7 +579,7 @@ It may be that this is not a S3Guard table.
 * Make sure that this is the correct table name.
 * Delete the table, so it can be rebuilt.
 
-#### Error: `Database table is from an incompatible S3Guard version`
+### Error: `Database table is from an incompatible S3Guard version`
 
 This indicates that the version of S3Guard which created (or possibly updated)
 the database table is from a different version that that expected by the S3A
@@ -596,7 +594,7 @@ bucket. Upgrade the application/library.
 If the expected version is higher than the actual version, then the table
 itself will need upgrading.
 
-#### Error `"DynamoDB table TABLE does not exist in region REGION; auto-creation is turned off"`
+### Error `"DynamoDB table TABLE does not exist in region REGION; auto-creation is turned off"`
 
 S3Guard could not find the DynamoDB table for the Metadata Store,
 and it was not configured to create it. Either the table was missing,
@@ -608,3 +606,8 @@ or the configuration is preventing S3Guard from finding the table.
 1. If the region is not set, verify that the table exists in the same
 region as the bucket being used.
 1. Create the table if necessary.
+
+
+## Other Topis
+
+For details on how to test S3Guard, see [Testing S3Guard](./testing.html#s3guard)

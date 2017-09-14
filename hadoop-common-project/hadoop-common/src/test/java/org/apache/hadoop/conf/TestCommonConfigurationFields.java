@@ -94,14 +94,10 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
-    xmlPropsToSkipCompare.add("test.fs.s3n.name");
     xmlPropsToSkipCompare.add("fs.viewfs.rename.strategy");
 
-    // S3N/S3A properties are in a different subtree.
-    // - org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys
+    // S3A properties are in a different subtree.
     xmlPrefixToSkipCompare.add("fs.s3a.");
-    xmlPrefixToSkipCompare.add("fs.s3n.");
-    xmlPrefixToSkipCompare.add("s3native.");
 
     // WASB properties are in a different subtree.
     // - org.apache.hadoop.fs.azure.NativeAzureFileSystem
