@@ -230,8 +230,8 @@ public class FSDataInputStream extends DataInputStream
     try {
       ((CanUnbuffer)in).unbuffer();
     } catch (ClassCastException e) {
-      throw new UnsupportedOperationException("this stream does not " +
-          "support unbuffering.");
+      throw new UnsupportedOperationException("this stream " +
+          in.getClass().getName() + " does not " + "support unbuffering.");
     }
   }
 
