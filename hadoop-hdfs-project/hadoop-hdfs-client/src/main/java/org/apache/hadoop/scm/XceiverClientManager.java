@@ -62,7 +62,6 @@ public class XceiverClientManager implements Closeable {
   private final Cache<String, XceiverClientSpi> clientCache;
   private final boolean useRatis;
 
-  private static XceiverClientMetrics metrics;
   /**
    * Creates a new XceiverClientManager.
    *
@@ -165,10 +164,6 @@ public class XceiverClientManager implements Closeable {
     //closing is done through RemovalListener
     clientCache.invalidateAll();
     clientCache.cleanUp();
-
-    if (metrics != null) {
-      metrics.unRegister();
-    }
   }
 
   /**
@@ -202,14 +197,4 @@ public class XceiverClientManager implements Closeable {
     return OzoneProtos.ReplicationType.STAND_ALONE;
   }
 
-  /**
-   * Get xceiver client metric.
-   */
-  public synchronized static XceiverClientMetrics getXceiverClientMetrics() {
-    if (metrics == null) {
-      metrics = XceiverClientMetrics.create();
-    }
-
-    return metrics;
-  }
 }
