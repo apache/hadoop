@@ -446,4 +446,11 @@
     <Method name="setInstance"/>
     <Bug pattern="ME_ENUM_FIELD_SETTER"/>
   </Match>
+
+  <!-- findbugs is mistaken -->
+  <Match>
+    <Class name="org.apache.hadoop.util.JsonSerializationy"/>
+    <Method name="save"/>
+    <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+  </Match>
 </FindBugsFilter>
