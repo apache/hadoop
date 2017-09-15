@@ -39,7 +39,7 @@ This will give you a tarball in your distribution directory. This is the
 tarball that can be used for deploying your hadoop cluster. Here is an
 example of the tarball that will be generated.
 
-* `~/apache/hadoop/hadoop-dist/target/hadoop-3.0.0-alpha4-SNAPSHOT.tar.gz`
+* `~/apache/hadoop/hadoop-dist/target/${project.version}.tar.gz`
 
 Please proceed to setup a hadoop cluster by creating the hdfs-site.xml and
 other configuration files that are needed for your cluster.
