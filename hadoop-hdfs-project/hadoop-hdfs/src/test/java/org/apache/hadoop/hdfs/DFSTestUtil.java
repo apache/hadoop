@@ -108,6 +108,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -163,6 +164,8 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.tools.JMXGet;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
@@ -1464,6 +1467,33 @@ public class DFSTestUtil {
         new byte[]{0x37, 0x38, 0x39});
     // OP_REMOVE_XATTR
     filesystem.removeXAttr(pathConcatTarget, "user.a2");
+
+    // OP_ADD_ERASURE_CODING_POLICY
+    ErasureCodingPolicy newPolicy1 =
+        new ErasureCodingPolicy(ErasureCodeConstants.RS_3_2_SCHEMA, 8 * 1024);
+    ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[] {newPolicy1};
+    AddECPolicyResponse[] responses =
+        filesystem.addErasureCodingPolicies(policyArray);
+    newPolicy1 = responses[0].getPolicy();
+
+    // OP_ADD_ERASURE_CODING_POLICY - policy with extra options
+    Map<String, String> extraOptions = new HashMap<String, String>();
+    extraOptions.put("dummyKey", "dummyValue");
+    ECSchema schema =
+        new ECSchema(ErasureCodeConstants.RS_CODEC_NAME, 6, 10, extraOptions);
+    ErasureCodingPolicy newPolicy2 = new ErasureCodingPolicy(schema, 4 * 1024);
+    policyArray = new ErasureCodingPolicy[] {newPolicy2};
+    responses = filesystem.addErasureCodingPolicies(policyArray);
+    newPolicy2 = responses[0].getPolicy();
+    // OP_ENABLE_ERASURE_CODING_POLICY
+    filesystem.enableErasureCodingPolicy(newPolicy1.getName());
+    filesystem.enableErasureCodingPolicy(newPolicy2.getName());
+    // OP_DISABLE_ERASURE_CODING_POLICY
+    filesystem.disableErasureCodingPolicy(newPolicy1.getName());
+    filesystem.disableErasureCodingPolicy(newPolicy2.getName());
+    // OP_REMOVE_ERASURE_CODING_POLICY
+    filesystem.removeErasureCodingPolicy(newPolicy1.getName());
+    filesystem.removeErasureCodingPolicy(newPolicy2.getName());
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {
