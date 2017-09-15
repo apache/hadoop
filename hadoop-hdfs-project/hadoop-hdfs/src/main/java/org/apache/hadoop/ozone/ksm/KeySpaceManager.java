@@ -40,7 +40,6 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocolPB
     .KeySpaceManagerProtocolServerSideTranslatorPB;
-import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -183,8 +182,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
    * @throws IOException if startup fails due to I/O error
    */
   public static void main(String[] argv) throws IOException {
-    StringUtils.startupShutdownMessage(StorageContainerManager.class,
-        argv, LOG);
+    StringUtils.startupShutdownMessage(KeySpaceManager.class, argv, LOG);
     try {
       KeySpaceManager ksm = new KeySpaceManager(new OzoneConfiguration());
       ksm.start();
