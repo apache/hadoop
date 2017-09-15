@@ -261,14 +261,14 @@ public class NodesListManager extends CompositeService implements
 
     HostDetails hostDetails = hostsReader.getHostDetails();
     Set<String> includes = hostDetails.getIncludedHosts();
-    Map<String, Integer> excludes = hostDetails.getExcludedMap();
+    Set<String> excludes = hostDetails.getExcludedHosts();
 
     for (RMNode n : this.rmContext.getRMNodes().values()) {
       NodeState s = n.getState();
       // An invalid node (either due to explicit exclude or not include)
       // should be excluded.
       boolean isExcluded = !isValidNode(
-          n.getHostName(), includes, excludes.keySet());
+          n.getHostName(), includes, excludes);
       String nodeStr = "node " + n.getNodeID() + " with state " + s;
       if (!isExcluded) {
         // Note that no action is needed for DECOMMISSIONED node.
@@ -280,17 +280,14 @@ public class NodesListManager extends CompositeService implements
       } else {
         // exclude is true.
         if (graceful) {
-          // Use per node timeout if exist otherwise the request timeout.
-          Integer timeoutToUse = (excludes.get(n.getHostName()) != null)?
-              excludes.get(n.getHostName()) : timeout;
           if (s != NodeState.DECOMMISSIONED &&
               s != NodeState.DECOMMISSIONING) {
             LOG.info("Gracefully decommission " + nodeStr);
             nodesToDecom.add(n);
           } else if (s == NodeState.DECOMMISSIONING &&
                      !Objects.equals(n.getDecommissioningTimeout(),
-                         timeoutToUse)) {
-            LOG.info("Update " + nodeStr + " timeout to be " + timeoutToUse);
+                         timeout)) {
+            LOG.info("Update " + nodeStr + " timeout to be " + timeout);
             nodesToDecom.add(n);
           } else {
             LOG.info("No action for " + nodeStr);
@@ -313,9 +310,7 @@ public class NodesListManager extends CompositeService implements
     for (RMNode n : nodesToDecom) {
       RMNodeEvent e;
       if (graceful) {
-        Integer timeoutToUse = (excludes.get(n.getHostName()) != null)?
-            excludes.get(n.getHostName()) : timeout;
-        e = new RMNodeDecommissioningEvent(n.getNodeID(), timeoutToUse);
+        e = new RMNodeDecommissioningEvent(n.getNodeID(), timeout);
       } else {
         RMNodeEventType eventType = isUntrackedNode(n.getHostName())?
             RMNodeEventType.SHUTDOWN : RMNodeEventType.DECOMMISSION;
