@@ -646,7 +646,7 @@ class S3ABlockOutputStream extends OutputStream {
       fs.incrementStatistic(OBJECT_MULTIPART_UPLOAD_ABORTED);
       try {
         writeOperationHelper.abortMultipartUpload(key, uploadId,
-            (e, r, i) -> statistics.exceptionInMultipartAbort());
+            (text, e, r, i) -> statistics.exceptionInMultipartAbort());
       } catch (IOException e) {
         // this point is only reached if the operation failed more than
         // the allowed retry count

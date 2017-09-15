@@ -85,6 +85,8 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
     FileSystem.closeAll();
     super.setup();
     verifyIsMagicCommitFS(getFileSystem());
+    // abort,; rethrow on failure
+    setThrottling(0.5f, 2);
   }
 
   @Test
@@ -156,11 +158,11 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
 
     CommitOperations actions = newCommitOperations();
     // abort,; rethrow on failure
-    setThrottling(1.0f, 2);
+//    setThrottling(1.0f, 2);
     LOG.info("Abort call");
     actions.abortAllSinglePendingCommits(pendingDataPath.getParent(), true)
         .maybeRethrow();
-    resetFailures();
+//    resetFailures();
     assertPathDoesNotExist("pending file not deleted", pendingDataPath);
     assertPathDoesNotExist("dest file was created", destFile);
   }

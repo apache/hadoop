@@ -831,6 +831,25 @@ public final class S3ATestUtils {
     conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, delay);
     conf.setFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY, 0.0f);
     conf.setFloat(FAIL_INJECT_THROTTLE_PROBABILITY, 0.0f);
+  }
 
+  /**
+   * Is the filesystem using the inconsistent/throttling/unreliable client?
+   * @param fs filesystem
+   * @return true if the filesystem's client is the inconsistent one.
+   */
+  public static boolean isFaultInjecting(S3AFileSystem fs) {
+    return fs.getAmazonS3Client() instanceof InconsistentAmazonS3Client;
+  }
+
+  /**
+   * Skip a test because the client is using fault injection.
+   * This should only be done for those tests which are measuring the cost
+   * of operations or otherwise cannot handle retries.
+   * @param fs filesystem to check
+   */
+  public static void skipDuringFaultInjection(S3AFileSystem fs) {
+    Assume.assumeFalse("Skipping as filesystem has fault injection",
+        isFaultInjecting(fs));
   }
 }

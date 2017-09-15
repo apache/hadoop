@@ -66,7 +66,7 @@ public class CommitOperations {
   private final S3AInstrumentation.CommitterStatistics statistics;
 
   private final S3ALambda invoke;
-  private final S3ALambda.Retrying onRetry;
+  private final S3ALambda.Failure onRetry;
 
   /**
    * Instantiate.
@@ -76,9 +76,11 @@ public class CommitOperations {
     Preconditions.checkArgument(fs != null, "null fs");
     this.fs = fs;
     statistics = fs.newCommitterStatistics();
-    onRetry = (ex, retries, idempotent) -> fs.operationRetried(ex);
-    invoke = new S3ALambda(new S3ARetryPolicy(fs.getConf()), onRetry,
-        S3ALambda.CATCH_LOG);
+    onRetry = fs::operationRetried;
+    invoke = new S3ALambda(
+        new S3ARetryPolicy(fs.getConf()),
+        onRetry,
+        S3ALambda.LOG_EVENT);
   }
 
   @Override
@@ -305,7 +307,7 @@ public class CommitOperations {
           // quietly try to delete the pending file
           S3ALambda.quietlyEval("delete", pendingFile.toString(),
               () -> invoke.retry("delete", pendingFile.toString(), true,
-                  onRetry, () -> fs.delete(pendingFile, false)
+                  () -> fs.delete(pendingFile, false)
               ));
         }
       }
@@ -323,8 +325,7 @@ public class CommitOperations {
   protected RemoteIterator<LocatedFileStatus> ls(Path path, boolean recursive)
       throws IOException {
     return invoke.retry("ls", path.toString(), true,
-        onRetry, () -> fs.listFiles(path, recursive)
-    );
+        () -> fs.listFiles(path, recursive));
   }
 
   /**
@@ -335,8 +336,7 @@ public class CommitOperations {
    */
   protected FileStatus getFileStatus(Path path) throws IOException {
     return invoke.retry("getFileStatus", path.toString(), true,
-        onRetry, () -> fs.getFileStatus(path)
-    );
+        () -> fs.getFileStatus(path));
   }
 
   /**
@@ -380,8 +380,7 @@ public class CommitOperations {
     LOG.debug("Touching success marker for job {}: {}", markerPath,
         successData);
     invoke.retry("save", markerPath.toString(), true,
-        () -> successData.save(fs, markerPath, true),
-        onRetry);
+        () -> successData.save(fs, markerPath, true));
   }
 
   /**

@@ -313,14 +313,19 @@ public final class S3AUtils {
   }
 
   /**
-   * Is the exception an instance of a throttling exception.
+   * Is the exception an instance of a throttling exception. That
+   * is an AmazonServiceException with a 503 response, any
+   * exception from DynamoDB for limits exceeded, or an
+   * {@link AWSServiceThrottledException}.
    * @param ex exception to examine
-   * @return true if it is one of the AWS exceptions
+   * @return true if it is considered a throttling exception
    */
   public static boolean isThrottleException(Exception ex) {
     return ex instanceof AWSServiceThrottledException
         || ex instanceof ProvisionedThroughputExceededException
-        || ex instanceof LimitExceededException;
+        || ex instanceof LimitExceededException
+        || (ex instanceof AmazonServiceException
+        && 503  == ((AmazonServiceException)ex).getStatusCode());
   }
 
   /**

@@ -212,12 +212,12 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   public DeleteObjectsResult deleteObjects(
       DeleteObjectsRequest deleteObjectsRequest)
       throws AmazonClientException, AmazonServiceException {
-    maybeFail();
     for (DeleteObjectsRequest.KeyVersion keyVersion :
         deleteObjectsRequest.getKeys()) {
     registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest
         .getBucketName());
     }
+    maybeFail();
     return super.deleteObjects(deleteObjectsRequest);
   }
 
@@ -245,8 +245,21 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   @Override
   public ObjectListing listObjects(ListObjectsRequest listObjectsRequest)
       throws AmazonClientException, AmazonServiceException {
-    LOG.debug("prefix {}", listObjectsRequest.getPrefix());
     maybeFail();
+    return innerlistObjects(listObjectsRequest);
+  }
+
+  /**
+   * Run the list object call without any failure probability.
+   * This stops a very aggressive failure rate from completely overloading
+   * the retry logic.
+   * @param listObjectsRequest request
+   * @return listing
+   * @throws AmazonClientException failure
+   */
+  private ObjectListing innerlistObjects(ListObjectsRequest listObjectsRequest)
+      throws AmazonClientException, AmazonServiceException {
+    LOG.debug("prefix {}", listObjectsRequest.getPrefix());
     ObjectListing listing = super.listObjects(listObjectsRequest);
     listing = filterListObjects(listing);
     listing = restoreListObjects(listObjectsRequest, listing);
@@ -257,13 +270,22 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   @Override
   public ListObjectsV2Result listObjectsV2(ListObjectsV2Request request)
       throws AmazonClientException, AmazonServiceException {
+    maybeFail();
+    return innerListObjectsV2(request);
+  }
+
+  /**
+   * Non failing V2 list object request.
+   * @param request request
+   * @return result.
+   */
+  private ListObjectsV2Result innerListObjectsV2(ListObjectsV2Request request) {
     LOG.debug("prefix {}", request.getPrefix());
     ListObjectsV2Result listing = super.listObjectsV2(request);
     listing = filterListObjectsV2(listing);
     listing = restoreListObjectsV2(request, listing);
     return listing;
   }
-
 
   private void addSummaryIfNotPresent(List<S3ObjectSummary> list,
       S3ObjectSummary item) {
@@ -468,8 +490,10 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     if (shouldDelay(key)) {
       // Record summary so we can add it back for some time post-deletion
       S3ObjectSummary summary = null;
-      ObjectListing list = listObjects(bucket, key);
-      for (S3ObjectSummary result : list.getObjectSummaries()) {
+      ListObjectsV2Request request =
+          new ListObjectsV2Request().withBucketName(bucket)
+              .withPrefix(key);
+      for (S3ObjectSummary result : listObjectsV2(request).getObjectSummaries()) {
         if (result.getKey().equals(key)) {
           summary = result;
           break;
@@ -590,7 +614,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     AmazonServiceException ex = null;
     if (trueWithProbability(throttleProbability)) {
       // throttle the request
-      ex = new AmazonServiceException("throttled "
+      ex = new AmazonServiceException("throttled"
           + " count = " + (failureCounter.get() + 1), null);
       ex.setStatusCode(503);
     }

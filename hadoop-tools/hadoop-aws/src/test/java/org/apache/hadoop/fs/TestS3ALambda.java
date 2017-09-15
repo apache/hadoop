@@ -30,6 +30,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -50,7 +51,12 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 
 /**
- * Test the {@link S3ALambda} code.
+ * Test the {@link S3ALambda} code and the associated {@link S3ARetryPolicy}.
+ *
+ * Some of the tests look at how Connection Timeout Exceptions are processed.
+ * Because of how the AWS libraries shade the classes, there have been some
+ * regressions here during development. These tests are intended to verify that
+ * the current match process based on classname works.
  */
 @SuppressWarnings("ThrowableNotThrown")
 public class TestS3ALambda extends Assert {
@@ -80,14 +86,20 @@ public class TestS3ALambda extends Assert {
       new S3ARetryPolicy(FAST_RETRY_CONF);
 
   private int retryCount;
+  private int catchCount;
   private S3ALambda invoke = new S3ALambda(RETRY_POLICY,
-      (e, retries, idempotent) -> retryCount++,
-      S3ALambda.CATCH_LOG);
+      (text, e, retries, idempotent) -> retryCount++,
+      (text, e, retries, idempotent) -> catchCount++);
   private static final AmazonClientException CLIENT_TIMEOUT_EXCEPTION =
       new AmazonClientException(new Local.ConnectTimeoutException("timeout"));
   private static final AmazonServiceException BAD_REQUEST = serviceException(
       AWSBadRequestException.STATUS_CODE,
       "bad request");
+
+  @Before
+  public void setup() {
+    resetCounters();
+  }
 
   private static AmazonServiceException serviceException(int code,
       String text) {
@@ -119,6 +131,11 @@ public class TestS3ALambda extends Assert {
       AmazonClientException exception) throws Exception {
     return verifyExceptionClass(clazz,
         translateException("test", "/", exception));
+  }
+
+  private void resetCounters() {
+    retryCount = 0;
+    catchCount = 0;
   }
 
   @Test
@@ -262,13 +279,16 @@ public class TestS3ALambda extends Assert {
   @Test
   public void testS3LambdaRetryBadRequestIdempotent() throws Throwable {
     final AtomicInteger counter = new AtomicInteger(0);
+    int attemptsBeforeSuccess = RETRY_LIMIT_DEFAULT;
     invoke.retry("test", null, true,
         () -> {
-          if (counter.incrementAndGet() < RETRY_LIMIT_DEFAULT) {
+          if (counter.incrementAndGet() < attemptsBeforeSuccess) {
             throw BAD_REQUEST;
           }
         });
-    assertEquals(RETRY_LIMIT_DEFAULT, counter.get());
+    assertEquals(attemptsBeforeSuccess, counter.get());
+    assertEquals("catch count", attemptsBeforeSuccess - 1 , catchCount);
+    assertEquals("retry count ", attemptsBeforeSuccess - 1, retryCount);
   }
 
   @Test
@@ -329,11 +349,18 @@ public class TestS3ALambda extends Assert {
     }
   }
 
+  /**
+   * Test that NPEs aren't retried. Also verify that the
+   * catch counts are incremented, while the retry count isn't.
+   */
   @Test
   public void testNPEsNotRetried() throws Throwable {
     assertRetryAction("Expected NPE trigger failure",
         RETRY_POLICY, RetryPolicy.RetryAction.FAIL,
         new NullPointerException(), 1, true);
+    // catch notification didn't see it
+    assertEquals("catch count", 0, catchCount);
+    assertEquals("retry count ", 0, retryCount);
   }
 
   /**
@@ -383,5 +410,9 @@ public class TestS3ALambda extends Assert {
         quietlyEval("", "", () -> 3 / d));
   }
 
+  @Test
+  public void testCatchingCallbackAwaysInvoked() throws Throwable {
+
+  }
 
 }

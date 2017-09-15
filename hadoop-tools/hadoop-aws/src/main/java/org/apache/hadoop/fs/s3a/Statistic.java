@@ -47,7 +47,6 @@ public enum Statistic {
   FAKE_DIRECTORIES_DELETED("fake_directories_deleted",
       "Total number of fake directory deletes submitted to object store."),
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored"),
-  THROTTLED_REQUESTS("throttled_requests", "Requests throttled and retried"),
   INVOCATION_COPY_FROM_LOCAL_FILE(CommonStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()"),
   INVOCATION_EXISTS(CommonStatisticNames.OP_EXISTS,
@@ -189,7 +188,8 @@ public enum Statistic {
   S3GUARD_METADATASTORE_RETRY("s3guard_metadatastore_retry",
       "s3guard metadata store retry events"),
   S3GUARD_METADATASTORE_THROTTLED("s3guard_metadatastore_throttled",
-      "s3guard metadata store throttled events");
+      "s3guard metadata store throttled events"),
+  STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

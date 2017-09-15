@@ -67,6 +67,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ALambda;
@@ -219,7 +220,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /** Lambda-invoker for IO. Until configured properly, use try-once. */
   private S3ALambda invoke = new S3ALambda(RetryPolicies.TRY_ONCE_THEN_FAIL,
-      S3ALambda.NO_OP, S3ALambda.CATCH_LOG);
+      S3ALambda.NO_OP, S3ALambda.LOG_EVENT);
 
   /** Data access can have its own policies. */
   private S3ALambda dataAccess;
@@ -271,7 +272,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     // set up a full retry policy
     invoke = new S3ALambda(new S3ARetryPolicy(conf),
         this::handleRetry,
-        S3ALambda.CATCH_LOG);
+        this::handleLambdaFailure);
 
     initTable();
 
@@ -332,7 +333,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
             TimeUnit.MILLISECONDS);
     dataAccess = new S3ALambda(dataAccessRetryPolicy,
         this::handleRetry,
-        S3ALambda.CATCH_LOG);
+        this::handleLambdaFailure);
   }
 
   @Override
@@ -474,6 +475,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.Once_translated
   public DirListingMetadata listChildren(final Path path) throws IOException {
     checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
@@ -1146,20 +1148,56 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /**
    * Callback from {@link S3ALambda} when an operation is retried.
+   * @param text text of the operation
    * @param ex exception
-   * @param retries number of retries
+   * @param attempts number of attempts
    * @param idempotent is the method idempotent
    */
-  void handleRetry(Exception ex, int retries, boolean idempotent) {
+  void handleRetry(
+      String text,
+      Exception ex,
+      int attempts,
+      boolean idempotent) {
     if (instrumentation != null) {
       if (S3AUtils.isThrottleException(ex)) {
         instrumentation.throttled();
       } else {
+        if (attempts == 1) {
+          LOG.info("Retrying {}", text);
+        }
         instrumentation.retrying();
       }
     }
     if (owner != null) {
-      owner.metastoreOperationRetried(ex, retries, idempotent);
+      owner.metastoreOperationRetried(ex, attempts, idempotent);
+    }
+  }
+
+  /**
+   * Callback from {@link S3ALambda} after an operation has failed and before
+   * any retry logic is invoked.
+   * If the failure is from throttling, log at warn, so that the problem is
+   * noticed. But: only log once, even on retries
+   * @param text text of the operation
+   * @param ex exception
+   * @param attempts number of attempts
+   * @param idempotent is the method idempotent
+   */
+  void handleLambdaFailure(
+      String text,
+      Exception ex,
+      int attempts,
+      boolean idempotent) {
+    if (S3AUtils.isThrottleException(ex)) {
+      if (attempts == 1) {
+        LOG.warn(
+            "DynamoDB IO limits reached in {}; consider increasing capacity",
+            text);
+      } else {
+        LOG.debug(
+            "DynamoDB IO limits reached in {}; consider increasing capacity",
+            text);
+      }
     }
   }
 

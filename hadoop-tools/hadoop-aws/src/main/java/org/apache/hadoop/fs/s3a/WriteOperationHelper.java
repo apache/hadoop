@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
@@ -47,6 +46,7 @@ import org.apache.hadoop.fs.Path;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.fs.s3a.S3ALambda.*;
 
 /**
  * Helper for low-level operations against an S3 Bucket for writing data
@@ -76,7 +76,6 @@ public class WriteOperationHelper {
   private final S3AFileSystem owner;
   private final String key;
   private final S3ALambda invoke;
-  private final S3ALambda.Retrying onRetry;
 
   /**
    * Constructor.
@@ -87,19 +86,20 @@ public class WriteOperationHelper {
     checkArgument(key != null, "No key");
     this.owner = owner;
     this.key = key;
-    this.onRetry = this::operationRetried;
-    this.invoke = new S3ALambda(new S3ARetryPolicy(owner.getConf()), onRetry,
-        S3ALambda.CATCH_LOG);
+    this.invoke = new S3ALambda(new S3ARetryPolicy(owner.getConf()),
+        this::operationRetried,
+        S3ALambda.LOG_EVENT);
   }
 
   /**
    * Callback from {@link S3ALambda} when an operation is retried.
+   * @param text text of the operation
    * @param ex exception
    * @param retries number of retries
    * @param idempotent is the method idempotent
    */
-  void operationRetried(Exception ex, int retries, boolean idempotent) {
-    owner.operationRetried(ex, retries, idempotent);
+  void operationRetried(String text, Exception ex, int retries, boolean idempotent) {
+    owner.operationRetried(text, ex, retries, idempotent);
   }
 
   /**
@@ -206,6 +206,7 @@ public class WriteOperationHelper {
    * @return the upload result containing the ID
    * @throws IOException IO problem
    */
+  @Retries.Retry_translated
   public String initiateMultiPartUpload() throws IOException {
     LOG.debug("Initiating Multipart upload to {}", key);
     final InitiateMultipartUploadRequest initiateMPURequest =
@@ -232,15 +233,17 @@ public class WriteOperationHelper {
    * @return the result of the operation.
    * @throws IOException on problems.
    */
+  @Retries.Retry_translated
   private CompleteMultipartUploadResult finalizeMultipartUpload(
       String destination,
       String uploadId,
       List<PartETag> partETags,
       long length,
-      S3ALambda.Retrying retrying) throws IOException {
+      S3ALambda.Failure retrying) throws IOException {
     return invoke.retry("Completing multipart commit", destination,
         true,
-        retrying, () -> {
+        retrying,
+        () -> {
           // a copy of the list is required, so that the AWS SDK doesn't
           // attempt to sort an unmodifiable list.
           CompleteMultipartUploadResult result =
@@ -249,7 +252,7 @@ public class WriteOperationHelper {
                       key,
                       uploadId,
                       new ArrayList<>(partETags)));
-          finishedWrite(destination, length);
+          owner.finishedWrite(destination, length);
           return result;
         }
     );
@@ -269,6 +272,7 @@ public class WriteOperationHelper {
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
    */
+  @Retries.Retry_translated
   public CompleteMultipartUploadResult completeMPUwithRetries(
       String uploadId,
       List<PartETag> partETags,
@@ -283,17 +287,7 @@ public class WriteOperationHelper {
         uploadId,
         partETags,
         length,
-        (e, r, i) -> errorCount.incrementAndGet());
-  }
-
-  /**
-   * Report to the owner that the write has finished; this may update
-   * any metastore.
-   * @param destination destination path
-   * @param size size of committed write.
-   */
-  private void finishedWrite(String destination, long size) {
-    owner.finishedWrite(destination, size);
+        (text, e, r, i) -> errorCount.incrementAndGet());
   }
 
   /**
@@ -303,16 +297,16 @@ public class WriteOperationHelper {
    * @param retrying callback invoked on every retry
    * @throws IOException failure to abort
    */
+  @Retries.Retry_translated
   public void abortMultipartUpload(String destKey, String uploadId,
-      S3ALambda.Retrying retrying)
+      S3ALambda.Failure retrying)
       throws IOException {
     LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
     invoke.retry("aborting multipart commit", destKey, true,
-        () -> owner.getAmazonS3Client().abortMultipartUpload(
-            new AbortMultipartUploadRequest(owner.getBucket(),
-                destKey,
-                uploadId)),
-        retrying);
+        retrying,
+        () -> owner.abortMultipartUpload(
+            destKey,
+            uploadId));
   }
 
   /**
@@ -321,6 +315,7 @@ public class WriteOperationHelper {
    * @return a count of aborts
    * @throws IOException trouble; FileNotFoundExceptions are swallowed.
    */
+  @Retries.Retry_translated
   public int abortMultipartUploadsUnderPath(String prefix)
       throws IOException {
     LOG.debug("Aborting multipart uploads under {}", prefix);
@@ -344,9 +339,10 @@ public class WriteOperationHelper {
    * @param uploadId multipart operation Id
    * @throws IOException on problems.
    */
+  @Retries.Retry_translated
   public void abortMultipartCommit(String dest, String uploadId)
       throws IOException {
-    abortMultipartUpload(dest, uploadId, onRetry);
+    abortMultipartUpload(dest, uploadId, invoke.getRetryCallback());
   }
 
   /**
@@ -424,6 +420,7 @@ public class WriteOperationHelper {
    * @return the upload initiated
    * @throws IOException on problems
    */
+  @Retries.Retry_translated
   public PutObjectResult putObject(PutObjectRequest putObjectRequest)
       throws IOException {
     return retry("put",
@@ -437,28 +434,31 @@ public class WriteOperationHelper {
    * @return the result of the operation
    * @throws IOException on problems
    */
+  @Retries.Once_translated
   public UploadResult uploadObject(PutObjectRequest putObjectRequest)
       throws IOException {
     // no retry; rely on xfer manager logic
-    return S3ALambda.once("put",
-        putObjectRequest.getKey(),
+    return retry("put",
+        putObjectRequest.getKey(), true,
         () -> owner.executePut(putObjectRequest, null));
   }
 
   /**
    * Revert a commit by deleting the file.
+   * Relies on retry code in filesystem
    * @throws IOException on problems
    * @param destKey destination key
    */
+  @Retries.Retry_translated
   public void revertCommit(String destKey) throws IOException {
-    invoke.retry("revert commit", destKey, true,
+    once("revert commit", destKey,
         () -> {
           Path destPath = owner.keyToQualifiedPath(destKey);
           owner.deleteObjectAtPath(destPath,
               destKey, true);
           owner.maybeCreateFakeParentDirectory(destPath);
-        },
-        onRetry);
+        }
+    );
   }
 
   /**
@@ -467,6 +467,7 @@ public class WriteOperationHelper {
    * @return the result of the operation.
    * @throws IOException on problems
    */
+  @Retries.Retry_translated
   public UploadPartResult uploadPart(UploadPartRequest request)
       throws IOException {
     return retry("upload part",
