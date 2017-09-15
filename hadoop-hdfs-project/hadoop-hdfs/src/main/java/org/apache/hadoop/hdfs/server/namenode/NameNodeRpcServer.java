@@ -483,10 +483,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         QuotaByStorageTypeExceededException.class,
         AclException.class,
         FSLimitException.PathComponentTooLongException.class,
-        FSLimitException.MaxDirectoryItemsExceededException.class,
-        UnresolvedPathException.class);
+        FSLimitException.MaxDirectoryItemsExceededException.class);
 
-    clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class);
+    clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class,
+        UnresolvedPathException.class);
 
     clientRpcServer.setTracer(nn.tracer);
     if (serviceRpcServer != null) {
