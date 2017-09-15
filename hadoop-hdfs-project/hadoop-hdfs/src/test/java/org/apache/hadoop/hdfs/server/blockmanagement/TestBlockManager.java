@@ -1030,8 +1030,7 @@ public class TestBlockManager {
         		0x1BAD5EED);
       }
       catch (RemoteException re) {
-    	  GenericTestUtils.assertExceptionContains("nodes instead of "
-    	  		+ "minReplication", re);
+        GenericTestUtils.assertExceptionContains("of the 1 minReplication", re);
       }
     }
     finally {
