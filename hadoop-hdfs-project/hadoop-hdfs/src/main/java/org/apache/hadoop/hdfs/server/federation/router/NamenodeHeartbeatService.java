@@ -94,8 +94,9 @@ public class NamenodeHeartbeatService extends PeriodicService {
    */
   public NamenodeHeartbeatService(
       ActiveNamenodeResolver resolver, String nsId, String nnId) {
-    super(NamenodeHeartbeatService.class.getSimpleName() + " " + nsId + " " +
-        nnId);
+    super(NamenodeHeartbeatService.class.getSimpleName() +
+        (nsId == null ? "" : " " + nsId) +
+        (nnId == null ? "" : " " + nnId));
 
     this.resolver = resolver;
 
@@ -109,28 +110,28 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
     this.conf = configuration;
 
+    String nnDesc = nameserviceId;
     if (this.namenodeId != null && !this.namenodeId.isEmpty()) {
       this.localTarget = new NNHAServiceTarget(
           conf, nameserviceId, namenodeId);
+      nnDesc += "-" + namenodeId;
     } else {
       this.localTarget = null;
     }
 
     // Get the RPC address for the clients to connect
     this.rpcAddress = getRpcAddress(conf, nameserviceId, namenodeId);
-    LOG.info("{}-{} RPC address: {}",
-        nameserviceId, namenodeId, rpcAddress);
+    LOG.info("{} RPC address: {}", nnDesc, rpcAddress);
 
     // Get the Service RPC address for monitoring
     this.serviceAddress =
         DFSUtil.getNamenodeServiceAddr(conf, nameserviceId, namenodeId);
     if (this.serviceAddress == null) {
-      LOG.error("Cannot locate RPC service address for NN {}-{}, " +
-          "using RPC address {}", nameserviceId, namenodeId, this.rpcAddress);
+      LOG.error("Cannot locate RPC service address for NN {}, " +
+          "using RPC address {}", nnDesc, this.rpcAddress);
       this.serviceAddress = this.rpcAddress;
     }
-    LOG.info("{}-{} Service RPC address: {}",
-        nameserviceId, namenodeId, serviceAddress);
+    LOG.info("{} Service RPC address: {}", nnDesc, serviceAddress);
 
     // Get the Lifeline RPC address for faster monitoring
     this.lifelineAddress =
@@ -138,13 +139,12 @@ public class NamenodeHeartbeatService extends PeriodicService {
     if (this.lifelineAddress == null) {
       this.lifelineAddress = this.serviceAddress;
     }
-    LOG.info("{}-{} Lifeline RPC address: {}",
-        nameserviceId, namenodeId, lifelineAddress);
+    LOG.info("{} Lifeline RPC address: {}", nnDesc, lifelineAddress);
 
     // Get the Web address for UI
     this.webAddress =
         DFSUtil.getNamenodeWebAddr(conf, nameserviceId, namenodeId);
-    LOG.info("{}-{} Web address: {}", nameserviceId, namenodeId, webAddress);
+    LOG.info("{} Web address: {}", nnDesc, webAddress);
 
     this.setIntervalMs(conf.getLong(
         DFS_ROUTER_HEARTBEAT_INTERVAL_MS,
@@ -173,7 +173,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
     String confKey = DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
     String ret = conf.get(confKey);
 
-    if (nsId != null && nnId != null) {
+    if (nsId != null || nnId != null) {
       // Get if for the proper nameservice and namenode
       confKey = DFSUtil.addKeySuffixes(confKey, nsId, nnId);
       ret = conf.get(confKey);
@@ -182,10 +182,16 @@ public class NamenodeHeartbeatService extends PeriodicService {
       if (ret == null) {
         Map<String, InetSocketAddress> rpcAddresses =
             DFSUtil.getRpcAddressesForNameserviceId(conf, nsId, null);
-        if (rpcAddresses.containsKey(nnId)) {
-          InetSocketAddress sockAddr = rpcAddresses.get(nnId);
+        InetSocketAddress sockAddr = null;
+        if (nnId != null) {
+          sockAddr = rpcAddresses.get(nnId);
+        } else if (rpcAddresses.size() == 1) {
+          // Get the only namenode in the namespace
+          sockAddr = rpcAddresses.values().iterator().next();
+        }
+        if (sockAddr != null) {
           InetAddress addr = sockAddr.getAddress();
-          ret = addr.getHostAddress() + ":" + sockAddr.getPort();
+          ret = addr.getHostName() + ":" + sockAddr.getPort();
         }
       }
     }
@@ -279,9 +285,14 @@ public class NamenodeHeartbeatService extends PeriodicService {
           HAServiceStatus status = haProtocol.getServiceStatus();
           report.setHAServiceState(status.getState());
         } catch (Throwable e) {
-          // Failed to fetch HA status, ignoring failure
-          LOG.error("Cannot fetch HA status for {}: {}",
-              getNamenodeDesc(), e.getMessage(), e);
+          if (e.getMessage().startsWith("HA for namenode is not enabled")) {
+            LOG.error("HA for {} is not enabled", getNamenodeDesc());
+            localTarget = null;
+          } else {
+            // Failed to fetch HA status, ignoring failure
+            LOG.error("Cannot fetch HA status for {}: {}",
+                getNamenodeDesc(), e.getMessage(), e);
+          }
         }
       }
     } catch(IOException e) {
