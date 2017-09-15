@@ -18,29 +18,23 @@
 
 package org.apache.hadoop.util;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Set;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 // Keeps track of which datanodes/nodemanagers are allowed to connect to the
 // namenode/resourcemanager.
@@ -56,7 +50,7 @@ public class HostsFileReader {
                          String exFile) throws IOException {
     HostDetails hostDetails = new HostDetails(
         inFile, Collections.emptySet(),
-        exFile, Collections.emptyMap());
+        exFile, Collections.emptySet());
     current = new AtomicReference<>(hostDetails);
     refresh(inFile, exFile);
   }
@@ -66,7 +60,7 @@ public class HostsFileReader {
       String excludesFile, InputStream exFileInputStream) throws IOException {
     HostDetails hostDetails = new HostDetails(
         includesFile, Collections.emptySet(),
-        excludesFile, Collections.emptyMap());
+        excludesFile, Collections.emptySet());
     current = new AtomicReference<>(hostDetails);
     refresh(inFileInputStream, exFileInputStream);
   }
@@ -117,88 +111,21 @@ public class HostsFileReader {
     refresh(hostDetails.includesFile, hostDetails.excludesFile);
   }
 
-  public static void readFileToMap(String type,
-      String filename, Map<String, Integer> map) throws IOException {
-    File file = new File(filename);
-    FileInputStream fis = new FileInputStream(file);
-    readFileToMapWithFileInputStream(type, filename, fis, map);
-  }
-
-  public static void readFileToMapWithFileInputStream(String type,
-      String filename, InputStream inputStream, Map<String, Integer> map)
-          throws IOException {
-    // The input file could be either simple text or XML.
-    boolean xmlInput = filename.toLowerCase().endsWith(".xml");
-    if (xmlInput) {
-      readXmlFileToMapWithFileInputStream(type, filename, inputStream, map);
-    } else {
-      HashSet<String> nodes = new HashSet<String>();
-      readFileToSetWithFileInputStream(type, filename, inputStream, nodes);
-      for (String node : nodes) {
-        map.put(node, null);
-      }
-    }
-  }
-
-  public static void readXmlFileToMapWithFileInputStream(String type,
-      String filename, InputStream fileInputStream, Map<String, Integer> map)
-          throws IOException {
-    Document dom;
-    DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
-    try {
-      DocumentBuilder db = builder.newDocumentBuilder();
-      dom = db.parse(fileInputStream);
-      // Examples:
-      // <host><name>host1</name></host>
-      // <host><name>host2</name><timeout>123</timeout></host>
-      // <host><name>host3</name><timeout>-1</timeout></host>
-      // <host><name>host4, host5,host6</name><timeout>1800</timeout></host>
-      Element doc = dom.getDocumentElement();
-      NodeList nodes = doc.getElementsByTagName("host");
-      for (int i = 0; i < nodes.getLength(); i++) {
-        Node node = nodes.item(i);
-        if (node.getNodeType() == Node.ELEMENT_NODE) {
-          Element e= (Element) node;
-          // Support both single host and comma-separated list of hosts.
-          String v = readFirstTagValue(e, "name");
-          String[] hosts = StringUtils.getTrimmedStrings(v);
-          String str = readFirstTagValue(e, "timeout");
-          Integer timeout = (str == null)? null : Integer.parseInt(str);
-          for (String host : hosts) {
-            map.put(host, timeout);
-            LOG.info("Adding a node \"" + host + "\" to the list of "
-                + type + " hosts from " + filename);
-          }
-        }
-      }
-    } catch (IOException|SAXException|ParserConfigurationException e) {
-      LOG.error("error parsing " + filename, e);
-      throw new RuntimeException(e);
-    } finally {
-      fileInputStream.close();
-    }
-  }
-
-  static String readFirstTagValue(Element e, String tag) {
-    NodeList nodes = e.getElementsByTagName(tag);
-    return (nodes.getLength() == 0)? null : nodes.item(0).getTextContent();
-  }
-
   public void refresh(String includesFile, String excludesFile)
       throws IOException {
     LOG.info("Refreshing hosts (include/exclude) list");
     HostDetails oldDetails = current.get();
     Set<String> newIncludes = oldDetails.includes;
-    Map<String, Integer> newExcludes = oldDetails.excludes;
+    Set<String> newExcludes = oldDetails.excludes;
     if (includesFile != null && !includesFile.isEmpty()) {
       newIncludes = new HashSet<>();
       readFileToSet("included", includesFile, newIncludes);
       newIncludes = Collections.unmodifiableSet(newIncludes);
     }
     if (excludesFile != null && !excludesFile.isEmpty()) {
-      newExcludes = new HashMap<>();
-      readFileToMap("excluded", excludesFile, newExcludes);
-      newExcludes = Collections.unmodifiableMap(newExcludes);
+      newExcludes = new HashSet<>();
+      readFileToSet("excluded", excludesFile, newExcludes);
+      newExcludes = Collections.unmodifiableSet(newExcludes);
     }
     HostDetails newDetails = new HostDetails(includesFile, newIncludes,
         excludesFile, newExcludes);
@@ -211,7 +138,7 @@ public class HostsFileReader {
     LOG.info("Refreshing hosts (include/exclude) list");
     HostDetails oldDetails = current.get();
     Set<String> newIncludes = oldDetails.includes;
-    Map<String, Integer> newExcludes = oldDetails.excludes;
+    Set<String> newExcludes = oldDetails.excludes;
     if (inFileInputStream != null) {
       newIncludes = new HashSet<>();
       readFileToSetWithFileInputStream("included", oldDetails.includesFile,
@@ -219,10 +146,10 @@ public class HostsFileReader {
       newIncludes = Collections.unmodifiableSet(newIncludes);
     }
     if (exFileInputStream != null) {
-      newExcludes = new HashMap<>();
-      readFileToMapWithFileInputStream("excluded", oldDetails.excludesFile,
+      newExcludes = new HashSet<>();
+      readFileToSetWithFileInputStream("excluded", oldDetails.excludesFile,
           exFileInputStream, newExcludes);
-      newExcludes = Collections.unmodifiableMap(newExcludes);
+      newExcludes = Collections.unmodifiableSet(newExcludes);
     }
     HostDetails newDetails = new HostDetails(
         oldDetails.includesFile, newIncludes,
@@ -252,21 +179,6 @@ public class HostsFileReader {
     HostDetails hostDetails = current.get();
     includes.addAll(hostDetails.getIncludedHosts());
     excludes.addAll(hostDetails.getExcludedHosts());
-  }
-
-  /**
-   * Retrieve an atomic view of the included and excluded hosts.
-   *
-   * @param includeHosts set to populate with included hosts
-   * @param excludeHosts map to populate with excluded hosts
-   * @deprecated use {@link #getHostDetails() instead}
-   */
-  @Deprecated
-  public void getHostDetails(Set<String> includeHosts,
-                             Map<String, Integer> excludeHosts) {
-    HostDetails hostDetails = current.get();
-    includeHosts.addAll(hostDetails.getIncludedHosts());
-    excludeHosts.putAll(hostDetails.getExcludedMap());
   }
 
   /**
@@ -311,12 +223,10 @@ public class HostsFileReader {
     private final String includesFile;
     private final Set<String> includes;
     private final String excludesFile;
-    // exclude host list with optional timeout.
-    // If the value is null, it indicates default timeout.
-    private final Map<String, Integer> excludes;
+    private final Set<String> excludes;
 
     HostDetails(String includesFile, Set<String> includes,
-        String excludesFile, Map<String, Integer> excludes) {
+        String excludesFile, Set<String> excludes) {
       this.includesFile = includesFile;
       this.includes = includes;
       this.excludesFile = excludesFile;
@@ -336,10 +246,6 @@ public class HostsFileReader {
     }
 
     public Set<String> getExcludedHosts() {
-      return excludes.keySet();
-    }
-
-    public Map<String, Integer> getExcludedMap() {
       return excludes;
     }
   }

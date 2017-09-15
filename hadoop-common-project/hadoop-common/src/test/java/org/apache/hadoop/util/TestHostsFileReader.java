@@ -20,7 +20,6 @@ package org.apache.hadoop.util;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
-import java.util.Map;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.HostsFileReader.HostDetails;
@@ -289,62 +288,5 @@ public class TestHostsFileReader {
     assertTrue(hfp.getExcludedHosts().contains("somehost2"));
     assertFalse(hfp.getExcludedHosts().contains("somehost5"));
 
-  }
-
-  /*
-   * Test if timeout values are provided in HostFile
-   */
-  @Test
-  public void testHostFileReaderWithTimeout() throws Exception {
-    FileWriter efw = new FileWriter(excludesXmlFile);
-    FileWriter ifw = new FileWriter(includesFile);
-
-    efw.write("<?xml version=\"1.0\"?>\n");
-    efw.write("<!-- yarn.nodes.exclude -->\n");
-    efw.write("<hosts>\n");
-    efw.write("<host><name>host1</name></host>\n");
-    efw.write("<host><name>host2</name><timeout>123</timeout></host>\n");
-    efw.write("<host><name>host3</name><timeout>-1</timeout></host>\n");
-    efw.write("<host><name>10000</name></host>\n");
-    efw.write("<host><name>10001</name><timeout>123</timeout></host>\n");
-    efw.write("<host><name>10002</name><timeout>-1</timeout></host>\n");
-    efw.write("<host><name>host4,host5, host6</name>" +
-              "<timeout>1800</timeout></host>\n");
-    efw.write("</hosts>\n");
-    efw.close();
-
-    ifw.write("#Hosts-in-DFS\n");
-    ifw.write("     \n");
-    ifw.write("   somehost \t  somehost2 \n somehost4");
-    ifw.write("   somehost3 \t # somehost5");
-    ifw.close();
-
-    HostsFileReader hfp = new HostsFileReader(includesFile, excludesXmlFile);
-
-    int includesLen = hfp.getHosts().size();
-    int excludesLen = hfp.getExcludedHosts().size();
-    assertEquals(4, includesLen);
-    assertEquals(9, excludesLen);
-
-    HostDetails hostDetails = hfp.getHostDetails();
-    Map<String, Integer> excludes = hostDetails.getExcludedMap();
-    assertTrue(excludes.containsKey("host1"));
-    assertTrue(excludes.containsKey("host2"));
-    assertTrue(excludes.containsKey("host3"));
-    assertTrue(excludes.containsKey("10000"));
-    assertTrue(excludes.containsKey("10001"));
-    assertTrue(excludes.containsKey("10002"));
-    assertTrue(excludes.containsKey("host4"));
-    assertTrue(excludes.containsKey("host5"));
-    assertTrue(excludes.containsKey("host6"));
-    assertTrue(excludes.get("host1") == null);
-    assertTrue(excludes.get("host2") == 123);
-    assertTrue(excludes.get("host3") == -1);
-    assertTrue(excludes.get("10000") == null);
-    assertTrue(excludes.get("10001") == 123);
-    assertTrue(excludes.get("10002") == -1);
-    assertTrue(excludes.get("host4") == 1800);
-    assertTrue(excludes.get("host5") == 1800);
-    assertTrue(excludes.get("host6") == 1800);
   }
 }
