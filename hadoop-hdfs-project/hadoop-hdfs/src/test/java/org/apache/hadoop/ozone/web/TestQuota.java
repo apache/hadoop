@@ -32,7 +32,7 @@ import static org.junit.Assert.fail;
 
 public class TestQuota {
   @Test
-  public void TestParseQuota() {
+  public void testParseQuota() {
     HashMap<String, Boolean> testMatrix;
     testMatrix = new HashMap<String, Boolean>();
 
@@ -56,10 +56,9 @@ public class TestQuota {
     testMatrix.put("1024 bytes", Boolean.TRUE);
     testMatrix.put("1bytes", Boolean.TRUE);
     testMatrix.put("0bytes", Boolean.TRUE);
-    testMatrix.put("10000 BYTES",Boolean.TRUE );
+    testMatrix.put("10000 BYTES", Boolean.TRUE);
     testMatrix.put("BYTESbytes", Boolean.FALSE);
     testMatrix.put("bytes", Boolean.FALSE);
-
 
     Set<String> keys = testMatrix.keySet();
     for (String key : keys) {
@@ -79,7 +78,7 @@ public class TestQuota {
   }
 
   @Test
-  public void TestVerifyQuota() {
+  public void testVerifyQuota() {
     OzoneQuota qt = OzoneQuota.parseQuota("10TB");
     assertEquals(qt.getSize(), 10);
     assertEquals(qt.getUnit(), OzoneQuota.Units.TB);
@@ -107,7 +106,7 @@ public class TestQuota {
   }
 
   @Test
-  public void TestVerifyRemove() {
+  public void testVerifyRemove() {
     assertTrue(OzoneQuota.isRemove("remove"));
     assertFalse(OzoneQuota.isRemove("not remove"));
     assertFalse(OzoneQuota.isRemove(null));

@@ -142,18 +142,18 @@ public final class KsmVolumeArgs {
       aclMap = new KsmOzoneAclMap();
     }
 
-    public Builder setAdminName(String adminName) {
-      this.adminName = adminName;
+    public Builder setAdminName(String admin) {
+      this.adminName = admin;
       return this;
     }
 
-    public Builder setOwnerName(String ownerName) {
-      this.ownerName = ownerName;
+    public Builder setOwnerName(String owner) {
+      this.ownerName = owner;
       return this;
     }
 
-    public Builder setVolume(String volume) {
-      this.volume = volume;
+    public Builder setVolume(String volumeName) {
+      this.volume = volumeName;
       return this;
     }
 
@@ -162,8 +162,8 @@ public final class KsmVolumeArgs {
       return this;
     }
 
-    public Builder setQuotaInBytes(long quotaInBytes) {
-      this.quotaInBytes = quotaInBytes;
+    public Builder setQuotaInBytes(long quota) {
+      this.quotaInBytes = quota;
       return this;
     }
 

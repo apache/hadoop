@@ -26,10 +26,13 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+/**
+ * This class is to test acl stoarge and retreival in ozone store.
+ */
 public class TestOzoneAcls {
 
   @Test
-  public void TestACLParse() {
+  public void testAclParse() {
     HashMap<String, Boolean> testMatrix;
     testMatrix = new HashMap<>();
 
@@ -103,7 +106,7 @@ public class TestOzoneAcls {
   }
 
   @Test
-  public void TestACLValues() {
+  public void testAclValues() {
     OzoneAcl acl = OzoneAcl.parseAcl("user:bilbo:rw");
     assertEquals(acl.getName(), "bilbo");
     assertEquals(acl.getRights(), OzoneAcl.OzoneACLRights.READ_WRITE);

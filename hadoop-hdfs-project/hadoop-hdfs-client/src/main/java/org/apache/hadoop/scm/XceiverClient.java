@@ -123,11 +123,11 @@ public class XceiverClient extends XceiverClientSpi {
       ContainerProtos.ContainerCommandRequestProto request)
       throws IOException {
     try {
-    if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
-      throw new IOException("This channel is not connected.");
-    }
-    XceiverClientHandler handler =
-        channelFuture.channel().pipeline().get(XceiverClientHandler.class);
+      if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
+        throw new IOException("This channel is not connected.");
+      }
+      XceiverClientHandler handler =
+          channelFuture.channel().pipeline().get(XceiverClientHandler.class);
 
       return handler.sendCommand(request);
     } catch (ExecutionException | InterruptedException e) {
@@ -144,13 +144,13 @@ public class XceiverClient extends XceiverClientSpi {
    */
   @Override
   public CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
-    sendCommandAsync(ContainerProtos.ContainerCommandRequestProto request)
+      sendCommandAsync(ContainerProtos.ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
-      if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
-        throw new IOException("This channel is not connected.");
-      }
-      XceiverClientHandler handler =
-          channelFuture.channel().pipeline().get(XceiverClientHandler.class);
-      return handler.sendCommandAsync(request);
+    if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
+      throw new IOException("This channel is not connected.");
+    }
+    XceiverClientHandler handler =
+        channelFuture.channel().pipeline().get(XceiverClientHandler.class);
+    return handler.sendCommandAsync(request);
   }
 }

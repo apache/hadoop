@@ -23,9 +23,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
 import org.apache.hadoop.utils.MetadataStore;
-import org.apache.hadoop.utils.MetadataStoreBuilder;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
@@ -142,8 +140,8 @@ public final class KeyUtils {
       KeyData data = KeyData.getFromProtoBuf(kd);
       return data;
     } catch (IOException e) {
-      throw new StorageContainerException("Failed to parse key data from the bytes array.",
-          NO_SUCH_KEY);
+      throw new StorageContainerException("Failed to parse key data from the" +
+              " bytes array.", NO_SUCH_KEY);
     }
   }
 }

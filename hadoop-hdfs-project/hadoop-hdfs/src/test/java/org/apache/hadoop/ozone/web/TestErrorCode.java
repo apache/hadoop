@@ -30,7 +30,7 @@ public class TestErrorCode {
    * Test Error Generator functions.
    */
   @Test
-  public void TestErrorGen() {
+  public void testErrorGen() {
     OzoneException e = ErrorTable
         .newError(ErrorTable.ACCESS_DENIED, getRequestID(), "/test/path",
                   "localhost");
@@ -40,7 +40,7 @@ public class TestErrorCode {
   }
 
   @Test
-  public void TestErrorGenWithException() {
+  public void testErrorGenWithException() {
     OzoneException e =
         new OzoneException(ErrorTable.ACCESS_DENIED.getHttpCode(),
                            "short message", new Exception("Hello"));

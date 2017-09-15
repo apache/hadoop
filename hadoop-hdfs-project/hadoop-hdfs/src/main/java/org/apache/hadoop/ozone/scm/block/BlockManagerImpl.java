@@ -290,7 +290,8 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
 
   private BlockContainerInfo getContainer(OzoneProtos.LifeCycleState state,
       String name) {
-    Map<String, BlockContainerInfo> containersByState = this.containers.get(state);
+    Map<String, BlockContainerInfo> containersByState =
+        this.containers.get(state);
     return containersByState.get(name);
   }
 
@@ -318,15 +319,15 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private void refreshContainers() {
     Map<String, BlockContainerInfo> containersByState =
         this.containers.get(OzoneProtos.LifeCycleState.CREATING);
-    for (String containerName: containersByState.keySet()) {
+    for (String containerName : containersByState.keySet()) {
       try {
         ContainerInfo containerInfo =
             containerManager.getContainer(containerName);
         if (containerInfo == null) {
           // TODO: clean up containers that has been deleted on SCM but
           // TODO: still in ALLOCATED state in block manager.
-          LOG.debug("Container {} allocated by block service" +
-              "can't be found in SCM", containerName);
+          LOG.debug("Container {} allocated by block service"
+              + "can't be found in SCM", containerName);
           continue;
         }
         if (containerInfo.getState() == OzoneProtos.LifeCycleState.OPEN) {
@@ -340,7 +341,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
         LOG.debug("Failed to get container info for: {}", containerName);
       }
     }
-   }
+  }
 
   /**
    * Allocates a new block for a given size.
@@ -356,8 +357,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   public AllocatedBlock allocateBlock(final long size) throws IOException {
     boolean createContainer = false;
     if (size < 0 || size > containerSize) {
-      throw new SCMException("Unsupported block size",
-          INVALID_BLOCK_SIZE);
+      throw new SCMException("Unsupported block size", INVALID_BLOCK_SIZE);
     }
     if (!nodeManager.isOutOfNodeChillMode()) {
       throw new SCMException("Unable to create block while in chill mode",
@@ -370,8 +370,8 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       List<String> candidates;
       candidates = filterContainers(OzoneProtos.LifeCycleState.OPEN, size);
       if (candidates.size() == 0) {
-        candidates = filterContainers(OzoneProtos.LifeCycleState.ALLOCATED,
-            size);
+        candidates =
+            filterContainers(OzoneProtos.LifeCycleState.ALLOCATED, size);
         if (candidates.size() == 0) {
           try {
             candidates = allocateContainers(containerProvisionBatchSize);
@@ -383,8 +383,9 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
         }
         // now we should have some candidates in ALLOCATE state
         if (candidates.size() == 0) {
-          throw new SCMException("Fail to find any container to allocate block "
-              + "of size " + size + ".", FAILED_TO_FIND_CONTAINER_WITH_SPACE);
+          throw new SCMException(
+              "Fail to find any container to allocate block " + "of size "
+                  + size + ".", FAILED_TO_FIND_CONTAINER_WITH_SPACE);
         }
       }
 
@@ -416,8 +417,8 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       // TODO: make block key easier to debug (e.g., seq no)
       // Allocate key for the block
       String blockKey = UUID.randomUUID().toString();
-      AllocatedBlock.Builder abb = new AllocatedBlock.Builder()
-          .setKey(blockKey).setPipeline(containerInfo.getPipeline())
+      AllocatedBlock.Builder abb = new AllocatedBlock.Builder().setKey(blockKey)
+          .setPipeline(containerInfo.getPipeline())
           .setShouldCreateContainer(createContainer);
       if (containerInfo.getPipeline().getMachines().size() > 0) {
         blockStore.put(DFSUtil.string2Bytes(blockKey),
@@ -428,12 +429,12 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
             getContainer(containerInfo.getState(), containerName);
         Preconditions.checkNotNull(containerInfoUpdate);
         containerInfoUpdate.addAllocated(size);
-        containerStore.put(DFSUtil.string2Bytes(containerName),
-            DFSUtil.string2Bytes(Long.toString(containerInfoUpdate.getAllocated())));
+        containerStore.put(DFSUtil.string2Bytes(containerName), DFSUtil
+            .string2Bytes(Long.toString(containerInfoUpdate.getAllocated())));
         if (createContainer) {
-          OzoneProtos.LifeCycleState newState =
-              containerManager.updateContainerState(containerName,
-              OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+          OzoneProtos.LifeCycleState newState = containerManager
+              .updateContainerState(containerName,
+                  OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
           updateContainer(containerInfo.getState(), containerName, newState);
         }
         return abb.build();
@@ -457,17 +458,19 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     try {
       byte[] containerBytes = blockStore.get(DFSUtil.string2Bytes(key));
       if (containerBytes == null) {
-        throw new SCMException("Specified block key does not exist. key : " +
-            key, FAILED_TO_FIND_BLOCK);
+        throw new SCMException(
+            "Specified block key does not exist. key : " + key,
+            FAILED_TO_FIND_BLOCK);
       }
       String containerName = DFSUtil.bytes2String(containerBytes);
-      ContainerInfo containerInfo = containerManager.getContainer(
-          containerName);
+      ContainerInfo containerInfo =
+          containerManager.getContainer(containerName);
       if (containerInfo == null) {
-          LOG.debug("Container {} allocated by block service" +
-              "can't be found in SCM", containerName);
-          throw new SCMException("Unable to find container for the block",
-              SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
+        LOG.debug(
+            "Container {} allocated by block service" + "can't be found in SCM",
+            containerName);
+        throw new SCMException("Unable to find container for the block",
+            SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
       return containerInfo.getPipeline();
     } finally {

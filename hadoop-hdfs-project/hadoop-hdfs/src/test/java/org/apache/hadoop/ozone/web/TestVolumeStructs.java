@@ -32,8 +32,8 @@ public class TestVolumeStructs {
 
   @Test
   public void testVolumeInfoParse() throws IOException {
-    VolumeInfo volInfo = new VolumeInfo("testvol",
-      "Thu, Apr 9, 2015 10:23:45 GMT", "gandalf");
+    VolumeInfo volInfo =
+        new VolumeInfo("testvol", "Thu, Apr 9, 2015 10:23:45 GMT", "gandalf");
     VolumeOwner owner = new VolumeOwner("bilbo");
     volInfo.setOwner(owner);
     String jString = volInfo.toJsonString();
@@ -48,8 +48,7 @@ public class TestVolumeStructs {
   public void testVolumeInfoValue() throws IOException {
     String createdOn = "Thu, Apr 9, 2015 10:23:45 GMT";
     String createdBy = "gandalf";
-    VolumeInfo volInfo = new VolumeInfo("testvol",
-      createdOn, createdBy);
+    VolumeInfo volInfo = new VolumeInfo("testvol", createdOn, createdBy);
     assertEquals(volInfo.getCreatedBy(), createdBy);
     assertEquals(volInfo.getCreatedOn(), createdOn);
   }
@@ -57,11 +56,10 @@ public class TestVolumeStructs {
 
   @Test
   public void testVolumeListParse() throws IOException {
-
     ListVolumes list = new ListVolumes();
     for (int x = 0; x < 100; x++) {
       VolumeInfo volInfo = new VolumeInfo("testvol" + Integer.toString(x),
-        "Thu, Apr 9, 2015 10:23:45 GMT", "gandalf");
+          "Thu, Apr 9, 2015 10:23:45 GMT", "gandalf");
       list.addVolume(volInfo);
     }
     list.sort();
@@ -69,5 +67,4 @@ public class TestVolumeStructs {
     ListVolumes newList = ListVolumes.parse(listString);
     assertEquals(list.toJsonString(), newList.toJsonString());
   }
-
 }

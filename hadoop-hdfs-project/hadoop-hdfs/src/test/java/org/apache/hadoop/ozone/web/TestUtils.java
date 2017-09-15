@@ -35,7 +35,7 @@ public class TestUtils {
    * Tests if the bucket name handling is correct.
    */
   @Test
-  public  void TestValidBucketNames() {
+  public  void testValidBucketNames() {
     HashMap<String, Boolean> testMatrix;
     // Init the Table with Strings and Expected Return values
     testMatrix = new HashMap<String, Boolean>();
@@ -47,9 +47,8 @@ public class TestUtils {
     testMatrix.put("bucket..ozone.self", Boolean.FALSE);
     testMatrix.put("192.1.1.1", Boolean.FALSE);
     testMatrix.put("ab", Boolean.FALSE);
-    testMatrix.put("bucket.ozone.self.this.is.a.really.long.name.that." +
-        "is.more.than.sixty.three.characters.long.for.sure",
-      Boolean.FALSE);
+    testMatrix.put("bucket.ozone.self.this.is.a.really.long.name.that."
+        + "is.more.than.sixty.three.characters.long.for.sure", Boolean.FALSE);
     testMatrix.put(null, Boolean.FALSE);
     testMatrix.put("bucket@$", Boolean.FALSE);
     testMatrix.put("BUCKET", Boolean.FALSE);
@@ -66,7 +65,7 @@ public class TestUtils {
 
     Set<String> keys = testMatrix.keySet();
     for (String key : keys) {
-      if(testMatrix.get(key)) {
+      if (testMatrix.get(key)) {
 
         // For valid names there should be no exceptions at all
         verifyResourceName(key);
@@ -74,8 +73,8 @@ public class TestUtils {
         try {
           verifyResourceName(key);
           // should never get here since the isValid call will throw
-         fail("An exception was expected but did not happen.");
-        } catch(IllegalArgumentException e){
+          fail("An exception was expected but did not happen.");
+        } catch (IllegalArgumentException e) {
 
         }
       }
@@ -90,11 +89,10 @@ public class TestUtils {
    *  that this test is good enough.
    */
   @Test
-  public void TestRequestIDisRandom(){
+  public void testRequestIDisRandom() {
     HashSet<String> set = new HashSet<>();
-    for (int i = 0; i < 1000; i ++){
+    for (int i = 0; i < 1000; i++) {
       assertTrue(set.add(getRequestID()));
     }
   }
-
 }

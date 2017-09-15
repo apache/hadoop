@@ -44,6 +44,10 @@ import java.util.concurrent.TimeoutException;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.TabularData;
 
+/**
+ *
+ * This class is to test JMX management interface for scm information.
+ */
 public class TestSCMMXBean {
 
   public static final Log LOG = LogFactory.getLog(TestSCMMXBean.class);

@@ -90,7 +90,7 @@ public class TestVolume {
   }
 
   /**
-   * shutdown MiniDFSCluster
+   * shutdown MiniDFSCluster.
    */
   @AfterClass
   public static void shutdown() {
@@ -255,10 +255,10 @@ public class TestVolume {
     final int step = 10;
     client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
     for (int x = 0; x < volCount; x++) {
-      String userName = "frodo" +
-          RandomStringUtils.randomAlphabetic(5).toLowerCase();
-      String volumeName = "vol" +
-          RandomStringUtils.randomAlphabetic(5).toLowerCase();
+      String userName =
+          "frodo" + RandomStringUtils.randomAlphabetic(5).toLowerCase();
+      String volumeName =
+          "vol" + RandomStringUtils.randomAlphabetic(5).toLowerCase();
       OzoneVolume vol = client.createVolume(volumeName, userName, "100TB");
       assertNotNull(vol);
     }
@@ -266,17 +266,16 @@ public class TestVolume {
     int count = 0;
     int pagecount = 0;
     while (count < volCount) {
-      List<OzoneVolume> ovols = client.listAllVolumes(null, step,
-          prevKey);
+      List<OzoneVolume> ovols = client.listAllVolumes(null, step, prevKey);
       count += ovols.size();
-      if(ovols.size() > 0) {
+      if (ovols.size() > 0) {
         prevKey = ovols.get(ovols.size() - 1);
       }
       pagecount++;
     }
     // becasue we are querying an existing ozone store, there will
     // be volumes created by other tests too. So we should get more page counts.
-    Assert.assertEquals(volCount / step , pagecount);
+    Assert.assertEquals(volCount / step, pagecount);
   }
 
   @Test

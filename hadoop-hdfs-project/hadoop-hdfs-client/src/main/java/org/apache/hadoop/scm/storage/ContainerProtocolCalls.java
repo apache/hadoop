@@ -188,40 +188,33 @@ public final class ContainerProtocolCalls  {
    * @param traceID - Trace ID for logging purpose.
    * @throws IOException
    */
-  public static void writeSmallFile(XceiverClientSpi client, String containerName,
-      String key, byte[] data, String traceID) throws IOException {
+  public static void writeSmallFile(XceiverClientSpi client,
+      String containerName, String key, byte[] data, String traceID)
+      throws IOException {
 
-    KeyData containerKeyData = KeyData
-        .newBuilder()
-        .setContainerName(containerName)
-        .setName(key).build();
-    PutKeyRequestProto.Builder createKeyRequest = PutKeyRequestProto
-        .newBuilder()
-        .setPipeline(client.getPipeline().getProtobufMessage())
-        .setKeyData(containerKeyData);
+    KeyData containerKeyData =
+        KeyData.newBuilder().setContainerName(containerName).setName(key)
+            .build();
+    PutKeyRequestProto.Builder createKeyRequest =
+        PutKeyRequestProto.newBuilder()
+            .setPipeline(client.getPipeline().getProtobufMessage())
+            .setKeyData(containerKeyData);
 
-    KeyValue keyValue = KeyValue.newBuilder()
-        .setKey("OverWriteRequested").setValue("true").build();
-    ChunkInfo chunk = ChunkInfo
-        .newBuilder()
-        .setChunkName(key + "_chunk")
-        .setOffset(0)
-        .setLen(data.length)
-        .addMetadata(keyValue)
-        .build();
+    KeyValue keyValue =
+        KeyValue.newBuilder().setKey("OverWriteRequested").setValue("true")
+            .build();
+    ChunkInfo chunk =
+        ChunkInfo.newBuilder().setChunkName(key + "_chunk").setOffset(0)
+            .setLen(data.length).addMetadata(keyValue).build();
 
-    PutSmallFileRequestProto putSmallFileRequest = PutSmallFileRequestProto
-        .newBuilder().setChunkInfo(chunk)
-        .setKey(createKeyRequest)
-        .setData(ByteString.copyFrom(data))
-        .build();
+    PutSmallFileRequestProto putSmallFileRequest =
+        PutSmallFileRequestProto.newBuilder().setChunkInfo(chunk)
+            .setKey(createKeyRequest).setData(ByteString.copyFrom(data))
+            .build();
 
-    ContainerCommandRequestProto request = ContainerCommandRequestProto
-        .newBuilder()
-        .setCmdType(Type.PutSmallFile)
-        .setTraceID(traceID)
-        .setPutSmallFile(putSmallFileRequest)
-        .build();
+    ContainerCommandRequestProto request =
+        ContainerCommandRequestProto.newBuilder().setCmdType(Type.PutSmallFile)
+            .setTraceID(traceID).setPutSmallFile(putSmallFileRequest).build();
     ContainerCommandResponseProto response = client.sendCommand(request);
     validateContainerResponse(response);
   }

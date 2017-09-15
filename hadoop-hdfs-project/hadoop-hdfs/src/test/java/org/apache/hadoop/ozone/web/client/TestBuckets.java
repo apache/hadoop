@@ -44,6 +44,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+
 public class TestBuckets {
   /**
    * Set the timeout for every test.
@@ -83,7 +84,7 @@ public class TestBuckets {
   }
 
   /**
-   * shutdown MiniDFSCluster
+   * shutdown MiniDFSCluster.
    */
   @AfterClass
   public static void shutdown() {

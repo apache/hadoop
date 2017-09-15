@@ -46,6 +46,7 @@ public class TestArchive {
   private long checksumWrite = 0L;
   private long checksumRead = 0L;
   private long tmp = 0L;
+  private Checksum crc = new Adler32();
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -53,7 +54,6 @@ public class TestArchive {
   @Rule
   public TemporaryFolder outputFolder = new TemporaryFolder();
 
-  Checksum crc = new Adler32();
 
   @Before
   public void setUp() throws Exception {

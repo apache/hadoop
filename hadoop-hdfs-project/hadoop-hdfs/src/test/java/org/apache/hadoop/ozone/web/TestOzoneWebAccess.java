@@ -48,7 +48,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestOzoneWebAccess {
   /**
-   * Set the timeout for every test
+   * Set the timeout for every test.
    */
   @Rule
   public Timeout testTimeout = new Timeout(300000);

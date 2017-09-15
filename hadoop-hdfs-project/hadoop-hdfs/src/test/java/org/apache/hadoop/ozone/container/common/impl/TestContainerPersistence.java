@@ -90,7 +90,7 @@ public class TestContainerPersistence {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static Logger LOG =
+  private static Logger log =
       LoggerFactory.getLogger(TestContainerPersistence.class);
   private static String path;
   private static ContainerManagerImpl containerManager;
@@ -149,7 +149,7 @@ public class TestContainerPersistence {
   @After
   public void cleanupDir() throws IOException {
     // Clean up SCM metadata
-    LOG.info("Deletting {}", path);
+    log.info("Deletting {}", path);
     FileUtils.deleteDirectory(new File(path));
 
     // Clean up SCM datanode container metadata/data
