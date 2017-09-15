@@ -109,8 +109,7 @@ public class AppBlock extends HtmlBlock {
       final GetApplicationReportRequest request =
           GetApplicationReportRequest.newInstance(appID);
       if (callerUGI == null) {
-        appReport =
-            appBaseProt.getApplicationReport(request).getApplicationReport();
+        appReport = getApplicationReport(request);
       } else {
         appReport =
             callerUGI.doAs(new PrivilegedExceptionAction<ApplicationReport>() {
