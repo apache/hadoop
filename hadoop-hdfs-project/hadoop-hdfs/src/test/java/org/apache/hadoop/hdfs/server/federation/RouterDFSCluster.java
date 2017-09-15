@@ -23,6 +23,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY;
@@ -31,6 +33,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS;
@@ -136,8 +139,7 @@ public class RouterDFSCluster {
     private RouterClient adminClient;
     private URI fileSystemUri;
 
-    public RouterContext(Configuration conf, String nsId, String nnId)
-        throws URISyntaxException {
+    public RouterContext(Configuration conf, String nsId, String nnId) {
       this.conf = conf;
       this.nameserviceId = nsId;
       this.namenodeId = nnId;
@@ -397,9 +399,13 @@ public class RouterDFSCluster {
 
         conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + "." + suffix,
             "127.0.0.1:" + context.rpcPort);
+        conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + suffix,
+            "127.0.0.1:" + context.servicePort);
         conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY + "." + suffix,
             "127.0.0.1:" + context.httpPort);
         conf.set(DFS_NAMENODE_RPC_BIND_HOST_KEY + "." + suffix,
+            "0.0.0.0");
+        conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY + "." + suffix,
             "0.0.0.0");
       }
     }
@@ -456,6 +462,19 @@ public class RouterDFSCluster {
     if (nnId != null) {
       conf.set(DFS_HA_NAMENODE_ID_KEY, nnId);
     }
+
+    // Namenodes to monitor
+    StringBuilder sb = new StringBuilder();
+    for (String ns : this.nameservices) {
+      for (NamenodeContext context : getNamenodes(ns)) {
+        String suffix = context.getConfSuffix();
+        if (sb.length() != 0) {
+          sb.append(",");
+        }
+        sb.append(suffix);
+      }
+    }
+    conf.set(DFS_ROUTER_MONITOR_NAMENODE, sb.toString());
 
     // Add custom overrides if available
     if (this.routerOverrides != null) {
