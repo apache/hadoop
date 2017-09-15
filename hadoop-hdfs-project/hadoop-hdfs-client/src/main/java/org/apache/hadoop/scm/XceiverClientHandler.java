@@ -109,8 +109,8 @@ public class XceiverClientHandler extends
    * @return -- response
    */
 
-  public ContainerCommandResponseProto
-    sendCommand(ContainerProtos.ContainerCommandRequestProto request)
+  public ContainerCommandResponseProto sendCommand(
+      ContainerProtos.ContainerCommandRequestProto request)
       throws ExecutionException, InterruptedException {
     Future<ContainerCommandResponseProto> future = sendCommandAsync(request);
     return future.get();
@@ -123,11 +123,11 @@ public class XceiverClientHandler extends
    * @param request - Request to execute
    * @return CompletableFuture
    */
-  public CompletableFuture<ContainerCommandResponseProto>
-    sendCommandAsync(ContainerProtos.ContainerCommandRequestProto request) {
+  public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
+      ContainerProtos.ContainerCommandRequestProto request) {
 
     // Throw an exception of request doesn't have traceId
-    if(StringUtils.isEmpty(request.getTraceID())) {
+    if (StringUtils.isEmpty(request.getTraceID())) {
       throw new IllegalArgumentException("Invalid trace ID");
     }
 

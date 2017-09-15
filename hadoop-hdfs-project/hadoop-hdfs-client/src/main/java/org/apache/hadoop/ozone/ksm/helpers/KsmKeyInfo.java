@@ -115,13 +115,13 @@ public final class KsmKeyInfo {
       return this;
     }
 
-    public Builder setCreationTime(long creationTime) {
-      this.creationTime = creationTime;
+    public Builder setCreationTime(long crTime) {
+      this.creationTime = crTime;
       return this;
     }
 
-    public Builder setModificationTime(long modificationTime) {
-      this.modificationTime = modificationTime;
+    public Builder setModificationTime(long mTime) {
+      this.modificationTime = mTime;
       return this;
     }
 

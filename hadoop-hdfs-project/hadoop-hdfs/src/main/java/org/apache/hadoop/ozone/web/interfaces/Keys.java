@@ -62,14 +62,9 @@ public interface Keys {
   @PUT
   @Consumes(MediaType.WILDCARD)
   Response putKey(@PathParam("volume") String volume,
-                  @PathParam("bucket") String bucket,
-                  @PathParam("keys") String keys,
-                  InputStream is,
-                  @Context Request req,
-                  @Context UriInfo info,
-                  @Context HttpHeaders headers)
-    throws OzoneException;
-
+      @PathParam("bucket") String bucket, @PathParam("keys") String keys,
+      InputStream is, @Context Request req, @Context UriInfo info,
+      @Context HttpHeaders headers) throws OzoneException;
 
   /**
    * Gets the Key if it exists.
@@ -88,14 +83,10 @@ public interface Keys {
    */
   @GET
   Response getKey(@PathParam("volume") String volume,
-                  @PathParam("bucket") String bucket,
-                  @PathParam("keys") String keys,
-                  @QueryParam(Header.OZONE_LIST_QUERY_TAG)
-                  String info,
-                  @Context Request req,
-                  @Context UriInfo uriInfo,
-                  @Context HttpHeaders headers)
-    throws OzoneException;
+      @PathParam("bucket") String bucket, @PathParam("keys") String keys,
+      @QueryParam(Header.OZONE_LIST_QUERY_TAG) String info,
+      @Context Request req, @Context UriInfo uriInfo,
+      @Context HttpHeaders headers) throws OzoneException;
 
   /**
    * Deletes an existing key.
@@ -112,11 +103,8 @@ public interface Keys {
    */
   @DELETE
   Response deleteKey(@PathParam("volume") String volume,
-                     @PathParam("bucket") String bucket,
-                     @PathParam("keys") String keys,
-                     @Context Request req,
-                     @Context UriInfo info,
-                     @Context HttpHeaders headers)
-    throws OzoneException;
+      @PathParam("bucket") String bucket, @PathParam("keys") String keys,
+      @Context Request req, @Context UriInfo info, @Context HttpHeaders headers)
+      throws OzoneException;
 }
 

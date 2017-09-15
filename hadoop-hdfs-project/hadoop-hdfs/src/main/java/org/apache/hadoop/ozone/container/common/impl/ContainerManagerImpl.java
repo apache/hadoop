@@ -430,7 +430,8 @@ public class ContainerManagerImpl implements ContainerManager {
     try {
       if (isOpen(pipeline.getContainerName())) {
         throw new StorageContainerException(
-            "Deleting an open container is not allowed.", UNCLOSED_CONTAINER_IO);
+            "Deleting an open container is not allowed.",
+            UNCLOSED_CONTAINER_IO);
       }
 
       ContainerStatus status = containerMap.get(containerName);

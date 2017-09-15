@@ -31,7 +31,7 @@ import java.util.List;
 
 public class TestBucketInfo {
   @Test
-  public void TestBucketInfoJson() throws IOException {
+  public void testBucketInfoJson() throws IOException {
     BucketInfo bucketInfo = new BucketInfo("volumeName", "bucketName");
     String bucketInfoString = bucketInfo.toJsonString();
     BucketInfo newBucketInfo = BucketInfo.parse(bucketInfoString);
@@ -39,7 +39,7 @@ public class TestBucketInfo {
   }
 
   @Test
-  public void TestBucketInfoDBString() throws IOException {
+  public void testBucketInfoDBString() throws IOException {
     BucketInfo bucketInfo = new BucketInfo("volumeName", "bucketName");
     String bucketInfoString = bucketInfo.toDBString();
     BucketInfo newBucketInfo = BucketInfo.parse(bucketInfoString);
@@ -47,7 +47,7 @@ public class TestBucketInfo {
   }
 
   @Test
-  public void TestBucketInfoAddAcls() throws IOException {
+  public void testBucketInfoAddAcls() throws IOException {
     BucketInfo bucketInfo = new BucketInfo("volumeName", "bucketName");
     String bucketInfoString = bucketInfo.toDBString();
     BucketInfo newBucketInfo = BucketInfo.parse(bucketInfoString);
@@ -64,7 +64,7 @@ public class TestBucketInfo {
 
 
   @Test
-  public void TestBucketInfoVersionAndType() throws IOException {
+  public void testBucketInfoVersionAndType() throws IOException {
     BucketInfo bucketInfo = new BucketInfo("volumeName", "bucketName");
     bucketInfo.setVersioning(OzoneConsts.Versioning.ENABLED);
     bucketInfo.setStorageType(StorageType.DISK);

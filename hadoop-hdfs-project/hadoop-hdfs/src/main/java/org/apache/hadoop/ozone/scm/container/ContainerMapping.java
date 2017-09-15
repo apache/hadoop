@@ -158,15 +158,17 @@ public class ContainerMapping implements Mapping {
    * {@inheritDoc}
    */
   @Override
-  public ContainerInfo getContainer(final String containerName) throws IOException {
+  public ContainerInfo getContainer(final String containerName)
+      throws IOException {
     ContainerInfo containerInfo;
     lock.lock();
     try {
       byte[] containerBytes =
           containerStore.get(containerName.getBytes(encoding));
       if (containerBytes == null) {
-        throw new SCMException("Specified key does not exist. key : " +
-            containerName, SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
+        throw new SCMException(
+            "Specified key does not exist. key : " + containerName,
+            SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
       containerInfo = ContainerInfo.fromProtobuf(
           OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes));
@@ -305,11 +307,11 @@ public class ContainerMapping implements Mapping {
     lock.lock();
     try {
       byte[] dbKey = containerName.getBytes(encoding);
-      byte[] containerBytes =
-          containerStore.get(dbKey);
-      if(containerBytes == null) {
-        throw new SCMException("Failed to update container state"
-            + containerName + ", reason : container doesn't exist.",
+      byte[] containerBytes = containerStore.get(dbKey);
+      if (containerBytes == null) {
+        throw new SCMException(
+            "Failed to update container state" + containerName
+                + ", reason : container doesn't exist.",
             SCMException.ResultCodes.FAILED_TO_FIND_CONTAINER);
       }
       containerInfo = ContainerInfo.fromProtobuf(
@@ -317,11 +319,12 @@ public class ContainerMapping implements Mapping {
 
       OzoneProtos.LifeCycleState newState;
       try {
-         newState = stateMachine.getNextState(containerInfo.getState(), event);
+        newState = stateMachine.getNextState(containerInfo.getState(), event);
       } catch (InvalidStateTransitionException ex) {
-        throw new SCMException("Failed to update container state"
-            + containerName + ", reason : invalid state transition from state: "
-            + containerInfo.getState() + " upon event: " + event + ".",
+        throw new SCMException(
+            "Failed to update container state" + containerName
+                + ", reason : invalid state transition from state: "
+                + containerInfo.getState() + " upon event: " + event + ".",
             SCMException.ResultCodes.FAILED_TO_CHANGE_CONTAINER_STATE);
       }
       containerInfo.setState(newState);

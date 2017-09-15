@@ -103,8 +103,8 @@ public abstract class XceiverClientSpi implements Closeable {
    * @return Response to the command
    * @throws IOException
    */
-  public abstract CompletableFuture<ContainerCommandResponseProto>
-    sendCommandAsync(ContainerCommandRequestProto request) throws IOException,
-      ExecutionException, InterruptedException;
+  public abstract CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
+      ContainerCommandRequestProto request)
+      throws IOException, ExecutionException, InterruptedException;
 
 }

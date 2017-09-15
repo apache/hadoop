@@ -20,7 +20,6 @@ package org.apache.hadoop.scm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.ratis.RatisHelper;
@@ -115,8 +114,8 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    * @throws IOException
    */
   @Override
-  public CompletableFuture<ContainerCommandResponseProto>
-    sendCommandAsync(ContainerCommandRequestProto request)
+  public CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
+      ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
     throw new IOException("Not implemented");
   }

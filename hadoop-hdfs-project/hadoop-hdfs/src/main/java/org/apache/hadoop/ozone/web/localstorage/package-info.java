@@ -15,32 +15,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.web.netty;
-
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import org.apache.hadoop.io.IOUtils;
-
-import java.io.Closeable;
-
-/**
- * A {@link ChannelFutureListener} that closes {@link Closeable} resources.
- */
-final class CloseableCleanupListener implements ChannelFutureListener {
-
-  private final Closeable[] closeables;
-
-  /**
-   * Creates a new CloseableCleanupListener.
-   *
-   * @param closeables any number of closeable resources
-   */
-  CloseableCleanupListener(Closeable... closeables) {
-    this.closeables = closeables;
-  }
-
-  @Override
-  public void operationComplete(ChannelFuture future) {
-    IOUtils.cleanup(null, closeables);
-  }
-}
+package org.apache.hadoop.ozone.web.localstorage;

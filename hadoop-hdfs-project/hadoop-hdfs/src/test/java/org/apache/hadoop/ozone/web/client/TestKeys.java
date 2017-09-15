@@ -110,7 +110,7 @@ public class TestKeys {
   }
 
   /**
-   * shutdown MiniDFSCluster
+   * shutdown MiniDFSCluster.
    */
   @AfterClass
   public static void shutdown() {
@@ -120,7 +120,7 @@ public class TestKeys {
   }
 
   /**
-   * Creates a file with Random Data
+   * Creates a file with Random Data.
    *
    * @return File.
    */
@@ -165,9 +165,9 @@ public class TestKeys {
     private final String dir;
     private final String keyName;
 
-    OzoneVolume vol;
-    OzoneBucket bucket;
-    File file;
+    private OzoneVolume vol;
+    private OzoneBucket bucket;
+    private File file;
 
     PutHelper(OzoneRestClient client, String dir) {
       this(client, dir, OzoneUtils.getRequestID().toLowerCase());

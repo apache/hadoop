@@ -213,7 +213,7 @@ public final class ObjectStoreJerseyContainer {
      * @param respOut output stream for writing response body
      * @param latch for coordinating asynchronous return of HTTP response
      */
-    public RequestRunner(HttpRequest nettyReq, InputStream reqIn,
+    RequestRunner(HttpRequest nettyReq, InputStream reqIn,
                          OutputStream respOut, CountDownLatch latch) {
       this.latch = latch;
       this.nettyReq = nettyReq;

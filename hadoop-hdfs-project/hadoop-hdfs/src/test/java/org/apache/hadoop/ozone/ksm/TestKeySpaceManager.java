@@ -523,14 +523,14 @@ public class TestKeySpaceManager {
       stream.write(dataString.getBytes());
     }
 
-    // We allow the key overwrite to be successful. Please note : Till HDFS-11922
-    // is fixed this causes a data block leak on the data node side. That is
-    // this overwrite only overwrites the keys on KSM. We need to garbage
-    // collect those blocks from datanode.
+    // We allow the key overwrite to be successful. Please note : Till
+    // HDFS-11922 is fixed this causes a data block leak on the data node side.
+    // That is this overwrite only overwrites the keys on KSM. We need to
+    // garbage collect those blocks from datanode.
     KeyArgs keyArgs2 = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     storageHandler.newKeyWriter(keyArgs2);
-    Assert.assertEquals(numKeyAllocateFails,
-        ksmMetrics.getNumKeyAllocateFails());
+    Assert
+        .assertEquals(numKeyAllocateFails, ksmMetrics.getNumKeyAllocateFails());
   }
 
   /**

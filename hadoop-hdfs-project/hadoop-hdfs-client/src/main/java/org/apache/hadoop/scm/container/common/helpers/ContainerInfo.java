@@ -82,13 +82,14 @@ public class ContainerInfo {
     return builder.build();
   }
 
+  /** Builder class for ContainerInfo. */
   public static class Builder {
     private OzoneProtos.LifeCycleState state;
     private Pipeline pipeline;
     private long stateEnterTime;
 
-    public Builder setState(OzoneProtos.LifeCycleState state) {
-      this.state = state;
+    public Builder setState(OzoneProtos.LifeCycleState lifeCycleState) {
+      this.state = lifeCycleState;
       return this;
     }
 

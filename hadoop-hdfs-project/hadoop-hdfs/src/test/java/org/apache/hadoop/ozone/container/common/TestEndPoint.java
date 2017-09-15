@@ -306,28 +306,27 @@ public class TestEndPoint {
 
 
     // Create a datanode state machine for stateConext used by endpoint task
-    try (DatanodeStateMachine stateMachine =
-             new DatanodeStateMachine(DFSTestUtil.getLocalDatanodeID(), conf);
-         EndpointStateMachine rpcEndPoint = SCMTestUtils.createEndpoint(conf,
-            scmAddress, rpcTimeout)) {
-    ContainerNodeIDProto containerNodeID = ContainerNodeIDProto.newBuilder()
-        .setClusterID(UUID.randomUUID().toString())
-        .setDatanodeID(getDatanodeID().getProtoBufMessage())
-        .build();
-    rpcEndPoint.setState(EndpointStateMachine.EndPointStates.HEARTBEAT);
+    try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
+        DFSTestUtil.getLocalDatanodeID(), conf);
+        EndpointStateMachine rpcEndPoint = SCMTestUtils
+            .createEndpoint(conf, scmAddress, rpcTimeout)) {
+      ContainerNodeIDProto containerNodeID = ContainerNodeIDProto.newBuilder()
+          .setClusterID(UUID.randomUUID().toString())
+          .setDatanodeID(getDatanodeID().getProtoBufMessage()).build();
+      rpcEndPoint.setState(EndpointStateMachine.EndPointStates.HEARTBEAT);
 
-    final StateContext stateContext = new StateContext(conf,
-        DatanodeStateMachine.DatanodeStates.RUNNING,
-        stateMachine);
+      final StateContext stateContext =
+          new StateContext(conf, DatanodeStateMachine.DatanodeStates.RUNNING,
+              stateMachine);
 
-    HeartbeatEndpointTask endpointTask =
-        new HeartbeatEndpointTask(rpcEndPoint, conf, stateContext);
-    endpointTask.setContainerNodeIDProto(containerNodeID);
-    endpointTask.call();
-    Assert.assertNotNull(endpointTask.getContainerNodeIDProto());
+      HeartbeatEndpointTask endpointTask =
+          new HeartbeatEndpointTask(rpcEndPoint, conf, stateContext);
+      endpointTask.setContainerNodeIDProto(containerNodeID);
+      endpointTask.call();
+      Assert.assertNotNull(endpointTask.getContainerNodeIDProto());
 
-    Assert.assertEquals(EndpointStateMachine.EndPointStates.HEARTBEAT,
-        rpcEndPoint.getState());
+      Assert.assertEquals(EndpointStateMachine.EndPointStates.HEARTBEAT,
+          rpcEndPoint.getState());
     }
   }
 
@@ -360,8 +359,8 @@ public class TestEndPoint {
    * @return
    */
   ContainerReport getRandomContainerReport() {
-    return new ContainerReport(UUID.randomUUID().toString()
-        ,DigestUtils.sha256Hex("Random"));
+    return new ContainerReport(UUID.randomUUID().toString(),
+        DigestUtils.sha256Hex("Random"));
   }
 
   /**

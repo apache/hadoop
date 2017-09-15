@@ -65,13 +65,10 @@ public interface Volume {
 
   @POST
   Response createVolume(@PathParam("volume") String volume,
-                        @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
-                        @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
-                        @Context Request req,
-                        @Context UriInfo uriInfo,
-                        @Context HttpHeaders headers)
-    throws OzoneException;
-
+      @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
+      @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
+      @Context Request req, @Context UriInfo uriInfo,
+      @Context HttpHeaders headers) throws OzoneException;
 
   /**
    * Updates a Volume owned by the user.
@@ -93,13 +90,10 @@ public interface Volume {
    */
   @PUT
   Response updateVolume(@PathParam("volume") String volume,
-                        @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
-                        @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
-                        @Context Request req,
-                        @Context UriInfo uriInfo,
-                        @Context HttpHeaders headers)
-    throws OzoneException;
-
+      @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
+      @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
+      @Context Request req, @Context UriInfo uriInfo,
+      @Context HttpHeaders headers) throws OzoneException;
 
   /**
    * Deletes a Volume if it is empty.
@@ -112,10 +106,8 @@ public interface Volume {
    */
   @DELETE
   Response deleteVolume(@PathParam("volume") String volume,
-                        @Context Request req,
-                        @Context UriInfo uriInfo,
-                        @Context HttpHeaders headers)
-    throws OzoneException;
+      @Context Request req, @Context UriInfo uriInfo,
+      @Context HttpHeaders headers) throws OzoneException;
 
   /**
    * Returns Volume info. This API can be invoked either
@@ -131,21 +123,14 @@ public interface Volume {
    */
   @GET
   Response getVolumeInfo(@PathParam("volume") String volume,
-                         @DefaultValue(Header.OZONE_LIST_QUERY_BUCKET)
-                         @QueryParam(Header.OZONE_LIST_QUERY_TAG)
-                         String info,
-                         @QueryParam(Header.OZONE_LIST_QUERY_PREFIX)
-                         String prefix,
-                         @DefaultValue(Header.OZONE_DEFAULT_LIST_SIZE)
-                         @QueryParam(Header.OZONE_LIST_QUERY_MAXKEYS)
-                         int keys,
-                         @QueryParam(Header.OZONE_LIST_QUERY_PREVKEY)
-                         String prevKey,
-                         @QueryParam(Header.OZONE_LIST_QUERY_ROOTSCAN)
-                         boolean rootScan,
-                         @Context Request req,
-                         @Context UriInfo uriInfo,
-                         @Context HttpHeaders headers)
-    throws OzoneException;
+      @DefaultValue(Header.OZONE_LIST_QUERY_BUCKET)
+      @QueryParam(Header.OZONE_LIST_QUERY_TAG) String info,
+      @QueryParam(Header.OZONE_LIST_QUERY_PREFIX) String prefix,
+      @DefaultValue(Header.OZONE_DEFAULT_LIST_SIZE)
+      @QueryParam(Header.OZONE_LIST_QUERY_MAXKEYS) int keys,
+      @QueryParam(Header.OZONE_LIST_QUERY_PREVKEY) String prevKey,
+      @QueryParam(Header.OZONE_LIST_QUERY_ROOTSCAN) boolean rootScan,
+      @Context Request req, @Context UriInfo uriInfo,
+      @Context HttpHeaders headers) throws OzoneException;
 
 }
