@@ -39,13 +39,14 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /** An {@link OutputCommitter} that commits files specified 
  * in job output directory i.e. ${mapreduce.output.fileoutputformat.outputdir}.
  **/
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileOutputCommitter extends OutputCommitter {
+public class FileOutputCommitter extends PathOutputCommitter {
   private static final Log LOG = LogFactory.getLog(FileOutputCommitter.class);
 
   /** 
@@ -101,8 +102,11 @@ public class FileOutputCommitter extends OutputCommitter {
   public FileOutputCommitter(Path outputPath, 
                              TaskAttemptContext context) throws IOException {
     this(outputPath, (JobContext)context);
-    if (outputPath != null) {
-      workPath = getTaskAttemptPath(context, outputPath);
+    if (getOutputPath() != null) {
+      workPath = Preconditions.checkNotNull(
+          getTaskAttemptPath(context, getOutputPath()),
+          "Null task attempt path in %s and output path %s",
+          context, outputPath);
     }
   }
   
@@ -116,6 +120,7 @@ public class FileOutputCommitter extends OutputCommitter {
   @Private
   public FileOutputCommitter(Path outputPath, 
                              JobContext context) throws IOException {
+    super(outputPath, context);
     Configuration conf = context.getConfiguration();
     algorithmVersion =
         conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -704,5 +709,19 @@ public class FileOutputCommitter extends OutputCommitter {
     } else {
       LOG.warn("Output Path is null in recoverTask()");
     }
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "FileOutputCommitter{");
+    sb.append(super.toString()).append("; ");
+    sb.append("outputPath=").append(outputPath);
+    sb.append(", workPath=").append(workPath);
+    sb.append(", algorithmVersion=").append(algorithmVersion);
+    sb.append(", skipCleanup=").append(skipCleanup);
+    sb.append(", ignoreCleanupFailures=").append(ignoreCleanupFailures);
+    sb.append('}');
+    return sb.toString();
   }
 }
