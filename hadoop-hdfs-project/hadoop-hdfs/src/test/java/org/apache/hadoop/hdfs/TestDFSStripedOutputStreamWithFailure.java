@@ -260,8 +260,6 @@ public class TestDFSStripedOutputStreamWithFailure {
 
   @Test(timeout=240000)
   public void testBlockTokenExpired() throws Exception {
-    // TODO: this is very flaky, re-enable it later. See HDFS-12417.
-    assumeTrue("Test has been temporarily disabled. See HDFS-12417.", false);
     final int length = dataBlocks * (blockSize - cellSize);
     final HdfsConfiguration conf = newHdfsConfiguration();
 
@@ -494,8 +492,8 @@ public class TestDFSStripedOutputStreamWithFailure {
       final BlockManager bm = nn.getNamesystem().getBlockManager();
       final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
 
-      // set a short token lifetime (1 second)
-      SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
+      // set a short token lifetime (6 second)
+      SecurityTestUtil.setBlockTokenLifetime(sm, 6000L);
     }
 
     final AtomicInteger pos = new AtomicInteger();
