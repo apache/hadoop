@@ -341,7 +341,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     int filesize = 10 * 1024;
     byte[] buf = dataset(filesize, 0, 255);
     Path randomSeekFile = path("testrandomseeks.bin");
-    createFile(getFileSystem(), randomSeekFile, false, buf);
+    createFile(getFileSystem(), randomSeekFile, true, buf);
     Random r = new Random();
 
     // Record the sequence of seeks and reads which trigger a failure.

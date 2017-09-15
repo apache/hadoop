@@ -61,7 +61,16 @@ public abstract class FileSystemContractBaseTest {
   protected byte[] data = dataset(getBlockSize() * 2, 0, 255);
 
   @Rule
-  public Timeout globalTimeout = new Timeout(30000);
+  public Timeout globalTimeout = new Timeout(getGlobalTimeout());
+
+  /**
+   * Get the timeout in milliseconds for each test case.
+   * @return a time in milliseconds.
+   */
+  protected int getGlobalTimeout() {
+    return 30 * 1000;
+  }
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 

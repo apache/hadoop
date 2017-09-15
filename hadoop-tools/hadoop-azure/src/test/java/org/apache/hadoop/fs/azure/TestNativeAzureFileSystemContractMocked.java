@@ -23,6 +23,9 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+/**
+ * Mocked testing of FileSystemContractBaseTest.
+ */
 public class TestNativeAzureFileSystemContractMocked extends
     FileSystemContractBaseTest {
 
