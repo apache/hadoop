@@ -29,7 +29,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -49,8 +48,8 @@ public class TestNativeAzureFileSystemAuthorization
   protected MockWasbAuthorizerImpl authorizer;
 
   @Override
-  public Configuration getConfiguration() {
-    Configuration conf = super.getConfiguration();
+  public Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
     conf.set(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, "true");
     conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost/");
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1 , user2");
@@ -59,13 +58,12 @@ public class TestNativeAzureFileSystemAuthorization
 
   @Override
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
-    Configuration conf = getConfiguration();
-    return AzureBlobStorageTestAccount.create(conf);
+    return AzureBlobStorageTestAccount.create(createConfiguration());
   }
 
-
-  @Before
-  public void beforeMethod() {
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
     boolean useSecureMode = fs.getConf().getBoolean(KEY_USE_SECURE_MODE, false);
     boolean useAuthorization = fs.getConf().getBoolean(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, false);
     Assume.assumeTrue("Test valid when both SecureMode and Authorization are enabled .. skipping",
@@ -75,7 +73,6 @@ public class TestNativeAzureFileSystemAuthorization
     authorizer.init(fs.getConf());
     fs.updateWasbAuthorizer(authorizer);
   }
-
 
   @Rule
   public ExpectedException expectedEx = ExpectedException.none();
@@ -95,7 +92,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Setup the expected exception class, and exception message that the test is supposed to fail with
+   * Setup the expected exception class, and exception message that the test is supposed to fail with.
    */
   protected void setExpectedFailureMessage(String operation, Path path) {
     expectedEx.expect(WasbAuthorizationException.class);
@@ -104,7 +101,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test to verify Create access check
+   * Positive test to verify Create access check.
    * The file is created directly under an existing folder.
    * No intermediate folders need to be created.
    * @throws Throwable
@@ -128,7 +125,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test to verify Create access check
+   * Positive test to verify Create access check.
    * The test tries to create a file whose parent is non-existent to ensure that
    * the intermediate folders between ancestor and direct parent are being created
    * when proper ranger policies are configured.
@@ -155,7 +152,7 @@ public class TestNativeAzureFileSystemAuthorization
 
 
   /**
-   * Negative test to verify that create fails when trying to overwrite an existing file
+   * Negative test to verify that create fails when trying to overwrite an existing file.
    * without proper write permissions on the file being overwritten.
    * @throws Throwable
    */
@@ -181,7 +178,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test to verify that create succeeds when trying to overwrite an existing file
+   * Positive test to verify that create succeeds when trying to overwrite an existing file.
    * when proper write permissions on the file being overwritten are provided.
    * @throws Throwable
    */
@@ -232,7 +229,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test to verify listStatus access check
+   * Positive test to verify listStatus access check.
    * @throws Throwable
    */
   @Test
@@ -257,7 +254,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Negative test to verify listStatus access check
+   * Negative test to verify listStatus access check.
    * @throws Throwable
    */
 
@@ -342,7 +339,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Negative test to verify rename access check - the dstFolder disallows rename
+   * Negative test to verify rename access check - the dstFolder disallows rename.
    * @throws Throwable
    */
   @Test //(expected=WasbAuthorizationException.class)
@@ -373,7 +370,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test to verify rename access check - the dstFolder allows rename
+   * Positive test to verify rename access check - the dstFolder allows rename.
    * @throws Throwable
    */
   @Test
@@ -484,7 +481,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test to verify file delete access check
+   * Positive test to verify file delete access check.
    * @throws Throwable
    */
   @Test
@@ -506,7 +503,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Negative test to verify file delete access check
+   * Negative test to verify file delete access check.
    * @throws Throwable
    */
   @Test //(expected=WasbAuthorizationException.class)
@@ -544,7 +541,7 @@ public class TestNativeAzureFileSystemAuthorization
 
   /**
    * Positive test to verify file delete access check, with intermediate folders
-   * Uses wildcard recursive permissions
+   * Uses wildcard recursive permissions.
    * @throws Throwable
    */
   @Test
@@ -582,7 +579,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test for mkdirs access check
+   * Positive test for mkdirs access check.
    * @throws Throwable
    */
   @Test
@@ -668,7 +665,7 @@ public class TestNativeAzureFileSystemAuthorization
     }
   }
   /**
-   * Negative test for mkdirs access check
+   * Negative test for mkdirs access check.
    * @throws Throwable
    */
   @Test //(expected=WasbAuthorizationException.class)
@@ -692,7 +689,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test triple slash format (wasb:///) access check
+   * Positive test triple slash format (wasb:///) access check.
    * @throws Throwable
    */
   @Test
@@ -708,7 +705,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Negative test for setOwner when Authorization is enabled
+   * Negative test for setOwner when Authorization is enabled.
    */
   @Test
   public void testSetOwnerThrowsForUnauthorisedUsers() throws Throwable {
@@ -744,7 +741,7 @@ public class TestNativeAzureFileSystemAuthorization
 
   /**
    * Test for setOwner when Authorization is enabled and
-   * the user is specified in chown allowed user list
+   * the user is specified in chown allowed user list.
    * */
   @Test
   public void testSetOwnerSucceedsForAuthorisedUsers() throws Throwable {
@@ -785,7 +782,7 @@ public class TestNativeAzureFileSystemAuthorization
 
   /**
    * Test for setOwner when Authorization is enabled and
-   * the userlist is specified as '*'
+   * the userlist is specified as '*'.
    * */
   @Test
   public void testSetOwnerSucceedsForAnyUserWhenWildCardIsSpecified() throws Throwable {
@@ -829,7 +826,7 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /** Test for setOwner  throws for illegal setup of chown
-   * allowed testSetOwnerSucceedsForAuthorisedUsers
+   * allowed testSetOwnerSucceedsForAuthorisedUsers.
    */
   @Test
   public void testSetOwnerFailsForIllegalSetup() throws Throwable {
