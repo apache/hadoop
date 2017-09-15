@@ -20,6 +20,9 @@ Release 2.7.5 - UNRELEASED
     HDFS-10711. Optimize FSPermissionChecker group membership check.
     (Daryn Sharp via kihwal)
 
+    HDFS-12323. NameNode terminates after full GC thinking QJM unresponsive
+    if full GC is much longer than timeout. (Erik Krogen via shv)
+
   BUG FIXES
 
     HDFS-12157. Do fsyncDirectory(..) outside of FSDataset lock.
