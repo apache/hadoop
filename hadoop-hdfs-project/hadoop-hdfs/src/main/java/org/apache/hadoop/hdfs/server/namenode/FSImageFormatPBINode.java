@@ -334,10 +334,10 @@ public final class FSImageFormatPBINode {
       boolean isStriped = f.hasErasureCodingPolicyID();
       assert ((!isStriped) || (isStriped && !f.hasReplication()));
       Short replication = (!isStriped ? (short) f.getReplication() : null);
+      Byte ecPolicyID = (isStriped ?
+          (byte) f.getErasureCodingPolicyID() : null);
       ErasureCodingPolicy ecPolicy = isStriped ?
-          fsn.getErasureCodingPolicyManager().getByID(
-              (byte) f.getErasureCodingPolicyID()) : null;
-      Byte ecPolicyID = (isStriped ? ecPolicy.getId() : null);
+          fsn.getErasureCodingPolicyManager().getByID(ecPolicyID) : null;
 
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0; i < bp.size(); ++i) {

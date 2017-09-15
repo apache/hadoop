@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -289,6 +290,11 @@ public final class ErasureCodingPolicyManager {
     }
     ecPolicy.setState(ErasureCodingPolicyState.REMOVED);
     LOG.info("Remove erasure coding policy " + name);
+
+    /*
+     * TODO HDFS-12405 postpone the delete removed policy to Namenode restart
+     * time.
+     * */
   }
 
   @VisibleForTesting
@@ -337,5 +343,37 @@ public final class ErasureCodingPolicyManager {
     enabledPolicies =
         enabledPoliciesByName.values().toArray(new ErasureCodingPolicy[0]);
     LOG.info("Enable the erasure coding policy " + name);
+  }
+
+  /**
+   * Load an erasure coding policy into erasure coding manager.
+   */
+  private void loadPolicy(ErasureCodingPolicy policy) {
+    if (!CodecUtil.hasCodec(policy.getCodecName()) ||
+        policy.getCellSize() > maxCellSize) {
+      // If policy is not supported in current system, set the policy state to
+      // DISABLED;
+      policy.setState(ErasureCodingPolicyState.DISABLED);
+    }
+
+    this.policiesByName.put(policy.getName(), policy);
+    this.policiesByID.put(policy.getId(), policy);
+    if (policy.isEnabled()) {
+      enablePolicy(policy.getName());
+    }
+  }
+
+  /**
+   * Reload erasure coding policies from fsImage.
+   *
+   * @param ecPolicies contains ErasureCodingPolicy list
+   *
+   */
+  public synchronized void loadPolicies(List<ErasureCodingPolicy> ecPolicies) {
+    Preconditions.checkNotNull(ecPolicies);
+    for (ErasureCodingPolicy p : ecPolicies) {
+      loadPolicy(p);
+    }
+    allPolicies = policiesByName.values().toArray(new ErasureCodingPolicy[0]);
   }
 }

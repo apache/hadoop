@@ -209,11 +209,6 @@ public class TestErasureCodingPolicies {
     cluster.restartNameNodes();
     cluster.waitActive();
 
-    // Only default policy should be enabled after restart
-    Assert.assertEquals("Only default policy should be enabled after restart",
-        1,
-        ErasureCodingPolicyManager.getInstance().getEnabledPolicies().length);
-
     // Already set directory-level policies should still be in effect
     Path disabledPolicy = new Path(dir1, "afterDisabled");
     Assert.assertEquals("Dir does not have policy set",
