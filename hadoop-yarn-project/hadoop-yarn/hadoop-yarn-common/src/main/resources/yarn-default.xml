@@ -289,6 +289,22 @@
   </property>
 
   <property>
+    <description>The minimum allocation for every container request at the RM,
+    in terms of GPUs. Requests lower than this will throw a
+    InvalidResourceRequestException.</description>
+    <name>yarn.scheduler.minimum-allocation-gpus</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>The maximum allocation for every container request at the RM,
+    in terms of GPUs. Requests higher than this will throw a
+    InvalidResourceRequestException.</description>
+    <name>yarn.scheduler.maximum-allocation-gpus</name>
+    <value>8</value>
+  </property>
+
+  <property>
     <description>Enable RM to recover state after starting. If true, then 
       yarn.resourcemanager.store.class must be specified. </description>
     <name>yarn.resourcemanager.recovery.enabled</name>
@@ -961,12 +977,31 @@
   </property>
 
   <property>
+    <description>Number of GPUs that can be allocated
+    for containers. This is used by the RM scheduler when allocating
+    resources for containers. This is not used to limit the number of
+    physical GPUs used by YARN containers.</description>
+    <name>yarn.nodemanager.resource.gpus</name>
+    <value>8</value>
+  </property>
+
+  <property>
     <description>Percentage of CPU that can be allocated
     for containers. This setting allows users to limit the amount of
     CPU that YARN containers use. Currently functional only
     on Linux using cgroups. The default is to use 100% of CPU.
     </description>
     <name>yarn.nodemanager.resource.percentage-physical-cpu-limit</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>Percentage of GPU that can be allocated
+    for containers. This setting allows users to limit the amount of
+    GPU that YARN containers use. Currently functional only
+    on Linux using cgroups. The default is to use 100% of GPU.
+    </description>
+    <name>yarn.nodemanager.resource.percentage-physical-gpu-limit</name>
     <value>100</value>
   </property>
 
@@ -1133,6 +1168,13 @@
     <description>This flag determines whether CPU limit will be set for the Windows Job
     Object of the containers launched by the default container executor.</description>
     <name>yarn.nodemanager.windows-container.cpu-limit.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>This flag determines whether GPU limit will be set for the Windows Job
+    Object of the containers launched by the default container executor.</description>
+    <name>yarn.nodemanager.windows-container.gpu-limit.enabled</name>
     <value>false</value>
   </property>
 

@@ -92,6 +92,13 @@ public abstract class ResourceCalculatorPlugin extends Configured {
   public abstract float getCpuUsage();
 
   /**
+   * Obtain the total number of GPUs present on the system.
+   *
+   * @return number of GPUs
+   */
+  public abstract int getNumGPUs();
+
+  /**
    * Create the ResourceCalculatorPlugin from the class name and configure it. If
    * class name is null, this method will try and return a memory calculator
    * plugin available for this system.

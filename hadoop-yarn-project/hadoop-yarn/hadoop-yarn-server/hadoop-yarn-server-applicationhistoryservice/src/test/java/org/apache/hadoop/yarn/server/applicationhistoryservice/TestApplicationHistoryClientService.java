@@ -153,6 +153,8 @@ public class TestApplicationHistoryClientService {
         .getMemorySeconds());
     Assert.assertEquals(345, appReport.getApplicationResourceUsageReport()
         .getVcoreSeconds());
+    Assert.assertEquals(567, appReport.getApplicationResourceUsageReport()
+        .getGPUSeconds());
     Assert.assertEquals("application_0_0001", appReport.getApplicationId()
       .toString());
     Assert.assertEquals("test app type",

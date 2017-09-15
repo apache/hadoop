@@ -651,13 +651,15 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
           WebServicesTestUtils.getXmlLong(element, "availMemoryMB"),
           WebServicesTestUtils.getXmlLong(element, "usedVirtualCores"),
           WebServicesTestUtils.getXmlLong(element,  "availableVirtualCores"),
+          WebServicesTestUtils.getXmlLong(element, "usedGPUs"),
+          WebServicesTestUtils.getXmlLong(element,  "availableGPUs"),
           WebServicesTestUtils.getXmlString(element, "version"));
     }
   }
 
   public void verifyNodeInfo(JSONObject nodeInfo, MockNM nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 13, nodeInfo.length());
+    assertEquals("incorrect number of elements", 15, nodeInfo.length());
 
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
         nodeInfo.getString("rack"),
@@ -667,6 +669,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         nodeInfo.getString("healthReport"), nodeInfo.getInt("numContainers"),
         nodeInfo.getLong("usedMemoryMB"), nodeInfo.getLong("availMemoryMB"),
         nodeInfo.getLong("usedVirtualCores"), nodeInfo.getLong("availableVirtualCores"),
+        nodeInfo.getLong("usedGPUs"), nodeInfo.getLong("availableGPUs"),
         nodeInfo.getString("version"));
 
   }
@@ -675,7 +678,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       String id, String nodeHostName,
       String nodeHTTPAddress, long lastHealthUpdate, String healthReport,
       int numContainers, long usedMemoryMB, long availMemoryMB, long usedVirtualCores, 
-      long availVirtualCores, String version)
+      long availVirtualCores, long usedGPUs, long availGPUs, String version)
       throws JSONException, Exception {
 
     RMNode node = rm.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -713,6 +716,10 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
           .getUsedResource().getVirtualCores(), usedVirtualCores);
       assertEquals("availVirtualCores doesn't match: " + availVirtualCores, report
           .getAvailableResource().getVirtualCores(), availVirtualCores);
+      assertEquals("usedGPUs doesn't match: " + usedGPUs, report
+          .getUsedResource().getGPUs(), usedGPUs);
+      assertEquals("availGPUs doesn't match: " + availGPUs, report
+          .getAvailableResource().getGPUs(), availGPUs);
     }
   }
 

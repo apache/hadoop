@@ -142,7 +142,7 @@ public class TestYARNTokenIdentifier {
             1, 1), 1), 1);
     String hostName = "host0";
     String appSubmitter = "usr0";
-    Resource r = Resource.newInstance(1024, 1);
+    Resource r = Resource.newInstance(1024, 1, 1);
     long expiryTimeStamp = 1000;
     int masterKeyId = 1;
     long rmIdentifier = 1;

@@ -28,21 +28,21 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
-import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.GPUResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Makes scheduling decisions by trying to equalize shares of memory.
+ * Makes scheduling decisions by trying to equalize shares of GPU.
  */
 @Private
 @Unstable
 public class FairSharePolicy extends SchedulingPolicy {
   @VisibleForTesting
   public static final String NAME = "fair";
-  private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
-      new DefaultResourceCalculator();
+  private static final GPUResourceCalculator RESOURCE_CALCULATOR =
+      new GPUResourceCalculator();
   private FairShareComparator comparator = new FairShareComparator();
 
   @Override
@@ -80,14 +80,14 @@ public class FairSharePolicy extends SchedulingPolicy {
           s1.getResourceUsage(), minShare1);
       boolean s2Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
           s2.getResourceUsage(), minShare2);
-      minShareRatio1 = (double) s1.getResourceUsage().getMemory()
-          / Resources.max(RESOURCE_CALCULATOR, null, minShare1, ONE).getMemory();
-      minShareRatio2 = (double) s2.getResourceUsage().getMemory()
-          / Resources.max(RESOURCE_CALCULATOR, null, minShare2, ONE).getMemory();
-      useToWeightRatio1 = s1.getResourceUsage().getMemory() /
-          s1.getWeights().getWeight(ResourceType.MEMORY);
-      useToWeightRatio2 = s2.getResourceUsage().getMemory() /
-          s2.getWeights().getWeight(ResourceType.MEMORY);
+      minShareRatio1 = (double) s1.getResourceUsage().getGPUs()
+          / Resources.max(RESOURCE_CALCULATOR, null, minShare1, ONE).getGPUs();
+      minShareRatio2 = (double) s2.getResourceUsage().getGPUs()
+          / Resources.max(RESOURCE_CALCULATOR, null, minShare2, ONE).getGPUs();
+      useToWeightRatio1 = s1.getResourceUsage().getGPUs() /
+          s1.getWeights().getWeight(ResourceType.GPU);
+      useToWeightRatio2 = s2.getResourceUsage().getGPUs() /
+          s2.getWeights().getWeight(ResourceType.GPU);
       int res = 0;
       if (s1Needy && !s2Needy)
         res = -1;
@@ -117,25 +117,26 @@ public class FairSharePolicy extends SchedulingPolicy {
   @Override
   public Resource getHeadroom(Resource queueFairShare,
                               Resource queueUsage, Resource maxAvailable) {
-    int queueAvailableMemory = Math.max(
-        queueFairShare.getMemory() - queueUsage.getMemory(), 0);
+    int queueAvailableGPU = Math.max(
+        queueFairShare.getGPUs() - queueUsage.getGPUs(), 0);
     Resource headroom = Resources.createResource(
-        Math.min(maxAvailable.getMemory(), queueAvailableMemory),
-        maxAvailable.getVirtualCores());
+        maxAvailable.getMemory(),
+        maxAvailable.getVirtualCores(),
+        Math.min(maxAvailable.getGPUs(), queueAvailableGPU));
     return headroom;
   }
 
   @Override
   public void computeShares(Collection<? extends Schedulable> schedulables,
       Resource totalResources) {
-    ComputeFairShares.computeShares(schedulables, totalResources, ResourceType.MEMORY);
+    ComputeFairShares.computeShares(schedulables, totalResources, ResourceType.GPU);
   }
 
   @Override
   public void computeSteadyShares(Collection<? extends FSQueue> queues,
       Resource totalResources) {
     ComputeFairShares.computeSteadyShares(queues, totalResources,
-        ResourceType.MEMORY);
+        ResourceType.GPU);
   }
 
   @Override
@@ -145,7 +146,7 @@ public class FairSharePolicy extends SchedulingPolicy {
 
   @Override
   public boolean checkIfAMResourceUsageOverLimit(Resource usage, Resource maxAMResource) {
-    return usage.getMemory() > maxAMResource.getMemory();
+    return usage.getGPUs() > maxAMResource.getGPUs();
   }
 
   @Override

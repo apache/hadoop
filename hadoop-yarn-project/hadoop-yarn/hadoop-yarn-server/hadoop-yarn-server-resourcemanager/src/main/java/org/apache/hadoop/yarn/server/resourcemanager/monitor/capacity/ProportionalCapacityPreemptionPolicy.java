@@ -358,7 +358,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     
     // based on ideal assignment computed above and current assignment we derive
     // how much preemption is required overall
-    Resource totPreemptionNeeded = Resource.newInstance(0, 0);
+    Resource totPreemptionNeeded = Resource.newInstance(0, 0, 0);
     for (TempQueue t:queues) {
       if (Resources.greaterThan(rc, tot_guarant, t.current, t.idealAssigned)) {
         Resources.addTo(totPreemptionNeeded,
@@ -429,7 +429,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     //assign all cluster resources until no more demand, or no resources are left
     while (!orderedByNeed.isEmpty()
        && Resources.greaterThan(rc,tot_guarant, unassigned,Resources.none())) {
-      Resource wQassigned = Resource.newInstance(0, 0);
+      Resource wQassigned = Resource.newInstance(0, 0, 0);
       // we compute normalizedGuarantees capacity based on currently active
       // queues
       resetCapacity(rc, unassigned, orderedByNeed, ignoreGuarantee);
@@ -445,7 +445,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       for (Iterator<TempQueue> i = underserved.iterator(); i.hasNext();) {
         TempQueue sub = i.next();
         Resource wQavail = Resources.multiplyAndNormalizeUp(rc,
-            unassigned, sub.normalizedGuarantee, Resource.newInstance(1, 1));
+            unassigned, sub.normalizedGuarantee, Resource.newInstance(1, 1, 1));
         Resource wQidle = sub.offer(wQavail, rc, tot_guarant);
         Resource wQdone = Resources.subtract(wQavail, wQidle);
 
@@ -490,7 +490,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
    */
   private void resetCapacity(ResourceCalculator rc, Resource clusterResource,
       Collection<TempQueue> queues, boolean ignoreGuar) {
-    Resource activeCap = Resource.newInstance(0, 0);
+    Resource activeCap = Resource.newInstance(0, 0, 0);
     
     if (ignoreGuar) {
       for (TempQueue q : queues) {
@@ -528,7 +528,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       if (qT.preemptionDisabled && qT.leafQueue != null) {
         if (LOG.isDebugEnabled()) {
           if (Resources.greaterThan(rc, clusterResource,
-              qT.toBePreempted, Resource.newInstance(0, 0))) {
+              qT.toBePreempted, Resource.newInstance(0, 0, 0))) {
             LOG.debug("Tried to preempt the following "
                       + "resources from non-preemptable queue: "
                       + qT.queueName + " - Resources: " + qT.toBePreempted);
@@ -544,7 +544,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         // accounts for natural termination of containers
         Resource resToObtain =
           Resources.multiply(qT.toBePreempted, naturalTerminationFactor);
-        Resource skippedAMSize = Resource.newInstance(0, 0);
+        Resource skippedAMSize = Resource.newInstance(0, 0, 0);
 
         // lock the leafqueue while we scan applications and unreserve
         synchronized (qT.leafQueue) {
@@ -751,7 +751,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       Resource guaranteed = Resources.multiply(clusterResources, absCap);
       Resource maxCapacity = Resources.multiply(clusterResources, absMaxCap);
 
-      Resource extra = Resource.newInstance(0, 0);
+      Resource extra = Resource.newInstance(0, 0, 0);
       if (Resources.greaterThan(rc, clusterResources, current, guaranteed)) {
         extra = Resources.subtract(current, guaranteed);
       }
@@ -767,10 +767,10 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         }
         ret.setLeafQueue(l);
       } else {
-        Resource pending = Resource.newInstance(0, 0);
+        Resource pending = Resource.newInstance(0, 0, 0);
         ret = new TempQueue(root.getQueueName(), current, pending, guaranteed,
             maxCapacity, false);
-        Resource childrensPreemptable = Resource.newInstance(0, 0);
+        Resource childrensPreemptable = Resource.newInstance(0, 0, 0);
         for (CSQueue c : root.getChildQueues()) {
           TempQueue subq = cloneQueues(c, clusterResources);
           Resources.addTo(childrensPreemptable, subq.preemptableExtra);
@@ -779,7 +779,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         // untouchableExtra = max(extra - childrenPreemptable, 0)
         if (Resources.greaterThanOrEqual(
               rc, clusterResources, childrensPreemptable, extra)) {
-          ret.untouchableExtra = Resource.newInstance(0, 0);
+          ret.untouchableExtra = Resource.newInstance(0, 0, 0);
         } else {
           ret.untouchableExtra =
                 Resources.subtractFrom(extra, childrensPreemptable);
@@ -837,13 +837,13 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       this.pending = pending;
       this.guaranteed = guaranteed;
       this.maxCapacity = maxCapacity;
-      this.idealAssigned = Resource.newInstance(0, 0);
-      this.actuallyPreempted = Resource.newInstance(0, 0);
-      this.toBePreempted = Resource.newInstance(0, 0);
+      this.idealAssigned = Resource.newInstance(0, 0, 0);
+      this.actuallyPreempted = Resource.newInstance(0, 0, 0);
+      this.toBePreempted = Resource.newInstance(0, 0, 0);
       this.normalizedGuarantee = Float.NaN;
       this.children = new ArrayList<TempQueue>();
-      this.untouchableExtra = Resource.newInstance(0, 0);
-      this.preemptableExtra = Resource.newInstance(0, 0);
+      this.untouchableExtra = Resource.newInstance(0, 0, 0);
+      this.preemptableExtra = Resource.newInstance(0, 0, 0);
       this.preemptionDisabled = preemptionDisabled;
     }
 
@@ -878,7 +878,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         Resource clusterResource) {
       Resource absMaxCapIdealAssignedDelta = Resources.componentwiseMax(
                       Resources.subtract(maxCapacity, idealAssigned),
-                      Resource.newInstance(0, 0));
+                      Resource.newInstance(0, 0, 0));
       // remain = avail - min(avail, (max - assigned), (current + pending - assigned))
       Resource accepted = 
           Resources.min(rc, clusterResource, 
@@ -921,7 +921,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
           toBePreempted = Resources.multiply(
               Resources.subtract(current, idealAssigned), scalingFactor);
       } else {
-        toBePreempted = Resource.newInstance(0, 0);
+        toBePreempted = Resource.newInstance(0, 0, 0);
       }
     }
 
@@ -929,16 +929,22 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       sb.append(queueName).append(", ")
         .append(current.getMemory()).append(", ")
         .append(current.getVirtualCores()).append(", ")
+        .append(current.getGPUs()).append(", ")
         .append(pending.getMemory()).append(", ")
         .append(pending.getVirtualCores()).append(", ")
+        .append(pending.getGPUs()).append(", ")
         .append(guaranteed.getMemory()).append(", ")
         .append(guaranteed.getVirtualCores()).append(", ")
+        .append(guaranteed.getGPUs()).append(", ")
         .append(idealAssigned.getMemory()).append(", ")
         .append(idealAssigned.getVirtualCores()).append(", ")
+        .append(idealAssigned.getGPUs()).append(", ")
         .append(toBePreempted.getMemory()).append(", ")
         .append(toBePreempted.getVirtualCores() ).append(", ")
+        .append(toBePreempted.getGPUs() ).append(", ")
         .append(actuallyPreempted.getMemory()).append(", ")
-        .append(actuallyPreempted.getVirtualCores());
+        .append(actuallyPreempted.getVirtualCores())
+        .append(actuallyPreempted.getGPUs());
     }
 
   }

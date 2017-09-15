@@ -168,7 +168,7 @@ public class TestRMApplicationHistoryWriter {
     when(container.getAllocatedNode()).thenReturn(
       NodeId.newInstance("test host", -100));
     when(container.getAllocatedResource()).thenReturn(
-      Resource.newInstance(-1, -1));
+      Resource.newInstance(-1, -1, -1));
     when(container.getAllocatedPriority()).thenReturn(Priority.UNDEFINED);
     when(container.getCreationTime()).thenReturn(0L);
     when(container.getFinishTime()).thenReturn(1L);
@@ -299,7 +299,7 @@ public class TestRMApplicationHistoryWriter {
     Assert.assertNotNull(containerHD);
     Assert.assertEquals(NodeId.newInstance("test host", -100),
       containerHD.getAssignedNode());
-    Assert.assertEquals(Resource.newInstance(-1, -1),
+    Assert.assertEquals(Resource.newInstance(-1, -1, -1),
       containerHD.getAllocatedResource());
     Assert.assertEquals(Priority.UNDEFINED, containerHD.getPriority());
     Assert.assertEquals(0L, container.getCreationTime());
@@ -451,7 +451,7 @@ public class TestRMApplicationHistoryWriter {
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     am.registerAppAttempt();
 
-    int request = 10000;
+    int request = 31;
     am.allocate("127.0.0.1", 1024, request, new ArrayList<ContainerId>());
     nm.nodeHeartbeat(true);
     List<Container> allocated =

@@ -84,7 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.GPUResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -126,7 +126,7 @@ public class FairScheduler extends
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
   
   private static final ResourceCalculator RESOURCE_CALCULATOR =
-      new DefaultResourceCalculator();
+      new GPUResourceCalculator();
   private static final ResourceCalculator DOMINANT_RESOURCE_CALCULATOR =
       new DominantResourceCalculator();
   
@@ -236,6 +236,24 @@ public class FairScheduler extends
         + "=" + maxVcores + ", min should equal greater than 0"
         + ", max should be no smaller than min.");
     }
+
+    // validate scheduler GPUs allocation setting
+    int minGPUs = conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
+    int maxGPUs = conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
+
+    if (minGPUs < 0 || minGPUs > maxGPUs) {
+      throw new YarnRuntimeException("Invalid resource scheduler GPUs"
+              + " allocation configuration"
+              + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS
+              + "=" + minGPUs
+              + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS
+              + "=" + maxGPUs + ", min should equal greater than 0"
+              + ", max should be no smaller than min.");
+    }
   }
 
   public FairSchedulerConfiguration getConf() {
@@ -319,7 +337,8 @@ public class FairScheduler extends
             "  Allocations: " + rootMetrics.getAllocatedResources() +
             "  Availability: " + Resource.newInstance(
             rootMetrics.getAvailableMB(),
-            rootMetrics.getAvailableVirtualCores()) +
+            rootMetrics.getAvailableVirtualCores(),
+            rootMetrics.getAvailableGPUs()) +
             "  Demand: " + rootQueue.getDemand());
       }
     }
@@ -498,6 +517,12 @@ public class FairScheduler extends
           + sched.getName() + ": resDueToMinShare = " + resDueToMinShare
           + ", resDueToFairShare = " + resDueToFairShare;
       LOG.info(message);
+      String vMessage = "PHILLY: Summary =====> MinShare: " + sched.getMinShare() + ", FairShare: "
+          + sched.getFairShare() + ", Demand: " + sched.getDemand() + ", MinShareTimeout: "
+          + minShareTimeout + ", FairShareTimeout: " + fairShareTimeout + ", MinElapsed: "
+          + (curTime - sched.getLastTimeAtMinShare()) + ", FairElapsed: "
+          + (curTime - sched.getLastTimeAtFairShareThreshold());
+      LOG.info(vMessage);
     }
     return resToPreempt;
   }
@@ -511,8 +536,8 @@ public class FairScheduler extends
   public synchronized ResourceWeights getAppWeight(FSAppAttempt app) {
     double weight = 1.0;
     if (sizeBasedWeight) {
-      // Set weight based on current memory demand
-      weight = Math.log1p(app.getDemand().getMemory()) / Math.log(2);
+      // Set weight based on current GPU demand
+      weight = Math.log1p(app.getDemand().getGPUs()) / Math.log(2);
     }
     weight *= app.getPriority().getPriority();
     if (weightAdjuster != null) {
@@ -910,26 +935,29 @@ public class FairScheduler extends
 
     synchronized (application) {
       if (!ask.isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("allocate: pre-update" +
+        LOG.info("PHILLY: allocate: pre-update" +
               " applicationAttemptId=" + appAttemptId +
               " application=" + application.getApplicationId());
-        }
         application.showRequests();
 
         // Update application requests
         application.updateResourceRequests(ask);
 
         application.showRequests();
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("allocate: post-update" +
+        LOG.info("PHILLY: allocate: post-update" +
             " applicationAttemptId=" + appAttemptId +
             " #ask=" + ask.size() +
             " reservation= " + application.getCurrentReservation());
 
-        LOG.debug("Preempting " + application.getPreemptionContainers().size()
+        String askString = "ASK:";
+        int reqNum = 1;
+        for (ResourceRequest request : ask) {
+          askString += request.getResourceName() + " (" + reqNum + "): " + request.getCapability() + "; ";
+          reqNum++;
+        }
+
+        LOG.info("PHILLY: " + askString);
+        LOG.info("PHILLY: Preempting " + application.getPreemptionContainers().size()
             + " container(s)");
       }
       
@@ -952,6 +980,10 @@ public class FairScheduler extends
    * Process a heartbeat update from a node.
    */
   private synchronized void nodeUpdate(RMNode nm) {
+    // MJTHIS: this is called by handle(), which processes various node events.
+    // 'nm' has totalCapability that is expected to show total resource capacity.
+    // More dynamic usage/availability information is stored at FSSchedulerNode below.
+
     long start = getClock().getTime();
     if (LOG.isDebugEnabled()) {
       LOG.debug("nodeUpdate: " + nm + " cluster capacity: " + clusterResource);
@@ -1046,6 +1078,10 @@ public class FairScheduler extends
 
   @VisibleForTesting
   synchronized void attemptScheduling(FSSchedulerNode node) {
+    // MJTHIS: two places that call this function:
+    // 1. continuousSchedulingAttempt() by ContinuousSchedulingThread that continuously attempts to schedule resources
+    // 2. nodeUpdate() that processes a heartbeat update from a node
+
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
       return;
@@ -1093,6 +1129,7 @@ public class FairScheduler extends
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {
         boolean assignedContainer = false;
+        // MJTHIS: follow this, then it will reach assignContainer() at FSAppAttempt.java
         if (!queueMgr.getRootQueue().assignContainer(node).equals(
             Resources.none())) {
           assignedContainers++;
@@ -1152,9 +1189,9 @@ public class FairScheduler extends
   private boolean shouldAttemptPreemption() {
     if (preemptionEnabled) {
       return (preemptionUtilizationThreshold < Math.max(
-          (float) rootMetrics.getAllocatedMB() / clusterResource.getMemory(),
-          (float) rootMetrics.getAllocatedVirtualCores() /
-              clusterResource.getVirtualCores()));
+          Math.max((float) rootMetrics.getAllocatedMB() / clusterResource.getMemory(),
+          (float) rootMetrics.getAllocatedVirtualCores() / clusterResource.getVirtualCores()),
+          (float) rootMetrics.getAllocatedGPUs() / clusterResource.getGPUs()));
     }
     return false;
   }
@@ -1659,7 +1696,7 @@ public class FairScheduler extends
   @Override
   public EnumSet<SchedulerResourceTypes> getSchedulingResourceTypes() {
     return EnumSet
-      .of(SchedulerResourceTypes.MEMORY, SchedulerResourceTypes.CPU);
+      .of(SchedulerResourceTypes.MEMORY, SchedulerResourceTypes.CPU, SchedulerResourceTypes.GPU);
   }
 
   @Override

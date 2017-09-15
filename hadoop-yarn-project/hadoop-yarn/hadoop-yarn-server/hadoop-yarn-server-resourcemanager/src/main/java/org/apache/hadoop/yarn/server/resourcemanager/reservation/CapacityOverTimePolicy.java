@@ -100,7 +100,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
 
     // define variable that will store integral of resources (need diff class to
     // avoid overflow issues for long/large allocations)
-    IntegralResource runningTot = new IntegralResource(0L, 0L);
+    IntegralResource runningTot = new IntegralResource(0L, 0L, 0L);
     IntegralResource maxAllowed = new IntegralResource(maxAvgRes);
     maxAllowed.multiplyBy(validWindow / step);
 
@@ -205,43 +205,58 @@ public class CapacityOverTimePolicy implements SharingPolicy {
   private static class IntegralResource {
     long memory;
     long vcores;
+    long gpus;
 
     public IntegralResource(Resource resource) {
       this.memory = resource.getMemory();
       this.vcores = resource.getVirtualCores();
+      this.gpus = resource.getGPUs();
     }
 
-    public IntegralResource(long mem, long vcores) {
+    /*public IntegralResource(long mem, long vcores) {
       this.memory = mem;
       this.vcores = vcores;
+      this.gpus = 0;
+    }*/
+
+    public IntegralResource(long mem, long vcores, long GPUs) {
+      this.memory = mem;
+      this.vcores = vcores;
+      this.gpus = GPUs;
     }
 
     public void add(Resource r) {
       memory += r.getMemory();
       vcores += r.getVirtualCores();
+      gpus += r.getGPUs();
     }
 
     public void subtract(Resource r) {
       memory -= r.getMemory();
       vcores -= r.getVirtualCores();
+      gpus -= r.getGPUs();
     }
 
     public void multiplyBy(long window) {
       memory = memory * window;
       vcores = vcores * window;
+      gpus = gpus * window;
     }
 
     public long compareTo(IntegralResource other) {
       long diff = memory - other.memory;
       if (diff == 0) {
         diff = vcores - other.vcores;
+        if (diff == 0) {
+          diff = gpus - other.gpus;
+        }
       }
       return diff;
     }
 
     @Override
     public String toString() {
-      return "<memory:" + memory + ", vCores:" + vcores + ">";
+      return "<memory:" + memory + ", vCores:" + vcores + ", GPUs:" + gpus + ">";
     }
   }
 }

@@ -93,9 +93,10 @@ public class TestContainerMetrics {
     int anyPmemLimit = 1024;
     int anyVmemLimit = 2048;
     int anyVcores = 10;
+    int anyGPUs = 2;
     String anyProcessId = "1234";
 
-    metrics.recordResourceLimit(anyVmemLimit, anyPmemLimit, anyVcores);
+    metrics.recordResourceLimit(anyVmemLimit, anyPmemLimit, anyVcores, anyGPUs);
     metrics.recordProcessId(anyProcessId);
 
     Thread.sleep(110);
@@ -110,6 +111,7 @@ public class TestContainerMetrics {
         .PMEM_LIMIT_METRIC_NAME, anyPmemLimit);
     MetricsRecords.assertMetric(record, ContainerMetrics.VMEM_LIMIT_METRIC_NAME, anyVmemLimit);
     MetricsRecords.assertMetric(record, ContainerMetrics.VCORE_LIMIT_METRIC_NAME, anyVcores);
+    MetricsRecords.assertMetric(record, ContainerMetrics.GPU_LIMIT_METRIC_NAME, anyGPUs);
 
     collector.clear();
   }

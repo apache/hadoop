@@ -234,7 +234,16 @@ public class AppSchedulingInfo {
   synchronized public ResourceRequest getResourceRequest(Priority priority,
       String resourceName) {
     Map<String, ResourceRequest> nodeRequests = requests.get(priority);
-    return (nodeRequests == null) ? null : nodeRequests.get(resourceName);
+
+    if (nodeRequests == null) {
+      return null;
+    }
+    else {
+      ResourceRequest rr = nodeRequests.get(resourceName);
+      if (rr == null) return null;
+      rr.setCapability(Resources.clone(rr.getCapability()));
+      return rr;
+    }
   }
 
   public synchronized Resource getResource(Priority priority) {
@@ -264,6 +273,9 @@ public class AppSchedulingInfo {
   synchronized public List<ResourceRequest> allocate(NodeType type,
       SchedulerNode node, Priority priority, ResourceRequest request,
       Container container) {
+    // MJTHIS: request seems to be request that is actually scheduled. Track how this is selected.
+    // It seems this function is called by allocate() in FSAppAttempt.java
+
     List<ResourceRequest> resourceRequests = new ArrayList<ResourceRequest>();
     if (type == NodeType.NODE_LOCAL) {
       allocateNodeLocal(node, priority, request, container, resourceRequests);

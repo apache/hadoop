@@ -76,7 +76,7 @@ public class FSLeafQueue extends FSQueue {
     this.lastTimeAtMinShare = scheduler.getClock().getTime();
     this.lastTimeAtFairShareThreshold = scheduler.getClock().getTime();
     activeUsersManager = new ActiveUsersManager(getMetrics());
-    amResourceUsage = Resource.newInstance(0, 0);
+    amResourceUsage = Resource.newInstance(0, 0, 0);
   }
   
   public void addApp(FSAppAttempt app, boolean runnable) {
@@ -323,6 +323,7 @@ public class FSLeafQueue extends FSQueue {
     // but we can accept it in practice since the probability is low.
     readLock.lock();
     try {
+      // MJTHIS: This is where we go through runnableApps
       for (FSAppAttempt sched : runnableApps) {
         if (SchedulerAppUtils.isBlacklisted(sched, node, LOG)) {
           continue;

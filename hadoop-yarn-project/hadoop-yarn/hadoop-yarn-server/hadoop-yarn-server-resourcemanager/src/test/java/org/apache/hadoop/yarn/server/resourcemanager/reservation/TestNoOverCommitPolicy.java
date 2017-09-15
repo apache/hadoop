@@ -53,9 +53,9 @@ public class TestNoOverCommitPolicy {
     step = 1000L;
 
     initTime = System.currentTimeMillis();
-    minAlloc = Resource.newInstance(1024, 1);
+    minAlloc = Resource.newInstance(1024, 1, 1);
     res = new DefaultResourceCalculator();
-    maxAlloc = Resource.newInstance(1024 * 8, 8);
+    maxAlloc = Resource.newInstance(1024 * 8, 8, 8);
 
     mAgent = mock(ReservationAgent.class);
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();

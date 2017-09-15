@@ -88,4 +88,65 @@ public class NodeManagerHardwareUtils {
     }
     return nodeCpuPercentage;
   }
+
+  /**
+   *
+   * Returns the fraction of GPUs that should be used for YARN containers.
+   * The number is derived based on various configuration params such as
+   * YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT
+   *
+   * @param conf
+   *          - Configuration object
+   * @return Fraction of GPUs to be used for YARN containers
+   */
+  public static float getContainersGPUs(Configuration conf) {
+    ResourceCalculatorPlugin plugin =
+            ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf);
+    return NodeManagerHardwareUtils.getContainersGPUs(plugin, conf);
+  }
+
+  /**
+   *
+   * Returns the fraction of GPUs that should be used for YARN containers.
+   * The number is derived based on various configuration params such as
+   * YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT
+   *
+   * @param plugin
+   *          - ResourceCalculatorPlugin object to determine hardware specs
+   * @param conf
+   *          - Configuration object
+   * @return Fraction of GPUs to be used for YARN containers
+   */
+  public static float getContainersGPUs(ResourceCalculatorPlugin plugin,
+                                         Configuration conf) {
+    int numGPUs = plugin.getNumGPUs();
+    int nodeGpuPercentage = getNodeGpuPercentage(conf);
+
+    return (nodeGpuPercentage * numGPUs) / 100.0f;
+  }
+
+  /**
+   * Gets the percentage of physical GPU that is configured for YARN containers.
+   * This is percent {@literal >} 0 and {@literal <=} 100 based on
+   * {@link YarnConfiguration#NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT}
+   * @param conf Configuration object
+   * @return percent {@literal >} 0 and {@literal <=} 100
+   */
+  public static int getNodeGpuPercentage(Configuration conf) {
+    int nodeGpuPercentage =
+        Math.min(conf.getInt(
+            YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT,
+            YarnConfiguration.DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT),
+            100);
+    nodeGpuPercentage = Math.max(0, nodeGpuPercentage);
+
+    if (nodeGpuPercentage == 0) {
+      String message =
+          "Illegal value for "
+              + YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT
+              + ". Value cannot be less than or equal to 0.";
+      throw new IllegalArgumentException(message);
+    }
+    return nodeGpuPercentage;
+  }
 }

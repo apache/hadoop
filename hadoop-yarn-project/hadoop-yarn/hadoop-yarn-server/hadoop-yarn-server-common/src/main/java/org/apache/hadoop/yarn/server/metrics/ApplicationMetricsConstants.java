@@ -70,6 +70,9 @@ public class ApplicationMetricsConstants {
   public static final String APP_MEM_METRICS =
       "YARN_APPLICATION_MEM_METRIC";
 
+  public static final String APP_GPU_METRICS =
+      "YARN_APPLICATION_GPU_METRIC";
+
   public static final String LATEST_APP_ATTEMPT_EVENT_INFO =
       "YARN_APPLICATION_LATEST_APP_ATTEMPT";
 

@@ -160,6 +160,10 @@ public class TestSystemMetricsPublisher {
             app.getRMAppMetrics().getVcoreSeconds(),
             Long.parseLong(entity.getOtherInfo()
                 .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getGPUSeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_GPU_METRICS).toString()));
       }
       boolean hasCreatedEvent = false;
       boolean hasFinishedEvent = false;
@@ -303,6 +307,10 @@ public class TestSystemMetricsPublisher {
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO));
     Assert.assertEquals(
+        container.getAllocatedResource().getGPUs(),
+        entity.getOtherInfo().get(
+            ContainerMetricsConstants.ALLOCATED_GPU_ENTITY_INFO));
+    Assert.assertEquals(
         container.getAllocatedPriority().getPriority(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO));
@@ -351,7 +359,7 @@ public class TestSystemMetricsPublisher {
     when(app.getFinalApplicationStatus()).thenReturn(
         FinalApplicationStatus.UNDEFINED);
     when(app.getRMAppMetrics()).thenReturn(
-        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE));
+        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE));
     return app;
   }
 
@@ -378,7 +386,7 @@ public class TestSystemMetricsPublisher {
     when(container.getAllocatedNode()).thenReturn(
         NodeId.newInstance("test host", -100));
     when(container.getAllocatedResource()).thenReturn(
-        Resource.newInstance(-1, -1));
+        Resource.newInstance(-1, -1, -1));
     when(container.getAllocatedPriority()).thenReturn(Priority.UNDEFINED);
     when(container.getCreationTime()).thenReturn(Integer.MAX_VALUE + 1L);
     when(container.getFinishTime()).thenReturn(Integer.MAX_VALUE + 2L);

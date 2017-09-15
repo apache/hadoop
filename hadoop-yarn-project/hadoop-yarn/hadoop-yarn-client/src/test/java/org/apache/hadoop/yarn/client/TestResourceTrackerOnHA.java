@@ -55,7 +55,7 @@ public class TestResourceTrackerOnHA extends ProtocolHATestBase{
   @Test(timeout = 15000)
   public void testResourceTrackerOnHA() throws Exception {
     NodeId nodeId = NodeId.newInstance("localhost", 0);
-    Resource resource = Resource.newInstance(2048, 4);
+    Resource resource = Resource.newInstance(2048, 4, 4);
 
     // make sure registerNodeManager works when failover happens
     RegisterNodeManagerRequest request =

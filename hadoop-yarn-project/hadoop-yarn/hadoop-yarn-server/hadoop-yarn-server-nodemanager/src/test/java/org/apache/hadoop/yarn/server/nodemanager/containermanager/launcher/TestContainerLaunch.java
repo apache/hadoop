@@ -924,7 +924,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
   protected Token createContainerToken(ContainerId cId, Priority priority,
       long createTime) throws InvalidToken {
-    Resource r = BuilderUtils.newResource(1024, 1);
+    Resource r = BuilderUtils.newResource(1024, 1, 1);
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(cId, context.getNodeId().toString(), user,
           r, System.currentTimeMillis() + 10000L, 123, DUMMY_RM_IDENTIFIER,

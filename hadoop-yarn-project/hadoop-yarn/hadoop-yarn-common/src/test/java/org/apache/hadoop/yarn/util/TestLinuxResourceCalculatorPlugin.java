@@ -43,8 +43,9 @@ public class TestLinuxResourceCalculatorPlugin {
 	  public FakeLinuxResourceCalculatorPlugin(String procfsMemFile,
 			                                       String procfsCpuFile,
 			                                       String procfsStatFile,
+                                                   String procfsGpuFile,
 			                                       long jiffyLengthInMillis) {
-	    super(procfsMemFile, procfsCpuFile, procfsStatFile, jiffyLengthInMillis);
+	    super(procfsMemFile, procfsCpuFile, procfsStatFile, procfsGpuFile, jiffyLengthInMillis);
 	  }
 	  @Override
 	  long getCurrentTime() {
@@ -60,14 +61,16 @@ public class TestLinuxResourceCalculatorPlugin {
   private static final String FAKE_MEMFILE;
   private static final String FAKE_CPUFILE;
   private static final String FAKE_STATFILE;
+  private static final String FAKE_GPUFILE;
   private static final long FAKE_JIFFY_LENGTH = 10L;
   static {
     int randomNum = (new Random()).nextInt(1000000000);
     FAKE_MEMFILE = TEST_ROOT_DIR + File.separator + "MEMINFO_" + randomNum;
     FAKE_CPUFILE = TEST_ROOT_DIR + File.separator + "CPUINFO_" + randomNum;
+    FAKE_GPUFILE = TEST_ROOT_DIR + File.separator + "GPUINFO_" + randomNum;
     FAKE_STATFILE = TEST_ROOT_DIR + File.separator + "STATINFO_" + randomNum;
     plugin = new FakeLinuxResourceCalculatorPlugin(FAKE_MEMFILE, FAKE_CPUFILE,
-                                                   FAKE_STATFILE,
+                                                   FAKE_STATFILE, FAKE_GPUFILE,
                                                    FAKE_JIFFY_LENGTH);
   }
   static final String MEMINFO_FORMAT = 

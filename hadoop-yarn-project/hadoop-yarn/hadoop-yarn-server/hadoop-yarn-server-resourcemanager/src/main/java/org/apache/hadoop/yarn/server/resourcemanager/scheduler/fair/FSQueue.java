@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public abstract class FSQueue implements Queue, Schedulable {
-  private Resource fairShare = Resources.createResource(0, 0);
-  private Resource steadyFairShare = Resources.createResource(0, 0);
+  private Resource fairShare = Resources.createResource(0, 0, 0);
+  private Resource steadyFairShare = Resources.createResource(0, 0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final FSQueueMetrics metrics;
@@ -124,18 +124,18 @@ public abstract class FSQueue implements Queue, Schedulable {
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queueInfo.setQueueName(getQueueName());
 
-    if (scheduler.getClusterResource().getMemory() == 0) {
+    if (scheduler.getClusterResource().getGPUs() == 0) {
       queueInfo.setCapacity(0.0f);
     } else {
-      queueInfo.setCapacity((float) getFairShare().getMemory() /
-          scheduler.getClusterResource().getMemory());
+      queueInfo.setCapacity((float) getFairShare().getGPUs() /
+          scheduler.getClusterResource().getGPUs());
     }
 
-    if (getFairShare().getMemory() == 0) {
+    if (getFairShare().getGPUs() == 0) {
       queueInfo.setCurrentCapacity(0.0f);
     } else {
-      queueInfo.setCurrentCapacity((float) getResourceUsage().getMemory() /
-          getFairShare().getMemory());
+      queueInfo.setCurrentCapacity((float) getResourceUsage().getGPUs() /
+          getFairShare().getGPUs());
     }
 
     ArrayList<QueueInfo> childQueueInfos = new ArrayList<QueueInfo>();

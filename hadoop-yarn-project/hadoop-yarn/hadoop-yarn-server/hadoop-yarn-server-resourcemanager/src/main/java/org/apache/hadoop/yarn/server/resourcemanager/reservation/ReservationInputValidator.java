@@ -125,7 +125,7 @@ public class ReservationInputValidator {
     }
     // compute minimum duration and max gang size
     long minDuration = 0;
-    Resource maxGangSize = Resource.newInstance(0, 0);
+    Resource maxGangSize = Resource.newInstance(0, 0, 0);
     ReservationRequestInterpreter type =
         contract.getReservationRequests().getInterpreter();
     for (ReservationRequest rr : resReq) {

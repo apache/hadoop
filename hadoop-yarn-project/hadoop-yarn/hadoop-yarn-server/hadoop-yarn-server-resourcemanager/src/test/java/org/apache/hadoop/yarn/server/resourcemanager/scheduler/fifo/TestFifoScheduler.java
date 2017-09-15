@@ -289,7 +289,7 @@ public class TestFifoScheduler {
     scheduler.start();
     scheduler.reinitialize(new Configuration(), rmContext);
     RMNode node0 = MockNodes.newNodeInfo(1,
-        Resources.createResource(2048, 4), 1, "127.0.0.1");
+        Resources.createResource(2048, 4, 4), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node0);
     scheduler.handle(nodeEvent1);
     
@@ -299,7 +299,7 @@ public class TestFifoScheduler {
         (Map<NodeId, FiCaSchedulerNode>) method.invoke(scheduler);
     assertEquals(schedulerNodes.values().size(), 1);
     
-    Resource newResource = Resources.createResource(1024, 4);
+    Resource newResource = Resources.createResource(1024, 4, 4);
     
     NodeResourceUpdateSchedulerEvent node0ResourceUpdate = new 
         NodeResourceUpdateSchedulerEvent(node0, ResourceOption.newInstance(
@@ -371,14 +371,14 @@ public class TestFifoScheduler {
     String host_0 = "host_0";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 = 
       registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(4 * GB, 1));
+          Resources.createResource(4 * GB, 1, 1));
     nm_0.heartbeat();
     
     // Register node2
     String host_1 = "host_1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_1 = 
       registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(2 * GB, 1));
+          Resources.createResource(2 * GB, 1, 1));
     nm_1.heartbeat();
 
     // ResourceRequest priorities

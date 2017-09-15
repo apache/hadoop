@@ -365,7 +365,7 @@ public class TestApplicationCleanup {
     // alloc another container on nm2
     AllocateResponse allocResponse =
         am0.allocate(Arrays.asList(ResourceRequest.newInstance(
-            Priority.newInstance(1), "*", Resource.newInstance(1024, 0), 1)),
+            Priority.newInstance(1), "*", Resource.newInstance(1024, 0, 0), 1)),
             null);
     while (null == allocResponse.getAllocatedContainers()
         || allocResponse.getAllocatedContainers().isEmpty()) {
@@ -382,7 +382,7 @@ public class TestApplicationCleanup {
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     nm1.registerNode(Arrays.asList(NMContainerStatus.newInstance(
       ContainerId.newContainerId(am0.getApplicationAttemptId(), 1),
-      ContainerState.COMPLETE, Resource.newInstance(1024, 1), "", 0,
+      ContainerState.COMPLETE, Resource.newInstance(1024, 1, 1), "", 0,
       Priority.newInstance(0), 1234)), Arrays.asList(app0.getApplicationId()));
     nm2.setResourceTrackerService(rm2.getResourceTrackerService());
     nm2.registerNode(Arrays.asList(app0.getApplicationId()));
@@ -594,7 +594,7 @@ public class TestApplicationCleanup {
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId, containerState,
-            Resource.newInstance(memory, 1), "recover container", 0,
+            Resource.newInstance(memory, 1, 1), "recover container", 0,
             Priority.newInstance(0), 0);
     return containerReport;
   }

@@ -40,7 +40,7 @@ public class TestContainerResourceIncrease {
     ContainerId containerId = ContainerId
         .newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(1234, 3), 3), 7);
-    Resource resource = Resource.newInstance(1023, 3);
+    Resource resource = Resource.newInstance(1023, 3, 3);
     ContainerResourceIncrease ctx = ContainerResourceIncrease.newInstance(
         containerId, resource, token);
 

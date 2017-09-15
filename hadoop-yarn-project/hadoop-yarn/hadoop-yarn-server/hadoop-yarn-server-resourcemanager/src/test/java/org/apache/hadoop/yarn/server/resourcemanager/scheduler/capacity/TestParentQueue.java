@@ -85,11 +85,11 @@ public class TestParentQueue {
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getMinimumResourceCapability()).thenReturn(
-        Resources.createResource(GB, 1));
+        Resources.createResource(GB, 1, 1));
     when(csContext.getMaximumResourceCapability()).thenReturn(
-        Resources.createResource(16*GB, 32));
+        Resources.createResource(16*GB, 32, 32));
     when(csContext.getClusterResource()).
-        thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32));
+        thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32, 100 * 32));
     when(csContext.getApplicationComparator()).
     thenReturn(CapacityScheduler.applicationComparator);
     when(csContext.getQueueComparator()).
@@ -118,7 +118,7 @@ public class TestParentQueue {
   private FiCaSchedulerApp getMockApplication(int appId, String user) {
     FiCaSchedulerApp application = mock(FiCaSchedulerApp.class);
     doReturn(user).when(application).getUser();
-    doReturn(Resources.createResource(0, 0)).when(application).getHeadroom();
+    doReturn(Resources.createResource(0, 0, 0)).when(application).getHeadroom();
     return application;
   }
 
@@ -212,6 +212,7 @@ public class TestParentQueue {
     // Setup some nodes
     final int memoryPerNode = 10;
     final int coresPerNode = 16;
+    final int GPUsPerNode = 16;
     final int numNodes = 2;
     
     FiCaSchedulerNode node_0 = 
@@ -221,7 +222,7 @@ public class TestParentQueue {
     
     final Resource clusterResource = 
         Resources.createResource(numNodes * (memoryPerNode*GB),
-            numNodes * coresPerNode);
+            numNodes * coresPerNode, numNodes * GPUsPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
@@ -432,6 +433,7 @@ public class TestParentQueue {
     // Setup some nodes
     final int memoryPerNode = 10;
     final int coresPerNode = 16;
+    final int GPUsPerNode = 16;
     final int numNodes = 3;
     
     FiCaSchedulerNode node_0 = 
@@ -443,7 +445,7 @@ public class TestParentQueue {
     
     final Resource clusterResource = 
         Resources.createResource(numNodes * (memoryPerNode*GB), 
-            numNodes * coresPerNode);
+            numNodes * coresPerNode, numNodes * GPUsPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
@@ -607,6 +609,7 @@ public class TestParentQueue {
     // Setup some nodes
     final int memoryPerNode = 10;
     final int coresPerNode = 16;
+    final int GPUsPerNode = 16;
     final int numNodes = 2;
     
     FiCaSchedulerNode node_0 = 
@@ -616,7 +619,7 @@ public class TestParentQueue {
     
     final Resource clusterResource = 
         Resources.createResource(numNodes * (memoryPerNode*GB), 
-            numNodes * coresPerNode);
+            numNodes * coresPerNode, numNodes * GPUsPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
@@ -676,6 +679,7 @@ public class TestParentQueue {
     // Setup some nodes
     final int memoryPerNode = 10;
     final int coresPerNode = 10;
+    final int GPUsPerNode = 10;
     final int numNodes = 2;
     
     FiCaSchedulerNode node_0 = 
@@ -685,7 +689,7 @@ public class TestParentQueue {
     
     final Resource clusterResource = 
         Resources.createResource(numNodes * (memoryPerNode*GB),
-            numNodes * coresPerNode);
+            numNodes * coresPerNode, numNodes * GPUsPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing

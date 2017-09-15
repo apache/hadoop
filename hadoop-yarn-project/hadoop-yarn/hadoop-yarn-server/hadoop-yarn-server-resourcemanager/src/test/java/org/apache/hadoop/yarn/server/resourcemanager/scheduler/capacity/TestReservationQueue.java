@@ -55,11 +55,11 @@ public class TestReservationQueue {
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).thenReturn(
-        Resources.createResource(GB, 1));
+        Resources.createResource(GB, 1, 1));
     when(csContext.getMaximumResourceCapability()).thenReturn(
-        Resources.createResource(16 * GB, 32));
+        Resources.createResource(16 * GB, 32, 32));
     when(csContext.getClusterResource()).thenReturn(
-        Resources.createResource(100 * 16 * GB, 100 * 32));
+        Resources.createResource(100 * 16 * GB, 100 * 32, 100 * 32));
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     
     RMContext mockRMContext = TestUtils.getMockRMContext();

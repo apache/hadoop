@@ -588,6 +588,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             rmNode.totalCapability = newNode.getTotalCapability();
           }
           if (rmNode.getState().equals(NodeState.RUNNING)) {
+            // MJTHIS: Must uncomment it when you are running test cases
+            assert (rmNode.getTotalCapability().getGPUAttribute() != 0) : "GPU attribute is not set for node added event";
             // Only add old node if old state is RUNNING
             rmNode.context.getDispatcher().getEventHandler().handle(
                 new NodeAddedSchedulerEvent(rmNode));
@@ -627,6 +629,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         if (isCapabilityChanged
             && rmNode.getState().equals(NodeState.RUNNING)) {
           // Update scheduler node's capacity for reconnect node.
+          // MJTHIS: Must uncomment it when you are running test cases
+          assert (rmNode.getTotalCapability().getGPUAttribute() != 0) : "GPU attribute is not set for node update event";
           rmNode.context
               .getDispatcher()
               .getEventHandler()
@@ -665,6 +669,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       RMNodeResourceUpdateEvent updateEvent = (RMNodeResourceUpdateEvent)event;
       updateNodeResourceFromEvent(rmNode, updateEvent);
+      // MJTHIS: Must uncomment it when you are running test cases
+      assert (rmNode.getTotalCapability().getGPUAttribute() != 0) : "GPU attribute is not set for node update event";
       // Notify new resourceOption to scheduler
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeResourceUpdateSchedulerEvent(rmNode, updateEvent.getResourceOption()));
@@ -814,6 +820,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.setLastHealthReportTime(
           remoteNodeHealthStatus.getLastHealthReportTime());
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {
+        // MJTHIS: Must uncomment it when you are running test cases
+        assert (rmNode.getTotalCapability().getGPUAttribute() != 0) : "GPU attribute is not set for node added event";
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));
         rmNode.context.getDispatcher().getEventHandler().handle(

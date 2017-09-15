@@ -31,20 +31,20 @@ import org.junit.Test;
 public class TestFairSchedulerConfiguration {
   @Test
   public void testParseResourceConfigValue() throws Exception {
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("2 vcores, 1024 mb"));
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024 mb, 2 vcores"));
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("2vcores,1024mb"));
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024mb,2vcores"));
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024   mb, 2    vcores"));
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("1024 Mb, 2 vCores"));
-    assertEquals(BuilderUtils.newResource(1024, 2),
-        parseResourceConfigValue("  1024 mb, 2 vcores  "));
+    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+        parseResourceConfigValue("2 vcores, 2 gpus, 1024 mb"));
+    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+        parseResourceConfigValue("1024 mb, 2 vcores, 2 gpus"));
+    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+        parseResourceConfigValue("2vcores,2gpus,1024mb"));
+    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+        parseResourceConfigValue("1024mb,2vcores,2gpus"));
+    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+        parseResourceConfigValue("1024   mb, 2    vcores, 2    gpus"));
+    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+        parseResourceConfigValue("1024 Mb, 2 vCores, 2 gpus"));
+    assertEquals(BuilderUtils.newResource(1024, 2, 2),
+        parseResourceConfigValue("  1024 mb, 2 vcores  , 2 gpus  "));
   }
   
   @Test(expected = AllocationConfigurationException.class)
@@ -66,5 +66,9 @@ public class TestFairSchedulerConfiguration {
   public void testGibberish() throws Exception {
     parseResourceConfigValue("1o24vc0res");
   }
-  
+
+  @Test(expected = AllocationConfigurationException.class)
+  public void testOnlyGPU() throws Exception {
+    parseResourceConfigValue("1024gcores");
+  }
 }
