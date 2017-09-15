@@ -889,7 +889,7 @@ public class TestNameNodeMetrics {
   public void testSyncAndBlockReportMetric() throws Exception {
     MetricsRecordBuilder rb = getMetrics(NN_METRICS);
     // We have one sync when the cluster starts up, just opening the journal
-    assertCounter("SyncsNumOps", 3L, rb);
+    assertCounter("SyncsNumOps", 4L, rb);
     // Each datanode reports in when the cluster comes up
     assertCounter("StorageBlockReportNumOps",
                   (long) DATANODE_COUNT * cluster.getStoragesPerDatanode(), rb);
