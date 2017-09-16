@@ -41,8 +41,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.junit.rules.Timeout;
 
 /**
  * Class for testing {@link BlockStatsMXBean} implementation
@@ -50,6 +52,9 @@ import org.eclipse.jetty.util.ajax.JSON;
 public class TestBlockStatsMXBean {
 
   private MiniDFSCluster cluster;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws IOException {
