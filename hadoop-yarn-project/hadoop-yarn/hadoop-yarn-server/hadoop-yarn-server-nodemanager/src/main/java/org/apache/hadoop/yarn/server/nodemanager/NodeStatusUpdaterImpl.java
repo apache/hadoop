@@ -760,155 +760,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   protected void startStatusUpdater() {
 
-    statusUpdaterRunnable = new Runnable() {
-      @Override
-      @SuppressWarnings("unchecked")
-      public void run() {
-        int lastHeartbeatID = 0;
-        while (!isStopped) {
-          // Send heartbeat
-          try {
-            NodeHeartbeatResponse response = null;
-            Set<NodeLabel> nodeLabelsForHeartbeat =
-                nodeLabelsHandler.getNodeLabelsForHeartbeat();
-            NodeStatus nodeStatus = getNodeStatus(lastHeartbeatID);
-            NodeHeartbeatRequest request =
-                NodeHeartbeatRequest.newInstance(nodeStatus,
-                    NodeStatusUpdaterImpl.this.context
-                        .getContainerTokenSecretManager().getCurrentKey(),
-                    NodeStatusUpdaterImpl.this.context
-                        .getNMTokenSecretManager().getCurrentKey(),
-                    nodeLabelsForHeartbeat);
-
-            if (logAggregationEnabled) {
-              // pull log aggregation status for application running in this NM
-              List<LogAggregationReport> logAggregationReports =
-                  getLogAggregationReportsForApps(context
-                    .getLogAggregationStatusForApps());
-              if (logAggregationReports != null
-                  && !logAggregationReports.isEmpty()) {
-                request.setLogAggregationReportsForApps(logAggregationReports);
-              }
-            }
-
-            response = resourceTracker.nodeHeartbeat(request);
-            //get next heartbeat interval from response
-            nextHeartBeatInterval = response.getNextHeartBeatInterval();
-            updateMasterKeys(response);
-
-            if (!handleShutdownOrResyncCommand(response)) {
-              nodeLabelsHandler.verifyRMHeartbeatResponseForNodeLabels(
-                  response);
-
-              // Explicitly put this method after checking the resync
-              // response. We
-              // don't want to remove the completed containers before resync
-              // because these completed containers will be reported back to RM
-              // when NM re-registers with RM.
-              // Only remove the cleanedup containers that are acked
-              removeOrTrackCompletedContainersFromContext(response
-                  .getContainersToBeRemovedFromNM());
-
-              logAggregationReportForAppsTempList.clear();
-              lastHeartbeatID = response.getResponseId();
-              List<ContainerId> containersToCleanup = response
-                  .getContainersToCleanup();
-              if (!containersToCleanup.isEmpty()) {
-                dispatcher.getEventHandler().handle(
-                    new CMgrCompletedContainersEvent(containersToCleanup,
-                        CMgrCompletedContainersEvent.Reason
-                            .BY_RESOURCEMANAGER));
-              }
-              List<ApplicationId> appsToCleanup =
-                  response.getApplicationsToCleanup();
-              //Only start tracking for keepAlive on FINISH_APP
-              trackAppsForKeepAlive(appsToCleanup);
-              if (!appsToCleanup.isEmpty()) {
-                dispatcher.getEventHandler().handle(
-                    new CMgrCompletedAppsEvent(appsToCleanup,
-                        CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
-              }
-              Map<ApplicationId, ByteBuffer> systemCredentials =
-                  response.getSystemCredentialsForApps();
-              if (systemCredentials != null && !systemCredentials.isEmpty()) {
-                ((NMContext) context).setSystemCrendentialsForApps(
-                    parseCredentials(systemCredentials));
-              }
-              List<org.apache.hadoop.yarn.api.records.Container>
-                  containersToUpdate = response.getContainersToUpdate();
-              if (!containersToUpdate.isEmpty()) {
-                dispatcher.getEventHandler().handle(
-                    new CMgrUpdateContainersEvent(containersToUpdate));
-              }
-
-              // SignalContainer request originally comes from end users via
-              // ClientRMProtocol's SignalContainer. Forward the request to
-              // ContainerManager which will dispatch the event to
-              // ContainerLauncher.
-              List<SignalContainerRequest> containersToSignal = response
-                  .getContainersToSignalList();
-              if (containersToSignal.size() != 0) {
-                dispatcher.getEventHandler().handle(
-                    new CMgrSignalContainersEvent(containersToSignal));
-              }
-
-              // Update QueuingLimits if ContainerManager supports queuing
-              ContainerQueuingLimit queuingLimit =
-                  response.getContainerQueuingLimit();
-              if (queuingLimit != null) {
-                context.getContainerManager().updateQueuingLimit(queuingLimit);
-              }
-            }
-            // Handling node resource update case.
-            Resource newResource = response.getResource();
-            if (newResource != null) {
-              updateNMResource(newResource);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Node's resource is updated to " +
-                    newResource.toString());
-              }
-            }
-          } catch (ConnectException e) {
-            //catch and throw the exception if tried MAX wait time to connect RM
-            dispatcher.getEventHandler().handle(
-                new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
-            // failed to connect to RM.
-            failedToConnect = true;
-            throw new YarnRuntimeException(e);
-          } catch (Throwable e) {
-
-            // TODO Better error handling. Thread can die with the rest of the
-            // NM still running.
-            LOG.error("Caught exception in status-updater", e);
-          } finally {
-            synchronized (heartbeatMonitor) {
-              nextHeartBeatInterval = nextHeartBeatInterval <= 0 ?
-                  YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS :
-                    nextHeartBeatInterval;
-              try {
-                heartbeatMonitor.wait(nextHeartBeatInterval);
-              } catch (InterruptedException e) {
-                // Do Nothing
-              }
-            }
-          }
-        }
-      }
-
-      private void updateMasterKeys(NodeHeartbeatResponse response) {
-        // See if the master-key has rolled over
-        MasterKey updatedMasterKey = response.getContainerTokenMasterKey();
-        if (updatedMasterKey != null) {
-          // Will be non-null only on roll-over on RM side
-          context.getContainerTokenSecretManager().setMasterKey(updatedMasterKey);
-        }
-        
-        updatedMasterKey = response.getNMTokenMasterKey();
-        if (updatedMasterKey != null) {
-          context.getNMTokenSecretManager().setMasterKey(updatedMasterKey);
-        }
-      }
-    };
+    statusUpdaterRunnable = new StatusUpdaterRunnable();
     statusUpdater =
         new Thread(statusUpdaterRunnable, "Node Status Updater");
     statusUpdater.start();
@@ -1166,6 +1018,156 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   + "} were not accepted by RM and message from RM : "
                   + response.getDiagnosticsMessage());
         }
+      }
+    }
+  }
+
+  private class StatusUpdaterRunnable implements Runnable {
+    @Override
+    @SuppressWarnings("unchecked")
+    public void run() {
+      int lastHeartbeatID = 0;
+      while (!isStopped) {
+        // Send heartbeat
+        try {
+          NodeHeartbeatResponse response = null;
+          Set<NodeLabel> nodeLabelsForHeartbeat =
+                  nodeLabelsHandler.getNodeLabelsForHeartbeat();
+          NodeStatus nodeStatus = getNodeStatus(lastHeartbeatID);
+          NodeHeartbeatRequest request =
+              NodeHeartbeatRequest.newInstance(nodeStatus,
+                NodeStatusUpdaterImpl.this.context
+                  .getContainerTokenSecretManager().getCurrentKey(),
+                NodeStatusUpdaterImpl.this.context
+                  .getNMTokenSecretManager().getCurrentKey(),
+                nodeLabelsForHeartbeat);
+
+          if (logAggregationEnabled) {
+            // pull log aggregation status for application running in this NM
+            List<LogAggregationReport> logAggregationReports =
+                    getLogAggregationReportsForApps(context
+                            .getLogAggregationStatusForApps());
+            if (logAggregationReports != null
+                    && !logAggregationReports.isEmpty()) {
+              request.setLogAggregationReportsForApps(logAggregationReports);
+            }
+          }
+
+          response = resourceTracker.nodeHeartbeat(request);
+          //get next heartbeat interval from response
+          nextHeartBeatInterval = response.getNextHeartBeatInterval();
+          updateMasterKeys(response);
+
+          if (!handleShutdownOrResyncCommand(response)) {
+            nodeLabelsHandler.verifyRMHeartbeatResponseForNodeLabels(
+                    response);
+
+            // Explicitly put this method after checking the resync
+            // response. We
+            // don't want to remove the completed containers before resync
+            // because these completed containers will be reported back to RM
+            // when NM re-registers with RM.
+            // Only remove the cleanedup containers that are acked
+            removeOrTrackCompletedContainersFromContext(response
+                    .getContainersToBeRemovedFromNM());
+
+            logAggregationReportForAppsTempList.clear();
+            lastHeartbeatID = response.getResponseId();
+            List<ContainerId> containersToCleanup = response
+                    .getContainersToCleanup();
+            if (!containersToCleanup.isEmpty()) {
+              dispatcher.getEventHandler().handle(
+                      new CMgrCompletedContainersEvent(containersToCleanup,
+                              CMgrCompletedContainersEvent.Reason
+                                      .BY_RESOURCEMANAGER));
+            }
+            List<ApplicationId> appsToCleanup =
+                    response.getApplicationsToCleanup();
+            //Only start tracking for keepAlive on FINISH_APP
+            trackAppsForKeepAlive(appsToCleanup);
+            if (!appsToCleanup.isEmpty()) {
+              dispatcher.getEventHandler().handle(
+                  new CMgrCompletedAppsEvent(appsToCleanup,
+                      CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
+            }
+            Map<ApplicationId, ByteBuffer> systemCredentials =
+                    response.getSystemCredentialsForApps();
+            if (systemCredentials != null && !systemCredentials.isEmpty()) {
+              ((NMContext) context).setSystemCrendentialsForApps(
+                      parseCredentials(systemCredentials));
+            }
+            List<org.apache.hadoop.yarn.api.records.Container>
+                    containersToUpdate = response.getContainersToUpdate();
+            if (!containersToUpdate.isEmpty()) {
+              dispatcher.getEventHandler().handle(
+                      new CMgrUpdateContainersEvent(containersToUpdate));
+            }
+
+            // SignalContainer request originally comes from end users via
+            // ClientRMProtocol's SignalContainer. Forward the request to
+            // ContainerManager which will dispatch the event to
+            // ContainerLauncher.
+            List<SignalContainerRequest> containersToSignal = response
+                    .getContainersToSignalList();
+            if (containersToSignal.size() != 0) {
+              dispatcher.getEventHandler().handle(
+                      new CMgrSignalContainersEvent(containersToSignal));
+            }
+
+            // Update QueuingLimits if ContainerManager supports queuing
+            ContainerQueuingLimit queuingLimit =
+                    response.getContainerQueuingLimit();
+            if (queuingLimit != null) {
+              context.getContainerManager().updateQueuingLimit(queuingLimit);
+            }
+          }
+          // Handling node resource update case.
+          Resource newResource = response.getResource();
+          if (newResource != null) {
+            updateNMResource(newResource);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Node's resource is updated to " +
+                      newResource.toString());
+            }
+          }
+        } catch (ConnectException e) {
+          //catch and throw the exception if tried MAX wait time to connect RM
+          dispatcher.getEventHandler().handle(
+                  new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
+          // failed to connect to RM.
+          failedToConnect = true;
+          throw new YarnRuntimeException(e);
+        } catch (Throwable e) {
+
+          // TODO Better error handling. Thread can die with the rest of the
+          // NM still running.
+          LOG.error("Caught exception in status-updater", e);
+        } finally {
+          synchronized (heartbeatMonitor) {
+            nextHeartBeatInterval = nextHeartBeatInterval <= 0 ?
+                    YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS :
+                    nextHeartBeatInterval;
+            try {
+              heartbeatMonitor.wait(nextHeartBeatInterval);
+            } catch (InterruptedException e) {
+              // Do Nothing
+            }
+          }
+        }
+      }
+    }
+
+    private void updateMasterKeys(NodeHeartbeatResponse response) {
+      // See if the master-key has rolled over
+      MasterKey updatedMasterKey = response.getContainerTokenMasterKey();
+      if (updatedMasterKey != null) {
+        // Will be non-null only on roll-over on RM side
+        context.getContainerTokenSecretManager().setMasterKey(updatedMasterKey);
+      }
+
+      updatedMasterKey = response.getNMTokenMasterKey();
+      if (updatedMasterKey != null) {
+        context.getNMTokenSecretManager().setMasterKey(updatedMasterKey);
       }
     }
   }
