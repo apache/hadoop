@@ -121,6 +121,8 @@ public class TestContainer {
     try {
       wc = new WrappedContainer(7, 314159265358979L, 4344, "yak");
       assertEquals(ContainerState.NEW, wc.c.getContainerState());
+      ContainerImpl container = (ContainerImpl)wc.c;
+      assertEquals(org.apache.hadoop.yarn.api.records.ContainerState.NEW, container.getCurrentState());
       wc.initContainer();
 
       // Verify request for public/private resources to localizer
@@ -130,6 +132,7 @@ public class TestContainer {
               LocalResourceVisibility.APPLICATION));
       verify(wc.localizerBus).handle(argThat(matchesReq));
       assertEquals(ContainerState.LOCALIZING, wc.c.getContainerState());
+      assertEquals(org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED, container.getCurrentState());
     }
     finally {
       if (wc != null) {
