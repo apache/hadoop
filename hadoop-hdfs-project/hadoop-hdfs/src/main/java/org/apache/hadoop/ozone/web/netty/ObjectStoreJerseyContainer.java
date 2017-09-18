@@ -231,6 +231,7 @@ public final class ObjectStoreJerseyContainer {
             ObjectStoreJerseyContainer.this.webapp, this.nettyReq, this.reqIn);
         ObjectStoreJerseyContainer.this.webapp.handleRequest(jerseyReq, this);
       } catch (Exception e) {
+        LOG.error("Error running Jersey Request Runner", e);
         this.exception = e;
         this.latch.countDown();
       } finally {
