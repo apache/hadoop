@@ -327,10 +327,7 @@ public class ZKRMStateStore extends RMStateStore {
     amrmTokenSecretManagerRoot =
         getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = getNodePath(zkRootNodePath, RESERVATION_SYSTEM_ROOT);
-    zkManager = resourceManager.getZKManager();
-    if (zkManager == null) {
-      zkManager = resourceManager.createAndStartZKManager(conf);
-    }
+    zkManager = resourceManager.getAndStartZKManager(conf);
   }
 
   @Override

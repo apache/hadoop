@@ -135,6 +135,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -2419,8 +2420,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Path("/sched-conf")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public synchronized Response updateSchedulerConfiguration(final SchedConfUpdateInfo
-      mutationInfo, @Context HttpServletRequest hsr)
+  public synchronized Response updateSchedulerConfiguration(
+      final SchedConfUpdateInfo mutationInfo, @Context HttpServletRequest hsr)
       throws AuthorizationException, InterruptedException {
     init();
 
@@ -2435,17 +2436,32 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
 
     final ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (scheduler instanceof MutableConfScheduler) {
+    if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
+        scheduler).isConfigurationMutable()) {
       try {
         callerUGI.doAs(new PrivilegedExceptionAction<Void>() {
           @Override
-          public Void run() throws IOException, YarnException {
-            ((MutableConfScheduler) scheduler).updateConfiguration(callerUGI,
-                mutationInfo);
+          public Void run() throws Exception {
+            MutableConfigurationProvider provider = ((MutableConfScheduler)
+                scheduler).getMutableConfProvider();
+            if (!provider.getAclMutationPolicy().isMutationAllowed(callerUGI,
+                mutationInfo)) {
+              throw new org.apache.hadoop.security.AccessControlException("User"
+                  + " is not admin of all modified queues.");
+            }
+            provider.logAndApplyMutation(callerUGI, mutationInfo);
+            try {
+              rm.getRMContext().getRMAdminService().refreshQueues();
+            } catch (IOException | YarnException e) {
+              provider.confirmPendingMutation(false);
+              throw e;
+            }
+            provider.confirmPendingMutation(true);
             return null;
           }
         });
       } catch (IOException e) {
+        LOG.error("Exception thrown when modifying configuration.", e);
         return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
             .build();
       }
