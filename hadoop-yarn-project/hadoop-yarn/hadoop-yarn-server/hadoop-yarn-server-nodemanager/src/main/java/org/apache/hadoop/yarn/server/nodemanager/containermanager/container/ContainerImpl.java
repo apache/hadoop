@@ -239,7 +239,8 @@ public class ContainerImpl implements Container {
     this.containerRetryContext = configureRetryContext(
         conf, launchContext, this.containerId);
     this.remainingRetryAttempts = this.containerRetryContext.getMaxRetries();
-    stateMachine = stateMachineFactory.make(this);
+    stateMachine = stateMachineFactory.make(this, ContainerState.NEW,
+        context.getContainerStateTransitionListener());
     this.context = context;
     this.resourceSet = new ResourceSet();
   }

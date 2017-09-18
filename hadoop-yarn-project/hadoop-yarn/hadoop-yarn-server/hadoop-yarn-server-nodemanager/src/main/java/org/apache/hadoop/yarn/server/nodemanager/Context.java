@@ -120,4 +120,6 @@ public interface Context {
   NMTimelinePublisher getNMTimelinePublisher();
 
   ContainerExecutor getContainerExecutor();
+
+  ContainerStateTransitionListener getContainerStateTransitionListener();
 }
