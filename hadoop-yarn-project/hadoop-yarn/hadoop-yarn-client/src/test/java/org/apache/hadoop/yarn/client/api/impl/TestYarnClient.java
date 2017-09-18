@@ -597,6 +597,7 @@ public class TestYarnClient {
     Assert.assertEquals(report.getContainerId().toString(),
         (ContainerId.newContainerId(expectedReports.get(0)
             .getCurrentApplicationAttemptId(), 3)).toString());
+    Assert.assertNotNull(report.getExecutionType());
     client.stop();
   }
 
