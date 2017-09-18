@@ -141,7 +141,6 @@ import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -393,9 +392,6 @@ public class CapacityScheduler extends
   @Override
   public void serviceStart() throws Exception {
     startSchedulerThreads();
-    if (this.csConfProvider instanceof MutableConfigurationProvider) {
-      ((MutableConfigurationProvider) csConfProvider).recoverConf();
-    }
     super.serviceStart();
   }
 
@@ -2619,19 +2615,15 @@ public class CapacityScheduler extends
   }
 
   @Override
-  public void updateConfiguration(UserGroupInformation user,
-      SchedConfUpdateInfo confUpdate) throws IOException, YarnException {
-    if (isConfigurationMutable()) {
-      ((MutableConfigurationProvider) csConfProvider).mutateConfiguration(
-          user, confUpdate);
-    } else {
-      throw new UnsupportedOperationException("Configured CS configuration " +
-          "provider does not support updating configuration.");
-    }
+  public boolean isConfigurationMutable() {
+    return csConfProvider instanceof MutableConfigurationProvider;
   }
 
   @Override
-  public boolean isConfigurationMutable() {
-    return csConfProvider instanceof MutableConfigurationProvider;
+  public MutableConfigurationProvider getMutableConfProvider() {
+    if (isConfigurationMutable()) {
+      return (MutableConfigurationProvider) csConfProvider;
+    }
+    return null;
   }
 }

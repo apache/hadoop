@@ -19,8 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -28,48 +29,35 @@ import java.util.Map;
  * A default implementation of {@link YarnConfigurationStore}. Doesn't offer
  * persistent configuration storage, just stores the configuration in memory.
  */
-public class InMemoryConfigurationStore implements YarnConfigurationStore {
+public class InMemoryConfigurationStore extends YarnConfigurationStore {
 
   private Configuration schedConf;
-  private LinkedList<LogMutation> pendingMutations;
-  private long pendingId;
+  private LogMutation pendingMutation;
 
   @Override
-  public void initialize(Configuration conf, Configuration schedConf) {
+  public void initialize(Configuration conf, Configuration schedConf,
+      RMContext rmContext) {
     this.schedConf = schedConf;
-    this.pendingMutations = new LinkedList<>();
-    this.pendingId = 0;
   }
 
   @Override
-  public synchronized long logMutation(LogMutation logMutation) {
-    logMutation.setId(++pendingId);
-    pendingMutations.add(logMutation);
-    return pendingId;
+  public void logMutation(LogMutation logMutation) {
+    pendingMutation = logMutation;
   }
 
   @Override
-  public synchronized boolean confirmMutation(long id, boolean isValid) {
-    LogMutation mutation = pendingMutations.poll();
-    // If confirmMutation is called out of order, discard mutations until id
-    // is reached.
-    while (mutation != null) {
-      if (mutation.getId() == id) {
-        if (isValid) {
-          Map<String, String> mutations = mutation.getUpdates();
-          for (Map.Entry<String, String> kv : mutations.entrySet()) {
-            if (kv.getValue() == null) {
-              schedConf.unset(kv.getKey());
-            } else {
-              schedConf.set(kv.getKey(), kv.getValue());
-            }
-          }
+  public void confirmMutation(boolean isValid) {
+    if (isValid) {
+      for (Map.Entry<String, String> kv : pendingMutation.getUpdates()
+          .entrySet()) {
+        if (kv.getValue() == null) {
+          schedConf.unset(kv.getKey());
+        } else {
+          schedConf.set(kv.getKey(), kv.getValue());
         }
-        return true;
       }
-      mutation = pendingMutations.poll();
     }
-    return false;
+    pendingMutation = null;
   }
 
   @Override
@@ -78,13 +66,30 @@ public class InMemoryConfigurationStore implements YarnConfigurationStore {
   }
 
   @Override
-  public synchronized List<LogMutation> getPendingMutations() {
-    return new LinkedList<>(pendingMutations);
-  }
-
-  @Override
   public List<LogMutation> getConfirmedConfHistory(long fromId) {
     // Unimplemented.
     return null;
+  }
+
+  @Override
+  public Version getConfStoreVersion() throws Exception {
+    // Does nothing.
+    return null;
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    // Does nothing.
+  }
+
+  @Override
+  public Version getCurrentVersion() {
+    // Does nothing.
+    return null;
+  }
+
+  @Override
+  public void checkVersion() {
+    // Does nothing. (Version is always compatible since it's in memory)
   }
 }

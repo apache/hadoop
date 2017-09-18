@@ -16,27 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
-
-import org.apache.hadoop.yarn.exceptions.YarnException;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 /**
- * This exception is thrown by ResourceManager if it's loading an incompatible
- * version of storage on recovery.
+ * Tests {@link InMemoryConfigurationStore}.
  */
-public class RMStateVersionIncompatibleException extends YarnException {
+public class TestInMemoryConfigurationStore extends ConfigurationStoreBaseTest {
 
-  private static final long serialVersionUID = 1364408L;
-
-  public RMStateVersionIncompatibleException(Throwable cause) {
-    super(cause);
-  }
-
-  public RMStateVersionIncompatibleException(String message) {
-    super(message);
-  }
-
-  public RMStateVersionIncompatibleException(String message, Throwable cause) {
-    super(message, cause);
+  @Override
+  protected YarnConfigurationStore createConfStore() {
+    return new InMemoryConfigurationStore();
   }
 }

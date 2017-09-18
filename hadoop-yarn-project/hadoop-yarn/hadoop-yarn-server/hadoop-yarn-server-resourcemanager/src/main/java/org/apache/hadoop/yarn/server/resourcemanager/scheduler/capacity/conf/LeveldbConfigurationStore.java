@@ -26,6 +26,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
@@ -55,58 +59,32 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 /**
  * A LevelDB implementation of {@link YarnConfigurationStore}.
  */
-public class LeveldbConfigurationStore implements YarnConfigurationStore {
+public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
   public static final Log LOG =
       LogFactory.getLog(LeveldbConfigurationStore.class);
 
   private static final String DB_NAME = "yarn-conf-store";
-  private static final String LOG_PREFIX = "log.";
-  private static final String LOG_COMMITTED_TXN = "committedTxn";
+  private static final String LOG_KEY = "log";
+  private static final String VERSION_KEY = "version";
 
   private DB db;
-  // Txnid for the last transaction logged to the store.
-  private long txnId = 0;
-  private long minTxn = 0;
   private long maxLogs;
   private Configuration conf;
-  private LinkedList<LogMutation> pendingMutations = new LinkedList<>();
+  private LogMutation pendingMutation;
+  private static final Version CURRENT_VERSION_INFO = Version
+      .newInstance(0, 1);
   private Timer compactionTimer;
   private long compactionIntervalMsec;
 
   @Override
-  public void initialize(Configuration config, Configuration schedConf)
-      throws IOException {
+  public void initialize(Configuration config, Configuration schedConf,
+      RMContext rmContext) throws IOException {
     this.conf = config;
     try {
       this.db = initDatabase(schedConf);
-      this.txnId = Long.parseLong(new String(db.get(bytes(LOG_COMMITTED_TXN)),
-          StandardCharsets.UTF_8));
-      DBIterator itr = db.iterator();
-      itr.seek(bytes(LOG_PREFIX + txnId));
-      // Seek to first uncommitted log
-      itr.next();
-      while (itr.hasNext()) {
-        Map.Entry<byte[], byte[]> entry = itr.next();
-        if (!new String(entry.getKey(), StandardCharsets.UTF_8)
-            .startsWith(LOG_PREFIX)) {
-          break;
-        }
-        pendingMutations.add(deserLogMutation(entry.getValue()));
-        txnId++;
-      }
-      // Get the earliest txnId stored in logs
-      itr.seekToFirst();
-      if (itr.hasNext()) {
-        Map.Entry<byte[], byte[]> entry = itr.next();
-        byte[] key = entry.getKey();
-        String logId = new String(key, StandardCharsets.UTF_8);
-        if (logId.startsWith(LOG_PREFIX)) {
-          minTxn = Long.parseLong(logId.substring(logId.indexOf('.') + 1));
-        }
-      }
       this.maxLogs = config.getLong(
-          YarnConfiguration.RM_SCHEDCONF_LEVELDB_MAX_LOGS,
+          YarnConfiguration.RM_SCHEDCONF_MAX_LOGS,
           YarnConfiguration.DEFAULT_RM_SCHEDCONF_LEVELDB_MAX_LOGS);
       this.compactionIntervalMsec = config.getLong(
           YarnConfiguration.RM_SCHEDCONF_LEVELDB_COMPACTION_INTERVAL_SECS,
@@ -127,33 +105,23 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
       public int compare(byte[] key1, byte[] key2) {
         String key1Str = new String(key1, StandardCharsets.UTF_8);
         String key2Str = new String(key2, StandardCharsets.UTF_8);
-        int key1Txn = Integer.MAX_VALUE;
-        int key2Txn = Integer.MAX_VALUE;
-        if (key1Str.startsWith(LOG_PREFIX)) {
-          key1Txn = Integer.parseInt(key1Str.substring(
-              key1Str.indexOf('.') + 1));
+        if (key1Str.equals(key2Str)) {
+          return 0;
+        } else if (key1Str.equals(VERSION_KEY)) {
+          return -1;
+        } else if (key2Str.equals(VERSION_KEY)) {
+          return 1;
+        } else if (key1Str.equals(LOG_KEY)) {
+          return -1;
+        } else if (key2Str.equals(LOG_KEY)) {
+          return 1;
         }
-        if (key2Str.startsWith(LOG_PREFIX)) {
-          key2Txn = Integer.parseInt(key2Str.substring(
-              key2Str.indexOf('.') + 1));
-        }
-        // TODO txnId could overflow, in theory
-        if (key1Txn == Integer.MAX_VALUE && key2Txn == Integer.MAX_VALUE) {
-          if (key1Str.equals(key2Str) && key1Str.equals(LOG_COMMITTED_TXN)) {
-            return 0;
-          } else if (key1Str.equals(LOG_COMMITTED_TXN)) {
-            return -1;
-          } else if (key2Str.equals(LOG_COMMITTED_TXN)) {
-            return 1;
-          }
-          return key1Str.compareTo(key2Str);
-        }
-        return key1Txn - key2Txn;
+        return key1Str.compareTo(key2Str);
       }
 
       @Override
       public String name() {
-        return "logComparator";
+        return "keyComparator";
       }
 
       public byte[] findShortestSeparator(byte[] start, byte[] limit) {
@@ -164,6 +132,7 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
         return key;
       }
     });
+
     LOG.info("Using conf database at " + storeRoot);
     File dbfile = new File(storeRoot.toString());
     try {
@@ -179,7 +148,6 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
           for (Map.Entry<String, String> kv : config) {
             initBatch.put(bytes(kv.getKey()), bytes(kv.getValue()));
           }
-          initBatch.put(bytes(LOG_COMMITTED_TXN), bytes("0"));
           db.write(initBatch);
         } catch (DBException dbErr) {
           throw new IOException(dbErr.getMessage(), dbErr);
@@ -208,28 +176,22 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
   }
 
   @Override
-  public synchronized long logMutation(LogMutation logMutation)
-      throws IOException {
-    logMutation.setId(++txnId);
-    WriteBatch logBatch = db.createWriteBatch();
-    logBatch.put(bytes(LOG_PREFIX + txnId), serLogMutation(logMutation));
-    if (txnId - minTxn >= maxLogs) {
-      logBatch.delete(bytes(LOG_PREFIX + minTxn));
-      minTxn++;
+  public void logMutation(LogMutation logMutation) throws IOException {
+    LinkedList<LogMutation> logs = deserLogMutations(db.get(bytes(LOG_KEY)));
+    logs.add(logMutation);
+    if (logs.size() > maxLogs) {
+      logs.removeFirst();
     }
-    db.write(logBatch);
-    pendingMutations.add(logMutation);
-    return txnId;
+    db.put(bytes(LOG_KEY), serLogMutations(logs));
+    pendingMutation = logMutation;
   }
 
   @Override
-  public synchronized boolean confirmMutation(long id, boolean isValid)
-      throws IOException {
+  public void confirmMutation(boolean isValid) throws IOException {
     WriteBatch updateBatch = db.createWriteBatch();
     if (isValid) {
-      LogMutation mutation = deserLogMutation(db.get(bytes(LOG_PREFIX + id)));
       for (Map.Entry<String, String> changes :
-          mutation.getUpdates().entrySet()) {
+          pendingMutation.getUpdates().entrySet()) {
         if (changes.getValue() == null || changes.getValue().isEmpty()) {
           updateBatch.delete(bytes(changes.getKey()));
         } else {
@@ -237,28 +199,24 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
         }
       }
     }
-    updateBatch.put(bytes(LOG_COMMITTED_TXN), bytes(String.valueOf(id)));
     db.write(updateBatch);
-    // Assumes logMutation and confirmMutation are done in the same
-    // synchronized method. For example,
-    // {@link MutableCSConfigurationProvider#mutateConfiguration(
-    // UserGroupInformation user, SchedConfUpdateInfo confUpdate)}
-    pendingMutations.removeFirst();
-    return true;
+    pendingMutation = null;
   }
 
-  private byte[] serLogMutation(LogMutation mutation) throws IOException {
+  private byte[] serLogMutations(LinkedList<LogMutation> mutations) throws
+      IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try (ObjectOutput oos = new ObjectOutputStream(baos)) {
-      oos.writeObject(mutation);
+      oos.writeObject(mutations);
       oos.flush();
       return baos.toByteArray();
     }
   }
-  private LogMutation deserLogMutation(byte[] mutation) throws IOException {
+  private LinkedList<LogMutation> deserLogMutations(byte[] mutations) throws
+      IOException {
     try (ObjectInput input = new ObjectInputStream(
-        new ByteArrayInputStream(mutation))) {
-      return (LogMutation) input.readObject();
+        new ByteArrayInputStream(mutations))) {
+      return (LinkedList<LogMutation>) input.readObject();
     } catch (ClassNotFoundException e) {
       throw new IOException(e);
     }
@@ -267,7 +225,7 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
   @Override
   public synchronized Configuration retrieve() {
     DBIterator itr = db.iterator();
-    itr.seek(bytes(LOG_COMMITTED_TXN));
+    itr.seek(bytes(LOG_KEY));
     Configuration config = new Configuration(false);
     itr.next();
     while (itr.hasNext()) {
@@ -276,11 +234,6 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
           new String(entry.getValue(), StandardCharsets.UTF_8));
     }
     return config;
-  }
-
-  @Override
-  public List<LogMutation> getPendingMutations() {
-    return new LinkedList<>(pendingMutations);
   }
 
   @Override
@@ -297,6 +250,39 @@ public class LeveldbConfigurationStore implements YarnConfigurationStore {
       compactionTimer.schedule(new CompactionTimerTask(),
           compactionIntervalMsec, compactionIntervalMsec);
     }
+  }
+
+  // TODO: following is taken from LeveldbRMStateStore
+  @Override
+  public Version getConfStoreVersion() throws Exception {
+    Version version = null;
+    try {
+      byte[] data = db.get(bytes(VERSION_KEY));
+      if (data != null) {
+        version = new VersionPBImpl(YarnServerCommonProtos.VersionProto
+            .parseFrom(data));
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+    return version;
+  }
+
+  @Override
+  public void storeVersion() throws Exception {
+    String key = VERSION_KEY;
+    byte[] data = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto()
+        .toByteArray();
+    try {
+      db.put(bytes(key), data);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public Version getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
   }
 
   private class CompactionTimerTask extends TimerTask {

@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateVersionIncompatibleException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 
 import java.io.IOException;
@@ -39,36 +44,26 @@ import java.util.Map;
  * {@code getPendingMutations}, and replay/confirm them via
  * {@code confirmMutation} as in the normal case.
  */
-public interface YarnConfigurationStore {
+public abstract class YarnConfigurationStore {
 
+  public static final Log LOG =
+      LogFactory.getLog(YarnConfigurationStore.class);
   /**
    * LogMutation encapsulates the fields needed for configuration mutation
    * audit logging and recovery.
    */
-  class LogMutation implements Serializable {
+  static class LogMutation implements Serializable {
     private Map<String, String> updates;
     private String user;
-    private long id;
 
     /**
-     * Create log mutation prior to logging.
+     * Create log mutation.
      * @param updates key-value configuration updates
      * @param user user who requested configuration change
      */
-    public LogMutation(Map<String, String> updates, String user) {
-      this(updates, user, 0);
-    }
-
-    /**
-     * Create log mutation for recovery.
-     * @param updates key-value configuration updates
-     * @param user user who requested configuration change
-     * @param id transaction id of configuration change
-     */
-    LogMutation(Map<String, String> updates, String user, long id) {
+    LogMutation(Map<String, String> updates, String user) {
       this.updates = updates;
       this.user = user;
-      this.id = id;
     }
 
     /**
@@ -86,75 +81,92 @@ public interface YarnConfigurationStore {
     public String getUser() {
       return user;
     }
-
-    /**
-     * Get transaction id of this configuration change.
-     * @return transaction id
-     */
-    public long getId() {
-      return id;
-    }
-
-    /**
-     * Set transaction id of this configuration change.
-     * @param id transaction id
-     */
-    public void setId(long id) {
-      this.id = id;
-    }
   }
 
   /**
-   * Initialize the configuration store.
+   * Initialize the configuration store, with schedConf as the initial
+   * scheduler configuration. If a persisted store already exists, use the
+   * scheduler configuration stored there, and ignore schedConf.
    * @param conf configuration to initialize store with
-   * @param schedConf Initial key-value configuration to persist
+   * @param schedConf Initial key-value scheduler configuration to persist.
+   * @param rmContext RMContext for this configuration store
    * @throws IOException if initialization fails
    */
-  void initialize(Configuration conf, Configuration schedConf)
-      throws IOException;
+  public abstract void initialize(Configuration conf, Configuration schedConf,
+      RMContext rmContext) throws Exception;
 
   /**
-   * Logs the configuration change to backing store. Generates an id associated
-   * with this mutation, sets it in {@code logMutation}, and returns it.
+   * Logs the configuration change to backing store.
    * @param logMutation configuration change to be persisted in write ahead log
-   * @return id which configuration store associates with this mutation
    * @throws IOException if logging fails
    */
-  long logMutation(LogMutation logMutation) throws IOException;
+  public abstract void logMutation(LogMutation logMutation) throws Exception;
 
   /**
    * Should be called after {@code logMutation}. Gets the pending mutation
-   * associated with {@code id} and marks the mutation as persisted (no longer
-   * pending). If isValid is true, merge the mutation with the persisted
+   * last logged by {@code logMutation} and marks the mutation as persisted (no
+   * longer pending). If isValid is true, merge the mutation with the persisted
    * configuration.
-   *
-   * If {@code confirmMutation} is called with ids in a different order than
-   * was returned by {@code logMutation}, the result is implementation
-   * dependent.
-   * @param id id of mutation to be confirmed
-   * @param isValid if true, update persisted configuration with mutation
-   *                associated with {@code id}.
-   * @return true on success
-   * @throws IOException if mutation confirmation fails
+   * @param isValid if true, update persisted configuration with pending
+   *                mutation.
+   * @throws Exception if mutation confirmation fails
    */
-  boolean confirmMutation(long id, boolean isValid) throws IOException;
+  public abstract void confirmMutation(boolean isValid) throws Exception;
 
   /**
    * Retrieve the persisted configuration.
    * @return configuration as key-value
    */
-  Configuration retrieve();
-
-  /**
-   * Get the list of pending mutations, in the order they were logged.
-   * @return list of mutations
-   */
-  List<LogMutation> getPendingMutations();
+  public abstract Configuration retrieve();
 
   /**
    * Get a list of confirmed configuration mutations starting from a given id.
    * @param fromId id from which to start getting mutations, inclusive
    * @return list of configuration mutations
    */
-  List<LogMutation> getConfirmedConfHistory(long fromId);
+  public abstract List<LogMutation> getConfirmedConfHistory(long fromId);
+
+  /**
+   * Get schema version of persisted conf store, for detecting compatibility
+   * issues when changing conf store schema.
+   * @return Schema version currently used by the persisted configuration store.
+   * @throws Exception On version fetch failure
+   */
+  protected abstract Version getConfStoreVersion() throws Exception;
+
+  /**
+   * Persist the hard-coded schema version to the conf store.
+   * @throws Exception On storage failure
+   */
+  protected abstract void storeVersion() throws Exception;
+
+  /**
+   * Get the hard-coded schema version, for comparison against the schema
+   * version currently persisted.
+   * @return Current hard-coded schema version
+   */
+  protected abstract Version getCurrentVersion();
+
+  public void checkVersion() throws Exception {
+    // TODO this was taken from RMStateStore. Should probably refactor
+    Version loadedVersion = getConfStoreVersion();
+    LOG.info("Loaded configuration store version info " + loadedVersion);
+    if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
+      return;
+    }
+    // if there is no version info, treat it as CURRENT_VERSION_INFO;
+    if (loadedVersion == null) {
+      loadedVersion = getCurrentVersion();
+    }
+    if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
+      LOG.info("Storing configuration store version info "
+          + getCurrentVersion());
+      storeVersion();
+    } else {
+      throw new RMStateVersionIncompatibleException(
+          "Expecting configuration store version " + getCurrentVersion()
+              + ", but loading version " + loadedVersion);
+    }
+  }
+
 }
