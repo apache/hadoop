@@ -896,8 +896,7 @@ public class TestReservations {
     String host_1 = "host_1";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0,
         8 * GB);
-    
-    Resource clusterResource = Resources.createResource(2 * 8 * GB);
+
 
     // Setup resource-requests
     Priority p = TestUtils.createMockPriority(5);
@@ -933,28 +932,27 @@ public class TestReservations {
         node_0.getNodeID(), "user", rmContext);
 
     // no reserved containers
-    NodeId unreserveId =
-        app_0.getNodeIdToUnreserve(priorityMap, capability,
-            cs.getResourceCalculator(), clusterResource);
+    NodeId unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
+            cs.getResourceCalculator());
     assertEquals(null, unreserveId);
 
     // no reserved containers - reserve then unreserve
     app_0.reserve(node_0, priorityMap, rmContainer_1, container_1);
     app_0.unreserve(priorityMap, node_0, rmContainer_1);
     unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
-        cs.getResourceCalculator(), clusterResource);
+        cs.getResourceCalculator());
     assertEquals(null, unreserveId);
 
     // no container large enough is reserved
     app_0.reserve(node_0, priorityMap, rmContainer_1, container_1);
     unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
-        cs.getResourceCalculator(), clusterResource);
+        cs.getResourceCalculator());
     assertEquals(null, unreserveId);
 
     // reserve one that is now large enough
     app_0.reserve(node_1, priorityMap, rmContainer, container);
     unreserveId = app_0.getNodeIdToUnreserve(priorityMap, capability,
-        cs.getResourceCalculator(), clusterResource);
+        cs.getResourceCalculator());
     assertEquals(node_1.getNodeID(), unreserveId);
   }
 
@@ -1001,16 +999,14 @@ public class TestReservations {
         node_1.getNodeID(), "user", rmContext);
 
     // nothing reserved
-    RMContainer toUnreserveContainer =
-        app_0.findNodeToUnreserve(csContext.getClusterResource(), node_1,
+    RMContainer toUnreserveContainer = app_0.findNodeToUnreserve(node_1,
             priorityMap, capability);
     assertTrue(toUnreserveContainer == null);
 
     // reserved but scheduler doesn't know about that node.
     app_0.reserve(node_1, priorityMap, rmContainer, container);
     node_1.reserveResource(app_0, priorityMap, rmContainer);
-    toUnreserveContainer =
-        app_0.findNodeToUnreserve(csContext.getClusterResource(), node_1,
+    toUnreserveContainer = app_0.findNodeToUnreserve(node_1,
             priorityMap, capability);
     assertTrue(toUnreserveContainer == null);
   }

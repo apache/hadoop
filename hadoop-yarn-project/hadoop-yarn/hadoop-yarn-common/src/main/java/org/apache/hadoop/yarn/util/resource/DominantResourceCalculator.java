@@ -538,7 +538,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean fitsIn(Resource cluster, Resource smaller, Resource bigger) {
+  public boolean fitsIn(Resource smaller, Resource bigger) {
     int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation sResourceInformation = smaller

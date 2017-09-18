@@ -24,14 +24,13 @@ import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class TestResourceCalculator {
@@ -64,29 +63,28 @@ public class TestResourceCalculator {
   
   @Test(timeout = 10000)
   public void testFitsIn() {
-    Resource cluster = Resource.newInstance(1024, 1);
 
     if (resourceCalculator instanceof DefaultResourceCalculator) {
-      assertTrue(resourceCalculator.fitsIn(cluster,
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 1)));
-      assertTrue(resourceCalculator.fitsIn(cluster,
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 2)));
-      assertTrue(resourceCalculator.fitsIn(cluster,
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 2)));
-      assertTrue(resourceCalculator.fitsIn(cluster,
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 1)));
-      assertFalse(resourceCalculator.fitsIn(cluster,
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(2, 1), Resource.newInstance(1, 2)));
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
-      assertFalse(resourceCalculator.fitsIn(cluster,
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 1)));
-      assertTrue(resourceCalculator.fitsIn(cluster,
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 2)));
-      assertTrue(resourceCalculator.fitsIn(cluster,
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 2)));
-      assertFalse(resourceCalculator.fitsIn(cluster,
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 1)));
-      assertFalse(resourceCalculator.fitsIn(cluster,
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(2, 1), Resource.newInstance(1, 2)));
     }
   }
