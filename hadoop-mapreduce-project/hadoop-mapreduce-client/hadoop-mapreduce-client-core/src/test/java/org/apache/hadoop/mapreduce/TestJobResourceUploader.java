@@ -20,6 +20,11 @@ package org.apache.hadoop.mapreduce;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 
 import java.io.IOException;
 import java.net.URI;
@@ -36,9 +41,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.mapred.JobConf;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.verification.VerificationMode;
 
 /**
  * A class for unit testing JobResourceUploader.
@@ -355,6 +363,40 @@ public class TestJobResourceUploader {
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesWithFrags,
         expectedArchivesWithFrags, expectedJobJar);
+  }
+
+  @Test
+  public void testErasureCodingDefault() throws IOException {
+    testErasureCodingSetting(true);
+  }
+
+  @Test
+  public void testErasureCodingDisabled() throws IOException {
+    testErasureCodingSetting(false);
+  }
+
+  private void testErasureCodingSetting(boolean defaultBehavior)
+      throws IOException {
+    JobConf jConf = new JobConf();
+    // don't set to false if EC remains disabled to check default setting
+    if (!defaultBehavior) {
+      jConf.setBoolean(MRJobConfig.MR_AM_STAGING_DIR_ERASURECODING_ENABLED,
+          true);
+    }
+
+    DistributedFileSystem fs = mock(DistributedFileSystem.class);
+    Path path = new Path("/");
+    when(fs.makeQualified(any(Path.class))).thenReturn(path);
+    JobResourceUploader uploader = new StubedUploader(fs, true);
+    Job job = Job.getInstance(jConf);
+
+    uploader.uploadResources(job, new Path("/test"));
+
+    String replicationPolicyName = SystemErasureCodingPolicies
+        .getReplicationPolicy().getName();
+    VerificationMode mode = defaultBehavior ? times(1) : never();
+    verify(fs, mode).setErasureCodingPolicy(eq(path),
+        eq(replicationPolicyName));
   }
 
   private void runTmpResourcePathTest(JobResourceUploader uploader,
@@ -696,6 +738,10 @@ public class TestJobResourceUploader {
 
     StubedUploader(JobConf conf, boolean useWildcard) throws IOException {
       super(FileSystem.getLocal(conf), useWildcard);
+    }
+
+    StubedUploader(FileSystem fs, boolean useWildcard) throws IOException {
+      super(fs, useWildcard);
     }
 
     @Override
