@@ -3297,4 +3297,13 @@
     <value>false</value>
   </property>
 
+  <property>
+    <name>yarn.resourcemanager.display.per-user-apps</name>
+    <value>false</value>
+      <description>
+        Flag to enable display of applications per user as an admin
+        configuration.
+      </description>
+  </property>
+
 </configuration>
