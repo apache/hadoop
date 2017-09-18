@@ -242,14 +242,15 @@ public final class ErasureCodingPolicyManager {
         policy.getSchema(), policy.getCellSize());
     for (ErasureCodingPolicy p : getPolicies()) {
       if (p.getName().equals(assignedNewName)) {
-        throw new HadoopIllegalArgumentException("The policy name " +
-            assignedNewName + " already exists");
+        LOG.info("The policy name " + assignedNewName + " already exists");
+        return p;
       }
       if (p.getSchema().equals(policy.getSchema()) &&
           p.getCellSize() == policy.getCellSize()) {
-        throw new HadoopIllegalArgumentException("A policy with same schema "
+        LOG.info("A policy with same schema "
             + policy.getSchema().toString() + " and cell size "
             + p.getCellSize() + " already exists");
+        return p;
       }
     }
     policy.setName(assignedNewName);
