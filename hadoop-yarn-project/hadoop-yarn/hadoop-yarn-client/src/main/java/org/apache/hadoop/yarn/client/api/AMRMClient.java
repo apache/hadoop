@@ -118,8 +118,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     private String nodeLabelsExpression;
     private ExecutionTypeRequest executionTypeRequest =
         ExecutionTypeRequest.newInstance();
-    private String resourceProfile;
-    
+    private String resourceProfile = ProfileCapability.DEFAULT_PROFILE;
+
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints and
      * locality relaxation enabled.
@@ -537,6 +537,11 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       public ContainerRequestBuilder executionTypeRequest(
           ExecutionTypeRequest executionTypeRequest) {
         containerRequest.executionTypeRequest = executionTypeRequest;
+        return this;
+      }
+
+      public ContainerRequestBuilder resourceProfile(String resourceProfile) {
+        containerRequest.resourceProfile = resourceProfile;
         return this;
       }
 
