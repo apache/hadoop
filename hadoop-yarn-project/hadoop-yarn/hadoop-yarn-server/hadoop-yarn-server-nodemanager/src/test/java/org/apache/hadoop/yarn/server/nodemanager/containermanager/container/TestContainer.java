@@ -71,7 +71,9 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerStateTransitionListener;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -287,6 +289,29 @@ public class TestContainer {
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
       assertEquals(completed + 1, metrics.getCompletedContainers());
       assertEquals(running, metrics.getRunningContainers());
+
+      ContainerEventType e1 = wc.initStateToEvent.get(ContainerState.NEW);
+      ContainerState s2 = wc.eventToFinalState.get(e1);
+      ContainerEventType e2 = wc.initStateToEvent.get(s2);
+      ContainerState s3 = wc.eventToFinalState.get(e2);
+      ContainerEventType e3 = wc.initStateToEvent.get(s3);
+      ContainerState s4 = wc.eventToFinalState.get(e3);
+      ContainerEventType e4 = wc.initStateToEvent.get(s4);
+      ContainerState s5 = wc.eventToFinalState.get(e4);
+      ContainerEventType e5 = wc.initStateToEvent.get(s5);
+      ContainerState s6 = wc.eventToFinalState.get(e5);
+
+      Assert.assertEquals(ContainerState.LOCALIZING, s2);
+      Assert.assertEquals(ContainerState.SCHEDULED, s3);
+      Assert.assertEquals(ContainerState.RUNNING, s4);
+      Assert.assertEquals(ContainerState.EXITED_WITH_SUCCESS, s5);
+      Assert.assertEquals(ContainerState.DONE, s6);
+
+      Assert.assertEquals(ContainerEventType.INIT_CONTAINER, e1);
+      Assert.assertEquals(ContainerEventType.RESOURCE_LOCALIZED, e2);
+      Assert.assertEquals(ContainerEventType.CONTAINER_LAUNCHED, e3);
+      Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS, e4);
+      Assert.assertEquals(ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP, e5);
     }
     finally {
       if (wc != null) {
@@ -401,6 +426,10 @@ public class TestContainer {
       Assert.assertTrue(
           containerMetrics.finishTime.value() > containerMetrics.startTime
               .value());
+      Assert.assertEquals(ContainerEventType.KILL_CONTAINER,
+          wc.initStateToEvent.get(ContainerState.NEW));
+      Assert.assertEquals(ContainerState.DONE,
+          wc.eventToFinalState.get(ContainerEventType.KILL_CONTAINER));
     } finally {
       if (wc != null) {
         wc.finished();
@@ -942,6 +971,10 @@ public class TestContainer {
     final Map<String, LocalResource> localResources;
     final Map<String, ByteBuffer> serviceData;
     final Context context = mock(Context.class);
+    private final Map<ContainerState, ContainerEventType> initStateToEvent =
+        new HashMap<>();
+    private final Map<ContainerEventType, ContainerState> eventToFinalState =
+        new HashMap<>();
 
     WrappedContainer(int appId, long timestamp, int id, String user)
         throws IOException {
@@ -1048,7 +1081,27 @@ public class TestContainer {
       }
       when(ctxt.getServiceData()).thenReturn(serviceData);
       when(ctxt.getContainerRetryContext()).thenReturn(containerRetryContext);
+      ContainerStateTransitionListener listener =
+          new ContainerStateTransitionListener() {
+        @Override
+        public void init(Context cntxt) {}
 
+        @Override
+        public void preTransition(ContainerImpl op, ContainerState beforeState,
+            ContainerEvent eventToBeProcessed) {
+          initStateToEvent.put(beforeState, eventToBeProcessed.getType());
+        }
+
+        @Override
+        public void postTransition(ContainerImpl op, ContainerState beforeState,
+            ContainerState afterState, ContainerEvent processedEvent) {
+          eventToFinalState.put(processedEvent.getType(), afterState);
+        }
+      };
+      NodeManager.DefaultContainerStateListener multi =
+          new NodeManager.DefaultContainerStateListener();
+      multi.addListener(listener);
+      when(context.getContainerStateTransitionListener()).thenReturn(multi);
       c = new ContainerImpl(conf, dispatcher, ctxt, null, metrics, identifier,
           context);
       dispatcher.register(ContainerEventType.class,

@@ -100,4 +100,6 @@ public interface Context {
   OpportunisticContainerAllocator getContainerAllocator();
 
   ContainerExecutor getContainerExecutor();
+
+  ContainerStateTransitionListener getContainerStateTransitionListener();
 }
