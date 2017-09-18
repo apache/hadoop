@@ -3385,11 +3385,20 @@
 
   <property>
     <description>
-      The max number of configuration change log entries kept in LevelDB config
+      The max number of configuration change log entries kept in config
       store, when yarn.scheduler.configuration.store.class is configured to be
-      "leveldb". Default is 1000.
+      "leveldb" or "zk". Default is 1000 for either.
     </description>
-    <name>yarn.scheduler.configuration.leveldb-store.max-logs</name>
+    <name>yarn.scheduler.configuration.store.max-logs</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      ZK root node path for configuration store when using zookeeper-based
+      configuration store.
+    </description>
+    <name>yarn.scheduler.configuration.zk-store.parent-path</name>
+    <value>/confstore</value>
   </property>
 </configuration>

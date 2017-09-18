@@ -387,9 +387,7 @@ public class AdminService extends CompositeService implements
     RefreshQueuesResponse response =
         recordFactory.newRecordInstance(RefreshQueuesResponse.class);
     try {
-      ResourceScheduler scheduler = rm.getRMContext().getScheduler();
-      if (scheduler instanceof MutableConfScheduler
-          && ((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      if (isSchedulerMutable()) {
         throw new IOException("Scheduler configuration is mutable. " +
             operation + " is not allowed in this scenario.");
       }
@@ -411,6 +409,12 @@ public class AdminService extends CompositeService implements
     if (rSystem != null) {
       rSystem.reinitialize(getConfig(), rm.getRMContext());
     }
+  }
+
+  private boolean isSchedulerMutable() {
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    return (scheduler instanceof MutableConfScheduler
+        && ((MutableConfScheduler) scheduler).isConfigurationMutable());
   }
 
   @Override
@@ -721,6 +725,14 @@ public class AdminService extends CompositeService implements
   void refreshAll() throws ServiceFailedException {
     try {
       checkAcls("refreshAll");
+      if (isSchedulerMutable()) {
+        try {
+          ((MutableConfScheduler) rm.getRMContext().getScheduler())
+              .getMutableConfProvider().reloadConfigurationFromStore();
+        } catch (Exception e) {
+          throw new IOException("Failed to refresh configuration:", e);
+        }
+      }
       refreshQueues();
       refreshNodes();
       refreshSuperUserGroupsConfiguration();

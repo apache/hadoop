@@ -19,10 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-
-import java.io.IOException;
 
 /**
  * Interface for allowing changing scheduler configurations.
@@ -30,19 +27,32 @@ import java.io.IOException;
 public interface MutableConfigurationProvider {
 
   /**
-   * Apply transactions which were not committed.
-   * @throws IOException if recovery fails
+   * Get the acl mutation policy for this configuration provider.
+   * @return The acl mutation policy.
    */
-  void recoverConf() throws IOException;
+  ConfigurationMutationACLPolicy getAclMutationPolicy();
 
   /**
-   * Update the scheduler configuration with the provided key value pairs.
-   * @param user User issuing the request
-   * @param confUpdate Key-value pairs for configurations to be updated.
-   * @throws IOException if scheduler could not be reinitialized
-   * @throws YarnException if reservation system could not be reinitialized
+   * Called when a new ResourceManager is starting/becomes active. Ensures
+   * configuration is up-to-date.
+   * @throws Exception if configuration could not be refreshed from store
    */
-  void mutateConfiguration(UserGroupInformation user, SchedConfUpdateInfo
-      confUpdate) throws IOException, YarnException;
+  void reloadConfigurationFromStore() throws Exception;
 
+  /**
+   * Log user's requested configuration mutation, and applies it in-memory.
+   * @param user User who requested the change
+   * @param confUpdate User's requested configuration change
+   * @throws Exception if logging the mutation fails
+   */
+  void logAndApplyMutation(UserGroupInformation user, SchedConfUpdateInfo
+      confUpdate) throws Exception;
+
+  /**
+   * Confirm last logged mutation.
+   * @param isValid if the last logged mutation is applied to scheduler
+   *                properly.
+   * @throws Exception if confirming mutation fails
+   */
+  void confirmPendingMutation(boolean isValid) throws Exception;
 }

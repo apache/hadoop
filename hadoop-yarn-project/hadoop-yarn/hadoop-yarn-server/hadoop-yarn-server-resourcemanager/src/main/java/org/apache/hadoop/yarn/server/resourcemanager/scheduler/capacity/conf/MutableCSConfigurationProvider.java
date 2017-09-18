@@ -18,20 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ConfigurationMutationACLPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ConfigurationMutationACLPolicyFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
@@ -56,6 +53,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
       LogFactory.getLog(MutableCSConfigurationProvider.class);
 
   private Configuration schedConf;
+  private Configuration oldConf;
   private YarnConfigurationStore confStore;
   private ConfigurationMutationACLPolicy aclMutationPolicy;
   private RMContext rmContext;
@@ -76,6 +74,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
       this.confStore = new LeveldbConfigurationStore();
       break;
+    case YarnConfiguration.ZK_CONFIGURATION_STORE:
+      this.confStore = new ZKConfigurationStore();
+      break;
     default:
       this.confStore = YarnConfigurationStoreFactory.getStore(config);
       break;
@@ -89,13 +90,22 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     for (Map.Entry<String, String> kv : initialSchedConf) {
       schedConf.set(kv.getKey(), kv.getValue());
     }
-    confStore.initialize(config, schedConf);
+    try {
+      confStore.initialize(config, schedConf, rmContext);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
     // After initializing confStore, the store may already have an existing
     // configuration. Use this one.
     schedConf = confStore.retrieve();
     this.aclMutationPolicy = ConfigurationMutationACLPolicyFactory
         .getPolicy(config);
     aclMutationPolicy.init(config, rmContext);
+  }
+
+  @VisibleForTesting
+  public YarnConfigurationStore getConfStore() {
+    return confStore;
   }
 
   @Override
@@ -107,16 +117,17 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
-  public synchronized void mutateConfiguration(UserGroupInformation user,
-      SchedConfUpdateInfo confUpdate) throws IOException, YarnException {
-    if (!aclMutationPolicy.isMutationAllowed(user, confUpdate)) {
-      throw new AccessControlException("User is not admin of all modified" +
-          " queues.");
-    }
-    Configuration oldConf = new Configuration(schedConf);
+  public ConfigurationMutationACLPolicy getAclMutationPolicy() {
+    return aclMutationPolicy;
+  }
+
+  @Override
+  public void logAndApplyMutation(UserGroupInformation user,
+      SchedConfUpdateInfo confUpdate) throws Exception {
+    oldConf = new Configuration(schedConf);
     Map<String, String> kvUpdate = constructKeyValueConfUpdate(confUpdate);
     LogMutation log = new LogMutation(kvUpdate, user.getShortUserName());
-    long id = confStore.logMutation(log);
+    confStore.logMutation(log);
     for (Map.Entry<String, String> kv : kvUpdate.entrySet()) {
       if (kv.getValue() == null) {
         schedConf.unset(kv.getKey());
@@ -124,47 +135,33 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
         schedConf.set(kv.getKey(), kv.getValue());
       }
     }
-    try {
-      rmContext.getRMAdminService().refreshQueues();
-    } catch (IOException | YarnException e) {
-      schedConf = oldConf;
-      confStore.confirmMutation(id, false);
-      throw e;
-    }
-    confStore.confirmMutation(id, true);
   }
 
   @Override
-  public void recoverConf() throws IOException {
-    List<LogMutation> uncommittedLogs = confStore.getPendingMutations();
-    Configuration oldConf = new Configuration(schedConf);
-    for (LogMutation mutation : uncommittedLogs) {
-      for (Map.Entry<String, String> kv : mutation.getUpdates().entrySet()) {
-        if (kv.getValue() == null) {
-          schedConf.unset(kv.getKey());
-        } else {
-          schedConf.set(kv.getKey(), kv.getValue());
-        }
-      }
-      try {
-        rmContext.getScheduler().reinitialize(schedConf, rmContext);
-      } catch (IOException e) {
-        schedConf = oldConf;
-        confStore.confirmMutation(mutation.getId(), false);
-        LOG.info("Configuration mutation " + mutation.getId()
-            + " was rejected", e);
-        continue;
-      }
-      confStore.confirmMutation(mutation.getId(), true);
-      LOG.info("Configuration mutation " + mutation.getId()+ " was accepted");
+  public void confirmPendingMutation(boolean isValid) throws Exception {
+    confStore.confirmMutation(isValid);
+    if (!isValid) {
+      schedConf = oldConf;
     }
+  }
+
+  @Override
+  public void reloadConfigurationFromStore() throws Exception {
+    schedConf = confStore.retrieve();
+  }
+
+  private List<String> getSiblingQueues(String queuePath, Configuration conf) {
+    String parentQueue = queuePath.substring(0, queuePath.lastIndexOf('.'));
+    String childQueuesKey = CapacitySchedulerConfiguration.PREFIX +
+        parentQueue + CapacitySchedulerConfiguration.DOT +
+        CapacitySchedulerConfiguration.QUEUES;
+    return new ArrayList<>(conf.getStringCollection(childQueuesKey));
   }
 
   private Map<String, String> constructKeyValueConfUpdate(
       SchedConfUpdateInfo mutationInfo) throws IOException {
-    CapacityScheduler cs = (CapacityScheduler) rmContext.getScheduler();
     CapacitySchedulerConfiguration proposedConf =
-        new CapacitySchedulerConfiguration(cs.getConfiguration(), false);
+        new CapacitySchedulerConfiguration(schedConf, false);
     Map<String, String> confUpdate = new HashMap<>();
     for (String queueToRemove : mutationInfo.getRemoveQueueInfo()) {
       removeQueue(queueToRemove, proposedConf, confUpdate);
@@ -188,40 +185,35 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     if (queueToRemove == null) {
       return;
     } else {
-      CapacityScheduler cs = (CapacityScheduler) rmContext.getScheduler();
       String queueName = queueToRemove.substring(
           queueToRemove.lastIndexOf('.') + 1);
-      CSQueue queue = cs.getQueue(queueName);
-      if (queue == null ||
-          !queue.getQueuePath().equals(queueToRemove)) {
-        throw new IOException("Queue " + queueToRemove + " not found");
-      } else if (queueToRemove.lastIndexOf('.') == -1) {
+      if (queueToRemove.lastIndexOf('.') == -1) {
         throw new IOException("Can't remove queue " + queueToRemove);
-      }
-      String parentQueuePath = queueToRemove.substring(0, queueToRemove
-          .lastIndexOf('.'));
-      String[] siblingQueues = proposedConf.getQueues(parentQueuePath);
-      List<String> newSiblingQueues = new ArrayList<>();
-      for (String siblingQueue : siblingQueues) {
-        if (!siblingQueue.equals(queueName)) {
-          newSiblingQueues.add(siblingQueue);
-        }
-      }
-      proposedConf.setQueues(parentQueuePath, newSiblingQueues
-          .toArray(new String[0]));
-      String queuesConfig = CapacitySchedulerConfiguration.PREFIX
-          + parentQueuePath + CapacitySchedulerConfiguration.DOT
-          + CapacitySchedulerConfiguration.QUEUES;
-      if (newSiblingQueues.size() == 0) {
-        confUpdate.put(queuesConfig, null);
       } else {
-        confUpdate.put(queuesConfig, Joiner.on(',').join(newSiblingQueues));
-      }
-      for (Map.Entry<String, String> confRemove : proposedConf.getValByRegex(
-          ".*" + queueToRemove.replaceAll("\\.", "\\.") + "\\..*")
-          .entrySet()) {
-        proposedConf.unset(confRemove.getKey());
-        confUpdate.put(confRemove.getKey(), null);
+        List<String> siblingQueues = getSiblingQueues(queueToRemove,
+            proposedConf);
+        if (!siblingQueues.contains(queueName)) {
+          throw new IOException("Queue " + queueToRemove + " not found");
+        }
+        siblingQueues.remove(queueName);
+        String parentQueuePath = queueToRemove.substring(0, queueToRemove
+            .lastIndexOf('.'));
+        proposedConf.setQueues(parentQueuePath, siblingQueues.toArray(
+            new String[0]));
+        String queuesConfig = CapacitySchedulerConfiguration.PREFIX
+            + parentQueuePath + CapacitySchedulerConfiguration.DOT
+            + CapacitySchedulerConfiguration.QUEUES;
+        if (siblingQueues.size() == 0) {
+          confUpdate.put(queuesConfig, null);
+        } else {
+          confUpdate.put(queuesConfig, Joiner.on(',').join(siblingQueues));
+        }
+        for (Map.Entry<String, String> confRemove : proposedConf.getValByRegex(
+            ".*" + queueToRemove.replaceAll("\\.", "\\.") + "\\..*")
+            .entrySet()) {
+          proposedConf.unset(confRemove.getKey());
+          confUpdate.put(confRemove.getKey(), null);
+        }
       }
     }
   }
@@ -232,13 +224,13 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     if (addInfo == null) {
       return;
     } else {
-      CapacityScheduler cs = (CapacityScheduler) rmContext.getScheduler();
       String queuePath = addInfo.getQueue();
       String queueName = queuePath.substring(queuePath.lastIndexOf('.') + 1);
-      if (cs.getQueue(queueName) != null) {
-        throw new IOException("Can't add existing queue " + queuePath);
-      } else if (queuePath.lastIndexOf('.') == -1) {
+      if (queuePath.lastIndexOf('.') == -1) {
         throw new IOException("Can't add invalid queue " + queuePath);
+      } else if (getSiblingQueues(queuePath, proposedConf).contains(
+          queueName)) {
+        throw new IOException("Can't add existing queue " + queuePath);
       }
       String parentQueue = queuePath.substring(0, queuePath.lastIndexOf('.'));
       String[] siblings = proposedConf.getQueues(parentQueue);
