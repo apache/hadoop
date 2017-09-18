@@ -762,7 +762,7 @@ public class RMContainerImpl implements RMContainer {
           this.getAllocatedSchedulerKey().getPriority(), this.getCreationTime(),
           this.getFinishTime(), this.getDiagnosticsInfo(), this.getLogURL(),
           this.getContainerExitStatus(), this.getContainerState(),
-          this.getNodeHttpAddress());
+          this.getNodeHttpAddress(), this.getExecutionType());
     } finally {
       this.readLock.unlock();
     }

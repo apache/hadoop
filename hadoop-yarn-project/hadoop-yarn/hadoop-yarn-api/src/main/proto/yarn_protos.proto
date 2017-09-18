@@ -109,6 +109,7 @@ message ContainerReportProto {
   optional int32 container_exit_status = 9;
   optional ContainerStateProto container_state = 10;
   optional string node_http_address = 11;
+  optional ExecutionTypeProto executionType = 12 [default = GUARANTEED];
 }
 
 enum YarnApplicationStateProto {
