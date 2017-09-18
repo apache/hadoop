@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-@InterfaceAudience.Private
-package org.apache.hadoop.ozone.client.rest.headers;
+package org.apache.hadoop.ozone.client.protocol;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+/**
+ * This package contains Ozone client protocol library classes.
+ */

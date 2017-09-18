@@ -20,6 +20,9 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.client.rest.RestClient;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.scm.ScmConfigKeys;
 
 /**
@@ -102,6 +105,13 @@ public final class OzoneConfigKeys {
    * */
   public static final String OZONE_ADMINISTRATORS =
       "ozone.administrators";
+
+  public static final String OZONE_CLIENT_PROTOCOL =
+      "ozone.client.protocol";
+  public static final Class<? extends ClientProtocol>
+      OZONE_CLIENT_PROTOCOL_RPC = RpcClient.class;
+  public static final Class<? extends ClientProtocol>
+      OZONE_CLIENT_PROTOCOL_REST = RestClient.class;
 
   public static final String OZONE_CLIENT_SOCKET_TIMEOUT_MS =
       "ozone.client.socket.timeout.ms";

@@ -28,9 +28,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.ozone.client.io.OzoneInputStream;
+import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.io.OzoneInputStream;
+import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -123,6 +126,7 @@ public final class Corona extends Configured implements Tool {
   private boolean validateWrites;
 
   private OzoneClient ozoneClient;
+  private ObjectStore objectStore;
   private ExecutorService processor;
 
   private long startTime;
@@ -157,6 +161,7 @@ public final class Corona extends Configured implements Tool {
     numberOfKeysAdded = new AtomicLong();
     OzoneClientFactory.setConfiguration(conf);
     ozoneClient = OzoneClientFactory.getClient();
+    objectStore = ozoneClient.getObjectStore();
   }
 
   @Override
@@ -208,6 +213,7 @@ public final class Corona extends Configured implements Tool {
     if(validateWrites) {
       validator.join();
     }
+    ozoneClient.close();
     return 0;
   }
 
@@ -334,30 +340,32 @@ public final class Corona extends Configured implements Tool {
 
     private int totalBuckets;
     private int totalKeys;
-    private String volume;
+    private OzoneVolume volume;
 
-    OfflineProcessor(String volume) throws Exception {
+    OfflineProcessor(String volumeName) throws Exception {
       this.totalBuckets = Integer.parseInt(numOfBuckets);
       this.totalKeys = Integer.parseInt(numOfKeys);
-      this.volume = volume;
-      LOG.trace("Creating volume: {}", volume);
+      LOG.trace("Creating volume: {}", volumeName);
       long start = System.nanoTime();
-      ozoneClient.createVolume(this.volume);
+      objectStore.createVolume(volumeName);
       volumeCreationTime.getAndAdd(System.nanoTime() - start);
       numberOfVolumesCreated.getAndIncrement();
+      volume = objectStore.getVolume(volumeName);
     }
 
     @Override
     public void run() {
       for (int j = 0; j < totalBuckets; j++) {
-        String bucket = "bucket-" + j + "-" +
+        String bucketName = "bucket-" + j + "-" +
             RandomStringUtils.randomNumeric(5);
         try {
-          LOG.trace("Creating bucket: {} in volume: {}", bucket, volume);
+          LOG.trace("Creating bucket: {} in volume: {}",
+              bucketName, volume.getName());
           long start = System.nanoTime();
-          ozoneClient.createBucket(volume, bucket);
+          volume.createBucket(bucketName);
           bucketCreationTime.getAndAdd(System.nanoTime() - start);
           numberOfBucketsCreated.getAndIncrement();
+          OzoneBucket bucket = volume.getBucket(bucketName);
           for (int k = 0; k < totalKeys; k++) {
             String key = "key-" + k + "-" +
                 RandomStringUtils.randomNumeric(5);
@@ -367,8 +375,7 @@ public final class Corona extends Configured implements Tool {
               LOG.trace("Adding key: {} in bucket: {} of volume: {}",
                   key, bucket, volume);
               long keyCreateStart = System.nanoTime();
-              OzoneOutputStream os = ozoneClient.createKey(
-                  volume, bucket, key, value.length);
+              OzoneOutputStream os = bucket.createKey(key, value.length);
               keyCreationTime.getAndAdd(System.nanoTime() - keyCreateStart);
               long keyWriteStart = System.nanoTime();
               os.write(value);
@@ -378,7 +385,7 @@ public final class Corona extends Configured implements Tool {
               numberOfKeysAdded.getAndIncrement();
               if(validateWrites) {
                 boolean validate = validationQueue.offer(
-                    new KeyValue(volume, bucket, key, value));
+                    new KeyValue(bucket, key, value));
                 if(validate) {
                   LOG.trace("Key {}, is queued for validation.", key);
                 }
@@ -392,7 +399,7 @@ public final class Corona extends Configured implements Tool {
         } catch (Exception e) {
           exception = true;
           LOG.error("Exception while creating bucket: {}" +
-              " in volume: {}.", bucket, volume, e);
+              " in volume: {}.", bucketName, volume, e);
         }
       }
     }
@@ -660,8 +667,8 @@ public final class Corona extends Configured implements Tool {
         try {
           KeyValue kv = validationQueue.poll(5, TimeUnit.SECONDS);
           if(kv != null) {
-            OzoneInputStream is = ozoneClient.
-                getKey(kv.volume, kv.bucket, kv.key);
+
+            OzoneInputStream is = kv.bucket.readKey(kv.key);
             byte[] value = new byte[kv.value.length];
             int length = is.read(value);
             totalWritesValidated++;
@@ -670,7 +677,7 @@ public final class Corona extends Configured implements Tool {
             } else {
               writeValidationFailureCount++;
               LOG.warn("Data validation error for key {}/{}/{}",
-                  kv.volume, kv.bucket, kv.key);
+                  kv.bucket.getVolumeName(), kv.bucket, kv.key);
               LOG.warn("Expected: {}, Actual: {}",
                   DFSUtil.bytes2String(kv.value),
                   DFSUtil.bytes2String(value));
@@ -683,22 +690,15 @@ public final class Corona extends Configured implements Tool {
     }
   }
 
-
-
   /**
    * Wrapper to hold ozone key-value pair.
    */
   private static class KeyValue {
 
     /**
-     * Volume name associated with the key-value.
-     */
-    private String volume;
-
-    /**
      * Bucket name associated with the key-value.
      */
-    private String bucket;
+    private OzoneBucket bucket;
     /**
      * Key name associated with the key-value.
      */
@@ -714,9 +714,7 @@ public final class Corona extends Configured implements Tool {
      * @param key   key part
      * @param value value part
      */
-    KeyValue(
-        String volume, String bucket, String key, byte[] value) {
-      this.volume = volume;
+    KeyValue(OzoneBucket bucket, String key, byte[] value) {
       this.bucket = bucket;
       this.key = key;
       this.value = value;

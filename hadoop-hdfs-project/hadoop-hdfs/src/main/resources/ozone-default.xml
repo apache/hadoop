@@ -86,6 +86,17 @@
   </property>
 
   <property>
+    <name>ozone.client.protocol</name>
+    <value>org.apache.hadoop.ozone.client.rpc.RpcClient</value>
+    <description>
+      Protocol class to be used by client to connect to ozone cluster.
+      The build-in implementation includes:
+      org.apache.hadoop.ozone.client.rpc.RpcClient for RPC
+      org.apache.hadoop.ozone.client.rest.RestClient for REST
+    </description>
+  </property>
+
+  <property>
     <name>ozone.client.socket.timeout.ms</name>
     <value>5000</value>
     <description>
