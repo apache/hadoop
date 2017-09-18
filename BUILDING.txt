@@ -308,6 +308,8 @@ Create a local staging version of the website (in /tmp/hadoop-site)
 
   $ mvn clean site -Preleasedocs; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
 
+Note that the site needs to be built in a second pass after other artifacts.
+
 ----------------------------------------------------------------------------------
 Installing Hadoop
 
