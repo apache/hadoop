@@ -437,9 +437,9 @@ public class Resources {
     return true;
   }
 
-  public static boolean fitsIn(ResourceCalculator rc, Resource cluster,
+  public static boolean fitsIn(ResourceCalculator rc,
       Resource smaller, Resource bigger) {
-    return rc.fitsIn(cluster, smaller, bigger);
+    return rc.fitsIn(smaller, bigger);
   }
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
