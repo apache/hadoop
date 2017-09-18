@@ -909,7 +909,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           maxResourceLimit = labelManager.getResourceByLabel(
               schedulerContainer.getNodePartition(), cluster);
         }
-        if (!Resources.fitsIn(resourceCalculator, cluster,
+        if (!Resources.fitsIn(resourceCalculator,
             Resources.add(queueUsage.getUsed(partition), netAllocated),
             maxResourceLimit)) {
           if (LOG.isDebugEnabled()) {
