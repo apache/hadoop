@@ -39,8 +39,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -48,6 +50,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -68,6 +71,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
@@ -117,9 +121,18 @@ public class TestYarnCLI {
     for (int i = 0; i < 2; ++i) {
       ApplicationCLI cli = createAndGetAppCLI();
       ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+      Map<String, Long> resourceSecondsMap = new HashMap<>();
+      Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+      resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 123456L);
+      resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 4567L);
+      preemptedResoureSecondsMap
+          .put(ResourceInformation.MEMORY_MB.getName(), 1111L);
+      preemptedResoureSecondsMap
+          .put(ResourceInformation.VCORES.getName(), 2222L);
       ApplicationResourceUsageReport usageReport = i == 0 ? null :
-          ApplicationResourceUsageReport.newInstance(
-              2, 0, null, null, null, 123456, 4567, 0, 0, 1111, 2222);
+          ApplicationResourceUsageReport
+              .newInstance(2, 0, null, null, null, resourceSecondsMap, 0, 0,
+                  preemptedResoureSecondsMap);
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
@@ -2148,17 +2161,16 @@ public class TestYarnCLI {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 6);
 
-    ApplicationReport appReport = ApplicationReport.newInstance(applicationId,
-        ApplicationAttemptId.newInstance(applicationId, 1), "user", "queue",
-        "appname", "host", 124, null, YarnApplicationState.RUNNING,
-        "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
-        "N/A", 0.53789f, "YARN", null);
-    ApplicationTimeout timeout = ApplicationTimeout
-        .newInstance(ApplicationTimeoutType.LIFETIME, "N/A", -1);
-    appReport.setApplicationTimeouts(
-        Collections.singletonMap(timeout.getTimeoutType(), timeout));
-    when(client.getApplicationReport(any(ApplicationId.class)))
-        .thenReturn(appReport);
+    UpdateApplicationTimeoutsResponse response =
+        mock(UpdateApplicationTimeoutsResponse.class);
+    String formatISO8601 =
+        Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
+    when(response.getApplicationTimeouts()).thenReturn(Collections
+        .singletonMap(ApplicationTimeoutType.LIFETIME, formatISO8601));
+
+    when(client
+        .updateApplicationTimeouts(any(UpdateApplicationTimeoutsRequest.class)))
+            .thenReturn(response);
 
     int result = cli.run(new String[] { "application", "-appId",
         applicationId.toString(), "-updateLifetime", "10" });

@@ -3018,16 +3018,6 @@
 </property>
 
 <property>
-  <name>dfs.namenode.ec.policies.enabled</name>
-  <value></value>
-  <description>Comma-delimited list of enabled erasure coding policies.
-    The NameNode will enforce this when setting an erasure coding policy
-    on a directory. By default, none of the built-in erasure coding
-    policies are enabled.
-  </description>
-</property>
-
-<property>
   <name>dfs.namenode.ec.system.default.policy</name>
   <value>RS-6-3-1024k</value>
   <description>The default erasure coding policy name will be used
@@ -3050,15 +3040,6 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedread.threads</name>
-  <value>20</value>
-  <description>
-    Number of threads used by the Datanode to read striped block
-    during background reconstruction work.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.ec.reconstruction.stripedread.buffer.size</name>
   <value>65536</value>
   <description>Datanode striped read buffer size.
@@ -3066,7 +3047,7 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedblock.threads.size</name>
+  <name>dfs.datanode.ec.reconstruction.threads</name>
   <value>8</value>
   <description>
     Number of threads used by the Datanode for background
@@ -4160,11 +4141,11 @@
 </property>
 
 <property>
-  <name>dfs.namenode.authorization.provider.bypass.users</name>
+  <name>dfs.namenode.inode.attributes.provider.bypass.users</name>
   <value></value>
   <description>
     A list of user principals (in secure cluster) or user names (in insecure
-    cluster) for whom the external attribute provider will be bypassed for all
+    cluster) for whom the external attributes provider will be bypassed for all
     operations. This means file attributes stored in HDFS instead of the
     external provider will be used for permission checking and be returned when
     requested.

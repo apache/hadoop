@@ -55,11 +55,13 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
@@ -107,9 +109,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   private static final long MEM_AGGREGATE_ALLOCATION_CACHE_MSECS = 3000;
   protected long lastMemoryAggregateAllocationUpdateTime = 0;
-  private long lastMemorySeconds = 0;
-  private long lastVcoreSeconds = 0;
-
+  private Map<String, Long> lastResourceSecondsMap = new HashMap<>();
   protected final AppSchedulingInfo appSchedulingInfo;
   protected ApplicationAttemptId attemptId;
   protected Map<ContainerId, RMContainer> liveContainers =
@@ -690,7 +690,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       if (autoUpdate) {
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMNodeUpdateContainerEvent(rmContainer.getNodeId(),
-                Collections.singletonList(rmContainer.getContainer())));
+                Collections.singletonMap(
+                    rmContainer.getContainer(), updateType)));
       } else {
         rmContainer.handle(new RMContainerUpdatesAcquiredEvent(
             rmContainer.getContainerId(),
@@ -1001,22 +1002,23 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     // recently.
     if ((currentTimeMillis - lastMemoryAggregateAllocationUpdateTime)
         > MEM_AGGREGATE_ALLOCATION_CACHE_MSECS) {
-      long memorySeconds = 0;
-      long vcoreSeconds = 0;
+      Map<String, Long> resourceSecondsMap = new HashMap<>();
       for (RMContainer rmContainer : this.liveContainers.values()) {
         long usedMillis = currentTimeMillis - rmContainer.getCreationTime();
         Resource resource = rmContainer.getContainer().getResource();
-        memorySeconds += resource.getMemorySize() * usedMillis /
-            DateUtils.MILLIS_PER_SECOND;
-        vcoreSeconds += resource.getVirtualCores() * usedMillis  
-            / DateUtils.MILLIS_PER_SECOND;
+        for (ResourceInformation entry : resource.getResources()) {
+          long value = RMServerUtils
+              .getOrDefault(resourceSecondsMap, entry.getName(), 0L);
+          value += entry.getValue() * usedMillis
+              / DateUtils.MILLIS_PER_SECOND;
+          resourceSecondsMap.put(entry.getName(), value);
+        }
       }
 
       lastMemoryAggregateAllocationUpdateTime = currentTimeMillis;
-      lastMemorySeconds = memorySeconds;
-      lastVcoreSeconds = vcoreSeconds;
+      lastResourceSecondsMap = resourceSecondsMap;
     }
-    return new AggregateAppResourceUsage(lastMemorySeconds, lastVcoreSeconds);
+    return new AggregateAppResourceUsage(lastResourceSecondsMap);
   }
 
   public ApplicationResourceUsageReport getResourceUsageReport() {
@@ -1031,6 +1033,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       Resource cluster = rmContext.getScheduler().getClusterResource();
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();
+      Map<String, Long> preemptedResourceSecondsMaps = new HashMap<>();
+      preemptedResourceSecondsMaps
+          .put(ResourceInformation.MEMORY_MB.getName(), 0L);
+      preemptedResourceSecondsMaps
+          .put(ResourceInformation.VCORES.getName(), 0L);
       float queueUsagePerc = 0.0f;
       float clusterUsagePerc = 0.0f;
       if (!calc.isInvalidDivisor(cluster)) {
@@ -1040,15 +1047,15 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           queueUsagePerc = calc.divide(cluster, usedResourceClone,
               Resources.multiply(cluster, queueCapacityPerc)) * 100;
         }
-        clusterUsagePerc = calc.divide(cluster, usedResourceClone, cluster)
-            * 100;
+        clusterUsagePerc =
+            calc.divide(cluster, usedResourceClone, cluster) * 100;
       }
-      return ApplicationResourceUsageReport.newInstance(liveContainers.size(),
-          reservedContainers.size(), usedResourceClone, reservedResourceClone,
-          Resources.add(usedResourceClone, reservedResourceClone),
-          runningResourceUsage.getMemorySeconds(),
-          runningResourceUsage.getVcoreSeconds(), queueUsagePerc,
-          clusterUsagePerc, 0, 0);
+      return ApplicationResourceUsageReport
+          .newInstance(liveContainers.size(), reservedContainers.size(),
+              usedResourceClone, reservedResourceClone,
+              Resources.add(usedResourceClone, reservedResourceClone),
+              runningResourceUsage.getResourceUsageSecondsMap(), queueUsagePerc,
+              clusterUsagePerc, preemptedResourceSecondsMaps);
     } finally {
       writeLock.unlock();
     }
@@ -1131,9 +1138,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       }
       LOG.info("SchedulerAttempt " + getApplicationAttemptId()
           + " is recovering container " + rmContainer.getContainerId());
-      liveContainers.put(rmContainer.getContainerId(), rmContainer);
-      attemptResourceUsage.incUsed(node.getPartition(),
-          rmContainer.getContainer().getResource());
+      addRMContainer(rmContainer.getContainerId(), rmContainer);
+      if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
+        attemptResourceUsage.incUsed(node.getPartition(),
+            rmContainer.getContainer().getResource());
+      }
 
       // resourceLimit: updated when LeafQueue#recoverContainer#allocateResource
       // is called.

@@ -53,9 +53,27 @@ message ContainerIdProto {
   optional int64 id = 3;
 }
 
+enum ResourceTypesProto {
+  COUNTABLE = 0;
+}
+
+message ResourceInformationProto {
+  required string key = 1;
+  optional int64 value = 2;
+  optional string units = 3;
+  optional ResourceTypesProto type = 4;
+}
+
+message ResourceTypeInfoProto {
+  required string name = 1;
+  optional string units = 2;
+  optional ResourceTypesProto type = 3;
+}
+
 message ResourceProto {
   optional int64 memory = 1;
   optional int32 virtual_cores = 2;
+  repeated ResourceInformationProto resource_value_map = 3;
 }
 
 message ResourceUtilizationProto {
@@ -67,6 +85,15 @@ message ResourceUtilizationProto {
 message ResourceOptionProto {
   optional ResourceProto resource = 1;
   optional int32 over_commit_timeout = 2;
+}
+
+message ResourceProfileEntry {
+  required string name = 1;
+  required ResourceProto resources = 2;
+}
+
+message ResourceProfilesProto {
+  repeated ResourceProfileEntry resource_profiles_map = 1;
 }
 
 message NodeResourceMapProto {
@@ -83,6 +110,7 @@ enum ContainerStateProto {
   C_RUNNING = 2;
   C_COMPLETE = 3;
   C_SCHEDULED = 4;
+  C_PAUSED = 5;
 }
 
 message ContainerProto {
@@ -174,6 +202,11 @@ message LocalResourceProto {
   optional bool should_be_uploaded_to_shared_cache = 7;
 }
 
+message StringLongMapProto {
+  required string key  = 1;
+  required int64 value = 2;
+}
+
 message ApplicationResourceUsageReportProto {
   optional int32 num_used_containers = 1;
   optional int32 num_reserved_containers = 2;
@@ -186,6 +219,8 @@ message ApplicationResourceUsageReportProto {
   optional float cluster_usage_percentage = 9;
   optional int64 preempted_memory_seconds = 10;
   optional int64 preempted_vcore_seconds = 11;
+  repeated StringLongMapProto application_resource_usage_map = 12;
+  repeated StringLongMapProto application_preempted_resource_usage_map = 13;
 }
 
 message ApplicationReportProto {
@@ -310,6 +345,11 @@ enum ExecutionTypeProto {
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
+message ProfileCapabilityProto {
+  required string profile = 1;
+  required ResourceProto profileCapabilityOverride = 2;
+}
+
 message ResourceRequestProto {
   optional PriorityProto priority = 1;
   optional string resource_name = 2;
@@ -319,6 +359,7 @@ message ResourceRequestProto {
   optional string node_label_expression = 6;
   optional ExecutionTypeRequestProto execution_type_request = 7;
   optional int64 allocation_request_id = 8 [default = 0];
+  optional ProfileCapabilityProto profile = 9;
 }
 
 message ExecutionTypeRequestProto {

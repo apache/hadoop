@@ -314,7 +314,6 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   }
 
   private boolean commonCheckContainerAllocation(
-      Resource cluster,
       ContainerAllocationProposal<FiCaSchedulerApp, FiCaSchedulerNode> allocation,
       SchedulerContainer<FiCaSchedulerApp, FiCaSchedulerNode> schedulerContainer) {
     // Make sure node is not reserved by anyone else
@@ -355,8 +354,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         }
       }
     }
-    if (!Resources.fitsIn(rc, cluster,
-        allocation.getAllocatedOrReservedResource(),
+    if (!Resources.fitsIn(rc, allocation.getAllocatedOrReservedResource(),
         availableResource)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Node doesn't have enough available resource, asked="
@@ -419,8 +417,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
           // Common part of check container allocation regardless if it is a
           // increase container or regular container
-          commonCheckContainerAllocation(cluster, allocation,
-              schedulerContainer);
+          commonCheckContainerAllocation(allocation, schedulerContainer);
         } else {
           // Container reserved first time will be NEW, after the container
           // accepted & confirmed, it will become RESERVED state
@@ -721,9 +718,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   }
 
   @VisibleForTesting
-  public NodeId getNodeIdToUnreserve(
-      SchedulerRequestKey schedulerKey, Resource resourceNeedUnreserve,
-      ResourceCalculator rc, Resource clusterResource) {
+  public NodeId getNodeIdToUnreserve(SchedulerRequestKey schedulerKey,
+      Resource resourceNeedUnreserve, ResourceCalculator resourceCalculator) {
     // first go around make this algorithm simple and just grab first
     // reservation that has enough resources
     Map<NodeId, RMContainer> reservedContainers = this.reservedContainers.get(
@@ -738,7 +734,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
         // make sure we unreserve one with at least the same amount of
         // resources, otherwise could affect capacity limits
-        if (Resources.fitsIn(rc, clusterResource, resourceNeedUnreserve,
+        if (Resources.fitsIn(resourceCalculator, resourceNeedUnreserve,
             reservedResource)) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(
@@ -806,14 +802,13 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   }
 
   @VisibleForTesting
-  public RMContainer findNodeToUnreserve(Resource clusterResource,
-      FiCaSchedulerNode node, SchedulerRequestKey schedulerKey,
-      Resource minimumUnreservedResource) {
+  public RMContainer findNodeToUnreserve(FiCaSchedulerNode node,
+      SchedulerRequestKey schedulerKey, Resource minimumUnreservedResource) {
     try {
       readLock.lock();
       // need to unreserve some other container first
       NodeId idToUnreserve = getNodeIdToUnreserve(schedulerKey,
-          minimumUnreservedResource, rc, clusterResource);
+          minimumUnreservedResource, rc);
       if (idToUnreserve == null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("checked to see if could unreserve for app but nothing "

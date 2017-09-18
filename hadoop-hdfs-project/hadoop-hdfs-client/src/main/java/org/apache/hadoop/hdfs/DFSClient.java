@@ -72,6 +72,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
@@ -866,6 +867,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * data-placement when performing operations.  For example, the
    * MapReduce system tries to schedule tasks on the same machines
    * as the data-block the task processes.
+   *
+   * Please refer to
+   * {@link FileSystem#getFileBlockLocations(FileStatus, long, long)}
+   * for more details.
    */
   public BlockLocation[] getBlockLocations(String src, long start,
       long length) throws IOException {

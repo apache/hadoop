@@ -61,8 +61,27 @@ public class YarnConfiguration extends Configuration {
   public static final String CORE_SITE_CONFIGURATION_FILE = "core-site.xml";
 
   @Private
+  public static final String RESOURCE_TYPES_CONFIGURATION_FILE =
+      "resource-types.xml";
+
+  @Private
+  public static final String NODE_RESOURCES_CONFIGURATION_FILE =
+      "node-resources.xml";
+
+  @Private
   public static final List<String> RM_CONFIGURATION_FILES =
       Collections.unmodifiableList(Arrays.asList(
+          RESOURCE_TYPES_CONFIGURATION_FILE,
+          DR_CONFIGURATION_FILE,
+          CS_CONFIGURATION_FILE,
+          HADOOP_POLICY_CONFIGURATION_FILE,
+          YARN_SITE_CONFIGURATION_FILE,
+          CORE_SITE_CONFIGURATION_FILE));
+
+  @Private
+  public static final List<String> NM_CONFIGURATION_FILES =
+      Collections.unmodifiableList(Arrays.asList(
+          NODE_RESOURCES_CONFIGURATION_FILE,
           DR_CONFIGURATION_FILE,
           CS_CONFIGURATION_FILE,
           HADOOP_POLICY_CONFIGURATION_FILE,
@@ -105,6 +124,16 @@ public class YarnConfiguration extends Configuration {
   //Configurations
 
   public static final String YARN_PREFIX = "yarn.";
+
+  /////////////////////////////
+  // Resource types configs
+  ////////////////////////////
+
+  public static final String RESOURCE_TYPES =
+      YarnConfiguration.YARN_PREFIX + "resource-types";
+
+  public static final String NM_RESOURCES_PREFIX =
+      YarnConfiguration.NM_PREFIX + "resource-type.";
 
   /** Delay before deleting resource to ease debugging of NM issues */
   public static final String DEBUG_NM_DELETE_DELAY_SEC =
@@ -856,6 +885,29 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
 
   /**
+   * Enable/disable resource profiles.
+   */
+  @Public
+  @Unstable
+  public static final String RM_RESOURCE_PROFILES_ENABLED =
+      RM_PREFIX + "resource-profiles.enabled";
+  @Public
+  @Unstable
+  public static final boolean DEFAULT_RM_RESOURCE_PROFILES_ENABLED = false;
+
+  /**
+   * File containing resource profiles.
+   */
+  @Public
+  @Unstable
+  public static final String RM_RESOURCE_PROFILES_SOURCE_FILE =
+      RM_PREFIX + "resource-profiles.source-file";
+  @Public
+  @Unstable
+  public static final String DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE =
+      "resource-profiles.json";
+
+  /**
    * Timeout in seconds for YARN node graceful decommission.
    * This is the maximal time to wait for running containers and applications
    * to complete before transition a DECOMMISSIONING node into DECOMMISSIONED.
@@ -916,8 +968,12 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "bind-host";
 
   /** who will execute(launch) the containers.*/
-  public static final String NM_CONTAINER_EXECUTOR = 
+  public static final String NM_CONTAINER_EXECUTOR =
     NM_PREFIX + "container-executor.class";
+
+  /** List of container state transition listeners.*/
+  public static final String NM_CONTAINER_STATE_TRANSITION_LISTENERS =
+      NM_PREFIX + "container-state-transition-listener.classes";
 
   /**  
    * Adjustment to make to the container os scheduling priority.
@@ -1035,6 +1091,15 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_RETRY_MINIMUM_INTERVAL_MS =
       NM_PREFIX + "container-retry-minimum-interval-ms";
   public static final int DEFAULT_NM_CONTAINER_RETRY_MINIMUM_INTERVAL_MS = 1000;
+
+  /**
+   * Use container pause as the preemption policy over kill in the container
+   * queue at a NodeManager.
+   **/
+  public static final String NM_CONTAINER_QUEUING_USE_PAUSE_FOR_PREEMPTION =
+      NM_PREFIX + "opportunistic-containers-use-pause-for-preemption";
+  public static final boolean
+      DEFAULT_NM_CONTAINER_QUEUING_USE_PAUSE_FOR_PREEMPTION = false;
 
   /** Interval at which the delayed token removal thread runs */
   public static final String RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
@@ -1470,6 +1535,23 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for runtime configuration constants. */
   public static final String LINUX_CONTAINER_RUNTIME_PREFIX = NM_PREFIX +
       "runtime.linux.";
+
+  /**
+   * Comma separated list of runtimes that are allowed when using
+   * LinuxContainerExecutor. The allowed values are:
+   * <ul>
+   *   <li>default</li>
+   *   <li>docker</li>
+   *   <li>javasandbox</li>
+   * </ul>
+   */
+  public static final String LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "allowed-runtimes";
+
+  /** The default list of allowed runtimes when using LinuxContainerExecutor. */
+  public static final String[] DEFAULT_LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES
+      = {"default"};
+
   public static final String DOCKER_CONTAINER_RUNTIME_PREFIX =
       LINUX_CONTAINER_RUNTIME_PREFIX + "docker.";
 
@@ -3088,6 +3170,14 @@ public class YarnConfiguration extends Configuration {
 
   public static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_SCRIPT_OPTS =
       NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX + "opts";
+
+  /*
+   * Support to view apps for given user in secure cluster.
+   */
+  public static final String DISPLAY_APPS_FOR_LOGGED_IN_USER =
+      RM_PREFIX + "display.per-user-apps";
+  public static final boolean DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER =
+      false;
 
   // RM and NM CSRF props
   public static final String REST_CSRF = "webapp.rest-csrf.";

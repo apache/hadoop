@@ -170,14 +170,6 @@ public abstract class SchedulerNode {
 
     launchedContainers.put(container.getId(),
         new ContainerInfo(rmContainer, launchedOnNode));
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Assigned container " + container.getId() + " of capacity "
-              + container.getResource() + " on host " + rmNode.getNodeAddress()
-              + ", which has " + numContainers + " containers, "
-              + getAllocatedResource() + " used and " + getUnallocatedResource()
-              + " available after allocation");
-    }
   }
 
   /**

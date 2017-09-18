@@ -20,15 +20,23 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 
+import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -36,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.AppBlock;
+import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
@@ -52,7 +61,7 @@ public class RMAppBlock extends AppBlock{
 
   @Inject
   RMAppBlock(ViewContext ctx, Configuration conf, ResourceManager rm) {
-    super(rm.getClientRMService(), ctx, conf);
+    super(null, ctx, conf);
     this.conf = conf;
     this.rm = rm;
   }
@@ -98,15 +107,12 @@ public class RMAppBlock extends AppBlock{
           attemptResourcePreempted)
         .__("Number of Non-AM Containers Preempted from Current Attempt:",
           attemptNumNonAMContainerPreempted)
-        .__("Aggregate Resource Allocation:",
-          String.format("%d MB-seconds, %d vcore-seconds",
-              appMetrics == null ? "N/A" : appMetrics.getMemorySeconds(),
-              appMetrics == null ? "N/A" : appMetrics.getVcoreSeconds()))
+        .__("Aggregate Resource Allocation:", appMetrics == null ? "N/A" :
+            StringHelper
+                .getResourceSecondsString(appMetrics.getResourceSecondsMap()))
         .__("Aggregate Preempted Resource Allocation:",
-          String.format("%d MB-seconds, %d vcore-seconds",
-            appMetrics == null ? "N/A" : appMetrics.getPreemptedMemorySeconds(),
-            appMetrics == null ? "N/A" :
-                appMetrics.getPreemptedVcoreSeconds()));
+            appMetrics == null ? "N/A" : StringHelper.getResourceSecondsString(
+                appMetrics.getPreemptedResourceSecondsMap()));
 
     pdiv.__();
   }
@@ -187,4 +193,29 @@ public class RMAppBlock extends AppBlock{
     }
     return rmApp.getLogAggregationStatusForAppReport();
   }
+
+  @Override
+  protected ContainerReport getContainerReport(
+      final GetContainerReportRequest request)
+      throws YarnException, IOException {
+    return rm.getClientRMService().getContainerReport(request)
+        .getContainerReport();
+  }
+
+  @Override
+  protected List<ApplicationAttemptReport> getApplicationAttemptsReport(
+      final GetApplicationAttemptsRequest request)
+      throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationAttempts(request)
+        .getApplicationAttemptList();
+  }
+
+  @Override
+  protected ApplicationReport getApplicationReport(
+      final GetApplicationReportRequest request)
+      throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationReport(request)
+        .getApplicationReport();
+  }
+
 }

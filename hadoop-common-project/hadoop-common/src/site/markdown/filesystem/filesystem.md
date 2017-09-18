@@ -605,7 +605,7 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3N, S3A, Swift and potentially other Object Stores do not currently change the FS state
+* S3A, Swift and potentially other Object Stores do not currently change the FS state
 until the output stream `close()` operation is completed.
 This MAY be a bug, as it allows >1 client to create a file with `overwrite==false`,
  and potentially confuse file/directory logic
@@ -961,7 +961,7 @@ The outcome is no change to FileSystem state, with a return value of false.
 
     FS' = FS; result = False
 
-*Local Filesystem, S3N*
+*Local Filesystem*
 
 The outcome is as a normal rename, with the additional (implicit) feature
 that the parent directories of the destination also exist.

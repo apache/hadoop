@@ -143,6 +143,10 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     // Used as Java command line properties, not XML
     configurationPrefixToSkipCompare.add("yarn.app.container");
 
+    // Ignore default file name for resource profiles
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE);
+
     // Ignore NodeManager "work in progress" variables
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED);

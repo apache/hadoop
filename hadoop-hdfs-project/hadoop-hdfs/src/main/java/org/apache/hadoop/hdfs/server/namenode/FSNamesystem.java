@@ -89,8 +89,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
@@ -4080,10 +4080,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get statistics pertaining to blocks of type {@link BlockType#CONTIGUOUS}
    * in the filesystem.
    * <p>
-   * @see ClientProtocol#getBlocksStats()
+   * @see ClientProtocol#getReplicatedBlockStats()
    */
-  BlocksStats getBlocksStats() {
-    return new BlocksStats(getLowRedundancyReplicatedBlocks(),
+  ReplicatedBlockStats getReplicatedBlockStats() {
+    return new ReplicatedBlockStats(getLowRedundancyReplicatedBlocks(),
         getCorruptReplicatedBlocks(), getMissingReplicatedBlocks(),
         getMissingReplicationOneBlocks(), getBytesInFutureReplicatedBlocks(),
         getPendingDeletionReplicatedBlocks());
@@ -4093,12 +4093,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get statistics pertaining to blocks of type {@link BlockType#STRIPED}
    * in the filesystem.
    * <p>
-   * @see ClientProtocol#getECBlockGroupsStats()
+   * @see ClientProtocol#getECBlockGroupStats()
    */
-  ECBlockGroupsStats getECBlockGroupsStats() {
-    return new ECBlockGroupsStats(getLowRedundancyECBlockGroups(),
+  ECBlockGroupStats getECBlockGroupStats() {
+    return new ECBlockGroupStats(getLowRedundancyECBlockGroups(),
         getCorruptECBlockGroups(), getMissingECBlockGroups(),
-        getBytesInFutureECBlockGroups(), getPendingDeletionECBlockGroups());
+        getBytesInFutureECBlockGroups(), getPendingDeletionECBlocks());
   }
 
   @Override // FSNamesystemMBean
@@ -4711,10 +4711,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // ECBlockGroupsMBean
-  @Metric({"PendingDeletionECBlockGroups", "Number of erasure coded block " +
-      "groups that are pending deletion"})
-  public long getPendingDeletionECBlockGroups() {
-    return blockManager.getPendingDeletionECBlockGroups();
+  @Metric({"PendingDeletionECBlocks", "Number of erasure coded blocks " +
+      "that are pending deletion"})
+  public long getPendingDeletionECBlocks() {
+    return blockManager.getPendingDeletionECBlocks();
   }
 
   @Override
@@ -4993,6 +4993,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   boolean isFileDeleted(INodeFile file) {
+    assert hasReadLock();
     // Not in the inodeMap or in the snapshot but marked deleted.
     if (dir.getInode(file.getId()) == null) {
       return true;
@@ -7110,6 +7111,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (keyVersionName == null) {
         throw new IOException("Failed to get key version name for " + zone);
       }
+      LOG.info("Re-encryption using key version " + keyVersionName
+          + " for zone " + zone);
     }
     writeLock();
     try {
@@ -7186,10 +7189,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Add multiple erasure coding policies to the ErasureCodingPolicyManager.
    * @param policies The policies to add.
+   * @param logRetryCache whether to record RPC ids in editlog for retry cache
+   *                      rebuilding
    * @return The according result of add operation.
    */
-  AddECPolicyResponse[] addErasureCodingPolicies(ErasureCodingPolicy[] policies)
-      throws IOException {
+  AddECPolicyResponse[] addErasureCodingPolicies(ErasureCodingPolicy[] policies,
+      final boolean logRetryCache) throws IOException {
     final String operationName = "addErasureCodingPolicies";
     String addECPolicyName = "";
     checkOperation(OperationCategory.WRITE);
@@ -7198,12 +7203,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot add erasure coding policy");
       for (ErasureCodingPolicy policy : policies) {
         try {
-          checkOperation(OperationCategory.WRITE);
-          checkNameNodeSafeMode("Cannot add erasure coding policy");
           ErasureCodingPolicy newPolicy =
-              FSDirErasureCodingOp.addErasureCodePolicy(this, policy);
+              FSDirErasureCodingOp.addErasureCodingPolicy(this, policy,
+                  logRetryCache);
           addECPolicyName = newPolicy.getName();
           responses.add(new AddECPolicyResponse(newPolicy));
         } catch (HadoopIllegalArgumentException e) {
@@ -7224,9 +7229,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Remove an erasure coding policy.
    * @param ecPolicyName the name of the policy to be removed
+   * @param logRetryCache whether to record RPC ids in editlog for retry cache
+   *                      rebuilding
    * @throws IOException
    */
-  void removeErasureCodingPolicy(String ecPolicyName) throws IOException {
+  void removeErasureCodingPolicy(String ecPolicyName,
+      final boolean logRetryCache) throws IOException {
     final String operationName = "removeErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
     boolean success = false;
@@ -7235,23 +7243,27 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove erasure coding policy "
           + ecPolicyName);
-      FSDirErasureCodingOp.removeErasureCodePolicy(this, ecPolicyName);
+      FSDirErasureCodingOp.removeErasureCodingPolicy(this, ecPolicyName,
+          logRetryCache);
       success = true;
     } finally {
       writeUnlock(operationName);
       if (success) {
         getEditLog().logSync();
       }
-      logAuditEvent(success, operationName, null, null, null);
+      logAuditEvent(success, operationName, ecPolicyName, null, null);
     }
   }
 
   /**
    * Enable an erasure coding policy.
    * @param ecPolicyName the name of the policy to be enabled
+   * @param logRetryCache whether to record RPC ids in editlog for retry cache
+   *                      rebuilding
    * @throws IOException
    */
-  void enableErasureCodingPolicy(String ecPolicyName) throws IOException {
+  void enableErasureCodingPolicy(String ecPolicyName,
+      final boolean logRetryCache) throws IOException {
     final String operationName = "enableErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
     boolean success = false;
@@ -7261,7 +7273,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot enable erasure coding policy "
           + ecPolicyName);
-      FSDirErasureCodingOp.enableErasureCodePolicy(this, ecPolicyName);
+      FSDirErasureCodingOp.enableErasureCodingPolicy(this, ecPolicyName,
+          logRetryCache);
       success = true;
     } finally {
       writeUnlock(operationName);
@@ -7275,9 +7288,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Disable an erasure coding policy.
    * @param ecPolicyName the name of the policy to be disabled
+   * @param logRetryCache whether to record RPC ids in editlog for retry cache
+   *                      rebuilding
    * @throws IOException
    */
-  void disableErasureCodingPolicy(String ecPolicyName) throws IOException {
+  void disableErasureCodingPolicy(String ecPolicyName,
+      final boolean logRetryCache) throws IOException {
     final String operationName = "disableErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
     boolean success = false;
@@ -7287,7 +7303,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot disable erasure coding policy "
           + ecPolicyName);
-      FSDirErasureCodingOp.disableErasureCodePolicy(this, ecPolicyName);
+      FSDirErasureCodingOp.disableErasureCodingPolicy(this, ecPolicyName,
+          logRetryCache);
       success = true;
     } finally {
       writeUnlock(operationName);

@@ -159,7 +159,8 @@ public class TestEventFlow {
     containerManager.startContainers(allRequests);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,
-        Arrays.asList(ContainerState.RUNNING, ContainerState.SCHEDULED), 20);
+        Arrays.asList(ContainerState.RUNNING, ContainerState.SCHEDULED,
+            ContainerState.NEW), 20);
 
     List<ContainerId> containerIds = new ArrayList<ContainerId>();
     containerIds.add(cID);

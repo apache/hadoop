@@ -204,4 +204,12 @@ public abstract class RegisterApplicationMasterResponse {
   @Unstable
   public abstract void setSchedulerResourceTypes(
       EnumSet<SchedulerResourceTypes> types);
+
+  @Public
+  @Unstable
+  public abstract Map<String, Resource> getResourceProfiles();
+
+  @Private
+  @Unstable
+  public abstract void setResourceProfiles(Map<String, Resource> profiles);
 }

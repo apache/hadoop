@@ -24,7 +24,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -52,6 +51,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
@@ -75,8 +75,6 @@ public class TestRMWebAppFairScheduler {
                   mockRm(rmContext);
               binder.bind(ResourceManager.class).toInstance
                   (mockRmWithFairScheduler);
-              binder.bind(ApplicationBaseProtocol.class).toInstance(
-                mockRmWithFairScheduler.getClientRMService());
             } catch (IOException e) {
               throw new IllegalStateException(e);
             }
@@ -115,9 +113,6 @@ public class TestRMWebAppFairScheduler {
                   mockRmWithApps(rmContext);
               binder.bind(ResourceManager.class).toInstance
                   (mockRmWithFairScheduler);
-              binder.bind(ApplicationBaseProtocol.class).toInstance(
-                  mockRmWithFairScheduler.getClientRMService());
-
             } catch (IOException e) {
               throw new IllegalStateException(e);
             }
@@ -142,8 +137,8 @@ public class TestRMWebAppFairScheduler {
       MockRMApp app = new MockRMApp(i, i, state) {
         @Override
         public RMAppMetrics getRMAppMetrics() {
-          return new RMAppMetrics(Resource.newInstance(0, 0),
-              0, 0, 0, 0, 0, 0);
+          return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0,
+              new HashMap<>(), new HashMap<>());
         }
         @Override
         public YarnApplicationState createApplicationState() {

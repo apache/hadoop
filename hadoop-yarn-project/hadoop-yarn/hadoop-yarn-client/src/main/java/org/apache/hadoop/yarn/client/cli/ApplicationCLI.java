@@ -41,6 +41,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -60,6 +61,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Times;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import static org.apache.hadoop.yarn.util.StringHelper.getResourceSecondsString;
 
 @Private
 @Unstable
@@ -359,10 +362,21 @@ public class ApplicationCLI extends YarnCLI {
         + timeoutType.toString() + " of an application " + applicationId);
     UpdateApplicationTimeoutsRequest request = UpdateApplicationTimeoutsRequest
         .newInstance(appId, Collections.singletonMap(timeoutType, newTimeout));
-    client.updateApplicationTimeouts(request);
+    UpdateApplicationTimeoutsResponse updateApplicationTimeouts =
+        client.updateApplicationTimeouts(request);
+    String updatedTimeout =
+        updateApplicationTimeouts.getApplicationTimeouts().get(timeoutType);
+
+    if (timeoutType.equals(ApplicationTimeoutType.LIFETIME)
+        && !newTimeout.equals(updatedTimeout)) {
+      sysout.println("Updated lifetime of an application  " + applicationId
+          + " to queue max/default lifetime." + " New expiry time is "
+          + updatedTimeout);
+      return;
+    }
     sysout.println(
         "Successfully updated " + timeoutType.toString() + " of an application "
-            + applicationId + ". New expiry time is " + newTimeout);
+            + applicationId + ". New expiry time is " + updatedTimeout);
   }
 
   /**
@@ -699,24 +713,9 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getRpcPort());
       appReportStr.print("\tAM Host : ");
       appReportStr.println(appReport.getHost());
-      appReportStr.print("\tAggregate Resource Allocation : ");
-
       ApplicationResourceUsageReport usageReport =
           appReport.getApplicationResourceUsageReport();
-      if (usageReport != null) {
-        //completed app report in the timeline server doesn't have usage report
-        appReportStr.print(usageReport.getMemorySeconds() + " MB-seconds, ");
-        appReportStr.println(usageReport.getVcoreSeconds() + " vcore-seconds");
-        appReportStr.print("\tAggregate Resource Preempted : ");
-        appReportStr.print(usageReport.getPreemptedMemorySeconds() +
-            " MB-seconds, ");
-        appReportStr.println(usageReport.getPreemptedVcoreSeconds() +
-            " vcore-seconds");
-      } else {
-        appReportStr.println("N/A");
-        appReportStr.print("\tAggregate Resource Preempted : ");
-        appReportStr.println("N/A");
-      }
+      printResourceUsage(appReportStr, usageReport);
       appReportStr.print("\tLog Aggregation Status : ");
       appReportStr.println(appReport.getLogAggregationStatus() == null ? "N/A"
           : appReport.getLogAggregationStatus());
@@ -745,6 +744,22 @@ public class ApplicationCLI extends YarnCLI {
     appReportStr.close();
     sysout.println(baos.toString("UTF-8"));
     return 0;
+  }
+
+  private void printResourceUsage(PrintWriter appReportStr,
+      ApplicationResourceUsageReport usageReport) {
+    appReportStr.print("\tAggregate Resource Allocation : ");
+    if (usageReport != null) {
+      appReportStr.println(
+          getResourceSecondsString(usageReport.getResourceSecondsMap()));
+      appReportStr.print("\tAggregate Resource Preempted : ");
+      appReportStr.println(getResourceSecondsString(
+          usageReport.getPreemptedResourceSecondsMap()));
+    } else {
+      appReportStr.println("N/A");
+      appReportStr.print("\tAggregate Resource Preempted : ");
+      appReportStr.println("N/A");
+    }
   }
 
   private String getAllValidApplicationStates() {

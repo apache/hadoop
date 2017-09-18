@@ -88,4 +88,9 @@ public class TestReencryptionWithKMS extends TestReencryption{
     KMSWebApp.getACLs().run();
     testReencryptionBasic();
   }
+
+  @Override
+  protected void rollKey(final String keyName) throws Exception {
+    dfsAdmin.getKeyProvider().rollNewVersion(keyName);
+  }
 }

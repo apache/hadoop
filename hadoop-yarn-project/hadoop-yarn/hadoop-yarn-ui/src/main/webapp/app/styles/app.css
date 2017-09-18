@@ -58,8 +58,7 @@ text.queue {
 }
 
 text.heatmap-cell {
-  font: 14px sans-serif;
-  font-weight: bold;
+  font-size: 14px;
   text-anchor: middle;
   fill: Azure;
   text-align: center;
@@ -83,11 +82,13 @@ text.heatmap-cell-notselected {
   text-anchor: middle;
   fill: Silver;
   text-align: center;
+
 }
 
 text.heatmap-rack {
-  font: 20px sans-serif;
-  fill: DimGray;
+  font-size: 18px;
+  font-weight: 400;
+  fill: #4b5052;
 }
 
 path.queue {
@@ -111,9 +112,8 @@ line.chart {
  */
 text.chart-title {
   font-size: 30px;
-  font-family: sans-serif;
   text-anchor: middle;
-  fill: Gray;
+  fill: #4b5052;
 }
 
 text.donut-highlight-text, text.donut-highlight-sub {
@@ -143,9 +143,10 @@ text.bar-chart-text {
 div.tooltip {
   position: absolute;
   text-align: center;
-  padding: 2px;
-  font: 24px sans-serif;
-  background: lightsteelblue;
+  padding: 10px;
+  font-size: 16px;
+  background: black;
+  color: white;
   border: 0px;
   border-radius: 8px;
   pointer-events: none;

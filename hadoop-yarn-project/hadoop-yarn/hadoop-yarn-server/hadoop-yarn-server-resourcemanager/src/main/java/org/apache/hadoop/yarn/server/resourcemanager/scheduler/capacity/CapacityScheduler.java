@@ -291,8 +291,8 @@ public class CapacityScheduler extends
       writeLock.lock();
       this.conf = loadCapacitySchedulerConfiguration(configuration);
       validateConf(this.conf);
-      this.minimumAllocation = this.conf.getMinimumAllocation();
-      initMaximumResourceCapability(this.conf.getMaximumAllocation());
+      this.minimumAllocation = super.getMinimumAllocation();
+      initMaximumResourceCapability(super.getMaximumAllocation());
       this.calculator = this.conf.getResourceCalculator();
       this.usePortForNodeName = this.conf.getUsePortForNodeName();
       this.applications = new ConcurrentHashMap<>();
@@ -2563,5 +2563,48 @@ public class CapacityScheduler extends
     } finally {
       writeLock.unlock();
     }
+  }
+
+  @Override
+  public long checkAndGetApplicationLifetime(String queueName,
+      long lifetimeRequestedByApp) {
+    try {
+      readLock.lock();
+      CSQueue queue = getQueue(queueName);
+      if (queue == null || !(queue instanceof LeafQueue)) {
+        return lifetimeRequestedByApp;
+      }
+
+      long defaultApplicationLifetime =
+          ((LeafQueue) queue).getDefaultApplicationLifetime();
+      long maximumApplicationLifetime =
+          ((LeafQueue) queue).getMaximumApplicationLifetime();
+
+      // check only for maximum, that's enough because default cann't
+      // exceed maximum
+      if (maximumApplicationLifetime <= 0) {
+        return lifetimeRequestedByApp;
+      }
+
+      if (lifetimeRequestedByApp <= 0) {
+        return defaultApplicationLifetime;
+      } else if (lifetimeRequestedByApp > maximumApplicationLifetime) {
+        return maximumApplicationLifetime;
+      }
+      return lifetimeRequestedByApp;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public long getMaximumApplicationLifetime(String queueName) {
+    CSQueue queue = getQueue(queueName);
+    if (queue == null || !(queue instanceof LeafQueue)) {
+      LOG.error("Unknown queue: " + queueName);
+      return -1;
+    }
+    // In seconds
+    return ((LeafQueue) queue).getMaximumApplicationLifetime();
   }
 }

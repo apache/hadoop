@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -173,7 +174,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   
   private final Map<ContainerId, Container> toBeUpdatedContainers =
       new HashMap<>();
-  
+
+  // NOTE: This is required for backward compatibility.
+  private final Map<ContainerId, Container> toBeDecreasedContainers =
+      new HashMap<>();
+
   private final Map<ContainerId, Container> nmReportedIncreasedContainers =
       new HashMap<>();
 
@@ -626,6 +631,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     try {
       response.addAllContainersToUpdate(toBeUpdatedContainers.values());
       toBeUpdatedContainers.clear();
+
+      // NOTE: This is required for backward compatibility.
+      response.addAllContainersToDecrease(toBeDecreasedContainers.values());
+      toBeDecreasedContainers.clear();
     } finally {
       this.writeLock.unlock();
     }
@@ -847,7 +856,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         containers = startEvent.getNMContainerStatuses();
         if (containers != null && !containers.isEmpty()) {
           for (NMContainerStatus container : containers) {
-            if (container.getContainerState() == ContainerState.RUNNING) {
+            if (container.getContainerState() == ContainerState.RUNNING ||
+                container.getContainerState() == ContainerState.SCHEDULED) {
               rmNode.launchedContainers.add(container.getContainerId());
             }
           }
@@ -1042,8 +1052,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       RMNodeUpdateContainerEvent de = (RMNodeUpdateContainerEvent) event;
 
-      for (Container c : de.getToBeUpdatedContainers()) {
-        rmNode.toBeUpdatedContainers.put(c.getId(), c);
+      for (Map.Entry<Container, ContainerUpdateType> e :
+          de.getToBeUpdatedContainers().entrySet()) {
+        // NOTE: This is required for backward compatibility.
+        if (ContainerUpdateType.DECREASE_RESOURCE == e.getValue()) {
+          rmNode.toBeDecreasedContainers.put(e.getKey().getId(), e.getKey());
+        }
+        rmNode.toBeUpdatedContainers.put(e.getKey().getId(), e.getKey());
       }
     }
   }

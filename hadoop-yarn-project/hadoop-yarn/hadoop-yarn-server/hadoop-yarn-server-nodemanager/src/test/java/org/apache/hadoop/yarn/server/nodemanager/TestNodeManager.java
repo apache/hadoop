@@ -25,6 +25,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.junit.Assert;
 import org.junit.Test;
@@ -55,6 +58,71 @@ public class TestNodeManager {
     } finally {
       nm.stop();
     }
+  }
+
+  private static int initCalls = 0;
+  private static int preCalls = 0;
+  private static int postCalls = 0;
+
+  private static class DummyCSTListener1
+      implements ContainerStateTransitionListener {
+    @Override
+    public void init(Context context) {
+      initCalls++;
+    }
+
+    @Override
+    public void preTransition(ContainerImpl op, ContainerState beforeState,
+        ContainerEvent eventToBeProcessed) {
+      preCalls++;
+    }
+
+    @Override
+    public void postTransition(ContainerImpl op, ContainerState beforeState,
+        ContainerState afterState, ContainerEvent processedEvent) {
+      postCalls++;
+    }
+  }
+
+  private static class DummyCSTListener2
+      implements ContainerStateTransitionListener {
+    @Override
+    public void init(Context context) {
+      initCalls++;
+    }
+
+    @Override
+    public void preTransition(ContainerImpl op, ContainerState beforeState,
+        ContainerEvent eventToBeProcessed) {
+      preCalls++;
+    }
+
+    @Override
+    public void postTransition(ContainerImpl op, ContainerState beforeState,
+        ContainerState afterState, ContainerEvent processedEvent) {
+      postCalls++;
+    }
+  }
+
+  @Test
+  public void testListenerInitialization() throws Exception{
+    NodeManager nodeManager = new NodeManager();
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.NM_CONTAINER_STATE_TRANSITION_LISTENERS,
+        DummyCSTListener1.class.getName() + ","
+            + DummyCSTListener2.class.getName());
+    initCalls = 0;
+    preCalls = 0;
+    postCalls = 0;
+    NodeManager.NMContext nmContext =
+        nodeManager.createNMContext(null, null, null, false, conf);
+    Assert.assertEquals(2, initCalls);
+    nmContext.getContainerStateTransitionListener().preTransition(
+        null, null, null);
+    nmContext.getContainerStateTransitionListener().postTransition(
+        null, null, null, null);
+    Assert.assertEquals(2, preCalls);
+    Assert.assertEquals(2, postCalls);
   }
 
   @Test

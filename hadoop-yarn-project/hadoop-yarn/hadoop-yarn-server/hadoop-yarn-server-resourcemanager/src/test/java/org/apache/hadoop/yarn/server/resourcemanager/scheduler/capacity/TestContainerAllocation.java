@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtilTestHelper;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -884,6 +885,55 @@ public class TestContainerAllocation {
     Assert.assertEquals(11, schedulerApp3.getLiveContainers().size());
 
     // (Now usages of queues: a=17G (satisfied), b=27G (satisfied), c=52G))
+
+    rm1.close();
+  }
+
+
+
+  @Test(timeout = 60000)
+  public void testUserLimitAllocationMultipleContainers() throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setUserLimit("root.c", 50);
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 1000 * GB);
+
+    // launch app from 1st user to queue C, AM container should be launched in nm1
+    RMApp app1 = rm1.submitApp(2 * GB, "app", "user1", null, "c");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch app from 2nd user to queue C, AM container should be launched in nm1
+    RMApp app2 = rm1.submitApp(2 * GB, "app", "user2", null, "c");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    // Each application asks 1000 * 5GB containers
+    am1.allocate("*", 5 * GB, 1000, null);
+    am1.allocate("h1", 5 * GB, 1000, null);
+    am1.allocate(NetworkTopology.DEFAULT_RACK, 5 * GB, 1000, null);
+
+    // Each application asks 1000 * 5GB containers
+    am2.allocate("*", 5 * GB, 1000, null);
+    am2.allocate("h1", 5 * GB, 1000, null);
+    am2.allocate(NetworkTopology.DEFAULT_RACK, 5 * GB, 1000, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp2 =
+        cs.getApplicationAttempt(am2.getApplicationAttemptId());
+
+    // container will be allocated to am1
+    // App1 will get 2 container allocated (plus AM container)
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(101, schedulerApp1.getLiveContainers().size());
+    Assert.assertEquals(100, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
   }

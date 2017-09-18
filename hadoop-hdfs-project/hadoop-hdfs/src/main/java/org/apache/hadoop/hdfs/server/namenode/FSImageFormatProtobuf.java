@@ -36,10 +36,13 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +50,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -55,6 +59,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.ErasureCodingSection;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FSImageFormatPBSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -287,6 +292,12 @@ public final class FSImageFormatProtobuf {
           prog.endStep(Phase.LOADING_FSIMAGE, step);
         }
           break;
+        case ERASURE_CODING:
+          Step step = new Step(StepType.ERASURE_CODING_POLICIES);
+          prog.beginStep(Phase.LOADING_FSIMAGE, step);
+          loadErasureCodingSection(in);
+          prog.endStep(Phase.LOADING_FSIMAGE, step);
+          break;
         default:
           LOG.warn("Unrecognized section {}", n);
           break;
@@ -366,6 +377,17 @@ public final class FSImageFormatProtobuf {
           new CacheManager.PersistState(s, pools, directives));
     }
 
+    private void loadErasureCodingSection(InputStream in)
+        throws IOException {
+      ErasureCodingSection s = ErasureCodingSection.parseDelimitedFrom(in);
+      List<ErasureCodingPolicy> ecPolicies = Lists
+          .newArrayListWithCapacity(s.getPoliciesCount());
+      for (int i = 0; i < s.getPoliciesCount(); ++i) {
+        ecPolicies.add(PBHelperClient.convertErasureCodingPolicy(
+            s.getPolicies(i)));
+      }
+      fsn.getErasureCodingPolicyManager().loadPolicies(ecPolicies);
+    }
   }
 
   public static final class Saver {
@@ -497,7 +519,13 @@ public final class FSImageFormatProtobuf {
       // depends on this behavior.
       context.checkCancelled();
 
-      Step step = new Step(StepType.INODES, filePath);
+      // Erasure coding policies should be saved before inodes
+      Step step = new Step(StepType.ERASURE_CODING_POLICIES, filePath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      saveErasureCodingSection(b);
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+
+      step = new Step(StepType.INODES, filePath);
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
       saveInodes(b);
       saveSnapshots(b);
@@ -555,6 +583,23 @@ public final class FSImageFormatProtobuf {
       commitSection(summary, SectionName.CACHE_MANAGER);
     }
 
+    private void saveErasureCodingSection(
+        FileSummary.Builder summary) throws IOException {
+      final FSNamesystem fsn = context.getSourceNamesystem();
+      ErasureCodingPolicy[] ecPolicies =
+          fsn.getErasureCodingPolicyManager().getPolicies();
+      ArrayList<ErasureCodingPolicyProto> ecPolicyProtoes =
+          new ArrayList<ErasureCodingPolicyProto>();
+      for (ErasureCodingPolicy p : ecPolicies) {
+        ecPolicyProtoes.add(PBHelperClient.convertErasureCodingPolicy(p));
+      }
+
+      ErasureCodingSection section = ErasureCodingSection.newBuilder().
+          addAllPolicies(ecPolicyProtoes).build();
+      section.writeDelimitedTo(sectionOutputStream);
+      commitSection(summary, SectionName.ERASURE_CODING);
+    }
+
     private void saveNameSystemSection(FileSummary.Builder summary)
         throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
@@ -606,6 +651,7 @@ public final class FSImageFormatProtobuf {
     NS_INFO("NS_INFO"),
     STRING_TABLE("STRING_TABLE"),
     EXTENDED_ACL("EXTENDED_ACL"),
+    ERASURE_CODING("ERASURE_CODING"),
     INODE("INODE"),
     INODE_REFERENCE("INODE_REFERENCE"),
     SNAPSHOT("SNAPSHOT"),

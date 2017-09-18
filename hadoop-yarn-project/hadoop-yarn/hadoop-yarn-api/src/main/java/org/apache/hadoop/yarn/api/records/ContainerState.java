@@ -33,11 +33,14 @@ public enum ContainerState {
   
   /** Running container */
   RUNNING, 
-  
+
   /** Completed container */
   COMPLETE,
 
   /** Scheduled (awaiting resources) at the NM. */
   @InterfaceStability.Unstable
-  SCHEDULED
+  SCHEDULED,
+
+  /** Paused at the NM. */
+  PAUSED
 }

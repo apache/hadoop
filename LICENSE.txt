@@ -359,7 +359,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The binary distribution of this product bundles these dependencies under the
 following license:
-re2j 1.0
+re2j 1.1
 ---------------------------------------------------------------------
 (GO license)
 This is a work derived from Russ Cox's RE2 in Go, whose license

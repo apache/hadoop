@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceSet;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
@@ -238,5 +239,15 @@ public class MockContainer implements Container {
 
   public long getContainerStartTime() {
     return 0;
+  }
+
+  @Override
+  public ResourceMappings getResourceMappings() {
+    return null;
+  }
+
+  @Override
+  public void sendPauseEvent(String description) {
+
   }
 }

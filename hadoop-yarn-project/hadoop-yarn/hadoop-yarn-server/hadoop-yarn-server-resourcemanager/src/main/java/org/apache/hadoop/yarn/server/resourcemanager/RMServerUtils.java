@@ -32,6 +32,7 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -65,6 +67,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
@@ -87,6 +90,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * Utility methods to aid serving RM data through the REST and RPC APIs
  */
 public class RMServerUtils {
+
+  private static final Log LOG_HANDLE = LogFactory.getLog(RMServerUtils.class);
 
   public static final String UPDATE_OUTSTANDING_ERROR =
       "UPDATE_OUTSTANDING_ERROR";
@@ -295,8 +300,7 @@ public class RMServerUtils {
     // Target resource of the increase request is more than NM can offer
     ResourceScheduler scheduler = rmContext.getScheduler();
     RMNode rmNode = request.getSchedulerNode().getRMNode();
-    if (!Resources.fitsIn(scheduler.getResourceCalculator(),
-        scheduler.getClusterResource(), targetResource,
+    if (!Resources.fitsIn(scheduler.getResourceCalculator(), targetResource,
         rmNode.getTotalCapability())) {
       String msg = "Target resource=" + targetResource + " of containerId="
           + containerId + " is more than node's total resource="
@@ -478,7 +482,7 @@ public class RMServerUtils {
       DUMMY_APPLICATION_RESOURCE_USAGE_REPORT =
       BuilderUtils.newApplicationResourceUsageReport(-1, -1,
           Resources.createResource(-1, -1), Resources.createResource(-1, -1),
-          Resources.createResource(-1, -1), 0, 0, 0, 0);
+          Resources.createResource(-1, -1), new HashMap<>(), new HashMap<>());
 
 
   /**
@@ -621,5 +625,44 @@ public class RMServerUtils {
               Collections.singleton(label));
       return labelsToNodes.get(label);
     }
+  }
+
+  public static void convertProfileToResourceCapability(ResourceRequest ask,
+      Configuration conf, ResourceProfilesManager resourceProfilesManager)
+      throws YarnException {
+
+    if (LOG_HANDLE.isDebugEnabled()) {
+      LOG_HANDLE
+          .debug("Converting profile to resource capability for ask " + ask);
+    }
+
+    boolean profilesEnabled =
+        conf.getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    if (!profilesEnabled) {
+      if (ask.getProfileCapability() != null && !ask.getProfileCapability()
+          .getProfileCapabilityOverride().equals(Resources.none())) {
+        ask.setCapability(
+            ask.getProfileCapability().getProfileCapabilityOverride());
+      }
+    } else {
+      if (ask.getProfileCapability() != null) {
+        ask.setCapability(ProfileCapability
+            .toResource(ask.getProfileCapability(),
+                resourceProfilesManager.getResourceProfiles()));
+      }
+    }
+    if (LOG_HANDLE.isDebugEnabled()) {
+      LOG_HANDLE
+          .debug("Converted profile to resource capability for ask " + ask);
+    }
+  }
+
+  public static Long getOrDefault(Map<String, Long> map, String key,
+      Long defaultValue) {
+    if (map.containsKey(key)) {
+      return map.get(key);
+    }
+    return defaultValue;
   }
 }

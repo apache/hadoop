@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.HashMap;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -37,7 +32,8 @@ import org.junit.Test;
  * Tests that WASB handles things gracefully when users add blobs to the Azure
  * Storage container from outside WASB's control.
  */
-public class TestOutOfBandAzureBlobOperations {
+public class TestOutOfBandAzureBlobOperations
+    extends AbstractWasbTestWithTimeout {
   private AzureBlobStorageTestAccount testAccount;
   private FileSystem fs;
   private InMemoryBlockBlobStore backingStore;

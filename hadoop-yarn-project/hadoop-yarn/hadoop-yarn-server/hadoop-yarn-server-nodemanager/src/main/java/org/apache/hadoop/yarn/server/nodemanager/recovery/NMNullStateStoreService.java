@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -76,6 +77,15 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerQueued(ContainerId containerId) throws IOException {
+  }
+
+  @Override
+  public void storeContainerPaused(ContainerId containerId) throws IOException {
+  }
+
+  @Override
+  public void removeContainerPaused(ContainerId containerId)
+      throws IOException {
   }
 
   @Override
@@ -254,6 +264,12 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
+      throws IOException {
+  }
+
+  @Override
+  public void storeAssignedResources(ContainerId containerId,
+      String resourceType, List<Serializable> assignedResources)
       throws IOException {
   }
 

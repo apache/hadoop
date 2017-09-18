@@ -145,13 +145,12 @@ public class TestReconstructStripedBlocksWithRackAwareness {
   public void testReconstructForNotEnoughRacks() throws Exception {
     LOG.info("cluster hosts: {}, racks: {}", Arrays.asList(hosts),
         Arrays.asList(racks));
-
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs.setErasureCodingPolicy(new Path("/"),
         StripedFileTestUtil.getDefaultECPolicy().getName());
     FSNamesystem fsn = cluster.getNamesystem();
@@ -219,12 +218,12 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
   @Test
   public void testChooseExcessReplicasToDelete() throws Exception {
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs.setErasureCodingPolicy(new Path("/"),
         StripedFileTestUtil.getDefaultECPolicy().getName());
 
@@ -271,8 +270,6 @@ public class TestReconstructStripedBlocksWithRackAwareness {
    */
   @Test
   public void testReconstructionWithDecommission() throws Exception {
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     final String[] rackNames = getRacks(dataBlocks + parityBlocks + 2,
         dataBlocks);
     final String[] hostNames = getHosts(dataBlocks + parityBlocks + 2);
@@ -281,6 +278,8 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         .numDataNodes(hostNames.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs.setErasureCodingPolicy(new Path("/"),
         StripedFileTestUtil.getDefaultECPolicy().getName());
 

@@ -81,11 +81,11 @@ abstract public class ReadStripedFileWithDecodingHelper {
         0);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     MiniDFSCluster myCluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_DATANODES)
         .build();
+    myCluster.getFileSystem().enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     myCluster.getFileSystem().getClient().setErasureCodingPolicy("/",
         StripedFileTestUtil.getDefaultECPolicy().getName());
     return myCluster;

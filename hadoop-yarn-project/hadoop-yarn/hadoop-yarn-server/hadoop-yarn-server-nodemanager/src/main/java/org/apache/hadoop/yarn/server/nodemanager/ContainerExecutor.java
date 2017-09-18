@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
@@ -663,7 +664,8 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   // LinuxContainerExecutor overrides this method and behaves differently.
-  public String[] getIpAndHost(Container container) {
+  public String[] getIpAndHost(Container container)
+      throws ContainerExecutionException {
     return getLocalIpAndHost(container);
   }
 
@@ -695,6 +697,28 @@ public abstract class ContainerExecutor implements Configurable {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  /**
+   * Pause the container. The default implementation is to raise a kill event.
+   * Specific executor implementations can override this behavior.
+   * @param container
+   *          the Container
+   */
+  public void pauseContainer(Container container) {
+    LOG.warn(container.getContainerId() + " doesn't support pausing.");
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Resume the container from pause state. The default implementation ignores
+   * this event. Specific implementations can override this behavior.
+   * @param container
+   *          the Container
+   */
+  public void resumeContainer(Container container) {
+    LOG.warn(container.getContainerId() + " doesn't support resume.");
+    throw new UnsupportedOperationException();
   }
 
   /**

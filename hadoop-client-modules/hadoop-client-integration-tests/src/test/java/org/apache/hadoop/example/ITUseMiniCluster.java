@@ -77,7 +77,9 @@ public class ITUseMiniCluster {
 
   @After
   public void clusterDown() {
-    cluster.close();
+    if (cluster != null) {
+      cluster.close();
+    }
   }
 
   @Test

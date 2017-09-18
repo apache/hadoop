@@ -31,6 +31,15 @@ public final class LinuxContainerRuntimeConstants {
   private LinuxContainerRuntimeConstants() {
   }
 
+  /**
+   * Linux container runtime types for {@link DelegatingLinuxContainerRuntime}.
+   */
+  public enum RuntimeType {
+    DEFAULT,
+    DOCKER,
+    JAVASANDBOX;
+  }
+
   public static final Attribute<Map> LOCALIZED_RESOURCES = Attribute
       .attribute(Map.class, "localized_resources");
   public static final Attribute<List> CONTAINER_LAUNCH_PREFIX_COMMANDS =

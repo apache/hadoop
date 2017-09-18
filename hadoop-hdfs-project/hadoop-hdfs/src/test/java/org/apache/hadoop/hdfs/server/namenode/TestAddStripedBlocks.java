@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSStripedOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -85,11 +84,10 @@ public class TestAddStripedBlocks {
   @Before
   public void setup() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        ecPolicy.getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
+    dfs.enableErasureCodingPolicy(ecPolicy.getName());
     dfs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
   }
 

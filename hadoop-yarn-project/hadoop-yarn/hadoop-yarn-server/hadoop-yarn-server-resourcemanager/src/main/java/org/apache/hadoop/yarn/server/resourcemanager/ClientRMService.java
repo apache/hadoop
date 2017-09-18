@@ -112,6 +112,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -145,6 +151,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInputValidator;
@@ -175,6 +182,7 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
@@ -207,8 +215,12 @@ public class ClientRMService extends AbstractService implements
   private ReservationSystem reservationSystem;
   private ReservationInputValidator rValidator;
 
+  private boolean displayPerUserApps = false;
+
   private static final EnumSet<RMAppState> ACTIVE_APP_STATES = EnumSet.of(
       RMAppState.ACCEPTED, RMAppState.RUNNING);
+
+  private ResourceProfilesManager resourceProfilesManager;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
@@ -232,6 +244,7 @@ public class ClientRMService extends AbstractService implements
     this.reservationSystem = rmContext.getReservationSystem();
     this.clock = clock;
     this.rValidator = new ReservationInputValidator(clock);
+    resourceProfilesManager = rmContext.getResourceProfilesManager();
   }
 
   @Override
@@ -264,7 +277,11 @@ public class ClientRMService extends AbstractService implements
       }
       refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
-    
+
+    this.displayPerUserApps  = conf.getBoolean(
+        YarnConfiguration.DISPLAY_APPS_FOR_LOGGED_IN_USER,
+        YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
+
     this.server.start();
     clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
                                                YarnConfiguration.RM_ADDRESS,
@@ -895,6 +912,12 @@ public class ClientRMService extends AbstractService implements
       boolean allowAccess = checkAccess(callerUGI, application.getUser(),
           ApplicationAccessType.VIEW_APP, application);
       if (scope == ApplicationsRequestScope.VIEWABLE && !allowAccess) {
+        continue;
+      }
+
+      // Given RM is configured to display apps per user, skip apps to which
+      // this caller doesn't have access to view.
+      if (displayPerUserApps && !allowAccess) {
         continue;
       }
 
@@ -1691,6 +1714,7 @@ public class ClientRMService extends AbstractService implements
         RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
             AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService",
             applicationId);
+        response.setApplicationTimeouts(applicationTimeouts);
         return response;
       }
       String msg =
@@ -1702,7 +1726,8 @@ public class ClientRMService extends AbstractService implements
     }
 
     try {
-      rmAppManager.updateApplicationTimeout(application, applicationTimeouts);
+      applicationTimeouts = rmAppManager.updateApplicationTimeout(application,
+          applicationTimeouts);
     } catch (YarnException ex) {
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.UPDATE_APP_TIMEOUTS, "UNKNOWN", "ClientRMService",
@@ -1712,6 +1737,7 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
         AuditConstants.UPDATE_APP_TIMEOUTS, "ClientRMService", applicationId);
+    response.setApplicationTimeouts(applicationTimeouts);
     return response;
   }
 
@@ -1763,4 +1789,36 @@ public class ClientRMService extends AbstractService implements
     return application;
   }
 
+  @Override
+  public GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException {
+    GetAllResourceProfilesResponse response =
+        GetAllResourceProfilesResponse.newInstance();
+    response.setResourceProfiles(resourceProfilesManager.getResourceProfiles());
+    return response;
+  }
+
+  @Override
+  public GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException {
+    GetResourceProfileResponse response =
+        GetResourceProfileResponse.newInstance();
+    response.setResource(
+        resourceProfilesManager.getProfile(request.getProfileName()));
+    return response;
+  }
+
+  @Override
+  public GetAllResourceTypeInfoResponse getResourceTypeInfo(
+      GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
+    GetAllResourceTypeInfoResponse response =
+        GetAllResourceTypeInfoResponse.newInstance();
+    response.setResourceTypeInfo(ResourceUtils.getResourcesTypeInfo());
+    return response;
+  }
+
+  @VisibleForTesting
+  public void setDisplayPerUserApps(boolean displayPerUserApps) {
+    this.displayPerUserApps = displayPerUserApps;
+  }
 }

@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -145,6 +146,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   // Fake rmAddr for token-renewal
   private static InetSocketAddress rmAddr;
   private List<MockRM> rms = new ArrayList<MockRM>();
+
+  public TestRMRestart(SchedulerType type) throws IOException {
+    super(type);
+  }
 
   @Before
   public void setup() throws IOException {
@@ -383,6 +388,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     // assert app1 attempt is saved
     attempt1 = loadedApp1.getCurrentAppAttempt();
     attemptId1 = attempt1.getAppAttemptId();
+    ((AbstractYarnScheduler)rm2.getResourceScheduler()).update();
     rm2.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
     appState = rmAppState.get(loadedApp1.getApplicationId());
     attemptState = appState.getAttempt(attemptId1);
@@ -2097,7 +2103,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId, 0, containerState,
             Resource.newInstance(1024, 1), "recover container", 0,
-            Priority.newInstance(0), 0, nodeLabelExpression);
+            Priority.newInstance(0), 0, nodeLabelExpression,
+            ExecutionType.GUARANTEED);
     return containerReport;
   }
 

@@ -53,9 +53,9 @@ class InvalidateBlocks {
   private final Map<DatanodeInfo, LightWeightHashSet<Block>>
       nodeToBlocks = new HashMap<>();
   private final Map<DatanodeInfo, LightWeightHashSet<Block>>
-      nodeToECBlockGroups = new HashMap<>();
+      nodeToECBlocks = new HashMap<>();
   private final LongAdder numBlocks = new LongAdder();
-  private final LongAdder numECBlockGroups = new LongAdder();
+  private final LongAdder numECBlocks = new LongAdder();
   private final int blockInvalidateLimit;
 
   /**
@@ -87,7 +87,7 @@ class InvalidateBlocks {
    * @return The total number of blocks to be invalidated.
    */
   long numBlocks() {
-    return getECBlockGroupsStat() + getBlocksStat();
+    return getECBlocks() + getBlocks();
   }
 
   /**
@@ -95,7 +95,7 @@ class InvalidateBlocks {
    * {@link org.apache.hadoop.hdfs.protocol.BlockType#CONTIGUOUS}
    * to be invalidated.
    */
-  long getBlocksStat() {
+  long getBlocks() {
     return numBlocks.longValue();
   }
 
@@ -104,8 +104,8 @@ class InvalidateBlocks {
    * {@link org.apache.hadoop.hdfs.protocol.BlockType#STRIPED}
    * to be invalidated.
    */
-  long getECBlockGroupsStat() {
-    return numECBlockGroups.longValue();
+  long getECBlocks() {
+    return numECBlocks.longValue();
   }
 
   private LightWeightHashSet<Block> getBlocksSet(final DatanodeInfo dn) {
@@ -115,9 +115,9 @@ class InvalidateBlocks {
     return null;
   }
 
-  private LightWeightHashSet<Block> getECBlockGroupsSet(final DatanodeInfo dn) {
-    if (nodeToECBlockGroups.containsKey(dn)) {
-      return nodeToECBlockGroups.get(dn);
+  private LightWeightHashSet<Block> getECBlocksSet(final DatanodeInfo dn) {
+    if (nodeToECBlocks.containsKey(dn)) {
+      return nodeToECBlocks.get(dn);
     }
     return null;
   }
@@ -125,7 +125,7 @@ class InvalidateBlocks {
   private LightWeightHashSet<Block> getBlocksSet(final DatanodeInfo dn,
       final Block block) {
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
-      return getECBlockGroupsSet(dn);
+      return getECBlocksSet(dn);
     } else {
       return getBlocksSet(dn);
     }
@@ -134,8 +134,8 @@ class InvalidateBlocks {
   private void putBlocksSet(final DatanodeInfo dn, final Block block,
       final LightWeightHashSet set) {
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
-      assert getECBlockGroupsSet(dn) == null;
-      nodeToECBlockGroups.put(dn, set);
+      assert getECBlocksSet(dn) == null;
+      nodeToECBlocks.put(dn, set);
     } else {
       assert getBlocksSet(dn) == null;
       nodeToBlocks.put(dn, set);
@@ -144,7 +144,7 @@ class InvalidateBlocks {
 
   private long getBlockSetsSize(final DatanodeInfo dn) {
     LightWeightHashSet<Block> replicaBlocks = getBlocksSet(dn);
-    LightWeightHashSet<Block> stripedBlocks = getECBlockGroupsSet(dn);
+    LightWeightHashSet<Block> stripedBlocks = getECBlocksSet(dn);
     return ((replicaBlocks == null ? 0 : replicaBlocks.size()) +
         (stripedBlocks == null ? 0 : stripedBlocks.size()));
   }
@@ -179,7 +179,7 @@ class InvalidateBlocks {
     }
     if (set.add(block)) {
       if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
-        numECBlockGroups.increment();
+        numECBlocks.increment();
       } else {
         numBlocks.increment();
       }
@@ -196,9 +196,9 @@ class InvalidateBlocks {
     if (replicaBlockSets != null) {
       numBlocks.add(replicaBlockSets.size() * -1);
     }
-    LightWeightHashSet<Block> blockGroupSets = nodeToECBlockGroups.remove(dn);
-    if (blockGroupSets != null) {
-      numECBlockGroups.add(blockGroupSets.size() * -1);
+    LightWeightHashSet<Block> ecBlocksSet = nodeToECBlocks.remove(dn);
+    if (ecBlocksSet != null) {
+      numECBlocks.add(ecBlocksSet.size() * -1);
     }
   }
 
@@ -207,7 +207,7 @@ class InvalidateBlocks {
     final LightWeightHashSet<Block> v = getBlocksSet(dn, block);
     if (v != null && v.remove(block)) {
       if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
-        numECBlockGroups.decrement();
+        numECBlocks.decrement();
       } else {
         numBlocks.decrement();
       }
@@ -231,21 +231,21 @@ class InvalidateBlocks {
   /** Print the contents to out. */
   synchronized void dump(final PrintWriter out) {
     final int size = nodeToBlocks.values().size() +
-        nodeToECBlockGroups.values().size();
+        nodeToECBlocks.values().size();
     out.println("Metasave: Blocks " + numBlocks()
         + " waiting deletion from " + size + " datanodes.");
     if (size == 0) {
       return;
     }
     dumpBlockSet(nodeToBlocks, out);
-    dumpBlockSet(nodeToECBlockGroups, out);
+    dumpBlockSet(nodeToECBlocks, out);
   }
 
   /** @return a list of the storage IDs. */
   synchronized List<DatanodeInfo> getDatanodes() {
     HashSet<DatanodeInfo> set = new HashSet<>();
     set.addAll(nodeToBlocks.keySet());
-    set.addAll(nodeToECBlockGroups.keySet());
+    set.addAll(nodeToECBlocks.keySet());
     return new ArrayList<>(set);
   }
 
@@ -289,9 +289,9 @@ class InvalidateBlocks {
       remainingLimit = getBlocksToInvalidateByLimit(nodeToBlocks.get(dn),
           toInvalidate, numBlocks, remainingLimit);
     }
-    if ((remainingLimit > 0) && (nodeToECBlockGroups.get(dn) != null)) {
-      getBlocksToInvalidateByLimit(nodeToECBlockGroups.get(dn),
-          toInvalidate, numECBlockGroups, remainingLimit);
+    if ((remainingLimit > 0) && (nodeToECBlocks.get(dn) != null)) {
+      getBlocksToInvalidateByLimit(nodeToECBlocks.get(dn),
+          toInvalidate, numECBlocks, remainingLimit);
     }
     if (toInvalidate.size() > 0 && getBlockSetsSize(dn) == 0) {
       remove(dn);
@@ -302,8 +302,8 @@ class InvalidateBlocks {
   
   synchronized void clear() {
     nodeToBlocks.clear();
-    nodeToECBlockGroups.clear();
+    nodeToECBlocks.clear();
     numBlocks.reset();
-    numECBlockGroups.reset();
+    numECBlocks.reset();
   }
 }

@@ -4319,143 +4319,6 @@ public class TestCapacityScheduler {
     rm.stop();
   }
 
-  @Test (timeout = 300000)
-  public void testUserLimitThroughput() throws Exception {
-    // Since this is more of a performance unit test, only run if
-    // RunUserLimitThroughput is set (-DRunUserLimitThroughput=true)
-    Assume.assumeTrue(Boolean.valueOf(
-        System.getProperty("RunUserLimitThroughput")));
-
-    CapacitySchedulerConfiguration csconf =
-        new CapacitySchedulerConfiguration();
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
-    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
-        100.0f);
-    csconf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
-    csconf.setResourceComparator(DominantResourceCalculator.class);
-
-    YarnConfiguration conf = new YarnConfiguration(csconf);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-
-    MockRM rm = new MockRM(conf);
-    rm.start();
-
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    LeafQueue qb = (LeafQueue)cs.getQueue("default");
-
-    // For now make user limit large so we can activate all applications
-    qb.setUserLimitFactor((float)100.0);
-    qb.setupConfigurableCapacities();
-
-    SchedulerEvent addAppEvent;
-    SchedulerEvent addAttemptEvent;
-    Container container = mock(Container.class);
-    ApplicationSubmissionContext submissionContext =
-        mock(ApplicationSubmissionContext.class);
-
-    final int appCount = 100;
-    ApplicationId[] appids = new ApplicationId[appCount];
-    RMAppAttemptImpl[] attempts = new RMAppAttemptImpl[appCount];
-    ApplicationAttemptId[] appAttemptIds = new ApplicationAttemptId[appCount];
-    RMAppImpl[] apps = new RMAppImpl[appCount];
-    RMAppAttemptMetrics[] attemptMetrics = new RMAppAttemptMetrics[appCount];
-    for (int i=0; i<appCount; i++) {
-      appids[i] = BuilderUtils.newApplicationId(100, i);
-      appAttemptIds[i] =
-      BuilderUtils.newApplicationAttemptId(appids[i], 1);
-
-      attemptMetrics[i] =
-          new RMAppAttemptMetrics(appAttemptIds[i], rm.getRMContext());
-      apps[i] = mock(RMAppImpl.class);
-      when(apps[i].getApplicationId()).thenReturn(appids[i]);
-      attempts[i] = mock(RMAppAttemptImpl.class);
-      when(attempts[i].getMasterContainer()).thenReturn(container);
-      when(attempts[i].getSubmissionContext()).thenReturn(submissionContext);
-      when(attempts[i].getAppAttemptId()).thenReturn(appAttemptIds[i]);
-      when(attempts[i].getRMAppAttemptMetrics()).thenReturn(attemptMetrics[i]);
-      when(apps[i].getCurrentAppAttempt()).thenReturn(attempts[i]);
-
-      rm.getRMContext().getRMApps().put(appids[i], apps[i]);
-      addAppEvent =
-          new AppAddedSchedulerEvent(appids[i], "default", "user1");
-      cs.handle(addAppEvent);
-      addAttemptEvent =
-          new AppAttemptAddedSchedulerEvent(appAttemptIds[i], false);
-      cs.handle(addAttemptEvent);
-    }
-
-    // add nodes  to cluster, so cluster has 20GB and 20 vcores
-    Resource newResource = Resource.newInstance(10 * GB, 10);
-    RMNode node = MockNodes.newNodeInfo(0, newResource, 1, "127.0.0.1");
-    cs.handle(new NodeAddedSchedulerEvent(node));
-
-    Resource newResource2 = Resource.newInstance(10 * GB, 10);
-    RMNode node2 = MockNodes.newNodeInfo(0, newResource2, 1, "127.0.0.2");
-    cs.handle(new NodeAddedSchedulerEvent(node2));
-
-    Priority u0Priority = TestUtils.createMockPriority(1);
-    RecordFactory recordFactory =
-        RecordFactoryProvider.getRecordFactory(null);
-
-    FiCaSchedulerApp[] fiCaApps = new FiCaSchedulerApp[appCount];
-    for (int i=0;i<appCount;i++) {
-      fiCaApps[i] =
-          cs.getSchedulerApplications().get(apps[i].getApplicationId())
-              .getCurrentAppAttempt();
-      // allocate container for app2 with 1GB memory and 1 vcore
-      fiCaApps[i].updateResourceRequests(Collections.singletonList(
-          TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true,
-              u0Priority, recordFactory)));
-    }
-    // Now force everything to be over user limit
-    qb.setUserLimitFactor((float)0.0);
-
-    // Quiet the loggers while measuring throughput
-    for (Enumeration<?> loggers=LogManager.getCurrentLoggers();
-        loggers.hasMoreElements(); )  {
-      Logger logger = (Logger) loggers.nextElement();
-      logger.setLevel(Level.WARN);
-    }
-    final int topn = 20;
-    final int iterations = 2000000;
-    final int printInterval = 20000;
-    final float numerator = 1000.0f * printInterval;
-    PriorityQueue<Long> queue = new PriorityQueue<>(topn,
-        Collections.reverseOrder());
-
-    long n = Time.monotonicNow();
-    long timespent = 0;
-    for (int i = 0; i < iterations; i+=2) {
-      if (i > 0  && i % printInterval == 0){
-        long ts = (Time.monotonicNow() - n);
-        if (queue.size() < topn) {
-          queue.offer(ts);
-        } else {
-          Long last = queue.peek();
-          if (last > ts) {
-            queue.poll();
-            queue.offer(ts);
-          }
-        }
-        System.out.println(i + " " + (numerator / ts));
-        n= Time.monotonicNow();
-      }
-    cs.handle(new NodeUpdateSchedulerEvent(node));
-    cs.handle(new NodeUpdateSchedulerEvent(node2));
-    }
-    timespent=0;
-    int entries = queue.size();
-    while(queue.size() > 0){
-      long l = queue.poll();
-      timespent += l;
-    }
-    System.out.println("Avg of fastest " + entries + ": "
-        + numerator / (timespent / entries));
-    rm.stop();
-  }
-
   @Test
   public void testCSQueueBlocked() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
@@ -4907,6 +4770,96 @@ public class TestCapacityScheduler {
     Assert.assertEquals(4096, amResourceLimit.getMemorySize());
     Assert.assertEquals(4, amResourceLimit.getVirtualCores());
     rm.stop();
+  }
+
+  @Test(timeout = 30000)
+  public void testcheckAndGetApplicationLifetime() throws Exception {
+    long maxLifetime = 10;
+    long defaultLifetime = 5;
+    // positive integer value
+    CapacityScheduler cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(9, cs.checkAndGetApplicationLifetime("default", 9));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(maxLifetime,
+        cs.getMaximumApplicationLifetime("default"));
+
+    maxLifetime = -1;
+    defaultLifetime = -1;
+    // test for default values
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(100, cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(0, cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(maxLifetime,
+        cs.getMaximumApplicationLifetime("default"));
+
+    maxLifetime = 10;
+    defaultLifetime = 10;
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(defaultLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
+    Assert.assertEquals(maxLifetime,
+        cs.getMaximumApplicationLifetime("default"));
+
+    maxLifetime = 0;
+    defaultLifetime = 0;
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(100, cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(-1, cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(0, cs.checkAndGetApplicationLifetime("default", 0));
+
+    maxLifetime = 10;
+    defaultLifetime = -1;
+    cs = setUpCSQueue(maxLifetime, defaultLifetime);
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 100));
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", -1));
+    Assert.assertEquals(maxLifetime,
+        cs.checkAndGetApplicationLifetime("default", 0));
+
+    maxLifetime = 5;
+    defaultLifetime = 10;
+    try {
+      setUpCSQueue(maxLifetime, defaultLifetime);
+      Assert.fail("Expected to fails since maxLifetime < defaultLifetime.");
+    } catch (YarnRuntimeException ye) {
+      Assert.assertTrue(
+          ye.getMessage().contains("can't exceed maximum lifetime"));
+    }
+  }
+
+  private CapacityScheduler setUpCSQueue(long maxLifetime,
+      long defaultLifetime) {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"default"});
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".default", 100);
+    csConf.setMaximumLifetimePerQueue(
+        CapacitySchedulerConfiguration.ROOT + ".default", maxLifetime);
+    csConf.setDefaultLifetimePerQueue(
+        CapacitySchedulerConfiguration.ROOT + ".default", defaultLifetime);
+
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+    CapacityScheduler cs = new CapacityScheduler();
+
+    RMContext rmContext = TestUtils.getMockRMContext();
+    cs.setConf(conf);
+    cs.setRMContext(rmContext);
+    cs.init(conf);
+
+    return cs;
   }
 
   private void waitforNMRegistered(ResourceScheduler scheduler, int nodecount,

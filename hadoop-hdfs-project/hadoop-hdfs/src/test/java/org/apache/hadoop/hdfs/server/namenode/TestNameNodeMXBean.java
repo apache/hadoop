@@ -726,8 +726,6 @@ public class TestNameNodeMXBean {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-          StripedFileTestUtil.getDefaultECPolicy().getName());
       int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
       int parityBlocks =
           StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
@@ -736,6 +734,8 @@ public class TestNameNodeMXBean {
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(totalSize).build();
       fs = cluster.getFileSystem();
+      fs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // create file
       Path ecDirPath = new Path("/striped");

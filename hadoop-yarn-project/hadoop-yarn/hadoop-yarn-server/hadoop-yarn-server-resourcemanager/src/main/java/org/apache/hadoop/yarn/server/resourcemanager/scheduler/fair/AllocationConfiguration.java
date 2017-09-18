@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -51,7 +50,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   // Maximum amount of resources for each queue's ad hoc children
   private final Map<String, Resource> maxChildQueueResources;
   // Sharing weights for each queue
-  private final Map<String, ResourceWeights> queueWeights;
+  private final Map<String, Float> queueWeights;
   
   // Max concurrent running applications for each queue and for each user; in addition,
   // for users that have no max specified, we use the userMaxJobsDefault.
@@ -112,10 +111,12 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   public AllocationConfiguration(Map<String, Resource> minQueueResources,
       Map<String, Resource> maxQueueResources,
       Map<String, Resource> maxChildQueueResources,
-      Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
-      Map<String, ResourceWeights> queueWeights,
+      Map<String, Integer> queueMaxApps,
+      Map<String, Integer> userMaxApps,
+      Map<String, Float> queueWeights,
       Map<String, Float> queueMaxAMShares, int userMaxAppsDefault,
-      int queueMaxAppsDefault, Resource queueMaxResourcesDefault,
+      int queueMaxAppsDefault,
+      Resource queueMaxResourcesDefault,
       float queueMaxAMShareDefault,
       Map<String, SchedulingPolicy> schedulingPolicies,
       SchedulingPolicy defaultSchedulingPolicy,
@@ -253,9 +254,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     return !nonPreemptableQueues.contains(queueName);
   }
 
-  private ResourceWeights getQueueWeight(String queue) {
-    ResourceWeights weight = queueWeights.get(queue);
-    return (weight == null) ? ResourceWeights.NEUTRAL : weight;
+  private float getQueueWeight(String queue) {
+    Float weight = queueWeights.get(queue);
+    return (weight == null) ? 1.0f : weight;
   }
 
   public int getUserMaxApps(String user) {

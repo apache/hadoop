@@ -29,11 +29,10 @@ return codes of Unix filesystem actions as a reference. Even so, there
 are places where HDFS diverges from the expected behaviour of a POSIX
 filesystem.
 
-The behaviour of other Hadoop filesystems are not as rigorously tested.
-The bundled S3N and S3A FileSystem clients make Amazon's S3 Object Store ("blobstore")
+The bundled S3A FileSystem clients make Amazon's S3 Object Store ("blobstore")
 accessible through the FileSystem API. The Swift FileSystem driver provides similar
-functionality for the OpenStack Swift blobstore. The Azure object storage
-FileSystem talks to Microsoft's Azure equivalent. All of these
+functionality for the OpenStack Swift blobstore. The Azure WASB and ADL object
+storage FileSystems talks to Microsoft's Azure storage. All of these
 bind to object stores, which do have different behaviors, especially regarding
 consistency guarantees, and atomicity of operations.
 

@@ -22,6 +22,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -62,9 +65,10 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
-import org.apache.hadoop.yarn.logaggregation.PerContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -74,9 +78,11 @@ import org.codehaus.jettison.json.JSONObject;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.filter.ClientFilter;
 
 @Public
 @Evolving
@@ -97,14 +103,27 @@ public class LogsCLI extends Configured implements Tool {
       = "show_container_log_info";
   private static final String OUT_OPTION = "out";
   private static final String SIZE_OPTION = "size";
+  private static final String CLIENT_MAX_RETRY_OPTION = "client_max_retries";
+  private static final String CLIENT_RETRY_INTERVAL_OPTION
+      = "client_retry_interval_ms";
   public static final String HELP_CMD = "help";
+
   private PrintStream outStream = System.out;
   private YarnClient yarnClient = null;
+  private Client webServiceClient = null;
+
+  private static final int DEFAULT_MAX_RETRIES = 30;
+  private static final long DEFAULT_RETRY_INTERVAL = 1000;
+
+  @Private
+  @VisibleForTesting
+  ClientConnectionRetry connectionRetry;
 
   @Override
   public int run(String[] args) throws Exception {
     try {
       yarnClient = createYarnClient();
+      webServiceClient = Client.create();
       return runCommand(args);
     } finally {
       if (yarnClient != null) {
@@ -139,6 +158,8 @@ public class LogsCLI extends Configured implements Tool {
     List<String> amContainersList = new ArrayList<String>();
     String localDir = null;
     long bytes = Long.MAX_VALUE;
+    int maxRetries = DEFAULT_MAX_RETRIES;
+    long retryInterval = DEFAULT_RETRY_INTERVAL;
     try {
       CommandLine commandLine = parser.parse(opts, args, false);
       appIdStr = commandLine.getOptionValue(APPLICATION_ID_OPTION);
@@ -169,6 +190,14 @@ public class LogsCLI extends Configured implements Tool {
       }
       if (commandLine.hasOption(SIZE_OPTION)) {
         bytes = Long.parseLong(commandLine.getOptionValue(SIZE_OPTION));
+      }
+      if (commandLine.hasOption(CLIENT_MAX_RETRY_OPTION)) {
+        maxRetries = Integer.parseInt(commandLine.getOptionValue(
+            CLIENT_MAX_RETRY_OPTION));
+      }
+      if (commandLine.hasOption(CLIENT_RETRY_INTERVAL_OPTION)) {
+        retryInterval = Long.parseLong(commandLine.getOptionValue(
+            CLIENT_RETRY_INTERVAL_OPTION));
       }
     } catch (ParseException e) {
       System.err.println("options parsing failed: " + e.getMessage());
@@ -230,6 +259,11 @@ public class LogsCLI extends Configured implements Tool {
         return -1;
       }
     }
+
+    // Set up Retry WebService Client
+    connectionRetry = new ClientConnectionRetry(maxRetries, retryInterval);
+    ClientJerseyRetryFilter retryFilter = new ClientJerseyRetryFilter();
+    webServiceClient.addFilter(retryFilter);
 
     LogCLIHelpers logCliHelper = new LogCLIHelpers();
     logCliHelper.setConf(getConf());
@@ -341,7 +375,6 @@ public class LogsCLI extends Configured implements Tool {
   protected List<JSONObject> getAMContainerInfoForRMWebService(
       Configuration conf, String appId) throws ClientHandlerException,
       UniformInterfaceException, JSONException {
-    Client webServiceClient = Client.create();
     String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(conf);
 
     WebResource webResource = webServiceClient.resource(webAppAddress);
@@ -363,7 +396,6 @@ public class LogsCLI extends Configured implements Tool {
   private List<JSONObject> getAMContainerInfoForAHSWebService(
       Configuration conf, String appId) throws ClientHandlerException,
       UniformInterfaceException, JSONException {
-    Client webServiceClient = Client.create();
     String webAppAddress =
         WebAppUtils.getHttpSchemePrefix(conf)
             + WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
@@ -411,12 +443,11 @@ public class LogsCLI extends Configured implements Tool {
     return false;
   }
 
-  private List<Pair<PerContainerLogFileInfo, String>> getContainerLogFiles(
+  private List<Pair<ContainerLogFileInfo, String>> getContainerLogFiles(
       Configuration conf, String containerIdStr, String nodeHttpAddress)
       throws IOException {
-    List<Pair<PerContainerLogFileInfo, String>> logFileInfos
+    List<Pair<ContainerLogFileInfo, String>> logFileInfos
         = new ArrayList<>();
-    Client webServiceClient = Client.create();
     try {
       WebResource webResource = webServiceClient
           .resource(WebAppUtils.getHttpSchemePrefix(conf) + nodeHttpAddress);
@@ -453,12 +484,12 @@ public class LogsCLI extends Configured implements Tool {
             if (ob instanceof JSONArray) {
               JSONArray obArray = (JSONArray)ob;
               for (int j = 0; j < obArray.length(); j++) {
-                logFileInfos.add(new Pair<PerContainerLogFileInfo, String>(
+                logFileInfos.add(new Pair<ContainerLogFileInfo, String>(
                     generatePerContainerLogFileInfoFromJSON(
                         obArray.getJSONObject(j)), aggregateType));
               }
             } else if (ob instanceof JSONObject) {
-              logFileInfos.add(new Pair<PerContainerLogFileInfo, String>(
+              logFileInfos.add(new Pair<ContainerLogFileInfo, String>(
                   generatePerContainerLogFileInfoFromJSON(
                       (JSONObject)ob), aggregateType));
             }
@@ -477,7 +508,7 @@ public class LogsCLI extends Configured implements Tool {
     return logFileInfos;
   }
 
-  private PerContainerLogFileInfo generatePerContainerLogFileInfoFromJSON(
+  private ContainerLogFileInfo generatePerContainerLogFileInfoFromJSON(
       JSONObject meta) throws JSONException {
     String fileName = meta.has("fileName") ?
         meta.getString("fileName") : "N/A";
@@ -485,10 +516,9 @@ public class LogsCLI extends Configured implements Tool {
         meta.getString("fileSize") : "N/A";
     String lastModificationTime = meta.has("lastModifiedTime") ?
         meta.getString("lastModifiedTime") : "N/A";
-    return new PerContainerLogFileInfo(fileName, fileSize,
+    return new ContainerLogFileInfo(fileName, fileSize,
         lastModificationTime);
   }
-
 
   @Private
   @VisibleForTesting
@@ -506,7 +536,7 @@ public class LogsCLI extends Configured implements Tool {
       return -1;
     }
     String nodeId = request.getNodeId();
-    PrintStream out = logCliHelper.createPrintStream(localDir, nodeId,
+    PrintStream out = LogToolUtils.createPrintStream(localDir, nodeId,
         containerIdStr);
     try {
       Set<String> matchedFiles = getMatchedContainerLogFiles(request,
@@ -520,7 +550,6 @@ public class LogsCLI extends Configured implements Tool {
       ContainerLogsRequest newOptions = new ContainerLogsRequest(request);
       newOptions.setLogTypes(matchedFiles);
 
-      Client webServiceClient = Client.create();
       boolean foundAnyLogs = false;
       byte[] buffer = new byte[65536];
       for (String logFile : newOptions.getLogTypes()) {
@@ -796,6 +825,10 @@ public class LogsCLI extends Configured implements Tool {
     }
   }
 
+  /**
+   * Create Command Options.
+   * @return the command options
+   */
   private Options createCommandOpts() {
     Options opts = new Options();
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
@@ -858,6 +891,13 @@ public class LogsCLI extends Configured implements Tool {
     opts.addOption(SIZE_OPTION, true, "Prints the log file's first 'n' bytes "
         + "or the last 'n' bytes. Use negative values as bytes to read from "
         + "the end and positive values as bytes to read from the beginning.");
+    opts.addOption(CLIENT_MAX_RETRY_OPTION, true, "Set max retry number for a"
+        + " retry client to get the container logs for the running "
+        + "applications. Use a negative value to make retry forever. "
+        + "The default value is 30.");
+    opts.addOption(CLIENT_RETRY_INTERVAL_OPTION, true,
+        "Work with --client_max_retries to create a retry client. "
+        + "The default value is 1000.");
     opts.getOption(APPLICATION_ID_OPTION).setArgName("Application ID");
     opts.getOption(CONTAINER_ID_OPTION).setArgName("Container ID");
     opts.getOption(NODE_ADDRESS_OPTION).setArgName("Node Address");
@@ -865,9 +905,17 @@ public class LogsCLI extends Configured implements Tool {
     opts.getOption(AM_CONTAINER_OPTION).setArgName("AM Containers");
     opts.getOption(OUT_OPTION).setArgName("Local Directory");
     opts.getOption(SIZE_OPTION).setArgName("size");
+    opts.getOption(CLIENT_MAX_RETRY_OPTION).setArgName("Max Retries");
+    opts.getOption(CLIENT_RETRY_INTERVAL_OPTION)
+        .setArgName("Retry Interval");
     return opts;
   }
 
+  /**
+   * Create Print options for helper message.
+   * @param commandOpts the options
+   * @return the print options
+   */
   private Options createPrintOpts(Options commandOpts) {
     Options printOpts = new Options();
     printOpts.addOption(commandOpts.getOption(HELP_CMD));
@@ -883,6 +931,8 @@ public class LogsCLI extends Configured implements Tool {
     printOpts.addOption(commandOpts.getOption(SIZE_OPTION));
     printOpts.addOption(commandOpts.getOption(
         PER_CONTAINER_LOG_FILES_REGEX_OPTION));
+    printOpts.addOption(commandOpts.getOption(CLIENT_MAX_RETRY_OPTION));
+    printOpts.addOption(commandOpts.getOption(CLIENT_RETRY_INTERVAL_OPTION));
     return printOpts;
   }
 
@@ -1235,9 +1285,9 @@ public class LogsCLI extends Configured implements Tool {
     outStream.printf(LogCLIHelpers.PER_LOG_FILE_INFO_PATTERN,
         "LogFile", "LogLength", "LastModificationTime", "LogAggregationType");
     outStream.println(StringUtils.repeat("=", containerString.length() * 2));
-    List<Pair<PerContainerLogFileInfo, String>> infos = getContainerLogFiles(
+    List<Pair<ContainerLogFileInfo, String>> infos = getContainerLogFiles(
         getConf(), containerId, nodeHttpAddress);
-    for (Pair<PerContainerLogFileInfo, String> info : infos) {
+    for (Pair<ContainerLogFileInfo, String> info : infos) {
       outStream.printf(LogCLIHelpers.PER_LOG_FILE_INFO_PATTERN,
           info.getKey().getFileName(), info.getKey().getFileSize(),
           info.getKey().getLastModifiedTime(), info.getValue());
@@ -1249,11 +1299,11 @@ public class LogsCLI extends Configured implements Tool {
       boolean useRegex) throws IOException {
     // fetch all the log files for the container
     // filter the log files based on the given -log_files pattern
-    List<Pair<PerContainerLogFileInfo, String>> allLogFileInfos=
+    List<Pair<ContainerLogFileInfo, String>> allLogFileInfos=
         getContainerLogFiles(getConf(), request.getContainerId(),
             request.getNodeHttpAddress());
     List<String> fileNames = new ArrayList<String>();
-    for (Pair<PerContainerLogFileInfo, String> fileInfo : allLogFileInfos) {
+    for (Pair<ContainerLogFileInfo, String> fileInfo : allLogFileInfos) {
       fileNames.add(fileInfo.getKey().getFileName());
     }
     return getMatchedLogFiles(request, fileNames,
@@ -1284,5 +1334,121 @@ public class LogsCLI extends Configured implements Tool {
         .getJSONObject("node");
     return nodeInfo.has("nodeHTTPAddress") ?
         nodeInfo.getString("nodeHTTPAddress") : null;
+  }
+
+  // Class to handle retry
+  static class ClientConnectionRetry {
+
+    // maxRetries < 0 means keep trying
+    @Private
+    @VisibleForTesting
+    public int maxRetries;
+
+    @Private
+    @VisibleForTesting
+    public long retryInterval;
+
+    // Indicates if retries happened last time. Only tests should read it.
+    // In unit tests, retryOn() calls should _not_ be concurrent.
+    private boolean retried = false;
+
+    @Private
+    @VisibleForTesting
+    boolean getRetired() {
+      return retried;
+    }
+
+    // Constructor with default retry settings
+    public ClientConnectionRetry(int inputMaxRetries,
+        long inputRetryInterval) {
+      this.maxRetries = inputMaxRetries;
+      this.retryInterval = inputRetryInterval;
+    }
+
+    public Object retryOn(ClientRetryOp op)
+        throws RuntimeException, IOException {
+      int leftRetries = maxRetries;
+      retried = false;
+
+      // keep trying
+      while (true) {
+        try {
+          // try perform the op, if fail, keep retrying
+          return op.run();
+        } catch (IOException | RuntimeException e) {
+          // break if there's no retries left
+          if (leftRetries == 0) {
+            break;
+          }
+          if (op.shouldRetryOn(e)) {
+            logException(e, leftRetries);
+          } else {
+            throw e;
+          }
+        }
+        if (leftRetries > 0) {
+          leftRetries--;
+        }
+        retried = true;
+        try {
+          // sleep for the given time interval
+          Thread.sleep(retryInterval);
+        } catch (InterruptedException ie) {
+          System.out.println("Client retry sleep interrupted! ");
+        }
+      }
+      throw new RuntimeException("Connection retries limit exceeded.");
+    };
+
+    private void logException(Exception e, int leftRetries) {
+      if (leftRetries > 0) {
+        System.out.println("Exception caught by ClientConnectionRetry,"
+              + " will try " + leftRetries + " more time(s).\nMessage: "
+              + e.getMessage());
+      } else {
+        // note that maxRetries may be -1 at the very beginning
+        System.out.println("ConnectionException caught by ClientConnectionRetry,"
+            + " will keep retrying.\nMessage: "
+            + e.getMessage());
+      }
+    }
+  }
+
+  private class ClientJerseyRetryFilter extends ClientFilter {
+    @Override
+    public ClientResponse handle(final ClientRequest cr)
+        throws ClientHandlerException {
+      // Set up the retry operation
+      ClientRetryOp jerseyRetryOp = new ClientRetryOp() {
+        @Override
+        public Object run() {
+          // Try pass the request, if fail, keep retrying
+          return getNext().handle(cr);
+        }
+
+        @Override
+        public boolean shouldRetryOn(Exception e) {
+          // Only retry on connection exceptions
+          return (e instanceof ClientHandlerException)
+              && (e.getCause() instanceof ConnectException ||
+                  e.getCause() instanceof SocketTimeoutException ||
+                  e.getCause() instanceof SocketException);
+        }
+      };
+      try {
+        return (ClientResponse) connectionRetry.retryOn(jerseyRetryOp);
+      } catch (IOException e) {
+        throw new ClientHandlerException("Jersey retry failed!\nMessage: "
+              + e.getMessage());
+      }
+    }
+  }
+
+  // Abstract class for an operation that should be retried by client
+  private static abstract class ClientRetryOp {
+    // The operation that should be retried
+    public abstract Object run() throws IOException;
+    // The method to indicate if we should retry given the incoming exception
+    public abstract boolean shouldRetryOn(Exception e);
   }
 }

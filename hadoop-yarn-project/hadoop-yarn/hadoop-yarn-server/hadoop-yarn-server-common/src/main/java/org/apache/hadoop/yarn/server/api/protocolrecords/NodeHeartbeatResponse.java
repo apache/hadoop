@@ -113,4 +113,9 @@ public abstract class NodeHeartbeatResponse {
 
   public abstract void setContainerQueuingLimit(
       ContainerQueuingLimit containerQueuingLimit);
+
+  public abstract List<Container> getContainersToDecrease();
+
+  public abstract void addAllContainersToDecrease(
+      Collection<Container> containersToDecrease);
 }

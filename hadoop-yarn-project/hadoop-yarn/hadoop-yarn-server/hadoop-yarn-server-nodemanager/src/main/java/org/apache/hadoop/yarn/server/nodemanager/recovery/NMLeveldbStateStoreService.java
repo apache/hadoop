@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestPBImpl;
@@ -60,6 +62,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDelet
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
@@ -116,6 +119,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
   private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
   private static final String CONTAINER_QUEUED_KEY_SUFFIX = "/queued";
+  private static final String CONTAINER_PAUSED_KEY_SUFFIX = "/paused";
   private static final String CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX =
       "/resourceChanged";
   private static final String CONTAINER_KILLED_KEY_SUFFIX = "/killed";
@@ -143,6 +147,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
 
   private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
+
+  private static final String CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX =
+      "/assignedResources_";
 
   private static final byte[] EMPTY_VALUE = new byte[0];
 
@@ -266,9 +273,16 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         if (rcs.status == RecoveredContainerStatus.REQUESTED) {
           rcs.status = RecoveredContainerStatus.QUEUED;
         }
+      } else if (suffix.equals(CONTAINER_PAUSED_KEY_SUFFIX)) {
+        if ((rcs.status == RecoveredContainerStatus.LAUNCHED)
+            ||(rcs.status == RecoveredContainerStatus.QUEUED)
+            ||(rcs.status == RecoveredContainerStatus.REQUESTED)) {
+          rcs.status = RecoveredContainerStatus.PAUSED;
+        }
       } else if (suffix.equals(CONTAINER_LAUNCHED_KEY_SUFFIX)) {
         if ((rcs.status == RecoveredContainerStatus.REQUESTED)
-            || (rcs.status == RecoveredContainerStatus.QUEUED)) {
+            || (rcs.status == RecoveredContainerStatus.QUEUED)
+            ||(rcs.status == RecoveredContainerStatus.PAUSED)) {
           rcs.status = RecoveredContainerStatus.LAUNCHED;
         }
       } else if (suffix.equals(CONTAINER_KILLED_KEY_SUFFIX)) {
@@ -286,6 +300,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         rcs.setWorkDir(asString(entry.getValue()));
       } else if (suffix.equals(CONTAINER_LOG_DIR_KEY_SUFFIX)) {
         rcs.setLogDir(asString(entry.getValue()));
+      } else if (suffix.startsWith(CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX)) {
+        String resourceType = suffix.substring(
+            CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX.length());
+        ResourceMappings.AssignedResources assignedResources =
+            ResourceMappings.AssignedResources.fromBytes(entry.getValue());
+        rcs.getResourceMappings().addAssignedResources(resourceType,
+            assignedResources);
       } else {
         LOG.warn("the container " + containerId
             + " will be killed because of the unknown key " + key
@@ -348,6 +369,37 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         + CONTAINER_QUEUED_KEY_SUFFIX;
     try {
       db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeContainerPaused(ContainerId containerId) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("storeContainerPaused: containerId=" + containerId);
+    }
+
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_PAUSED_KEY_SUFFIX;
+    try {
+      db.put(bytes(key), EMPTY_VALUE);
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeContainerPaused(ContainerId containerId)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("removeContainerPaused: containerId=" + containerId);
+    }
+
+    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_PAUSED_KEY_SUFFIX;
+    try {
+      db.delete(bytes(key));
     } catch (DBException e) {
       throw new IOException(e);
     }
@@ -497,6 +549,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.delete(bytes(keyPrefix + CONTAINER_DIAGS_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_LAUNCHED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_QUEUED_KEY_SUFFIX));
+        batch.delete(bytes(keyPrefix + CONTAINER_PAUSED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_KILLED_KEY_SUFFIX));
         batch.delete(bytes(keyPrefix + CONTAINER_EXIT_CODE_KEY_SUFFIX));
         List<String> unknownKeysForContainer = containerUnknownKeySuffixes
@@ -1086,6 +1139,35 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     String key = getLogDeleterKey(appId);
     try {
       db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void storeAssignedResources(ContainerId containerId,
+      String resourceType, List<Serializable> assignedResources)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("storeAssignedResources: containerId=" + containerId
+          + ", assignedResources=" + StringUtils.join(",", assignedResources));
+    }
+
+    String keyResChng = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_ASSIGNED_RESOURCES_KEY_SUFFIX + resourceType;
+    try {
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        ResourceMappings.AssignedResources res =
+            new ResourceMappings.AssignedResources();
+        res.updateAssignedResources(assignedResources);
+
+        // New value will overwrite old values for the same key
+        batch.put(bytes(keyResChng), res.toBytes());
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
     } catch (DBException e) {
       throw new IOException(e);
     }

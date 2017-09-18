@@ -137,9 +137,6 @@ public class TestNameNodeMetrics {
     // Enable stale DataNodes checking
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
-    // Enable erasure coding
-    CONF.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        EC_POLICY.getName());
     GenericTestUtils.setLogLevel(LogFactory.getLog(MetricsAsserts.class),
         Level.DEBUG);
   }
@@ -166,6 +163,7 @@ public class TestNameNodeMetrics {
     namesystem = cluster.getNamesystem();
     bm = namesystem.getBlockManager();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(EC_POLICY.getName());
     ecDir = getTestPath("/ec");
     fs.mkdirs(ecDir);
     fs.setErasureCodingPolicy(ecDir, EC_POLICY.getName());
@@ -449,7 +447,7 @@ public class TestNameNodeMetrics {
     assertEquals("Pending deletion blocks metrics not matching!",
         namesystem.getPendingDeletionBlocks(),
         namesystem.getPendingDeletionReplicatedBlocks() +
-            namesystem.getPendingDeletionECBlockGroups());
+            namesystem.getPendingDeletionECBlocks());
   }
 
   /** Corrupt a block and ensure metrics reflects it */
@@ -891,7 +889,7 @@ public class TestNameNodeMetrics {
   public void testSyncAndBlockReportMetric() throws Exception {
     MetricsRecordBuilder rb = getMetrics(NN_METRICS);
     // We have one sync when the cluster starts up, just opening the journal
-    assertCounter("SyncsNumOps", 3L, rb);
+    assertCounter("SyncsNumOps", 4L, rb);
     // Each datanode reports in when the cluster comes up
     assertCounter("StorageBlockReportNumOps",
                   (long) DATANODE_COUNT * cluster.getStoragesPerDatanode(), rb);
