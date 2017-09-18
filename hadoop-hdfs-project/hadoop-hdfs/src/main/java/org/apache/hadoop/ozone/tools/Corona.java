@@ -91,6 +91,7 @@ public final class Corona extends Configured implements Tool {
   private static final String NUM_OF_VOLUMES = "numOfVolumes";
   private static final String NUM_OF_BUCKETS = "numOfBuckets";
   private static final String NUM_OF_KEYS = "numOfKeys";
+  private static final String KEY_SIZE = "keySize";
 
   private static final String MODE_DEFAULT = "offline";
   private static final String SOURCE_DEFAULT =
@@ -100,6 +101,8 @@ public final class Corona extends Configured implements Tool {
   private static final String NUM_OF_VOLUMES_DEFAULT = "10";
   private static final String NUM_OF_BUCKETS_DEFAULT = "1000";
   private static final String NUM_OF_KEYS_DEFAULT = "500000";
+
+  private static final int KEY_SIZE_DEFAULT = 10240;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(Corona.class);
@@ -114,6 +117,8 @@ public final class Corona extends Configured implements Tool {
   private String numOfVolumes;
   private String numOfBuckets;
   private String numOfKeys;
+
+  private int keySize;
 
   private boolean validateWrites;
 
@@ -157,8 +162,8 @@ public final class Corona extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     GenericOptionsParser parser = new GenericOptionsParser(getConf(),
-        getOzonePetaGenOptions(), args);
-    parseOzonePetaGenOptions(parser.getCommandLine());
+        getOptions(), args);
+    parseOptions(parser.getCommandLine());
     if(printUsage) {
       usage();
       return 0;
@@ -174,6 +179,7 @@ public final class Corona extends Configured implements Tool {
       LOG.info("Number of Volumes: {}.", numOfVolumes);
       LOG.info("Number of Buckets per Volume: {}.", numOfBuckets);
       LOG.info("Number of Keys per Bucket: {}.", numOfKeys);
+      LOG.info("Key size: {} bytes", keySize);
       for (int i = 0; i < Integer.parseInt(numOfVolumes); i++) {
         String volume = "vol-" + i + "-" +
             RandomStringUtils.randomNumeric(5);
@@ -205,7 +211,7 @@ public final class Corona extends Configured implements Tool {
     return 0;
   }
 
-  private Options getOzonePetaGenOptions() {
+  private Options getOptions() {
     Options options = new Options();
 
     OptionBuilder.withDescription("prints usage.");
@@ -251,6 +257,12 @@ public final class Corona extends Configured implements Tool {
         "created per Bucket in offline mode");
     Option optNumOfKeys = OptionBuilder.create(NUM_OF_KEYS);
 
+    OptionBuilder.withArgName("value");
+    OptionBuilder.hasArg();
+    OptionBuilder.withDescription("specifies the size of Key in bytes to be " +
+        "created in offline mode");
+    Option optKeySize = OptionBuilder.create(KEY_SIZE);
+
     options.addOption(optHelp);
     options.addOption(optMode);
     options.addOption(optSource);
@@ -259,10 +271,11 @@ public final class Corona extends Configured implements Tool {
     options.addOption(optNumOfVolumes);
     options.addOption(optNumOfBuckets);
     options.addOption(optNumOfKeys);
+    options.addOption(optKeySize);
     return options;
   }
 
-  private void parseOzonePetaGenOptions(CommandLine cmdLine) {
+  private void parseOptions(CommandLine cmdLine) {
     printUsage = cmdLine.hasOption(HELP);
 
     mode = cmdLine.hasOption(MODE) ?
@@ -284,6 +297,10 @@ public final class Corona extends Configured implements Tool {
 
     numOfKeys = cmdLine.hasOption(NUM_OF_KEYS) ?
         cmdLine.getOptionValue(NUM_OF_KEYS) : NUM_OF_KEYS_DEFAULT;
+
+    keySize = cmdLine.hasOption(KEY_SIZE) ?
+        Integer.parseInt(cmdLine.getOptionValue(KEY_SIZE)) : KEY_SIZE_DEFAULT;
+
   }
 
   private void usage() {
@@ -306,6 +323,8 @@ public final class Corona extends Configured implements Tool {
     System.out.println("-numOfKeys <value>              "
         + "specifies number of Keys to be created per Bucket " +
         "in offline mode");
+    System.out.println("-keySize <value>                "
+        + "specifies the size of Key in bytes to be created in offline mode");
     System.out.println("-help                           "
         + "prints usage.");
     System.out.println();
@@ -343,8 +362,7 @@ public final class Corona extends Configured implements Tool {
             String key = "key-" + k + "-" +
                 RandomStringUtils.randomNumeric(5);
             byte[] value = DFSUtil.string2Bytes(
-                RandomStringUtils.randomAscii(10240));
-
+                RandomStringUtils.randomAscii(keySize));
             try {
               LOG.trace("Adding key: {} in bucket: {} of volume: {}",
                   key, bucket, volume);
