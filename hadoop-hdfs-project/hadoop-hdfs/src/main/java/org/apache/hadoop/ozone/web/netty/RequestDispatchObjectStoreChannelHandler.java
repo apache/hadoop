@@ -88,7 +88,7 @@ public final class RequestDispatchObjectStoreChannelHandler
     ctx.pipeline().replace(this,
         RequestContentObjectStoreChannelHandler.class.getSimpleName(),
         new RequestContentObjectStoreChannelHandler(nettyReq, nettyResp,
-            reqOut, respIn));
+            reqOut, respIn, jerseyContainer));
 
     LOG.trace("end RequestDispatchObjectStoreChannelHandler channelRead0, " +
         "ctx = {}, nettyReq = {}", ctx, nettyReq);

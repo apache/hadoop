@@ -46,6 +46,7 @@ public final class RequestContentObjectStoreChannelHandler
   private final Future<HttpResponse> nettyResp;
   private final OutputStream reqOut;
   private final InputStream respIn;
+  private ObjectStoreJerseyContainer jerseyContainer;
 
   /**
    * Creates a new RequestContentObjectStoreChannelHandler.
@@ -54,13 +55,16 @@ public final class RequestContentObjectStoreChannelHandler
    * @param nettyResp asynchronous HTTP response
    * @param reqOut output stream for writing request body
    * @param respIn input stream for reading response body
+   * @param jerseyContainer jerseyContainer to handle the request
    */
   public RequestContentObjectStoreChannelHandler(HttpRequest nettyReq,
-      Future<HttpResponse> nettyResp, OutputStream reqOut, InputStream respIn) {
+      Future<HttpResponse> nettyResp, OutputStream reqOut, InputStream respIn,
+      ObjectStoreJerseyContainer jerseyContainer) {
     this.nettyReq = nettyReq;
     this.nettyResp = nettyResp;
     this.reqOut = reqOut;
     this.respIn = respIn;
+    this.jerseyContainer = jerseyContainer;
   }
 
   @Override
@@ -83,6 +87,21 @@ public final class RequestContentObjectStoreChannelHandler
       respFuture.addListener(new CloseableCleanupListener(this.respIn));
       if (!HttpHeaderUtil.isKeepAlive(this.nettyReq)) {
         respFuture.addListener(ChannelFutureListener.CLOSE);
+      } else {
+        respFuture.addListener(new ChannelFutureListener() {
+          @Override
+          public void operationComplete(ChannelFuture future) throws Exception {
+            // Notify client this is the last content for current request.
+            ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+            // Reset the pipeline handler for next request to reuses the
+            // same connection.
+            RequestDispatchObjectStoreChannelHandler h =
+                new RequestDispatchObjectStoreChannelHandler(jerseyContainer);
+            ctx.pipeline().replace(ctx.pipeline().last(),
+                RequestDispatchObjectStoreChannelHandler.class.getSimpleName(),
+                h);
+          }
+        });
       }
     }
     LOG.trace(
