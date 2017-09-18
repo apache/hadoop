@@ -718,7 +718,7 @@ public class TestErasureCodingPolicies {
     policyArray  = new ErasureCodingPolicy[]{policy0};
     responses = fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);
-    assertFalse(responses[0].isSucceed());
+    assertTrue(responses[0].isSucceed());
 
     // Test add policy successfully
     newPolicy =
