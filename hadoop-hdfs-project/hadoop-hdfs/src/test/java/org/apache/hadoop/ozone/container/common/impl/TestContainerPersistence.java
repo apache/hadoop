@@ -173,7 +173,7 @@ public class TestContainerPersistence {
     ContainerStatus status = containerManager
         .getContainerMap().get(containerName);
 
-    Assert.assertTrue(status.isActive());
+    Assert.assertNotNull(status.getContainer());
     Assert.assertNotNull(status.getContainer().getContainerPath());
     Assert.assertNotNull(status.getContainer().getDBPath());
 

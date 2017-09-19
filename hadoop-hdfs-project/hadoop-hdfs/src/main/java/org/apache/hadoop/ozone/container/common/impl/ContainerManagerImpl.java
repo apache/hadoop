@@ -227,7 +227,7 @@ public class ContainerManagerImpl implements ContainerManager {
         // when loading the info we get a null, this often means last time
         // SCM was ending up at some middle phase causing that the metadata
         // was not populated. Such containers are marked as inactive.
-        containerMap.put(keyName, new ContainerStatus(null, false));
+        containerMap.put(keyName, new ContainerStatus(null));
         return;
       }
       containerData = ContainerData.getFromProtBuf(containerDataProto);
@@ -241,12 +241,11 @@ public class ContainerManagerImpl implements ContainerManager {
         // Hopefully SCM will ask us to delete this container and rebuild it.
         LOG.error("Invalid SHA found for container data. Name :{}"
             + "cowardly refusing to read invalid data", containerName);
-        containerMap.put(keyName, new ContainerStatus(null, false));
+        containerMap.put(keyName, new ContainerStatus(null));
         return;
       }
 
-      ContainerStatus containerStatus = new ContainerStatus(
-          containerData, true);
+      ContainerStatus containerStatus = new ContainerStatus(containerData);
       // Initialize pending deletion blocks count in in-memory
       // container status.
       MetadataStore metadata = KeyUtils.getDB(containerData, conf);
@@ -263,7 +262,7 @@ public class ContainerManagerImpl implements ContainerManager {
       // TODO : Add this file to a recovery Queue.
 
       // Remember that this container is busted and we cannot use it.
-      containerMap.put(keyName, new ContainerStatus(null, false));
+      containerMap.put(keyName, new ContainerStatus(null));
       throw new StorageContainerException("Unable to read container info",
           UNABLE_TO_READ_METADATA_DB);
     } finally {
@@ -440,6 +439,11 @@ public class ContainerManagerImpl implements ContainerManager {
         throw new StorageContainerException("No such container. Name : " +
             containerName, CONTAINER_NOT_FOUND);
       }
+      if (status.getContainer() == null) {
+        LOG.debug("Invalid container data. Name: {}", containerName);
+        throw new StorageContainerException("Invalid container data. Name : " +
+            containerName, CONTAINER_NOT_FOUND);
+      }
       ContainerUtils.removeContainer(status.getContainer(), conf, forceDelete);
       containerMap.remove(containerName);
     } catch (StorageContainerException e) {
@@ -514,7 +518,12 @@ public class ContainerManagerImpl implements ContainerManager {
       throw new StorageContainerException("Unable to find the container. Name: "
           + containerName, CONTAINER_NOT_FOUND);
     }
-    return containerMap.get(containerName).getContainer();
+    ContainerData cData = containerMap.get(containerName).getContainer();
+    if (cData == null) {
+      throw new StorageContainerException("Invalid container data. Name: "
+          + containerName, CONTAINER_INTERNAL_ERROR);
+    }
+    return cData;
   }
 
   /**
@@ -547,7 +556,7 @@ public class ContainerManagerImpl implements ContainerManager {
     // I/O failure, this allows us to take quick action in case of container
     // issues.
 
-    ContainerStatus status = new ContainerStatus(containerData, true);
+    ContainerStatus status = new ContainerStatus(containerData);
     containerMap.put(containerName, status);
   }
 
@@ -580,6 +589,12 @@ public class ContainerManagerImpl implements ContainerManager {
     try {
       Path location = locationManager.getContainerPath();
       ContainerData orgData = containerMap.get(containerName).getContainer();
+      if (orgData == null) {
+        // updating a invalid container
+        throw new StorageContainerException("Update a container with invalid" +
+            "container meta data", CONTAINER_INTERNAL_ERROR);
+      }
+
       if (!forceUpdate && !orgData.isOpen()) {
         throw new StorageContainerException(
             "Update a closed container is not allowed. Name: " + containerName,
@@ -611,7 +626,7 @@ public class ContainerManagerImpl implements ContainerManager {
       }
 
       // Update the in-memory map
-      ContainerStatus newStatus = new ContainerStatus(data, true);
+      ContainerStatus newStatus = new ContainerStatus(data);
       containerMap.replace(containerName, newStatus);
     } catch (IOException e) {
       // Restore the container file from backup
