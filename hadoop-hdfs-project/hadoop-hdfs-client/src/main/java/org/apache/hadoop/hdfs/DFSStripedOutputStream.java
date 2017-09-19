@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -85,11 +86,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
     private final List<BlockingQueue<T>> queues;
 
     MultipleBlockingQueue(int numQueue, int queueSize) {
-      List<BlockingQueue<T>> list = new ArrayList<>(numQueue);
+      queues = new ArrayList<>(numQueue);
       for (int i = 0; i < numQueue; i++) {
-        list.add(new LinkedBlockingQueue<T>(queueSize));
+        queues.add(new LinkedBlockingQueue<T>(queueSize));
       }
-      queues = Collections.synchronizedList(list);
     }
 
     void offer(int i, T object) {
@@ -156,8 +156,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       followingBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
       endBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
       newBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
-      updateStreamerMap = Collections.synchronizedMap(
-          new HashMap<StripedDataStreamer, Boolean>(numAllBlocks));
+      updateStreamerMap = new ConcurrentHashMap<>(numAllBlocks);
       streamerUpdateResult = new MultipleBlockingQueue<>(numAllBlocks, 1);
     }
 
