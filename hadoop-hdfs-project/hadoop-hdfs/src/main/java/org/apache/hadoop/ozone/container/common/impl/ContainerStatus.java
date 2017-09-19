@@ -30,7 +30,6 @@ import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
  */
 public class ContainerStatus {
   private final ContainerData containerData;
-  private final boolean active;
 
   /**
    * Number of pending deletion blocks in container.
@@ -41,12 +40,10 @@ public class ContainerStatus {
    * Creates a Container Status class.
    *
    * @param containerData - ContainerData.
-   * @param active - Active or not active.
    */
-  ContainerStatus(ContainerData containerData, boolean active) {
+  ContainerStatus(ContainerData containerData) {
     this.numPendingDeletionBlocks = 0;
     this.containerData = containerData;
-    this.active = active;
   }
 
   /**
@@ -56,19 +53,7 @@ public class ContainerStatus {
    * @return ContainerData.
    */
   public ContainerData getContainer() {
-    if (active) {
-      return containerData;
-    }
-    return null;
-  }
-
-  /**
-   * Indicates if a container is Active.
-   *
-   * @return true if it is active.
-   */
-  public boolean isActive() {
-    return active;
+    return containerData;
   }
 
   /**
