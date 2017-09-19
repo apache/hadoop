@@ -72,7 +72,11 @@ public class GPUResourceCalculator extends ResourceCalculator {
   @Override
   public Resource divideAndCeil(Resource numerator, int denominator) {
     return Resources.createResource(
-        divideAndCeil(numerator.getGPUs(), denominator));
+    		numerator.getMemory(), 
+    		numerator.getVirtualCores(),
+            divideAndCeil(numerator.getGPUs(), denominator),
+            numerator.getGPUAttribute()
+    		);
   }
 
   @Override
@@ -83,7 +87,12 @@ public class GPUResourceCalculator extends ResourceCalculator {
             Math.max(r.getGPUs(), minimumResource.getGPUs()),
             stepFactor.getGPUs()),
             maximumResource.getGPUs());
-    return Resources.createResource(normalizedGPU);
+    return Resources.createResource(
+    		r.getMemory(), 
+            r.getVirtualCores(),
+    		normalizedGPU,
+    		r.getGPUAttribute()
+    		);
   }
 
   @Override
@@ -95,21 +104,31 @@ public class GPUResourceCalculator extends ResourceCalculator {
   @Override
   public Resource roundUp(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundUp(r.getGPUs(), stepFactor.getGPUs())
+    	r.getMemory(), 
+        r.getVirtualCores(),
+        roundUp(r.getGPUs(), stepFactor.getGPUs()),
+        r.getGPUAttribute()
         );
   }
 
   @Override
   public Resource roundDown(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundDown(r.getGPUs(), stepFactor.getGPUs()));
+    	 r.getMemory(), 
+         r.getVirtualCores(),
+         roundDown(r.getGPUs(), stepFactor.getGPUs()),
+         r.getGPUAttribute()
+        );
   }
 
   @Override
   public Resource multiplyAndNormalizeUp(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
-        roundUp((int)(r.getGPUs() * by + 0.5), stepFactor.getGPUs())
+    	r.getMemory(), 
+        r.getVirtualCores(),
+        roundUp((int)(r.getGPUs() * by + 0.5), stepFactor.getGPUs()),
+        r.getGPUAttribute()
         );
   }
 
@@ -117,10 +136,13 @@ public class GPUResourceCalculator extends ResourceCalculator {
   public Resource multiplyAndNormalizeDown(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
+    	r.getMemory(), 
+    	r.getVirtualCores(),
         roundDown(
             (int)(r.getGPUs() * by),
             stepFactor.getGPUs()
-            )
+            ),
+        r.getGPUAttribute()
         );
   }
 
