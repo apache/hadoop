@@ -992,6 +992,13 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
 
+      // this audit log is disabled by default,
+      // to turn it on please enable this audit log
+      // on log4j.properties by uncommenting the setting
+      if (AUDITLOG.isDebugEnabled()) {
+        AUDITLOG.debug("shuffle for " + jobQ.get(0) + " mappers: " + mapIds +
+                         " reducer " + reduceQ.get(0));
+      }
       int reduceId;
       String jobId;
       try {
@@ -1176,17 +1183,6 @@ public class ShuffleHandler extends AuxiliaryService {
 
       // Now set the response headers.
       setResponseHeaders(response, keepAliveParam, contentLength);
-
-      // this audit log is disabled by default,
-      // to turn it on please enable this audit log
-      // on log4j.properties by uncommenting the setting
-      if (AUDITLOG.isDebugEnabled()) {
-        StringBuilder sb = new StringBuilder("shuffle for ").append(jobId);
-        sb.append(" mappers: ").append(mapIds);
-        sb.append(" reducer ").append(reduce);
-        sb.append(" length ").append(contentLength);
-        AUDITLOG.debug(sb.toString());
-      }
     }
 
     protected void setResponseHeaders(HttpResponse response,
