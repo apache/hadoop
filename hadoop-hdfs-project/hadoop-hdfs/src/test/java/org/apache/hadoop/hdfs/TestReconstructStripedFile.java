@@ -456,8 +456,8 @@ public class TestReconstructStripedFile {
     ErasureCodingPolicy policy = StripedFileTestUtil.getDefaultECPolicy();
     fs.getClient().setErasureCodingPolicy("/", policy.getName());
 
-    final int fileLen = cellSize * ecPolicy.getNumDataUnits() * 2;
-    for (int i = 0; i < 100; i++) {
+    final int fileLen = cellSize * ecPolicy.getNumDataUnits();
+    for (int i = 0; i < 50; i++) {
       writeFile(fs, "/ec-file-" + i, fileLen);
     }
 
