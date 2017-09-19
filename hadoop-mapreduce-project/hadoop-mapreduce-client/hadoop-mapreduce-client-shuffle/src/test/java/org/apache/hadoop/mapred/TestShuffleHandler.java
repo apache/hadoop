@@ -118,7 +118,7 @@ public class TestShuffleHandler {
         }
         @Override
         protected void populateHeaders(List<String> mapIds, String jobId,
-            String user, int reduce, HttpRequest request,
+            String outputBase, String user, int reduce, HttpRequest request,
             HttpResponse response, boolean keepAliveParam,
             Map<String, MapOutputInfo> infoMap) throws IOException {
           // Do nothing.
@@ -237,7 +237,7 @@ public class TestShuffleHandler {
           }
           @Override
           protected void populateHeaders(List<String> mapIds, String jobId,
-              String user, int reduce, HttpRequest request,
+              String outputBase, String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
               Map<String, MapOutputInfo> infoMap) throws IOException {
             // Only set response headers and skip everything else
@@ -349,7 +349,7 @@ public class TestShuffleHandler {
 
           @Override
           protected void populateHeaders(List<String> mapIds, String jobId,
-              String user, int reduce, HttpRequest request,
+              String outputBase, String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
               Map<String, MapOutputInfo> infoMap) throws IOException {
             // Send some dummy data (populate content length details)
@@ -565,7 +565,7 @@ public class TestShuffleHandler {
           }
           @Override
           protected void populateHeaders(List<String> mapIds, String jobId,
-              String user, int reduce, HttpRequest request,
+              String outputBase, String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
               Map<String, MapOutputInfo> infoMap) throws IOException {
             // Do nothing.
@@ -988,7 +988,7 @@ public class TestShuffleHandler {
         // replace the shuffle handler with one stubbed for testing
         return new Shuffle(conf) {
           @Override
-          protected void populateHeaders(List<String> mapIds,
+          protected void populateHeaders(List<String> mapIds, String jobId,
               String outputBaseStr, String user, int reduce,
               HttpRequest request, HttpResponse response,
               boolean keepAliveParam, Map<String, MapOutputInfo> infoMap)
