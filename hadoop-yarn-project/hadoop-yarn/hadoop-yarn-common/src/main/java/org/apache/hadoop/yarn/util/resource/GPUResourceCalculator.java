@@ -34,7 +34,14 @@ public class GPUResourceCalculator extends ResourceCalculator {
   @Override
   public int computeAvailableContainers(Resource available, Resource required) {
     // Only consider GPU
-    return available.getGPUs() / required.getGPUs();
+	if(!isInvalidDivisor(required))
+	{
+		return available.getGPUs() / required.getGPUs();
+	}
+	else 
+	{
+		return available.getGPUs();
+	}
   }
 
   @Override
@@ -52,7 +59,14 @@ public class GPUResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    return (float)a.getGPUs() / b.getGPUs();
+	  if(!isInvalidDivisor(b))
+	  {
+		return (float)a.getGPUs() / b.getGPUs();
+	  }
+	  else
+	  {
+		  return (float)a.getGPUs();
+	  }
   }
 
   @Override

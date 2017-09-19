@@ -1434,6 +1434,9 @@ public class LeafQueue extends AbstractCSQueue {
     Resource available = node.getAvailableResource();
     Resource totalResource = node.getTotalResource();
 
+    if (!Resources.fitsIn(capability, available)) {
+    	 return Resources.none();
+    }
     if (!Resources.lessThanOrEqual(resourceCalculator, clusterResource,
         capability, totalResource)) {
       LOG.warn("Node : " + node.getNodeID()
@@ -1508,7 +1511,12 @@ public class LeafQueue extends AbstractCSQueue {
 
       //int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
       //container.setGPULocation(allocated);
-
+  	
+      LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
+      int allocated = Resources.allocateGPUs(capability, available);
+      LOG.info("Allocated GPUs in bitvector format: " + allocated);
+      container.setGPULocation(allocated);
+      
       // Inform the node
       node.allocateContainer(allocatedContainer);
 

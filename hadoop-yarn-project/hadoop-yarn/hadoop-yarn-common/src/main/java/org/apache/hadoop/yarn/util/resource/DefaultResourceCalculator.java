@@ -34,7 +34,11 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public int computeAvailableContainers(Resource available, Resource required) {
     // Only consider memory
-    return available.getMemory() / required.getMemory();
+	if(!isInvalidDivisor(required))	{
+		return available.getMemory() / required.getMemory();
+	}
+	else 
+		return available.getMemory(); 
   }
 
   @Override
@@ -52,7 +56,10 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    return (float)a.getMemory() / b.getMemory();
+	  if(!isInvalidDivisor(b))	{
+		  return (float)a.getMemory() / b.getMemory();
+	  }
+	  return (float)a.getMemory();
   }
 
   @Override
