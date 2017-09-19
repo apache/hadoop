@@ -231,6 +231,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final SocketFactory socketFactory;
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
   final FileSystem.Statistics stats;
+  final short dtpReplaceDatanodeOnFailureReplication;
   private final URI namenodeUri;
   private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
@@ -311,7 +312,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
     this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
-
+    this.dtpReplaceDatanodeOnFailureReplication = (short) conf
+        .getInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+                MIN_REPLICATION,
+            HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+                MIN_REPLICATION_DEFAULT);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Sets " + HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+              MIN_REPLICATION + " to "
+              + dtpReplaceDatanodeOnFailureReplication);
+    }
     this.ugi = UserGroupInformation.getCurrentUser();
 
     this.namenodeUri = nameNodeUri;
