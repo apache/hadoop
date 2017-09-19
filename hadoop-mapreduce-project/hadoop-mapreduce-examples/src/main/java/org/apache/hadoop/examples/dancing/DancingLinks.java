@@ -368,7 +368,7 @@ public class DancingLinks<ColumnName> {
 
   /**
    * Make one move from a prefix
-   * @param goalRow the row that should be choosen
+   * @param goalRow the row that should be chosen
    * @return the row that was found
    */
   private Node<ColumnName> advance(int goalRow) {
