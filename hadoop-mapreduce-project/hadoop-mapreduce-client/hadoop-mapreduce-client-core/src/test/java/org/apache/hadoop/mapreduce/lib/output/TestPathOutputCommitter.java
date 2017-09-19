@@ -114,7 +114,7 @@ public class TestPathOutputCommitter extends Assert {
   /**
    * Stub task context.
    */
-  public class TaskContext
+  public static class TaskContext
       implements TaskInputOutputContext<String, String, String, String> {
 
     private OutputCommitter outputCommitter;

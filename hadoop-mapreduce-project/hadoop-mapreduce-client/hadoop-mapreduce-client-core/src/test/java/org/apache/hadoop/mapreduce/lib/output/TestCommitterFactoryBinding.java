@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,7 +26,11 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.*;
@@ -35,13 +38,15 @@ import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.
 /**
  * Test the committer factory logic, using an FS scheme of "http".
  */
-public class TestCommitterBinding extends Assert {
+public class TestCommitterFactoryBinding extends Assert {
 
   private static final String COMMITTER_FACTORY_KEY = String.format(
       OUTPUTCOMMITTER_FACTORY_SCHEME_PATTERN, "http");
 
-  private static final Path DEST_PATH = new Path("http://hadoop.apache.org/");
+  private static final Path HTTP_PATH = new Path("http://hadoop.apache.org/");
   private static final Path HDFS_PATH = new Path("hdfs://localhost:8081/");
+
+  private TaskAttemptID attemptID = new TaskAttemptID("local", 0, TaskType.MAP, 1, 2);
 
   /**
    * Set a factory for a schema, verify it works.
@@ -52,7 +57,7 @@ public class TestCommitterBinding extends Assert {
     Configuration conf = new Configuration();
     bindSchemaFactory(conf);
     CommitterFactory factory = (CommitterFactory)
-        getOutputCommitterFactory(DEST_PATH, conf);
+        getOutputCommitterFactory(HTTP_PATH, conf);
   }
 
   /**
@@ -82,7 +87,22 @@ public class TestCommitterBinding extends Assert {
     CommitterFactory2 factory = (CommitterFactory2)
         getOutputCommitterFactory(HDFS_PATH, conf);
     CommitterFactory f2 = (CommitterFactory)
-        getOutputCommitterFactory(DEST_PATH, conf);
+        getOutputCommitterFactory(HTTP_PATH, conf);
+  }
+
+  @Test
+  public void testFileOutputFormatBinding() throws Throwable {
+    Configuration conf = new Configuration();
+    conf.set(OUTPUTCOMMITTER_FACTORY_CLASS, CommitterFactory2.class.getName());
+    conf.set(FileOutputFormat.OUTDIR, HTTP_PATH.toUri().toString());
+    bindSchemaFactory(conf);
+    TaskAttemptContextImpl context =
+        new TaskAttemptContextImpl(conf, attemptID);
+    TextOutputFormat<String, String> off = new TextOutputFormat<>();
+    OutputCommitter committer = off.getOutputCommitter(context);
+    assertTrue("Wrong committer : " + committer,
+        committer instanceof SimpleCommitter);
+
   }
 
   /**
@@ -128,13 +148,7 @@ public class TestCommitterBinding extends Assert {
     conf.set(key, "Not a factory");
     RuntimeException ex = LambdaTestUtils.intercept(
         RuntimeException.class,
-        new Callable<PathOutputCommitterFactory>() {
-          @Override
-          public PathOutputCommitterFactory call() throws Exception {
-            return getOutputCommitterFactory(DEST_PATH,
-                conf);
-          }
-        });
+        () -> getOutputCommitterFactory(HTTP_PATH, conf));
     verifyCauseClass(
         verifyCauseClass(ex, RuntimeException.class),
         ClassNotFoundException.class);
@@ -189,13 +203,13 @@ public class TestCommitterBinding extends Assert {
     @Override
     public PathOutputCommitter createOutputCommitter(Path outputPath,
         TaskAttemptContext context) throws IOException {
-      return super.createOutputCommitter(outputPath, context);
+      return new SimpleCommitter(outputPath, context);
     }
 
     @Override
     public PathOutputCommitter createOutputCommitter(Path outputPath,
         JobContext context) throws IOException {
-      return super.createOutputCommitter(outputPath, context);
+      return new SimpleCommitter(outputPath, context);
     }
   }
 
@@ -204,13 +218,13 @@ public class TestCommitterBinding extends Assert {
     @Override
     public PathOutputCommitter createOutputCommitter(Path outputPath,
         TaskAttemptContext context) throws IOException {
-      return super.createOutputCommitter(outputPath, context);
+      return new SimpleCommitter(outputPath, context);
     }
 
     @Override
     public PathOutputCommitter createOutputCommitter(Path outputPath,
         JobContext context) throws IOException {
-      return super.createOutputCommitter(outputPath, context);
+      return new SimpleCommitter(outputPath, context);
     }
   }
 

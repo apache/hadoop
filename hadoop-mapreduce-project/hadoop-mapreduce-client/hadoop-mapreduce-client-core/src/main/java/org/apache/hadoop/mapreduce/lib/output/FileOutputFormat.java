@@ -329,11 +329,13 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   }
 
   public synchronized 
-     OutputCommitter getOutputCommitter(TaskAttemptContext context
-                                        ) throws IOException {
+     OutputCommitter getOutputCommitter(TaskAttemptContext context)
+      throws IOException {
     if (committer == null) {
       Path output = getOutputPath(context);
-      committer = new FileOutputCommitter(output, context);
+      committer = PathOutputCommitterFactory.getOutputCommitterFactory(
+          output,
+          context.getConfiguration()).createOutputCommitter(output, context);
     }
     return committer;
   }
