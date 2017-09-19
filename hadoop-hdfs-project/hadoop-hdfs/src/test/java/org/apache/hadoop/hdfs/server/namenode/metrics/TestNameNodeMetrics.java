@@ -851,22 +851,22 @@ public class TestNameNodeMetrics {
         getMetrics(NS_METRICS));
     
     assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
-    assertGauge("LastWrittenTransactionId", 3L, getMetrics(NS_METRICS));
-    assertGauge("TransactionsSinceLastCheckpoint", 3L, getMetrics(NS_METRICS));
-    assertGauge("TransactionsSinceLastLogRoll", 3L, getMetrics(NS_METRICS));
-    
-    fs.mkdirs(new Path(TEST_ROOT_DIR_PATH, "/tmp"));
-    
-    assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
     assertGauge("LastWrittenTransactionId", 4L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastCheckpoint", 4L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastLogRoll", 4L, getMetrics(NS_METRICS));
     
+    fs.mkdirs(new Path(TEST_ROOT_DIR_PATH, "/tmp"));
+    
+    assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
+    assertGauge("LastWrittenTransactionId", 5L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastCheckpoint", 5L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastLogRoll", 5L, getMetrics(NS_METRICS));
+    
     cluster.getNameNodeRpc().rollEditLog();
     
     assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
-    assertGauge("LastWrittenTransactionId", 6L, getMetrics(NS_METRICS));
-    assertGauge("TransactionsSinceLastCheckpoint", 6L, getMetrics(NS_METRICS));
+    assertGauge("LastWrittenTransactionId", 7L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastCheckpoint", 7L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
     
     cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
@@ -876,7 +876,7 @@ public class TestNameNodeMetrics {
     long newLastCkptTime = MetricsAsserts.getLongGauge("LastCheckpointTime",
         getMetrics(NS_METRICS));
     assertTrue(lastCkptTime < newLastCkptTime);
-    assertGauge("LastWrittenTransactionId", 8L, getMetrics(NS_METRICS));
+    assertGauge("LastWrittenTransactionId", 9L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastCheckpoint", 1L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
   }
