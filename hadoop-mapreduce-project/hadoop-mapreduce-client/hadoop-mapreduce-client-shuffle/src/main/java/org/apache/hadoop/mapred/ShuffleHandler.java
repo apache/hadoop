@@ -80,6 +80,7 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -1025,7 +1026,11 @@ public class ShuffleHandler extends AuxiliaryService {
           }
           nextMap.addListener(new ReduceMapFileCount(reduceContext));
         } catch (IOException e) {
-          LOG.error("Shuffle error :", e);
+          if (e instanceof DiskChecker.DiskErrorException) {
+            LOG.error("Shuffle error :" + e);
+          } else {
+            LOG.error("Shuffle error :", e);
+          }
           String errorMessage = getErrorMessage(e);
           sendError(reduceContext.getCtx(), errorMessage,
               INTERNAL_SERVER_ERROR);
