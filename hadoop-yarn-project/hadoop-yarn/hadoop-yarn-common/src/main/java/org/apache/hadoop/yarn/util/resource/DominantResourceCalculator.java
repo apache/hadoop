@@ -98,23 +98,33 @@ public class DominantResourceCalculator extends ResourceCalculator {
   protected float getResourceAsValue(
       Resource clusterResource, Resource resource, boolean dominant) {
     // Just use 'dominant' resource
-    return (dominant) ?
-        Math.max(
-            (float)resource.getMemory() / clusterResource.getMemory(), 
-            (float)resource.getVirtualCores() / clusterResource.getVirtualCores()
-            ) 
-        :
-          Math.min(
+	  float maxV =  Math.max(
+	            (float)resource.getMemory() / clusterResource.getMemory(), 
+	            (float)resource.getVirtualCores() / clusterResource.getVirtualCores()
+	            );
+	  float minV =  Math.min(
               (float)resource.getMemory() / clusterResource.getMemory(), 
               (float)resource.getVirtualCores() / clusterResource.getVirtualCores()
               ); 
+	  
+	  if(resource.getGPUs() != 0 && clusterResource.getGPUs() != 0)
+	  {
+		  maxV = Math.max(maxV, (float)resource.getGPUs()/clusterResource.getGPUs());
+		  minV = Math.min(minV, (float)resource.getGPUs()/clusterResource.getGPUs());
+	  }
+      return (dominant) ? maxV:minV;
   }
   
   @Override
   public int computeAvailableContainers(Resource available, Resource required) {
-    return Math.min(
-        available.getMemory() / required.getMemory(), 
-        available.getVirtualCores() / required.getVirtualCores());
+        int num =  Math.min(
+	        available.getMemory() / required.getMemory(), 
+	        available.getVirtualCores() / required.getVirtualCores());
+    
+        if(required.getGPUs() != 0) {
+        	num = Math.min(num, available.getGPUs()/required.getGPUs());
+	    }
+        return num;
   }
 
   @Override
@@ -135,10 +145,14 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    return Math.max(
+	  float rate = Math.max(
         (float)a.getMemory()/b.getMemory(), 
         (float)a.getVirtualCores()/b.getVirtualCores()
         );
+	   if(b.getGPUs() != 0) {
+		   rate = Math.max(rate, (float)a.getGPUs() /b.getGPUs());
+	   }
+	   return rate;
   }
 
   @Override
