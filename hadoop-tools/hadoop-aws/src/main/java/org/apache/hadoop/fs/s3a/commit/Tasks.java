@@ -48,6 +48,7 @@ public final class Tasks {
    * @param <I> item type being processed
    * @param <E> exception class which may be raised
    */
+  @FunctionalInterface
   public interface Task<I, E extends Exception> {
     void run(I item) throws E;
   }
@@ -57,6 +58,7 @@ public final class Tasks {
    * @param <I> item type being processed
    * @param <E> exception class which may be raised
    */
+  @FunctionalInterface
   public interface FailureTask<I, E extends Exception> {
 
     /**
@@ -152,8 +154,8 @@ public final class Tasks {
 
     private <E extends Exception> boolean runSingleThreaded(Task<I, E> task)
         throws E {
-      List<I> succeeded = new ArrayList();
-      List<Exception> exceptions = new ArrayList();
+      List<I> succeeded = new ArrayList<>();
+      List<Exception> exceptions = new ArrayList<>();
 
       Iterator<I> iterator = items.iterator();
       boolean threw = true;
@@ -238,7 +240,7 @@ public final class Tasks {
       final AtomicBoolean abortFailed = new AtomicBoolean(false);
       final AtomicBoolean revertFailed = new AtomicBoolean(false);
 
-      List<Future<?>> futures = new ArrayList();
+      List<Future<?>> futures = new ArrayList<>();
 
       for (final I item : items) {
         // submit a task for each item that will either run or abort the task
@@ -302,24 +304,21 @@ public final class Tasks {
       if (taskFailed.get() && revertTask != null) {
         // at least one task failed, revert any that succeeded
         for (final I item : succeeded) {
-          futures.add(service.submit(new Runnable() {
-            @Override
-            public void run() {
-              if (stopRevertsOnFailure && revertFailed.get()) {
-                return;
-              }
+          futures.add(service.submit(() -> {
+            if (stopRevertsOnFailure && revertFailed.get()) {
+              return;
+            }
 
-              boolean failed = true;
-              try {
-                revertTask.run(item);
-                failed = false;
-              } catch (Exception e) {
-                LOG.error("Failed to revert task", e);
-                // swallow the exception
-              } finally {
-                if (failed) {
-                  revertFailed.set(true);
-                }
+            boolean failed = true;
+            try {
+              revertTask.run(item);
+              failed = false;
+            } catch (Exception e) {
+              LOG.error("Failed to revert task", e);
+              // swallow the exception
+            } finally {
+              if (failed) {
+                revertFailed.set(true);
               }
             }
           }));

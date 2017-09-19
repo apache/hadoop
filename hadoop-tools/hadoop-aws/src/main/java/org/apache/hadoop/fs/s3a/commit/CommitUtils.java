@@ -297,10 +297,10 @@ public final class CommitUtils {
       throws PathCommitException {
     if (!fs.isMagicCommitEnabled()) {
       // dump out details to console for support diagnostics
-      LOG.error("{}: {}:\n{}", E_NORMAL_FS, fs.getUri().toString(), fs);
+      String fsUri = fs.getUri().toString();
+      LOG.error("{}: {}:\n{}", E_NORMAL_FS, fsUri, fs);
       // then fail
-      throw new PathCommitException(fs.getUri().toString(),
-          E_NORMAL_FS);
+      throw new PathCommitException(fsUri, E_NORMAL_FS);
     }
   }
 

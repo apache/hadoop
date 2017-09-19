@@ -147,10 +147,10 @@ public enum Statistic {
   // S3guard committer stats
   COMMITTER_COMMITS_CREATED(
       "committer_commits_created",
-      "Number of commits created"),
+      "Number of files to commit created"),
   COMMITTER_COMMITS_COMPLETED(
       "committer_commits_completed",
-      "Number of file commits completed"),
+      "Number of files committed"),
   COMMITTER_JOBS_SUCCEEDED(
       "committer_jobs_completed",
       "Number of successful jobs"),
@@ -166,6 +166,9 @@ public enum Statistic {
   COMMITTER_BYTES_COMMITTED(
       "committer_bytes_committed",
       "Amount of data committed"),
+  COMMITTER_BYTES_UPLOADED(
+      "committer_bytes_uploaded",
+      "Number of bytes uploaded duing commit operations"),
   COMMITTER_COMMITS_FAILED(
       "committer_commits_failed",
       "Number of commits failed"),

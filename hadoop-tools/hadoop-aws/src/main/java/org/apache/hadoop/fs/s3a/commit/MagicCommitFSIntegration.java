@@ -37,7 +37,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
  * <ol>
  *   <li>{@link #isMagicCommitPath(Path)} will always return false.</li>
  *   <li>{@link #createTracker(Path, String)} will always return an instance
- *   of {@link DefaultPutTracker}.</li>
+ *   of {@link PutTracker}.</li>
  * </ol>
  */
 public class MagicCommitFSIntegration {
@@ -81,9 +81,9 @@ public class MagicCommitFSIntegration {
    * @param key key of path of nominal write
    * @return the tracker for this operation.
    */
-  public DefaultPutTracker createTracker(Path path, String key) {
+  public PutTracker createTracker(Path path, String key) {
     final List<String> elements = splitPathToElements(path);
-    DefaultPutTracker tracker;
+    PutTracker tracker;
     if (isMagicCommitPath(elements)) {
       final String destKey = keyOfFinalDestination(elements, key);
       String pendingObject = key + CommitConstants.PENDING_SUFFIX;
@@ -95,7 +95,7 @@ public class MagicCommitFSIntegration {
           owner.createWriteOperationHelper(pendingObject));
     } else {
       // standard multipart tracking
-      tracker = new DefaultPutTracker(key);
+      tracker = new PutTracker(key);
     }
     LOG.debug("Created {}", tracker);
     return tracker;

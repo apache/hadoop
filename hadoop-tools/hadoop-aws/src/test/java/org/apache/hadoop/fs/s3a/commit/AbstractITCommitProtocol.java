@@ -248,6 +248,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * Lambda Interface for creating committers, designed to allow
    * different factories to be used to create different failure modes.
    */
+  @FunctionalInterface
   public interface CommitterFactory {
 
     /**

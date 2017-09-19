@@ -188,16 +188,13 @@ public class TestCommitUtils extends Assert {
 
   @Test(expected = IllegalArgumentException.class)
   public void testFinalDestinationBaseNoChild() throws Throwable {
-    assertEquals(l(),
-        finalDestination(l(
-            MAGIC, BASE)));
+    assertEquals(l(), finalDestination(l(MAGIC, BASE)));
   }
 
   @Test
   public void testFinalDestinationBaseSubdirsChild() throws Throwable {
     assertEquals(l("2", "3.txt"),
-        finalDestination(l(
-            MAGIC, "4", BASE, "2", "3.txt")));
+        finalDestination(l(MAGIC, "4", BASE, "2", "3.txt")));
   }
 
   /**
@@ -206,8 +203,7 @@ public class TestCommitUtils extends Assert {
   @Test
   public void testFinalDestinationIgnoresBaseBeforeMagic() throws Throwable {
     assertEquals(l(BASE, "home", "3.txt"),
-        finalDestination(l(
-            BASE, "home", MAGIC, "2", "3.txt")));
+        finalDestination(l(BASE, "home", MAGIC, "2", "3.txt")));
   }
 
   /** varargs to array. */

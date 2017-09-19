@@ -96,9 +96,10 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.DefaultPutTracker;
+import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.MagicCommitFSIntegration;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
@@ -135,7 +136,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AFileSystem extends FileSystem {
+public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   /**
    * Default blocksize as used in blocksize and FS status queries.
    */
@@ -746,7 +747,7 @@ public class S3AFileSystem extends FileSystem {
 
     }
     instrumentation.fileCreated();
-    DefaultPutTracker putTracker =
+    PutTracker putTracker =
         committerIntegration.createTracker(path, key);
     String destKey = putTracker.getDestKey();
     return new FSDataOutputStream(
@@ -3128,4 +3129,24 @@ public class S3AFileSystem extends FileSystem {
     return instrumentation.newCommitterStatistics();
   }
 
+  /**
+   * Return the capabilities of this filesystem instance
+   * @param capability string to query the stream support for.
+   * @return whether the FS instance has the capability.
+   */
+  @Override
+  public boolean hasCapability(String capability) {
+
+    boolean b = false;
+    switch (capability) {
+
+    case CommitConstants.MAGIC_COMMITTER_ENABLED:
+      b = isMagicCommitEnabled();
+      break;
+
+    default:
+      b = false;
+    }
+    return b;
+  }
 }

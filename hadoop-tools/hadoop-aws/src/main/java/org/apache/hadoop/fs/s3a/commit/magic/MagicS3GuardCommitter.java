@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -124,7 +125,7 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
     String r = getRole();
     String id = jobIdString(context);
     try (DurationInfo d = new DurationInfo("%s: preparing to commit Job", r)) {
-      pending = getPendingUploadsToCommit(context);
+      pending = listPendingUploadsToCommit(context);
     } catch (IOException e) {
       LOG.warn("Precommit failure for job {}", id, e);
       abortJobInternal(context, pending, true);
@@ -142,31 +143,48 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
   }
 
   /**
-     * Get the list of pending uploads for this job attempt.
-     * @param context job context
-     * @return a list of pending uploads.
-     * @throws IOException Any IO failure
-     */
-  protected List<SinglePendingCommit> getPendingUploadsToCommit(
+   * Get the list of pending uploads for this job attempt, by listing
+   * all .pendingset files in the job attempt directory.
+   * @param context job context
+   * @return a list of pending commits.
+   * @throws IOException Any IO failure
+   */
+  protected List<SinglePendingCommit> listPendingUploadsToCommit(
       JobContext context)
       throws IOException {
-    Path jobAttemptPath = getJobAttemptPath(context);
     FileSystem fs = getDestFS();
-    FileStatus[] commitFiles = fs.listStatus(jobAttemptPath,
-        PENDINGSET_FILTER);
-    return loadMultiplePendingCommitFiles(context, false, fs, commitFiles);
+    return loadMultiplePendingCommitFiles(context, false, fs,
+        fs.listStatus(getJobAttemptPath(context), PENDINGSET_FILTER));
   }
 
+  /**
+   *
+   * Get the list of pending uploads for this job attempt, by listing
+   * all .pendingset files in the job attempt directory.
+   * @param context job context
+   * @return a list of pending commits.
+   * @throws IOException Any IO failure which has not been swallowed
+   */
   @Override
-  protected List<SinglePendingCommit> getPendingUploadsToAbort(
+  protected List<SinglePendingCommit> listPendingUploadsToAbort(
       JobContext context)
       throws IOException {
-    Path jobAttemptPath = getJobAttemptPath(context);
     FileSystem fs = getDestFS();
-    FileStatus[] commitFiles = fs.listStatus(jobAttemptPath,
-        PENDINGSET_FILTER);
-    fs.listFiles(jobAttemptPath, true);
-    return loadMultiplePendingCommitFiles(context, true, fs, commitFiles);
+    FileStatus[] pendingCommitFiles;
+    Path jobAttemptPath = null;
+    try {
+      jobAttemptPath = getJobAttemptPath(context);
+      pendingCommitFiles = fs.listStatus(jobAttemptPath,
+          PENDINGSET_FILTER);
+    } catch (IOException e) {
+      // listing failure
+      LOG.info("Failed to list contents of {}: {}",
+          jobAttemptPath, e.toString());
+      return new ArrayList<>(0);
+
+    }
+    return loadMultiplePendingCommitFiles(context, true, fs,
+        pendingCommitFiles);
   }
 
   /**
@@ -185,7 +203,7 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
   @Override
   protected void cleanup(JobContext context, boolean suppressExceptions)
       throws IOException {
-    CommitOperations.MaybeIOE outcome = new CommitOperations.MaybeIOE();
+    CommitOperations.MaybeIOE outcome = CommitOperations.MaybeIOE.NONE;
     try (DurationInfo d =
              new DurationInfo("Cleanup: aborting pending uploads for Job %s",
                  jobIdString(context))) {

@@ -32,14 +32,14 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
-import org.apache.hadoop.fs.s3a.commit.DefaultPutTracker;
+import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 
 /**
  * Put tracker for Magic commits.
  */
 @InterfaceAudience.Private
-public class MagicCommitTracker extends DefaultPutTracker {
+public class MagicCommitTracker extends PutTracker {
   public static final Logger LOG = LoggerFactory.getLogger(
       MagicCommitTracker.class);
 
@@ -81,6 +81,17 @@ public class MagicCommitTracker extends DefaultPutTracker {
   @Override
   public boolean inited() throws IOException {
     return true;
+  }
+
+
+  /**
+   * Flag to indicate that output is not visible after the stream
+   * is closed.
+   * @return true
+   */
+  @Override
+  public boolean isCommitOutput() {
+    return false;
   }
 
   /**

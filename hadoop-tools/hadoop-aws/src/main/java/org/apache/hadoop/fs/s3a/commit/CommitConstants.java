@@ -64,8 +64,24 @@ public final class CommitConstants {
    * in the filesystem.
    * Value: {@value}.
    */
+  public static final String MAGIC_COMMITTER_PREFIX
+      = "fs.s3a.committer.magic";
+
+  /**
+   * Flag to indicate whether support for the Magic committer is enabled
+   * in the filesystem.
+   * Value: {@value}.
+   */
   public static final String MAGIC_COMMITTER_ENABLED
-      = "fs.s3a.committer.magic.enabled";
+      = MAGIC_COMMITTER_PREFIX + ".enabled";
+
+  /**
+   * Flag to indicate whether a stream is a magic output stream;
+   * returned in {@code StreamCapabilities}
+   * Value: {@value}.
+   */
+  public static final String MAGIC_COMMITTER_OUTPUT_STREAM
+      = MAGIC_COMMITTER_PREFIX + ".output.stream";
 
   /**
    * Is the committer enabled by default? No.

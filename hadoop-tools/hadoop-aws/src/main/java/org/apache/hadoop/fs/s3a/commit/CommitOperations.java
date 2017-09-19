@@ -128,7 +128,7 @@ public class CommitOperations {
       destKey = commit.getDestinationKey();
       innerCommit(commit);
       LOG.debug("Successful commit");
-      outcome = new MaybeIOE();
+      outcome = MaybeIOE.NONE;
     } catch (IOException e) {
       String msg = String.format("Failed to commit upload against %s: %s",
           destKey, e);
@@ -286,9 +286,9 @@ public class CommitOperations {
       pendingFiles = ls(pendingDir, recursive);
     } catch (FileNotFoundException e) {
       LOG.info("No directory to abort {}", pendingDir);
-      return new MaybeIOE();
+      return MaybeIOE.NONE;
     }
-    MaybeIOE outcome = null;
+    MaybeIOE outcome = MaybeIOE.NONE;
     if (!pendingFiles.hasNext()) {
       LOG.debug("No files to abort under {}", pendingDir);
     }
@@ -312,7 +312,7 @@ public class CommitOperations {
         }
       }
     }
-    return outcome == null ? new MaybeIOE() : outcome;
+    return outcome;
   }
 
   /**
@@ -469,6 +469,7 @@ public class CommitOperations {
       }
 
       commitData.bindCommitData(parts);
+      statistics.commitUploaded(length);
       threw = false;
       return commitData;
     } finally {
@@ -512,16 +513,20 @@ public class CommitOperations {
    * A holder for a possible IOException; the call {@link #maybeRethrow()}
    * will throw any exception passed into the constructor, and be a no-op
    * if none was.
+   *
+   * Why isn't a Java 8 optional used here? The main benefit would be that
+   * {@link #maybeRethrow()} could be done as a map(), but because Java doesn't
+   * allow checked exceptions in a map, the following code is invalid
+   * <pre>
+   *   exception.map((e) -> {throw e;}
+   * </pre>
+   * As a result, the code to work with exceptions would be almost as convoluted
+   * as the original.
    */
   public static class MaybeIOE {
     private final IOException exception;
 
-    /**
-     * Construct without an exception.
-     */
-    public MaybeIOE() {
-      this.exception = null;
-    }
+    public static final MaybeIOE NONE = new MaybeIOE(null);
 
     /**
      * Construct with an exception.

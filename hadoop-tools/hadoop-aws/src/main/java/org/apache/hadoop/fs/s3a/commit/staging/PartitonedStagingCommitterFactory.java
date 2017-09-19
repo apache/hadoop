@@ -37,7 +37,8 @@ public class PartitonedStagingCommitterFactory
    * Name of this class: {@value}.
    */
   public static final String CLASSNAME
-      = "org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory";
+      = "org.apache.hadoop.fs.s3a.commit.staging"
+      + ".PartitonedStagingCommitterFactory";
 
   public PathOutputCommitter createTaskCommitter(S3AFileSystem fileSystem,
       Path outputPath,

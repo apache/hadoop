@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,7 +45,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.s3a.commit.DefaultPutTracker;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -63,7 +64,8 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-class S3ABlockOutputStream extends OutputStream {
+class S3ABlockOutputStream extends OutputStream implements
+    StreamCapabilities {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(S3ABlockOutputStream.class);
@@ -115,7 +117,7 @@ class S3ABlockOutputStream extends OutputStream {
   /**
    * Track multipart put operation.
    */
-  private final DefaultPutTracker putTracker;
+  private final PutTracker putTracker;
 
   /**
    * An S3A output stream which uploads partitions in a separate pool of
@@ -144,7 +146,7 @@ class S3ABlockOutputStream extends OutputStream {
       S3ADataBlocks.BlockFactory blockFactory,
       S3AInstrumentation.OutputStreamStatistics statistics,
       WriteOperationHelper writeOperationHelper,
-      DefaultPutTracker putTracker)
+      PutTracker putTracker)
       throws IOException {
     this.fs = fs;
     this.key = key;
@@ -355,6 +357,7 @@ class S3ABlockOutputStream extends OutputStream {
           // This must happen even if there is no data, so that 0 byte files
           // are created.
           bytes = putObject();
+          bytesSubmitted = bytes;
         }
       } else {
         // there's an MPU in progress';
@@ -378,6 +381,10 @@ class S3ABlockOutputStream extends OutputStream {
           LOG.info("upload completion delayed until job commit");
         }
       }
+      if (putTracker.isCommitOutput()) {
+        // track the number of bytes uploaded as commit operations.
+        statistics.commitUploaded(bytes);
+      }
       LOG.debug("Upload complete for {}", writeOperationHelper);
     } catch (IOException ioe) {
       writeOperationHelper.writeFailed(ioe);
@@ -388,8 +395,7 @@ class S3ABlockOutputStream extends OutputStream {
       closeAll(LOG, statistics);
       clearActiveBlock();
     }
-    // Note end of write. This does not change the state of the FS, as it
-    // is called for pending as well as committed writes
+    // Note end of write. This does not change the state of the remote FS.
     writeOperationHelper.writeSuccessful(bytes);
   }
 
@@ -418,18 +424,13 @@ class S3ABlockOutputStream extends OutputStream {
     putObjectRequest.setGeneralProgressListener(callback);
     statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResult> putObjectResult =
-        executorService.submit(new Callable<PutObjectResult>() {
-          @Override
-          public PutObjectResult call() throws Exception {
-            PutObjectResult result;
-            try {
-              // the putObject call automatically closes the input
-              // stream afterwards.
-              result = writeOperationHelper.putObject(putObjectRequest);
-            } finally {
-              closeAll(LOG, uploadData, block);
-            }
-            return result;
+        executorService.submit(() -> {
+          try {
+            // the putObject call automatically closes the input
+            // stream afterwards.
+            return writeOperationHelper.putObject(putObjectRequest);
+          } finally {
+            closeAll(LOG, uploadData, block);
           }
         });
     clearActiveBlock();
@@ -479,6 +480,32 @@ class S3ABlockOutputStream extends OutputStream {
    */
   S3AInstrumentation.OutputStreamStatistics getStatistics() {
     return statistics;
+  }
+
+  /**
+   * Return the stream capabilities.
+   * This stream always returns false when queried about hflush and hsync.
+   * If asked about {@link CommitConstants#MAGIC_COMMITTER_OUTPUT_STREAM}
+   * it will return true iff this is an active "magic" output stream.
+   * @param capability string to query the stream support for.
+   * @return true if the capability is supported by this instance.
+   */
+  @Override
+  public boolean hasCapability(String capability) {
+    switch (capability) {
+
+      // does the output stream have delayed visibility
+    case CommitConstants.MAGIC_COMMITTER_OUTPUT_STREAM:
+      return putTracker.isCommitOutput();
+
+      // The flush/sync options are absolutely not supported
+    case "hflush":
+    case "hsync":
+      return false;
+
+    default:
+        return false;
+    }
   }
 
   /**
@@ -562,26 +589,22 @@ class S3ABlockOutputStream extends OutputStream {
       request.setGeneralProgressListener(callback);
       statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<PartETag> partETagFuture =
-          executorService.submit(new Callable<PartETag>() {
-            @Override
-            public PartETag call() throws Exception {
-              // this is the queued upload operation
-              LOG.debug("Uploading part {} for id '{}'", currentPartNumber,
-                  uploadId);
-              // do the upload
-              PartETag partETag;
-              try {
-                partETag = writeOperationHelper.uploadPart(request)
-                    .getPartETag();
-                LOG.debug("Completed upload of {} to part {}", block,
-                    partETag.getETag());
-                LOG.debug("Stream statistics of {}", statistics);
-                partsUploaded++;
-              } finally {
-                // close the stream and block
-                closeAll(LOG, uploadData, block);
-              }
+          executorService.submit(() -> {
+            // this is the queued upload operation
+            // do the upload
+            try {
+              LOG.debug("Uploading part {} for id '{}'",
+                  currentPartNumber, uploadId);
+              PartETag partETag = writeOperationHelper.uploadPart(request)
+                  .getPartETag();
+              LOG.debug("Completed upload of {} to part {}",
+                  block, partETag.getETag());
+              LOG.debug("Stream statistics of {}", statistics);
+              partsUploaded++;
               return partETag;
+            } finally {
+              // close the stream and block
+              closeAll(LOG, uploadData, block);
             }
           });
       partETagsFutures.add(partETagFuture);

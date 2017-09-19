@@ -134,6 +134,7 @@ public class S3AInstrumentation {
       COMMITTER_TASKS_SUCCEEDED,
       COMMITTER_TASKS_FAILED,
       COMMITTER_BYTES_COMMITTED,
+      COMMITTER_BYTES_UPLOADED,
       COMMITTER_COMMITS_FAILED,
       COMMITTER_COMMITS_ABORTED,
       COMMITTER_COMMITS_REVERTED,
@@ -864,6 +865,15 @@ public class S3AInstrumentation {
     }
 
     /**
+     * Data has been uploaded to be committed in a subsequent operation;
+     * to be called at the end of the write.
+     * @param size size in bytes
+     */
+    public void commitUploaded(long size) {
+      incrementCounter(COMMITTER_BYTES_UPLOADED, size);
+    }
+
+    /**
      * Output stream has closed.
      * Trigger merge in of all statistics not updated during operation.
      */
@@ -969,6 +979,14 @@ public class S3AInstrumentation {
     /** A commit has been created. */
     public void commitCreated() {
       incrementCounter(COMMITTER_COMMITS_CREATED, 1);
+    }
+
+    /**
+     * Data has been uploaded to be committed in a subsequent operation.
+     * @param size size in bytes
+     */
+    public void commitUploaded(long size) {
+      incrementCounter(COMMITTER_BYTES_UPLOADED, size);
     }
 
     /**

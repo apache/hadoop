@@ -32,7 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  *
  */
 @InterfaceAudience.Private
-public class DefaultPutTracker {
+public class PutTracker {
 
   /** The destination. */
   private final String destKey;
@@ -41,7 +41,7 @@ public class DefaultPutTracker {
    * Instantiate.
    * @param destKey destination key
    */
-  public DefaultPutTracker(String destKey) {
+  public PutTracker(String destKey) {
     this.destKey = destKey;
   }
 
@@ -51,6 +51,15 @@ public class DefaultPutTracker {
    * @throws IOException any IO problem.
    */
   public boolean inited() throws IOException {
+    return false;
+  }
+
+  /**
+   * Flag to indicate that output is not immediately visible after the stream
+   * is closed. Default: false.
+   * @return true if the output's visibility will be delayed.
+   */
+  public boolean isCommitOutput() {
     return false;
   }
 

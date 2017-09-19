@@ -437,32 +437,11 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     Tasks.foreach(pending)
         .stopOnFailure().throwFailureWhenFinished()
         .executeWith(buildThreadPool(context))
-        .onFailure(
-            new Tasks.FailureTask<SinglePendingCommit, IOException>() {
-              @Override
-              public void run(SinglePendingCommit commit,
-                  Exception exception) throws IOException {
-                getCommitOperations().abortSingleCommit(commit);
-              }
-            })
-        .abortWith(new Tasks.Task<SinglePendingCommit, IOException>() {
-          @Override
-          public void run(SinglePendingCommit commit) throws IOException {
-            getCommitOperations().abortSingleCommit(commit);
-          }
-        })
-        .revertWith(new Tasks.Task<SinglePendingCommit, IOException>() {
-          @Override
-          public void run(SinglePendingCommit commit) throws IOException {
-            getCommitOperations().revertCommit(commit);
-          }
-        })
-        .run(new Tasks.Task<SinglePendingCommit, IOException>() {
-          @Override
-          public void run(SinglePendingCommit commit) throws IOException {
-            getCommitOperations().commitOrFail(commit);
-          }
-        });
+        .onFailure((commit, exception) ->
+                getCommitOperations().abortSingleCommit(commit))
+        .abortWith(commit -> getCommitOperations().abortSingleCommit(commit))
+        .revertWith(commit -> getCommitOperations().revertCommit(commit))
+        .run(commit -> getCommitOperations().commitOrFail(commit));
   }
 
   /**
@@ -474,7 +453,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @param fs job attempt fs
    * @param pendingCommitFiles list of files found in the listing scan
    * @return the list of commits
-   * @throws IOException on a failure
+   * @throws IOException on a failure when suppressExceptions is false.
    */
   protected List<SinglePendingCommit> loadMultiplePendingCommitFiles(
       JobContext context,
@@ -487,14 +466,11 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     Tasks.foreach(pendingCommitFiles)
         .throwFailureWhenFinished(!suppressExceptions)
         .executeWith(buildThreadPool(context))
-        .run(new Tasks.Task<FileStatus, IOException>() {
-          @Override
-          public void run(FileStatus pendingCommitFile) throws IOException {
-            PendingSet commits = PendingSet.load(
-                fs, pendingCommitFile.getPath());
-            pending.addAll(commits.getCommits());
-          }
-        });
+        .run(pendingCommitFile ->
+          pending.addAll(PendingSet.load(
+              fs,
+              pendingCommitFile.getPath()).getCommits())
+        );
     return pending;
   }
 
@@ -525,7 +501,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     String r = getRole();
     try (DurationInfo d = new DurationInfo("%s: aborting job in state %s ",
         r, CommitUtils.jobIdString(context), state)) {
-      List<SinglePendingCommit> pending = getPendingUploadsToAbort(context);
+      List<SinglePendingCommit> pending = listPendingUploadsToAbort(context);
       if (!pending.isEmpty()) {
         abortJobInternal(context, pending, false);
       }
@@ -571,7 +547,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * then this may not match the actual set of pending operations
    * @throws IOException shouldn't be raised, but retained for compiler
    */
-  protected abstract List<SinglePendingCommit> getPendingUploadsToAbort(
+  protected abstract List<SinglePendingCommit> listPendingUploadsToAbort(
       JobContext context)
       throws IOException;
 
@@ -706,19 +682,9 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
       Tasks.foreach(pending)
           .throwFailureWhenFinished(!suppressExceptions)
           .executeWith(buildThreadPool(context))
-          .onFailure(new Tasks.FailureTask<SinglePendingCommit, IOException>() {
-            @Override
-            public void run(SinglePendingCommit commit,
-                Exception exception) throws IOException {
-              getCommitOperations().abortSingleCommit(commit);
-            }
-          })
-          .run(new Tasks.Task<SinglePendingCommit, IOException>() {
-            @Override
-            public void run(SinglePendingCommit commit) throws IOException {
-              getCommitOperations().abortSingleCommit(commit);
-            }
-          });
+          .onFailure((commit, exception) ->
+              getCommitOperations().abortSingleCommit(commit))
+          .run(commit -> getCommitOperations().abortSingleCommit(commit));
     }
   }
 

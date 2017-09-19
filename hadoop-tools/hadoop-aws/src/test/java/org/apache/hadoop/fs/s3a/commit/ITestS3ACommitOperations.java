@@ -97,7 +97,7 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
     String filename = "notdelayed.txt";
     Path destFile = methodPath(filename);
     String origKey = fs.pathToKey(destFile);
-    DefaultPutTracker tracker = integration.createTracker(destFile, origKey);
+    PutTracker tracker = integration.createTracker(destFile, origKey);
     assertFalse("wrong type: " + tracker + " for " + destFile,
         tracker instanceof MagicCommitTracker);
   }
@@ -128,7 +128,7 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
     final String destKey = elementsToKey(finalDestination);
     assertEquals("destination key", origKey, destKey);
 
-    DefaultPutTracker tracker = integration.createTracker(pendingPath,
+    PutTracker tracker = integration.createTracker(pendingPath,
         pendingPathKey);
     assertTrue("wrong type: " + tracker + " for " + pendingPathKey,
         tracker instanceof MagicCommitTracker);

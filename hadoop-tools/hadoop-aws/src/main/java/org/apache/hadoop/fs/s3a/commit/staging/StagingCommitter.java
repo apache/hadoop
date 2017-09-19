@@ -538,7 +538,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   protected List<SinglePendingCommit> getPendingUploadsToCommit(
       JobContext context)
       throws IOException {
-    return getPendingUploads(context, false);
+    return listPendingUploads(context, false);
   }
 
   /**
@@ -549,9 +549,9 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
    * then this may not match the actual set of pending operations
    * @throws IOException shouldn't be raised, but retained for the compiler
    */
-  protected List<SinglePendingCommit> getPendingUploadsToAbort(
+  protected List<SinglePendingCommit> listPendingUploadsToAbort(
       JobContext context) throws IOException {
-    return getPendingUploads(context, true);
+    return listPendingUploads(context, true);
   }
 
   /**
@@ -562,7 +562,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
    * then this may not match the actual set of pending operations
    * @throws IOException Any IO failure which wasn't swallowed.
    */
-  protected List<SinglePendingCommit> getPendingUploads(
+  protected List<SinglePendingCommit> listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
     Path jobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
     final FileSystem attemptFS = jobAttemptPath.getFileSystem(
@@ -731,8 +731,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   public void commitTask(TaskAttemptContext context) throws IOException {
     try (DurationInfo d = new DurationInfo("%s: commit task %s",
         getRole(), context.getTaskAttemptID())) {
-      List<FileStatus> filesToCommit = getTaskOutput(context);
-      int count = commitTaskInternal(context, filesToCommit);
+      int count = commitTaskInternal(context, getTaskOutput(context));
       LOG.info("{}: upload file count: {}", getRole(), count);
     } catch (IOException e) {
       LOG.error("{}: commit of task {} failed",
@@ -788,25 +787,22 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
             .stopOnFailure()
             .throwFailureWhenFinished()
             .executeWith(buildThreadPool(context))
-            .run(new Tasks.Task<FileStatus, IOException>() {
-              @Override
-              public void run(FileStatus stat) throws IOException {
-                Path path = stat.getPath();
-                File localFile = new File(path.toUri().getPath());
-                String relative = Paths.getRelativePath(attemptPath, path);
-                // TODO: Why isn't this being used?
-                String partition = getPartition(relative);
-                String key = getFinalKey(relative, context);
-                Path destPath = getDestS3AFS().keyToQualifiedPath(key);
-                SinglePendingCommit commit = getCommitOperations()
-                    .uploadFileToPendingCommit(
-                        localFile,
-                        destPath,
-                        partition,
-                        uploadPartSize);
-                LOG.debug("{}: adding pending commit {}", getRole(), commit);
-                commits.add(commit);
-              }
+            .run(stat -> {
+              Path path = stat.getPath();
+              File localFile = new File(path.toUri().getPath());
+              String relative = Paths.getRelativePath(attemptPath, path);
+              // TODO: Why isn't this being used?
+              String partition = getPartition(relative);
+              String key = getFinalKey(relative, context);
+              Path destPath = getDestS3AFS().keyToQualifiedPath(key);
+              SinglePendingCommit commit = getCommitOperations()
+                  .uploadFileToPendingCommit(
+                      localFile,
+                      destPath,
+                      partition,
+                      uploadPartSize);
+              LOG.debug("{}: adding pending commit {}", getRole(), commit);
+              commits.add(commit);
             });
 
         for (SinglePendingCommit commit : commits) {
@@ -829,12 +825,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
               "{}: Exception during commit process, aborting {} commit(s)",
               getRole(), commits.size());
           Tasks.foreach(commits)
-              .run(new Tasks.Task<SinglePendingCommit, IOException>() {
-                @Override
-                public void run(SinglePendingCommit commit) throws IOException {
-                  getCommitOperations().abortSingleCommit(commit);
-                }
-              });
+              .run(commit -> getCommitOperations().abortSingleCommit(commit));
           deleteTaskAttemptPathQuietly(context);
         }
       }

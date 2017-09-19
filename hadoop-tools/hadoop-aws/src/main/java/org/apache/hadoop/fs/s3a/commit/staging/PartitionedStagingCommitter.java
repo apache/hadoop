@@ -37,7 +37,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
  * Partitioned committer.
- * This writes data to specific "partition" subdirectories
+ * This writes data to specific "partition" subdirectories.
  */
 public class PartitionedStagingCommitter extends StagingCommitter {
 
@@ -159,11 +159,9 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       }
       String partition = getPartition(
           Paths.getRelativePath(attemptPath, outputFile));
-      if (partition != null) {
-        partitions.add(partition);
-      } else {
-        partitions.add(StagingCommitterConstants.TABLE_ROOT);
-      }
+      partitions.add(partition != null ?
+          partition
+          : StagingCommitterConstants.TABLE_ROOT);
     }
 
     return partitions;

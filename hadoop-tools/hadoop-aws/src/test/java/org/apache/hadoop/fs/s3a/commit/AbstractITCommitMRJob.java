@@ -225,8 +225,12 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
 
     // load in the success data marker: this guarantees that a s3guard
     // committer was used
+    Path success = new Path(outputPath, _SUCCESS);
+    FileStatus status = fs.getFileStatus(success);
+    assertTrue("0 byte success file - not a s3guard committer " + success,
+        status.getLen() > 0);
     SuccessData successData = SuccessData.load(fs,
-        new Path(outputPath, _SUCCESS));
+        success);
     String commitDetails = successData.toString();
     LOG.info("Committer from " + committerFactoryClassname() + "\n{}",
         commitDetails);

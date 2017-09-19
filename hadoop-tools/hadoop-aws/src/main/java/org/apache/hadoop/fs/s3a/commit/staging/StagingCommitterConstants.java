@@ -28,10 +28,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class StagingCommitterConstants {
 
-  public static final String FILESYSTEM_TEMP_PATH = "/tmp";
-
   private StagingCommitterConstants() {
   }
+
+  public static final String FILESYSTEM_TEMP_PATH = "/tmp";
 
   /** Name of the root partition :{@value}. */
   public static final String TABLE_ROOT = "table_root";
