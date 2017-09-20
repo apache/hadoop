@@ -529,7 +529,7 @@
 
   <property>
     <name>ozone.ksm.address</name>
-    <value>0.0.0.0</value>
+    <value></value>
     <description>
       The address of the Ozone KSM service.
     </description>

@@ -106,6 +106,19 @@ public class RpcClient implements ClientProtocol {
     this.groupRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS,
         KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS_DEFAULT);
 
+    long ksmVersion =
+        RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
+    InetSocketAddress ksmAddress = OzoneClientUtils
+        .getKsmAddressForClients(conf);
+    RPC.setProtocolEngine(conf, KeySpaceManagerProtocolPB.class,
+        ProtobufRpcEngine.class);
+    this.keySpaceManagerClient =
+        new KeySpaceManagerProtocolClientSideTranslatorPB(
+            RPC.getProxy(KeySpaceManagerProtocolPB.class, ksmVersion,
+                ksmAddress, UserGroupInformation.getCurrentUser(), conf,
+                NetUtils.getDefaultSocketFactory(conf),
+                Client.getRpcTimeout(conf)));
+
     long scmVersion =
         RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
     InetSocketAddress scmAddress =
@@ -116,18 +129,6 @@ public class RpcClient implements ClientProtocol {
         new StorageContainerLocationProtocolClientSideTranslatorPB(
             RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
                 scmAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
-
-    long ksmVersion =
-        RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
-    InetSocketAddress ksmAddress = OzoneClientUtils.getKsmAddress(conf);
-    RPC.setProtocolEngine(conf, KeySpaceManagerProtocolPB.class,
-        ProtobufRpcEngine.class);
-    this.keySpaceManagerClient =
-        new KeySpaceManagerProtocolClientSideTranslatorPB(
-            RPC.getProxy(KeySpaceManagerProtocolPB.class, ksmVersion,
-                ksmAddress, UserGroupInformation.getCurrentUser(), conf,
                 NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
 

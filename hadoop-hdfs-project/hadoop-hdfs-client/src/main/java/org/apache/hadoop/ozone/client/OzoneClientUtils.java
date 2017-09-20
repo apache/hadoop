@@ -322,6 +322,32 @@ public final class OzoneClientUtils {
   }
 
   /**
+   * Retrieve the socket address that should be used by clients to connect
+   * to KSM.
+   * @param conf
+   * @return Target InetSocketAddress for the KSM service endpoint.
+   */
+  public static InetSocketAddress getKsmAddressForClients(
+      Configuration conf) {
+    final Optional<String> host = getHostNameFromConfigKeys(conf,
+        OZONE_KSM_ADDRESS_KEY);
+
+    if (!host.isPresent()) {
+      throw new IllegalArgumentException(
+          OZONE_KSM_ADDRESS_KEY + " must be defined. See" +
+              " https://wiki.apache.org/hadoop/Ozone#Configuration for" +
+              " details on configuring Ozone.");
+    }
+
+    // If no port number is specified then we'll just try the defaultBindPort.
+    final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
+        OZONE_KSM_ADDRESS_KEY);
+
+    return NetUtils.createSocketAddr(
+        host.get() + ":" + port.or(OZONE_KSM_PORT_DEFAULT));
+  }
+
+  /**
    * Retrieve the socket address that is used by CBlock Service.
    * @param conf
    * @return Target InetSocketAddress for the CBlock Service endpoint.
