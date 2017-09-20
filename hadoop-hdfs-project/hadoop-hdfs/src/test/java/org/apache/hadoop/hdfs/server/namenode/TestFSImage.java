@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
@@ -847,7 +847,8 @@ public class TestFSImage {
       ErasureCodingPolicy newPolicy =
           new ErasureCodingPolicy(newSchema, 2 * 1024, (byte) 254);
       ErasureCodingPolicy[] policies = new ErasureCodingPolicy[]{newPolicy};
-      AddECPolicyResponse[] ret = fs.addErasureCodingPolicies(policies);
+      AddErasureCodingPolicyResponse[] ret =
+          fs.addErasureCodingPolicies(policies);
       assertEquals(1, ret.length);
       assertEquals(true, ret[0].isSucceed());
       newPolicy = ret[0].getPolicy();

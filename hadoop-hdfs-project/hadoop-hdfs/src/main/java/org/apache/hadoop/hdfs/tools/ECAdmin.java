@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.util.ECPolicyLoader;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
@@ -175,9 +175,10 @@ public class ECAdmin extends Configured implements Tool {
         List<ErasureCodingPolicy> policies =
             new ECPolicyLoader().loadPolicy(filePath);
         if (policies.size() > 0) {
-          AddECPolicyResponse[] responses = dfs.addErasureCodingPolicies(
+          AddErasureCodingPolicyResponse[] responses =
+              dfs.addErasureCodingPolicies(
             policies.toArray(new ErasureCodingPolicy[policies.size()]));
-          for (AddECPolicyResponse response : responses) {
+          for (AddErasureCodingPolicyResponse response : responses) {
             System.out.println(response);
           }
         } else {

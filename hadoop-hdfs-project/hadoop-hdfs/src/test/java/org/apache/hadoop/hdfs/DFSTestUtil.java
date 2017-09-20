@@ -108,7 +108,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -1472,7 +1472,7 @@ public class DFSTestUtil {
     ErasureCodingPolicy newPolicy1 =
         new ErasureCodingPolicy(ErasureCodeConstants.RS_3_2_SCHEMA, 8 * 1024);
     ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[] {newPolicy1};
-    AddECPolicyResponse[] responses =
+    AddErasureCodingPolicyResponse[] responses =
         filesystem.addErasureCodingPolicies(policyArray);
     newPolicy1 = responses[0].getPolicy();
 
