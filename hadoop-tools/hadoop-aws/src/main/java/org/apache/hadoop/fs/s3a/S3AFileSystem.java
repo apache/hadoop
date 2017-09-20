@@ -163,7 +163,6 @@ public class S3AFileSystem extends FileSystem {
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
-  private boolean blockUploadEnabled;
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
@@ -281,21 +280,20 @@ public class S3AFileSystem extends FileSystem {
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
 
-      blockUploadEnabled = conf.getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD);
+      boolean blockUploadEnabled = conf.getBoolean(FAST_UPLOAD, true);
 
-      if (blockUploadEnabled) {
-        blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
-            DEFAULT_FAST_UPLOAD_BUFFER);
-        partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
-        blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
-        blockOutputActiveBlocks = intOption(conf,
-            FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
-        LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
-                " queue limit={}",
-            blockOutputBuffer, partSize, blockOutputActiveBlocks);
-      } else {
-        LOG.debug("Using S3AOutputStream");
+      if (!blockUploadEnabled) {
+        LOG.warn("The \"slow\" output stream is no longer supported");
       }
+      blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
+          DEFAULT_FAST_UPLOAD_BUFFER);
+      partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
+      blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
+      blockOutputActiveBlocks = intOption(conf,
+          FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
+      LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
+              " queue limit={}",
+          blockOutputBuffer, partSize, blockOutputActiveBlocks);
 
       metadataStore = S3Guard.getMetadataStore(this);
       allowAuthoritative = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
@@ -644,33 +642,18 @@ public class S3AFileSystem extends FileSystem {
 
     }
     instrumentation.fileCreated();
-    FSDataOutputStream output;
-    if (blockUploadEnabled) {
-      output = new FSDataOutputStream(
-          new S3ABlockOutputStream(this,
-              key,
-              new SemaphoredDelegatingExecutor(boundedThreadPool,
-                  blockOutputActiveBlocks, true),
-              progress,
-              partSize,
-              blockFactory,
-              instrumentation.newOutputStreamStatistics(statistics),
-              new WriteOperationHelper(key)
-          ),
-          null);
-    } else {
-
-      // We pass null to FSDataOutputStream so it won't count writes that
-      // are being buffered to a file
-      output = new FSDataOutputStream(
-          new S3AOutputStream(getConf(),
-              this,
-              key,
-              progress
-          ),
-          null);
-    }
-    return output;
+    return new FSDataOutputStream(
+        new S3ABlockOutputStream(this,
+            key,
+            new SemaphoredDelegatingExecutor(boundedThreadPool,
+                blockOutputActiveBlocks, true),
+            progress,
+            partSize,
+            blockFactory,
+            instrumentation.newOutputStreamStatistics(statistics),
+            new WriteOperationHelper(key)
+        ),
+        null);
   }
 
   /**
@@ -2471,7 +2454,9 @@ public class S3AFileSystem extends FileSystem {
       sb.append(", cannedACL=").append(cannedACL.toString());
     }
     sb.append(", readAhead=").append(readAhead);
-    sb.append(", blockSize=").append(getDefaultBlockSize());
+    if (getConf() != null) {
+      sb.append(", blockSize=").append(getDefaultBlockSize());
+    }
     sb.append(", multiPartThreshold=").append(multiPartThreshold);
     if (serverSideEncryptionAlgorithm != null) {
       sb.append(", serverSideEncryptionAlgorithm='")

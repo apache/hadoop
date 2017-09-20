@@ -84,13 +84,16 @@ import org.mockito.Mockito;
 @SuppressWarnings("unchecked")
 public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
+  public TestAbstractYarnScheduler(SchedulerType type) throws IOException {
+    super(type);
+  }
+
   @Test
   public void testMaximimumAllocationMemory() throws Exception {
     final int node1MaxMemory = 15 * 1024;
     final int node2MaxMemory = 5 * 1024;
     final int node3MaxMemory = 6 * 1024;
     final int configuredMaxMemory = 10 * 1024;
-    configureScheduler();
     YarnConfiguration conf = getConf();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         configuredMaxMemory);
@@ -177,7 +180,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     final int node2MaxVCores = 5;
     final int node3MaxVCores = 6;
     final int configuredMaxVCores = 10;
-    configureScheduler();
     YarnConfiguration conf = getConf();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         configuredMaxVCores);
@@ -381,7 +383,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   @Test(timeout = 10000)
   public void testReleasedContainerIfAppAttemptisNull() throws Exception {
     YarnConfiguration conf=getConf();
-    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     MockRM rm1 = new MockRM(conf);
     try {
       rm1.start();
@@ -425,7 +426,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   @Test(timeout=60000)
   public void testContainerReleasedByNode() throws Exception {
     System.out.println("Starting testContainerReleasedByNode");
-    configureScheduler();
     YarnConfiguration conf = getConf();
     MockRM rm1 = new MockRM(conf);
     try {
@@ -538,7 +538,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   @Test(timeout = 60000)
   public void testResourceRequestRestoreWhenRMContainerIsAtAllocated()
       throws Exception {
-    configureScheduler();
     YarnConfiguration conf = getConf();
     MockRM rm1 = new MockRM(conf);
     try {
@@ -627,7 +626,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   public void testResourceRequestRecoveryToTheRightAppAttempt()
       throws Exception {
 
-    configureScheduler();
     YarnConfiguration conf = getConf();
     MockRM rm = new MockRM(conf);
     try {
@@ -798,7 +796,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    */
   @Test(timeout = 60000)
   public void testNodemanagerReconnect() throws Exception {
-    configureScheduler();
     Configuration conf = getConf();
     MockRM rm = new MockRM(conf);
     try {
@@ -842,6 +839,37 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       Assert.assertEquals("Cluster resources don't match", newCapability,
           rm.getResourceScheduler().getClusterResource());
       privateResourceTrackerService.stop();
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test(timeout = 10000)
+  public void testUpdateThreadLifeCycle() throws Exception {
+    MockRM rm = new MockRM(getConf());
+    try {
+      rm.start();
+      AbstractYarnScheduler scheduler =
+          (AbstractYarnScheduler) rm.getResourceScheduler();
+
+      if (getSchedulerType().equals(SchedulerType.FAIR)) {
+        Thread updateThread = scheduler.updateThread;
+        Assert.assertTrue(updateThread.isAlive());
+        scheduler.stop();
+
+        int numRetries = 100;
+        while (numRetries-- > 0 && updateThread.isAlive()) {
+          Thread.sleep(50);
+        }
+
+        Assert.assertNotEquals("The Update thread is still alive", 0, numRetries);
+      } else if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
+        Assert.assertNull("updateThread shouldn't have been created",
+            scheduler.updateThread);
+      } else {
+        Assert.fail("Unhandled SchedulerType, " + getSchedulerType() +
+            ", please update this unit test.");
+      }
     } finally {
       rm.stop();
     }

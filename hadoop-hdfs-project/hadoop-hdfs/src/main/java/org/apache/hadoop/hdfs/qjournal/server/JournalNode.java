@@ -157,27 +157,36 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
    */
   public void start() throws IOException {
     Preconditions.checkState(!isStarted(), "JN already running");
-    
-    validateAndCreateJournalDir(localDir);
-    
-    DefaultMetricsSystem.initialize("JournalNode");
-    JvmMetrics.create("JournalNode",
-        conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
-        DefaultMetricsSystem.instance());
 
-    InetSocketAddress socAddr = JournalNodeRpcServer.getAddress(conf);
-    SecurityUtil.login(conf, DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
-    
-    registerJNMXBean();
-    
-    httpServer = new JournalNodeHttpServer(conf, this);
-    httpServer.start();
+    try {
 
-    httpServerURI = httpServer.getServerURI().toString();
+      validateAndCreateJournalDir(localDir);
 
-    rpcServer = new JournalNodeRpcServer(conf, this);
-    rpcServer.start();
+      DefaultMetricsSystem.initialize("JournalNode");
+      JvmMetrics.create("JournalNode",
+          conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+          DefaultMetricsSystem.instance());
+
+      InetSocketAddress socAddr = JournalNodeRpcServer.getAddress(conf);
+      SecurityUtil.login(conf, DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY,
+          socAddr.getHostName());
+
+      registerJNMXBean();
+
+      httpServer = new JournalNodeHttpServer(conf, this);
+      httpServer.start();
+
+      httpServerURI = httpServer.getServerURI().toString();
+
+      rpcServer = new JournalNodeRpcServer(conf, this);
+      rpcServer.start();
+    } catch (IOException ioe) {
+      //Shutdown JournalNode of JournalNodeRpcServer fails to start
+      LOG.error("Failed to start JournalNode.", ioe);
+      this.stop(1);
+      throw ioe;
+    }
   }
 
   public boolean isStarted() {

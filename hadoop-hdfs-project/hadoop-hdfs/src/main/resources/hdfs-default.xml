@@ -61,7 +61,8 @@
     connecting to this address if it is configured. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.servicerpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of nn-host1:rpc-port. The NameNode's default service RPC port is 9840.
+    The value of this property will take the form of nn-host1:rpc-port.
+    If the value of this property is unset the value of dfs.namenode.rpc-address will be used as the default.
   </description>
 </property>
 
@@ -656,6 +657,23 @@
     probability of data loss.
   </description>
 </property>
+
+  <property>
+    <name>dfs.client.block.write.replace-datanode-on-failure.min-replication</name>
+    <value>0</value>
+    <description>
+      The minimum number of replications that are needed to not to fail
+      the write pipeline if new datanodes can not be found to replace
+      failed datanodes (could be due to network failure) in the write pipeline.
+      If the number of the remaining datanodes in the write pipeline is greater
+      than or equal to this property value, continue writing to the remaining nodes.
+      Otherwise throw exception.
+
+      If this is set to 0, an exception will be thrown, when a replacement
+      can not be found.
+      See also dfs.client.block.write.replace-datanode-on-failure.policy
+    </description>
+  </property>
 
 <property>
   <name>dfs.blockreport.intervalMsec</name>
@@ -3017,16 +3035,6 @@
 </property>
 
 <property>
-  <name>dfs.namenode.ec.policies.enabled</name>
-  <value></value>
-  <description>Comma-delimited list of enabled erasure coding policies.
-    The NameNode will enforce this when setting an erasure coding policy
-    on a directory. By default, none of the built-in erasure coding
-    policies are enabled.
-  </description>
-</property>
-
-<property>
   <name>dfs.namenode.ec.system.default.policy</name>
   <value>RS-6-3-1024k</value>
   <description>The default erasure coding policy name will be used
@@ -3049,15 +3057,6 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedread.threads</name>
-  <value>20</value>
-  <description>
-    Number of threads used by the Datanode to read striped block
-    during background reconstruction work.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.ec.reconstruction.stripedread.buffer.size</name>
   <value>65536</value>
   <description>Datanode striped read buffer size.
@@ -3065,7 +3064,7 @@
 </property>
 
 <property>
-  <name>dfs.datanode.ec.reconstruction.stripedblock.threads.size</name>
+  <name>dfs.datanode.ec.reconstruction.threads</name>
   <value>8</value>
   <description>
     Number of threads used by the Datanode for background

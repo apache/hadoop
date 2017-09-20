@@ -1261,6 +1261,15 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.staging-dir.erasurecoding.enabled</name>
+  <value>false</value>
+  <description>Whether Erasure Coding should be enabled for
+  files that are copied to the MR staging area. This is a job-level
+  setting.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.am.max-attempts</name>
   <value>2</value>
   <description>The maximum number of application attempts. It is a

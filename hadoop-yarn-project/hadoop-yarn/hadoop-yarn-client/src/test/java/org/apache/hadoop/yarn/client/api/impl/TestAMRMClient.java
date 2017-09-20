@@ -130,11 +130,13 @@ public class TestAMRMClient {
   @Before
   public void setup() throws Exception {
     conf = new YarnConfiguration();
-    createClusterAndStartApplication();
+    createClusterAndStartApplication(conf);
   }
 
-  private void createClusterAndStartApplication() throws Exception {
+  private void createClusterAndStartApplication(Configuration conf)
+      throws Exception {
     // start minicluster
+    this.conf = conf;
     conf.set(YarnConfiguration.RM_SCHEDULER, schedulerName);
     conf.setLong(
       YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
@@ -532,11 +534,12 @@ public class TestAMRMClient {
                   List<? extends Collection<ContainerRequest>> matches,
                   int matchSize) {
     assertEquals(1, matches.size());
-    assertEquals(matches.get(0).size(), matchSize);
+    assertEquals(matchSize, matches.get(0).size());
   }
   
   @Test (timeout=60000)
-  public void testAMRMClientMatchingFitInferredRack() throws YarnException, IOException {
+  public void testAMRMClientMatchingFitInferredRack()
+      throws YarnException, IOException {
     AMRMClientImpl<ContainerRequest> amClient = null;
     try {
       // start am rm client
@@ -544,10 +547,10 @@ public class TestAMRMClient {
       amClient.init(conf);
       amClient.start();
       amClient.registerApplicationMaster("Host", 10000, "");
-      
+
       Resource capability = Resource.newInstance(1024, 2);
 
-      ContainerRequest storedContainer1 = 
+      ContainerRequest storedContainer1 =
           new ContainerRequest(capability, nodes, null, priority);
       amClient.addContainerRequest(storedContainer1);
 
@@ -564,14 +567,15 @@ public class TestAMRMClient {
       verifyMatches(matches, 1);
       storedRequest = matches.get(0).iterator().next();
       assertEquals(storedContainer1, storedRequest);
-      
+
       // inferred rack match no longer valid after request is removed
       amClient.removeContainerRequest(storedContainer1);
       matches = amClient.getMatchingRequests(priority, rack, capability);
       assertTrue(matches.isEmpty());
-      
-      amClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED,
-          null, null);
+
+      amClient
+          .unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, null,
+              null);
 
     } finally {
       if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
@@ -604,16 +608,19 @@ public class TestAMRMClient {
       amClient.addContainerRequest(storedContainer1);
       amClient.addContainerRequest(storedContainer2);
       amClient.addContainerRequest(storedContainer3);
+
+      ProfileCapability profileCapability =
+          ProfileCapability.newInstance(capability);
       
       // test addition and storage
       RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
           amClient.getTable(0);
       int containersRequestedAny = remoteRequestsTable.get(priority,
-          ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
+          ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
           .remoteRequest.getNumContainers();
       assertEquals(2, containersRequestedAny);
       containersRequestedAny = remoteRequestsTable.get(priority1,
-          ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
+          ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
           .remoteRequest.getNumContainers();
          assertEquals(1, containersRequestedAny);
       List<? extends Collection<ContainerRequest>> matches = 
@@ -884,7 +891,7 @@ public class TestAMRMClient {
     teardown();
     conf = new YarnConfiguration();
     conf.set(CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION, "privacy");
-    createClusterAndStartApplication();
+    createClusterAndStartApplication(conf);
     initAMRMClientAndTest(false);
   }
 
@@ -1183,9 +1190,11 @@ public class TestAMRMClient {
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.OPPORTUNISTIC, true)));
 
+    ProfileCapability profileCapability =
+          ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.OPPORTUNISTIC, capability).remoteRequest
+            ExecutionType.OPPORTUNISTIC, profileCapability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -1322,9 +1331,11 @@ public class TestAMRMClient {
             true, null, ExecutionTypeRequest
             .newInstance(ExecutionType.GUARANTEED, true)));
 
+    ProfileCapability profileCapability =
+        ProfileCapability.newInstance(capability);
     int oppContainersRequestedAny =
         amClient.getTable(0).get(priority2, ResourceRequest.ANY,
-            ExecutionType.GUARANTEED, capability).remoteRequest
+            ExecutionType.GUARANTEED, profileCapability).remoteRequest
             .getNumContainers();
 
     assertEquals(1, oppContainersRequestedAny);
@@ -1702,14 +1713,16 @@ public class TestAMRMClient {
       int expAsks, int expRelease) {
     RemoteRequestsTable<ContainerRequest> remoteRequestsTable =
         amClient.getTable(allocationReqId);
+    ProfileCapability profileCapability =
+        ProfileCapability.newInstance(capability);
     int containersRequestedNode = remoteRequestsTable.get(priority,
-        node, ExecutionType.GUARANTEED, capability).remoteRequest
+        node, ExecutionType.GUARANTEED, profileCapability).remoteRequest
         .getNumContainers();
     int containersRequestedRack = remoteRequestsTable.get(priority,
-        rack, ExecutionType.GUARANTEED, capability).remoteRequest
+        rack, ExecutionType.GUARANTEED, profileCapability).remoteRequest
         .getNumContainers();
     int containersRequestedAny = remoteRequestsTable.get(priority,
-        ResourceRequest.ANY, ExecutionType.GUARANTEED, capability)
+        ResourceRequest.ANY, ExecutionType.GUARANTEED, profileCapability)
         .remoteRequest.getNumContainers();
 
     assertEquals(expNode, containersRequestedNode);
@@ -1906,5 +1919,107 @@ public class TestAMRMClient {
       }
     }
     return result;
+  }
+
+  @Test(timeout = 60000)
+  public void testGetMatchingFitWithProfiles() throws Exception {
+    teardown();
+    conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
+    createClusterAndStartApplication(conf);
+    AMRMClient<ContainerRequest> amClient = null;
+    try {
+      // start am rm client
+      amClient = AMRMClient.<ContainerRequest>createAMRMClient();
+      amClient.init(conf);
+      amClient.start();
+      amClient.registerApplicationMaster("Host", 10000, "");
+
+      ProfileCapability capability1 = ProfileCapability.newInstance("minimum");
+      ProfileCapability capability2 = ProfileCapability.newInstance("default");
+      ProfileCapability capability3 = ProfileCapability.newInstance("maximum");
+      ProfileCapability capability4 = ProfileCapability
+          .newInstance("minimum", Resource.newInstance(2048, 1));
+      ProfileCapability capability5 = ProfileCapability.newInstance("default");
+      ProfileCapability capability6 = ProfileCapability
+          .newInstance("default", Resource.newInstance(2048, 1));
+      // http has the same capabilities as default
+      ProfileCapability capability7 = ProfileCapability.newInstance("http");
+
+      ContainerRequest storedContainer1 =
+          new ContainerRequest(capability1, nodes, racks, priority);
+      ContainerRequest storedContainer2 =
+          new ContainerRequest(capability2, nodes, racks, priority);
+      ContainerRequest storedContainer3 =
+          new ContainerRequest(capability3, nodes, racks, priority);
+      ContainerRequest storedContainer4 =
+          new ContainerRequest(capability4, nodes, racks, priority);
+      ContainerRequest storedContainer5 =
+          new ContainerRequest(capability5, nodes, racks, priority2);
+      ContainerRequest storedContainer6 =
+          new ContainerRequest(capability6, nodes, racks, priority);
+      ContainerRequest storedContainer7 =
+          new ContainerRequest(capability7, nodes, racks, priority);
+
+
+      amClient.addContainerRequest(storedContainer1);
+      amClient.addContainerRequest(storedContainer2);
+      amClient.addContainerRequest(storedContainer3);
+      amClient.addContainerRequest(storedContainer4);
+      amClient.addContainerRequest(storedContainer5);
+      amClient.addContainerRequest(storedContainer6);
+      amClient.addContainerRequest(storedContainer7);
+
+      // test matching of containers
+      List<? extends Collection<ContainerRequest>> matches;
+      ContainerRequest storedRequest;
+      // exact match
+      ProfileCapability testCapability1 =
+          ProfileCapability.newInstance("minimum");
+      matches = amClient
+          .getMatchingRequests(priority, node, ExecutionType.GUARANTEED,
+              testCapability1);
+      verifyMatches(matches, 1);
+      storedRequest = matches.get(0).iterator().next();
+      assertEquals(storedContainer1, storedRequest);
+      amClient.removeContainerRequest(storedContainer1);
+
+      // exact matching with order maintained
+      // we should get back 3 matches - default + http because they have the
+      // same capability
+      ProfileCapability testCapability2 =
+          ProfileCapability.newInstance("default");
+      matches = amClient
+          .getMatchingRequests(priority, node, ExecutionType.GUARANTEED,
+              testCapability2);
+      verifyMatches(matches, 2);
+      // must be returned in the order they were made
+      int i = 0;
+      for (ContainerRequest storedRequest1 : matches.get(0)) {
+        switch(i) {
+        case 0:
+          assertEquals(storedContainer2, storedRequest1);
+          break;
+        case 1:
+          assertEquals(storedContainer7, storedRequest1);
+          break;
+        }
+        i++;
+      }
+      amClient.removeContainerRequest(storedContainer5);
+
+      // matching with larger container. all requests returned
+      Resource testCapability3 = Resource.newInstance(8192, 8);
+      matches = amClient
+          .getMatchingRequests(priority, node, testCapability3);
+      assertEquals(3, matches.size());
+
+      Resource testCapability4 = Resource.newInstance(2048, 1);
+      matches = amClient.getMatchingRequests(priority, node, testCapability4);
+      assertEquals(1, matches.size());
+    } finally {
+      if (amClient != null && amClient.getServiceState() == STATE.STARTED) {
+        amClient.stop();
+      }
+    }
   }
 }

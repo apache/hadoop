@@ -77,13 +77,13 @@ public class TestErasureCodingPolicies {
     ecPolicy = getEcPolicy();
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).
         numDataNodes(ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()).
         build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     namesystem = cluster.getNamesystem();
+    DFSTestUtil.enableAllECPolicies(fs);
   }
 
   @After
@@ -206,15 +206,8 @@ public class TestErasureCodingPolicies {
 
     // Verify that policies are successfully loaded even when policies
     // are disabled
-    cluster.getConfiguration(0).set(
-        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, "");
     cluster.restartNameNodes();
     cluster.waitActive();
-
-    // Only default policy should be enabled after restart
-    Assert.assertEquals("Only default policy should be enabled after restart",
-        1,
-        ErasureCodingPolicyManager.getInstance().getEnabledPolicies().length);
 
     // Already set directory-level policies should still be in effect
     Path disabledPolicy = new Path(dir1, "afterDisabled");
@@ -725,7 +718,7 @@ public class TestErasureCodingPolicies {
     policyArray  = new ErasureCodingPolicy[]{policy0};
     responses = fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);
-    assertFalse(responses[0].isSucceed());
+    assertTrue(responses[0].isSucceed());
 
     // Test add policy successfully
     newPolicy =

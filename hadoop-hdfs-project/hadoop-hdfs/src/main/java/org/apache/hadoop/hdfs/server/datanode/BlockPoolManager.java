@@ -150,7 +150,7 @@ class BlockPoolManager {
             (DFSConfigKeys.DFS_NAMESERVICES));
 
     Map<String, Map<String, InetSocketAddress>> newAddressMap = DFSUtil
-            .getNNServiceRpcAddresses(conf);
+            .getNNServiceRpcAddressesForCluster(conf);
     Map<String, Map<String, InetSocketAddress>> newLifelineAddressMap = DFSUtil
             .getNNLifelineRpcAddressesForCluster(conf);
 

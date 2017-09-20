@@ -70,7 +70,6 @@ import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -105,7 +104,6 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -141,14 +139,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
     };
     exec.setConf(conf);
     return spy(exec);
-  }
-
-  @Override
-  @Before
-  public void setup() throws IOException {
-    conf.setInt(
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
-    super.setup();
   }
   
   @Override
@@ -1944,123 +1934,5 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertTrue(response.getFailedRequests().containsKey(cId));
     Assert.assertTrue(response.getFailedRequests().get(cId).getMessage()
         .contains("Null resource visibility for local resource"));
-  }
-
-  @Test
-  public void testContainerUpdateExecTypeOpportunisticToGuaranteed()
-      throws IOException, YarnException, InterruptedException {
-    delayContainers = true;
-    containerManager.start();
-    // Construct the Container-id
-    ContainerId cId = createContainerId(0);
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
-    StartContainerRequest scRequest =
-        StartContainerRequest.newInstance(
-            containerLaunchContext,
-            createContainerToken(cId, DUMMY_RM_IDENTIFIER,
-                context.getNodeId(), user, BuilderUtils.newResource(512, 1),
-                context.getContainerTokenSecretManager(), null,
-                ExecutionType.OPPORTUNISTIC));
-    List<StartContainerRequest> list = new ArrayList<>();
-    list.add(scRequest);
-    StartContainersRequest allRequests =
-        StartContainersRequest.newInstance(list);
-    containerManager.startContainers(allRequests);
-    // Make sure the container reaches RUNNING state
-    BaseContainerManagerTest.waitForNMContainerState(containerManager, cId,
-        org.apache.hadoop.yarn.server.nodemanager.
-            containermanager.container.ContainerState.RUNNING);
-    // Construct container resource increase request,
-    List<Token> updateTokens = new ArrayList<>();
-    Token containerToken =
-        createContainerToken(cId, 1, DUMMY_RM_IDENTIFIER, context.getNodeId(),
-            user, BuilderUtils.newResource(512, 1),
-            context.getContainerTokenSecretManager(), null,
-            ExecutionType.GUARANTEED);
-    updateTokens.add(containerToken);
-    ContainerUpdateRequest updateRequest =
-        ContainerUpdateRequest.newInstance(updateTokens);
-    ContainerUpdateResponse updateResponse =
-        containerManager.updateContainer(updateRequest);
-
-    Assert.assertEquals(
-        1, updateResponse.getSuccessfullyUpdatedContainers().size());
-    Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
-
-    //Make sure the container is running
-    List<ContainerId> statList = new ArrayList<ContainerId>();
-    statList.add(cId);
-    GetContainerStatusesRequest statRequest =
-        GetContainerStatusesRequest.newInstance(statList);
-    List<ContainerStatus> containerStatuses = containerManager
-        .getContainerStatuses(statRequest).getContainerStatuses();
-    Assert.assertEquals(1, containerStatuses.size());
-    for (ContainerStatus status : containerStatuses) {
-      Assert.assertEquals(
-          org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-          status.getState());
-      Assert.assertEquals(ExecutionType.GUARANTEED, status.getExecutionType());
-    }
-  }
-
-  @Test
-  public void testContainerUpdateExecTypeGuaranteedToOpportunistic()
-      throws IOException, YarnException, InterruptedException {
-    delayContainers = true;
-    containerManager.start();
-    // Construct the Container-id
-    ContainerId cId = createContainerId(0);
-    ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
-    StartContainerRequest scRequest =
-        StartContainerRequest.newInstance(
-            containerLaunchContext,
-            createContainerToken(cId, DUMMY_RM_IDENTIFIER,
-                context.getNodeId(), user, BuilderUtils.newResource(512, 1),
-                context.getContainerTokenSecretManager(), null));
-    List<StartContainerRequest> list = new ArrayList<>();
-    list.add(scRequest);
-    StartContainersRequest allRequests =
-        StartContainersRequest.newInstance(list);
-    containerManager.startContainers(allRequests);
-    // Make sure the container reaches RUNNING state
-    BaseContainerManagerTest.waitForNMContainerState(containerManager, cId,
-        org.apache.hadoop.yarn.server.nodemanager.
-            containermanager.container.ContainerState.RUNNING);
-    // Construct container resource increase request,
-    List<Token> updateTokens = new ArrayList<>();
-    Token containerToken =
-        createContainerToken(cId, 1, DUMMY_RM_IDENTIFIER, context.getNodeId(),
-            user, BuilderUtils.newResource(512, 1),
-            context.getContainerTokenSecretManager(), null,
-            ExecutionType.OPPORTUNISTIC);
-    updateTokens.add(containerToken);
-    ContainerUpdateRequest updateRequest =
-        ContainerUpdateRequest.newInstance(updateTokens);
-    ContainerUpdateResponse updateResponse =
-        containerManager.updateContainer(updateRequest);
-
-    Assert.assertEquals(
-        1, updateResponse.getSuccessfullyUpdatedContainers().size());
-    Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
-
-    //Make sure the container is running
-    List<ContainerId> statList = new ArrayList<ContainerId>();
-    statList.add(cId);
-    GetContainerStatusesRequest statRequest =
-        GetContainerStatusesRequest.newInstance(statList);
-    List<ContainerStatus> containerStatuses = containerManager
-        .getContainerStatuses(statRequest).getContainerStatuses();
-    Assert.assertEquals(1, containerStatuses.size());
-    for (ContainerStatus status : containerStatuses) {
-      Assert.assertEquals(
-          org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-          status.getState());
-      Assert
-          .assertEquals(ExecutionType.OPPORTUNISTIC, status.getExecutionType());
-    }
   }
 }

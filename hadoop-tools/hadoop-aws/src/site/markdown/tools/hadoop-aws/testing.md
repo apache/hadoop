@@ -12,9 +12,9 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Testing the S3 filesystem clients
+# Testing the S3A filesystem client and its features, including S3Guard
 
-<!-- MACRO{toc|fromDepth=0|toDepth=5} -->
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 This module includes both unit tests, which can run in isolation without
 connecting to the S3 service, and integration tests, which require a working
@@ -26,7 +26,7 @@ Due to eventual consistency, integration tests may fail without reason.
 Transient failures, which no longer occur upon rerunning the test, should thus
 be ignored.
 
-## Policy for submitting patches which affect the `hadoop-aws` module.
+## <a name="policy"></a> Policy for submitting patches which affect the `hadoop-aws` module.
 
 The Apache Jenkins infrastucture does not run any S3 integration tests,
 due to the need to keep credentials secure.
@@ -74,7 +74,7 @@ in the production code, that could be a sign of a problem which may surface
 over long-haul connections. Please help us identify and fix these problems
 &mdash; especially as you are the one best placed to verify the fixes work.
 
-## Setting up the tests
+## <a name="setting-up"></a> Setting up the tests
 
 To integration test the S3* filesystem clients, you need to provide
 `auth-keys.xml` which passes in authentication details to the test runner.
@@ -101,16 +101,11 @@ The XML file must contain all the ID/key information needed to connect
 each of the filesystem clients to the object stores, and a URL for
 each filesystem for its testing.
 
-1. `test.fs.s3n.name` : the URL of the bucket for S3n tests
 1. `test.fs.s3a.name` : the URL of the bucket for S3a tests
-1. `fs.contract.test.fs.s3n` : the URL of the bucket for S3n filesystem contract tests
 1. `fs.contract.test.fs.s3a` : the URL of the bucket for S3a filesystem contract tests
 
-*Note* that running s3a and s3n tests in parallel mode, against the same bucket
-is unreliable.  We recommend using separate buckets or testing one connector
-at a time.
 
-The contents of each bucket will be destroyed during the test process:
+The contents of the bucket will be destroyed during the test process:
 do not use the bucket for any purpose other than testing. Furthermore, for
 s3a, all in-progress multi-part uploads to the bucket will be aborted at the
 start of a test (by forcing `fs.s3a.multipart.purge=true`) to clean up the
@@ -120,26 +115,6 @@ Example:
 
 ```xml
 <configuration>
-
-  <property>
-    <name>test.fs.s3n.name</name>
-    <value>s3n://test-aws-s3n/</value>
-  </property>
-
-  <property>
-    <name>fs.contract.test.fs.s3n</name>
-    <value>${test.fs.s3n.name}</value>
-  </property>
-
-  <property>
-    <name>fs.s3n.awsAccessKeyId</name>
-    <value>DONOTPCOMMITTHISKEYTOSCM</value>
-  </property>
-
-  <property>
-    <name>fs.s3n.awsSecretAccessKey</name>
-    <value>DONOTEVERSHARETHISSECRETKEY!</value>
-  </property>
 
   <property>
     <name>test.fs.s3a.name</name>
@@ -172,7 +147,7 @@ Example:
 </configuration>
 ```
 
-### Configuring S3a Encryption
+### <a name="encryption"></a> Configuring S3a Encryption
 
 For S3a encryption tests to run correctly, the
 `fs.s3a.server-side-encryption.key` must be configured in the s3a contract xml
@@ -192,7 +167,7 @@ You can also force all the tests to run with a specific SSE encryption method
 by configuring the property `fs.s3a.server-side-encryption-algorithm` in the s3a
 contract file.
 
-## Running the Tests
+## <a name="running"></a> Running the Tests
 
 After completing the configuration, execute the test run through Maven.
 
@@ -251,7 +226,7 @@ combination with `test` or `it.test`.  If you know that you are specifying only
 tests that can run safely in parallel, then it will work.  For wide patterns,
 like `ITestS3A*` shown above, it may cause unpredictable test failures.
 
-### Testing against different regions
+### <a name="regions"></a> Testing against different regions
 
 S3A can connect to different regions —the tests support this. Simply
 define the target region in `auth-keys.xml`.
@@ -265,7 +240,7 @@ define the target region in `auth-keys.xml`.
 This is used for all tests expect for scale tests using a Public CSV.gz file
 (see below)
 
-### CSV Data source Tests
+### <a name="csv"></a> CSV Data Tests
 
 The `TestS3AInputStreamPerformance` tests require read access to a multi-MB
 text file. The default file for these tests is one published by amazon,
@@ -303,7 +278,7 @@ For the default test dataset, hosted in the `landsat-pds` bucket, this is:
 </property>
 ```
 
-### Viewing Integration Test Reports
+## <a name="reporting"></a> Viewing Integration Test Reports
 
 
 Integration test results and logs are stored in `target/failsafe-reports/`.
@@ -313,7 +288,7 @@ plugin:
 ```bash
 mvn surefire-report:failsafe-report-only
 ```
-### Scale Tests
+## <a name="scale"></a> Scale Tests
 
 There are a set of tests designed to measure the scalability and performance
 at scale of the S3A tests, *Scale Tests*. Tests include: creating
@@ -325,7 +300,7 @@ By their very nature they are slow. And, as their execution time is often
 limited by bandwidth between the computer running the tests and the S3 endpoint,
 parallel execution does not speed these tests up.
 
-#### Enabling the Scale Tests
+### <a name="enabling-scale"></a> Enabling the Scale Tests
 
 The tests are enabled if the `scale` property is set in the maven build
 this can be done regardless of whether or not the parallel test profile
@@ -342,7 +317,7 @@ sequentially; those which are slow due to HTTPS setup costs or server-side
 actionsare included in the set of parallelized tests.
 
 
-#### Maven build tuning options
+### <a name="tuning_scale"></a> Tuning scale optins from Maven
 
 
 Some of the tests can be tuned from the maven build or from the
@@ -373,7 +348,7 @@ Only a few properties can be set this way; more will be added.
 The file and partition sizes are numeric values with a k/m/g/t/p suffix depending
 on the desired size. For example: 128M, 128m, 2G, 2G, 4T or even 1P.
 
-#### Scale test configuration options
+### <a name="scale-config"></a> Scale test configuration options
 
 Some scale tests perform multiple operations (such as creating many directories).
 
@@ -418,7 +393,7 @@ smaller to achieve faster test runs.
 
 S3A specific scale test properties are
 
-##### `fs.s3a.scale.test.huge.filesize`: size in MB for "Huge file tests".
+*`fs.s3a.scale.test.huge.filesize`: size in MB for "Huge file tests".*
 
 The Huge File tests validate S3A's ability to handle large files —the property
 `fs.s3a.scale.test.huge.filesize` declares the file size to use.
@@ -452,13 +427,11 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 </property>
 ```
 
-
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
 
-
-## Testing against non AWS S3 endpoints.
+## <a name="alternate_s3"></a> Testing against non AWS S3 endpoints.
 
 The S3A filesystem is designed to work with storage endpoints which implement
 the S3 protocols to the extent that the amazon S3 SDK is capable of talking
@@ -527,7 +500,7 @@ An alternate endpoint may be defined in `test.fs.s3a.sts.endpoint`.
 The default is ""; meaning "use the amazon default value".
 
 
-## Debugging Test failures
+## <a name="debugging"></a> Debugging Test failures
 
 Logging at debug level is the standard way to provide more diagnostics output;
 after setting this rerun the tests
@@ -550,7 +523,7 @@ setting the `fs.s3a.user.agent.prefix` to a unique prefix for a specific
 test run, which will enable the specific log entries to be more easily
 located.
 
-## Adding new tests
+## <a name="new_tests"></a> Adding new tests
 
 New tests are always welcome. Bear in mind that we need to keep costs
 and test time down, which is done by
@@ -593,7 +566,7 @@ fail with meaningful diagnostics, so any new problems can be easily debugged
 from test logs.
 
 
-### Requirements of new Tests
+## <a name="requirements"></a> Requirements of new Tests
 
 
 This is what we expect from new tests; they're an extension of the normal
@@ -602,7 +575,7 @@ use requires the presence of secret credentials, where tests may be slow,
 and where finding out why something failed from nothing but the test output
 is critical.
 
-#### Subclasses Existing Shared Base Classes
+### Subclasses Existing Shared Base Classes
 
 Extend `AbstractS3ATestBase` or `AbstractSTestS3AHugeFiles` unless justifiable.
 These set things up for testing against the object stores, provide good threadnames,
@@ -619,12 +592,12 @@ defined in `fs.s3a.contract.test`
 Having shared base classes may help reduce future maintenance too. Please
 use them/
 
-#### Secure
+### Secure
 
 Don't ever log credentials. The credential tests go out of their way to
 not provide meaningful logs or assertion messages precisely to avoid this.
 
-#### Efficient of Time and Money
+### Efficient of Time and Money
 
 This means efficient in test setup/teardown, and, ideally, making use of
 existing public datasets to save setup time and tester cost.
@@ -650,7 +623,7 @@ against other regions, or with third party S3 implementations. Thus the
 URL can be overridden for testing elsewhere.
 
 
-#### Works With Other S3 Endpoints
+### Works With Other S3 Endpoints
 
 Don't assume AWS S3 US-East only, do allow for working with external S3 implementations.
 Those may be behind the latest S3 API features, not support encryption, session
@@ -678,7 +651,7 @@ adds some newlines so as to be easier to spot.
 1. Use `ContractTestUtils.NanoTimer` to measure the duration of operations,
 and log the output.
 
-#### Fails Meaningfully
+### Fails Meaningfully
 
 The `ContractTestUtils` class contains a whole set of assertions for making
 statements about the expected state of a filesystem, e.g.
@@ -705,7 +678,7 @@ get called.
 We really appreciate this &mdash; you will too.
 
 
-## Tips
+## <a name="tips"></a> Tips
 
 ### How to keep your credentials really safe
 
@@ -725,7 +698,7 @@ using an absolute XInclude reference to it.
 </configuration>
 ```
 
-# Failure Injection
+#  <a name="failure-injection"></a>Failure Injection
 
 **Warning do not enable any type of failure injection in production.  The
 following settings are for testing only.**
@@ -858,7 +831,10 @@ The inconsistent client is shipped in the `hadoop-aws` JAR, so it can
 be used in applications which work with S3 to see how they handle
 inconsistent directory listings.
 
-## Testing S3Guard
+##<a name="s3guard"></a> Testing S3Guard
+
+[S3Guard](./s3guard.html) is an extension to S3A which adds consistent metadata
+listings to the S3A client. As it is part of S3A, it also needs to be tested.
 
 The basic strategy for testing S3Guard correctness consists of:
 
@@ -934,13 +910,6 @@ If the `s3guard` profile *is* set,
   overwrite any previously set in the configuration files.
 1. DynamoDB will be configured to create any missing tables.
 
-### Warning About Concurrent Tests
-
-You must not run S3A and S3N tests in parallel on the same bucket.  This is
-especially true when S3Guard is enabled.  S3Guard requires that all clients
-that are modifying the bucket have S3Guard enabled, so having S3N
-integration tests running in parallel with S3A tests will cause strange
-failures.
 
 ### Scale Testing MetadataStore Directly
 

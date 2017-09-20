@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -25,11 +27,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -49,10 +53,8 @@ public class RMAppAttemptMetrics {
   
   private ReadLock readLock;
   private WriteLock writeLock;
-  private AtomicLong finishedMemorySeconds = new AtomicLong(0);
-  private AtomicLong finishedVcoreSeconds = new AtomicLong(0);
-  private AtomicLong preemptedMemorySeconds = new AtomicLong(0);
-  private AtomicLong preemptedVcoreSeconds = new AtomicLong(0);
+  private Map<String, AtomicLong> resourceUsageMap = new HashMap<>();
+  private Map<String, AtomicLong> preemptedResourceMap = new HashMap<>();
   private RMContext rmContext;
 
   private int[][] localityStatistics =
@@ -102,11 +104,16 @@ public class RMAppAttemptMetrics {
   }
 
   public long getPreemptedMemory() {
-    return preemptedMemorySeconds.get();
+    return preemptedResourceMap.get(ResourceInformation.MEMORY_MB.getName())
+        .get();
   }
 
   public long getPreemptedVcore() {
-    return preemptedVcoreSeconds.get();
+    return preemptedResourceMap.get(ResourceInformation.VCORES.getName()).get();
+  }
+
+  public Map<String, Long> getPreemptedResourceSecondsMap() {
+    return convertAtomicLongMaptoLongMap(preemptedResourceMap);
   }
 
   public int getNumNonAMContainersPreempted() {
@@ -122,35 +129,89 @@ public class RMAppAttemptMetrics {
   }
 
   public AggregateAppResourceUsage getAggregateAppResourceUsage() {
-    long memorySeconds = finishedMemorySeconds.get();
-    long vcoreSeconds = finishedVcoreSeconds.get();
+    Map<String, Long> resourcesUsed =
+        convertAtomicLongMaptoLongMap(resourceUsageMap);
 
     // Only add in the running containers if this is the active attempt.
     RMApp rmApp = rmContext.getRMApps().get(attemptId.getApplicationId());
-    if (null != rmApp) {
-      RMAppAttempt currentAttempt = rmApp.getCurrentAppAttempt();
+    if (rmApp != null) {
+      RMAppAttempt currentAttempt = rmContext.getRMApps().get(attemptId.getApplicationId()).getCurrentAppAttempt();
       if (currentAttempt.getAppAttemptId().equals(attemptId)) {
-        ApplicationResourceUsageReport appResUsageReport = rmContext
-                .getScheduler().getAppResourceUsageReport(attemptId);
+        ApplicationResourceUsageReport appResUsageReport =
+            rmContext.getScheduler().getAppResourceUsageReport(attemptId);
         if (appResUsageReport != null) {
-          memorySeconds += appResUsageReport.getMemorySeconds();
-          vcoreSeconds += appResUsageReport.getVcoreSeconds();
+          Map<String, Long> tmp = appResUsageReport.getResourceSecondsMap();
+          for (Map.Entry<String, Long> entry : tmp.entrySet()) {
+            if (resourcesUsed.containsKey(entry.getKey())) {
+              Long value = resourcesUsed.get(entry.getKey());
+              value += entry.getValue();
+              resourcesUsed.put(entry.getKey(), value);
+            } else{
+              resourcesUsed.put(entry.getKey(), entry.getValue());
+            }
+          }
         }
       }
     }
-    return new AggregateAppResourceUsage(memorySeconds, vcoreSeconds);
+    return new AggregateAppResourceUsage(resourcesUsed);
   }
 
-  public void updateAggregateAppResourceUsage(long finishedMemorySeconds,
-                                        long finishedVcoreSeconds) {
-    this.finishedMemorySeconds.addAndGet(finishedMemorySeconds);
-    this.finishedVcoreSeconds.addAndGet(finishedVcoreSeconds);
+  public void updateAggregateAppResourceUsage(Resource allocated,
+      long deltaUsedMillis) {
+    updateUsageMap(allocated, deltaUsedMillis, resourceUsageMap);
+  }
+
+  public void updateAggregatePreemptedAppResourceUsage(Resource allocated,
+      long deltaUsedMillis) {
+    updateUsageMap(allocated, deltaUsedMillis, preemptedResourceMap);
+  }
+
+  public void updateAggregateAppResourceUsage(
+      Map<String, Long> resourceSecondsMap) {
+    updateUsageMap(resourceSecondsMap, resourceUsageMap);
   }
 
   public void updateAggregatePreemptedAppResourceUsage(
-      long preemptedMemorySeconds, long preemptedVcoreSeconds) {
-    this.preemptedMemorySeconds.addAndGet(preemptedMemorySeconds);
-    this.preemptedVcoreSeconds.addAndGet(preemptedVcoreSeconds);
+      Map<String, Long> preemptedResourceSecondsMap) {
+    updateUsageMap(preemptedResourceSecondsMap, preemptedResourceMap);
+  }
+
+  private void updateUsageMap(Resource allocated, long deltaUsedMillis,
+      Map<String, AtomicLong> targetMap) {
+    for (ResourceInformation entry : allocated.getResources()) {
+      AtomicLong resourceUsed;
+      if (!targetMap.containsKey(entry.getName())) {
+        resourceUsed = new AtomicLong(0);
+        targetMap.put(entry.getName(), resourceUsed);
+
+      }
+      resourceUsed = targetMap.get(entry.getName());
+      resourceUsed.addAndGet((entry.getValue() * deltaUsedMillis)
+          / DateUtils.MILLIS_PER_SECOND);
+    }
+  }
+
+  private void updateUsageMap(Map<String, Long> sourceMap,
+      Map<String, AtomicLong> targetMap) {
+    for (Map.Entry<String, Long> entry : sourceMap.entrySet()) {
+      AtomicLong resourceUsed;
+      if (!targetMap.containsKey(entry.getKey())) {
+        resourceUsed = new AtomicLong(0);
+        targetMap.put(entry.getKey(), resourceUsed);
+
+      }
+      resourceUsed = targetMap.get(entry.getKey());
+      resourceUsed.set(entry.getValue());
+    }
+  }
+
+  private Map<String, Long> convertAtomicLongMaptoLongMap(
+      Map<String, AtomicLong> source) {
+    Map<String, Long> ret = new HashMap<>();
+    for (Map.Entry<String, AtomicLong> entry : source.entrySet()) {
+      ret.put(entry.getKey(), entry.getValue().get());
+    }
+    return ret;
   }
 
   public void incNumAllocatedContainers(NodeType containerType,

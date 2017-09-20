@@ -72,6 +72,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
@@ -222,6 +223,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   final String clientName;
   final SocketFactory socketFactory;
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
+  final short dtpReplaceDatanodeOnFailureReplication;
   private final FileSystem.Statistics stats;
   private final URI namenodeUri;
   private final Random r = new Random();
@@ -304,7 +306,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
     this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
-
+    this.dtpReplaceDatanodeOnFailureReplication = (short) conf
+        .getInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+                MIN_REPLICATION,
+            HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+                MIN_REPLICATION_DEFAULT);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Sets " + HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+              MIN_REPLICATION + " to "
+              + dtpReplaceDatanodeOnFailureReplication);
+    }
     this.ugi = UserGroupInformation.getCurrentUser();
 
     this.namenodeUri = nameNodeUri;
@@ -866,6 +878,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * data-placement when performing operations.  For example, the
    * MapReduce system tries to schedule tasks on the same machines
    * as the data-block the task processes.
+   *
+   * Please refer to
+   * {@link FileSystem#getFileBlockLocations(FileStatus, long, long)}
+   * for more details.
    */
   public BlockLocation[] getBlockLocations(String src, long start,
       long length) throws IOException {

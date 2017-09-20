@@ -29,7 +29,6 @@ public class ITestS3AEncryptionSSES3BlockOutputStream
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setBoolean(Constants.FAST_UPLOAD, true);
     conf.set(Constants.FAST_UPLOAD_BUFFER,
         Constants.FAST_UPLOAD_BYTEBUFFER);
     //must specify encryption key as empty because SSE-S3 does not allow it,

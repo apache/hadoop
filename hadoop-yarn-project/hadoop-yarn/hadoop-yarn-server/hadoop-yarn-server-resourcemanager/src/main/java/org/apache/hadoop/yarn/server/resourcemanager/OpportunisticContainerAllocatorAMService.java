@@ -127,7 +127,8 @@ public class OpportunisticContainerAllocatorAMService
     public void registerApplicationMaster(
         ApplicationAttemptId applicationAttemptId,
         RegisterApplicationMasterRequest request,
-        RegisterApplicationMasterResponse response) throws IOException {
+        RegisterApplicationMasterResponse response)
+        throws IOException, YarnException {
       SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
           getScheduler()).getApplicationAttempt(applicationAttemptId);
       if (appAttempt.getOpportunisticContainerContext() == null) {

@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
@@ -47,15 +41,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
-import org.apache.hadoop.fs.azure.AzureException;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 
 import com.microsoft.azure.storage.AccessCondition;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
+
+import static org.apache.hadoop.test.GenericTestUtils.*;
 
 /*
  * Tests the Native Azure file system (WASB) against an actual blob store if
@@ -71,15 +67,46 @@ public abstract class NativeAzureFileSystemBaseTest
   private final long modifiedTimeErrorMargin = 5 * 1000; // Give it +/-5 seconds
 
   public static final Log LOG = LogFactory.getLog(NativeAzureFileSystemBaseTest.class);
+  protected NativeAzureFileSystem fs;
+
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+    fs = getFileSystem();
+  }
+
+  /**
+   * Assert that a path does not exist.
+   *
+   * @param message message to include in the assertion failure message
+   * @param path path in the filesystem
+   * @throws IOException IO problems
+   */
+  public void assertPathDoesNotExist(String message,
+      Path path) throws IOException {
+    ContractTestUtils.assertPathDoesNotExist(fs, message, path);
+  }
+
+  /**
+   * Assert that a path exists.
+   *
+   * @param message message to include in the assertion failure message
+   * @param path path in the filesystem
+   * @throws IOException IO problems
+   */
+  public void assertPathExists(String message,
+      Path path) throws IOException {
+    ContractTestUtils.assertPathExists(fs, message, path);
+  }
 
   @Test
   public void testCheckingNonExistentOneLetterFile() throws Exception {
-    assertFalse(fs.exists(new Path("/a")));
+    assertPathDoesNotExist("one letter file", new Path("/a"));
   }
 
   @Test
   public void testStoreRetrieveFile() throws Exception {
-    Path testFile = new Path("unit-test-file");
+    Path testFile = methodPath();
     writeString(testFile, "Testing");
     assertTrue(fs.exists(testFile));
     FileStatus status = fs.getFileStatus(testFile);
@@ -93,7 +120,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testStoreDeleteFolder() throws Exception {
-    Path testFolder = new Path("storeDeleteFolder");
+    Path testFolder = methodPath();
     assertFalse(fs.exists(testFolder));
     assertTrue(fs.mkdirs(testFolder));
     assertTrue(fs.exists(testFolder));
@@ -105,22 +132,22 @@ public abstract class NativeAzureFileSystemBaseTest
     assertEquals(new FsPermission((short) 0755), status.getPermission());
     Path innerFile = new Path(testFolder, "innerFile");
     assertTrue(fs.createNewFile(innerFile));
-    assertTrue(fs.exists(innerFile));
+    assertPathExists("inner file", innerFile);
     assertTrue(fs.delete(testFolder, true));
-    assertFalse(fs.exists(innerFile));
-    assertFalse(fs.exists(testFolder));
+    assertPathDoesNotExist("inner file", innerFile);
+    assertPathDoesNotExist("testFolder", testFolder);
   }
 
   @Test
   public void testFileOwnership() throws Exception {
-    Path testFile = new Path("ownershipTestFile");
+    Path testFile = methodPath();
     writeString(testFile, "Testing");
     testOwnership(testFile);
   }
 
   @Test
   public void testFolderOwnership() throws Exception {
-    Path testFolder = new Path("ownershipTestFolder");
+    Path testFolder = methodPath();
     fs.mkdirs(testFolder);
     testOwnership(testFolder);
   }
@@ -147,7 +174,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testFilePermissions() throws Exception {
-    Path testFile = new Path("permissionTestFile");
+    Path testFile = methodPath();
     FsPermission permission = FsPermission.createImmutable((short) 644);
     createEmptyFile(testFile, permission);
     FileStatus ret = fs.getFileStatus(testFile);
@@ -157,7 +184,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testFolderPermissions() throws Exception {
-    Path testFolder = new Path("permissionTestFolder");
+    Path testFolder = methodPath();
     FsPermission permission = FsPermission.createImmutable((short) 644);
     fs.mkdirs(testFolder, permission);
     FileStatus ret = fs.getFileStatus(testFolder);
@@ -176,9 +203,9 @@ public abstract class NativeAzureFileSystemBaseTest
     createEmptyFile(testFile, permission);
     FsPermission rootPerm = fs.getFileStatus(firstDir.getParent()).getPermission();
     FsPermission inheritPerm = FsPermission.createImmutable((short)(rootPerm.toShort() | 0300));
-    assertTrue(fs.exists(testFile));
-    assertTrue(fs.exists(firstDir));
-    assertTrue(fs.exists(middleDir));
+    assertPathExists("test file", testFile);
+    assertPathExists("firstDir", firstDir);
+    assertPathExists("middleDir", middleDir);
     // verify that the indirectly created directory inherited its permissions from the root directory
     FileStatus directoryStatus = fs.getFileStatus(middleDir);
     assertTrue(directoryStatus.isDirectory());
@@ -188,7 +215,7 @@ public abstract class NativeAzureFileSystemBaseTest
     assertFalse(fileStatus.isDirectory());
     assertEqualsIgnoreStickyBit(umaskedPermission, fileStatus.getPermission());
     assertTrue(fs.delete(firstDir, true));
-    assertFalse(fs.exists(testFile));
+    assertPathDoesNotExist("deleted file", testFile);
 
     // An alternative test scenario would've been to delete the file first,
     // and then check for the existence of the upper folders still. But that
@@ -264,7 +291,7 @@ public abstract class NativeAzureFileSystemBaseTest
     assertTrue(fs.delete(new Path("deep"), true));
   }
 
-  private static enum RenameFolderVariation {
+  private enum RenameFolderVariation {
     CreateFolderAndInnerFile, CreateJustInnerFile, CreateJustFolder
   }
 
@@ -303,10 +330,10 @@ public abstract class NativeAzureFileSystemBaseTest
     localFs.delete(localFilePath, true);
     try {
       writeString(localFs, localFilePath, "Testing");
-      Path dstPath = new Path("copiedFromLocal");
+      Path dstPath = methodPath();
       assertTrue(FileUtil.copy(localFs, localFilePath, fs, dstPath, false,
           fs.getConf()));
-      assertTrue(fs.exists(dstPath));
+      assertPathExists("coied from local", dstPath);
       assertEquals("Testing", readString(fs, dstPath));
       fs.delete(dstPath, true);
     } finally {
@@ -423,32 +450,32 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testReadingDirectoryAsFile() throws Exception {
-    Path dir = new Path("/x");
+    Path dir = methodPath();
     assertTrue(fs.mkdirs(dir));
     try {
       fs.open(dir).close();
       assertTrue("Should've thrown", false);
     } catch (FileNotFoundException ex) {
-      assertEquals("/x is a directory not a file.", ex.getMessage());
+      assertExceptionContains("a directory not a file.", ex);
     }
   }
 
   @Test
   public void testCreatingFileOverDirectory() throws Exception {
-    Path dir = new Path("/x");
+    Path dir = methodPath();
     assertTrue(fs.mkdirs(dir));
     try {
       fs.create(dir).close();
       assertTrue("Should've thrown", false);
     } catch (IOException ex) {
-      assertEquals("Cannot create file /x; already exists as a directory.",
-          ex.getMessage());
+      assertExceptionContains("Cannot create file", ex);
+      assertExceptionContains("already exists as a directory", ex);
     }
   }
 
   @Test
   public void testInputStreamReadWithZeroSizeBuffer() throws Exception {
-    Path newFile = new Path("zeroSizeRead");
+    Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     output.write(10);
     output.close();
@@ -460,7 +487,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testInputStreamReadWithBufferReturnsMinusOneOnEof() throws Exception {
-    Path newFile = new Path("eofRead");
+    Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     output.write(10);
     output.close();
@@ -482,7 +509,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testInputStreamReadWithBufferReturnsMinusOneOnEofForLargeBuffer() throws Exception {
-    Path newFile = new Path("eofRead2");
+    Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     byte[] outputBuff = new byte[97331];
     for(int i = 0; i < outputBuff.length; ++i) {
@@ -508,7 +535,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testInputStreamReadIntReturnsMinusOneOnEof() throws Exception {
-    Path newFile = new Path("eofRead3");
+    Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     output.write(10);
     output.close();
@@ -525,7 +552,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testSetPermissionOnFile() throws Exception {
-    Path newFile = new Path("testPermission");
+    Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     output.write(13);
     output.close();
@@ -540,14 +567,14 @@ public abstract class NativeAzureFileSystemBaseTest
 
     // Don't check the file length for page blobs. Only block blobs
     // provide the actual length of bytes written.
-    if (!(this instanceof TestNativeAzureFSPageBlobLive)) {
+    if (!(this instanceof ITestNativeAzureFSPageBlobLive)) {
       assertEquals(1, newStatus.getLen());
     }
   }
 
   @Test
   public void testSetPermissionOnFolder() throws Exception {
-    Path newFolder = new Path("testPermission");
+    Path newFolder = methodPath();
     assertTrue(fs.mkdirs(newFolder));
     FsPermission newPermission = new FsPermission((short) 0600);
     fs.setPermission(newFolder, newPermission);
@@ -559,7 +586,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testSetOwnerOnFile() throws Exception {
-    Path newFile = new Path("testOwner");
+    Path newFile = methodPath();
     OutputStream output = fs.create(newFile);
     output.write(13);
     output.close();
@@ -571,7 +598,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
     // File length is only reported to be the size of bytes written to the file for block blobs.
     // So only check it for block blobs, not page blobs.
-    if (!(this instanceof TestNativeAzureFSPageBlobLive)) {
+    if (!(this instanceof ITestNativeAzureFSPageBlobLive)) {
       assertEquals(1, newStatus.getLen());
     }
     fs.setOwner(newFile, null, "newGroup");
@@ -583,7 +610,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testSetOwnerOnFolder() throws Exception {
-    Path newFolder = new Path("testOwner");
+    Path newFolder = methodPath();
     assertTrue(fs.mkdirs(newFolder));
     fs.setOwner(newFolder, "newUser", null);
     FileStatus newStatus = fs.getFileStatus(newFolder);
@@ -594,21 +621,21 @@ public abstract class NativeAzureFileSystemBaseTest
 
   @Test
   public void testModifiedTimeForFile() throws Exception {
-    Path testFile = new Path("testFile");
+    Path testFile = methodPath();
     fs.create(testFile).close();
     testModifiedTime(testFile);
   }
 
   @Test
   public void testModifiedTimeForFolder() throws Exception {
-    Path testFolder = new Path("testFolder");
+    Path testFolder = methodPath();
     assertTrue(fs.mkdirs(testFolder));
     testModifiedTime(testFolder);
   }
 
   @Test
   public void testFolderLastModifiedTime() throws Exception {
-    Path parentFolder = new Path("testFolder");
+    Path parentFolder = methodPath();
     Path innerFile = new Path(parentFolder, "innerfile");
     assertTrue(fs.mkdirs(parentFolder));
 
@@ -983,7 +1010,7 @@ public abstract class NativeAzureFileSystemBaseTest
 
     // Make sure rename pending file is gone.
     FileStatus[] listed = fs.listStatus(new Path("/"));
-    assertEquals(1, listed.length);
+    assertEquals("Pending directory still found", 1, listed.length);
     assertTrue(listed[0].isDirectory());
   }
 
@@ -1681,7 +1708,7 @@ public abstract class NativeAzureFileSystemBaseTest
           assertTrue("Unanticipated exception", false);
         }
       } else {
-        assertTrue("Unknown thread name", false);
+        fail("Unknown thread name");
       }
 
       LOG.info(name + " is exiting.");

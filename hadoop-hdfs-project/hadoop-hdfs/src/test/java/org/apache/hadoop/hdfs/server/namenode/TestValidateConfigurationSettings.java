@@ -125,8 +125,6 @@ public class TestValidateConfigurationSettings {
     // Set ephemeral ports 
     conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,
         "127.0.0.1:0");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-        "127.0.0.1:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
         "127.0.0.1:0");
     

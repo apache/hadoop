@@ -2057,6 +2057,7 @@ public class BlockManager implements BlockStatsMXBean {
       final List<String> favoredNodes,
       final byte storagePolicyID,
       final BlockType blockType,
+      final ErasureCodingPolicy ecPolicy,
       final EnumSet<AddBlockFlag> flags) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 
         getDatanodeDescriptors(favoredNodes);
@@ -2067,14 +2068,23 @@ public class BlockManager implements BlockStatsMXBean {
     final DatanodeStorageInfo[] targets = blockplacement.chooseTarget(src,
         numOfReplicas, client, excludedNodes, blocksize, 
         favoredDatanodeDescriptors, storagePolicy, flags);
-    if (targets.length < minReplication) {
-      throw new IOException("File " + src + " could only be replicated to "
-          + targets.length + " nodes instead of minReplication (="
-          + minReplication + ").  There are "
-          + getDatanodeManager().getNetworkTopology().getNumOfLeaves()
-          + " datanode(s) running and "
-          + (excludedNodes == null? "no": excludedNodes.size())
-          + " node(s) are excluded in this operation.");
+
+    final String errorMessage = "File %s could only be written to %d of " +
+        "the %d %s. There are %d datanode(s) running and %s "
+        + "node(s) are excluded in this operation.";
+    if (blockType == BlockType.CONTIGUOUS && targets.length < minReplication) {
+      throw new IOException(String.format(errorMessage, src,
+          targets.length, minReplication, "minReplication nodes",
+          getDatanodeManager().getNetworkTopology().getNumOfLeaves(),
+          (excludedNodes == null? "no": excludedNodes.size())));
+    } else if (blockType == BlockType.STRIPED &&
+        targets.length < ecPolicy.getNumDataUnits()) {
+      throw new IOException(
+          String.format(errorMessage, src, targets.length,
+              ecPolicy.getNumDataUnits(),
+              String.format("required nodes for %s", ecPolicy.getName()),
+              getDatanodeManager().getNetworkTopology().getNumOfLeaves(),
+              (excludedNodes == null ? "no" : excludedNodes.size())));
     }
     return targets;
   }
@@ -3541,8 +3551,8 @@ public class BlockManager implements BlockStatsMXBean {
     List<DatanodeStorageInfo> replicasToDelete = replicator
         .chooseReplicasToDelete(nonExcess, nonExcess, replication, excessTypes,
             addedNode, delNodeHint);
-    for (DatanodeStorageInfo choosenReplica : replicasToDelete) {
-      processChosenExcessRedundancy(nonExcess, choosenReplica, storedBlock);
+    for (DatanodeStorageInfo chosenReplica : replicasToDelete) {
+      processChosenExcessRedundancy(nonExcess, chosenReplica, storedBlock);
     }
   }
 

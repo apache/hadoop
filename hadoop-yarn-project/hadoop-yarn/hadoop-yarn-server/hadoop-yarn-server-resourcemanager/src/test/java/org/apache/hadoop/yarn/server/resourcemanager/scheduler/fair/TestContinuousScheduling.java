@@ -285,24 +285,19 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testThreadLifeCycle() throws InterruptedException {
+  public void testSchedulerThreadLifeCycle() throws InterruptedException {
     scheduler.start();
 
-    Thread updateThread = scheduler.updateThread;
     Thread schedulingThread = scheduler.schedulingThread;
-
-    assertTrue(updateThread.isAlive());
     assertTrue(schedulingThread.isAlive());
-
     scheduler.stop();
 
     int numRetries = 100;
-    while (numRetries-- > 0 &&
-        (updateThread.isAlive() || schedulingThread.isAlive())) {
+    while (numRetries-- > 0 && schedulingThread.isAlive()) {
       Thread.sleep(50);
     }
 
-    assertNotEquals("One of the threads is still alive", 0, numRetries);
+    assertNotEquals("The Scheduling thread is still alive", 0, numRetries);
   }
 
   @Test

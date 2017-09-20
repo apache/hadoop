@@ -21,6 +21,10 @@ package org.apache.hadoop.fs.azure;
 import java.io.IOException;
 import org.junit.Ignore;
 
+/**
+ * Run {@link NativeAzureFileSystemBaseTest} tests against a mocked store,
+ * skipping tests of unsupported features
+ */
 public class TestNativeAzureFileSystemMocked extends
     NativeAzureFileSystemBaseTest {
 

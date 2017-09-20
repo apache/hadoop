@@ -30,7 +30,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -134,11 +133,7 @@ public class TestSchedulingPolicy {
         Resource.newInstance(0, 1), Resource.newInstance(2, 1),
         Resource.newInstance(4, 1) };
 
-    private ResourceWeights[] weightsCollection = {
-        new ResourceWeights(0.0f), new ResourceWeights(1.0f),
-        new ResourceWeights(2.0f) };
-
-
+    private float[] weightsCollection = {0.0f, 1.0f, 2.0f};
 
     public FairShareComparatorTester(
         Comparator<Schedulable> fairShareComparator) {
@@ -225,10 +220,10 @@ public class TestSchedulingPolicy {
       private String name;
       private long startTime;
       private Resource usage;
-      private ResourceWeights weights;
+      private float weights;
 
       public MockSchedulable(Resource minShare, Resource demand, String name,
-          long startTime, Resource usage, ResourceWeights weights) {
+          long startTime, Resource usage, float weights) {
         this.minShare = minShare;
         this.demand = demand;
         this.name = name;
@@ -258,7 +253,7 @@ public class TestSchedulingPolicy {
       }
 
       @Override
-      public ResourceWeights getWeights() {
+      public float getWeight() {
         return weights;
       }
 

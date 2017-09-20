@@ -700,6 +700,28 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   /**
+   * Pause the container. The default implementation is to raise a kill event.
+   * Specific executor implementations can override this behavior.
+   * @param container
+   *          the Container
+   */
+  public void pauseContainer(Container container) {
+    LOG.warn(container.getContainerId() + " doesn't support pausing.");
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Resume the container from pause state. The default implementation ignores
+   * this event. Specific implementations can override this behavior.
+   * @param container
+   *          the Container
+   */
+  public void resumeContainer(Container container) {
+    LOG.warn(container.getContainerId() + " doesn't support resume.");
+    throw new UnsupportedOperationException();
+  }
+
+  /**
    * Get the process-identifier for the container.
    *
    * @param containerID the container ID

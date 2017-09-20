@@ -225,8 +225,7 @@ public abstract class ResourceCalculator {
   /**
    * Check if a smaller resource can be contained by bigger resource.
    */
-  public abstract boolean fitsIn(Resource cluster,
-      Resource smaller, Resource bigger);
+  public abstract boolean fitsIn(Resource smaller, Resource bigger);
 
   /**
    * Check if resource has any major resource types (which are all NodeManagers

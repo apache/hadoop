@@ -28,10 +28,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -47,7 +45,7 @@ public class TestEnabledECPolicies {
 
   private void expectInvalidPolicy(String value) {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
         value);
     try {
       ErasureCodingPolicyManager.getInstance().init(conf);
@@ -60,11 +58,10 @@ public class TestEnabledECPolicies {
   private void expectValidPolicy(String value, final int numEnabled) throws
       Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        value);
     ErasureCodingPolicyManager manager =
         ErasureCodingPolicyManager.getInstance();
     manager.init(conf);
+    manager.enablePolicy(value);
     assertEquals("Incorrect number of enabled policies",
         numEnabled, manager.getEnabledPolicies().length);
   }
@@ -73,8 +70,8 @@ public class TestEnabledECPolicies {
   public void testDefaultPolicy() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     String defaultECPolicies = conf.get(
-        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
+        DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
+        DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
     expectValidPolicy(defaultECPolicies, 1);
   }
 
@@ -97,11 +94,6 @@ public class TestEnabledECPolicies {
   public void testValid() throws Exception {
     String ecPolicyName = StripedFileTestUtil.getDefaultECPolicy().getName();
     expectValidPolicy(ecPolicyName, 1);
-    expectValidPolicy(ecPolicyName + ", ", 1);
-    expectValidPolicy(",", 1);
-    expectValidPolicy(", " + ecPolicyName, 1);
-    expectValidPolicy(" ", 1);
-    expectValidPolicy(" , ", 1);
   }
 
   @Test
@@ -128,13 +120,12 @@ public class TestEnabledECPolicies {
   private void testGetPolicies(ErasureCodingPolicy[] enabledPolicies)
       throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        Arrays.asList(enabledPolicies).stream()
-            .map(ErasureCodingPolicy::getName)
-            .collect(Collectors.joining(", ")));
     ErasureCodingPolicyManager manager =
         ErasureCodingPolicyManager.getInstance();
     manager.init(conf);
+    for (ErasureCodingPolicy p : enabledPolicies) {
+      manager.enablePolicy(p.getName());
+    }
     // Check that returned values are unique
     Set<String> found = new HashSet<>();
     for (ErasureCodingPolicy p : manager.getEnabledPolicies()) {

@@ -31,7 +31,6 @@ public class ITestS3AEncryptionSSECBlockOutputStream
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setBoolean(Constants.FAST_UPLOAD, true);
     conf.set(Constants.FAST_UPLOAD_BUFFER,
         Constants.FAST_UPLOAD_BYTEBUFFER);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY,

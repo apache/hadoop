@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -338,9 +339,20 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             ApplicationMetricsConstants.APP_MEM_PREEMPT_METRICS);
         long preemptedVcoreSeconds = parseLong(entityInfo,
             ApplicationMetricsConstants.APP_CPU_PREEMPT_METRICS);
-        appResources = ApplicationResourceUsageReport.newInstance(0, 0, null,
-            null, null, memorySeconds, vcoreSeconds, 0, 0,
-            preemptedMemorySeconds, preemptedVcoreSeconds);
+        Map<String, Long> resourceSecondsMap = new HashMap<>();
+        Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+        resourceSecondsMap
+            .put(ResourceInformation.MEMORY_MB.getName(), memorySeconds);
+        resourceSecondsMap
+            .put(ResourceInformation.VCORES.getName(), vcoreSeconds);
+        preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+            preemptedMemorySeconds);
+        preemptedResoureSecondsMap
+            .put(ResourceInformation.VCORES.getName(), preemptedVcoreSeconds);
+
+        appResources = ApplicationResourceUsageReport
+            .newInstance(0, 0, null, null, null, resourceSecondsMap, 0, 0,
+                preemptedResoureSecondsMap);
       }
 
       if (entityInfo.containsKey(ApplicationMetricsConstants.APP_TAGS_INFO)) {

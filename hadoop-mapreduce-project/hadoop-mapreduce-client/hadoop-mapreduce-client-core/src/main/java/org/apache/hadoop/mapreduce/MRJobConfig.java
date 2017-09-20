@@ -1037,4 +1037,9 @@ public interface MRJobConfig {
   String FINISH_JOB_WHEN_REDUCERS_DONE =
       "mapreduce.job.finish-when-all-reducers-done";
   boolean DEFAULT_FINISH_JOB_WHEN_REDUCERS_DONE = true;
+
+  String MR_AM_STAGING_DIR_ERASURECODING_ENABLED =
+      MR_AM_STAGING_DIR + "erasurecoding.enabled";
+
+  boolean DEFAULT_MR_AM_STAGING_ERASURECODING_ENABLED = false;
 }

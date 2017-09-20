@@ -944,6 +944,22 @@
     <value>600000</value>
   </property>
 
+  <property>
+    <description>
+    Flag to enable/disable resource profiles
+    </description>
+    <name>yarn.resourcemanager.resource-profiles.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    If resource profiles is enabled, source file for the profiles
+    </description>
+    <name>yarn.resourcemanager.resource-profiles.source-file</name>
+    <value>resource-profiles.json</value>
+  </property>
+
   <!-- Node Manager Configuration -->
 
   <property>
@@ -985,6 +1001,12 @@
     <description>who will execute(launch) the containers.</description>
     <name>yarn.nodemanager.container-executor.class</name>
     <value>org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor</value>
+  </property>
+
+  <property>
+    <description>Comma separated List of container state transition listeners.</description>
+    <name>yarn.nodemanager.container-state-transition-listener.classes</name>
+    <value></value>
   </property>
 
   <property>
@@ -3003,6 +3025,15 @@
 
   <property>
     <description>
+    Use container pause as the preemption policy over kill in the container
+    queue at a NodeManager.
+    </description>
+    <name>yarn.nodemanager.opportunistic-containers-use-pause-for-preemption</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
     Error filename pattern, to identify the file in the container's
     Log directory which contain the container's error log. As error file
     redirection is done by client/AM and yarn will not be aware of the error
@@ -3295,6 +3326,26 @@
     </description>
     <name>yarn.timeline-service.entity-group-fs-store.with-user-dir</name>
     <value>false</value>
+  </property>
+
+
+  <!-- resource types configuration -->
+  <property>
+    <name>yarn.resource-types</name>
+    <value></value>
+    <description>
+    The resource types to be used for scheduling. Use resource-types.xml
+    to specify details about the individual resource types.
+    </description>
+  </property>
+ 
+  <property>
+    <name>yarn.resourcemanager.display.per-user-apps</name>
+    <value>false</value>
+      <description>
+        Flag to enable display of applications per user as an admin
+        configuration.
+      </description>
   </property>
 
 </configuration>
