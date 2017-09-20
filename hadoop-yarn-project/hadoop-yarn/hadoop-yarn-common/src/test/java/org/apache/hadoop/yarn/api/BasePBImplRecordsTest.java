@@ -37,6 +37,9 @@ public class BasePBImplRecordsTest {
   @SuppressWarnings("checkstyle:visibilitymodifier")
   protected static HashMap<Type, Object> typeValueCache =
       new HashMap<Type, Object>();
+  @SuppressWarnings("checkstyle:visibilitymodifier")
+  protected static HashMap<Type, List<String>> excludedPropertiesMap =
+      new HashMap<>();
   private static Random rand = new Random();
   private static byte [] bytes = new byte[] {'1', '2', '3', '4'};
 
@@ -167,6 +170,10 @@ public class BasePBImplRecordsTest {
   private <R> Map<String, GetSetPair> getGetSetPairs(Class<R> recordClass)
       throws Exception {
     Map<String, GetSetPair> ret = new HashMap<String, GetSetPair>();
+    List<String> excluded = null;
+    if (excludedPropertiesMap.containsKey(recordClass.getClass())) {
+      excluded = excludedPropertiesMap.get(recordClass.getClass());
+    }
     Method [] methods = recordClass.getDeclaredMethods();
     // get all get methods
     for (int i = 0; i < methods.length; i++) {
@@ -223,6 +230,11 @@ public class BasePBImplRecordsTest {
       if ((gsp.getMethod == null) ||
           (gsp.setMethod == null)) {
         LOG.info(String.format("Exclude potential property: %s\n", gsp.propertyName));
+        itr.remove();
+      } else if ((excluded != null && excluded.contains(gsp.propertyName))) {
+        LOG.info(String.format(
+            "Excluding potential property(present in exclusion list): %s\n",
+            gsp.propertyName));
         itr.remove();
       } else {
         LOG.info(String.format("New property: %s type: %s", gsp.toString(), gsp.type));

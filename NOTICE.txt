@@ -8,19 +8,10 @@ following notices:
 * Copyright 2011 FuseSource Corp. http://fusesource.com
 
 The binary distribution of this product bundles binaries of
-org.fusesource.hawtjni:hawtjni-runtime (https://github.com/fusesource/hawtjni),
-which has the following notices:
-* This product includes software developed by FuseSource Corp.
-  http://fusesource.com
-* This product includes software developed at
-  Progress Software Corporation and/or its  subsidiaries or affiliates.
-* This product includes software developed by IBM Corporation and others.
-
-The binary distribution of this product bundles binaries of
-AWS SDK for Java - Core 1.11.45,
-AWS Java SDK for AWS KMS 1.11.45,
-AWS Java SDK for Amazon S3 1.11.45,
-AWS Java SDK for AWS STS 1.11.45,
+AWS SDK for Java - Bundle 1.11.134,
+AWS Java SDK for AWS KMS 1.11.134,
+AWS Java SDK for Amazon S3 1.11.134,
+AWS Java SDK for AWS STS 1.11.134,
 JMES Path Query library 1.0,
 which has the following notices:
  * This software includes third party software subject to the following
@@ -303,15 +294,15 @@ which has the following notices:
   notice.
 
 The binary distribution of this product bundles binaries of
-Jetty :: Http Utility 9.3.11.,
-Jetty :: IO Utility 9.3.11.,
-Jetty :: Security 9.3.11.,
-Jetty :: Server Core 9.3.11.,
-Jetty :: Servlet Handling 9.3.11.,
-Jetty :: Utilities 9.3.11.,
+Jetty :: Http Utility 9.3.19.,
+Jetty :: IO Utility 9.3.19.,
+Jetty :: Security 9.3.19.,
+Jetty :: Server Core 9.3.19.,
+Jetty :: Servlet Handling 9.3.19.,
+Jetty :: Utilities 9.3.19.,
 Jetty :: Utilities :: Ajax,
-Jetty :: Webapp Application Support 9.3.11.,
-Jetty :: XML utilities 9.3.11.,
+Jetty :: Webapp Application Support 9.3.19.,
+Jetty :: XML utilities 9.3.19.,
 which has the following notices:
  * ==============================================================
     Jetty Web Container
@@ -481,15 +472,15 @@ which has the following notices:
    Copyright (C) 1999-2012, QOS.ch. All rights reserved.
 
 The binary distribution of this product bundles binaries of
-Apache HBase - Annotations 1.2.4,
-Apache HBase - Client 1.2.4,
-Apache HBase - Common 1.2.4,
-Apache HBase - Hadoop Compatibility 1.2.4,
-Apache HBase - Hadoop Two Compatibility 1.2.4,
-Apache HBase - Prefix Tree 1.2.4,
-Apache HBase - Procedure 1.2.4,
-Apache HBase - Protocol 1.2.4,
-Apache HBase - Server 1.2.4,
+Apache HBase - Annotations 1.2.6,
+Apache HBase - Client 1.2.6,
+Apache HBase - Common 1.2.6,
+Apache HBase - Hadoop Compatibility 1.2.6,
+Apache HBase - Hadoop Two Compatibility 1.2.6,
+Apache HBase - Prefix Tree 1.2.6,
+Apache HBase - Procedure 1.2.6,
+Apache HBase - Protocol 1.2.6,
+Apache HBase - Server 1.2.6,
 which has the following notices:
  * Apache HBase
    Copyright 2007-2015 The Apache Software Foundation
@@ -576,3 +567,17 @@ The binary distribution of this product bundles binaries of
 software.amazon.ion:ion-java 1.0.1,
 which has the following notices:
  * Amazon Ion Java Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+The binary distribution of this product bundles binaries of
+joda-time:joda-time:2.9.9
+which has the following notices:
+ * =============================================================================
+   = NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
+   =============================================================================
+   This product includes software developed by
+   Joda.org (http://www.joda.org/).
+
+The binary distribution of this product bundles binaries of
+Ehcache 3.3.1,
+which has the following notices:
+ * Ehcache V3 Copyright 2014-2016 Terracotta, Inc.

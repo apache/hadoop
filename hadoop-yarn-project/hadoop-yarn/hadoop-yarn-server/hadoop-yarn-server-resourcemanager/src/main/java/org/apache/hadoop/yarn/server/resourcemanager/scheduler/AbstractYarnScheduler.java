@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -95,6 +97,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -123,7 +126,19 @@ public abstract class AbstractYarnScheduler
   protected SchedulerHealth schedulerHealth = new SchedulerHealth();
   protected volatile long lastNodeUpdateTime;
 
+  // timeout to join when we stop this service
+  protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
+
   private volatile Clock clock;
+
+  /**
+   * To enable the update thread, subclasses should set updateInterval to a
+   * positive value during {@link #serviceInit(Configuration)}.
+   */
+  protected long updateInterval = -1L;
+  @VisibleForTesting
+  Thread updateThread;
+  private final Object updateThreadMonitor = new Object();
 
   /*
    * All schedulers which are inheriting AbstractYarnScheduler should use
@@ -185,7 +200,33 @@ public abstract class AbstractYarnScheduler
     autoUpdateContainers =
         conf.getBoolean(YarnConfiguration.RM_AUTO_UPDATE_CONTAINERS,
             YarnConfiguration.DEFAULT_RM_AUTO_UPDATE_CONTAINERS);
+
+    if (updateInterval > 0) {
+      updateThread = new UpdateThread();
+      updateThread.setName("SchedulerUpdateThread");
+      updateThread.setUncaughtExceptionHandler(
+          new RMCriticalThreadUncaughtExceptionHandler(rmContext));
+      updateThread.setDaemon(true);
+    }
+
     super.serviceInit(conf);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    if (updateThread != null) {
+      updateThread.start();
+    }
+    super.serviceStart();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    if (updateThread != null) {
+      updateThread.interrupt();
+      updateThread.join(THREAD_JOIN_TIMEOUT_MS);
+    }
+    super.serviceStop();
   }
 
   @VisibleForTesting
@@ -1281,8 +1322,64 @@ public abstract class AbstractYarnScheduler
    * @param container Container.
    */
   public void asyncContainerRelease(RMContainer container) {
-    this.rmContext.getDispatcher().getEventHandler()
-        .handle(new ReleaseContainerEvent(container));
+    this.rmContext.getDispatcher().getEventHandler().handle(
+        new ReleaseContainerEvent(container));
+  }
+
+  /*
+   * Get a Resource object with for the minimum allocation possible. If resource
+   * profiles are enabled then the 'minimum' resource profile will be used. If
+   * they are not enabled, use the minimums specified in the config files.
+   *
+   * @return a Resource object with the minimum allocation for the scheduler
+   */
+  public Resource getMinimumAllocation() {
+    boolean profilesEnabled = getConfig()
+        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    Resource ret;
+    if (!profilesEnabled) {
+      ret = ResourceUtils.getResourceTypesMinimumAllocation();
+    } else {
+      try {
+        ret = rmContext.getResourceProfilesManager().getMinimumProfile();
+      } catch (YarnException e) {
+        LOG.error(
+            "Exception while getting minimum profile from profile manager:", e);
+        throw new YarnRuntimeException(e);
+      }
+    }
+    LOG.info("Minimum allocation = " + ret);
+    return ret;
+  }
+
+  /**
+   * Get a Resource object with for the maximum allocation possible. If resource
+   * profiles are enabled then the 'maximum' resource profile will be used. If
+   * they are not enabled, use the maximums specified in the config files.
+   *
+   * @return a Resource object with the maximum allocation for the scheduler
+   */
+
+  public Resource getMaximumAllocation() {
+    boolean profilesEnabled = getConfig()
+        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    Resource ret;
+    if (!profilesEnabled) {
+      ret = ResourceUtils.getResourceTypesMaximumAllocation();
+    } else {
+      try {
+        ret = rmContext.getResourceProfilesManager().getMaximumProfile();
+      } catch (YarnException e) {
+        LOG.error(
+            "Exception while getting maximum profile from ResourceProfileManager:",
+            e);
+        throw new YarnRuntimeException(e);
+      }
+    }
+    LOG.info("Maximum allocation = " + ret);
+    return ret;
   }
 
   @Override
@@ -1294,5 +1391,52 @@ public abstract class AbstractYarnScheduler
   @Override
   public long getMaximumApplicationLifetime(String queueName) {
     return -1;
+  }
+
+  /**
+   * Update internal state of the scheduler.  This can be useful for scheduler
+   * implementations that maintain some state that needs to be periodically
+   * updated; for example, metrics or queue resources.  It will be called by the
+   * {@link UpdateThread} every {@link #updateInterval}.  By default, it will
+   * not run; subclasses should set {@link #updateInterval} to a
+   * positive value during {@link #serviceInit(Configuration)} if they want to
+   * enable the thread.
+   */
+  @VisibleForTesting
+  public void update() {
+    // do nothing by default
+  }
+
+  /**
+   * Thread which calls {@link #update()} every
+   * <code>updateInterval</code> milliseconds.
+   */
+  private class UpdateThread extends Thread {
+    @Override
+    public void run() {
+      while (!Thread.currentThread().isInterrupted()) {
+        try {
+          synchronized (updateThreadMonitor) {
+            updateThreadMonitor.wait(updateInterval);
+          }
+          update();
+        } catch (InterruptedException ie) {
+          LOG.warn("Scheduler UpdateThread interrupted. Exiting.");
+          return;
+        } catch (Exception e) {
+          LOG.error("Exception in scheduler UpdateThread", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Allows {@link UpdateThread} to start processing without waiting till
+   * {@link #updateInterval}.
+   */
+  protected void triggerUpdate() {
+    synchronized (updateThreadMonitor) {
+      updateThreadMonitor.notify();
+    }
   }
 }

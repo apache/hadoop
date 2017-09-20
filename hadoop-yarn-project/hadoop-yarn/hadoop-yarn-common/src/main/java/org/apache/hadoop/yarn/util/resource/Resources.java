@@ -18,104 +18,124 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
-@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
+/**
+ * Resources is a computation class which provides a set of apis to do
+ * mathematical operations on Resource object.
+ */
+@InterfaceAudience.LimitedPrivate({ "YARN", "MapReduce" })
 @Unstable
 public class Resources {
-  
-  // Java doesn't have const :(
-  private static final Resource NONE = new Resource() {
+
+  private static final Log LOG =
+      LogFactory.getLog(Resources.class);
+
+  /**
+   * Helper class to create a resource with a fixed value for all resource
+   * types. For example, a NONE resource which returns 0 for any resource type.
+   */
+  @InterfaceAudience.Private
+  @Unstable
+  static class FixedValueResource extends Resource {
+
+    private final long resourceValue;
+    private String name;
+
+    /**
+     * Constructor for a fixed value resource.
+     * @param rName the name of the resource
+     * @param value the fixed value to be returned for all resource types
+     */
+    FixedValueResource(String rName, long value) {
+      this.resourceValue = value;
+      this.name = rName;
+      initResourceMap();
+    }
+
+    private int resourceValueToInt() {
+      if(this.resourceValue > Integer.MAX_VALUE) {
+        return Integer.MAX_VALUE;
+      }
+      return Long.valueOf(this.resourceValue).intValue();
+    }
 
     @Override
     @SuppressWarnings("deprecation")
     public int getMemory() {
-      return 0;
+      return resourceValueToInt();
     }
 
     @Override
     public long getMemorySize() {
-      return 0;
-    }
-
-    @Override
-    public void setMemorySize(long memory) {
-      throw new RuntimeException("NONE cannot be modified!");
+      return this.resourceValue;
     }
 
     @Override
     @SuppressWarnings("deprecation")
     public void setMemory(int memory) {
-      throw new RuntimeException("NONE cannot be modified!");
-    }
-
-    @Override
-    public int getVirtualCores() {
-      return 0;
-    }
-
-    @Override
-    public void setVirtualCores(int cores) {
-      throw new RuntimeException("NONE cannot be modified!");
-    }
-
-    @Override
-    public int compareTo(Resource o) {
-      long diff = 0 - o.getMemorySize();
-      if (diff == 0) {
-        diff = 0 - o.getVirtualCores();
-      }
-      return Long.signum(diff);
-    }
-    
-  };
-  
-  private static final Resource UNBOUNDED = new Resource() {
-
-    @Override
-    @SuppressWarnings("deprecation")
-    public int getMemory() {
-      return Integer.MAX_VALUE;
-    }
-
-    @Override
-    public long getMemorySize() {
-      return Long.MAX_VALUE;
-    }
-
-    @Override
-    @SuppressWarnings("deprecation")
-    public void setMemory(int memory) {
-      throw new RuntimeException("UNBOUNDED cannot be modified!");
+      throw new RuntimeException(name + " cannot be modified!");
     }
 
     @Override
     public void setMemorySize(long memory) {
-      throw new RuntimeException("UNBOUNDED cannot be modified!");
+      throw new RuntimeException(name + " cannot be modified!");
     }
 
     @Override
     public int getVirtualCores() {
-      return Integer.MAX_VALUE;
+      return resourceValueToInt();
     }
 
     @Override
-    public void setVirtualCores(int cores) {
-      throw new RuntimeException("UNBOUNDED cannot be modified!");
+    public void setVirtualCores(int virtualCores) {
+      throw new RuntimeException(name + " cannot be modified!");
     }
 
     @Override
-    public int compareTo(Resource o) {
-      long diff = Long.MAX_VALUE - o.getMemorySize();
-      if (diff == 0) {
-        diff = Integer.MAX_VALUE - o.getVirtualCores();
+    public void setResourceInformation(int index,
+        ResourceInformation resourceInformation)
+        throws ResourceNotFoundException {
+      throw new RuntimeException(name + " cannot be modified!");
+    }
+
+    @Override
+    public void setResourceValue(int index, long value)
+        throws ResourceNotFoundException {
+      throw new RuntimeException(name + " cannot be modified!");
+    }
+
+    @Override
+    public void setResourceInformation(String resource,
+        ResourceInformation resourceInformation)
+        throws ResourceNotFoundException {
+      throw new RuntimeException(name + " cannot be modified!");
+    }
+
+    @Override
+    public void setResourceValue(String resource, long value)
+        throws ResourceNotFoundException {
+      throw new RuntimeException(name + " cannot be modified!");
+    }
+
+    private void initResourceMap() {
+      ResourceInformation[] types = ResourceUtils.getResourceTypesArray();
+      if (types != null) {
+        resources = new ResourceInformation[types.length];
+        for (int index = 0; index < types.length; index++) {
+          resources[index] = ResourceInformation.newInstance(types[index]);
+          resources[index].setValue(resourceValue);
+        }
       }
-      return Long.signum(diff);
     }
-    
-  };
+  }
 
   public static Resource createResource(int memory) {
     return createResource(memory, (memory > 0) ? 1 : 0);
@@ -124,6 +144,11 @@ public class Resources {
   public static Resource createResource(int memory, int cores) {
     return Resource.newInstance(memory, cores);
   }
+
+  private static final Resource UNBOUNDED =
+      new FixedValueResource("UNBOUNDED", Long.MAX_VALUE);
+
+  private static final Resource NONE = new FixedValueResource("NONE", 0L);
 
   public static Resource createResource(long memory) {
     return createResource(memory, (memory > 0) ? 1 : 0);
@@ -152,12 +177,26 @@ public class Resources {
   }
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemorySize(), res.getVirtualCores());
+    return Resource.newInstance(res);
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
-    lhs.setMemorySize(lhs.getMemorySize() + rhs.getMemorySize());
-    lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
+        lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
     return lhs;
   }
 
@@ -166,8 +205,22 @@ public class Resources {
   }
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
-    lhs.setMemorySize(lhs.getMemorySize() - rhs.getMemorySize());
-    lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
+        lhs.setResourceValue(i, lhsValue.getValue() - convertedRhs);
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
     return lhs;
   }
 
@@ -198,8 +251,16 @@ public class Resources {
   }
 
   public static Resource multiplyTo(Resource lhs, double by) {
-    lhs.setMemorySize((long)(lhs.getMemorySize() * by));
-    lhs.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+        lhs.setResourceValue(i, (long) (lhsValue.getValue() * by));
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
     return lhs;
   }
 
@@ -213,9 +274,24 @@ public class Resources {
    */
   public static Resource multiplyAndAddTo(
       Resource lhs, Resource rhs, double by) {
-    lhs.setMemorySize(lhs.getMemorySize() + (long)(rhs.getMemorySize() * by));
-    lhs.setVirtualCores(lhs.getVirtualCores()
-        + (int)(rhs.getVirtualCores() * by));
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+
+        long convertedRhs = (long) (((rhsValue.getUnits()
+            .equals(lhsValue.getUnits()))
+                ? rhsValue.getValue()
+                : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                    lhsValue.getUnits(), rhsValue.getValue()))
+            * by);
+        lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
     return lhs;
   }
 
@@ -231,8 +307,16 @@ public class Resources {
   
   public static Resource multiplyAndRoundDown(Resource lhs, double by) {
     Resource out = clone(lhs);
-    out.setMemorySize((long)(lhs.getMemorySize() * by));
-    out.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+        out.setResourceValue(i, (long) (lhsValue.getValue() * by));
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
     return out;
   }
 
@@ -332,23 +416,78 @@ public class Resources {
   }
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
-    return smaller.getMemorySize() <= bigger.getMemorySize() &&
-        smaller.getVirtualCores() <= bigger.getVirtualCores();
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation rhsValue = bigger.getResourceInformation(i);
+        ResourceInformation lhsValue = smaller.getResourceInformation(i);
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
+        if (lhsValue.getValue() > convertedRhs) {
+          return false;
+        }
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
+    return true;
   }
 
-  public static boolean fitsIn(ResourceCalculator rc, Resource cluster,
+  public static boolean fitsIn(ResourceCalculator rc,
       Resource smaller, Resource bigger) {
-    return rc.fitsIn(cluster, smaller, bigger);
+    return rc.fitsIn(smaller, bigger);
   }
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
-    return createResource(Math.min(lhs.getMemorySize(), rhs.getMemorySize()),
-        Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()));
+    Resource ret = createResource(0);
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
+        ResourceInformation outInfo = lhsValue.getValue() < convertedRhs
+            ? lhsValue
+            : rhsValue;
+        ret.setResourceInformation(i, outInfo);
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
+    return ret;
   }
   
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
-    return createResource(Math.max(lhs.getMemorySize(), rhs.getMemorySize()),
-        Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()));
+    Resource ret = createResource(0);
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(i);
+        ResourceInformation lhsValue = lhs.getResourceInformation(i);
+
+        long convertedRhs = (rhsValue.getUnits().equals(lhsValue.getUnits()))
+            ? rhsValue.getValue()
+            : UnitsConversionUtil.convert(rhsValue.getUnits(),
+                lhsValue.getUnits(), rhsValue.getValue());
+        ResourceInformation outInfo = lhsValue.getValue() > convertedRhs
+            ? lhsValue
+            : rhsValue;
+        ret.setResourceInformation(i, outInfo);
+      } catch (ResourceNotFoundException ye) {
+        LOG.warn("Resource is missing:" + ye.getMessage());
+        continue;
+      }
+    }
+    return ret;
   }
 
   public static boolean isAnyMajorResourceZero(ResourceCalculator rc,

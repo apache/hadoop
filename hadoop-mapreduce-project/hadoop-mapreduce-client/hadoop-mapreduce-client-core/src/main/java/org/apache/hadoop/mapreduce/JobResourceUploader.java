@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 
@@ -93,6 +95,11 @@ class JobResourceUploader {
     FsPermission mapredSysPerms =
         new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
     mkdirs(jtFs, submitJobDir, mapredSysPerms);
+
+    if (!conf.getBoolean(MRJobConfig.MR_AM_STAGING_DIR_ERASURECODING_ENABLED,
+        MRJobConfig.DEFAULT_MR_AM_STAGING_ERASURECODING_ENABLED)) {
+      disableErasureCodingForPath(jtFs, submitJobDir);
+    }
 
     Collection<String> files = conf.getStringCollection("tmpfiles");
     Collection<String> libjars = conf.getStringCollection("tmpjars");
@@ -574,5 +581,15 @@ class JobResourceUploader {
           path.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString();
     }
     return finalPath;
+  }
+
+  private void disableErasureCodingForPath(FileSystem fs, Path path)
+      throws IOException {
+    if (jtFs instanceof DistributedFileSystem) {
+      LOG.info("Disabling Erasure Coding for path: " + path);
+      DistributedFileSystem dfs = (DistributedFileSystem) jtFs;
+      dfs.setErasureCodingPolicy(path,
+          SystemErasureCodingPolicies.getReplicationPolicy().getName());
+    }
   }
 }

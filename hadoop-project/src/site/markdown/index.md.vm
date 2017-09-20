@@ -204,6 +204,16 @@ in both the task configuration and as a Java option.
 Existing configs that already specify both are not affected by this change.
 See the full release notes of MAPREDUCE-5785 for more details.
 
+S3Guard: Consistency and Metadata Caching for the S3A filesystem client
+---------------------
+
+[HADOOP-13345](https://issues.apache.org/jira/browse/HADOOP-13345) adds an
+optional feature to the S3A client of Amazon S3 storage: the ability to use
+a DynamoDB table as a fast and consistent store of file and directory
+metadata.
+
+See [S3Guard](./hadoop-aws/tools/hadoop-aws/s3guard.html) for more details.
+
 Getting Started
 ===============
 

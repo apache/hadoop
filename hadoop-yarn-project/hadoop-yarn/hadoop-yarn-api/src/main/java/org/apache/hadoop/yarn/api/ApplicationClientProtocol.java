@@ -65,6 +65,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -75,6 +81,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 
 /**
  * <p>The protocol between clients and the <code>ResourceManager</code>
@@ -589,4 +596,50 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get all the resource profiles that are
+   * available on the ResourceManager.
+   * </p>
+   * @param request request to get all the resource profiles
+   * @return Response containing a map of the profile name to Resource
+   *         capabilities
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface to get the details for a specific resource profile.
+   * </p>
+   * @param request request to get the details of a resource profile
+   * @return Response containing the details for a particular resource profile
+   * @throws YARNFeatureNotEnabledException if resource-profile is disabled
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface to get the details for a specific resource profile.
+   * </p>
+   * @param request request to get the details of a resource profile
+   * @return Response containing the details for a particular resource profile
+   * @throws YarnException if any error happens inside YARN
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetAllResourceTypeInfoResponse getResourceTypeInfo(
+      GetAllResourceTypeInfoRequest request) throws YarnException, IOException;
 }

@@ -18,17 +18,11 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Before;
+
 import org.junit.Test;
 
 /**
@@ -38,24 +32,18 @@ import org.junit.Test;
  * creation/rename of files/directories through WASB that have colons in the
  * names.
  */
-public class TestNativeAzureFileSystemFileNameCheck {
-  private FileSystem fs = null;
-  private AzureBlobStorageTestAccount testAccount = null;
+public class TestNativeAzureFileSystemFileNameCheck extends AbstractWasbTestBase {
   private String root = null;
 
-  @Before
+  @Override
   public void setUp() throws Exception {
-    testAccount = AzureBlobStorageTestAccount.createMock();
-    fs = testAccount.getFileSystem();
+    super.setUp();
     root = fs.getUri().toString();
   }
 
-  @After
-  public void tearDown() throws Exception {
-    testAccount.cleanup();
-    root = null;
-    fs = null;
-    testAccount = null;
+  @Override
+  protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
+    return AzureBlobStorageTestAccount.createMock();
   }
 
   @Test

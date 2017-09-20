@@ -159,8 +159,7 @@ public class EditLogTailer {
 
       for (RemoteNameNodeInfo info : nns) {
         // overwrite the socket address, if we need to
-        InetSocketAddress ipc = NameNode.getServiceAddress(
-            info.getConfiguration());
+        InetSocketAddress ipc = NameNode.getServiceAddress(info.getConfiguration(), true);
         // sanity check the ipc address
         Preconditions.checkArgument(ipc.getPort() > 0,
             "Active NameNode must have an IPC port configured. " + "Got address '%s'", ipc);

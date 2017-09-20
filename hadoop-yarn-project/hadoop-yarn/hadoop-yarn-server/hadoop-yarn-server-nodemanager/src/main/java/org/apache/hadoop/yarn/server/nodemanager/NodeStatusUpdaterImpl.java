@@ -174,27 +174,28 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    int memoryMb = NodeManagerHardwareUtils.getContainerMemoryMB(conf);
+    this.totalResource = NodeManagerHardwareUtils.getNodeResources(conf);
+    long memoryMb = totalResource.getMemorySize();
     float vMemToPMem =
         conf.getFloat(
             YarnConfiguration.NM_VMEM_PMEM_RATIO, 
             YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO); 
-    int virtualMemoryMb = (int)Math.ceil(memoryMb * vMemToPMem);
+    long virtualMemoryMb = (long)Math.ceil(memoryMb * vMemToPMem);
     
-    int virtualCores = NodeManagerHardwareUtils.getVCores(conf);
+    int virtualCores = totalResource.getVirtualCores();
     LOG.info("Nodemanager resources: memory set to " + memoryMb + "MB.");
     LOG.info("Nodemanager resources: vcores set to " + virtualCores + ".");
+    LOG.info("Nodemanager resources: " + totalResource);
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores);
     metrics.addResource(totalResource);
 
     // Get actual node physical resources
-    int physicalMemoryMb = memoryMb;
+    long physicalMemoryMb = memoryMb;
     int physicalCores = virtualCores;
     ResourceCalculatorPlugin rcp =
         ResourceCalculatorPlugin.getNodeResourceMonitorPlugin(conf);
     if (rcp != null) {
-      physicalMemoryMb = (int) (rcp.getPhysicalMemorySize() / (1024 * 1024));
+      physicalMemoryMb = rcp.getPhysicalMemorySize() / (1024 * 1024);
       physicalCores = rcp.getNumProcessors();
     }
     this.physicalResource =

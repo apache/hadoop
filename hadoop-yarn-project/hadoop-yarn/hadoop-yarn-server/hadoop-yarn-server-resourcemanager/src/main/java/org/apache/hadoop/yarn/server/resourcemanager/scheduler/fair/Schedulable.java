@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 
 /**
  * A Schedulable represents an entity that can be scheduled such as an
@@ -42,10 +41,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
  * - updateDemand() is called periodically to compute the demand of the various
  *   jobs and queues, which may be expensive (e.g. jobs must iterate through all
  *   their tasks to count failed tasks, tasks that can be speculated, etc).
- * - redistributeShare() is called after demands are updated and a Schedulable's
- *   fair share has been set by its parent to let it distribute its share among
- *   the other Schedulables within it (e.g. for queues that want to perform fair
- *   sharing among their jobs).
  */
 @Private
 @Unstable
@@ -72,8 +67,15 @@ public interface Schedulable {
   /** Maximum Resource share assigned to the schedulable. */
   Resource getMaxShare();
 
-  /** Job/queue weight in fair sharing. */
-  ResourceWeights getWeights();
+  /**
+   * Job/queue weight in fair sharing. Weights are only meaningful when
+   * compared. A weight of 2.0f has twice the weight of a weight of 1.0f,
+   * which has twice the weight of a weight of 0.5f. A weight of 1.0f is
+   * considered unweighted or a neutral weight. A weight of 0 is no weight.
+   *
+   * @return the weight
+   */
+  float getWeight();
 
   /** Start time for jobs in FIFO queues; meaningless for QueueSchedulables.*/
   long getStartTime();

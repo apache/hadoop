@@ -25,7 +25,13 @@
   <version>3.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <description>Enforces our invariants for the testing client modules.</description>
+  <description>
+  Enforces our invariants for the test client modules.
+  E.g. that modules have a specific set of transitive dependencies
+  and shaded artifacts only contain classes that are in particular
+  packages. Does the enforcement through the maven-enforcer-plugin
+  and an integration test.
+  </description>
   <name>Apache Hadoop Client Packaging Invariants for Test</name>
 
   <properties>
@@ -90,6 +96,8 @@
                     <exclude>junit:junit</exclude>
                     <!-- JUnit brings in hamcrest -->
                     <exclude> org.hamcrest:hamcrest-core</exclude>
+                    <!-- Leave javax annotations we need exposed -->
+                    <exclude>com.google.code.findbugs:jsr305</exclude>
                   </excludes>
                 </banTransitiveDependencies>
                 <banDuplicateClasses>
@@ -105,7 +113,6 @@
                   </dependencies>
                 </banDuplicateClasses>
               </rules>
-<!-- TODO we need a rule for "we don't have classes that are outside of the org.apache.hadoop package" -->
 <!-- TODO we need a rule for "the constants in this set of classes haven't been shaded / don't have this prefix"
      Manually checking the set of Keys that look like packages we relocate:
 
@@ -120,6 +127,71 @@
            -constants "${clazz//\//.}" | grep "org.apache.hadoop.shaded"
      done
 -->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>test-resources</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>testResources</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- create a maven pom property that has all of our dependencies.
+         below in the integration-test phase we'll pass this list
+         of paths to our jar checker script.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>put-client-artifacts-in-a-property</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <!-- these two get covered in our non-test invariant check -->
+              <excludeArtifactIds>hadoop-client-api,hadoop-client-runtime</excludeArtifactIds>
+              <excludeTransitive>true</excludeTransitive>
+              <outputProperty>hadoop-client-artifacts</outputProperty>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!--
+        Check that we actually relocated everything we included.
+        It's critical that we don't ship third party dependencies that haven't
+        been relocated under our pacakge space, since this will lead to
+        difficult to debug classpath errors for downstream. Unfortunately, that
+        means inspecting all the jars.
+        -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>check-jar-contents</id>
+            <phase>integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${shell-executable}</executable>
+              <workingDirectory>${project.build.testOutputDirectory}</workingDirectory>
+              <requiresOnline>false</requiresOnline>
+              <arguments>
+                <argument>ensure-jars-have-correct-contents.sh</argument>
+                <argument>${hadoop-client-artifacts}</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>

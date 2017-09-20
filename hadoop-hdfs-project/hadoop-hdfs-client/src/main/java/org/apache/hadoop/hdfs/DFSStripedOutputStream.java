@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -85,11 +86,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
     private final List<BlockingQueue<T>> queues;
 
     MultipleBlockingQueue(int numQueue, int queueSize) {
-      List<BlockingQueue<T>> list = new ArrayList<>(numQueue);
+      queues = new ArrayList<>(numQueue);
       for (int i = 0; i < numQueue; i++) {
-        list.add(new LinkedBlockingQueue<T>(queueSize));
+        queues.add(new LinkedBlockingQueue<T>(queueSize));
       }
-      queues = Collections.synchronizedList(list);
     }
 
     void offer(int i, T object) {
@@ -156,8 +156,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       followingBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
       endBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
       newBlocks = new MultipleBlockingQueue<>(numAllBlocks, 1);
-      updateStreamerMap = Collections.synchronizedMap(
-          new HashMap<StripedDataStreamer, Boolean>(numAllBlocks));
+      updateStreamerMap = new ConcurrentHashMap<>(numAllBlocks);
       streamerUpdateResult = new MultipleBlockingQueue<>(numAllBlocks, 1);
     }
 
@@ -260,6 +259,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
   private final Coordinator coordinator;
   private final CellBuffers cellBuffers;
+  private final ErasureCodingPolicy ecPolicy;
   private final RawErasureEncoder encoder;
   private final List<StripedDataStreamer> streamers;
   private final DFSPacket[] currentPackets; // current Packet of each streamer
@@ -286,7 +286,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       LOG.debug("Creating DFSStripedOutputStream for " + src);
     }
 
-    final ErasureCodingPolicy ecPolicy = stat.getErasureCodingPolicy();
+    ecPolicy = stat.getErasureCodingPolicy();
     final int numParityBlocks = ecPolicy.getNumParityUnits();
     cellSize = ecPolicy.getCellSize();
     numDataBlocks = ecPolicy.getNumDataUnits();
@@ -478,11 +478,6 @@ public class DFSStripedOutputStream extends DFSOutputStream
     final LocatedBlock lb = addBlock(excludedNodes, dfsClient, src,
         currentBlockGroup, fileId, favoredNodes, getAddBlockFlags());
     assert lb.isStriped();
-    if (lb.getLocations().length < numDataBlocks) {
-      throw new IOException("Failed to get " + numDataBlocks
-          + " nodes from namenode: blockGroupSize= " + numAllBlocks
-          + ", blocks.length= " + lb.getLocations().length);
-    }
     // assign the new block to the current block group
     currentBlockGroup = lb.getBlock();
     blockGroupIndex++;
@@ -494,11 +489,16 @@ public class DFSStripedOutputStream extends DFSOutputStream
       StripedDataStreamer si = getStripedDataStreamer(i);
       assert si.isHealthy();
       if (blocks[i] == null) {
+        // allocBlock() should guarantee that all data blocks are successfully
+        // allocated.
+        assert i >= numDataBlocks;
         // Set exception and close streamer as there is no block locations
         // found for the parity block.
-        LOG.warn("Failed to get block location for parity block, index=" + i);
+        LOG.warn("Cannot allocate parity block(index={}, policy={}). " +
+            "Not enough datanodes? Exclude nodes={}", i,  ecPolicy.getName(),
+            excludedNodes);
         si.getLastException().set(
-            new IOException("Failed to get following block, i=" + i));
+            new IOException("Failed to get parity block, index=" + i));
         si.getErrorState().setInternalError();
         si.close(true);
       } else {

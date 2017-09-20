@@ -109,16 +109,16 @@ public class TestDataNodeMultipleRegistrations {
       BPOfferService bpos2 = dn.getAllBpOs().get(1);
 
       // The order of bpos is not guaranteed, so fix the order
-      if (getNNSocketAddress(bpos1).equals(nn2.getServiceRpcAddress())) {
+      if (getNNSocketAddress(bpos1).equals(nn2.getNameNodeAddress())) {
         BPOfferService tmp = bpos1;
         bpos1 = bpos2;
         bpos2 = tmp;
       }
 
       assertEquals("wrong nn address", getNNSocketAddress(bpos1),
-          nn1.getServiceRpcAddress());
+          nn1.getNameNodeAddress());
       assertEquals("wrong nn address", getNNSocketAddress(bpos2),
-          nn2.getServiceRpcAddress());
+          nn2.getNameNodeAddress());
       assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
       assertEquals("wrong bpid", bpos2.getBlockPoolId(), bpid2);
       assertEquals("wrong cid", dn.getClusterId(), cid1);
@@ -182,7 +182,7 @@ public class TestDataNodeMultipleRegistrations {
 
       assertEquals("wrong nn address",
           getNNSocketAddress(bpos1),
-          nn1.getServiceRpcAddress());
+          nn1.getNameNodeAddress());
       assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
       assertEquals("wrong cid", dn.getClusterId(), cid1);
       cluster.shutdown();

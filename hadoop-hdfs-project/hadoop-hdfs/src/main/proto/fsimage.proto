@@ -346,3 +346,7 @@ message CacheManagerSection {
   // repeated CachePoolInfoProto pools
   // repeated CacheDirectiveInfoProto directives
 }
+
+message ErasureCodingSection {
+  repeated ErasureCodingPolicyProto policies = 1;
+}

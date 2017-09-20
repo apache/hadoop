@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
-import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -70,21 +69,14 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
   protected void setProvider() {
   }
 
-  private KMSClientProvider getKMSClientProvider() {
-    LoadBalancingKMSClientProvider lbkmscp =
-        (LoadBalancingKMSClientProvider) Whitebox
-        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
-    assert lbkmscp.getProviders().length == 1;
-    return lbkmscp.getProviders()[0];
-  }
-
   @Test(timeout = 120000)
   public void testCreateEZPopulatesEDEKCache() throws Exception {
     final Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
     dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
     @SuppressWarnings("unchecked")
-    KMSClientProvider kcp = getKMSClientProvider();
+    KMSClientProvider kcp = (KMSClientProvider) Whitebox
+        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
     assertTrue(kcp.getEncKeyQueueSize(TEST_KEY) > 0);
   }
 
@@ -118,7 +110,8 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     dfsAdmin.createEncryptionZone(zonePath, anotherKey, NO_TRASH);
 
     @SuppressWarnings("unchecked")
-    KMSClientProvider spy = getKMSClientProvider();
+    KMSClientProvider spy = (KMSClientProvider) Whitebox
+        .getInternalState(cluster.getNamesystem().getProvider(), "extension");
     assertTrue("key queue is empty after creating encryption zone",
         spy.getEncKeyQueueSize(TEST_KEY) > 0);
 
@@ -129,7 +122,9 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        final KMSClientProvider kspy = getKMSClientProvider();
+        final KMSClientProvider kspy = (KMSClientProvider) Whitebox
+            .getInternalState(cluster.getNamesystem().getProvider(),
+                "extension");
         return kspy.getEncKeyQueueSize(TEST_KEY) > 0;
       }
     }, 1000, 60000);

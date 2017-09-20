@@ -147,6 +147,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   private static InetSocketAddress rmAddr;
   private List<MockRM> rms = new ArrayList<MockRM>();
 
+  public TestRMRestart(SchedulerType type) throws IOException {
+    super(type);
+  }
+
   @Before
   public void setup() throws IOException {
     conf = getConf();
@@ -384,6 +388,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     // assert app1 attempt is saved
     attempt1 = loadedApp1.getCurrentAppAttempt();
     attemptId1 = attempt1.getAppAttemptId();
+    ((AbstractYarnScheduler)rm2.getResourceScheduler()).update();
     rm2.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
     appState = rmAppState.get(loadedApp1.getApplicationId());
     attemptState = appState.getAttempt(attemptId1);

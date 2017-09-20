@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 
@@ -137,6 +139,16 @@ public class ContainersLauncher extends AbstractService
         containerLauncher.submit(launch);
         running.put(containerId, launch);
         break;
+      case RECOVER_PAUSED_CONTAINER:
+        // Recovery for paused containers is not supported, thus here
+        // we locate any paused containers, and terminate them.
+        app = context.getApplications().get(
+            containerId.getApplicationAttemptId().getApplicationId());
+        launch = new RecoverPausedContainerLaunch(context, getConfig(),
+            dispatcher, exec, app, event.getContainer(), dirsHandler,
+            containerManager);
+        containerLauncher.submit(launch);
+        break;
       case CLEANUP_CONTAINER:
       case CLEANUP_CONTAINER_FOR_REINIT:
         ContainerLaunch launcher = running.remove(containerId);
@@ -169,6 +181,36 @@ public class ContainersLauncher extends AbstractService
         } catch (IOException e) {
           LOG.warn("Got exception while signaling container " + containerId
               + " with command " + signalEvent.getCommand());
+        }
+        break;
+      case PAUSE_CONTAINER:
+        ContainerLaunch launchedContainer = running.get(containerId);
+        if (launchedContainer == null) {
+          // Container not launched. So nothing needs to be done.
+          return;
+        }
+
+        // Pause the container
+        try {
+          launchedContainer.pauseContainer();
+        } catch (Exception e) {
+          LOG.info("Got exception while pausing container: " +
+            StringUtils.stringifyException(e));
+        }
+        break;
+      case RESUME_CONTAINER:
+        ContainerLaunch launchCont = running.get(containerId);
+        if (launchCont == null) {
+          // Container not launched. So nothing needs to be done.
+          return;
+        }
+
+        // Resume the container.
+        try {
+          launchCont.resumeContainer();
+        } catch (Exception e) {
+          LOG.info("Got exception while resuming container: " +
+            StringUtils.stringifyException(e));
         }
         break;
     }

@@ -105,11 +105,8 @@ public class InternalDataNodeTestUtils {
    *
    * @throws IOException
    */
-  public static DataNode startDNWithMockNN(
-      Configuration conf,
-      final InetSocketAddress nnSocketAddr,
-      final InetSocketAddress nnServiceAddr,
-      final String dnDataDir)
+  public static DataNode startDNWithMockNN(Configuration conf,
+      final InetSocketAddress nnSocketAddr, final String dnDataDir)
       throws IOException {
 
     FileSystem.setDefaultUri(conf, "hdfs://" + nnSocketAddr.getHostName() + ":"
@@ -152,7 +149,7 @@ public class InternalDataNodeTestUtils {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
-        Assert.assertEquals(nnServiceAddr, nnAddr);
+        Assert.assertEquals(nnSocketAddr, nnAddr);
         return namenode;
       }
     };

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.lang.ArrayUtils;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -101,15 +101,10 @@ public final class ErasureCodingPolicyManager {
   private ErasureCodingPolicyManager() {}
 
   public void init(Configuration conf) {
-    // Populate the list of enabled policies from configuration
-    final String[] enablePolicyNames = conf.getTrimmedStrings(
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_DEFAULT);
+    // Load erasure coding default policy
     final String defaultPolicyName = conf.getTrimmed(
             DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
             DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
-    final String[] policyNames =
-            (String[]) ArrayUtils.add(enablePolicyNames, defaultPolicyName);
     this.policiesByName = new TreeMap<>();
     this.policiesByID = new TreeMap<>();
     this.enabledPoliciesByName = new TreeMap<>();
@@ -129,11 +124,8 @@ public final class ErasureCodingPolicyManager {
       policiesByID.put(policy.getId(), policy);
     }
 
-    for (String policyName : policyNames) {
-      if (policyName.trim().isEmpty()) {
-        continue;
-      }
-      ErasureCodingPolicy ecPolicy = policiesByName.get(policyName);
+    if (!defaultPolicyName.trim().isEmpty()) {
+      ErasureCodingPolicy ecPolicy = policiesByName.get(defaultPolicyName);
       if (ecPolicy == null) {
         String names = policiesByName.values()
             .stream().map(ErasureCodingPolicy::getName)
@@ -141,8 +133,8 @@ public final class ErasureCodingPolicyManager {
         String msg = String.format("EC policy '%s' specified at %s is not a "
                 + "valid policy. Please choose from list of available "
                 + "policies: [%s]",
-            policyName,
-            DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
+            defaultPolicyName,
+            DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
             names);
         throw new HadoopIllegalArgumentException(msg);
       }
@@ -250,14 +242,15 @@ public final class ErasureCodingPolicyManager {
         policy.getSchema(), policy.getCellSize());
     for (ErasureCodingPolicy p : getPolicies()) {
       if (p.getName().equals(assignedNewName)) {
-        throw new HadoopIllegalArgumentException("The policy name " +
-            assignedNewName + " already exists");
+        LOG.info("The policy name " + assignedNewName + " already exists");
+        return p;
       }
       if (p.getSchema().equals(policy.getSchema()) &&
           p.getCellSize() == policy.getCellSize()) {
-        throw new HadoopIllegalArgumentException("A policy with same schema "
+        LOG.info("A policy with same schema "
             + policy.getSchema().toString() + " and cell size "
             + p.getCellSize() + " already exists");
+        return p;
       }
     }
     policy.setName(assignedNewName);
@@ -298,6 +291,11 @@ public final class ErasureCodingPolicyManager {
     }
     ecPolicy.setState(ErasureCodingPolicyState.REMOVED);
     LOG.info("Remove erasure coding policy " + name);
+
+    /*
+     * TODO HDFS-12405 postpone the delete removed policy to Namenode restart
+     * time.
+     * */
   }
 
   @VisibleForTesting
@@ -346,5 +344,37 @@ public final class ErasureCodingPolicyManager {
     enabledPolicies =
         enabledPoliciesByName.values().toArray(new ErasureCodingPolicy[0]);
     LOG.info("Enable the erasure coding policy " + name);
+  }
+
+  /**
+   * Load an erasure coding policy into erasure coding manager.
+   */
+  private void loadPolicy(ErasureCodingPolicy policy) {
+    if (!CodecUtil.hasCodec(policy.getCodecName()) ||
+        policy.getCellSize() > maxCellSize) {
+      // If policy is not supported in current system, set the policy state to
+      // DISABLED;
+      policy.setState(ErasureCodingPolicyState.DISABLED);
+    }
+
+    this.policiesByName.put(policy.getName(), policy);
+    this.policiesByID.put(policy.getId(), policy);
+    if (policy.isEnabled()) {
+      enablePolicy(policy.getName());
+    }
+  }
+
+  /**
+   * Reload erasure coding policies from fsImage.
+   *
+   * @param ecPolicies contains ErasureCodingPolicy list
+   *
+   */
+  public synchronized void loadPolicies(List<ErasureCodingPolicy> ecPolicies) {
+    Preconditions.checkNotNull(ecPolicies);
+    for (ErasureCodingPolicy p : ecPolicies) {
+      loadPolicy(p);
+    }
+    allPolicies = policiesByName.values().toArray(new ErasureCodingPolicy[0]);
   }
 }

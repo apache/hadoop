@@ -245,4 +245,9 @@ public class MockContainer implements Container {
   public ResourceMappings getResourceMappings() {
     return null;
   }
+
+  @Override
+  public void sendPauseEvent(String description) {
+
+  }
 }
