@@ -47,7 +47,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
@@ -735,7 +735,7 @@ public class TestFSEditLogLoader {
       ErasureCodingPolicy newPolicy =
           new ErasureCodingPolicy(schema, cellSize, (byte) 0);
       ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[]{newPolicy};
-      AddECPolicyResponse[] responses =
+      AddErasureCodingPolicyResponse[] responses =
           fs.addErasureCodingPolicies(policyArray);
       assertEquals(1, responses.length);
       assertTrue(responses[0].isSucceed());

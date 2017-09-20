@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -686,7 +686,7 @@ public class TestErasureCodingPolicies {
     ErasureCodingPolicy newPolicy =
         new ErasureCodingPolicy(toAddSchema, 128 * 1024);
     ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[]{newPolicy};
-    AddECPolicyResponse[] responses =
+    AddErasureCodingPolicyResponse[] responses =
         fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);
     assertFalse(responses[0].isSucceed());
@@ -839,7 +839,8 @@ public class TestErasureCodingPolicies {
         new ErasureCodingPolicy(ErasureCodeConstants.RS_3_2_SCHEMA, 8 * 1024);
     ErasureCodingPolicy[] policyArray =
         new ErasureCodingPolicy[] {newPolicy1};
-    AddECPolicyResponse[] responses = fs.addErasureCodingPolicies(policyArray);
+    AddErasureCodingPolicyResponse[] responses =
+        fs.addErasureCodingPolicies(policyArray);
     assertEquals(1, responses.length);
     assertTrue(responses[0].isSucceed());
     newPolicy1 = responses[0].getPolicy();

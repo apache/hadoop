@@ -390,7 +390,7 @@ message ErasureCodingPolicyProto {
   optional ErasureCodingPolicyState state = 5 [default = ENABLED];
 }
 
-message AddECPolicyResponseProto {
+message AddErasureCodingPolicyResponseProto {
   required ErasureCodingPolicyProto policy = 1;
   required bool succeed = 2;
   optional string errorMsg = 3;

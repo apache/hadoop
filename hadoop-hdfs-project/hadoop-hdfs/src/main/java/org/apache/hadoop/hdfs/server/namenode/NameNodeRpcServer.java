@@ -85,7 +85,7 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -2333,17 +2333,18 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public AddECPolicyResponse[] addErasureCodingPolicies(
+  public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
     final CacheEntryWithPayload cacheEntry =
         RetryCache.waitForCompletion(retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (AddECPolicyResponse[]) cacheEntry.getPayload();
+      return (AddErasureCodingPolicyResponse[]) cacheEntry.getPayload();
     }
     boolean success = false;
-    AddECPolicyResponse[] responses = new AddECPolicyResponse[0];
+    AddErasureCodingPolicyResponse[] responses =
+        new AddErasureCodingPolicyResponse[0];
     try {
       responses =
           namesystem.addErasureCodingPolicies(policies, cacheEntry != null);

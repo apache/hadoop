@@ -1584,7 +1584,7 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @AtMostOnce
-  AddECPolicyResponse[] addErasureCodingPolicies(
+  AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException;
 
   /**
