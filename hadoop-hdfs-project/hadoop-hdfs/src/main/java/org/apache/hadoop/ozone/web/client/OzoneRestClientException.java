@@ -33,6 +33,16 @@ public class OzoneRestClientException extends OzoneException {
   }
 
   /**
+   * Constructor that allows a shortMessage and an exception.
+   *
+   * @param shortMessage short message
+   * @param ex exception
+   */
+  public OzoneRestClientException(String shortMessage, Exception ex) {
+    super(0, shortMessage, shortMessage, ex);
+  }
+
+  /**
    * Constructor that allows the shortMessage and a longer message.
    *
    * @param shortMessage Short Message

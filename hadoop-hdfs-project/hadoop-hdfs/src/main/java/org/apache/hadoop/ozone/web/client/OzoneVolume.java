@@ -201,7 +201,7 @@ public class OzoneVolume {
       executeCreateBucket(httpPost, httpClient);
       return getBucket(bucketName);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(httpPost);
     }
@@ -305,7 +305,7 @@ public class OzoneVolume {
       }
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -334,7 +334,7 @@ public class OzoneVolume {
       }
       executePutBucket(putRequest, httpClient);
     } catch (URISyntaxException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -359,7 +359,7 @@ public class OzoneVolume {
       return executeInfoBucket(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }
@@ -465,7 +465,7 @@ public class OzoneVolume {
       return executeListBuckets(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage());
+      throw new OzoneRestClientException(e.getMessage(), e);
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }
@@ -533,7 +533,7 @@ public class OzoneVolume {
       executeDeleteBucket(delRequest, httpClient);
 
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(delRequest);
     }
