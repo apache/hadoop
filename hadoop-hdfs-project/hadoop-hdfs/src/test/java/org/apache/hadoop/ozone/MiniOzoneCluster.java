@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.container.common
+    .statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
@@ -168,8 +170,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
 
     try {
       this.waitActive();
-      this.waitForHeartbeatProcessed();
-      this.waitOzoneReady();
+      waitDatanodeOzoneReady(i);
     } catch (TimeoutException | InterruptedException e) {
       Thread.interrupted();
     }
@@ -260,6 +261,21 @@ public final class MiniOzoneCluster extends MiniDFSCluster
             isReady? "Cluster is ready" : "Waiting for cluster to be ready",
             healthy, numDataNodes);
       return isReady;
+    }, 1000, 60 * 1000); //wait for 1 min.
+  }
+
+  /**
+   * Waits for a particular Datanode to be ready for processing ozone requests.
+   */
+  public void waitDatanodeOzoneReady(int dnIndex)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(() -> {
+      DatanodeStateMachine.DatanodeStates state =
+          dataNodes.get(dnIndex).getDatanode().getOzoneStateMachineState();
+      final boolean rebootComplete =
+          (state == DatanodeStateMachine.DatanodeStates.RUNNING);
+      LOG.info("{} Current state:{}", rebootComplete, state);
+      return rebootComplete;
     }, 1000, 60 * 1000); //wait for 1 min.
   }
 
