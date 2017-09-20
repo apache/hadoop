@@ -1581,6 +1581,15 @@ public class DataNode extends ReconfigurableBase
     return this.datanodeStateMachine.getContainer();
   }
 
+  @VisibleForTesting
+  public DatanodeStateMachine.DatanodeStates getOzoneStateMachineState() {
+    if (this.datanodeStateMachine != null) {
+      return this.datanodeStateMachine.getContext().getState();
+    }
+    // if the state machine doesn't exist then DN initialization is in progress
+    return DatanodeStateMachine.DatanodeStates.INIT;
+  }
+
   /**
    * After the block pool has contacted the NN, registers that block pool
    * with the secret manager, updating it with the secrets provided by the NN.
