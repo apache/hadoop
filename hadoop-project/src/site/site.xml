@@ -98,6 +98,8 @@
       <item name="Multihoming" href="hadoop-project-dist/hadoop-hdfs/HdfsMultihoming.html"/>
       <item name="Storage Policies" href="hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html"/>
       <item name="Memory Storage Support" href="hadoop-project-dist/hadoop-hdfs/MemoryStorage.html"/>
+      <item name="Upgrade Domain" href="hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html"/>
+      <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
