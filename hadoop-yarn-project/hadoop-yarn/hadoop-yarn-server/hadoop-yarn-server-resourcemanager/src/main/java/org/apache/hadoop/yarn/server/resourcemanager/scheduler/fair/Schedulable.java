@@ -41,10 +41,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
  * - updateDemand() is called periodically to compute the demand of the various
  *   jobs and queues, which may be expensive (e.g. jobs must iterate through all
  *   their tasks to count failed tasks, tasks that can be speculated, etc).
- * - redistributeShare() is called after demands are updated and a Schedulable's
- *   fair share has been set by its parent to let it distribute its share among
- *   the other Schedulables within it (e.g. for queues that want to perform fair
- *   sharing among their jobs).
  */
 @Private
 @Unstable

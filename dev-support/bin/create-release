@@ -564,6 +564,7 @@ function makearelease
     "${MVN}" "${MVN_ARGS[@]}" install \
       site site:stage \
       -DskipTests \
+      -DskipShade \
       -Pdist,src \
       "${DOCFLAGS}"
 
