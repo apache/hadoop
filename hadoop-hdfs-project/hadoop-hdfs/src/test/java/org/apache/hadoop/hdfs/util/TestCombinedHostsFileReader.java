@@ -20,28 +20,29 @@ package org.apache.hadoop.hdfs.util;
 import java.io.File;
 import java.io.FileWriter;
 
-import java.util.Set;
-
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-/*
- * Test for JSON based HostsFileReader
+/**
+ * Test for JSON based HostsFileReader.
  */
 public class TestCombinedHostsFileReader {
 
   // Using /test/build/data/tmp directory to store temporary files
-  static final String HOSTS_TEST_DIR = new File(System.getProperty(
-      "test.build.data", "/tmp")).getAbsolutePath();
-  File NEW_FILE = new File(HOSTS_TEST_DIR, "dfs.hosts.new.json");
+  static final String HOSTSTESTDIR = GenericTestUtils.getTestDir()
+      .getAbsolutePath();
+  private final File newFile = new File(HOSTSTESTDIR, "dfs.hosts.new.json");
 
-  static final String TEST_CACHE_DATA_DIR =
+  static final String TESTCACHEDATADIR =
       System.getProperty("test.cache.data", "build/test/cache");
-  File EXISTING_FILE = new File(TEST_CACHE_DATA_DIR, "dfs.hosts.json");
+  private final File jsonFile = new File(TESTCACHEDATADIR, "dfs.hosts.json");
+  private final File legacyFile =
+      new File(TESTCACHEDATADIR, "legacy.dfs.hosts.json");
 
   @Before
   public void setUp() throws Exception {
@@ -50,18 +51,28 @@ public class TestCombinedHostsFileReader {
   @After
   public void tearDown() throws Exception {
     // Delete test file after running tests
-    NEW_FILE.delete();
+    newFile.delete();
 
   }
 
   /*
-   * Load the existing test json file
+   * Load the legacy test json file
+   */
+  @Test
+  public void testLoadLegacyJsonFile() throws Exception {
+    DatanodeAdminProperties[] all =
+        CombinedHostsFileReader.readFile(legacyFile.getAbsolutePath());
+    assertEquals(5, all.length);
+  }
+
+  /*
+   * Load the test json file
    */
   @Test
   public void testLoadExistingJsonFile() throws Exception {
-    Set<DatanodeAdminProperties> all =
-        CombinedHostsFileReader.readFile(EXISTING_FILE.getAbsolutePath());
-    assertEquals(5, all.size());
+    DatanodeAdminProperties[] all =
+        CombinedHostsFileReader.readFile(jsonFile.getAbsolutePath());
+    assertEquals(5, all.length);
   }
 
   /*
@@ -69,11 +80,11 @@ public class TestCombinedHostsFileReader {
    */
   @Test
   public void testEmptyCombinedHostsFileReader() throws Exception {
-    FileWriter hosts = new FileWriter(NEW_FILE);
+    FileWriter hosts = new FileWriter(newFile);
     hosts.write("");
     hosts.close();
-    Set<DatanodeAdminProperties> all =
-        CombinedHostsFileReader.readFile(NEW_FILE.getAbsolutePath());
-    assertEquals(0, all.size());
+    DatanodeAdminProperties[] all =
+        CombinedHostsFileReader.readFile(newFile.getAbsolutePath());
+    assertEquals(0, all.length);
   }
 }
