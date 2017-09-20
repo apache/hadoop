@@ -402,6 +402,7 @@ public class Shell extends Configured implements Tool {
       System.err.printf("Command Failed : %s%n", ex.getMessage());
     } catch (OzoneException ex) {
       System.err.printf("Command Failed : %s%n", ex.toJsonString());
+      ex.printStackTrace(System.err);
     } catch (IllegalArgumentException ex) {
       System.err.printf("Illegal argument: %s%n", ex.getMessage());
     }

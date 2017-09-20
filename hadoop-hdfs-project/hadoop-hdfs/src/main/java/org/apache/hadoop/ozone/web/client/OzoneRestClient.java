@@ -167,7 +167,7 @@ public class OzoneRestClient implements Closeable {
       executeCreateVolume(httpPost, httpClient);
       return getVolume(volumeName);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(httpPost);
     }
@@ -194,7 +194,7 @@ public class OzoneRestClient implements Closeable {
       httpGet = getHttpGet(builder.toString());
       return executeInfoVolume(httpGet, httpClient);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(httpGet);
     }
@@ -245,7 +245,7 @@ public class OzoneRestClient implements Closeable {
       }
       return executeListVolume(httpGet, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(httpGet);
     }
@@ -327,7 +327,7 @@ public class OzoneRestClient implements Closeable {
       return executeListVolume(httpGet, httpClient);
 
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(httpGet);
     }
@@ -349,7 +349,7 @@ public class OzoneRestClient implements Closeable {
       httpDelete = getHttpDelete(builder.toString());
       executeDeleteVolume(httpDelete, httpClient);
     } catch (IOException | URISyntaxException | IllegalArgumentException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(httpDelete);
     }
@@ -378,7 +378,7 @@ public class OzoneRestClient implements Closeable {
       executePutVolume(putRequest, httpClient);
 
     } catch (URISyntaxException | IllegalArgumentException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -411,7 +411,7 @@ public class OzoneRestClient implements Closeable {
       executePutVolume(putRequest, httpClient);
 
     } catch (URISyntaxException | IllegalArgumentException | IOException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(putRequest);
     }
@@ -617,7 +617,7 @@ public class OzoneRestClient implements Closeable {
       putRequest.setHeader(Header.CONTENT_MD5, DigestUtils.md5Hex(fis));
       OzoneBucket.executePutKey(putRequest, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(fis);
       OzoneClientUtils.releaseConnection(putRequest);
@@ -659,7 +659,7 @@ public class OzoneRestClient implements Closeable {
       OzoneBucket.executeGetKey(getRequest, httpClient, outPutFile);
       outPutFile.flush();
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(outPutFile);
       OzoneClientUtils.releaseConnection(getRequest);
@@ -704,7 +704,7 @@ public class OzoneRestClient implements Closeable {
       getRequest = getHttpGet(builder.toString());
       return OzoneBucket.executeListKeys(getRequest, httpClient);
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage());
+      throw new OzoneRestClientException(e.getMessage(), e);
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }

@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
  */
 @InterfaceAudience.Private
 public class OzoneException extends Exception {
+
   private static final ObjectReader READER =
       new ObjectMapper().readerFor(OzoneException.class);
   private static final ObjectMapper MAPPER;
@@ -113,7 +114,23 @@ public class OzoneException extends Exception {
   }
 
   /**
-   * Returns the Resource that was involved in the exception.
+   * Constructor that allows a shortMessage, a long message and an exception.
+   *
+   * @param httpCode Error code
+   * @param shortMessage Short message
+   * @param message Long error message
+   * @param ex Exception
+   */
+  public OzoneException(long httpCode, String shortMessage,
+      String message, Exception ex) {
+    super(ex);
+    this.shortMessage = shortMessage;
+    this.message = message;
+    this.httpCode = httpCode;
+  }
+
+  /**
+   * Returns the Resource that was involved in the stackTraceString.
    *
    * @return String
    */

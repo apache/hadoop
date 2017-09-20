@@ -190,7 +190,7 @@ public class OzoneBucket {
       }
       executePutKey(putRequest, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(is);
       OzoneClientUtils.releaseConnection(putRequest);
@@ -321,7 +321,7 @@ public class OzoneBucket {
       executeGetKey(getRequest, httpClient, outPutFile);
       outPutFile.flush();
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(outPutFile);
       OzoneClientUtils.releaseConnection(getRequest);
@@ -355,7 +355,7 @@ public class OzoneBucket {
       executeGetKey(getRequest, httpClient, outPutStream);
       return outPutStream.toString(ENCODING_NAME);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       IOUtils.closeStream(outPutStream);
       OzoneClientUtils.releaseConnection(getRequest);
@@ -422,7 +422,7 @@ public class OzoneBucket {
           .getClient().getHttpDelete(builder.toString());
       executeDeleteKey(deleteRequest, httpClient);
     } catch (IOException | URISyntaxException ex) {
-      throw new OzoneRestClientException(ex.getMessage());
+      throw new OzoneRestClientException(ex.getMessage(), ex);
     } finally {
       OzoneClientUtils.releaseConnection(deleteRequest);
     }
@@ -500,7 +500,7 @@ public class OzoneBucket {
       return executeListKeys(getRequest, httpClient);
 
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage());
+      throw new OzoneRestClientException(e.getMessage(), e);
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }
@@ -570,7 +570,7 @@ public class OzoneBucket {
       getRequest = client.getHttpGet(builder.toString());
       return executeGetKeyInfo(getRequest, httpClient);
     } catch (IOException | URISyntaxException e) {
-      throw new OzoneRestClientException(e.getMessage());
+      throw new OzoneRestClientException(e.getMessage(), e);
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }
