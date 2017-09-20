@@ -158,7 +158,6 @@ public final class OzoneClientFactory {
       return ctor.newInstance(getConfiguration());
     } catch (Exception e) {
       final String message = "Couldn't create protocol " + protocolClass;
-      LOG.warn(message, e);
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
       } else {
