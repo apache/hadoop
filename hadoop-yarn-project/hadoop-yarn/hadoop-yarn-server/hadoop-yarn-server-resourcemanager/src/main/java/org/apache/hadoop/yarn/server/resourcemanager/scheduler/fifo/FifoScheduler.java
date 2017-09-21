@@ -660,6 +660,10 @@ public class FifoScheduler extends
         " request=" + request + " type=" + type);
     Resource capability = request.getCapability();
 
+    if (!Resources.fitsIn(capability, node.getAvailableResource())) 
+    {
+    	return Resources.none();
+    }    	
     int availableContainers = 
       node.getAvailableResource().getMemory() / capability.getMemory(); // TODO: A buggy
                                                                         // application
@@ -669,7 +673,6 @@ public class FifoScheduler extends
                                                                         // scheduler.
     int assignedContainers = 
       Math.min(assignableContainers, availableContainers);
-
     if (assignedContainers > 0) {
       for (int i=0; i < assignedContainers; ++i) {
 
@@ -682,8 +685,13 @@ public class FifoScheduler extends
             BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
               .getHttpAddress(), capability, priority, null);
         
-        // Allocate!
-        
+        if(capability.getGPUs() > 0) {
+	        // Allocate!
+	        LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
+	        int allocated = Resources.allocateGPUs(capability, available);
+	        LOG.info("Allocated GPUs in bitvector format: " + allocated);
+	        container.setGPULocation(allocated);
+	     }
         // Inform the application
         RMContainer rmContainer =
             application.allocate(type, node, priority, request, container);
