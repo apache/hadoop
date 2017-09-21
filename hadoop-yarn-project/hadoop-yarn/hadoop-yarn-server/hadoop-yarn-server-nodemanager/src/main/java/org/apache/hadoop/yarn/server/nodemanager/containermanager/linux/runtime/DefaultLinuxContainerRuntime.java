@@ -65,7 +65,6 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
     PrivilegedOperation launchOp = new PrivilegedOperation(
         PrivilegedOperation.OperationType.LAUNCH_CONTAINER);
 
@@ -101,8 +100,7 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
 
     try {
       privilegedOperationExecutor.executePrivilegedOperation(prefixCommands,
-            launchOp, null, container.getLaunchContext().getEnvironment(),
-            false, false);
+            launchOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
       LOG.warn("Launch container failed. Exception: ", e);
 
@@ -114,7 +112,6 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
     PrivilegedOperation signalOp = new PrivilegedOperation(
         PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
 
@@ -133,8 +130,7 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
           .getInstance(conf);
 
       executor.executePrivilegedOperation(null,
-          signalOp, null, container.getLaunchContext().getEnvironment(),
-          false, true);
+          signalOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
       //Don't log the failure here. Some kinds of signaling failures are
       // acceptable. Let the calling executor decide what to do.
