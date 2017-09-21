@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +36,16 @@ import org.apache.hadoop.util.ReflectionUtils;
  * A factory for committers implementing the {@link PathOutputCommitter}
  * methods, and so can be used from {@link FileOutputFormat}.
  * The base implementation returns {@link FileOutputCommitter} instances.
+ *
+ * Algorithm:
+ * <ol>
+ *   <ul>If an explicit committer factory is named, it is used.</ul>
+ *   <ul>The output path is examined.
+ *   If there is an explicit schema for that filesystem, its factory
+ *   is instantiated.</ul>
+ *   <ul>Otherwise, an instance of {@link FileOutputCommitter} is
+ *   created</ul>
+ * </ol>
  */
 public class PathOutputCommitterFactory extends Configured {
   private static final Logger LOG =
@@ -44,26 +56,48 @@ public class PathOutputCommitterFactory extends Configured {
    * output committer factory to use unless there is a specific
    * one for a schema.
    */
-  public static final String OUTPUTCOMMITTER_FACTORY_CLASS =
-      "mapreduce.pathoutputcommitter.factory.class";
+  public static final String COMMITTER_FACTORY_CLASS =
+      "mapreduce.outputcommitter.factory.class";
 
   /**
    * Scheme prefix for per-filesystem scheme committers.
    */
-  public static final String OUTPUTCOMMITTER_FACTORY_SCHEME =
-      "mapreduce.pathoutputcommitter.factory.scheme";
+  public static final String COMMITTER_FACTORY_SCHEME =
+      "mapreduce.outputcommitter.factory.scheme";
 
   /**
    * String format pattern for per-filesystem scheme committers.
    */
-  public static final String OUTPUTCOMMITTER_FACTORY_SCHEME_PATTERN =
-      OUTPUTCOMMITTER_FACTORY_SCHEME + ".%s";
+  public static final String COMMITTER_FACTORY_SCHEME_PATTERN =
+      COMMITTER_FACTORY_SCHEME + ".%s";
+
+
+  /**
+   * The {@link FileOutputCommitter} factory.
+   */
+  public static final String FILE_COMMITTER_FACTORY  =
+      "org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.FileOutputCommitterFactory";
+
+  /**
+   * The {@link FileOutputCommitter} factory.
+   */
+  public static final String NAMED_COMMITTER_FACTORY  =
+      "org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.NamedCommitterFactory";
+
+  /**
+   * The named output committer.
+   * Creates any committer listed in
+   */
+  public static final String COMMITTER_CLASSNAME =
+      "mapreduce.outputcommitter.named.classname";
 
   /**
    * Default committer factory name: {@value}.
    */
-  public static final String OUTPUTCOMMITTER_FACTORY_DEFAULT =
-      "org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory";
+  public static final String COMMITTER_FACTORY_DEFAULT =
+      FILE_COMMITTER_FACTORY;
+
+
 
   /**
    * Create an output committer for a task attempt.
@@ -74,7 +108,7 @@ public class PathOutputCommitterFactory extends Configured {
    */
   public PathOutputCommitter createOutputCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
-    return createDefaultCommitter(outputPath, context);
+    return createFileOutputCommitter(outputPath, context);
   }
 
   /**
@@ -87,20 +121,18 @@ public class PathOutputCommitterFactory extends Configured {
    */
   public PathOutputCommitter createOutputCommitter(Path outputPath,
       JobContext context) throws IOException {
-    return createDefaultCommitter(outputPath, context);
+    return createFileOutputCommitter(outputPath, context);
   }
 
   /**
-   * Create an instance of the default committer, a {@link FileOutputCommitter}
-   * for a job. This is made available for subclasses to use if they ever
-   * need to create the default committer.
+   * Create a {@link FileOutputCommitter} for a job.
    * @param outputPath the job's output path, or null if you want the output
    * committer to act as a no-op.
    * @param context the job context
    * @return the committer to use
    * @throws IOException problems instantiating the committer
    */
-  protected final PathOutputCommitter createDefaultCommitter(Path outputPath,
+  protected final PathOutputCommitter createFileOutputCommitter(Path outputPath,
       JobContext context) throws IOException {
     LOG.debug("Creating FileOutputCommitter for path {} and context {}",
         outputPath, context);
@@ -109,15 +141,14 @@ public class PathOutputCommitterFactory extends Configured {
 
   /**
    * Create an instance of the default committer, a {@link FileOutputCommitter}
-   * for a task. This is made available for subclasses to use if they ever
-   * need to create the default committer.
-   * @param outputPath the job's output path, or null if you want the output
+   * for a task.
+   * @param outputPath the task's output path, or null if you want the output
    * committer to act as a no-op.
    * @param context the task's context
    * @return the committer to use
    * @throws IOException problems instantiating the committer
    */
-  protected final PathOutputCommitter createDefaultCommitter(Path outputPath,
+  protected final PathOutputCommitter createFileOutputCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
     LOG.debug("Creating FileOutputCommitter for path {} and context {}",
         outputPath, context);
@@ -131,29 +162,105 @@ public class PathOutputCommitterFactory extends Configured {
    * @param conf configuration
    * @return an instantiated committer factory
    */
-  public static PathOutputCommitterFactory getOutputCommitterFactory(
+  public static PathOutputCommitterFactory getCommitterFactory(
       Path outputPath,
       Configuration conf) {
-    String keyName = OUTPUTCOMMITTER_FACTORY_CLASS;
-    if (outputPath != null) {
+    String key = COMMITTER_FACTORY_CLASS;
+    if (conf.getTrimmed(key) == null && outputPath != null) {
+      // there is no explicit factory and there's an output path
       String scheme = outputPath.toUri().getScheme();
-      String schemeKey = String.format(OUTPUTCOMMITTER_FACTORY_SCHEME_PATTERN,
+      String schemeKey = String.format(COMMITTER_FACTORY_SCHEME_PATTERN,
           scheme);
 
       String factoryClass = conf.getTrimmed(schemeKey);
       if (factoryClass != null) {
-        LOG.debug("Using scheme-specific committer factory key {}: {}",
-            schemeKey, factoryClass);
-        keyName = schemeKey;
+        key = schemeKey;
       }
     } else {
-      LOG.warn("Unknown commit destination; cannot choose scheme committer");
+      // no explicit factory. The default will be used
     }
     Class<? extends PathOutputCommitterFactory> factory =
-        conf.getClass(keyName,
-            PathOutputCommitterFactory.class,
+        conf.getClass(key,
+            FileOutputCommitterFactory.class,
             PathOutputCommitterFactory.class);
-    LOG.debug("Using OutputCommitter factory class {}", factory);
+    LOG.debug("Using OutputCommitter factory class {} from key {}",
+        factory, key);
     return ReflectionUtils.newInstance(factory, conf);
+  }
+
+  /**
+   * Creates a file output committer, always.
+   */
+  public static final class FileOutputCommitterFactory extends
+      PathOutputCommitterFactory {
+
+    @Override
+    public PathOutputCommitter createOutputCommitter(Path outputPath,
+        TaskAttemptContext context) throws IOException {
+      return super.createFileOutputCommitter(outputPath, context);
+    }
+
+    @Override
+    public PathOutputCommitter createOutputCommitter(Path outputPath,
+        JobContext context) throws IOException {
+      return super.createFileOutputCommitter(outputPath, context);
+    }
+  }
+
+  /**
+   * A factory which creates any named committer (i.e.: no need to
+   * implement a factory for a simple instantiation).
+   */
+  public static final class NamedCommitterFactory extends
+      PathOutputCommitterFactory {
+
+    @Override
+    public PathOutputCommitter createOutputCommitter(Path outputPath,
+        TaskAttemptContext context) throws IOException {
+      Class<? extends PathOutputCommitter> clazz = loadClass(context);
+      LOG.debug("Using OutputCommitter factory class {}", clazz);
+      try {
+        Constructor<? extends PathOutputCommitter> ctor
+            = clazz.getConstructor(Path.class, TaskAttemptContext.class);
+        return ctor.newInstance(outputPath, context);
+      } catch (NoSuchMethodException | InstantiationException |
+          IllegalAccessException | InvocationTargetException e) {
+        throw new IOException("Failed to create " + clazz
+            + ":" + e, e);
+      }
+    }
+
+    @Override
+    public PathOutputCommitter createOutputCommitter(Path outputPath,
+        JobContext context) throws IOException {
+      Class<? extends PathOutputCommitter> clazz = loadClass(context);
+      LOG.debug("Using OutputCommitter factory class {}", clazz);
+      try {
+        Constructor<? extends PathOutputCommitter> ctor
+            = clazz.getConstructor(Path.class, JobContext.class);
+        return ctor.newInstance(outputPath, context);
+      } catch (NoSuchMethodException | InstantiationException |
+          IllegalAccessException | InvocationTargetException e) {
+        throw new IOException("Failed to create " + clazz
+            + ":" + e, e);
+      }
+    }
+
+    /**
+     * Load the class named in {@link #COMMITTER_CLASSNAME}.
+     * @param context job or task context
+     * @return the class
+     * @throws IOException if no committer was designed.
+     */
+    private Class<? extends PathOutputCommitter> loadClass(JobContext context)
+        throws IOException {
+      Configuration conf = context.getConfiguration();
+      String value = conf.get(COMMITTER_CLASSNAME, "");
+      if (value.isEmpty()) {
+        throw new IOException("No committer defined in " + COMMITTER_CLASSNAME);
+      }
+      return conf.getClass(COMMITTER_CLASSNAME,
+          FileOutputCommitter.class, PathOutputCommitter.class);
+    }
   }
 }

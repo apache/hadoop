@@ -333,7 +333,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
       throws IOException {
     if (committer == null) {
       Path output = getOutputPath(context);
-      committer = PathOutputCommitterFactory.getOutputCommitterFactory(
+      committer = PathOutputCommitterFactory.getCommitterFactory(
           output,
           context.getConfiguration()).createOutputCommitter(output, context);
     }

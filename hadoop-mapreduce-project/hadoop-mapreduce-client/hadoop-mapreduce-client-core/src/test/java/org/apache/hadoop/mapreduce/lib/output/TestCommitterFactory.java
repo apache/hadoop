@@ -31,22 +31,23 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test the committer factory logic, using an FS scheme of "http".
  */
-public class TestCommitterFactoryBinding extends Assert {
+public class TestCommitterFactory extends Assert {
 
   private static final String COMMITTER_FACTORY_KEY = String.format(
-      OUTPUTCOMMITTER_FACTORY_SCHEME_PATTERN, "http");
+      COMMITTER_FACTORY_SCHEME_PATTERN, "http");
 
   private static final Path HTTP_PATH = new Path("http://hadoop.apache.org/");
   private static final Path HDFS_PATH = new Path("hdfs://localhost:8081/");
 
   private TaskAttemptID attemptID = new TaskAttemptID("local", 0, TaskType.MAP, 1, 2);
+  private TaskAttemptContextImpl taskContext;
 
   /**
    * Set a factory for a schema, verify it works.
@@ -56,8 +57,8 @@ public class TestCommitterFactoryBinding extends Assert {
   public void testCommitterFactoryForSchema() throws Throwable {
     Configuration conf = new Configuration();
     bindSchemaFactory(conf);
-    CommitterFactory factory = (CommitterFactory)
-        getOutputCommitterFactory(HTTP_PATH, conf);
+    SchemaFactory factory = (SchemaFactory)
+        getCommitterFactory(HTTP_PATH, conf);
   }
 
   /**
@@ -68,41 +69,60 @@ public class TestCommitterFactoryBinding extends Assert {
   public void testCommitterFactoryFallbackDefault() throws Throwable {
     Configuration conf = new Configuration();
     bindSchemaFactory(conf);
-    PathOutputCommitterFactory factory = getOutputCommitterFactory(
+    PathOutputCommitterFactory factory = getCommitterFactory(
         HDFS_PATH, conf);
     assertFalse("Wrong committer factory: " + factory,
-        factory instanceof CommitterFactory);
+        factory instanceof SchemaFactory);
   }
 
   /**
-   * Verify that you can set the default entry and it works for all but
-   * any schema which you've explicitly set up.
-   * @throws Throwable failure
+   * Verify that you can override any schema with an explicit name.
    */
   @Test
-  public void testCommitterFactoryFallbackOverride() throws Throwable {
+  public void testCommitterFactoryOverride() throws Throwable {
     Configuration conf = new Configuration();
+    // set up for the schema factory
     bindSchemaFactory(conf);
-    conf.set(OUTPUTCOMMITTER_FACTORY_CLASS, CommitterFactory2.class.getName());
-    CommitterFactory2 factory = (CommitterFactory2)
-        getOutputCommitterFactory(HDFS_PATH, conf);
-    CommitterFactory f2 = (CommitterFactory)
-        getOutputCommitterFactory(HTTP_PATH, conf);
+    // and then set a global one which overrides the others.
+    conf.set(COMMITTER_FACTORY_CLASS, OtherFactory.class.getName());
+    OtherFactory factory = (OtherFactory)
+        getCommitterFactory(HDFS_PATH, conf);
+    OtherFactory f2 = (OtherFactory)
+        getCommitterFactory(HTTP_PATH, conf);
+  }
+
+  @Test
+  public void testCommitterFactoryUnknown() throws Throwable {
+    Configuration conf = new Configuration();
+    // set up for the schema factory
+    conf.set(COMMITTER_FACTORY_CLASS, "unknown");
+    intercept(RuntimeException.class,
+        () -> getCommitterFactory(HDFS_PATH, conf));
+
+  }
+  @Test
+  public void testCommitterFactoryNamed() throws Throwable {
+    Configuration conf = new Configuration();
+    // set up for the schema factory
+    conf.set(COMMITTER_FACTORY_CLASS, NAMED_COMMITTER_FACTORY);
+    conf.set(COMMITTER_CLASSNAME, SimpleCommitter.class.getName());
+    NamedCommitterFactory factory =
+        (NamedCommitterFactory) getCommitterFactory(HDFS_PATH, conf);
+    SimpleCommitter sc = (SimpleCommitter) factory.createOutputCommitter(HDFS_PATH, taskContext);
+
   }
 
   @Test
   public void testFileOutputFormatBinding() throws Throwable {
     Configuration conf = new Configuration();
-    conf.set(OUTPUTCOMMITTER_FACTORY_CLASS, CommitterFactory2.class.getName());
+//    conf.set(COMMITTER_FACTORY_CLASS, OtherFactory.class.getName());
     conf.set(FileOutputFormat.OUTDIR, HTTP_PATH.toUri().toString());
     bindSchemaFactory(conf);
-    TaskAttemptContextImpl context =
-        new TaskAttemptContextImpl(conf, attemptID);
+    taskContext = new TaskAttemptContextImpl(conf, attemptID);
     TextOutputFormat<String, String> off = new TextOutputFormat<>();
-    OutputCommitter committer = off.getOutputCommitter(context);
+    OutputCommitter committer = off.getOutputCommitter(taskContext);
     assertTrue("Wrong committer : " + committer,
         committer instanceof SimpleCommitter);
-
   }
 
   /**
@@ -111,7 +131,7 @@ public class TestCommitterFactoryBinding extends Assert {
    */
   protected void bindSchemaFactory(Configuration conf) {
     conf.set(COMMITTER_FACTORY_KEY,
-        CommitterFactory.class.getName());
+        SchemaFactory.class.getName());
   }
 
   private Throwable verifyCauseClass(Throwable ex,
@@ -146,9 +166,8 @@ public class TestCommitterFactoryBinding extends Assert {
   protected void expectFactoryConstructionFailure(String key) throws Throwable {
     Configuration conf = new Configuration();
     conf.set(key, "Not a factory");
-    RuntimeException ex = LambdaTestUtils.intercept(
-        RuntimeException.class,
-        () -> getOutputCommitterFactory(HTTP_PATH, conf));
+    RuntimeException ex = intercept(RuntimeException.class,
+        () -> getCommitterFactory(HTTP_PATH, conf));
     verifyCauseClass(
         verifyCauseClass(ex, RuntimeException.class),
         ClassNotFoundException.class);
@@ -196,9 +215,14 @@ public class TestCommitterFactoryBinding extends Assert {
     public void abortTask(TaskAttemptContext taskContext) throws IOException {
 
     }
+
+    @Override
+    public Path getOutputPath() {
+      return null;
+    }
   }
 
-  private static class CommitterFactory extends PathOutputCommitterFactory {
+  private static class SchemaFactory extends PathOutputCommitterFactory {
 
     @Override
     public PathOutputCommitter createOutputCommitter(Path outputPath,
@@ -213,7 +237,7 @@ public class TestCommitterFactoryBinding extends Assert {
     }
   }
 
-  private static class CommitterFactory2 extends PathOutputCommitterFactory {
+  private static class OtherFactory extends PathOutputCommitterFactory {
 
     @Override
     public PathOutputCommitter createOutputCommitter(Path outputPath,

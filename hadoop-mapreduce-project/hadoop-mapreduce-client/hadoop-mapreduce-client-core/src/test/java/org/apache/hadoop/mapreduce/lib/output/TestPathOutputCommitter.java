@@ -109,6 +109,11 @@ public class TestPathOutputCommitter extends Assert {
     public void abortTask(TaskAttemptContext taskContext) throws IOException {
 
     }
+
+    @Override
+    public Path getOutputPath() {
+      return null;
+    }
   }
 
   /**
