@@ -1520,6 +1520,27 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_PRIVILEGED_CONTAINERS =
       false;
 
+  /** enable user remapping. */
+  public static final String NM_DOCKER_ENABLE_USER_REMAPPING =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "enable-userremapping.allowed";
+
+  /** Set enable user remapping as false by default. */
+  public static final boolean DEFAULT_NM_DOCKER_ENABLE_USER_REMAPPING = false;
+
+  /** lower limit for acceptable uids of user remapped user. */
+  public static final String NM_DOCKER_USER_REMAPPING_UID_THRESHOLD =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "userremapping-uid-threshold";
+
+  /** Set user remapping lower uid limit to 1 by default. */
+  public static final int DEFAULT_NM_DOCKER_USER_REMAPPING_UID_THRESHOLD = 1;
+
+  /** lower limit for acceptable gids of user remapped user. */
+  public static final String NM_DOCKER_USER_REMAPPING_GID_THRESHOLD =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "userremapping-gid-threshold";
+
+  /** Set user remapping lower gid limit to 1 by default. */
+  public static final int DEFAULT_NM_DOCKER_USER_REMAPPING_GID_THRESHOLD = 1;
+
   /** ACL list for users allowed to run privileged containers. */
   public static final String NM_DOCKER_PRIVILEGED_CONTAINERS_ACL =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "privileged-containers.acl";

@@ -1627,6 +1627,25 @@
   </property>
 
   <property>
+    <description>Property to enable docker user remapping</description>
+    <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>lower limit for acceptable uids of user remapped user</description>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-uid-threshold</name>
+    <value>1</value>
+  </property>
+
+
+  <property>
+    <description>lower limit for acceptable gids of user remapped user</description>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-gid-threshold</name>
+    <value>1</value>
+  </property>
+
+  <property>
     <description>The mode in which the Java Container Sandbox should run detailed by
       the JavaSandboxLinuxContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>
