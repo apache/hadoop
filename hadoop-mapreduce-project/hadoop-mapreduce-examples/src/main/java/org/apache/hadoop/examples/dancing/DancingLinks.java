@@ -19,8 +19,8 @@ package org.apache.hadoop.examples.dancing;
 
 import java.util.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A generic solver for tile laying problems using Knuth's dancing link
@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
  * The type parameter ColumnName is the class of application's column names.
  */
 public class DancingLinks<ColumnName> {
-  private static final Logger LOG = LoggerFactory.getLogger(DancingLinks.class);
+  private static final Log LOG = 
+    LogFactory.getLog(DancingLinks.class.getName());
   
   /**
    * A cell in the table with up/down and left/right links that form doubly

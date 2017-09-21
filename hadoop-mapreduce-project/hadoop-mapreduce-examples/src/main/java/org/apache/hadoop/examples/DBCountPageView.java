@@ -29,6 +29,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
@@ -47,8 +49,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.hsqldb.server.Server;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This is a demonstrative program, which uses DBInputFormat for reading
@@ -77,8 +77,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DBCountPageView extends Configured implements Tool {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DBCountPageView.class);
+  private static final Log LOG = LogFactory.getLog(DBCountPageView.class);
   
   private Connection connection;
   private boolean initialized = false;
