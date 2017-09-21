@@ -1115,7 +1115,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * Shutdown disk balancer.
    */
-  private  void shutdownDiskBalancer() {
+  private void shutdownDiskBalancer() {
     if (this.diskBalancer != null) {
       this.diskBalancer.shutdown();
       this.diskBalancer = null;
@@ -2075,6 +2075,10 @@ public class DataNode extends ReconfigurableBase
    // shutdown command response won't get sent.
    if (ipcServer != null) {
       ipcServer.stop();
+    }
+
+    if (ecWorker != null) {
+      ecWorker.shutDown();
     }
 
     if(blockPoolManager != null) {
