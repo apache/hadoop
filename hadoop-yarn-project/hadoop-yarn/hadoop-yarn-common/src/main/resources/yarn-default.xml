@@ -1593,6 +1593,25 @@
   </property>
 
   <property>
+    <description>Property to enable docker user remapping</description>
+    <name>yarn.nodemanager.runtime.linux.docker.enable-userremapping.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>lower limit for acceptable uids of user remapped user</description>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-uid-threshold</name>
+    <value>1</value>
+  </property>
+
+
+  <property>
+    <description>lower limit for acceptable gids of user remapped user</description>
+    <name>yarn.nodemanager.runtime.linux.docker.userremapping-gid-threshold</name>
+    <value>1</value>
+  </property>
+
+  <property>
     <description>This flag determines whether memory limit will be set for the Windows Job
     Object of the containers launched by the default container executor.</description>
     <name>yarn.nodemanager.windows-container.memory-limit.enabled</name>
