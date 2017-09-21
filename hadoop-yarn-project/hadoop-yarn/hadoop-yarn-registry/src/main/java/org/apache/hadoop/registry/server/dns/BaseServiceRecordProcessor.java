@@ -52,8 +52,8 @@ public abstract class BaseServiceRecordProcessor
   private String domain;
 
   private static final Pattern USER_NAME = Pattern.compile("/users/(\\w*)/?");
-  private static final String SLIDER_API_PREFIX =
-      "classpath:org.apache.slider.";
+  private static final String YARN_SERVICE_API_PREFIX =
+      "classpath:org.apache.hadoop.yarn.service.";
   private static final String HTTP_API_TYPE = "http://";
 
   /**
@@ -425,8 +425,8 @@ public abstract class BaseServiceRecordProcessor
      */
     protected String getDNSApiFragment(String api) {
       String dnsApi = null;
-      if (api.startsWith(SLIDER_API_PREFIX)) {
-        dnsApi = api.substring(SLIDER_API_PREFIX.length());
+      if (api.startsWith(YARN_SERVICE_API_PREFIX)) {
+        dnsApi = api.substring(YARN_SERVICE_API_PREFIX.length());
       } else if (api.startsWith(HTTP_API_TYPE)) {
         dnsApi = "http";
       }

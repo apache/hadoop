@@ -170,6 +170,9 @@ public class ServiceClient extends CompositeService
     if (!StringUtils.isEmpty(args.getServiceName())) {
       service.setName(args.getServiceName());
     }
+    if (!StringUtils.isEmpty(args.queue)) {
+      service.setQueue(args.queue);
+    }
     return service;
   }
 

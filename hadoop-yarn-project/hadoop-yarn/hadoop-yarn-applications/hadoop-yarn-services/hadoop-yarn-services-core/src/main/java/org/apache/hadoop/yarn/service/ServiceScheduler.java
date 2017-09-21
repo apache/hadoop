@@ -344,11 +344,7 @@ public class ServiceScheduler extends CompositeService {
         attemptId.getApplicationId().toString());
     serviceRecord.set(YarnRegistryAttributes.YARN_PERSISTENCE,
         PersistencePolicies.APPLICATION);
-    serviceRecord.description = "Yarn Service Master";
-
-    serviceRecord.addExternalEndpoint(RegistryTypeUtils
-        .ipcEndpoint("classpath:org.apache.hadoop.yarn.service.appmaster.ipc",
-            context.clientAMService.getBindAddress()));
+    serviceRecord.description = "YarnServiceMaster";
 
     // set any provided attributes
     setUserProvidedServiceRecordAttributes(service.getConfiguration(),

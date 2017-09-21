@@ -812,13 +812,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           .executePrivilegedOperation(null, privOp, null,
               null, true, false);
       LOG.info("Docker inspect output for " + containerId + ": " + output);
+      // strip off quotes if any
+      output = output.replaceAll("['\"]", "");
       int index = output.lastIndexOf(',');
       if (index == -1) {
         LOG.error("Incorrect format for ip and host");
         return null;
       }
-      // strip off quotes if any
-      output = output.replaceAll("['\"]", "");
       String ips = output.substring(0, index).trim();
       String host = output.substring(index+1).trim();
       String[] ipAndHost = new String[2];

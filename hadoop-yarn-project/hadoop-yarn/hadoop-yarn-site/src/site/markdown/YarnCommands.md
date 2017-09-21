@@ -92,6 +92,7 @@ Usage `yarn service [sub-command] [service-name] [options]`
 
    Options:
     --file,-f       The local path to the service definition file.
+    --queue,-q      The queue to which the service is submitted.
     --example,-e    The name of the example service such as:
                     Sleeper      A simple service that launches a few non-docker sleep containers on YARN.
    ```
