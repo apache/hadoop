@@ -137,6 +137,30 @@ public class AppBlock extends HtmlBlock {
 
     setTitle(join("Application ", aid));
 
+    //Validate if able to read application attempts
+    // which should also validate if kill is allowed for the user based on ACLs
+
+    Collection<ApplicationAttemptReport> attempts;
+    try {
+      final GetApplicationAttemptsRequest request =
+          GetApplicationAttemptsRequest.newInstance(appID);
+      attempts = callerUGI.doAs(
+          new PrivilegedExceptionAction<Collection<
+              ApplicationAttemptReport>>() {
+            @Override
+            public Collection<ApplicationAttemptReport> run() throws Exception {
+              return getApplicationAttemptsReport(request);
+            }
+          });
+    } catch (Exception e) {
+      String message =
+          "Failed to read the attempts of the application " + appID + ".";
+      LOG.error(message, e);
+      html.p().__(message).__();
+      return;
+    }
+
+
     // YARN-6890. for secured cluster allow anonymous UI access, application kill
     // shouldn't be there.
     boolean unsecuredUIForSecuredCluster = UserGroupInformation.isSecurityEnabled()
@@ -182,26 +206,6 @@ public class AppBlock extends HtmlBlock {
         "/cluster/scheduler?openQueues=" + app.getQueue();
 
     generateOverviewTable(app, schedulerPath, webUiType, appReport);
-
-    Collection<ApplicationAttemptReport> attempts;
-    try {
-      final GetApplicationAttemptsRequest request =
-          GetApplicationAttemptsRequest.newInstance(appID);
-      attempts = callerUGI.doAs(
-          new PrivilegedExceptionAction<Collection<
-              ApplicationAttemptReport>>() {
-            @Override
-            public Collection<ApplicationAttemptReport> run() throws Exception {
-              return getApplicationAttemptsReport(request);
-            }
-          });
-    } catch (Exception e) {
-      String message =
-          "Failed to read the attempts of the application " + appID + ".";
-      LOG.error(message, e);
-      html.p().__(message).__();
-      return;
-    }
 
     createApplicationMetricsTable(html);
 
