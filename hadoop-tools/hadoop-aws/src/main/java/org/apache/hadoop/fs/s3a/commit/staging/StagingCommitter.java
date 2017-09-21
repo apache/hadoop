@@ -163,7 +163,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     ConflictResolution mode = getConflictResolutionMode(getJobContext());
     LOG.debug("Conflict resolution mode: {}", mode);
     JobContext context = getJobContext();
-    finalOutputPath = getFinalOutputPath(constructorOutputPath, context);
+    finalOutputPath = constructorOutputPath;
     Preconditions.checkNotNull(finalOutputPath, "Output path cannot be null");
     S3AFileSystem fs = getS3AFileSystem(finalOutputPath,
         context.getConfiguration(), false);
@@ -498,22 +498,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   @Override
   public Path getJobAttemptPath(JobContext context) {
     return wrappedCommitter.getJobAttemptPath(context);
-  }
-
-  /**
-   * Returns the target output path based on the output path passed to the
-   * constructor.
-   * <p>
-   * Subclasses can override this method to redirect output. For example, a
-   * committer can write output to a new directory instead of deleting the
-   * current directory's contents, and then point a table to the new location.
-   *
-   * @param outputPath the output path passed to the constructor
-   * @param context the JobContext passed to the constructor
-   * @return the final output path
-   */
-  protected Path getFinalOutputPath(Path outputPath, JobContext context) {
-    return outputPath;
   }
 
   /**

@@ -84,9 +84,14 @@ public final class CommitterFaultInjectionImpl
   }
 
   @Override
+  public Path getOutputPath() {
+    return null;
+  }
+
+
+  @Override
   public void setupJob(JobContext jobContext) throws IOException {
     maybeFail(Faults.setupJob);
-
   }
 
   @Override

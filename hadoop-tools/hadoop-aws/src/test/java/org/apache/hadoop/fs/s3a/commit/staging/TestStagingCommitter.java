@@ -344,7 +344,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         UUID.randomUUID().toString(), 10);
 
     intercept(AWSClientIOException.class,
-        "Fail on init 1", "Should fail during init",
+        "Fail on init 1",
+        "Should fail during init",
         () -> committer.commitTask(tac));
 
     assertEquals("Should have initialized one file upload",
@@ -371,7 +372,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         UUID.randomUUID().toString(), 10);
 
     intercept((Class<? extends Exception>) AWSClientIOException.class,
-        "Fail on upload 2", "Should fail during upload",
+        "Fail on upload 2",
+        "Should fail during upload",
         () -> {
           committer.commitTask(tac);
           return committer.toString();
@@ -401,7 +403,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         UUID.randomUUID().toString(), 10);
 
     intercept((Class<? extends Exception>) AWSClientIOException.class,
-        "Fail on upload 5", "Should fail during upload",
+        "Fail on upload 5",
+        "Should fail during upload",
         () -> {
           committer.commitTask(tac);
           return committer.toString();

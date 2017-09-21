@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
 
-import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.OUTPUTCOMMITTER_FACTORY_SCHEME_PATTERN;
+import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.COMMITTER_FACTORY_SCHEME_PATTERN;
 
 /**
  * Constants for working with committers.
@@ -121,7 +121,7 @@ public final class CommitConstants {
    * Key to set for the S3A schema to use the specific committer.
    */
   public static final String S3A_COMMITTER_FACTORY_KEY = String.format(
-      OUTPUTCOMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
+      COMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
   /**
    * Directory committer: {@value}.
    */

@@ -56,7 +56,7 @@ class PartitionedCommitterForTesting extends
    * @throws IOException failure to get the FS
    */
   @Override
-  protected FileSystem getDestination(Path out, Configuration config)
+  protected FileSystem getDestinationFS(Path out, Configuration config)
       throws IOException {
     return out.getFileSystem(config);
   }

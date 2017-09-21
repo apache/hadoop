@@ -94,7 +94,7 @@ public class TestStagingPartitionedTaskCommit
     reset(mockS3);
     pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(0)).getParent());
 
-    intercept(PathExistsException.class, null,
+    intercept(PathExistsException.class, "",
         "Expected a PathExistsException as a partition already exists",
         () -> committer.commitTask(getTAC()));
 
@@ -133,7 +133,7 @@ public class TestStagingPartitionedTaskCommit
     reset(mockS3);
     pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(1)).getParent());
 
-    intercept(PathExistsException.class, null,
+    intercept(PathExistsException.class, "",
         "Should complain because a partition already exists",
         () -> committer.commitTask(getTAC()));
 

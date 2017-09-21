@@ -159,7 +159,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @throws IOException failure to create the FS.
    */
   protected void initOutput(Path out) throws IOException {
-    FileSystem fs = getDestination(out, getConf());
+    FileSystem fs = getDestinationFS(out, getConf());
     setDestFS(fs);
     setOutputPath(fs.makeQualified(out));
   }
@@ -176,7 +176,8 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * Final path of output, in the destination FS.
    * @return the path
    */
-  public Path getOutputPath() {
+  @Override
+  public final Path getOutputPath() {
     return outputPath;
   }
 
@@ -184,7 +185,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * Set the output path.
    * @param outputPath new value
    */
-  protected void setOutputPath(Path outputPath) {
+  protected final void setOutputPath(Path outputPath) {
     Preconditions.checkNotNull(outputPath, "Null output path");
     this.outputPath = outputPath;
   }
@@ -223,7 +224,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    */
   public FileSystem getDestFS() throws IOException {
     if (destFS == null) {
-      FileSystem fs = getDestination(outputPath, getConf());
+      FileSystem fs = getDestinationFS(outputPath, getConf());
       setDestFS(fs);
     }
     return destFS;
@@ -321,7 +322,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @throws PathCommitException output path isn't to an S3A FS instance.
    * @throws IOException failure to instantiate the FS.
    */
-  protected FileSystem getDestination(Path out, Configuration config)
+  protected FileSystem getDestinationFS(Path out, Configuration config)
       throws IOException {
     return getS3AFileSystem(out, config, isMagicFileSystemRequired());
   }

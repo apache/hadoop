@@ -56,7 +56,7 @@ class MockedStagingCommitter extends StagingCommitter {
    * @throws IOException IO failure
    */
   @Override
-  protected FileSystem getDestination(Path out, Configuration config)
+  protected FileSystem getDestinationFS(Path out, Configuration config)
       throws IOException {
     return out.getFileSystem(config);
   }

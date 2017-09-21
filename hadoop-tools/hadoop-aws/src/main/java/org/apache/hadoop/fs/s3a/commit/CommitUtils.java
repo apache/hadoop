@@ -308,13 +308,15 @@ public final class CommitUtils {
    * Verify that an FS is an S3A FS.
    * @param fs filesystem
    * @param path path to to use in exception
+   * @return the typecast FS.
    * @throws PathCommitException if the FS is not an S3A FS.
    */
-  public static void verifyIsS3AFS(FileSystem fs, Path path)
+  public static S3AFileSystem verifyIsS3AFS(FileSystem fs, Path path)
       throws PathCommitException {
     if (!(fs instanceof S3AFileSystem)) {
       throw new PathCommitException(path, E_WRONG_FS);
     }
+    return (S3AFileSystem) fs;
   }
 
   /**
@@ -331,13 +333,11 @@ public final class CommitUtils {
       Configuration conf,
       boolean magicCommitRequired)
       throws PathCommitException, IOException {
-    FileSystem fs = path.getFileSystem(conf);
-    verifyIsS3AFS(fs, path);
-    S3AFileSystem s3a = (S3AFileSystem) fs;
+    S3AFileSystem s3AFS = verifyIsS3AFS(path.getFileSystem(conf), path);
     if (magicCommitRequired) {
-      verifyIsMagicCommitFS(s3a);
+      verifyIsMagicCommitFS(s3AFS);
     }
-    return s3a;
+    return s3AFS;
   }
 
   /**

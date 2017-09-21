@@ -65,11 +65,11 @@ public class TestStagingDirectoryOutputCommitter
     pathExists(mockS3, OUTPUT_PATH);
     final DirectoryStagingCommitter committer = newJobCommitter();
 
-    intercept(PathExistsException.class, null,
+    intercept(PathExistsException.class, "",
         "Should throw an exception because the path exists",
         () -> committer.setupJob(getJob()));
 
-    intercept(PathExistsException.class, null,
+    intercept(PathExistsException.class, "",
         "Should throw an exception because the path exists",
         () -> committer.commitJob(getJob()));
 

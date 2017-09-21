@@ -89,7 +89,7 @@ public abstract class AbstractS3GuardCommitterFactory
       // this is the null path as well as the patch taken if the
       // FS is not an S3A FS.
       LOG.debug("Dest FS is not S3A, so using standard committer");
-      outputCommitter = createDefaultCommitter(outputPath, context);
+      outputCommitter = createFileOutputCommitter(outputPath, context);
     }
     LOG.info("Using Commmitter {} for {}",
         outputCommitter,

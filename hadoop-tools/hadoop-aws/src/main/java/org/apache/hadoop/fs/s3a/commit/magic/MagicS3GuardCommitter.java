@@ -110,7 +110,7 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
     try (DurationInfo d =
              new DurationInfo("Setup Job %s", jobIdString(context))) {
       Path jobAttemptPath = getJobAttemptPath(context);
-      FileSystem fs = getDestination(jobAttemptPath,
+      FileSystem fs = getDestinationFS(jobAttemptPath,
           context.getConfiguration());
       if (!fs.mkdirs(jobAttemptPath)) {
         throw new PathCommitException(jobAttemptPath,

@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# The S3Guard Committers
+# Committing work to S3 with the "S3Guard Committers"
 
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
@@ -68,7 +68,7 @@ module for committing work to Amazon S3 via the S3A filesystem client.
 
 
 
-### Background : the "commit protocol"
+### Background : Hadoop's "commit protocol"
 
 How exactly is work written to its final destination? That is accomplished by
 a "commit protocol" between the workers and the job manager.
@@ -210,11 +210,10 @@ The staging committer comes in two slightly different forms, depending
 on what kind of output is to be generated
 
 
-* **Directory**: the data is written directly into the directory.
+* **Directory**: the data is written directly into the directory. 
 * **Partitioned**: special handling of partitioned directory trees of the form
 `YEAR=2017/MONTH=09/DAY=19`, where the directory tree may already exist.
 
-These two variants address the 
 
 
 ### The Magic Committer
@@ -244,6 +243,28 @@ with the magic directories and treat them specially.
 
 It's also not been field tested to the extent of Netflix's committer; consider
 it the least mature of the committers.
+
+
+#### Which Committer to Use?
+
+The Magic committer should be faster when large quantities of data are written.
+And as tasks do not need to store all generated output locally until they are
+committed, VMs using the committer do not need to so much storage
+But the committer needs a "consistent" S3 store (via S3Guard when working with
+Amazon S3).
+
+The Staging Committer, in contrast, can write data to a S3 store without
+any consistency layer. It does, however, need local storage large enough
+to store the output of all active tasks running on the machine. The more
+CPUs and worker processes, the more data generated: the more storage is needed.
+Furthermore, because this data is uploaded in task commit, tasks take longer
+to commit.
+
+Finally, note that even though the staging committers don't need a consistent
+AWS S3 endpoint to commit their work into, chaining a sequence of queries together
+does meanthat the subsequent readers of work *will* need a consistent listing
+of the output. Which comes from either a consistent store *or* adding a "sufficient"
+delay between queries for the listing to stabilize.
 
 
 ## Enabling a Committer

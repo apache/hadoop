@@ -94,6 +94,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
   }
 
   /**
+   * Job-side conflict resolution.
    * The partition path conflict resolution assumes that:
    * <ol>
    *   <li>FAIL checking has taken place earlier.</li>
@@ -159,9 +160,11 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       }
       String partition = getPartition(
           Paths.getRelativePath(attemptPath, outputFile));
-      partitions.add(partition != null ?
-          partition
-          : StagingCommitterConstants.TABLE_ROOT);
+      if (partition != null) {
+        partitions.add(partition);
+      } else {
+        partitions.add(StagingCommitterConstants.TABLE_ROOT);
+      }
     }
 
     return partitions;

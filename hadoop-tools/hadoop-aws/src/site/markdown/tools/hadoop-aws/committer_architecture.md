@@ -18,7 +18,7 @@
 
 This document covers the architecture and implementation details of the S3A committers.
 
-For information on using the committers, see [the S3A Committers](s3a_committer.html).
+For information on using the committers, see [the S3A Committers](./committer.html).
 
 
 ## Problem: Efficient, reliable commits of work to consistent S3 buckets

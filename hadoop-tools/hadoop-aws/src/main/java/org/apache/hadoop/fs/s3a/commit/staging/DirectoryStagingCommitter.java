@@ -96,9 +96,10 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       // do nothing
       break;
     case REPLACE:
-      LOG.debug("{}: removing output path to be replaced: {}",
-          getRole(), outputPath);
-      fs.delete(outputPath, true /* recursive */);
+      if (fs.delete(outputPath, true /* recursive */)) {
+        LOG.info("{}: removed output path to be replaced: {}",
+            getRole(), outputPath);
+      }
       break;
     default:
       throw new IOException(getRole() + ": unknown conflict resolution mode: "

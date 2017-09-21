@@ -204,37 +204,6 @@ public class TestStagingPartitionedJobCommit
     verifyDeleted(mockS3, "dateint=20161116/hour=14");
   }
 
-  /**
-   * The exists() check before the delete has been cut as not needed; it
-   * only adds 1-4 HTTP requests which the delete() call will need to do anyway.
-   */
-//  @Test
-  public void testReplaceWithExistsFailure() throws Exception {
-    FileSystem mockS3 = getMockS3A();
-
-    getJob().getConfiguration().set(
-        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_REPLACE);
-
-    final PartitionedStagingCommitter committer = newJobCommitter();
-
-    pathsExist(mockS3, "dateint=20161115/hour=13");
-    canDelete(mockS3, "dateint=20161115/hour=13");
-    String message = "Fake IOException for delete";
-    when(mockS3.exists(new Path(OUTPUT_PATH, "dateint=20161115/hour=14")))
-        .thenThrow(new IOException(message));
-
-    intercept(IOException.class, message,
-        "Should throw the fake IOException",
-        () -> committer.commitJob(getJob()));
-
-    verifyExistenceChecked(mockS3, "dateint=20161115/hour=13");
-    verifyDeleted(mockS3, "dateint=20161115/hour=13");
-    verifyExistenceChecked(mockS3, "dateint=20161115/hour=14");
-    assertTrue("Should have aborted",
-        ((PartitionedStagingCommitterForTesting) committer).aborted);
-    verifyCompletion(mockS3);
-  }
-
   @Test
   public void testReplaceWithDeleteFailure() throws Exception {
     FileSystem mockS3 = getMockS3A();
@@ -251,7 +220,8 @@ public class TestStagingPartitionedJobCommit
             true))
         .thenThrow(new IOException("Fake IOException for delete"));
 
-    intercept(IOException.class, null, "Should throw the fake IOException",
+    intercept(IOException.class, "",
+        "Should throw the fake IOException",
         () -> committer.commitJob(getJob()));
 
     verifyReplaceCommitActions(mockS3);

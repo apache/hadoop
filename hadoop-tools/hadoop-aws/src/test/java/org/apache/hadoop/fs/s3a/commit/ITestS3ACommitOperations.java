@@ -61,7 +61,7 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
       LoggerFactory.getLogger(ITestS3ACommitOperations.class);
   private static final byte[] DATASET = dataset(1000, 'a', 32);
   private static final String S3A_FACTORY_KEY = String.format(
-      OUTPUTCOMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
+      COMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
 
   @Override
   protected Configuration createConfiguration() {
@@ -207,10 +207,10 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
   public void testCommitterFactoryDefault() throws Throwable {
     Configuration conf = new Configuration();
     Path dest = methodPath();
-    conf.set(OUTPUTCOMMITTER_FACTORY_CLASS,
+    conf.set(COMMITTER_FACTORY_CLASS,
         MagicS3GuardCommitterFactory.CLASSNAME);
     PathOutputCommitterFactory factory
-        = getOutputCommitterFactory(dest, conf);
+        = getCommitterFactory(dest, conf);
     PathOutputCommitter committer = factory.createOutputCommitter(
         methodPath(),
         new TaskAttemptContextImpl(getConfiguration(),
@@ -227,7 +227,7 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
     conf.set(S3A_FACTORY_KEY,
         MagicS3GuardCommitterFactory.CLASSNAME);
     PathOutputCommitterFactory factory
-        = getOutputCommitterFactory(dest, conf);
+        = getCommitterFactory(dest, conf);
     // the casting is an implicit type check
     MagicS3GuardCommitter s3a = (MagicS3GuardCommitter)
         factory.createOutputCommitter(

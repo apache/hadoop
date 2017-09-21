@@ -81,7 +81,7 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
     if (factory != null) {
       return factory.createJobCommitter(fileSystem, outputPath, context);
     } else {
-      return createDefaultCommitter(outputPath, context);
+      return createFileOutputCommitter(outputPath, context);
     }
   }
 
@@ -101,7 +101,7 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
         outputPath);
     return factory != null ?
       factory.createTaskCommitter(fileSystem, outputPath, context)
-      : createDefaultCommitter(outputPath, context);
+      : createFileOutputCommitter(outputPath, context);
   }
 
   /**
