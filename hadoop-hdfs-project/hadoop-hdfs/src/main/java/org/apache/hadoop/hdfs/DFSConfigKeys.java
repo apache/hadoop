@@ -667,6 +667,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_IMAGE_TRANSFER_CHUNKSIZE_KEY = "dfs.image.transfer.chunksize";
   public static final int DFS_IMAGE_TRANSFER_CHUNKSIZE_DEFAULT = 64 * 1024;
 
+  public static final String DFS_QJM_OPERATIONS_TIMEOUT =
+      "dfs.qjm.operations.timeout";
+  public static final long DFS_QJM_OPERATIONS_TIMEOUT_DEFAULT = 60000;
+
   // Datanode File IO Stats
   public static final String DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY =
       "dfs.datanode.enable.fileio.fault.injection";

@@ -4332,4 +4332,15 @@
      Enables DFSNetworkTopology to choose nodes for placing replicas.
     </description>
   </property>
+
+  <property>
+    <name>dfs.qjm.operations.timeout</name>
+    <value>60s</value>
+    <description>
+      Common key to set timeout for related operations in
+      QuorumJournalManager. This setting supports multiple time unit suffixes
+      as described in dfs.heartbeat.interval.
+      If no suffix is specified then milliseconds is assumed.
+    </description>
+  </property>
 </configuration>
