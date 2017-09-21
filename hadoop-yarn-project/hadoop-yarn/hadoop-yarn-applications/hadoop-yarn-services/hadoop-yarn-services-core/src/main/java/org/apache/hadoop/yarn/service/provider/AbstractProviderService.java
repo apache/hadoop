@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.service.provider;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.service.api.records.Service;
@@ -91,13 +92,16 @@ public abstract class AbstractProviderService implements ProviderService,
         component, tokensForSubstitution, instance, context);
 
     // substitute launch command
-    String launchCommand = ProviderUtils
-        .substituteStrWithTokens(component.getLaunchCommand(),
-            tokensForSubstitution);
-    CommandLineBuilder operation = new CommandLineBuilder();
-    operation.add(launchCommand);
-    operation.addOutAndErrFiles(OUT_FILE, ERR_FILE);
-    launcher.addCommand(operation.build());
+    String launchCommand = component.getLaunchCommand();
+    // docker container may have empty commands
+    if (!StringUtils.isEmpty(launchCommand)) {
+      launchCommand = ProviderUtils
+          .substituteStrWithTokens(launchCommand, tokensForSubstitution);
+      CommandLineBuilder operation = new CommandLineBuilder();
+      operation.add(launchCommand);
+      operation.addOutAndErrFiles(OUT_FILE, ERR_FILE);
+      launcher.addCommand(operation.build());
+    }
 
     // By default retry forever every 30 seconds
     launcher.setRetryContext(YarnServiceConf

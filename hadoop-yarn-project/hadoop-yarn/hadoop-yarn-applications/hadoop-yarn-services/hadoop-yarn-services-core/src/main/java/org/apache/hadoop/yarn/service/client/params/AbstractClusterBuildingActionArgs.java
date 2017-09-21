@@ -37,7 +37,7 @@ public abstract class AbstractClusterBuildingActionArgs
   }
 
   @Parameter(names = {
-      ARG_QUEUE }, description = "Queue to submit the service")
+      ARG_QUEUE, ARG_SHORT_QUEUE}, description = "Queue to submit the service")
   public String queue;
 
   @Parameter(names = {

@@ -59,6 +59,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import static org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes.*;
 import static org.apache.hadoop.yarn.api.records.ContainerExitStatus.KILLED_BY_APPMASTER;
 import static org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.*;
@@ -356,12 +357,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       YarnRegistryViewForProviders yarnRegistry, ContainerStatus status) {
     ServiceRecord record = new ServiceRecord();
     String containerId = status.getContainerId().toString();
-    record.set(YarnRegistryAttributes.YARN_ID, containerId);
+    record.set(YARN_ID, containerId);
     record.description = getCompInstanceName();
-    record.set(YarnRegistryAttributes.YARN_PERSISTENCE,
-        PersistencePolicies.CONTAINER);
-    record.set("yarn:ip", status.getIPs());
-    record.set("yarn:hostname", status.getHost());
+    record.set(YARN_PERSISTENCE, PersistencePolicies.CONTAINER);
+    record.set(YARN_IP, status.getIPs().get(0));
+    record.set(YARN_HOSTNAME, status.getHost());
     try {
       yarnRegistry
           .putComponent(RegistryPathUtils.encodeYarnID(containerId), record);

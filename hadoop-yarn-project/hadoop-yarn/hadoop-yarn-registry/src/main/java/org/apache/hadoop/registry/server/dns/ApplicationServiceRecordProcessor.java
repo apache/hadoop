@@ -18,6 +18,8 @@ package org.apache.hadoop.registry.server.dns;
 
 import org.apache.hadoop.registry.client.types.Endpoint;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Type;
 
@@ -32,7 +34,8 @@ import java.util.List;
  */
 public class ApplicationServiceRecordProcessor extends
     BaseServiceRecordProcessor {
-
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ApplicationServiceRecordProcessor.class);
   /**
    * Create an application service record processor.
    *
@@ -57,6 +60,10 @@ public class ApplicationServiceRecordProcessor extends
    */
   @Override public void initTypeToInfoMapping(ServiceRecord serviceRecord)
       throws Exception {
+    if (serviceRecord.external.isEmpty()) {
+      LOG.info(serviceRecord.description + ": No external endpoints defined.");
+      return;
+    }
     for (int type : getRecordTypes()) {
       switch (type) {
       case Type.A:
@@ -309,6 +316,9 @@ public class ApplicationServiceRecordProcessor extends
         throws Exception {
       this.setNames(new Name[] {getServiceName()});
       List<Endpoint> endpoints = serviceRecord.external;
+      if (endpoints.isEmpty()) {
+        return;
+      }
       // TODO:  do we need a "hostname" attribute for an application record or
       // can we rely on the first endpoint record.
       this.setTarget(InetAddress.getByName(
@@ -342,6 +352,9 @@ public class ApplicationServiceRecordProcessor extends
     @Override protected void init(ServiceRecord serviceRecord)
         throws Exception {
       super.init(serviceRecord);
+      if (getTarget() == null) {
+        return;
+      }
       try {
         this.setTarget(getIpv6Address(getTarget()));
       } catch (UnknownHostException e) {

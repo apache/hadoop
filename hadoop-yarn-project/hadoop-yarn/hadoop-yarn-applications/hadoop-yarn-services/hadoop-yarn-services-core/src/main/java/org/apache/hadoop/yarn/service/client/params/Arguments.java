@@ -77,6 +77,7 @@ public interface Arguments {
   String ARG_PATH = "--path";
   String ARG_PRINCIPAL = "--principal";
   String ARG_QUEUE = "--queue";
+  String ARG_SHORT_QUEUE = "-q";
   String ARG_LIFETIME = "--lifetime";
   String ARG_RESOURCE = "--resource";
   String ARG_RESOURCE_MANAGER = "--rm";
