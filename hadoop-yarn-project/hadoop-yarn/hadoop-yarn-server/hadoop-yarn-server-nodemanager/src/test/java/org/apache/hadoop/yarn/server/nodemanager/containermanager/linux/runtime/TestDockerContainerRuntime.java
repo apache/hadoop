@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
@@ -261,12 +262,18 @@ public class TestDockerContainerRuntime {
   }
 
   private String getExpectedCGroupsMountString() {
+    CGroupsHandler cgroupsHandler = ResourceHandlerModule.getCGroupsHandler();
+    if(cgroupsHandler == null) {
+      return "";
+    }
+
+    String cgroupMountPath = cgroupsHandler.getCGroupMountPath();
     boolean cGroupsMountExists = new File(
-        DockerLinuxContainerRuntime.CGROUPS_ROOT_DIRECTORY).exists();
+        cgroupMountPath).exists();
 
     if(cGroupsMountExists) {
-      return "-v " + DockerLinuxContainerRuntime.CGROUPS_ROOT_DIRECTORY
-          + ":" + DockerLinuxContainerRuntime.CGROUPS_ROOT_DIRECTORY + ":ro ";
+      return "-v " + cgroupMountPath
+          + ":" + cgroupMountPath + ":ro ";
     } else {
       return "";
     }

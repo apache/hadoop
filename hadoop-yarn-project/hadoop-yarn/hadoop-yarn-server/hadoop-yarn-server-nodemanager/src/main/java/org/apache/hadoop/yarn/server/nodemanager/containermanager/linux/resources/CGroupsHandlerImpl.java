@@ -603,4 +603,9 @@ class CGroupsHandlerImpl implements CGroupsHandler {
           "Unable to read from " + cGroupParamPath);
     }
   }
+
+  @Override
+  public String getCGroupMountPath() {
+    return cGroupMountPath;
+  }
 }

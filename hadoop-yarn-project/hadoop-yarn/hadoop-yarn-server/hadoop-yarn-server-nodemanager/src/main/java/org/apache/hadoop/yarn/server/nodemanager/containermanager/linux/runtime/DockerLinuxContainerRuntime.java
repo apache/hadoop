@@ -167,13 +167,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS";
 
-  static final String CGROUPS_ROOT_DIRECTORY = "/sys/fs/cgroup";
-
   private Configuration conf;
   private DockerClient dockerClient;
   private PrivilegedOperationExecutor privilegedOperationExecutor;
   private Set<String> allowedNetworks = new HashSet<>();
   private String defaultNetwork;
+  private String cgroupsRootDirectory;
   private CGroupsHandler cGroupsHandler;
   private AccessControlList privilegedContainersAcl;
 
@@ -228,6 +227,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.info("cGroupsHandler is null - cgroups not in use.");
     } else {
       this.cGroupsHandler = cGroupsHandler;
+      this.cgroupsRootDirectory = cGroupsHandler.getCGroupMountPath();
     }
   }
 
@@ -486,9 +486,12 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType(network);
     setHostname(runCommand, containerIdStr, hostname);
-    runCommand.setCapabilities(capabilities)
-        .addMountLocation(CGROUPS_ROOT_DIRECTORY,
-            CGROUPS_ROOT_DIRECTORY + ":ro", false);
+    runCommand.setCapabilities(capabilities);
+
+    if(cgroupsRootDirectory != null) {
+      runCommand.addMountLocation(cgroupsRootDirectory,
+          cgroupsRootDirectory + ":ro", false);
+    }
 
     List<String> allDirs = new ArrayList<>(containerLocalDirs);
     allDirs.addAll(filecacheDirs);
