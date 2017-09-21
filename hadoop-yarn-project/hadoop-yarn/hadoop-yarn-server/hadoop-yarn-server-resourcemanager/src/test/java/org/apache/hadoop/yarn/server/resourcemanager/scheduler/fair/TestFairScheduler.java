@@ -5220,12 +5220,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue aQueue =
         new FSLeafQueue("root.queue1.a", scheduler, queue1);
     aQueue.setMaxShare(maxResource);
-    aQueue.addAppSchedulable(app1);
+    aQueue.addApp(app1, true);
 
     FSLeafQueue bQueue =
         new FSLeafQueue("root.queue1.b", scheduler, queue1);
     bQueue.setMaxShare(maxResource);
-    bQueue.addAppSchedulable(app2);
+    bQueue.addApp(app2, true);
 
     queue1.setMaxShare(maxResource);
     queue1.addChildQueue(aQueue);
@@ -5269,7 +5269,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(resource);
     Mockito.when(app.getResourceUsage()).thenReturn(resource);
-    child1.addAppSchedulable(app);
+    child1.addApp(app, true);
     child1.updateDemand();
 
     String childQueueString = "{Name: root.parent.child1,"
