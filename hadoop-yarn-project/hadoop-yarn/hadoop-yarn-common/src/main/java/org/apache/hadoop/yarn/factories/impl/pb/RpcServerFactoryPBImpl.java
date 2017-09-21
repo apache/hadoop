@@ -51,7 +51,6 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
   
   private static final RpcServerFactoryPBImpl self = new RpcServerFactoryPBImpl();
 
-  private Configuration localConf = new Configuration();
   private ConcurrentMap<Class<?>, Constructor<?>> serviceCache = new ConcurrentHashMap<Class<?>, Constructor<?>>();
   private ConcurrentMap<Class<?>, Method> protoCache = new ConcurrentHashMap<Class<?>, Method>();
   
@@ -80,7 +79,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     if (constructor == null) {
       Class<?> pbServiceImplClazz = null;
       try {
-        pbServiceImplClazz = localConf
+        pbServiceImplClazz = conf
             .getClassByName(getPbServiceImplClassName(protocol));
       } catch (ClassNotFoundException e) {
         throw new YarnRuntimeException("Failed to load class: ["
@@ -113,7 +112,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     if (method == null) {
       Class<?> protoClazz = null;
       try {
-        protoClazz = localConf.getClassByName(getProtoClassName(protocol));
+        protoClazz = conf.getClassByName(getProtoClassName(protocol));
       } catch (ClassNotFoundException e) {
         throw new YarnRuntimeException("Failed to load class: ["
             + getProtoClassName(protocol) + "]", e);
