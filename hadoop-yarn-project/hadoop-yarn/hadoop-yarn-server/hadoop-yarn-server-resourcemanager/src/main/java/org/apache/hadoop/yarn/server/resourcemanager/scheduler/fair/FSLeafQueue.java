@@ -96,16 +96,6 @@ public class FSLeafQueue extends FSQueue {
     }
   }
   
-  // for testing
-  void addAppSchedulable(FSAppAttempt appSched) {
-    writeLock.lock();
-    try {
-      runnableApps.add(appSched);
-    } finally {
-      writeLock.unlock();
-    }
-  }
-  
   /**
    * Removes the given app from this queue.
    * @return whether or not the app was runnable
