@@ -116,6 +116,7 @@ public class TestDockerContainerRuntime {
     cId = mock(ContainerId.class);
     context = mock(ContainerLaunchContext.class);
     env = new HashMap<String, String>();
+    env.put("FROM_CLIENT", "1");
     image = "busybox:latest";
 
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE, image);
@@ -204,7 +205,7 @@ public class TestDockerContainerRuntime {
     // warning annotation on the entire method
     verify(mockExecutor, times(1))
         .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
-            File.class), any(Map.class), eq(false), eq(false));
+            File.class), eq(null), eq(false), eq(false));
 
     //verification completed. we need to isolate specific invications.
     // hence, reset mock here
