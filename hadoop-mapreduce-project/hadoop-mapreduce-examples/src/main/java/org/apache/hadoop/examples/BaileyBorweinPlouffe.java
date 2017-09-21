@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -379,7 +380,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
 
     // start a map/reduce job
     out.println("\nStarting Job ...");
-    final long startTime = System.currentTimeMillis();
+    final long startTime = Time.monotonicNow();
     try {
       if (!job.waitForCompletion(true)) {
         out.println("Job failed.");
@@ -388,7 +389,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
-      final double duration = (System.currentTimeMillis() - startTime)/1000.0;
+      final double duration = (Time.monotonicNow() - startTime)/1000.0;
       out.println("Duration is " + duration + " seconds.");
     }
     out.println("Output file: " + hexfile);
