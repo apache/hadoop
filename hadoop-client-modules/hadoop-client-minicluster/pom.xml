@@ -647,6 +647,13 @@
                         <exclude>xml.xsd</exclude>
                       </excludes>
                     </filter>
+                    <!-- filtering HISTORY-JAVA.md from rocksdb jar -->
+                    <filter>
+                    <artifact>org.rocksdb:rocksdbjni</artifact>
+                    <excludes>
+                      <exclude>HISTORY-JAVA.md</exclude>
+                    </excludes>
+                    </filter>
                     <filter>
                       <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
                       <artifact>org.eclipse.jetty:*</artifact>

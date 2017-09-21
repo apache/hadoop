@@ -121,6 +121,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <artifactId>ratis-common</artifactId>
       <groupId>org.apache.ratis</groupId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <artifactId>ratis-client</artifactId>
