@@ -1118,9 +1118,16 @@ public class CapacityScheduler extends
     node.updateLabels(newLabels);
   }
 
-  private synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
+  @VisibleForTesting
+  public synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
+      return;
+    }
+
+    if (!nodes.containsKey(node.getNodeID())) {
+      LOG.info("Skipping scheduling as the node " + node.getNodeID() +
+          " has been removed");
       return;
     }
 
