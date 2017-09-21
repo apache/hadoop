@@ -114,6 +114,13 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand groupAdd(String[] groups) {
+    for(int i = 0; i < groups.length; i++) {
+      super.addCommandArguments("--group-add " + groups[i]);
+    }
+    return this;
+  }
+
   public DockerRunCommand setOverrideCommandWithArgs(
       List<String> overrideCommandWithArgs) {
     this.overrrideCommandWithArgs = overrideCommandWithArgs;
