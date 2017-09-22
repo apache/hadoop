@@ -21,7 +21,7 @@ Introduction
 ------------
 
 NameNodes have scalability limits because of the metadata overhead comprised of inodes (files and directories) and file blocks, the number of Datanode heartbeats, and the number of HDFS RPC client requests.
-The common solution is to split the filesystem into smaller subclusters [HDFS Federation](.Federation.html) and provide a federated view [ViewFs](.ViewFs.html).
+The common solution is to split the filesystem into smaller subclusters [HDFS Federation](./Federation.html) and provide a federated view [ViewFs](./ViewFs.html).
 The problem is how to maintain the split of the subclusters (e.g., namespace partition), which forces users to connect to multiple subclusters and manage the allocation of folders/files to them.
 
 
@@ -35,7 +35,7 @@ This layer must be scalable, highly available, and fault tolerant.
 
 This federation layer comprises multiple components.
 The _Router_ component that has the same interface as a NameNode, and forwards the client requests to the correct subcluster, based on ground-truth information from a State Store.
-The _State Store_ combines a remote _Mount Table_ (in the flavor of [ViewFs](.ViewFs.html), but shared between clients) and utilization (load/capacity) information about the subclusters.
+The _State Store_ combines a remote _Mount Table_ (in the flavor of [ViewFs](./ViewFs.html), but shared between clients) and utilization (load/capacity) information about the subclusters.
 This approach has the same architecture as [YARN federation](../hadoop-yarn/Federation.html).
 
 ![Router-based Federation Sequence Diagram | width=800](./images/routerfederation.png)
@@ -101,11 +101,11 @@ To interact with the users and the administrators, the Router exposes multiple i
 * **RPC:**
 The Router RPC implements the most common interfaces clients use to interact with HDFS.
 The current implementation has been tested using analytics workloads written in plain MapReduce, Spark, and Hive (on Tez, Spark, and MapReduce).
-Advanced functions like snapshotting, encryption and tiered storage are left for future versions.
+Advanced functions like snapshot, encryption and tiered storage are left for future versions.
 All unimplemented functions will throw exceptions.
 
 * **Admin:**
-Adminstrators can query information from clusters and add/remove entries from the mount table over RPC.
+Administrators can query information from clusters and add/remove entries from the mount table over RPC.
 This interface is also exposed through the command line to get and modify information from the federation.
 
 * **Web UI:**
@@ -151,6 +151,10 @@ This table hosts the mapping between folders and subclusters.
 It is similar to the mount table in [ViewFs](.ViewFs.html) where it specifies the federated folder, the destination subcluster and the path in that folder.
 
 
+### Security
+Secure authentication and authorization are not supported yet, so the Router will not proxy to Hadoop clusters with security enabled.
+
+
 Deployment
 ----------
 
@@ -160,11 +164,148 @@ The rest of the options are documented in [hdfs-default.xml](./hdfs-default.xml)
 
 Once the Router is configured, it can be started:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs router
+    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs start router
 
-To manage the mount table:
+And to stop it:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /tmp DC1 /tmp
-    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /data/wl1 DC2 /data/wl1
-    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /data/wl2 DC3 /data/wl2
+    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs stop router
+
+### Mount table management
+
+The mount table entries are pretty much the same as in [ViewFs](./ViewFs.html).
+A good practice for simplifying the management is to name the federated namespace with the same names as the destination namespaces.
+For example, if we to mount `/data/app1` in the federated namespace, it is recommended to have that same name as in the destination namespace.
+
+The federation admin tool supports managing the mount table.
+For example, to create three mount points and list them:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /tmp ns1 /tmp
+    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /data/app1 ns2 /data/app1
+    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /data/app2 ns3 /data/app2
     [hdfs]$ $HADOOP_HOME/bin/hdfs federation -ls
+
+If a mount point is not set, the Router will map it to the default namespace `dfs.federation.router.default.nameserviceId`.
+
+
+Client configuration
+--------------------
+
+For clients to use the federated namespace, they need to create a new one that points to the routers.
+For example, a cluster with 4 namespaces **ns0, ns1, ns2, ns3**, can add a new one to **hdfs-site.xml** called **ns-fed** which points to two of the routers:
+
+```xml
+<configuration>
+  <property>
+    <name>dfs.nameservices</name>
+    <value>ns0,ns1,ns2,ns3,ns-fed</value>
+  </property>
+  <property>
+    <name>dfs.namenodes.ns-fed</name>
+    <value>r1,r2</value>
+  </property>
+  <property>
+    <name>dfs.namenode.rpc-address.ns-fed.r1</name>
+    <value>router1:rpc-port</value>
+  </property>
+  <property>
+    <name>dfs.namenode.rpc-address.ns-fed.r2</name>
+    <value>router2:rpc-port</value>
+  </property>
+  <property>
+    <name>dfs.client.failover.proxy.provider.ns-fed</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+  </property>
+  <property>
+    <name>dfs.client.failover.random.order</name>
+    <value>true</value>
+  </property>
+</configuration>
+```
+
+The `dfs.client.failover.random.order` set to `true` allows distributing the load evenly across the routers.
+
+With this setting a user can interact with `ns-fed` as a regular namespace:
+
+    $ $HADOOP_HOME/bin/hdfs dfs -ls hdfs://ns-fed/
+    /tmp
+    /data
+
+This federated namespace can also be set as the default one at **core-site.xml** using `fs.defaultFS`.
+
+
+Router configuration
+--------------------
+
+One can add the configurations for Router-based federation to **hdfs-site.xml**.
+The main options are documented in [hdfs-default.xml](./hdfs-default.xml).
+The configuration values are described in this section.
+
+### RPC server
+
+The RPC server to receive connections from the clients.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.default.nameserviceId | | Nameservice identifier of the default subcluster to monitor. |
+| dfs.federation.router.rpc.enable | `true` | If `true`, the RPC service to handle client requests in the router is enabled. |
+| dfs.federation.router.rpc-address | 0.0.0.0:8888 | RPC address that handles all clients requests. |
+| dfs.federation.router.rpc-bind-host | 0.0.0.0 |  The actual address the RPC server will bind to. |
+| dfs.federation.router.handler.count | 10 | The number of server threads for the router to handle RPC requests from clients. |
+| dfs.federation.router.handler.queue.size | 100 | The size of the queue for the number of handlers to handle RPC client requests. |
+| dfs.federation.router.reader.count | 1 | The number of readers for the router to handle RPC client requests. |
+| dfs.federation.router.reader.queue.size | 100 | The size of the queue for the number of readers for the router to handle RPC client requests. |
+
+#### Connection to the Namenodes
+
+The Router forwards the client requests to the NameNodes.
+It uses a pool of connections to reduce the latency of creating them.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.connection.pool-size | 1 | Size of the pool of connections from the router to namenodes. |
+| dfs.federation.router.connection.clean.ms | 10000 | Time interval, in milliseconds, to check if the connection pool should remove unused connections. |
+| dfs.federation.router.connection.pool.clean.ms | 60000 | Time interval, in milliseconds, to check if the connection manager should remove unused connection pools. |
+
+### Admin server
+
+The administration server to manage the Mount Table.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.admin.enable | `true` | If `true`, the RPC admin service to handle client requests in the router is enabled. |
+| dfs.federation.router.admin-address | 0.0.0.0:8111 | RPC address that handles the admin requests. |
+| dfs.federation.router.admin-bind-host | 0.0.0.0 | The actual address the RPC admin server will bind to. |
+| dfs.federation.router.admin.handler.count | 1 | The number of server threads for the router to handle RPC requests from admin. |
+
+### State Store
+
+The connection to the State Store and the internal caching at the Router.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.store.enable | `true` | If `true`, the Router connects to the State Store. |
+| dfs.federation.router.store.serializer | `StateStoreSerializerPBImpl` | Class to serialize State Store records. |
+| dfs.federation.router.store.driver.class | `StateStoreZKImpl` | Class to implement the State Store. |
+| dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
+| dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
+| dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
+
+### Routing
+
+Forwarding client requests to the right subcluster.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.file.resolver.client.class | MountTableResolver | Class to resolve files to subclusters. |
+| dfs.federation.router.namenode.resolver.client.class | MembershipNamenodeResolver | Class to resolve the namenode for a subcluster. |
+
+### Namenode monitoring
+
+Monitor the namenodes in the subclusters for forwarding the client requests.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.heartbeat.enable | `true` | If `true`, the Router heartbeats into the State Store. |
+| dfs.federation.router.heartbeat.interval | 5000 | How often the Router should heartbeat into the State Store in milliseconds. |
+| dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
+| dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
