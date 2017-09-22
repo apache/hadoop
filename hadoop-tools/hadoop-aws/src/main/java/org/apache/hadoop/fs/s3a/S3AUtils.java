@@ -220,6 +220,10 @@ public final class S3AUtils {
         ioe.initCause(ase);
         break;
 
+      case 443:
+        ioe = new AWSNoResponseException(message, ase);
+        break;
+
       // throttling
       case 503:
         ioe = new AWSServiceThrottledException(message, ase);

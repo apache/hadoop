@@ -96,7 +96,7 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // which is wrapped by a rejection of all non-idempotent calls except
     // for specific failures.
-    RetryPolicy maybeRetry = new FailNonIOEs(
+    RetryPolicy retryIdempotentCalls = new FailNonIOEs(
         new IdempotencyRetryFilter(fixedRetries));
 
     // and a separate policy for throttle requests, which are considered
@@ -145,16 +145,19 @@ public class S3ARetryPolicy implements RetryPolicy {
     // which can be reacted to by another attempt if the request was idempotent.
     // But: could also be a sign of trying to read past the EOF on a GET,
     // which isn't going to be recovered from
-    policyMap.put(EOFException.class, maybeRetry);
+    policyMap.put(EOFException.class, retryIdempotentCalls);
 
     // policy on a 400/bad request still ambiguous. Given it
     // comes and goes on test runs: try again
-    policyMap.put(AWSBadRequestException.class, maybeRetry);
+    policyMap.put(AWSBadRequestException.class, retryIdempotentCalls);
+
+    // server didn't respond.
+    policyMap.put(AWSNoResponseException.class, retryIdempotentCalls);
 
     // other operations
-    policyMap.put(AWSClientIOException.class, maybeRetry);
-    policyMap.put(AWSServiceIOException.class, maybeRetry);
-    policyMap.put(AWSS3IOException.class, maybeRetry);
+    policyMap.put(AWSClientIOException.class, retryIdempotentCalls);
+    policyMap.put(AWSServiceIOException.class, retryIdempotentCalls);
+    policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
 
     // Dynamo DB exceptions
     // asking for more than you should get. It's a retry but should be logged
@@ -162,7 +165,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(ProvisionedThroughputExceededException.class, throttlePolicy);
 
 
-    retryPolicy = retryByException(maybeRetry, policyMap);
+    retryPolicy = retryByException(retryIdempotentCalls, policyMap);
   }
 
   @Override
