@@ -406,7 +406,7 @@ public class DFSUtilClient {
    * @param keys list of keys in the order of preference
    * @return value of the key or default if a key was not found in configuration
    */
-  private static String getConfValue(String defaultValue, String keySuffix,
+  public static String getConfValue(String defaultValue, String keySuffix,
       Configuration conf, String... keys) {
     String value = null;
     for (String key : keys) {
