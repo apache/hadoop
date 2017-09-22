@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -302,13 +303,13 @@ public class QuasiMonteCarlo extends Configured implements Tool {
   
       //start a map/reduce job
       System.out.println("Starting Job");
-      final long startTime = System.currentTimeMillis();
+      final long startTime = Time.monotonicNow();
       job.waitForCompletion(true);
       if (!job.isSuccessful()) {
         System.out.println("Job " + job.getJobID() + " failed!");
         System.exit(1);
       }
-      final double duration = (System.currentTimeMillis() - startTime)/1000.0;
+      final double duration = (Time.monotonicNow() - startTime)/1000.0;
       System.out.println("Job Finished in " + duration + " seconds");
 
       //read outputs
