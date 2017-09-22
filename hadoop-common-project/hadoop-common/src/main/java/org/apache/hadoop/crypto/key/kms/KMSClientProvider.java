@@ -77,6 +77,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -128,6 +129,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public static final int DEFAULT_AUTH_RETRY = 1;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
+
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writerWithDefaultPrettyPrinter();
 
   private class EncryptedQueueRefiller implements
     ValueQueue.QueueRefiller<EncryptedKeyVersion> {
@@ -222,8 +226,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private static void writeJson(Object obj, OutputStream os)
       throws IOException {
     Writer writer = new OutputStreamWriter(os, StandardCharsets.UTF_8);
-    ObjectMapper jsonMapper = new ObjectMapper();
-    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, obj);
+    WRITER.writeValue(writer, obj);
   }
 
   /**
