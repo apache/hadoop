@@ -44,7 +44,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -134,7 +133,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   /**
    * Returns the comma separated intercepter class names from the configuration.
    *
-   * @param conf
+   * @param config
    * @return the intercepter class names as an instance of ArrayList
    */
   private List<String> getInterceptorClassNames(Configuration config) {
@@ -302,8 +301,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   @GET
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public ClusterInfo get() {
     return getClusterInfo();
@@ -311,8 +309,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.INFO)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public ClusterInfo getClusterInfo() {
     init();
@@ -322,8 +319,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.METRICS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
     init();
@@ -333,8 +329,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.SCHEDULER)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     init();
@@ -344,8 +339,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.SCHEDULER_LOGS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public String dumpSchedulerLogs(@FormParam(RMWSConsts.TIME) String time,
       @Context HttpServletRequest hsr) throws IOException {
@@ -356,8 +350,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.NODES)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public NodesInfo getNodes(@QueryParam(RMWSConsts.STATES) String states) {
     init();
@@ -367,8 +360,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.NODES_NODEID)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public NodeInfo getNode(@PathParam(RMWSConsts.NODEID) String nodeId) {
     init();
@@ -378,8 +370,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppsInfo getApps(@Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.STATE) String stateQuery,
@@ -405,8 +396,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.SCHEDULER_ACTIVITIES)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public ActivitiesInfo getActivities(@Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.NODEID) String nodeId) {
@@ -417,8 +407,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.SCHEDULER_APP_ACTIVITIES)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppActivitiesInfo getAppActivities(@Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.APP_ID) String appId,
@@ -430,8 +419,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APP_STATISTICS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public ApplicationStatisticsInfo getAppStatistics(
       @Context HttpServletRequest hsr,
@@ -445,8 +433,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_APPID)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppInfo getApp(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId,
@@ -458,8 +445,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_APPID_STATE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppState getAppState(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
@@ -470,8 +456,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @PUT
   @Path(RMWSConsts.APPS_APPID_STATE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response updateAppState(AppState targetState,
       @Context HttpServletRequest hsr,
@@ -485,8 +470,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.GET_NODE_TO_LABELS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public NodeToLabelsInfo getNodeToLabels(@Context HttpServletRequest hsr)
       throws IOException {
@@ -497,8 +481,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.LABEL_MAPPINGS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public LabelsToNodesInfo getLabelsToNodes(
       @QueryParam(RMWSConsts.LABELS) Set<String> labels) throws IOException {
@@ -509,8 +492,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.REPLACE_NODE_TO_LABELS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response replaceLabelsOnNodes(
       final NodeToLabelsEntryList newNodeToLabels,
@@ -523,8 +505,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.NODES_NODEID_REPLACE_LABELS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response replaceLabelsOnNode(
       @QueryParam(RMWSConsts.LABELS) Set<String> newNodeLabelsName,
@@ -538,8 +519,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.GET_NODE_LABELS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public NodeLabelsInfo getClusterNodeLabels(@Context HttpServletRequest hsr)
       throws IOException {
@@ -550,8 +530,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.ADD_NODE_LABELS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels,
       @Context HttpServletRequest hsr) throws Exception {
@@ -563,8 +542,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.REMOVE_NODE_LABELS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response removeFromCluserNodeLabels(
       @QueryParam(RMWSConsts.LABELS) Set<String> oldNodeLabels,
@@ -577,8 +555,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.NODES_NODEID_GETLABELS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public NodeLabelsInfo getLabelsOnNode(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.NODEID) String nodeId) throws IOException {
@@ -589,8 +566,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_APPID_PRIORITY)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppPriority getAppPriority(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
@@ -601,8 +577,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @PUT
   @Path(RMWSConsts.APPS_APPID_PRIORITY)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response updateApplicationPriority(AppPriority targetPriority,
       @Context HttpServletRequest hsr,
@@ -616,8 +591,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_APPID_QUEUE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppQueue getAppQueue(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
@@ -628,8 +602,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @PUT
   @Path(RMWSConsts.APPS_APPID_QUEUE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response updateAppQueue(AppQueue targetQueue,
       @Context HttpServletRequest hsr,
@@ -643,8 +616,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.APPS_NEW_APPLICATION)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response createNewApplication(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
@@ -655,8 +627,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.APPS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response submitApplication(ApplicationSubmissionContextInfo newApp,
       @Context HttpServletRequest hsr)
@@ -668,8 +639,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.DELEGATION_TOKEN)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response postDelegationToken(DelegationToken tokenData,
       @Context HttpServletRequest hsr) throws AuthorizationException,
@@ -681,8 +651,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.DELEGATION_TOKEN_EXPIRATION)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response postDelegationTokenExpiration(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, Exception {
@@ -693,8 +662,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @DELETE
   @Path(RMWSConsts.DELEGATION_TOKEN)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response cancelDelegationToken(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException,
@@ -706,8 +674,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.RESERVATION_NEW)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response createNewReservation(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
@@ -718,8 +685,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.RESERVATION_SUBMIT)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response submitReservation(ReservationSubmissionRequestInfo resContext,
       @Context HttpServletRequest hsr)
@@ -731,8 +697,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.RESERVATION_UPDATE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response updateReservation(ReservationUpdateRequestInfo resContext,
       @Context HttpServletRequest hsr)
@@ -744,8 +709,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @POST
   @Path(RMWSConsts.RESERVATION_DELETE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response deleteReservation(ReservationDeleteRequestInfo resContext,
       @Context HttpServletRequest hsr)
@@ -757,8 +721,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.RESERVATION_LIST)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response listReservation(
       @QueryParam(RMWSConsts.QUEUE) @DefaultValue(DEFAULT_QUEUE) String queue,
@@ -775,8 +738,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_TIMEOUTS_TYPE)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppTimeoutInfo getAppTimeout(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId,
@@ -788,8 +750,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_TIMEOUTS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppTimeoutsInfo getAppTimeouts(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
@@ -800,8 +761,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @PUT
   @Path(RMWSConsts.APPS_TIMEOUT)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response updateApplicationTimeout(AppTimeoutInfo appTimeout,
       @Context HttpServletRequest hsr,
@@ -815,8 +775,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_APPID_APPATTEMPTS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public AppAttemptsInfo getAppAttempts(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) {
@@ -827,8 +786,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_APPID_APPATTEMPTS_APPATTEMPTID)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo getAppAttempt(
       @Context HttpServletRequest req, @Context HttpServletResponse res,
       @PathParam(RMWSConsts.APPID) String appId,
@@ -841,8 +799,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.APPS_APPID_APPATTEMPTS_APPATTEMPTID_CONTAINERS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ContainersInfo getContainers(@Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam(RMWSConsts.APPID) String appId,
@@ -855,8 +812,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
 
   @GET
   @Path(RMWSConsts.GET_CONTAINER)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ContainerInfo getContainer(@Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam(RMWSConsts.APPID) String appId,

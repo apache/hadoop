@@ -132,7 +132,8 @@ public final class FederationPoliciesTestUtil {
     GetSubClustersInfoResponse response = GetSubClustersInfoResponse
         .newInstance(new ArrayList<SubClusterInfo>(activeSubclusters.values()));
 
-    when(fss.getSubClusters(any())).thenReturn(response);
+    when(fss.getSubClusters(any(GetSubClustersInfoRequest.class)))
+        .thenReturn(response);
     facade.reinitialize(fss, new Configuration());
     fpc.setFederationStateStoreFacade(facade);
     policy.reinitialize(fpc);
@@ -192,20 +193,26 @@ public final class FederationPoliciesTestUtil {
     FederationStateStore fss = mock(FederationStateStore.class);
     GetSubClustersInfoResponse response = GetSubClustersInfoResponse
         .newInstance(subClusterInfos);
-    when(fss.getSubClusters(any())).thenReturn(response);
+    when(fss.getSubClusters(any(GetSubClustersInfoRequest.class)))
+        .thenReturn(response);
 
-    List<SubClusterPolicyConfiguration> configurations = new ArrayList<>();
+    List<SubClusterPolicyConfiguration> configurations =
+        new ArrayList<SubClusterPolicyConfiguration>();
     configurations.add(policyConfiguration);
 
     GetSubClusterPoliciesConfigurationsResponse policiesResponse =
         GetSubClusterPoliciesConfigurationsResponse
             .newInstance(configurations);
-    when(fss.getPoliciesConfigurations(any())).thenReturn(policiesResponse);
+    when(fss.getPoliciesConfigurations(
+        any(GetSubClusterPoliciesConfigurationsRequest.class)))
+            .thenReturn(policiesResponse);
 
     GetSubClusterPolicyConfigurationResponse policyResponse =
         GetSubClusterPolicyConfigurationResponse
             .newInstance(policyConfiguration);
-    when(fss.getPolicyConfiguration(any())).thenReturn(policyResponse);
+    when(fss.getPolicyConfiguration(
+        any(GetSubClusterPolicyConfigurationRequest.class)))
+            .thenReturn(policyResponse);
 
     goodFacade.reinitialize(fss, new Configuration());
     return goodFacade;
@@ -220,8 +227,8 @@ public final class FederationPoliciesTestUtil {
    * @throws YarnException in case the initialization is not successful.
    */
   public static FederationStateStoreFacade initFacade() throws YarnException {
-    return initFacade(new ArrayList<>(), mock(SubClusterPolicyConfiguration
-        .class));
+    return initFacade(new ArrayList<SubClusterInfo>(),
+        mock(SubClusterPolicyConfiguration.class));
   }
 
 }

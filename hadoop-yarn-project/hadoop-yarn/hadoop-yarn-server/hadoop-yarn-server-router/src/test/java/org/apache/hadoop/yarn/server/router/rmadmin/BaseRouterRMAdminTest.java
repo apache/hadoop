@@ -330,7 +330,7 @@ public abstract class BaseRouterRMAdminTest {
         });
   }
 
-  protected String[] getGroupsForUser(String user)
+  protected String[] getGroupsForUser(final String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
         .doAs(new PrivilegedExceptionAction<String[]>() {

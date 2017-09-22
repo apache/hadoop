@@ -150,8 +150,8 @@ public class TestRouterWebServicesREST {
    * Performs 2 GET calls one to RM and the one to Router. In positive case, it
    * returns the 2 answers in a list.
    */
-  private static <T> List<T> performGetCalls(String path, Class<T> returnType,
-      String queryName, String queryValue)
+  private static <T> List<T> performGetCalls(String path,
+      final Class<T> returnType, String queryName, String queryValue)
       throws IOException, InterruptedException {
     Client clientToRouter = Client.create();
     WebResource toRouter = clientToRouter
@@ -161,8 +161,8 @@ public class TestRouterWebServicesREST {
     WebResource toRM = clientToRM
         .resource(WebAppUtils.getRMWebAppURLWithScheme(conf)).path(path);
 
-    Builder toRouterBuilder;
-    Builder toRMBuilder;
+    final Builder toRouterBuilder;
+    final Builder toRMBuilder;
 
     if (queryValue != null && queryName != null) {
       toRouterBuilder = toRouter.queryParam(queryName, queryValue)
@@ -197,9 +197,9 @@ public class TestRouterWebServicesREST {
   /**
    * Performs a POST/PUT/DELETE call to Router and returns the ClientResponse.
    */
-  private static ClientResponse performCall(String webAddress, String queryKey,
-      String queryValue, Object context, HTTPMethods method)
-      throws IOException, InterruptedException {
+  private static ClientResponse performCall(final String webAddress,
+      final String queryKey, final String queryValue, final Object context,
+      final HTTPMethods method) throws IOException, InterruptedException {
 
     return UserGroupInformation.createRemoteUser(userName)
         .doAs(new PrivilegedExceptionAction<ClientResponse>() {

@@ -494,7 +494,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
           .checkArgument(!ResourceRequest.isAnyLocation(rr.getResourceName()));
 
       if (!countContainersPerRM.containsKey(rr.getAllocationRequestId())) {
-        countContainersPerRM.put(rr.getAllocationRequestId(), new HashMap<>());
+        countContainersPerRM.put(rr.getAllocationRequestId(),
+            new HashMap<SubClusterId, AtomicLong>());
       }
       if (!countContainersPerRM.get(rr.getAllocationRequestId())
           .containsKey(targetId)) {

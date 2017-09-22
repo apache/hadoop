@@ -161,7 +161,7 @@ public final class AMRMClientUtils {
       final Token<? extends TokenIdentifier> token) throws IOException {
     try {
       String rmClusterId = configuration.get(YarnConfiguration.RM_CLUSTER_ID,
-          YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
+          "yarn_cluster");
       LOG.info("Creating RMProxy to RM {} for protocol {} for user {}",
           rmClusterId, protocol.getSimpleName(), user);
       if (token != null) {

@@ -50,7 +50,8 @@ public abstract class BaseFederationPoliciesTest {
 
   private ConfigurableFederationPolicy policy;
   private WeightedPolicyInfo policyInfo = mock(WeightedPolicyInfo.class);
-  private Map<SubClusterId, SubClusterInfo> activeSubclusters = new HashMap<>();
+  private Map<SubClusterId, SubClusterInfo> activeSubclusters =
+      new HashMap<SubClusterId, SubClusterInfo>();
   private FederationPolicyInitializationContext federationPolicyContext;
   private ApplicationSubmissionContext applicationSubmissionContext =
       mock(ApplicationSubmissionContext.class);
@@ -99,7 +100,7 @@ public abstract class BaseFederationPoliciesTest {
   public void testNoSubclusters() throws YarnException {
     // empty the activeSubclusters map
     FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), new HashMap<>());
+        getPolicyInfo(), new HashMap<SubClusterId, SubClusterInfo>());
 
     ConfigurableFederationPolicy localPolicy = getPolicy();
     if (localPolicy instanceof FederationRouterPolicy) {

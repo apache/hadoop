@@ -73,9 +73,10 @@ public final class RouterWebServiceUtil {
    *          call in case the call has no servlet request
    * @return the retrieved entity from the REST call
    */
-  protected static <T> T genericForward(String webApp, HttpServletRequest hsr,
-      final Class<T> returnType, HTTPMethods method, String targetPath,
-      Object formParam, Map<String, String[]> additionalParam) {
+  protected static <T> T genericForward(final String webApp,
+      final HttpServletRequest hsr, final Class<T> returnType,
+      final HTTPMethods method, final String targetPath, final Object formParam,
+      final Map<String, String[]> additionalParam) {
 
     UserGroupInformation callerUGI = null;
 
