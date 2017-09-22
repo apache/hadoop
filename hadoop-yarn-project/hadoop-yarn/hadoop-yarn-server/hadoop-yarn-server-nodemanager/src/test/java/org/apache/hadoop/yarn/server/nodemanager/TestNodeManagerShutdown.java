@@ -255,7 +255,7 @@ public class TestNodeManagerShutdown {
         GetContainerStatusesRequest.newInstance(containerIds);
     ContainerStatus containerStatus =
         containerManager.getContainerStatuses(request).getContainerStatuses().get(0);
-    Assert.assertEquals(ContainerState.RUNNING, containerStatus.getState());
+    Assert.assertEquals(ContainerState.SCHEDULED, containerStatus.getState());
   }
   
   public static ContainerId createContainerId() {

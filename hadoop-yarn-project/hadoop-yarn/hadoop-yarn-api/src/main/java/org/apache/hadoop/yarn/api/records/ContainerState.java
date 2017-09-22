@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * <p>State of a <code>Container</code>.</p>
@@ -28,11 +29,15 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 @Stable
 public enum ContainerState {
   /** New container */
-  NEW, 
-  
+  NEW,
+
   /** Running container */
-  RUNNING, 
-  
+  RUNNING,
+
   /** Completed container */
-  COMPLETE
+  COMPLETE,
+
+  /** Scheduled (awaiting resources) at the NM. */
+  @Unstable
+  SCHEDULED
 }
