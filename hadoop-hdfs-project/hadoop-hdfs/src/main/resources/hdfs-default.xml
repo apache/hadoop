@@ -4662,7 +4662,8 @@
     <name>dfs.federation.router.rpc.enable</name>
     <value>true</value>
     <description>
-      If the RPC service to handle client requests in the router is enabled.
+      If true, the RPC service to handle client requests in the router is
+      enabled.
     </description>
   </property>
 
@@ -4766,7 +4767,7 @@
     <name>dfs.federation.router.admin.enable</name>
     <value>true</value>
     <description>
-      If the RPC admin service to handle client requests in the router is
+      If true, the RPC admin service to handle client requests in the router is
       enabled.
     </description>
   </property>
@@ -4820,7 +4821,7 @@
     <name>dfs.federation.router.store.enable</name>
     <value>true</value>
     <description>
-      If the Router connects to the State Store.
+      If true, the Router connects to the State Store.
     </description>
   </property>
 
@@ -4868,7 +4869,7 @@
     <name>dfs.federation.router.heartbeat.enable</name>
     <value>true</value>
     <description>
-      Enables the Router to heartbeat into the State Store.
+      If true, the Router heartbeats into the State Store.
     </description>
   </property>
 
@@ -4892,7 +4893,7 @@
     <name>dfs.federation.router.monitor.localnamenode.enable</name>
     <value>true</value>
     <description>
-      If the Router should monitor the namenode in the local machine.
+      If true, the Router should monitor the namenode in the local machine.
     </description>
   </property>
 
