@@ -75,7 +75,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
     // Check the volume count
     if (prevVolList.size() >= maxUserVolumeCount) {
-      LOG.error("Too many volumes for user:{}", owner);
+      LOG.debug("Too many volumes for user:{}", owner);
       throw new KSMException(ResultCodes.FAILED_TOO_MANY_USER_VOLUMES);
     }
 
@@ -97,6 +97,7 @@ public class VolumeManagerImpl implements VolumeManager {
       VolumeList vlist = VolumeList.parseFrom(volumeList);
       prevVolList.addAll(vlist.getVolumeNamesList());
     } else {
+      LOG.debug("volume:{} not found for user:{}");
       throw new KSMException(ResultCodes.FAILED_USER_NOT_FOUND);
     }
 
@@ -125,7 +126,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
       // Check of the volume already exists
       if (volumeInfo != null) {
-        LOG.error("volume:{} already exists", args.getVolume());
+        LOG.debug("volume:{} already exists", args.getVolume());
         throw new KSMException(ResultCodes.FAILED_VOLUME_ALREADY_EXISTS);
       }
 
@@ -137,11 +138,13 @@ public class VolumeManagerImpl implements VolumeManager {
       // Add volume to user list
       addVolumeToOwnerList(args.getVolume(), args.getOwnerName(), batch);
       metadataManager.writeBatch(batch);
-      LOG.info("created volume:{} user:{}",
-                                  args.getVolume(), args.getOwnerName());
+      LOG.debug("created volume:{} user:{}", args.getVolume(),
+          args.getOwnerName());
     } catch (IOException ex) {
-      LOG.error("Volume creation failed for user:{} volname:{}",
-                                args.getOwnerName(), args.getVolume(), ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Volume creation failed for user:{} volume:{}",
+            args.getOwnerName(), args.getVolume(), ex);
+      }
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
@@ -164,6 +167,8 @@ public class VolumeManagerImpl implements VolumeManager {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
       byte[] volInfo = metadataManager.get(dbVolumeKey);
       if (volInfo == null) {
+        LOG.debug("Changing volume ownership failed for user:{} volume:{}",
+            owner, volume);
         throw  new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
 
@@ -188,8 +193,10 @@ public class VolumeManagerImpl implements VolumeManager {
 
       metadataManager.writeBatch(batch);
     } catch (IOException ex) {
-      LOG.error("Changing volume ownership failed for user:{} volume:{}",
-          owner, volume, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Changing volume ownership failed for user:{} volume:{}",
+            owner, volume, ex);
+      }
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
@@ -210,7 +217,8 @@ public class VolumeManagerImpl implements VolumeManager {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
       byte[] volInfo = metadataManager.get(dbVolumeKey);
       if (volInfo == null) {
-        throw  new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
+        LOG.debug("volume:{} does not exist", volume);
+        throw new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
 
       VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
@@ -218,18 +226,20 @@ public class VolumeManagerImpl implements VolumeManager {
       Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
 
       KsmVolumeArgs newVolumeArgs =
-          KsmVolumeArgs.newBuilder().setVolume(volumeArgs.getVolume())
+          KsmVolumeArgs.newBuilder()
+              .setVolume(volumeArgs.getVolume())
               .setAdminName(volumeArgs.getAdminName())
               .setOwnerName(volumeArgs.getOwnerName())
               .setQuotaInBytes(quota)
-              .setCreationTime(volumeArgs.getCreationTime())
-              .build();
+              .setCreationTime(volumeArgs.getCreationTime()).build();
 
       VolumeInfo newVolumeInfo = newVolumeArgs.getProtobuf();
       metadataManager.put(dbVolumeKey, newVolumeInfo.toByteArray());
     } catch (IOException ex) {
-      LOG.error("Changing volume quota failed for volume:{} quota:{}",
-          volume, quota, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Changing volume quota failed for volume:{} quota:{}", volume,
+            quota, ex);
+      }
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
@@ -249,7 +259,8 @@ public class VolumeManagerImpl implements VolumeManager {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
       byte[] volInfo = metadataManager.get(dbVolumeKey);
       if (volInfo == null) {
-        throw  new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
+        LOG.debug("volume:{} does not exist", volume);
+        throw new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
 
       VolumeInfo volumeInfo = VolumeInfo.parseFrom(volInfo);
@@ -257,7 +268,9 @@ public class VolumeManagerImpl implements VolumeManager {
       Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
       return volumeArgs;
     } catch (IOException ex) {
-      LOG.error("Info volume failed for volume:{}", volume, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.warn("Info volume failed for volume:{}", volume, ex);
+      }
       throw ex;
     } finally {
       metadataManager.readLock().unlock();
@@ -279,10 +292,12 @@ public class VolumeManagerImpl implements VolumeManager {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
       byte[] volInfo = metadataManager.get(dbVolumeKey);
       if (volInfo == null) {
+        LOG.debug("volume:{} does not exist", volume);
         throw new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
 
       if (!metadataManager.isVolumeEmpty(volume)) {
+        LOG.debug("volume:{} is not empty", volume);
         throw new KSMException(ResultCodes.FAILED_VOLUME_NOT_EMPTY);
       }
 
@@ -294,7 +309,9 @@ public class VolumeManagerImpl implements VolumeManager {
       batch.delete(dbVolumeKey);
       metadataManager.writeBatch(batch);
     } catch (IOException ex) {
-      LOG.error("Delete volume failed for volume:{}", volume, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Delete volume failed for volume:{}", volume, ex);
+      }
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
@@ -318,6 +335,7 @@ public class VolumeManagerImpl implements VolumeManager {
       byte[] dbVolumeKey = metadataManager.getVolumeKey(volume);
       byte[] volInfo = metadataManager.get(dbVolumeKey);
       if (volInfo == null) {
+        LOG.debug("volume:{} does not exist", volume);
         throw  new KSMException(ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
 
@@ -326,8 +344,10 @@ public class VolumeManagerImpl implements VolumeManager {
       Preconditions.checkState(volume.equals(volumeInfo.getVolume()));
       return volumeArgs.getAclMap().hasAccess(userAcl);
     } catch (IOException ex) {
-      LOG.error("Check volume access failed for volume:{} user:{} rights:{}",
-          volume, userAcl.getName(), userAcl.getRights(), ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Check volume access failed for volume:{} user:{} rights:{}",
+            volume, userAcl.getName(), userAcl.getRights(), ex);
+      }
       throw ex;
     } finally {
       metadataManager.readLock().unlock();

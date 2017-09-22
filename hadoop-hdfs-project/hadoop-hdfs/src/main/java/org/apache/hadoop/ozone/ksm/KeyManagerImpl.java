@@ -99,18 +99,18 @@ public class KeyManagerImpl implements KeyManager {
     try {
       byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-      byte[] keyKey = metadataManager.getDBKeyForKey(
-          volumeName, bucketName, keyName);
+      byte[] keyKey =
+          metadataManager.getDBKeyForKey(volumeName, bucketName, keyName);
 
       //Check if the volume exists
-      if(metadataManager.get(volumeKey) == null) {
-        LOG.error("volume not found: {}", volumeName);
+      if (metadataManager.get(volumeKey) == null) {
+        LOG.debug("volume not found: {}", volumeName);
         throw new KSMException("Volume not found",
             KSMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
       //Check if bucket already exists
-      if(metadataManager.get(bucketKey) == null) {
-        LOG.error("bucket not found: {}/{} ", volumeName, bucketName);
+      if (metadataManager.get(bucketKey) == null) {
+        LOG.debug("bucket not found: {}/{} ", volumeName, bucketName);
         throw new KSMException("Bucket not found",
             KSMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
       }
@@ -122,7 +122,6 @@ public class KeyManagerImpl implements KeyManager {
       // In reality we need to garbage collect those blocks by telling SCM to
       // clean up those blocks when it can. Right now making this change
       // allows us to pass tests that expect ozone can overwrite a key.
-
 
       // When we talk to SCM make sure that we ask for at least a byte in the
       // block. This way even if the call is for a zero length key, we back it
@@ -164,14 +163,16 @@ public class KeyManagerImpl implements KeyManager {
           .setModificationTime(currentTime)
           .build();
       metadataManager.put(keyKey, keyBlock.getProtobuf().toByteArray());
-      LOG.debug("Key {} allocated in volume {} bucket {}",
-          keyName, volumeName, bucketName);
+      LOG.debug("Key {} allocated in volume {} bucket {}", keyName, volumeName,
+          bucketName);
       return keyBlock;
     } catch (KSMException e) {
       throw e;
     } catch (IOException ex) {
-      LOG.error("Key allocation failed for volume:{} bucket:{} key:{}",
-          volumeName, bucketName, keyName, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Key allocation failed for volume:{} bucket:{} key:{}",
+            volumeName, bucketName, keyName, ex);
+      }
       throw new KSMException(ex.getMessage(),
           KSMException.ResultCodes.FAILED_KEY_ALLOCATION);
     } finally {
@@ -191,7 +192,7 @@ public class KeyManagerImpl implements KeyManager {
           volumeName, bucketName, keyName);
       byte[] value = metadataManager.get(keyKey);
       if (value == null) {
-        LOG.error("Key: {} not found", keyKey);
+        LOG.debug("Key: {} not found", keyKey);
         throw new KSMException("Key not found",
             KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
       }

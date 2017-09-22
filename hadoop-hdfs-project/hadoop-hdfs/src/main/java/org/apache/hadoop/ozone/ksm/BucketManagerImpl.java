@@ -85,14 +85,14 @@ public class BucketManagerImpl implements BucketManager {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
       //Check if the volume exists
-      if(metadataManager.get(volumeKey) == null) {
-        LOG.error("volume: {} not found ", volumeName);
+      if (metadataManager.get(volumeKey) == null) {
+        LOG.debug("volume: {} not found ", volumeName);
         throw new KSMException("Volume doesn't exist",
             KSMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
       //Check if bucket already exists
-      if(metadataManager.get(bucketKey) != null) {
-        LOG.error("bucket: {} already exists ", bucketName);
+      if (metadataManager.get(bucketKey) != null) {
+        LOG.debug("bucket: {} already exists ", bucketName);
         throw new KSMException("Bucket already exist",
             KSMException.ResultCodes.FAILED_BUCKET_ALREADY_EXISTS);
       }
@@ -100,8 +100,10 @@ public class BucketManagerImpl implements BucketManager {
 
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
     } catch (IOException | DBException ex) {
-      LOG.error("Bucket creation failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Bucket creation failed for bucket:{} in volume:{}",
+            bucketName, volumeName, ex);
+      }
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
@@ -123,16 +125,18 @@ public class BucketManagerImpl implements BucketManager {
     try {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       byte[] value = metadataManager.get(bucketKey);
-      if(value == null) {
-        LOG.error("bucket: {} not found in volume: {}.",
-            bucketName, volumeName);
+      if (value == null) {
+        LOG.debug("bucket: {} not found in volume: {}.", bucketName,
+            volumeName);
         throw new KSMException("Bucket not found",
             KSMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
       }
       return KsmBucketInfo.getFromProtobuf(BucketInfo.parseFrom(value));
     } catch (IOException | DBException ex) {
-      LOG.error("Exception while getting bucket info for bucket: {}",
-          bucketName, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Exception while getting bucket info for bucket: {}",
+            bucketName, ex);
+      }
       throw ex;
     } finally {
       metadataManager.readLock().unlock();
@@ -155,14 +159,14 @@ public class BucketManagerImpl implements BucketManager {
       //Check if volume exists
       if(metadataManager.get(metadataManager.getVolumeKey(volumeName)) ==
           null) {
-        LOG.error("volume: {} not found ", volumeName);
+        LOG.debug("volume: {} not found ", volumeName);
         throw new KSMException("Volume doesn't exist",
             KSMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
       byte[] value = metadataManager.get(bucketKey);
       //Check if bucket exist
       if(value == null) {
-        LOG.error("bucket: {} not found ", bucketName);
+        LOG.debug("bucket: {} not found ", bucketName);
         throw new KSMException("Bucket doesn't exist",
             KSMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
       }
@@ -184,7 +188,7 @@ public class BucketManagerImpl implements BucketManager {
 
       //Check StorageType to update
       StorageType storageType = args.getStorageType();
-      if(storageType != null) {
+      if (storageType != null) {
         bucketInfoBuilder.setStorageType(storageType);
         LOG.debug("Updating bucket storage type for bucket: {} in volume: {}",
             bucketName, volumeName);
@@ -194,21 +198,23 @@ public class BucketManagerImpl implements BucketManager {
 
       //Check Versioning to update
       Boolean versioning = args.getIsVersionEnabled();
-      if(versioning != null) {
+      if (versioning != null) {
         bucketInfoBuilder.setIsVersionEnabled(versioning);
         LOG.debug("Updating bucket versioning for bucket: {} in volume: {}",
             bucketName, volumeName);
       } else {
-        bucketInfoBuilder.setIsVersionEnabled(
-            oldBucketInfo.getIsVersionEnabled());
+        bucketInfoBuilder
+            .setIsVersionEnabled(oldBucketInfo.getIsVersionEnabled());
       }
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
-      metadataManager.put(bucketKey, bucketInfoBuilder.build()
-          .getProtobuf().toByteArray());
+      metadataManager.put(bucketKey,
+          bucketInfoBuilder.build().getProtobuf().toByteArray());
     } catch (IOException | DBException ex) {
-      LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
+            bucketName, volumeName, ex);
+      }
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
@@ -250,28 +256,30 @@ public class BucketManagerImpl implements BucketManager {
     try {
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       //Check if volume exists
-      if(metadataManager.get(metadataManager.getVolumeKey(volumeName)) ==
-          null) {
-        LOG.error("volume: {} not found ", volumeName);
+      if (metadataManager.get(metadataManager.getVolumeKey(volumeName))
+          == null) {
+        LOG.debug("volume: {} not found ", volumeName);
         throw new KSMException("Volume doesn't exist",
             KSMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
       }
       //Check if bucket exist
-      if(metadataManager.get(bucketKey) == null) {
-        LOG.error("bucket: {} not found ", bucketName);
+      if (metadataManager.get(bucketKey) == null) {
+        LOG.debug("bucket: {} not found ", bucketName);
         throw new KSMException("Bucket doesn't exist",
             KSMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
       }
       //Check if bucket is empty
-      if(!metadataManager.isBucketEmpty(volumeName, bucketName)) {
-        LOG.error("bucket: {} is not empty ", bucketName);
+      if (!metadataManager.isBucketEmpty(volumeName, bucketName)) {
+        LOG.debug("bucket: {} is not empty ", bucketName);
         throw new KSMException("Bucket is not empty",
             KSMException.ResultCodes.FAILED_BUCKET_NOT_EMPTY);
       }
       metadataManager.delete(bucketKey);
     } catch (IOException ex) {
-      LOG.error("Delete bucket failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
+      if (!(ex instanceof KSMException)) {
+        LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
+            volumeName, ex);
+      }
       throw ex;
     } finally {
       metadataManager.writeLock().unlock();
