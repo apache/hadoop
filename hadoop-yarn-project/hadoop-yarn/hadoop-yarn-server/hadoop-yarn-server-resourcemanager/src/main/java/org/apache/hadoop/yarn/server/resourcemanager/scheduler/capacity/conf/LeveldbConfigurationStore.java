@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +73,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   private long maxLogs;
   private Configuration conf;
   private LogMutation pendingMutation;
-  private static final Version CURRENT_VERSION_INFO = Version
+  @VisibleForTesting
+  protected static final Version CURRENT_VERSION_INFO = Version
       .newInstance(0, 1);
   private Timer compactionTimer;
   private long compactionIntervalMsec;
@@ -82,7 +84,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       RMContext rmContext) throws IOException {
     this.conf = config;
     try {
-      this.db = initDatabase(schedConf);
+      initDatabase(schedConf);
       this.maxLogs = config.getLong(
           YarnConfiguration.RM_SCHEDCONF_MAX_LOGS,
           YarnConfiguration.DEFAULT_RM_SCHEDCONF_LEVELDB_MAX_LOGS);
@@ -96,7 +98,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     }
   }
 
-  private DB initDatabase(Configuration config) throws Exception {
+  private void initDatabase(Configuration config) throws Exception {
     Path storeRoot = createStorageDir();
     Options options = new Options();
     options.createIfMissing(false);
@@ -108,13 +110,13 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
         if (key1Str.equals(key2Str)) {
           return 0;
         } else if (key1Str.equals(VERSION_KEY)) {
-          return -1;
+          return 1;
         } else if (key2Str.equals(VERSION_KEY)) {
-          return 1;
-        } else if (key1Str.equals(LOG_KEY)) {
           return -1;
-        } else if (key2Str.equals(LOG_KEY)) {
+        } else if (key1Str.equals(LOG_KEY)) {
           return 1;
+        } else if (key2Str.equals(LOG_KEY)) {
+          return -1;
         }
         return key1Str.compareTo(key2Str);
       }
@@ -156,7 +158,6 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
         throw e;
       }
     }
-    return db;
   }
 
   private Path createStorageDir() throws IOException {
@@ -173,6 +174,13 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
           YarnConfiguration.RM_SCHEDCONF_STORE_PATH);
     }
     return new Path(storePath, DB_NAME);
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (db != null) {
+      db.close();
+    }
   }
 
   @Override
@@ -212,8 +220,12 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       return baos.toByteArray();
     }
   }
+
   private LinkedList<LogMutation> deserLogMutations(byte[] mutations) throws
       IOException {
+    if (mutations == null) {
+      return new LinkedList<>();
+    }
     try (ObjectInput input = new ObjectInputStream(
         new ByteArrayInputStream(mutations))) {
       return (LinkedList<LogMutation>) input.readObject();
@@ -225,13 +237,16 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   @Override
   public synchronized Configuration retrieve() {
     DBIterator itr = db.iterator();
-    itr.seek(bytes(LOG_KEY));
+    itr.seekToFirst();
     Configuration config = new Configuration(false);
-    itr.next();
     while (itr.hasNext()) {
       Map.Entry<byte[], byte[]> entry = itr.next();
-      config.set(new String(entry.getKey(), StandardCharsets.UTF_8),
-          new String(entry.getValue(), StandardCharsets.UTF_8));
+      String key = new String(entry.getKey(), StandardCharsets.UTF_8);
+      String value = new String(entry.getValue(), StandardCharsets.UTF_8);
+      if (key.equals(LOG_KEY) || key.equals(VERSION_KEY)) {
+        break;
+      }
+      config.set(key, value);
     }
     return config;
   }
@@ -266,6 +281,11 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
       throw new IOException(e);
     }
     return version;
+  }
+
+  @VisibleForTesting
+  protected LinkedList<LogMutation> getLogs() throws Exception {
+    return deserLogMutations(db.get(bytes(LOG_KEY)));
   }
 
   @Override
