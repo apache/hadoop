@@ -53,6 +53,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -162,9 +163,9 @@ public final class DistSum extends Configured implements Tool {
       LOG.info(s = "sigma=" + sigma);
       context.setStatus(s);
 
-      final long start = System.currentTimeMillis();
+      final long start = Time.monotonicNow();
       sigma.compute();
-      final long duration = System.currentTimeMillis() - start;
+      final long duration = Time.monotonicNow() - start;
       final TaskResult result = new TaskResult(sigma, duration);
 
       LOG.info(s = "result=" + result);
