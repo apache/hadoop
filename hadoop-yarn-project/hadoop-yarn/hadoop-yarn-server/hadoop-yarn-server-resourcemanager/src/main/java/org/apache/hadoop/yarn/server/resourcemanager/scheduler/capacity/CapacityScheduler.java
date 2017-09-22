@@ -411,6 +411,9 @@ public class CapacityScheduler extends
       writeLock.unlock();
     }
 
+    if (isConfigurationMutable()) {
+      ((MutableConfigurationProvider) csConfProvider).close();
+    }
     super.serviceStop();
   }
 

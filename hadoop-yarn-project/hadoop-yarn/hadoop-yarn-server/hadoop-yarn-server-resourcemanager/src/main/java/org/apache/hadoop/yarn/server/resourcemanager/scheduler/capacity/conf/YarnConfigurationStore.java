@@ -96,6 +96,12 @@ public abstract class YarnConfigurationStore {
       RMContext rmContext) throws Exception;
 
   /**
+   * Closes the configuration store, releasing any required resources.
+   * @throws IOException on failure to close
+   */
+  public void close() throws IOException {}
+
+  /**
    * Logs the configuration change to backing store.
    * @param logMutation configuration change to be persisted in write ahead log
    * @throws IOException if logging fails

@@ -92,6 +92,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     }
     try {
       confStore.initialize(config, schedConf, rmContext);
+      confStore.checkVersion();
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -101,6 +102,11 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     this.aclMutationPolicy = ConfigurationMutationACLPolicyFactory
         .getPolicy(config);
     aclMutationPolicy.init(config, rmContext);
+  }
+
+  @Override
+  public void close() throws IOException {
+    confStore.close();
   }
 
   @VisibleForTesting
