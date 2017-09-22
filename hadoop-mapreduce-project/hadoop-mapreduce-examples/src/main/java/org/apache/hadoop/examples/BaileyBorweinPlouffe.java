@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,6 +50,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 
@@ -84,7 +84,8 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
   private static final String DIGIT_SIZE_PROPERTY = NAME + ".digit.size";
   private static final String DIGIT_PARTS_PROPERTY = NAME + ".digit.parts";
 
-  private static final Log LOG = LogFactory.getLog(BaileyBorweinPlouffe.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BaileyBorweinPlouffe.class);
 
   /** Mapper class computing digits of Pi. */
   public static class BbpMapper extends
