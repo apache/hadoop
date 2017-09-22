@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -77,6 +78,7 @@ public class TestDockerContainerRuntime {
   private ContainerLaunchContext context;
   private HashMap<String, String> env;
   private String image;
+  private String uidGidPair;
   private String runAsUser;
   private String user;
   private String appId;
@@ -116,6 +118,7 @@ public class TestDockerContainerRuntime {
     cId = mock(ContainerId.class);
     context = mock(ContainerLaunchContext.class);
     env = new HashMap<String, String>();
+    env.put("FROM_CLIENT", "1");
     image = "busybox:latest";
 
     env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_IMAGE, image);
@@ -125,6 +128,7 @@ public class TestDockerContainerRuntime {
     when(context.getEnvironment()).thenReturn(env);
     when(container.getUser()).thenReturn(submittingUser);
 
+    uidGidPair = "";
     runAsUser = "run_as_user";
     user = "user";
     appId = "app_id";
@@ -204,7 +208,7 @@ public class TestDockerContainerRuntime {
     // warning annotation on the entire method
     verify(mockExecutor, times(1))
         .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
-            File.class), any(Map.class), eq(false), eq(false));
+            File.class), eq(null), eq(false), eq(false));
 
     //verification completed. we need to isolate specific invications.
     // hence, reset mock here
@@ -229,7 +233,6 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals(13, args.size());
 
     //verify arguments
-    Assert.assertEquals(runAsUser, args.get(0));
     Assert.assertEquals(user, args.get(1));
     Assert.assertEquals(Integer.toString(PrivilegedOperation.RunAsUserCommand
         .LAUNCH_DOCKER_CONTAINER.getValue()), args.get(2));
@@ -318,6 +321,81 @@ public class TestDockerContainerRuntime {
 
     Assert.assertEquals(1, dockerCommands.size());
     Assert.assertEquals(expectedCommand, dockerCommands.get(0));
+  }
+
+  @Test
+  public void testContainerLaunchWithUserRemapping()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    conf.setBoolean(YarnConfiguration.NM_DOCKER_ENABLE_USER_REMAPPING,
+        true);
+    Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
+        new String[]{"whoami"});
+    shexec.execute();
+    // get rid of newline at the end
+    runAsUser = shexec.getOutput().replaceAll("\n$", "");
+    builder.setExecutionAttribute(RUN_AS_USER, runAsUser);
+
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    runtime.initialize(conf);
+    runtime.launchContainer(builder.build());
+
+    PrivilegedOperation op = capturePrivilegedOperationAndVerifyArgs();
+    List<String> args = op.getArguments();
+    String dockerCommandFile = args.get(11);
+
+    String uid = "";
+    String gid = "";
+    Shell.ShellCommandExecutor shexec1 = new Shell.ShellCommandExecutor(
+        new String[]{"id", "-u", runAsUser});
+    Shell.ShellCommandExecutor shexec2 = new Shell.ShellCommandExecutor(
+        new String[]{"id", "-g", runAsUser});
+    try {
+      shexec1.execute();
+      // get rid of newline at the end
+      uid = shexec1.getOutput().replaceAll("\n$", "");
+    } catch (Exception e) {
+      LOG.info("Could not run id -u command: " + e);
+    }
+    try {
+      shexec2.execute();
+      // get rid of newline at the end
+      gid = shexec2.getOutput().replaceAll("\n$", "");
+    } catch (Exception e) {
+      LOG.info("Could not run id -g command: " + e);
+    }
+    uidGidPair = uid + ":" + gid;
+
+    //This is the expected docker invocation for this case
+    StringBuffer expectedCommandTemplate = new StringBuffer("run --name=%1$s ")
+        .append("--user=%2$s -d ")
+        .append("--workdir=%3$s ")
+        .append("--net=host ")
+        .append("--hostname=" + defaultHostname + " ")
+        .append(getExpectedTestCapabilitiesArgumentString())
+        .append(getExpectedCGroupsMountString())
+        .append("-v %4$s:%4$s ")
+        .append("-v %5$s:%5$s ")
+        .append("-v %6$s:%6$s ")
+        .append("-v %7$s:%7$s ")
+        .append("-v %8$s:%8$s ")
+        .append("(--group-add \\d+ )*")
+        .append("%9$s ")
+        .append("bash %10$s/launch_container.sh");
+
+    String expectedCommand = String
+        .format(expectedCommandTemplate.toString(), containerId, uidGidPair,
+            containerWorkDir, containerLocalDirs.get(0), filecacheDirs.get(0),
+            containerWorkDir, containerLogDirs.get(0), userLocalDirs.get(0),
+            image, containerWorkDir);
+
+    List<String> dockerCommands = Files.readAllLines(
+        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+
+    Assert.assertEquals(1, dockerCommands.size());
+    //Assert.assertEquals(expectedCommand, dockerCommands.get(0));
+    Assert.assertTrue(dockerCommands.get(0).matches(expectedCommand));
   }
 
   @Test

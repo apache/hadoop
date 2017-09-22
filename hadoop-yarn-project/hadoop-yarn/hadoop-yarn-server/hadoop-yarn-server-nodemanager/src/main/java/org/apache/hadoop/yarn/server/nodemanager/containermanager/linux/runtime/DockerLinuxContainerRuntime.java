@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
@@ -164,6 +165,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER";
   @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_RUN_ENABLE_USER_REMAPPING =
+      "YARN_CONTAINER_RUNTIME_DOCKER_RUN_ENABLE_USER_REMAPPING";
+  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS";
 
@@ -175,6 +179,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private String cgroupsRootDirectory;
   private CGroupsHandler cGroupsHandler;
   private AccessControlList privilegedContainersAcl;
+  private boolean enableUserReMapping;
+  private int userRemappingUidThreshold;
+  private int userRemappingGidThreshold;
 
   /**
    * Return whether the given environment variables indicate that the operation
@@ -260,6 +267,18 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     privilegedContainersAcl = new AccessControlList(conf.getTrimmed(
         YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         YarnConfiguration.DEFAULT_NM_DOCKER_PRIVILEGED_CONTAINERS_ACL));
+
+    enableUserReMapping = conf.getBoolean(
+      YarnConfiguration.NM_DOCKER_ENABLE_USER_REMAPPING,
+      YarnConfiguration.DEFAULT_NM_DOCKER_ENABLE_USER_REMAPPING);
+
+    userRemappingUidThreshold = conf.getInt(
+      YarnConfiguration.NM_DOCKER_USER_REMAPPING_UID_THRESHOLD,
+      YarnConfiguration.DEFAULT_NM_DOCKER_USER_REMAPPING_UID_THRESHOLD);
+
+    userRemappingGidThreshold = conf.getInt(
+      YarnConfiguration.NM_DOCKER_USER_REMAPPING_GID_THRESHOLD,
+      YarnConfiguration.DEFAULT_NM_DOCKER_USER_REMAPPING_GID_THRESHOLD);
   }
 
   @Override
@@ -436,6 +455,34 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         "resource: " + mount);
   }
 
+  private String getUserIdInfo(String userName)
+      throws ContainerExecutionException {
+    String id = "";
+    Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
+        new String[]{"id", "-u", userName});
+    try {
+      shexec.execute();
+      id = shexec.getOutput().replaceAll("[^0-9]", "");
+    } catch (Exception e) {
+      throw new ContainerExecutionException(e);
+    }
+    return id;
+  }
+
+  private String[] getGroupIdInfo(String userName)
+      throws ContainerExecutionException {
+    String[] id = null;
+    Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
+        new String[]{"id", "-G", userName});
+    try {
+      shexec.execute();
+      id = shexec.getOutput().replace("\n", "").split(" ");
+    } catch (Exception e) {
+      throw new ContainerExecutionException(e);
+    }
+    return id;
+  }
+
   @Override
   public void launchContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
@@ -458,7 +505,30 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     String containerIdStr = container.getContainerId().toString();
     String runAsUser = ctx.getExecutionAttribute(RUN_AS_USER);
+    String dockerRunAsUser = runAsUser;
     Path containerWorkDir = ctx.getExecutionAttribute(CONTAINER_WORK_DIR);
+    String[] groups = null;
+
+    if (enableUserReMapping) {
+      String uid = getUserIdInfo(runAsUser);
+      groups = getGroupIdInfo(runAsUser);
+      String gid = groups[0];
+      if(Integer.parseInt(uid) < userRemappingUidThreshold) {
+        String message = "uid: " + uid + " below threshold: "
+            + userRemappingUidThreshold;
+        throw new ContainerExecutionException(message);
+      }
+      for(int i = 0; i < groups.length; i++) {
+        String group = groups[i];
+        if (Integer.parseInt(group) < userRemappingGidThreshold) {
+          String message = "gid: " + group
+              + " below threshold: " + userRemappingGidThreshold;
+          throw new ContainerExecutionException(message);
+        }
+      }
+      dockerRunAsUser = uid + ":" + gid;
+    }
+
     //List<String> -> stored as List -> fetched/converted to List<String>
     //we can't do better here thanks to type-erasure
     @SuppressWarnings("unchecked")
@@ -481,7 +551,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     @SuppressWarnings("unchecked")
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
-        runAsUser, imageName)
+        dockerRunAsUser, imageName)
         .detachOnRun()
         .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType(network);
@@ -542,6 +612,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       runCommand.setOverrideCommandWithArgs(overrideCommands);
     }
 
+    if(enableUserReMapping) {
+      runCommand.groupAdd(groups);
+    }
+
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
         containerIdStr);
     PrivilegedOperation launchOp = buildLaunchOp(ctx,
@@ -549,8 +623,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     try {
       privilegedOperationExecutor.executePrivilegedOperation(null,
-          launchOp, null, container.getLaunchContext().getEnvironment(),
-          false, false);
+          launchOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
       LOG.warn("Launch container failed. Exception: ", e);
       LOG.info("Docker command used: " + runCommand.getCommandWithArguments());
@@ -563,7 +636,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
     ContainerExecutor.Signal signal = ctx.getExecutionAttribute(SIGNAL);
 
     PrivilegedOperation privOp = null;
@@ -594,8 +666,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
 
     try {
       privilegedOperationExecutor.executePrivilegedOperation(null,
-          privOp, null, container.getLaunchContext().getEnvironment(),
-          false, false);
+          privOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
       throw new ContainerExecutionException("Signal container failed", e
           .getExitCode(), e.getOutput(), e.getErrorOutput());
@@ -623,7 +694,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       privOp.appendArgs(commandFile);
       String output = privilegedOperationExecutor
           .executePrivilegedOperation(null, privOp, null,
-              container.getLaunchContext().getEnvironment(), true, false);
+              null, true, false);
       LOG.info("Docker inspect output for " + containerId + ": " + output);
       int index = output.lastIndexOf(',');
       if (index == -1) {
