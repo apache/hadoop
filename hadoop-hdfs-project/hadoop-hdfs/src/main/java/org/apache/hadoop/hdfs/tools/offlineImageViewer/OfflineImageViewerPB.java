@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * OfflineImageViewerPB to dump the contents of an Hadoop image file to XML or
@@ -174,8 +175,8 @@ public class OfflineImageViewerPB {
     Configuration conf = new Configuration();
     try (PrintStream out = outputFile.equals("-") ?
         System.out : new PrintStream(outputFile, "UTF-8")) {
-      switch (processor) {
-      case "FileDistribution":
+      switch (StringUtils.toUpperCase(processor)) {
+      case "FILEDISTRIBUTION":
         long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
         int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
         boolean formatOutput = cmd.hasOption("format");
@@ -186,7 +187,7 @@ public class OfflineImageViewerPB {
         new PBImageXmlWriter(conf, out).visit(new RandomAccessFile(inputFile,
             "r"));
         break;
-      case "ReverseXML":
+      case "REVERSEXML":
         try {
           OfflineImageReconstructor.run(inputFile, outputFile);
         } catch (Exception e) {
@@ -196,14 +197,14 @@ public class OfflineImageViewerPB {
           System.exit(1);
         }
         break;
-      case "Web":
+      case "WEB":
         String addr = cmd.getOptionValue("addr", "localhost:5978");
         try (WebImageViewer viewer =
             new WebImageViewer(NetUtils.createSocketAddr(addr))) {
           viewer.start(inputFile);
         }
         break;
-      case "Delimited":
+      case "DELIMITED":
         try (PBImageDelimitedTextWriter writer =
             new PBImageDelimitedTextWriter(out, delimiter, tempPath)) {
           writer.visit(new RandomAccessFile(inputFile, "r"));
