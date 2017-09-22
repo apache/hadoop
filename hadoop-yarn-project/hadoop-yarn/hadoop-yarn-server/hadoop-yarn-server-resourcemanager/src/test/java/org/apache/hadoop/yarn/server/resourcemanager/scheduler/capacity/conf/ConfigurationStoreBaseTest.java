@@ -71,6 +71,7 @@ public abstract class ConfigurationStoreBaseTest {
     confStore.confirmMutation(false);
     assertNull("Configuration should not be updated",
         confStore.retrieve().get("keyUpdate2"));
+    confStore.close();
   }
 
   @Test
@@ -86,5 +87,6 @@ public abstract class ConfigurationStoreBaseTest {
     confStore.logMutation(mutation);
     confStore.confirmMutation(true);
     assertNull(confStore.retrieve().get("key"));
+    confStore.close();
   }
 }
