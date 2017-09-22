@@ -300,9 +300,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       boolean magicCommitterEnabled = conf.getBoolean(
           CommitConstants.MAGIC_COMMITTER_ENABLED,
           CommitConstants.DEFAULT_MAGIC_COMMITTER_ENABLED);
-      if (magicCommitterEnabled) {
-        LOG.info("Magic committer is enabled");
-      }
+      LOG.debug("Magic committer {} enabled",
+          magicCommitterEnabled ? "is" : "is not");
       committerIntegration = new MagicCommitFSIntegration(
           this, magicCommitterEnabled);
 
@@ -342,12 +341,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     return (S3AStorageStatistics)
         GlobalStorageStatistics.INSTANCE
             .put(S3AStorageStatistics.NAME,
-                new GlobalStorageStatistics.StorageStatisticsProvider() {
-                  @Override
-                  public StorageStatistics provide() {
-                    return new S3AStorageStatistics();
-                  }
-                });
+                () -> new S3AStorageStatistics());
   }
 
   /**
