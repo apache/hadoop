@@ -85,9 +85,9 @@ The allocation file must be in XML format. The format contains five types of ele
 
     * **minResources**: minimum resources the queue is entitled to, in the form "X mb, Y vcores". For the single-resource fairness policy, the vcores value is ignored. If a queue's minimum share is not satisfied, it will be offered available resources before any other queue under the same parent. Under the single-resource fairness policy, a queue is considered unsatisfied if its memory usage is below its minimum memory share. Under dominant resource fairness, a queue is considered unsatisfied if its usage for its dominant resource with respect to the cluster capacity is below its minimum share for that resource. If multiple queues are unsatisfied in this situation, resources go to the queue with the smallest ratio between relevant resource usage and minimum. Note that it is possible that a queue that is below its minimum may not immediately get up to its minimum when it submits an application, because already-running jobs may be using those resources.
 
-    * **maxResources**: maximum resources a queue is allowed, in the form "X mb, Y vcores". A queue will never be assigned a container that would put its aggregate usage over this limit.
+    * **maxResources**: maximum resources a queue is allocated, expressed either in absolute values (X mb, Y vcores) or as a percentage of the cluster resources (X% memory, Y% cpu). A queue will not be assigned a container that would put its aggregate usage over this limit.
 
-    * **maxChildResources**: maximum resources an ad hoc child queue is allowed, in the form "X mb, Y vcores". Any ad hoc queue that is a direct child of a queue with this property set will have it's maxResources property set accordingly.
+    * **maxChildResources**: maximum resources an ad hoc child queue is allocated, expressed either in absolute values (X mb, Y vcores) or as a percentage of the cluster resources (X% memory, Y% cpu). An ad hoc child queue will not be assigned a container that would put its aggregate usage over this limit.
 
     * **maxRunningApps**: limit the number of apps from the queue to run at once
 

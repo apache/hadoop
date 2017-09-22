@@ -235,21 +235,21 @@ public class TestAllocationFileLoaderService {
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
     assertEquals(Resources.createResource(2048, 10),
-        queueConf.getMaxResources("root.queueA"));
+        queueConf.getMaxResources("root.queueA").getResource());
     assertEquals(Resources.createResource(5120, 110),
-        queueConf.getMaxResources("root.queueB"));
-    assertEquals(Resources.createResource(5120, 0),
-        queueConf.getMaxResources("root.queueC"));
+        queueConf.getMaxResources("root.queueB").getResource());
     assertEquals(Resources.createResource(4096, 100),
-        queueConf.getMaxResources("root.queueD"));
+        queueConf.getMaxResources("root.queueC").getResource());
     assertEquals(Resources.createResource(4096, 100),
-        queueConf.getMaxResources("root.queueE"));
+        queueConf.getMaxResources("root.queueD").getResource());
     assertEquals(Resources.createResource(4096, 100),
-        queueConf.getMaxResources("root.queueF"));
+        queueConf.getMaxResources("root.queueE").getResource());
     assertEquals(Resources.createResource(4096, 100),
-        queueConf.getMaxResources("root.queueG"));
+        queueConf.getMaxResources("root.queueF").getResource());
     assertEquals(Resources.createResource(4096, 100),
-        queueConf.getMaxResources("root.queueG.queueH"));
+        queueConf.getMaxResources("root.queueG").getResource());
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueG.queueH").getResource());
 
     assertEquals(Resources.createResource(1024, 0),
         queueConf.getMinResources("root.queueA"));
@@ -279,9 +279,9 @@ public class TestAllocationFileLoaderService {
     assertNull("Max child resources unexpectedly set for queue root.queueE",
         queueConf.getMaxChildResources("root.queueE"));
     assertEquals(Resources.createResource(2048, 64),
-        queueConf.getMaxChildResources("root.queueF"));
+        queueConf.getMaxChildResources("root.queueF").getResource());
     assertEquals(Resources.createResource(2048, 64),
-        queueConf.getMaxChildResources("root.queueG"));
+        queueConf.getMaxChildResources("root.queueG").getResource());
     assertNull("Max child resources unexpectedly set for "
         + "queue root.queueG.queueH",
         queueConf.getMaxChildResources("root.queueG.queueH"));

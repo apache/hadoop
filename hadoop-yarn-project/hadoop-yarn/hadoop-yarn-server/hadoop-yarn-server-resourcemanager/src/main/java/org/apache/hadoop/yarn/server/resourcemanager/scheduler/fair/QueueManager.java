@@ -41,7 +41,6 @@ import org.xml.sax.SAXException;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.Iterator;
 import java.util.Set;
-import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
@@ -330,7 +329,7 @@ public class QueueManager {
         !configuredQueues.get(FSQueueType.PARENT).contains(child.getName())) {
       // For ad hoc queues, set their max reource allocations based on
       // their parents' default child settings.
-      Resource maxChild = parent.getMaxChildQueueResource();
+      ConfigurableResource maxChild = parent.getMaxChildQueueResource();
 
       if (maxChild != null) {
         child.setMaxShare(maxChild);
