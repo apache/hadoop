@@ -622,11 +622,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * operation.
    */
   @Override
-  public AppsInfo getApps(HttpServletRequest hsr, String stateQuery,
-      Set<String> statesQuery, String finalStatusQuery, String userQuery,
-      String queueQuery, String count, String startedBegin, String startedEnd,
-      String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+  public AppsInfo getApps(final HttpServletRequest hsr, final String stateQuery,
+      final Set<String> statesQuery, final String finalStatusQuery,
+      final String userQuery, final String queueQuery, final String count,
+      final String startedBegin, final String startedEnd,
+      final String finishBegin, final String finishEnd,
+      final Set<String> applicationTypes, final Set<String> applicationTags,
+      final Set<String> unselectedFields) {
     AppsInfo apps = new AppsInfo();
     long startTime = clock.getTime();
 
