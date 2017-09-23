@@ -36,11 +36,7 @@ import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
  *
  * <p/>
  * The policy for choosing which priority to give added blocks
-<<<<<<< HEAD
- * is implemented in {@link #getPriority(int, int, int)}.
-=======
- * is implemented in {@link #getPriority(BlockInfo, int, int, int, int)}.
->>>>>>> 5411dc5... HDFS-9205. Do not schedule corrupt blocks for replication.  (szetszwo)
+ * is implemented in {@link #getPriority(int, int, int, int)}.
  * </p>
  * <p>The queue order is as follows:</p>
  * <ol>
