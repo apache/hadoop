@@ -19,7 +19,8 @@
     "use strict";
 
     var isIgnoredJmxKeys = function (key) {
-        return key == 'name' || key == 'modelerType' || key.match(/tag.*/);
+        return key == 'name' || key == 'modelerType' || key == "$$hashKey" ||
+            key.match(/tag.*/);
     };
     angular.module('ozone', ['nvd3'])
     angular.module('ozone').component('overview', {

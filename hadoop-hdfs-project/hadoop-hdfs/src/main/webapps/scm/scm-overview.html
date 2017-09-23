@@ -18,7 +18,7 @@
 
 <table class="table table-bordered table-striped" class="col-md-6">
     <tbody>
-    <tr ng-repeat="typestat in $ctrl.overview.jmx.NodeCount">
+    <tr ng-repeat="typestat in $ctrl.overview.jmx.NodeCount | orderBy:'key':false:$ctrl.nodeOrder">
         <td>{{typestat.key}}</td>
         <td>{{typestat.value}}</td>
     </tr>
@@ -41,7 +41,7 @@
         <td>{{$ctrl.blockmanagermetrics.OpenContainersNo}}</td>
     </tr>
     <tr>
-        <td>Node Manager: Minimum chill mode nodes)</td>
+        <td>Node Manager: Minimum chill mode nodes</td>
         <td>{{$ctrl.nodemanagermetrics.MinimumChillModeNodes}}</td>
     </tr>
     <tr>
