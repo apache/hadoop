@@ -146,11 +146,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       } else if (i == 3) {
         entities.addEntity(createApplicationTimelineEntity(
             appId, false, false, false, false, YarnApplicationState.FINISHED,
-            true, false));
-      } else if (i == SCALE + 1) {
-        entities.addEntity(createApplicationTimelineEntity(
-            appId, false, false, false, false, YarnApplicationState.FINISHED,
-            false, true));
+            true));
       } else {
         entities.addEntity(createApplicationTimelineEntity(
             appId, false, false, false, false, YarnApplicationState.FINISHED));
@@ -501,14 +497,13 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       boolean wrongAppId, boolean enableUpdateEvent,
       YarnApplicationState state) {
     return createApplicationTimelineEntity(appId, emptyACLs, noAttemptId,
-        wrongAppId, enableUpdateEvent, state, false, false);
+        wrongAppId, enableUpdateEvent, state, false);
   }
 
   private static TimelineEntity createApplicationTimelineEntity(
       ApplicationId appId, boolean emptyACLs, boolean noAttemptId,
       boolean wrongAppId, boolean enableUpdateEvent,
-      YarnApplicationState state, boolean missingPreemptMetrics,
-      boolean missingQueue) {
+      YarnApplicationState state, boolean missingPreemptMetrics) {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     if (wrongAppId) {
@@ -524,10 +519,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entityInfo.put(ApplicationMetricsConstants.TYPE_ENTITY_INFO,
         "test app type");
     entityInfo.put(ApplicationMetricsConstants.USER_ENTITY_INFO, "user1");
-    if (!missingQueue) {
-      entityInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO,
-          "test queue");
-    }
+    entityInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO, "test queue");
     entityInfo.put(
         ApplicationMetricsConstants.UNMANAGED_APPLICATION_ENTITY_INFO, "false");
     entityInfo.put(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO,
