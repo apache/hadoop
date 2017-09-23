@@ -396,6 +396,42 @@ esac
 # export HDFS_MOVER_OPTS=""
 
 ###
+# HDFS CBlock Server specific parameters
+###
+# Specify the JVM options to be used when starting the HDFS CBlock Server.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HDFS_CBLOCKSERVER_OPTS=""
+
+###
+# HDFS JSCSI specific parameters
+###
+# Specify the JVM options to be used when starting the HDFS JSCSI.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HDFS_JSCSI_OPTS=""
+
+###
+# HDFS Key Space Manager specific parameters
+###
+# Specify the JVM options to be used when starting the HDFS Key Space Manager.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HDFS_KEYSPACEMANAGER_OPTS=""
+
+###
+# HDFS StorageContainerManager specific parameters
+###
+# Specify the JVM options to be used when starting the HDFS Storage Container Manager.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# export HDFS_STORAGECONTAINERMANAGER_OPTS=""
+
+###
 # Advanced Users Only!
 ###
 
