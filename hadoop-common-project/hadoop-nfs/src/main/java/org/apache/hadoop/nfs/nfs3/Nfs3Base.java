@@ -78,6 +78,13 @@ public abstract class Nfs3Base {
     nfsBoundPort = tcpServer.getBoundPort();
   }
 
+  public void stop() {
+    if (nfsBoundPort > 0) {
+      rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
+      nfsBoundPort = 0;
+    }
+    rpcProgram.stopDaemons();
+  }
   /**
    * Priority of the nfsd shutdown hook.
    */
@@ -86,8 +93,7 @@ public abstract class Nfs3Base {
   private class NfsShutdownHook implements Runnable {
     @Override
     public synchronized void run() {
-      rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
-      rpcProgram.stopDaemons();
+      stop();
     }
   }
 }
