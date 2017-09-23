@@ -35,6 +35,19 @@
                     ctrl.nodemanagermetrics = result.data.beans[0];
                 });
 
+            var statusSortOrder = {
+                "HEALTHY": "a",
+                "STALE": "b",
+                "DEAD": "c",
+                "UNKNOWN": "z",
+                "DECOMMISSIONING": "x",
+                "DECOMMISSIONED": "y"
+            };
+            ctrl.nodeOrder = function (v1, v2) {
+                //status with non defined sort order will be "undefined"
+                return ("" + statusSortOrder[v1.value]).localeCompare("" + statusSortOrder[v2.value])
+            }
+
         }
     });
 
