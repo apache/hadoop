@@ -23,6 +23,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -67,11 +68,12 @@ import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 
 /**
- * This is the CLI that can be use to convert a levelDB into a sqlite DB file.
+ * This is the CLI that can be use to convert an ozone metadata DB into
+ * a sqlite DB file.
  *
  * NOTE: user should use this CLI in an offline fashion. Namely, this should not
- * be used to convert a levelDB that is currently being used by Ozone. Instead,
- * this should be used to debug and diagnosis closed levelDB instances.
+ * be used to convert a DB that is currently being used by Ozone. Instead,
+ * this should be used to debug and diagnosis closed DB instances.
  *
  */
 public class SQLCLI  extends Configured implements Tool {
@@ -213,11 +215,18 @@ public class SQLCLI  extends Configured implements Tool {
   @SuppressWarnings("static-access")
   private Options getOptions() {
     Options allOptions = new Options();
+    Option helpOpt = OptionBuilder
+        .hasArg(false)
+        .withLongOpt("help")
+        .withDescription("display help message")
+        .create("h");
+    allOptions.addOption(helpOpt);
+
     Option dbPathOption = OptionBuilder
-        .withArgName("levelDB path")
+        .withArgName("DB path")
         .withLongOpt("dbPath")
         .hasArgs(1)
-        .withDescription("specify levelDB path")
+        .withDescription("specify DB path")
         .create("p");
     allOptions.addOption(dbPathOption);
 
@@ -225,22 +234,33 @@ public class SQLCLI  extends Configured implements Tool {
         .withArgName("output path")
         .withLongOpt("outPath")
         .hasArgs(1)
-        .withDescription("specify output path")
+        .withDescription("specify output DB file path")
         .create("o");
     allOptions.addOption(outPathOption);
 
     return allOptions;
   }
 
+  public void displayHelp() {
+    HelpFormatter helpFormatter = new HelpFormatter();
+    Options allOpts = getOptions();
+    helpFormatter.printHelp("hdfs oz_debug -p <DB path>"
+        + " -o <Output DB file path>", allOpts);
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     CommandLine commandLine = parseArgs(args);
+    if (commandLine.hasOption("help")) {
+      displayHelp();
+      return 0;
+    }
     if (!commandLine.hasOption("p") || !commandLine.hasOption("o")) {
-      LOG.error("Require dbPath option(-p) AND outPath option (-o)");
+      displayHelp();
       return -1;
     }
     String value = commandLine.getOptionValue("p");
-    LOG.info("levelDB path {}", value);
+    LOG.info("DB path {}", value);
     // the value is supposed to be an absolute path to a container file
     Path dbPath = Paths.get(value);
     if (!Files.exists(dbPath)) {
@@ -257,6 +277,11 @@ public class SQLCLI  extends Configured implements Tool {
     Path outPath = Paths.get(value);
     if (outPath == null || outPath.getParent() == null) {
       LOG.error("Error processing output path {}", outPath);
+      return -1;
+    }
+
+    if (outPath.toFile().isDirectory()) {
+      LOG.error("The db output path should be a file instead of a directory");
       return -1;
     }
 
@@ -689,6 +714,9 @@ public class SQLCLI  extends Configured implements Tool {
       ToolRunner.run(shell, args);
     } catch (Exception ex) {
       LOG.error(ex.toString());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Command execution failed", ex);
+      }
       res = 1;
     }
     System.exit(res);
