@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataStore;
@@ -291,6 +292,25 @@ public class TestMetadataStore {
     result = store.getRangeKVs(null, 1, null);
     Assert.assertEquals(1, result.size());
     Assert.assertEquals("a0", getString(result.get(0).getKey()));
+  }
+
+  @Test
+  public void testGetSequentialRangeKVs() throws IOException {
+    MetadataKeyFilter suffixFilter = (preKey, currentKey, nextKey)
+        -> DFSUtil.bytes2String(currentKey).endsWith("2");
+    // Suppose to return a2 and b2
+    List<Map.Entry<byte[], byte[]>> result =
+        store.getRangeKVs(null, MAX_GETRANGE_LENGTH, suffixFilter);
+    Assert.assertEquals(2, result.size());
+    Assert.assertEquals("a2", DFSUtil.bytes2String(result.get(0).getKey()));
+    Assert.assertEquals("b2", DFSUtil.bytes2String(result.get(1).getKey()));
+
+    // Suppose to return just a2, because when it iterates to a3,
+    // the filter no long matches and it should stop from there.
+    result = store.getSequentialRangeKVs(null,
+        MAX_GETRANGE_LENGTH, suffixFilter);
+    Assert.assertEquals(1, result.size());
+    Assert.assertEquals("a2", DFSUtil.bytes2String(result.get(0).getKey()));
   }
 
   @Test

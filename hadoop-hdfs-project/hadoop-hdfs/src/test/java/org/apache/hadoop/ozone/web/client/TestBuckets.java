@@ -124,6 +124,19 @@ public class TestBuckets {
     assertEquals(vol.getOwnerName(), "bilbo");
     assertEquals(vol.getQuota().getUnit(), OzoneQuota.Units.TB);
     assertEquals(vol.getQuota().getSize(), 100);
+
+    // Test create a bucket with invalid bucket name,
+    // not use Rule here because the test method is static.
+    try {
+      String invalidBucketName = "#" + OzoneUtils.getRequestID().toLowerCase();
+      vol.createBucket(invalidBucketName, acls, StorageType.DEFAULT);
+      fail("Except the bucket creation to be failed because the"
+          + " bucket name starts with an invalid char #");
+    } catch (Exception e) {
+      assertTrue(e instanceof OzoneRestClientException);
+      assertTrue(e.getMessage().contains("Bucket or Volume name"
+          + " has an unsupported character : #"));
+    }
   }
 
   @Test

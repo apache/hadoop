@@ -80,9 +80,9 @@ public class TestBucketManagerImpl {
           @Override
           public Boolean answer(InvocationOnMock invocation)
               throws Throwable {
-            String keyRootName =  OzoneConsts.KSM_VOLUME_PREFIX
+            String keyRootName =  OzoneConsts.KSM_KEY_PREFIX
                 + invocation.getArguments()[0]
-                + OzoneConsts.KSM_BUCKET_PREFIX
+                + OzoneConsts.KSM_KEY_PREFIX
                 + invocation.getArguments()[1]
                 + OzoneConsts.KSM_KEY_PREFIX;
             Iterator<String> keyIterator = metadataDB.keySet().iterator();

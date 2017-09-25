@@ -63,6 +63,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_USER_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.KSM_BUCKET_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_VOLUME_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
@@ -385,7 +386,7 @@ public class SQLCLI  extends Configured implements Tool {
         try {
           insertKSMDB(conn, type, keyString, value);
         } catch (IOException | SQLException ex) {
-          LOG.error("Exception inserting key {}", keyString, ex);
+          LOG.error("Exception inserting key {} type {}", keyString, type, ex);
         }
         return true;
       });
@@ -445,18 +446,11 @@ public class SQLCLI  extends Configured implements Tool {
   private KeyType getKeyType(String key) {
     if (key.startsWith(KSM_USER_PREFIX)) {
       return KeyType.USER;
-    } else {
-      int count = key.length() - key.replace(KSM_VOLUME_PREFIX, "").length();
-      // NOTE : when delimiter gets changed, will need to change this part
-      if (count == 1) {
-        return KeyType.VOLUME;
-      } else if (count == 2) {
-        return KeyType.BUCKET;
-      } else if (count >= 3) {
-        return KeyType.KEY;
-      } else {
-        return KeyType.UNKNOWN;
-      }
+    } else if (key.startsWith(KSM_VOLUME_PREFIX)) {
+      return key.replaceFirst(KSM_VOLUME_PREFIX, "")
+          .contains(KSM_BUCKET_PREFIX) ? KeyType.BUCKET : KeyType.VOLUME;
+    }else {
+      return KeyType.KEY;
     }
   }
 

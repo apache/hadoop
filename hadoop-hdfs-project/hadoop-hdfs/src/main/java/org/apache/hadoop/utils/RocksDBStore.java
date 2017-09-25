@@ -133,6 +133,20 @@ public class RocksDBStore implements MetadataStore {
   public List<Map.Entry<byte[], byte[]>> getRangeKVs(byte[] startKey,
       int count, MetadataKeyFilters.MetadataKeyFilter... filters)
       throws IOException, IllegalArgumentException {
+    return getRangeKVs(startKey, count, false, filters);
+  }
+
+  @Override
+  public List<Map.Entry<byte[], byte[]>> getSequentialRangeKVs(byte[] startKey,
+      int count, MetadataKeyFilters.MetadataKeyFilter... filters)
+      throws IOException, IllegalArgumentException {
+    return getRangeKVs(startKey, count, true, filters);
+  }
+
+  private List<Map.Entry<byte[], byte[]>> getRangeKVs(byte[] startKey,
+      int count, boolean sequential,
+      MetadataKeyFilters.MetadataKeyFilter... filters)
+      throws IOException, IllegalArgumentException {
     List<Map.Entry<byte[], byte[]>> result = new ArrayList<>();
     long start = System.currentTimeMillis();
     if (count < 0) {
@@ -161,11 +175,23 @@ public class RocksDBStore implements MetadataStore {
         it.next();
         final byte[] nextKey = it.isValid() ? it.key() : null;
 
-        if (filters == null || Arrays.asList(filters).stream()
-            .allMatch(entry -> entry.filterKey(prevKey,
-                currentKey, nextKey))) {
+        if (filters == null) {
           result.add(new AbstractMap.SimpleImmutableEntry<>(currentKey,
               currentValue));
+        } else {
+          if (Arrays.asList(filters).stream()
+              .allMatch(entry -> entry.filterKey(prevKey,
+                  currentKey, nextKey))) {
+            result.add(new AbstractMap.SimpleImmutableEntry<>(currentKey,
+                currentValue));
+          } else {
+            if (result.size() > 0 && sequential) {
+              // if the caller asks for a sequential range of results,
+              // and we met a dis-match, abort iteration from here.
+              // if result is empty, we continue to look for the first match.
+              break;
+            }
+          }
         }
       }
     } finally {
@@ -261,7 +287,7 @@ public class RocksDBStore implements MetadataStore {
         it.seek(from);
       }
       if (!it.isValid()) {
-        throw new IOException("Key not found");
+        return null;
       }
 
       switch (offset) {

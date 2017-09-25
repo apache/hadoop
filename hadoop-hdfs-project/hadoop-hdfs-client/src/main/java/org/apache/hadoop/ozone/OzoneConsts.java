@@ -98,10 +98,29 @@ public final class OzoneConsts {
 
   /**
    * KSM LevelDB prefixes.
+   *
+   * KSM DB stores metadata as KV pairs with certain prefixes,
+   * prefix is used to improve the performance to get related
+   * metadata.
+   *
+   * KSM DB Schema:
+   *  ----------------------------------------------------------
+   *  |  KEY                                     |     VALUE   |
+   *  ----------------------------------------------------------
+   *  | $userName                                |  VolumeList |
+   *  ----------------------------------------------------------
+   *  | /#volumeName                             |  VolumeInfo |
+   *  ----------------------------------------------------------
+   *  | /#volumeName/#bucketName                 |  BucketInfo |
+   *  ----------------------------------------------------------
+   *  | /volumeName/bucketName/keyName           |  KeyInfo    |
+   *  ----------------------------------------------------------
+   *  | #deleting#/volumeName/bucketName/keyName |  KeyInfo    |
+   *  ----------------------------------------------------------
    */
-  public static final String KSM_VOLUME_PREFIX = "/";
-  public static final String KSM_BUCKET_PREFIX = KSM_VOLUME_PREFIX;
-  public static final String KSM_KEY_PREFIX = KSM_VOLUME_PREFIX;
+  public static final String KSM_VOLUME_PREFIX = "/#";
+  public static final String KSM_BUCKET_PREFIX = "/#";
+  public static final String KSM_KEY_PREFIX = "/";
   public static final String KSM_USER_PREFIX = "$";
 
   /**
