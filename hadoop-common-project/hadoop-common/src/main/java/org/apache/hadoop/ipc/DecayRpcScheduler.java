@@ -50,6 +50,7 @@ import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
 import org.apache.hadoop.metrics2.util.Metrics2Util.TopN;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,6 +128,8 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   public static final Logger LOG =
       LoggerFactory.getLogger(DecayRpcScheduler.class);
+
+  private static final ObjectWriter WRITER = new ObjectMapper().writer();
 
   // Track the decayed and raw (no decay) number of calls for each schedulable
   // identity from all previous decay windows: idx 0 for decayed call count and
@@ -909,8 +912,7 @@ public class DecayRpcScheduler implements RpcScheduler,
       return "{}";
     } else {
       try {
-        ObjectMapper om = new ObjectMapper();
-        return om.writeValueAsString(decisions);
+        return WRITER.writeValueAsString(decisions);
       } catch (Exception e) {
         return "Error: " + e.getMessage();
       }
@@ -919,8 +921,7 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   public String getCallVolumeSummary() {
     try {
-      ObjectMapper om = new ObjectMapper();
-      return om.writeValueAsString(getDecayedCallCounts());
+      return WRITER.writeValueAsString(getDecayedCallCounts());
     } catch (Exception e) {
       return "Error: " + e.getMessage();
     }

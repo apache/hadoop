@@ -43,6 +43,7 @@ import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.http.client.utils.URIBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +127,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public static final int DEFAULT_AUTH_RETRY = 1;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
+
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writerWithDefaultPrettyPrinter();
 
   private class EncryptedQueueRefiller implements
     ValueQueue.QueueRefiller<EncryptedKeyVersion> {
@@ -282,8 +286,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
   private static void writeJson(Map map, OutputStream os) throws IOException {
     Writer writer = new OutputStreamWriter(os, StandardCharsets.UTF_8);
-    ObjectMapper jsonMapper = new ObjectMapper();
-    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, map);
+    WRITER.writeValue(writer, map);
   }
 
   /**

@@ -28,6 +28,7 @@ import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
 import org.codehaus.jackson.node.ContainerNode;
 
 import java.io.IOException;
@@ -105,6 +106,7 @@ public class Log4Json extends Layout {
    * configuration it must be done in a static intializer block.
    */
   private static final JsonFactory factory = new MappingJsonFactory();
+  private static final ObjectReader READER = new ObjectMapper(factory).reader();
   public static final String DATE = "date";
   public static final String EXCEPTION_CLASS = "exceptionclass";
   public static final String LEVEL = "level";
@@ -252,8 +254,7 @@ public class Log4Json extends Layout {
    * @throws IOException on any parsing problems
    */
   public static ContainerNode parse(String json) throws IOException {
-    ObjectMapper mapper = new ObjectMapper(factory);
-    JsonNode jsonNode = mapper.readTree(json);
+    JsonNode jsonNode = READER.readTree(json);
     if (!(jsonNode instanceof ContainerNode)) {
       throw new IOException("Wrong JSON data: " + json);
     }
