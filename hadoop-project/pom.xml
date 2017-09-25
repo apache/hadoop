@@ -1615,9 +1615,7 @@
             <configuration>
               <rules>
                 <DependencyConvergence>
-                  <!--
-                  <uniqueversions>true</uniqueversions>
-                  -->
+                  <uniqueVersions>true</uniqueVersions>
                 </DependencyConvergence>
                 <bannedDependencies>
                   <excludes>
