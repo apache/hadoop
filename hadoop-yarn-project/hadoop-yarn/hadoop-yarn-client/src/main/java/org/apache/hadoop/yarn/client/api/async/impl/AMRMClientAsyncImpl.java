@@ -142,11 +142,7 @@ extends AMRMClientAsync<T> {
     handlerThread.interrupt();
     super.serviceStop();
   }
-  
-  public void setHeartbeatInterval(int interval) {
-    heartbeatIntervalMs.set(interval);
-  }
-  
+
   public List<? extends Collection<T>> getMatchingRequests(
                                                    Priority priority, 
                                                    String resourceName, 
