@@ -52,7 +52,8 @@ The benefits of combining these workloads are two-fold:
 
 * [Concepts](Concepts.md): Describes the internals of the framework and some features in YARN core to support running services on YARN.
 * [Service REST API](YarnServiceAPI.md): The API doc for deploying/managing services on YARN.
-* [Service Discovery](ServiceDiscovery.md): Deep dives into the YARN DNS internals
+* [Service Discovery](ServiceDiscovery.md): Deep dives into the YARN DNS internals.
+* [Examples](Examples.md): List some example service definitions (`Yarnfile`).
 
 
  

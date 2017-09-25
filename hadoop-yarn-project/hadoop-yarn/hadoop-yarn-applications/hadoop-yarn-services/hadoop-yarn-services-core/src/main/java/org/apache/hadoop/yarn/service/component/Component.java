@@ -47,8 +47,10 @@ import org.slf4j.LoggerFactory;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +60,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.api.records.ContainerExitStatus.*;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.*;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.START;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.STOP;
@@ -384,6 +387,34 @@ public class Component implements EventHandler<ComponentEvent> {
       }
     }
     return true;
+  }
+
+  public Map<String, String> getDependencyHostIpTokens() {
+    Map<String, String> tokens = new HashMap<>();
+    List<String> dependencies = componentSpec.getDependencies();
+    if (SliderUtils.isEmpty(dependencies)) {
+      return tokens;
+    }
+    for (String dependency : dependencies) {
+      Collection<ComponentInstance> instances = scheduler.getAllComponents()
+          .get(dependency).getAllComponentInstances().values();
+      for (ComponentInstance instance : instances) {
+        if (instance.getContainerStatus() == null) {
+          continue;
+        }
+        if (SliderUtils.isEmpty(instance.getContainerStatus().getIPs()) ||
+            SliderUtils.isUnset(instance.getContainerStatus().getHost())) {
+          continue;
+        }
+        String ip = instance.getContainerStatus().getIPs().get(0);
+        String host = instance.getContainerStatus().getHost();
+        tokens.put(String.format(COMPONENT_IP,
+            instance.getCompInstanceName().toUpperCase()), ip);
+        tokens.put(String.format(COMPONENT_HOST,
+            instance.getCompInstanceName().toUpperCase()), host);
+      }
+    }
+    return tokens;
   }
 
   private void incRunningContainers() {

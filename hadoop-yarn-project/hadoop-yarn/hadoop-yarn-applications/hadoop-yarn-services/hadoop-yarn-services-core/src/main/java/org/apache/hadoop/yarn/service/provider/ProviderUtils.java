@@ -397,6 +397,7 @@ public class ProviderUtils implements YarnServiceConstants {
     tokens.put(CONTAINER_ID, instance.getContainer().getId().toString());
     tokens.put(COMPONENT_ID,
         String.valueOf(instance.getCompInstanceId().getId()));
+    tokens.putAll(instance.getComponent().getDependencyHostIpTokens());
     return tokens;
   }
 }
