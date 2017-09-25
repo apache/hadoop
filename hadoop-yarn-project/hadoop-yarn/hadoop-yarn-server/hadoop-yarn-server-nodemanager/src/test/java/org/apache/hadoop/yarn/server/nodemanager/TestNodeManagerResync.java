@@ -454,14 +454,6 @@ public class TestNodeManagerResync {
             if (containersShouldBePreserved) {
               Assert.assertFalse(containers.isEmpty());
               Assert.assertTrue(containers.containsKey(existingCid));
-              ContainerState state = containers.get(existingCid)
-                  .cloneAndGetContainerStatus().getState();
-              // Wait till RUNNING state...
-              int counter = 50;
-              while (state != ContainerState.RUNNING && counter > 0) {
-                Thread.sleep(100);
-                counter--;
-              }
               Assert.assertEquals(ContainerState.RUNNING,
                   containers.get(existingCid)
                   .cloneAndGetContainerStatus().getState());
