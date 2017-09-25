@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A no-op implementation of MetadataStore.  Clients that use this
@@ -100,5 +102,18 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public String toString() {
     return "NullMetadataStore";
+  }
+
+  @Override
+  public Map<String, String> getDiagnostics() throws IOException {
+    Map<String, String> map = new HashMap<>();
+    map.put("name", "Null Metadata Store");
+    map.put("description", "This is not a real metadata store");
+    return map;
+  }
+
+  @Override
+  public void updateParameters(Map<String, String> parameters)
+      throws IOException {
   }
 }
