@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -95,6 +96,10 @@ public final class S3Guard {
           msClass.getSimpleName(), fs.getScheme());
       msInstance.initialize(fs);
       return msInstance;
+    } catch (FileNotFoundException e) {
+      // Don't log this exception as it means the table doesn't exist yet;
+      // rely on callers to catch and treat specially
+      throw e;
     } catch (RuntimeException | IOException e) {
       String message = "Failed to instantiate metadata store " +
           conf.get(S3_METADATA_STORE_IMPL)
@@ -109,14 +114,20 @@ public final class S3Guard {
     }
   }
 
-  private static Class<? extends MetadataStore> getMetadataStoreClass(
+  static Class<? extends MetadataStore> getMetadataStoreClass(
       Configuration conf) {
     if (conf == null) {
       return NullMetadataStore.class;
     }
+    if (conf.get(S3_METADATA_STORE_IMPL) != null && LOG.isDebugEnabled()) {
+      LOG.debug("Metastore option source {}",
+          conf.getPropertySources(S3_METADATA_STORE_IMPL));
+    }
 
-    return conf.getClass(S3_METADATA_STORE_IMPL, NullMetadataStore.class,
-            MetadataStore.class);
+    Class<? extends MetadataStore> aClass = conf.getClass(
+        S3_METADATA_STORE_IMPL, NullMetadataStore.class,
+        MetadataStore.class);
+    return aClass;
   }
 
 

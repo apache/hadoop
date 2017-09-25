@@ -298,6 +298,10 @@ public class S3AFileSystem extends FileSystem {
       metadataStore = S3Guard.getMetadataStore(this);
       allowAuthoritative = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
           DEFAULT_METADATASTORE_AUTHORITATIVE);
+      if (hasMetadataStore()) {
+        LOG.debug("Using metadata store {}, authoritative={}",
+            getMetadataStore(), allowAuthoritative);
+      }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -967,7 +971,7 @@ public class S3AFileSystem extends FileSystem {
    * @return the metadata store of this FS instance
    */
   @VisibleForTesting
-  MetadataStore getMetadataStore() {
+  public MetadataStore getMetadataStore() {
     return metadataStore;
   }
 
@@ -2474,9 +2478,11 @@ public class S3AFileSystem extends FileSystem {
     sb.append(", statistics {")
         .append(statistics)
         .append("}");
-    sb.append(", metrics {")
-        .append(instrumentation.dump("{", "=", "} ", true))
-        .append("}");
+    if (instrumentation != null) {
+      sb.append(", metrics {")
+          .append(instrumentation.dump("{", "=", "} ", true))
+          .append("}");
+    }
     sb.append('}');
     return sb.toString();
   }
