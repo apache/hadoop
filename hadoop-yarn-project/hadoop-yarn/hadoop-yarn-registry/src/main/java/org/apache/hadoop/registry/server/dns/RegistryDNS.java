@@ -1550,6 +1550,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   private final RegistryCommand removeRecordCommand = new RegistryCommand() {
     @Override
     public void exec(Zone zone, Record record) throws IOException {
+      if (zone == null) {
+        LOG.error("Unable to remove record because zone is null: {}", record);
+        return;
+      }
       zone.removeRecord(record);
       LOG.info("Removed {}", record);
       if (isDNSSECEnabled()) {
