@@ -1095,7 +1095,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (!success) {
         fsImage.close();
       }
-      writeUnlock("loadFSImage");
+      writeUnlock("loadFSImage", true);
     }
     imageLoadComplete();
   }
@@ -1586,6 +1586,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public void writeUnlock(String opName) {
     this.fsLock.writeUnlock(opName);
   }
+
+  public void writeUnlock(String opName, boolean suppressWriteLockReport) {
+    this.fsLock.writeUnlock(opName, suppressWriteLockReport);
+  }
+
   @Override
   public boolean hasWriteLock() {
     return this.fsLock.isWriteLockedByCurrentThread();
