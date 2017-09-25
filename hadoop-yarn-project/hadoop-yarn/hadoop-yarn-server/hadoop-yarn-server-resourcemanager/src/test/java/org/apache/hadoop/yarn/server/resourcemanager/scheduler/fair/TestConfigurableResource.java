@@ -25,13 +25,16 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+/**
+ * To test class {@link ConfigurableResource}.
+ */
 public class TestConfigurableResource {
   private final Resource clusterResource = Resources.createResource(2048, 2);
 
   @Test
   public void testGetResourceWithPercentage() {
     ConfigurableResource configurableResource =
-        new ConfigurableResource(new double[] { 0.5, 0.5 });
+        new ConfigurableResource(new double[] {0.5, 0.5});
     assertEquals(
         configurableResource.getResource(clusterResource).getMemorySize(),
         1024);
