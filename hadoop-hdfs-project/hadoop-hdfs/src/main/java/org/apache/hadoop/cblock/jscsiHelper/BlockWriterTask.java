@@ -77,6 +77,7 @@ public class BlockWriterTask implements Runnable {
     String containerName = null;
     XceiverClientSpi client = null;
     LevelDBStore levelDBStore = null;
+    String traceID = flusher.getTraceID(new File(dbPath), block.getBlockID());
     flusher.getLOG().debug(
         "Writing block to remote. block ID: {}", block.getBlockID());
     try {
@@ -94,8 +95,7 @@ public class BlockWriterTask implements Runnable {
       Preconditions.checkState(data.length > 0, "Block data is zero length");
       startTime = Time.monotonicNow();
       ContainerProtocolCalls.writeSmallFile(client, containerName,
-          Long.toString(block.getBlockID()), data,
-          flusher.getTraceID(new File(dbPath), block.getBlockID()));
+          Long.toString(block.getBlockID()), data, traceID);
       endTime = Time.monotonicNow();
       flusher.getTargetMetrics().updateContainerWriteLatency(
           endTime - startTime);
@@ -107,7 +107,7 @@ public class BlockWriterTask implements Runnable {
     } catch (Exception ex) {
       flusher.getLOG().error("Writing of block:{} failed, We have attempted " +
               "to write this block {} times to the container {}.Trace ID:{}",
-          block.getBlockID(), this.getTryCount(), containerName, "", ex);
+          block.getBlockID(), this.getTryCount(), containerName, traceID, ex);
       writeRetryBlock(block);
       if (ex instanceof IOException) {
         flusher.getTargetMetrics().incNumWriteIOExceptionRetryBlocks();
