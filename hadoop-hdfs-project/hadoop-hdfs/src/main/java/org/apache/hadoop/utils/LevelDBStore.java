@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -179,7 +180,7 @@ public class LevelDBStore implements MetadataStore {
         it.seek(from);
       }
       if (!it.hasNext()) {
-        throw new IOException("Key not found");
+        return null;
       }
       switch (offset) {
       case 0:
@@ -260,6 +261,20 @@ public class LevelDBStore implements MetadataStore {
     }
   }
 
+  @Override
+  public List<Map.Entry<byte[], byte[]>> getRangeKVs(byte[] startKey,
+      int count, MetadataKeyFilters.MetadataKeyFilter... filters)
+      throws IOException, IllegalArgumentException {
+    return getRangeKVs(startKey, count, false, filters);
+  }
+
+  @Override
+  public List<Map.Entry<byte[], byte[]>> getSequentialRangeKVs(byte[] startKey,
+      int count, MetadataKeyFilters.MetadataKeyFilter... filters)
+      throws IOException, IllegalArgumentException {
+    return getRangeKVs(startKey, count, true, filters);
+  }
+
   /**
    * Returns a certain range of key value pairs as a list based on a
    * startKey or count. Further a {@link MetadataKeyFilter} can be added to
@@ -287,9 +302,9 @@ public class LevelDBStore implements MetadataStore {
    * @throws IOException if an invalid startKey is given or other I/O errors.
    * @throws IllegalArgumentException if count is less than 0.
    */
-  @Override
-  public List<Entry<byte[], byte[]>> getRangeKVs(byte[] startKey,
-      int count, MetadataKeyFilter... filters) throws IOException {
+  private List<Entry<byte[], byte[]>> getRangeKVs(byte[] startKey,
+      int count, boolean sequential, MetadataKeyFilter... filters)
+      throws IOException {
     List<Entry<byte[], byte[]>> result = new ArrayList<>();
     long start = System.currentTimeMillis();
     if (count < 0) {
@@ -314,10 +329,21 @@ public class LevelDBStore implements MetadataStore {
         byte[] preKey = dbIter.hasPrev() ? dbIter.peekPrev().getKey() : null;
         byte[] nextKey = dbIter.hasNext() ? dbIter.peekNext().getKey() : null;
         Entry<byte[], byte[]> current = dbIter.next();
-        if (filters == null || Arrays.asList(filters).stream()
-            .allMatch(entry -> entry.filterKey(preKey,
-                current.getKey(), nextKey))) {
+
+        if (filters == null) {
           result.add(current);
+        } else {
+          if (Arrays.asList(filters).stream().allMatch(
+              entry -> entry.filterKey(preKey, current.getKey(), nextKey))) {
+            result.add(current);
+          } else {
+            if (result.size() > 0 && sequential) {
+              // if the caller asks for a sequential range of results,
+              // and we met a dis-match, abort iteration from here.
+              // if result is empty, we continue to look for the first match.
+              break;
+            }
+          }
         }
       }
     } finally {

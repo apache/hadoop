@@ -37,7 +37,6 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.*;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -47,6 +46,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.BeforeClass;
+import org.junit.AfterClass;
+import org.junit.Test;
+import org.junit.Ignore;
+import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -125,6 +129,20 @@ public class TestVolume {
     // verify the key creation time
     assertTrue((OzoneUtils.formatDate(vol.getCreatedOn())
         / 1000) >= (currentTime / 1000));
+
+    // Test create a volume with invalid volume name,
+    // not use Rule here because the test method is static.
+    try {
+      String invalidVolumeName = "#" + OzoneUtils.getRequestID().toLowerCase();
+      client.setUserAuth(OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+      mockClient.createVolume(invalidVolumeName, "bilbo", "100TB");
+      fail("Except the volume creation be failed because the"
+          + " volume name starts with an invalid char #");
+    } catch (Exception e) {
+      assertTrue(e instanceof OzoneRestClientException);
+      assertTrue(e.getMessage().contains("Bucket or Volume name"
+          + " has an unsupported character : #"));
+    }
   }
 
   @Test
@@ -239,7 +257,7 @@ public class TestVolume {
       prevKey = ovols.get(ovols.size() - 1);
       pagecount++;
     }
-    Assert.assertEquals(volCount / step, pagecount);
+    assertEquals(volCount / step, pagecount);
   }
 
   // TODO: remove @Ignore below once the problem has been resolved.
@@ -275,7 +293,7 @@ public class TestVolume {
     }
     // becasue we are querying an existing ozone store, there will
     // be volumes created by other tests too. So we should get more page counts.
-    Assert.assertEquals(volCount / step, pagecount);
+    assertEquals(volCount / step, pagecount);
   }
 
   @Test
@@ -382,37 +400,32 @@ public class TestVolume {
   private static void verifyHttpConnectionClosed(
       List<CloseableHttpClient> mockedHttpClients) {
     final AtomicInteger totalCalled = new AtomicInteger();
-    Assert.assertTrue(mockedHttpClients.stream().allMatch(
-        closeableHttpClient -> {
-          boolean clientUsed = false;
-          try {
-            verify(closeableHttpClient, times(1))
-                .execute(Mockito.any());
-            totalCalled.incrementAndGet();
-            clientUsed = true;
-          } catch (Throwable e) {
-            // There might be some redundant instances in mockedHttpClients,
-            // it is allowed that a client is not used.
-            return true;
-          }
+    assertTrue(mockedHttpClients.stream().allMatch(closeableHttpClient -> {
+      boolean clientUsed = false;
+      try {
+        verify(closeableHttpClient, times(1)).execute(Mockito.any());
+        totalCalled.incrementAndGet();
+        clientUsed = true;
+      } catch (Throwable e) {
+        // There might be some redundant instances in mockedHttpClients,
+        // it is allowed that a client is not used.
+        return true;
+      }
 
-          if (clientUsed) {
-            try {
-              // If a client is used, ensure the close function is called.
-              verify(closeableHttpClient,
-                  times(1)).close();
-              return true;
-            } catch (IOException e) {
-              return false;
-            }
-          } else {
-            return true;
-          }
-        }));
-    System.out.println("Successful connections "
-        + totalCalled.get());
-    Assert.assertTrue(
-        "The mocked http client should be called at least once.",
+      if (clientUsed) {
+        try {
+          // If a client is used, ensure the close function is called.
+          verify(closeableHttpClient, times(1)).close();
+          return true;
+        } catch (IOException e) {
+          return false;
+        }
+      } else {
+        return true;
+      }
+    }));
+    System.out.println("Successful connections " + totalCalled.get());
+    assertTrue("The mocked http client should be called at least once.",
         totalCalled.get() > 0);
   }
 }
