@@ -45,7 +45,6 @@ public class RpcClientFactoryPBImpl implements RpcClientFactory {
   private static final String PB_IMPL_CLASS_SUFFIX = "PBClientImpl";
   
   private static final RpcClientFactoryPBImpl self = new RpcClientFactoryPBImpl();
-  private Configuration localConf = new Configuration();
   private ConcurrentMap<Class<?>, Constructor<?>> cache = new ConcurrentHashMap<Class<?>, Constructor<?>>();
   
   public static RpcClientFactoryPBImpl get() {
@@ -62,7 +61,7 @@ public class RpcClientFactoryPBImpl implements RpcClientFactory {
     if (constructor == null) {
       Class<?> pbClazz = null;
       try {
-        pbClazz = localConf.getClassByName(getPBImplClassName(protocol));
+        pbClazz = conf.getClassByName(getPBImplClassName(protocol));
       } catch (ClassNotFoundException e) {
         throw new YarnRuntimeException("Failed to load class: ["
             + getPBImplClassName(protocol) + "]", e);

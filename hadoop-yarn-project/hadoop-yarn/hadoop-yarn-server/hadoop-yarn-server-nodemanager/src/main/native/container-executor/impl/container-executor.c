@@ -1258,6 +1258,7 @@ char* sanitize_docker_command(const char *line) {
     {"device", required_argument, 0, 'i' },
     {"detach", required_argument, 0, 't' },
     {"format", required_argument, 0, 'f' },
+    {"group-add", required_argument, 0, 'x' },
     {0, 0, 0, 0}
   };
 
@@ -1356,6 +1357,9 @@ char* sanitize_docker_command(const char *line) {
         strcat(output, "--format=");
         strcat(output, optarg);
         strcat(output, " ");
+        break;
+      case 'x':
+        quote_and_append_arg(&output, &output_size, "--group-add ", optarg);
         break;
       default:
         fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);

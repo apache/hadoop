@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.management.ObjectName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDoubleArray;
 import org.apache.commons.lang.exception.ExceptionUtils;
@@ -127,6 +128,8 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   public static final Logger LOG =
       LoggerFactory.getLogger(DecayRpcScheduler.class);
+
+  private static final ObjectWriter WRITER = new ObjectMapper().writer();
 
   // Track the decayed and raw (no decay) number of calls for each schedulable
   // identity from all previous decay windows: idx 0 for decayed call count and
@@ -909,8 +912,7 @@ public class DecayRpcScheduler implements RpcScheduler,
       return "{}";
     } else {
       try {
-        ObjectMapper om = new ObjectMapper();
-        return om.writeValueAsString(decisions);
+        return WRITER.writeValueAsString(decisions);
       } catch (Exception e) {
         return "Error: " + e.getMessage();
       }
@@ -919,8 +921,7 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   public String getCallVolumeSummary() {
     try {
-      ObjectMapper om = new ObjectMapper();
-      return om.writeValueAsString(getDecayedCallCounts());
+      return WRITER.writeValueAsString(getDecayedCallCounts());
     } catch (Exception e) {
       return "Error: " + e.getMessage();
     }

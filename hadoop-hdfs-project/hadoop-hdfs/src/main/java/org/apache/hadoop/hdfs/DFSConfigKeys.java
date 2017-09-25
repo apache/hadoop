@@ -725,6 +725,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.edit.log.transfer.bandwidthPerSec";
   public static final long DFS_EDIT_LOG_TRANSFER_RATE_DEFAULT = 0; //no throttling
 
+  public static final String DFS_QJM_OPERATIONS_TIMEOUT =
+      "dfs.qjm.operations.timeout";
+  public static final long DFS_QJM_OPERATIONS_TIMEOUT_DEFAULT = 60000;
+
   // Datanode File IO Stats
   public static final String DFS_DATANODE_ENABLE_FILEIO_FAULT_INJECTION_KEY =
       "dfs.datanode.enable.fileio.fault.injection";

@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.metrics2;
 
-import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Build a JSON dump of the metrics.
@@ -43,6 +44,9 @@ public class MetricsJsonBuilder extends MetricsRecordBuilder {
       .getLogger(MetricsRecordBuilder.class);
   private final MetricsCollector parent;
   private Map<String, Object> innerMetrics = new LinkedHashMap<>();
+
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writer();
 
   /**
    * Build an instance.
@@ -116,7 +120,7 @@ public class MetricsJsonBuilder extends MetricsRecordBuilder {
   @Override
   public String toString() {
     try {
-      return new ObjectMapper().writeValueAsString(innerMetrics);
+      return WRITER.writeValueAsString(innerMetrics);
     } catch (IOException e) {
       LOG.warn("Failed to dump to Json.", e);
       return ExceptionUtils.getStackTrace(e);

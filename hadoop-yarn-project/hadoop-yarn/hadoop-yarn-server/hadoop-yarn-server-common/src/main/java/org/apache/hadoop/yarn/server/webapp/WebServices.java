@@ -192,7 +192,8 @@ public class WebServices {
         }
       }
       if (queueQuery != null && !queueQuery.isEmpty()) {
-        if (!appReport.getQueue().equals(queueQuery)) {
+        if (appReport.getQueue() == null || !appReport.getQueue()
+            .equals(queueQuery)) {
           continue;
         }
       }

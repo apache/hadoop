@@ -180,7 +180,7 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.UnknownCryptoProtocolVersionException;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
@@ -7193,12 +7193,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *                      rebuilding
    * @return The according result of add operation.
    */
-  AddECPolicyResponse[] addErasureCodingPolicies(ErasureCodingPolicy[] policies,
-      final boolean logRetryCache) throws IOException {
+  AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
+      ErasureCodingPolicy[] policies, final boolean logRetryCache)
+      throws IOException {
     final String operationName = "addErasureCodingPolicies";
     String addECPolicyName = "";
     checkOperation(OperationCategory.WRITE);
-    List<AddECPolicyResponse> responses = new ArrayList<>();
+    List<AddErasureCodingPolicyResponse> responses = new ArrayList<>();
     boolean success = false;
     writeLock();
     try {
@@ -7210,13 +7211,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               FSDirErasureCodingOp.addErasureCodingPolicy(this, policy,
                   logRetryCache);
           addECPolicyName = newPolicy.getName();
-          responses.add(new AddECPolicyResponse(newPolicy));
+          responses.add(new AddErasureCodingPolicyResponse(newPolicy));
         } catch (HadoopIllegalArgumentException e) {
-          responses.add(new AddECPolicyResponse(policy, e));
+          responses.add(new AddErasureCodingPolicyResponse(policy, e));
         }
       }
       success = true;
-      return responses.toArray(new AddECPolicyResponse[0]);
+      return responses.toArray(new AddErasureCodingPolicyResponse[0]);
     } finally {
       writeUnlock(operationName);
       if (success) {
