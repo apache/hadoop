@@ -115,11 +115,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
 
     <dependency>
-      <groupId>org.apache.ratis</groupId>
-      <artifactId>ratis-proto-shaded</artifactId>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-common</artifactId>
+      <artifactId>ratis-server</artifactId>
       <groupId>org.apache.ratis</groupId>
       <exclusions>
         <exclusion>
@@ -127,14 +123,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <artifactId>slf4j-log4j12</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-client</artifactId>
-      <groupId>org.apache.ratis</groupId>
-    </dependency>
-    <dependency>
-      <artifactId>ratis-server</artifactId>
-      <groupId>org.apache.ratis</groupId>
     </dependency>
     <dependency>
       <artifactId>ratis-netty</artifactId>
