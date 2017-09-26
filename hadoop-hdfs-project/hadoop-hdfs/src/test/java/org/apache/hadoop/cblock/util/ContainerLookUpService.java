@@ -22,7 +22,7 @@ import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 
 /**
  * NOTE : This class is only for testing purpose.
@@ -34,8 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * This is to allow volume creation call and perform standalone tests.
  */
 public final class ContainerLookUpService {
-  private static ConcurrentHashMap<String, ContainerDescriptor>
-      containers = new ConcurrentHashMap<>();
+  private static HashMap<String, ContainerDescriptor>
+      containers = new HashMap<>();
 
   /**
    * Return an *existing* container with given Id.

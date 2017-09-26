@@ -898,22 +898,6 @@
   </property>
 
   <property>
-    <name>dfs.cblock.manager.pool.size</name>
-    <value>16</value>
-    <description>
-      Number of threads that cblock manager will use for container operations.
-    </description>
-  </property>
-
-  <property>
-    <name>dfs.cblock.rpc.timeout.seconds</name>
-    <value>300</value>
-    <description>
-      RPC timeout in seconds used for cblock CLI operations.
-    </description>
-  </property>
-
-  <property>
     <name>dfs.cblock.scm.ipaddress</name>
     <value>127.0.0.1</value>
     <description>

@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The internal representation maintained by CBlock server as the info for
@@ -54,7 +53,7 @@ public class VolumeDescriptor {
   private static final Logger LOG =
       LoggerFactory.getLogger(VolumeDescriptor.class);
 
-  private ConcurrentHashMap<String, ContainerDescriptor> containerMap;
+  private HashMap<String, ContainerDescriptor> containerMap;
   private String userName;
   private int blockSize;
   private long volumeSize;
@@ -73,12 +72,13 @@ public class VolumeDescriptor {
    * and set*() methods are for the same purpose also.
    */
   public VolumeDescriptor() {
-    this(null, null, 0, 0);
+    containerMap = new HashMap<>();
+    containerIdOrdered = new ArrayList<>();
   }
 
   public VolumeDescriptor(String userName, String volumeName, long volumeSize,
       int blockSize) {
-    this.containerMap = new ConcurrentHashMap<>();
+    this.containerMap = new HashMap<>();
     this.userName = userName;
     this.volumeName = volumeName;
     this.blockSize = blockSize;
