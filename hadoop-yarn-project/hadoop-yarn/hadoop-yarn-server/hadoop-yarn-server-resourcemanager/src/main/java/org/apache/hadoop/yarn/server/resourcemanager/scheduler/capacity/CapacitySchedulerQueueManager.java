@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -170,8 +171,14 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     CSQueue newRoot =  parseQueue(this.csContext, newConf, null,
         CapacitySchedulerConfiguration.ROOT, newQueues, queues, NOOP);
 
-    // Ensure queue hiearchy in the new XML file is proper.
-    validateQueueHierarchy(queues, newQueues);
+    // When failing over, if using configuration store, don't validate queue
+    // hierarchy since queues can be removed without being STOPPED.
+    if (!csContext.isConfigurationMutable() ||
+        csContext.getRMContext().getHAServiceState()
+            != HAServiceProtocol.HAServiceState.STANDBY) {
+      // Ensure queue hiearchy in the new XML file is proper.
+      validateQueueHierarchy(queues, newQueues);
+    }
 
     // Add new queues and delete OldQeueus only after validation.
     updateQueues(queues, newQueues);
