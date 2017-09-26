@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.cblock.client;
 
+import org.apache.hadoop.cblock.CBlockConfigKeys;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.cblock.protocolPB.CBlockServiceProtocolPB;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -36,32 +37,25 @@ import java.util.concurrent.TimeUnit;
  */
 public class CBlockVolumeClient {
   private final CBlockServiceProtocolClientSideTranslatorPB cblockClient;
-  private final OzoneConfiguration conf;
 
   public CBlockVolumeClient(OzoneConfiguration conf) throws IOException {
-    this.conf = conf;
-    long version = RPC.getProtocolVersion(CBlockServiceProtocolPB.class);
-    InetSocketAddress address = OzoneClientUtils.getCblockServiceRpcAddr(conf);
-    // currently the largest supported volume is about 8TB, which might take
-    // > 20 seconds to finish creating containers. thus set timeout to 30 sec.
-    cblockClient = new CBlockServiceProtocolClientSideTranslatorPB(
-        RPC.getProtocolProxy(CBlockServiceProtocolPB.class, version,
-            address, UserGroupInformation.getCurrentUser(), conf,
-            NetUtils.getDefaultSocketFactory(conf), 30000, RetryPolicies
-                .retryUpToMaximumCountWithFixedSleep(300, 1, TimeUnit
-                    .SECONDS)).getProxy());
+    this(conf, null);
   }
 
   public CBlockVolumeClient(OzoneConfiguration conf,
       InetSocketAddress serverAddress) throws IOException {
-    this.conf = conf;
+    InetSocketAddress address = serverAddress != null ? serverAddress :
+        OzoneClientUtils.getCblockServiceRpcAddr(conf);
     long version = RPC.getProtocolVersion(CBlockServiceProtocolPB.class);
+    int rpcTimeout =
+        conf.getInt(CBlockConfigKeys.DFS_CBLOCK_RPC_TIMEOUT_SECONDS,
+        CBlockConfigKeys.DFS_CBLOCK_RPC_TIMEOUT_SECONDS_DEFAULT) * 1000;
     cblockClient = new CBlockServiceProtocolClientSideTranslatorPB(
         RPC.getProtocolProxy(CBlockServiceProtocolPB.class, version,
-            serverAddress, UserGroupInformation.getCurrentUser(), conf,
-            NetUtils.getDefaultSocketFactory(conf), 30000, RetryPolicies
-                .retryUpToMaximumCountWithFixedSleep(300, 1, TimeUnit
-                    .SECONDS)).getProxy());
+            address, UserGroupInformation.getCurrentUser(), conf,
+            NetUtils.getDefaultSocketFactory(conf), rpcTimeout, RetryPolicies
+                .retryUpToMaximumCountWithFixedSleep(
+                    300, 1, TimeUnit.SECONDS)).getProxy());
   }
 
   public void createVolume(String userName, String volumeName,

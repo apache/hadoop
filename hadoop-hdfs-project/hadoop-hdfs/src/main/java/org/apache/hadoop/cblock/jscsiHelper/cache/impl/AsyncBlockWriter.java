@@ -151,6 +151,7 @@ public class AsyncBlockWriter {
    */
   public void writeBlock(LogicalBlock block) throws IOException {
     byte[] keybuf = Longs.toByteArray(block.getBlockID());
+    String traceID = parentCache.getTraceID(block.getBlockID());
     if (parentCache.isShortCircuitIOEnabled()) {
       long startTime = Time.monotonicNow();
       getCacheDB().put(keybuf, block.getData().array());
@@ -176,7 +177,7 @@ public class AsyncBlockWriter {
             .acquireClient(parentCache.getPipeline(block.getBlockID()));
         ContainerProtocolCalls.writeSmallFile(client, containerName,
             Long.toString(block.getBlockID()), block.getData().array(),
-            parentCache.getTraceID(block.getBlockID()));
+            traceID);
         long endTime = Time.monotonicNow();
         if (parentCache.isTraceEnabled()) {
           String datahash = DigestUtils.sha256Hex(block.getData().array());
@@ -189,8 +190,9 @@ public class AsyncBlockWriter {
         parentCache.getTargetMetrics().incNumDirectBlockWrites();
       } catch (Exception ex) {
         parentCache.getTargetMetrics().incNumFailedDirectBlockWrites();
-        LOG.error("Direct I/O writing of block:{} to container {} failed",
-            block.getBlockID(), containerName, ex);
+        LOG.error("Direct I/O writing of block:{} traceID:{} to "
+            + "container {} failed", block.getBlockID(), traceID,
+            containerName, ex);
         throw ex;
       } finally {
         if (client != null) {
