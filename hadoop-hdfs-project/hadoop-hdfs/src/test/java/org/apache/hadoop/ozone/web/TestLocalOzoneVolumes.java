@@ -178,4 +178,8 @@ public class TestLocalOzoneVolumes extends TestOzoneHelper {
     super.testGetVolumesOfAnotherUserShouldFail(port);
   }
 
+  @Test
+  public void testListKeyOnEmptyBucket() throws IOException {
+    super.testListKeyOnEmptyBucket(port);
+  }
 }
