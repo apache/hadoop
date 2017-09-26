@@ -61,20 +61,20 @@ public class TestSchedConfCLI {
   @Test(timeout = 10000)
   public void testInvalidConf() throws Exception {
     // conf pair with no key should be invalid
-    int exitCode = cli.run(new String[] {"-add", "root.a,=confVal"});
+    int exitCode = cli.run(new String[] {"-add", "root.a:=confVal"});
     assertTrue("Should return an error code", exitCode != 0);
     assertTrue(sysErrStream.toString().contains("Specify configuration key " +
         "value as confKey=confVal."));
-    exitCode = cli.run(new String[] {"-update", "root.a,=confVal"});
+    exitCode = cli.run(new String[] {"-update", "root.a:=confVal"});
     assertTrue("Should return an error code", exitCode != 0);
     assertTrue(sysErrStream.toString().contains("Specify configuration key " +
         "value as confKey=confVal."));
 
-    exitCode = cli.run(new String[] {"-add", "root.a,confKey=confVal=conf"});
+    exitCode = cli.run(new String[] {"-add", "root.a:confKey=confVal=conf"});
     assertTrue("Should return an error code", exitCode != 0);
     assertTrue(sysErrStream.toString().contains("Specify configuration key " +
         "value as confKey=confVal."));
-    exitCode = cli.run(new String[] {"-update", "root.a,confKey=confVal=c"});
+    exitCode = cli.run(new String[] {"-update", "root.a:confKey=confVal=c"});
     assertTrue("Should return an error code", exitCode != 0);
     assertTrue(sysErrStream.toString().contains("Specify configuration key " +
         "value as confKey=confVal."));
@@ -83,8 +83,7 @@ public class TestSchedConfCLI {
   @Test(timeout = 10000)
   public void testAddQueues() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
-    cli.addQueues("root.a,a1=aVal1,a2=aVal2," +
-        "a3=", schedUpdateInfo);
+    cli.addQueues("root.a:a1=aVal1,a2=aVal2,a3=", schedUpdateInfo);
     QueueConfigInfo addInfo = schedUpdateInfo.getAddQueueInfo().get(0);
     assertEquals("root.a", addInfo.getQueue());
     Map<String, String> params = addInfo.getParams();
@@ -94,7 +93,7 @@ public class TestSchedConfCLI {
     assertNull(params.get("a3"));
 
     schedUpdateInfo = new SchedConfUpdateInfo();
-    cli.addQueues("root.b,b1=bVal1;root.c,c1=cVal1", schedUpdateInfo);
+    cli.addQueues("root.b:b1=bVal1;root.c:c1=cVal1", schedUpdateInfo);
     assertEquals(2, schedUpdateInfo.getAddQueueInfo().size());
     QueueConfigInfo bAddInfo = schedUpdateInfo.getAddQueueInfo().get(0);
     assertEquals("root.b", bAddInfo.getQueue());
@@ -111,7 +110,7 @@ public class TestSchedConfCLI {
   @Test(timeout = 10000)
   public void testRemoveQueues() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
-    cli.removeQueues("root.a,root.b,root.c.c1", schedUpdateInfo);
+    cli.removeQueues("root.a;root.b;root.c.c1", schedUpdateInfo);
     List<String> removeInfo = schedUpdateInfo.getRemoveQueueInfo();
     assertEquals(3, removeInfo.size());
     assertEquals("root.a", removeInfo.get(0));
@@ -122,8 +121,7 @@ public class TestSchedConfCLI {
   @Test(timeout = 10000)
   public void testUpdateQueues() {
     SchedConfUpdateInfo schedUpdateInfo = new SchedConfUpdateInfo();
-    cli.updateQueues("root.a,a1=aVal1,a2=aVal2," +
-        "a3=", schedUpdateInfo);
+    cli.updateQueues("root.a:a1=aVal1,a2=aVal2,a3=", schedUpdateInfo);
     QueueConfigInfo updateInfo = schedUpdateInfo.getUpdateQueueInfo().get(0);
     assertEquals("root.a", updateInfo.getQueue());
     Map<String, String> params = updateInfo.getParams();
@@ -133,7 +131,7 @@ public class TestSchedConfCLI {
     assertNull(params.get("a3"));
 
     schedUpdateInfo = new SchedConfUpdateInfo();
-    cli.updateQueues("root.b,b1=bVal1;root.c,c1=cVal1", schedUpdateInfo);
+    cli.updateQueues("root.b:b1=bVal1;root.c:c1=cVal1", schedUpdateInfo);
     assertEquals(2, schedUpdateInfo.getUpdateQueueInfo().size());
     QueueConfigInfo bUpdateInfo = schedUpdateInfo.getUpdateQueueInfo().get(0);
     assertEquals("root.b", bUpdateInfo.getQueue());

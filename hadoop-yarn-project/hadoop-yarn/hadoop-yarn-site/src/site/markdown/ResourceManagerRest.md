@@ -4436,16 +4436,18 @@ Scheduler Configuration Mutation API
 
 The scheduler configuration mutation API provides a way to modify scheduler/queue configuration and queue hierarchy.
 
+Please note that this feature is currently in the alpha stage and is subject to change.
+
 
 ### URI
 
-      * http://rm-http-address:port/ws/v1/cluster/sched-conf
+      * http://rm-http-address:port/ws/v1/cluster/scheduler-conf
 
 ### HTTP Operations Supported
 
       * PUT
 
-### Elements of the *schedConf* object
+### Elements of the *sched-conf* object
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -4466,7 +4468,7 @@ Request for updating queue configurations.
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| queueName | string | Full path name of the queue to update |
+| queue-name | string | Full path name of the queue to update |
 | params | map | A map of key value configuration pairs to update for this queue |
 
 Assuming we are using the capacity scheduler and the current queue configuration is a single queue *root.default*, this example sets *root.default*'s maximum applications to 100 and its minimum user limit percent to 10.
@@ -4475,12 +4477,12 @@ HTTP Request:
 
 ```xml
       Accept: application/xml
-      PUT http://rm-http-address:port/ws/v1/cluster/sched-conf
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
       Content-Type: application/xml
       <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-      <schedConf>
+      <sched-conf>
         <update-queue>
-          <queueName>root.default</queueName>
+          <queue-name>root.default</queue-name>
           <params>
             <entry>
               <key>maximum-applications</key>
@@ -4492,7 +4494,7 @@ HTTP Request:
             </entry>
           </params>
         </update-queue>
-      </schedConf>
+      </sched-conf>
 ```
 
 
@@ -4511,7 +4513,7 @@ Request for adding queues/updating queue configurations.
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| queueName | string | Full path name of the queue to add |
+| queue-name | string | Full path name of the queue to add |
 | params | map | A map of key value configuration pairs to set for this queue |
 
 Assuming we are using the capacity scheduler and the current queue configuration is a single queue *root.default*, this example adds a queue *root.a* with capacity/maximum-capacity 10, and adjusts *root.default*'s capacity/maximum-capacity to 90. (More complex examples include adding a queue whose parent is also being added in the same request, or adding multiple sibling queues.)
@@ -4520,12 +4522,12 @@ HTTP Request:
 
 ```xml
       Accept: application/xml
-      PUT http://rm-http-address:port/ws/v1/cluster/sched-conf
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
       Content-Type: application/xml
       <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-      <schedConf>
+      <sched-conf>
         <add-queue>
-          <queueName>root.a</queueName>
+          <queue-name>root.a</queue-name>
           <params>
             <entry>
               <key>capacity</key>
@@ -4538,7 +4540,7 @@ HTTP Request:
           </params>
         </add-queue>
         <update-queue>
-          <queueName>root.default</queueName>
+          <queue-name>root.default</queue-name>
           <params>
             <entry>
               <key>capacity</key>
@@ -4550,7 +4552,7 @@ HTTP Request:
             </entry>
           </params>
         </update-queue>
-      </schedConf>
+      </sched-conf>
 ```
 
 
@@ -4573,13 +4575,13 @@ HTTP Request:
 
 ```xml
       Accept: application/xml
-      PUT http://rm-http-address:port/ws/v1/cluster/sched-conf
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
       Content-Type: application/xml
       <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-      <schedConf>
+      <sched-conf>
         <remove-queue>root.a</remove-queue>
         <remove-queue>root.b</remove-queue>
-      </schedConf>
+      </sched-conf>
 ```
 
 
@@ -4597,17 +4599,17 @@ HTTP Request:
 
 ```xml
       Accept: application/xml
-      PUT http://rm-http-address:port/ws/v1/cluster/sched-conf
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
       Content-Type: application/xml
       <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-      <schedConf>
+      <sched-conf>
         <global-updates>
           <entry>
             <key>yarn.scheduler.capacity.queue-mappings-override.enable</key>
             <value>true</value>
           </entry>
         </global-updates>
-      </schedConf>
+      </sched-conf>
 ```
 
 

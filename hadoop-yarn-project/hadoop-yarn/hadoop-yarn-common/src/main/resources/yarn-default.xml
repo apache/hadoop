@@ -3369,14 +3369,17 @@
 
   <property>
     <description>
-      The type of configuration store to use for storing scheduler
-      configurations, if using a mutable configuration provider.
-      Keywords such as "memory" map to certain configuration store
-      implementations. If keyword is not found, try to load this
-      value as a class.
+      The type of configuration store to use for scheduler configurations.
+      Default is "file", which uses file based capacity-scheduler.xml to
+      retrieve and change scheduler configuration. To enable API based
+      scheduler configuration, use either "memory" (in memory storage, no
+      persistence across restarts), "leveldb" (leveldb based storage), or
+      "zk" (zookeeper based storage). API based configuration is only useful
+      when using a scheduler which supports mutable configuration. Currently
+      only capacity scheduler supports this.
     </description>
     <name>yarn.scheduler.configuration.store.class</name>
-    <value>memory</value>
+    <value>file</value>
   </property>
 
   <property>

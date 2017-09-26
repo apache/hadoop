@@ -27,7 +27,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -48,7 +48,7 @@ import java.util.Map;
  * CLI for modifying scheduler configuration.
  */
 @Public
-@Evolving
+@Unstable
 public class SchedConfCLI extends Configured implements Tool {
 
   private static final String ADD_QUEUES_OPTION = "addQueues";
@@ -135,7 +135,7 @@ public class SchedConfCLI extends Configured implements Tool {
     WebResource webResource = webServiceClient.resource(WebAppUtils.
         getRMWebAppURLWithScheme(getConf()));
     ClientResponse response = webResource.path("ws").path("v1").path("cluster")
-        .path("sched-conf").accept(MediaType.APPLICATION_JSON)
+        .path("scheduler-conf").accept(MediaType.APPLICATION_JSON)
         .entity(YarnWebServiceUtils.toJson(updateInfo,
             SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
@@ -170,7 +170,7 @@ public class SchedConfCLI extends Configured implements Tool {
     if (args == null) {
       return;
     }
-    List<String> queuesToRemove = Arrays.asList(args.split(","));
+    List<String> queuesToRemove = Arrays.asList(args.split(";"));
     updateInfo.setRemoveQueueInfo(new ArrayList<>(queuesToRemove));
   }
 
@@ -199,11 +199,14 @@ public class SchedConfCLI extends Configured implements Tool {
   }
 
   private QueueConfigInfo getQueueConfigInfo(String arg) {
-    String[] queueArgs = arg.split(",");
-    String queuePath = queueArgs[0];
+    String[] args = arg.split(":");
+    String queuePath = args[0];
     Map<String, String> queueConfigs = new HashMap<>();
-    for (int i = 1; i < queueArgs.length; ++i) {
-      putKeyValuePair(queueConfigs, queueArgs[i]);
+    if (args.length > 1) {
+      String[] queueArgs = args[1].split(",");
+      for (int i = 0; i < queueArgs.length; ++i) {
+        putKeyValuePair(queueConfigs, queueArgs[i]);
+      }
     }
     return new QueueConfigInfo(queuePath, queueConfigs);
   }
@@ -228,11 +231,24 @@ public class SchedConfCLI extends Configured implements Tool {
   }
 
   private void printUsage() {
-    System.out.println("yarn schedconf [-add queueAddPath1,confKey1=confVal1,"
-        + "confKey2=confVal2;queueAddPath2,confKey3=confVal3] "
-        + "[-remove queueRemovePath1,queueRemovePath2] "
-        + "[-update queueUpdatePath1,confKey1=confVal1] "
+    System.out.println("yarn schedulerconf [-add "
+        + "\"queueAddPath1:confKey1=confVal1,confKey2=confVal2;"
+        + "queueAddPath2:confKey3=confVal3\"] "
+        + "[-remove \"queueRemovePath1;queueRemovePath2\"] "
+        + "[-update \"queueUpdatePath1:confKey1=confVal1\"] "
         + "[-global globalConfKey1=globalConfVal1,"
-        + "globalConfKey2=globalConfVal2]");
+        + "globalConfKey2=globalConfVal2]\n"
+        + "Example (adding queues): yarn schedulerconf -add "
+        + "\"root.a.a1:capacity=100,maximum-capacity=100;root.a.a2:capacity=0,"
+        + "maximum-capacity=0\"\n"
+        + "Example (removing queues): yarn schedulerconf -remove \"root.a.a1;"
+        + "root.a.a2\"\n"
+        + "Example (updating queues): yarn schedulerconf -update \"root.a.a1"
+        + ":capacity=25,maximum-capacity=25;root.a.a2:capacity=75,"
+        + "maximum-capacity=75\"\n"
+        + "Example (global scheduler update): yarn schedulerconf "
+        + "-global yarn.scheduler.capacity.maximum-applications=10000\n"
+        + "Note: This is an alpha feature, the syntax/options are subject to "
+        + "change, please run at your own risk.");
   }
 }
