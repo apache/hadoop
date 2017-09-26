@@ -172,21 +172,6 @@ public final class CBlockConfigKeys {
   public static final int DFS_CBLOCK_CACHE_MAX_RETRY_DEFAULT =
       64 * 1024;
 
-  /**
-   * Cblock CLI configs.
-   */
-  public static final String DFS_CBLOCK_MANAGER_POOL_SIZE =
-      "dfs.cblock.manager.pool.size";
-  public static final int DFS_CBLOCK_MANAGER_POOL_SIZE_DEFAULT = 16;
-
-  /**
-   * currently the largest supported volume is about 8TB, which might take
-   * > 20 seconds to finish creating containers. thus set timeout to 30 sec.
-   */
-  public static final String DFS_CBLOCK_RPC_TIMEOUT_SECONDS =
-      "dfs.cblock.rpc.timeout.seconds";
-  public static final int DFS_CBLOCK_RPC_TIMEOUT_SECONDS_DEFAULT = 300;
-
   private CBlockConfigKeys() {
 
   }

@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class is the one that directly talks to SCM server.
@@ -38,8 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  */
 public class MockStorageClient implements ScmClient {
-  private static AtomicInteger currentContainerId =
-      new AtomicInteger(0);
+  private static long currentContainerId = -1;
 
   /**
    * Ask SCM to get a exclusive container.
@@ -50,9 +48,9 @@ public class MockStorageClient implements ScmClient {
   @Override
   public Pipeline createContainer(String containerId)
       throws IOException {
-    int contId = currentContainerId.getAndIncrement();
-    ContainerLookUpService.addContainer(Long.toString(contId));
-    return ContainerLookUpService.lookUp(Long.toString(contId))
+    currentContainerId += 1;
+    ContainerLookUpService.addContainer(Long.toString(currentContainerId));
+    return ContainerLookUpService.lookUp(Long.toString(currentContainerId))
         .getPipeline();
   }
 
@@ -128,11 +126,10 @@ public class MockStorageClient implements ScmClient {
   public Pipeline createContainer(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor replicationFactor, String containerId)
       throws IOException {
-    int contId = currentContainerId.getAndIncrement();
-    ContainerLookUpService.addContainer(Long.toString(contId));
-    return ContainerLookUpService.lookUp(Long.toString(contId))
-        .getPipeline();
-  }
+    currentContainerId += 1;
+    ContainerLookUpService.addContainer(Long.toString(currentContainerId));
+    return ContainerLookUpService.lookUp(Long.toString(currentContainerId))
+        .getPipeline();  }
 
   /**
    * Returns a set of Nodes that meet a query criteria.
