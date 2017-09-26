@@ -351,4 +351,64 @@ public class TestOzoneHelper {
     }
   }
 
+  public void testListKeyOnEmptyBucket(int port) throws IOException {
+    SimpleDateFormat format =
+        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZ", Locale.US);
+    CloseableHttpClient client = createHttpClient();
+    String volumeName = OzoneUtils.getRequestID().toLowerCase();
+    String bucketName = OzoneUtils.getRequestID().toLowerCase() + "bucket";
+    try {
+
+      HttpPost httppost = new HttpPost(
+          String.format("http://localhost:%d/%s", port, volumeName));
+      httppost.addHeader(Header.OZONE_VERSION_HEADER,
+          Header.OZONE_V1_VERSION_HEADER);
+      httppost.addHeader(HttpHeaders.DATE,
+          format.format(new Date(Time.monotonicNow())));
+      httppost.addHeader(HttpHeaders.AUTHORIZATION,
+          Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " "
+              + OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+      httppost.addHeader(Header.OZONE_USER, OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+      HttpResponse response = client.execute(httppost);
+      assertEquals(response.toString(), HTTP_CREATED,
+          response.getStatusLine().getStatusCode());
+      client.close();
+
+      client = createHttpClient();
+      httppost = new HttpPost(String
+          .format("http://localhost:%d/%s/%s", port, volumeName, bucketName));
+      httppost.addHeader(Header.OZONE_VERSION_HEADER,
+          Header.OZONE_V1_VERSION_HEADER);
+      httppost.addHeader(HttpHeaders.DATE,
+          format.format(new Date(Time.monotonicNow())));
+      httppost.addHeader(HttpHeaders.AUTHORIZATION,
+          Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " "
+              + OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+      httppost.addHeader(Header.OZONE_USER, OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+      response = client.execute(httppost);
+      assertEquals(response.toString(), HTTP_CREATED,
+          response.getStatusLine().getStatusCode());
+      client.close();
+
+      client = createHttpClient();
+      HttpGet httpget = new HttpGet(String
+          .format("http://localhost:%d/%s/%s", port, volumeName, bucketName));
+      httpget.addHeader(Header.OZONE_VERSION_HEADER,
+          Header.OZONE_V1_VERSION_HEADER);
+      httpget.addHeader(HttpHeaders.DATE,
+          format.format(new Date(Time.monotonicNow())));
+      httpget.addHeader(HttpHeaders.AUTHORIZATION,
+          Header.OZONE_SIMPLE_AUTHENTICATION_SCHEME + " "
+              + OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+      httpget.addHeader(Header.OZONE_USER, OzoneConsts.OZONE_SIMPLE_HDFS_USER);
+      response = client.execute(httpget);
+      assertEquals(response.toString() + " " + response.getStatusLine()
+              .getReasonPhrase(), HTTP_OK,
+          response.getStatusLine().getStatusCode());
+
+    } finally {
+      client.close();
+    }
+  }
+
 }

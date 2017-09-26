@@ -634,6 +634,10 @@ public final class OzoneMetadataManager {
       userDB.put(args.getParentName().getBytes(encoding),
           bucketList.toDBString().getBytes(encoding));
 
+      // Update userDB with volume/bucket -> empty key list
+      userDB.put(args.getResourceName().getBytes(encoding),
+          new ListKeys().toDBString().getBytes(encoding));
+
       // and update the metadataDB with volume/bucket->BucketInfo
       metadataDB.put(args.getResourceName().getBytes(encoding),
           bucketInfo.toDBString().getBytes(encoding));
@@ -916,12 +920,7 @@ public final class OzoneMetadataManager {
       ListKeys keyList;
       byte[] bucketListBytes = userDB.get(args.getParentName()
           .getBytes(encoding));
-      if (bucketListBytes == null) {
-        keyList = new ListKeys();
-      } else {
-        keyList = ListKeys.parse(new String(bucketListBytes, encoding));
-      }
-
+      keyList = ListKeys.parse(new String(bucketListBytes, encoding));
       KeyInfo keyInfo;
 
       byte[] objectBytes = metadataDB.get(args.getResourceName()
