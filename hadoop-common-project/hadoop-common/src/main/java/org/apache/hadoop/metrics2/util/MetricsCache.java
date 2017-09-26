@@ -29,7 +29,6 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,9 +126,13 @@ public class MetricsCache {
     }
 
     @Override public String toString() {
-      return Objects.toStringHelper(this)
-          .add("tags", tags).add("metrics", metrics)
-          .toString();
+      StringBuilder sb = new StringBuilder(32);
+      sb.append(this.getClass().getSimpleName());
+      sb.append("{tags=");
+      sb.append(tags);
+      sb.append(", metrics=");
+      sb.append(metrics);
+      return sb.append('}').toString();
     }
   }
 

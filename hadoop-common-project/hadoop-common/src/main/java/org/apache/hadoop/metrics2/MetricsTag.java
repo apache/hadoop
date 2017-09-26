@@ -80,9 +80,12 @@ public class MetricsTag implements MetricsInfo {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
-        .add("info", info)
-        .add("value", value())
-        .toString();
+    StringBuilder sb = new StringBuilder(32);
+    sb.append(this.getClass().getSimpleName());
+    sb.append("{info=");
+    sb.append(info);
+    sb.append(", value=");
+    sb.append(value());
+    return sb.append('}').toString();
   }
 }

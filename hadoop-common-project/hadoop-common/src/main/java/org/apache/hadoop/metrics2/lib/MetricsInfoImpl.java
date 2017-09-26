@@ -55,8 +55,12 @@ class MetricsInfoImpl implements MetricsInfo {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
-        .add("name", name).add("description", description)
-        .toString();
+    StringBuilder sb = new StringBuilder(32);
+    sb.append(this.getClass().getSimpleName());
+    sb.append("{name=");
+    sb.append(name);
+    sb.append(", description=");
+    sb.append(description);
+    return sb.append('}').toString();
   }
 }
