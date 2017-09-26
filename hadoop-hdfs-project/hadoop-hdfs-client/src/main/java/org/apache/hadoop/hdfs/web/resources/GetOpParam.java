@@ -44,7 +44,9 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
 
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED),
 
-    CHECKACCESS(false, HttpURLConnection.HTTP_OK);
+    CHECKACCESS(false, HttpURLConnection.HTTP_OK),
+
+    GETSERVERDEFAULTS(false, HttpURLConnection.HTTP_OK);
 
     final boolean redirect;
     final int expectedHttpResponseCode;
