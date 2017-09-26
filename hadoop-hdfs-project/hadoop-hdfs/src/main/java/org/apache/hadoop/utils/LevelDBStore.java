@@ -353,11 +353,23 @@ public class LevelDBStore implements MetadataStore {
       if (dbIter != null) {
         dbIter.close();
       }
-      long end = System.currentTimeMillis();
-      long timeConsumed = end - start;
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Time consumed for getRangeKVs() is {},"
-                + " result length is {}.", timeConsumed, result.size());
+        if (filters != null) {
+          for (MetadataKeyFilters.MetadataKeyFilter filter : filters) {
+            int scanned = filter.getKeysScannedNum();
+            int hinted = filter.getKeysHintedNum();
+            if (scanned > 0 || hinted > 0) {
+              LOG.debug(
+                  "getRangeKVs ({}) numOfKeysScanned={}, numOfKeysHinted={}",
+                  filter.getClass().getSimpleName(), filter.getKeysScannedNum(),
+                  filter.getKeysHintedNum());
+            }
+          }
+        }
+        long end = System.currentTimeMillis();
+        long timeConsumed = end - start;
+        LOG.debug("Time consumed for getRangeKVs() is {}ms,"
+            + " result length is {}.", timeConsumed, result.size());
       }
     }
     return result;

@@ -38,6 +38,14 @@ public class MetadataKeyFilters {
      * @return true if a certain condition satisfied, return false otherwise.
      */
     boolean filterKey(byte[] preKey, byte[] currentKey, byte[] nextKey);
+
+    default int getKeysScannedNum() {
+      return 0;
+    }
+
+    default int getKeysHintedNum() {
+      return 0;
+    }
   }
 
   /**
@@ -47,19 +55,37 @@ public class MetadataKeyFilters {
   public static class KeyPrefixFilter implements MetadataKeyFilter {
 
     private String keyPrefix = null;
+    private int keysScanned = 0;
+    private int keysHinted = 0;
 
     public KeyPrefixFilter(String keyPrefix) {
       this.keyPrefix = keyPrefix;
     }
 
-    @Override public boolean filterKey(byte[] preKey, byte[] currentKey,
+    @Override
+    public boolean filterKey(byte[] preKey, byte[] currentKey,
         byte[] nextKey) {
+      keysScanned++;
       if (Strings.isNullOrEmpty(keyPrefix)) {
         return true;
       } else {
-        return currentKey != null &&
-            DFSUtil.bytes2String(currentKey).startsWith(keyPrefix);
+        if (currentKey != null &&
+            DFSUtil.bytes2String(currentKey).startsWith(keyPrefix)) {
+          keysHinted++;
+          return true;
+        }
+        return false;
       }
+    }
+
+    @Override
+    public int getKeysScannedNum() {
+      return keysScanned;
+    }
+
+    @Override
+    public int getKeysHintedNum() {
+      return keysHinted;
     }
   }
 }
