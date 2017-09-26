@@ -265,6 +265,8 @@ public class TestMetadataStore {
     Assert.assertTrue(result.stream().allMatch(entry ->
         new String(entry.getKey()).startsWith("b")
     ));
+    Assert.assertEquals(20, filter1.getKeysScannedNum());
+    Assert.assertEquals(10, filter1.getKeysHintedNum());
     result = store.getRangeKVs(null, 3, filter1);
     Assert.assertEquals(3, result.size());
     result = store.getRangeKVs(getBytes("b3"), 1, filter1);

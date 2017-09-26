@@ -201,11 +201,22 @@ public class RocksDBStore implements MetadataStore {
       long end = System.currentTimeMillis();
       long timeConsumed = end - start;
       if (LOG.isDebugEnabled()) {
+        if (filters != null) {
+          for (MetadataKeyFilters.MetadataKeyFilter filter : filters) {
+            int scanned = filter.getKeysScannedNum();
+            int hinted = filter.getKeysHintedNum();
+            if (scanned > 0 || hinted > 0) {
+              LOG.debug(
+                  "getRangeKVs ({}) numOfKeysScanned={}, numOfKeysHinted={}",
+                  filter.getClass().getSimpleName(), filter.getKeysScannedNum(),
+                  filter.getKeysHintedNum());
+            }
+          }
+        }
         LOG.debug("Time consumed for getRangeKVs() is {}ms,"
             + " result length is {}.", timeConsumed, result.size());
       }
     }
-
     return result;
   }
 
