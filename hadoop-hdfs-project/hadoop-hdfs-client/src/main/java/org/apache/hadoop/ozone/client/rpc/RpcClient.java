@@ -264,7 +264,7 @@ public class RpcClient implements ClientProtocol {
     Preconditions.checkNotNull(bucketArgs);
 
     Boolean isVersionEnabled = bucketArgs.isVersionEnabled() == null ?
-        false : bucketArgs.isVersionEnabled();
+        Boolean.FALSE : bucketArgs.isVersionEnabled();
     StorageType storageType = bucketArgs.getStorageType() == null ?
         StorageType.DEFAULT : bucketArgs.getStorageType();
     List<OzoneAcl> listOfAcls = new ArrayList<>();

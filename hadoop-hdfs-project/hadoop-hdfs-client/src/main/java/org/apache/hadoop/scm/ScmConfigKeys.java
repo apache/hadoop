@@ -26,9 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class ScmConfigKeys {
-  public static final String DFS_CONTAINER_IPC_PORT =
-      "dfs.container.ipc";
-  public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 50011;
 
   public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
       "scm.container.client.idle.threshold";

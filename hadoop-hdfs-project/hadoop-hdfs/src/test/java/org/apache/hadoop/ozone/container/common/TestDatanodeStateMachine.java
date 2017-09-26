@@ -200,7 +200,7 @@ public class TestDatanodeStateMachine {
         conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
     idPath.delete();
     DatanodeID dnID = DFSTestUtil.getLocalDatanodeID();
-    dnID.setContainerPort(ScmConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+    dnID.setContainerPort(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
     ContainerUtils.writeDatanodeIDTo(dnID, idPath);
 
     try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(

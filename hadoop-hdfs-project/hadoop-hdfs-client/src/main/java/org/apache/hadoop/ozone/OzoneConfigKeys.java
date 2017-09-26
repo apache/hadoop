@@ -33,7 +33,7 @@ import org.apache.hadoop.scm.ScmConfigKeys;
 public final class OzoneConfigKeys {
   public static final String DFS_CONTAINER_IPC_PORT =
       "dfs.container.ipc";
-  public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 50011;
+  public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 9859;
 
   /**
    *
@@ -53,7 +53,7 @@ public final class OzoneConfigKeys {
    */
   public static final String DFS_CONTAINER_RATIS_IPC_PORT =
       "dfs.container.ratis.ipc";
-  public static final int DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT = 50012;
+  public static final int DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT = 9858;
 
   /**
    * When set to true, allocate a random free port for ozone container, so that
