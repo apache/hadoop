@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.metrics2.source;
 
-import com.google.common.base.Objects;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 
@@ -60,8 +58,12 @@ public enum JvmMetricsInfo implements MetricsInfo {
   @Override public String description() { return desc; }
 
   @Override public String toString() {
-  return Objects.toStringHelper(this)
-      .add("name", name()).add("description", desc)
-      .toString();
+    StringBuilder sb = new StringBuilder(32);
+    sb.append(this.getClass().getSimpleName());
+    sb.append("{name=");
+    sb.append(name());
+    sb.append(", description=");
+    sb.append(desc);
+    return sb.append('}').toString();
   }
 }
