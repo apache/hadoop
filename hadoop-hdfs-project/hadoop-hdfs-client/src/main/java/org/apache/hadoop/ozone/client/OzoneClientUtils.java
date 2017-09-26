@@ -642,8 +642,8 @@ public final class OzoneClientUtils {
    * @return port number.
    */
   public static int getContainerPort(Configuration conf) {
-    return conf.getInt(ScmConfigKeys.DFS_CONTAINER_IPC_PORT, ScmConfigKeys
-        .DFS_CONTAINER_IPC_PORT_DEFAULT);
+    return conf.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+        OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
   }
 
   /**

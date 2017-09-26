@@ -460,7 +460,7 @@
 
   <property>
     <name>dfs.container.ipc</name>
-    <value>50011</value>
+    <value>9859</value>
     <description>
       The ipc port number of container.
     </description>
@@ -939,7 +939,7 @@
 
   <property>
     <name>dfs.container.ratis.ipc</name>
-    <value>50012</value>
+    <value>9858</value>
     <description>
       The ipc port number of container.
     </description>
