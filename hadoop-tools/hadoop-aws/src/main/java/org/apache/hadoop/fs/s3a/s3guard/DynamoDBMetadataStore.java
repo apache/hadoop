@@ -1158,15 +1158,11 @@ public class DynamoDBMetadataStore implements MetadataStore {
       Exception ex,
       int attempts,
       boolean idempotent) {
+    if (attempts == 1) {
+      LOG.info("Retrying {}", text);
+    }
     if (instrumentation != null) {
-      if (S3AUtils.isThrottleException(ex)) {
-        instrumentation.throttled();
-      } else {
-        if (attempts == 1) {
-          LOG.info("Retrying {}", text);
-        }
-        instrumentation.retrying();
-      }
+      instrumentation.retrying();
     }
     if (owner != null) {
       owner.metastoreOperationRetried(ex, attempts, idempotent);
@@ -1189,6 +1185,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
       int attempts,
       boolean idempotent) {
     if (S3AUtils.isThrottleException(ex)) {
+      if (instrumentation != null) {
+        instrumentation.throttled();
+      }
       if (attempts == 1) {
         LOG.warn(
             "DynamoDB IO limits reached in {}; consider increasing capacity",

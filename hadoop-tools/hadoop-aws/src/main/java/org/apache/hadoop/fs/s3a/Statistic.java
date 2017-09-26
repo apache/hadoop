@@ -182,16 +182,20 @@ public enum Statistic {
   // S3guard stats
   S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
       "s3guard_metadatastore_put_path_request",
-      "s3guard metadata store put one metadata path request"),
+      "S3Guard metadata store put one metadata path request"),
   S3GUARD_METADATASTORE_PUT_PATH_LATENCY(
       "s3guard_metadatastore_put_path_latency",
-      "s3guard metadata store put one metadata path latency"),
+      "S3Guard metadata store put one metadata path latency"),
   S3GUARD_METADATASTORE_INITIALIZATION("s3guard_metadatastore_initialization",
-      "s3guard metadata store initialization times"),
+      "S3Guard metadata store initialization times"),
   S3GUARD_METADATASTORE_RETRY("s3guard_metadatastore_retry",
-      "s3guard metadata store retry events"),
+      "S3Guard metadata store retry events"),
   S3GUARD_METADATASTORE_THROTTLED("s3guard_metadatastore_throttled",
-      "s3guard metadata store throttled events"),
+      "S3Guard metadata store throttled events"),
+  S3GUARD_METADATASTORE_THROTTLE_RATE(
+      "s3guard_metadatastore_throttle_rate",
+      "S3Guard metadata store throttle rate"),
+
   STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried");
 
   private static final Map<String, Statistic> SYMBOL_MAP =

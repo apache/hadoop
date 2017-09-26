@@ -198,8 +198,11 @@ public class S3AInstrumentation {
       gauge(statistic.getSymbol(), statistic.getDescription());
     }
     //todo need a config for the quantiles interval?
+    int interval = 1;
     quantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-        "ops", "latency", 1);
+        "ops", "latency", interval);
+    quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+        "events", "frequency (Hz)", interval);
   }
 
   /**
@@ -961,10 +964,17 @@ public class S3AInstrumentation {
 
     }
 
+    /**
+     * Throttled request.
+     */
     public void throttled() {
       incrementCounter(S3GUARD_METADATASTORE_THROTTLED, 1);
+      addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE, 1);
     }
 
+    /**
+     * S3Guard is retrying after a (retryable) failure.
+     */
     public void retrying() {
       incrementCounter(S3GUARD_METADATASTORE_RETRY, 1);
     }
@@ -976,6 +986,7 @@ public class S3AInstrumentation {
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public final class CommitterStatistics {
+
     /** A commit has been created. */
     public void commitCreated() {
       incrementCounter(COMMITTER_COMMITS_CREATED, 1);
