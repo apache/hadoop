@@ -99,14 +99,12 @@ public interface MetadataStore extends Closeable{
       throws IOException, IllegalArgumentException;
 
   /**
-   * This method is very similar with
-   * {@link #getRangeKVs(byte[], int, MetadataKeyFilter...)}, the only
+   * This method is very similar to {@link #getRangeKVs}, the only
    * different is this method is supposed to return a sequential range
    * of elements based on the filters. While iterating the elements,
    * if it met any entry that cannot pass the filter, the iterator will stop
    * from this point without looking for next match. If no filter is given,
-   * this method behaves just like
-   * {@link #getRangeKVs(byte[], int, MetadataKeyFilter...)}.
+   * this method behaves just like {@link #getRangeKVs}.
    *
    * @param startKey a start key.
    * @param count max number of entries to return.
