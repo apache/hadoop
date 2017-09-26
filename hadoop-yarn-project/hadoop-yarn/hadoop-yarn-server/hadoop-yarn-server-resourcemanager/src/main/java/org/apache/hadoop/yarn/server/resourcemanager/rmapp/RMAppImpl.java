@@ -1463,7 +1463,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.rmContext.getSystemMetricsPublisher()
           .appFinished(app, finalState, app.finishTime);
       // set the memory free
-      app.submissionContext.getAMContainerSpec().setTokensConf(null);
+      app.clearUnusedFields();
     };
   }
 
@@ -2017,5 +2017,14 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   public void setApplicationPriority(Priority applicationPriority) {
     this.applicationPriority = applicationPriority;
+  }
+
+  /**
+     * Clear Unused fields to free memory.
+     * @param app
+     */
+  private void clearUnusedFields() {
+    this.submissionContext.setAMContainerSpec(null);
+    this.submissionContext.setLogAggregationContext(null);
   }
 }
