@@ -1128,7 +1128,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * Shutdown disk balancer.
    */
-  private  void shutdownDiskBalancer() {
+  private void shutdownDiskBalancer() {
     if (this.diskBalancer != null) {
       this.diskBalancer.shutdown();
       this.diskBalancer = null;
@@ -2137,7 +2137,11 @@ public class DataNode extends ReconfigurableBase
       ipcServer.stop();
     }
 
-    if (blockPoolManager != null) {
+    if (ecWorker != null) {
+      ecWorker.shutDown();
+    }
+
+    if(blockPoolManager != null) {
       try {
         this.blockPoolManager.shutDownAll(bposArray);
       } catch (InterruptedException ie) {

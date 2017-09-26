@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -66,6 +67,11 @@ public class SlowDiskTracker {
    * unit testing.
    */
   private final Timer timer;
+
+  /**
+   * ObjectWriter to convert JSON reports to String.
+   */
+  private static final ObjectWriter WRITER = new ObjectMapper().writer();
 
   /**
    * Number of disks to include in JSON report per operation. We will return
@@ -254,12 +260,11 @@ public class SlowDiskTracker {
    *         serialization failed.
    */
   public String getSlowDiskReportAsJsonString() {
-    ObjectMapper objectMapper = new ObjectMapper();
     try {
       if (slowDisksReport.isEmpty()) {
         return null;
       }
-      return objectMapper.writeValueAsString(slowDisksReport);
+      return WRITER.writeValueAsString(slowDisksReport);
     } catch (JsonProcessingException e) {
       // Failed to serialize. Don't log the exception call stack.
       LOG.debug("Failed to serialize statistics" + e);

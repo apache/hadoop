@@ -52,6 +52,10 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Lists;
 
 public class TestJsonUtil {
+
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(Map.class);
+
   static FileStatus toFileStatus(HdfsFileStatus f, String parent) {
     return new FileStatus(f.getLen(), f.isDirectory(), f.getReplication(),
         f.getBlockSize(), f.getModificationTime(), f.getAccessTime(),
@@ -76,9 +80,8 @@ public class TestJsonUtil {
     System.out.println("fstatus = " + fstatus);
     final String json = JsonUtil.toJsonString(status, true);
     System.out.println("json    = " + json.replace(",", ",\n  "));
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
     final HdfsFileStatus s2 =
-        JsonUtilClient.toFileStatus((Map<?, ?>) reader.readValue(json), true);
+        JsonUtilClient.toFileStatus((Map<?, ?>) READER.readValue(json), true);
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
@@ -164,8 +167,7 @@ public class TestJsonUtil {
   public void testToAclStatus() throws IOException {
     String jsonString =
         "{\"AclStatus\":{\"entries\":[\"user::rwx\",\"user:user1:rw-\",\"group::rw-\",\"other::r-x\"],\"group\":\"supergroup\",\"owner\":\"testuser\",\"stickyBit\":false}}";
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
-    Map<?, ?> json = reader.readValue(jsonString);
+    Map<?, ?> json = READER.readValue(jsonString);
 
     List<AclEntry> aclSpec =
         Lists.newArrayList(aclEntry(ACCESS, USER, ALL),
@@ -224,8 +226,7 @@ public class TestJsonUtil {
     String jsonString = 
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
-    Map<?, ?> json = reader.readValue(jsonString);
+    Map<?, ?> json = READER.readValue(jsonString);
     XAttr xAttr1 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
         setName("a1").setValue(XAttrCodec.decodeValue("0x313233")).build();
     XAttr xAttr2 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
@@ -250,8 +251,7 @@ public class TestJsonUtil {
     String jsonString = 
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
-    Map<?, ?> json = reader.readValue(jsonString);
+    Map<?, ?> json = READER.readValue(jsonString);
 
     // Get xattr: user.a2
     byte[] value = JsonUtilClient.getXAttr(json, "user.a2");

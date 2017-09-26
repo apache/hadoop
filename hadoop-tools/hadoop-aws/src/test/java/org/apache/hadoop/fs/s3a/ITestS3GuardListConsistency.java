@@ -435,16 +435,16 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     // files to list are delaying visibility
     if (!recursive) {
       // in this case only the top level files are listed
+      verifyFileIsListed(listedFiles, baseTestDir, fileNames);
       assertEquals("Unexpected number of files returned by listFiles() call",
           normalFileNum + delayedFileNum, listedFiles.size());
-      verifyFileIsListed(listedFiles, baseTestDir, fileNames);
     } else {
-      assertEquals("Unexpected number of files returned by listFiles() call",
-          filesAndEmptyDirectories,
-          listedFiles.size());
       for (Path dir : testDirs) {
         verifyFileIsListed(listedFiles, dir, fileNames);
       }
+      assertEquals("Unexpected number of files returned by listFiles() call",
+          filesAndEmptyDirectories,
+          listedFiles.size());
     }
   }
 

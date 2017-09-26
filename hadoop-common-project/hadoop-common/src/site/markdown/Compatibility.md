@@ -191,9 +191,13 @@ dependencies is part of the Hadoop ABI.
 
 The minimum required versions of the native components on which Hadoop depends
 at compile time and/or runtime SHALL be considered
-[Stable](./InterfaceClassification.html#Stable). Changes to the minimum
-required versions MUST NOT increase between minor releases within a major
-version.
+[Evolving](./InterfaceClassification.html#Evolving). Changes to the minimum
+required versions SHOULD NOT increase between minor releases within a major
+version, though updates because of security issues, license issues, or other
+reasons may occur. When the native components on which Hadoop depends must
+be updated between minor releases within a major release, where possible the
+changes SHOULD only change the minor versions of the components without
+changing the major versions.
 
 ### Wire Protocols
 

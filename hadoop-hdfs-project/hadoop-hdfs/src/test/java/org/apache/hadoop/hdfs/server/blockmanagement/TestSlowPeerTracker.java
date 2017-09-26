@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.blockmanagement.SlowPeerTracker.ReportForJson;
+import org.apache.hadoop.hdfs.server.blockmanagement.SlowPeerTracker
+    .ReportForJson;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Before;
 import org.junit.Rule;
@@ -38,7 +40,6 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
 
 /**
  * Tests for {@link SlowPeerTracker}.
@@ -57,6 +58,8 @@ public class TestSlowPeerTracker {
   private SlowPeerTracker tracker;
   private FakeTimer timer;
   private long reportValidityMs;
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(new TypeReference<Set<ReportForJson>>() {});
 
   @Before
   public void setup() {
@@ -220,7 +223,6 @@ public class TestSlowPeerTracker {
       throws IOException {
     final String json = tracker.getJson();
     LOG.info("Got JSON: {}", json);
-    return (new ObjectMapper()).readValue(
-        json, new TypeReference<Set<ReportForJson>>() {});
+    return READER.readValue(json);
   }
 }
