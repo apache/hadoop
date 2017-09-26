@@ -59,7 +59,7 @@ public final class JsonUtils {
    *
    * @param str json string.
    * @param elementType element type.
-   * @return
+   * @return List of elements of type elementType
    * @throws IOException
    */
   public static List<?> toJsonList(String str, Class<?> elementType)
