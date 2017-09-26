@@ -28,6 +28,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Declaration of retry policy.
  * This is purely for visibility in source and is currently package-scoped.
+ * {@see org.apache.hadoop.io.retry.Idempotent}
+ * and {@see org.apache.hadoop.io.retry.AtMostOnce}; those are preserved to
+ * runtime and have specific requirements on servers.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
