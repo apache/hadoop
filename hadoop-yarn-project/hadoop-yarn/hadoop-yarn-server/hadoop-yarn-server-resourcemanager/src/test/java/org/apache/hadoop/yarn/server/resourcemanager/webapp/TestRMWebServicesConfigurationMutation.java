@@ -88,8 +88,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
       conf = new YarnConfiguration();
       conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
           ResourceScheduler.class);
-      conf.set(CapacitySchedulerConfiguration.CS_CONF_PROVIDER,
-          CapacitySchedulerConfiguration.STORE_CS_CONF_PROVIDER);
+      conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+          YarnConfiguration.MEMORY_CONFIGURATION_STORE);
       conf.set(YarnConfiguration.YARN_ADMIN_ACL, userName);
       try {
         if (CONF_FILE.exists()) {
@@ -179,7 +179,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getAddQueueInfo().add(d);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -214,7 +214,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(b);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -240,7 +240,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getRemoveQueueInfo().add("root.a.a2");
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -265,7 +265,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getRemoveQueueInfo().add("root.c");
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -296,7 +296,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(b);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -328,7 +328,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(configInfo);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -356,7 +356,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     }
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -391,7 +391,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         0.001f);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -409,7 +409,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(aUpdateInfo);
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -439,7 +439,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -464,7 +464,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
@@ -479,7 +479,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     // Unset maximum-applications. Should be set to default.
     response =
         r.path("ws").path("v1").path("cluster")
-            .path("sched-conf").queryParam("user.name", userName)
+            .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
             .entity(YarnWebServiceUtils.toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)

@@ -199,8 +199,8 @@ public class TestRMAdminService {
 
   @Test
   public void testAdminRefreshQueuesWithMutableSchedulerConfiguration() {
-    configuration.set(CapacitySchedulerConfiguration.CS_CONF_PROVIDER,
-        CapacitySchedulerConfiguration.STORE_CS_CONF_PROVIDER);
+    configuration.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
     try {
       rm = new MockRM(configuration);

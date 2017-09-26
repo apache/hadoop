@@ -34,7 +34,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class QueueConfigInfo {
 
-  @XmlElement(name = "queueName")
+  @XmlElement(name = "queue-name")
   private String queue;
 
   private HashMap<String, String> params = new HashMap<>();

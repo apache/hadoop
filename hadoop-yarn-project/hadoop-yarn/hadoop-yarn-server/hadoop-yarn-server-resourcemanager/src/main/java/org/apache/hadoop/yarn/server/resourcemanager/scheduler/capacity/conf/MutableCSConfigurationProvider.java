@@ -66,7 +66,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   public void init(Configuration config) throws IOException {
     String store = config.get(
         YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-        YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
     switch (store) {
     case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
       this.confStore = new InMemoryConfigurationStore();

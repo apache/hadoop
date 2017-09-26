@@ -31,7 +31,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  * Information for making scheduler configuration changes (supports adding,
  * removing, or updating a queue, as well as global scheduler conf changes).
  */
-@XmlRootElement(name = "schedConf")
+@XmlRootElement(name = "sched-conf")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SchedConfUpdateInfo {
 

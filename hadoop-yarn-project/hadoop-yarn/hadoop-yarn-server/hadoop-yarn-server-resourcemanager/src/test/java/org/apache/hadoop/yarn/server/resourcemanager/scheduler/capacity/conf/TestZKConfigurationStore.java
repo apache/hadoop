@@ -199,8 +199,6 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, rmIds);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
-    conf.set(CapacitySchedulerConfiguration.CS_CONF_PROVIDER,
-        CapacitySchedulerConfiguration.STORE_CS_CONF_PROVIDER);
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.ZK_CONFIGURATION_STORE);
     conf.set(YarnConfiguration.RM_STORE, ZKRMStateStore.class.getName());
