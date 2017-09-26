@@ -297,18 +297,20 @@ public class CapacityScheduler extends
     try {
       writeLock.lock();
       String confProviderStr = configuration.get(
-          CapacitySchedulerConfiguration.CS_CONF_PROVIDER,
-          CapacitySchedulerConfiguration.DEFAULT_CS_CONF_PROVIDER);
+          YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+          YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
       switch (confProviderStr) {
-      case CapacitySchedulerConfiguration.FILE_CS_CONF_PROVIDER:
+      case YarnConfiguration.FILE_CONFIGURATION_STORE:
         this.csConfProvider =
             new FileBasedCSConfigurationProvider(rmContext);
         break;
-      case CapacitySchedulerConfiguration.STORE_CS_CONF_PROVIDER:
+      case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
+      case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
+      case YarnConfiguration.ZK_CONFIGURATION_STORE:
         this.csConfProvider = new MutableCSConfigurationProvider(rmContext);
         break;
       default:
-        throw new IOException("Invalid CS configuration provider: " +
+        throw new IOException("Invalid configuration store class: " +
             confProviderStr);
       }
       this.csConfProvider.init(configuration);

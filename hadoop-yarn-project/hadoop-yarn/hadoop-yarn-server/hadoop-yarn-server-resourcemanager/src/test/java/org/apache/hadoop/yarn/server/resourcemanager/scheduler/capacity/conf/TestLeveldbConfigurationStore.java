@@ -59,8 +59,6 @@ public class TestLeveldbConfigurationStore extends ConfigurationStoreBaseTest {
   public void setUp() throws Exception {
     super.setUp();
     FileUtil.fullyDelete(TEST_DIR);
-    conf.set(CapacitySchedulerConfiguration.CS_CONF_PROVIDER,
-        CapacitySchedulerConfiguration.STORE_CS_CONF_PROVIDER);
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.LEVELDB_CONFIGURATION_STORE);
     conf.set(YarnConfiguration.RM_SCHEDCONF_STORE_PATH, TEST_DIR.toString());

@@ -2417,7 +2417,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   }
 
   @PUT
-  @Path("/sched-conf")
+  @Path("/scheduler-conf")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public synchronized Response updateSchedulerConfiguration(
