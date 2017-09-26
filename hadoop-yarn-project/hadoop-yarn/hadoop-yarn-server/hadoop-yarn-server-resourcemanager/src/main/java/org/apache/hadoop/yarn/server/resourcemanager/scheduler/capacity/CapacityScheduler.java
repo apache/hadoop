@@ -1428,6 +1428,12 @@ public class CapacityScheduler extends
     
     // Get the node on which the container was allocated
     FiCaSchedulerNode node = getNode(container.getNodeId());
+    if (node == null) {
+      LOG.info("Container=" + container + " of application=" + appId
+          + " completed with event=" + event + " on a node=" + container
+          .getNodeId() + ". However the node might be already removed by RM.");
+      return;
+    }
     
     // Inform the queue
     LeafQueue queue = (LeafQueue)application.getQueue();

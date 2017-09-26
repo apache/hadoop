@@ -26,6 +26,9 @@ Release 2.7.6 - UNRELEASED
     YARN-7590. Improve container-executor validation check.
     Contributed by Eric Yang.
 
+    YARN-7249. Fix CapacityScheduler NPE issue when a container preempted while
+    the node is being removed. (Wangda Tan via Eric Payne)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
