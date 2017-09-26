@@ -43,12 +43,18 @@ abstract class AbstractMetricsRecord implements MetricsRecord {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
-        .add("timestamp", timestamp())
-        .add("name", name())
-        .add("description", description())
-        .add("tags", tags())
-        .add("metrics", Iterables.toString(metrics()))
-        .toString();
+    StringBuilder sb = new StringBuilder(32);
+    sb.append(this.getClass().getSimpleName());
+    sb.append("{timestamp=");
+    sb.append(timestamp());
+    sb.append(", name=");
+    sb.append(name());
+    sb.append(", description=");
+    sb.append(description());
+    sb.append(", tags=");
+    sb.append(tags());
+    sb.append(", metrics=");
+    sb.append(Iterables.toString(metrics()));
+    return sb.append('}').toString();
   }
 }
