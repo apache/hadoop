@@ -41,9 +41,9 @@ Previously this was supported purely for MapReduce jobs by the Application Histo
 With the introduction of the timeline server, the Application History Server becomes just one use of
 the Timeline Server.
 
-Generic information includes application level data such as 
+Generic information includes application level data such as
 
-* queue-name, 
+* queue-name,
 * user information and the like set in the `ApplicationSubmissionContext`,
 * a list of application-attempts that ran for an application
 * information about each application-attempt
@@ -68,7 +68,7 @@ Current status
 1. The "Timeline Server v1" REST API has been declared one of the REST APIs
   whose compatibility will be maintained in future releases.
 1. The single-server implementation of the Timeline Server places a limit on
-  the scalability of the service; it also prevents the service being 
+  the scalability of the service; it also prevents the service being
   High-Availability component of the YARN infrastructure.
 
 Future Plans
@@ -88,9 +88,9 @@ data structures as well as the ability of the client to failover between Timelin
 The Timeline Domain offers a namespace for Timeline server allowing
 users to host multiple entities, isolating them from other users and applications.
 Timeline server Security is defined at this level.
- 
+
 A "Domain" primarily stores owner info, read and& write ACL information,
-created and modified time stamp information. Each Domain is identified by an ID which 
+created and modified time stamp information. Each Domain is identified by an ID which
 must be unique across all users in the YARN cluster.
 
 #### Timeline Entity
@@ -111,7 +111,7 @@ Each Entity is uniquely identified by an `EntityId` and `EntityType`.
 #### Timeline Events
 
 A Timeline Event describes an event that is related to a specific
-Timeline Entity of an application. 
+Timeline Entity of an application.
 
 Users are free to define what an event means —such as starting
 an application, getting allocated a container,
@@ -156,7 +156,7 @@ and cluster operators.
 | `yarn.timeline-service.webapp.https.address` | The https address of the Timeline service web application. Defaults to `${yarn.timeline-service.hostname}:8190`. |
 | `yarn.timeline-service.bind-host` | The actual address the server will bind to. If this optional address is set, the RPC and webapp servers will bind to this address and the port specified in `yarn.timeline-service.address` and `yarn.timeline-service.webapp.address`, respectively. This is most useful for making the service listen on all interfaces by setting to `0.0.0.0`. |
 | `yarn.timeline-service.http-cross-origin.enabled` | Enables cross-origin support (CORS) for web services where cross-origin web response headers are needed. For example, javascript making a web services request to the timeline server. Defaults to `false`. |
-| `yarn.timeline-service.http-cross-origin.allowed-origins` | Comma separated list of origins that are allowed for web services needing cross-origin (CORS) support. Wildcards `(*)` and patterns allowed. Defaults to `*`. |
+| `yarn.timeline-service.http-cross-origin.allowed-origins` | Comma separated list of origins that are allowed. Values prefixed with `regex:` are interpreted as regular expressions. Values containing wildcards (`*`) are possible as well, here a regular expression is generated, the use is discouraged and support is only available for backward compatibility. Defaults to `*`. |
 | `yarn.timeline-service.http-cross-origin.allowed-methods` | Comma separated list of methods that are allowed for web services needing cross-origin (CORS) support. Defaults to `GET,POST,HEAD`. |
 | `yarn.timeline-service.http-cross-origin.allowed-headers` | Comma separated list of headers that are allowed for web services needing cross-origin (CORS) support. Defaults to `X-Requested-With,Content-Type,Accept,Origin`. |
 | `yarn.timeline-service.http-cross-origin.max-age` | The number of seconds a pre-flighted request can be cached for web services needing cross-origin (CORS) support. Defaults to `1800`. |
@@ -420,7 +420,7 @@ response: `TimelinePutResponse`
 
 ### List domains of a user: GET `/ws/v1/timeline/domain`
 
-Retrieves a list of all domains of a user. 
+Retrieves a list of all domains of a user.
 
 If an owner is specified, that owner name overrides that of the caller.
 
@@ -598,8 +598,8 @@ Request Body:
 Required fields
 
 Entity: `type` and `id`. `starttime` is required unless the
-entity contains one or more event). 
-Event: `type` and `timestamp`. 
+entity contains one or more event).
+Event: `type` and `timestamp`.
 
 ## <a name="REST_API_LIST_TIMELINE_ENTITIES"></a>Timeline Entity List
 
@@ -809,7 +809,7 @@ Response Body:
         }
       ]
     }
-  
+
 
 
 
@@ -1443,8 +1443,8 @@ None
 ### Elements of the `appattempts` (Application Attempt List) Object
 
 When you make a request for the list of application attempts, the information
-will be returned as a collection of application attempt objects. See 
-[Application Attempt](#REST_API_APPLICATION_ATTEMPT) for the syntax of 
+will be returned as a collection of application attempt objects. See
+[Application Attempt](#REST_API_APPLICATION_ATTEMPT) for the syntax of
 the application attempt object.
 
 | Item         | Data Type   | Description                  |
@@ -1758,7 +1758,7 @@ Response Body:
         }
       ]
     }
-    
+
 
 #### XML response
 
@@ -2004,8 +2004,8 @@ Response Body:
       <containerState>COMPLETE</containerState>
       <nodeHttpAddress>http://localhost:8042</nodeHttpAddress>
     </container>
- 
- 
+
+
 ### Response Codes
 
 1. Queries where a domain, entity type, entity ID or similar cannot be resolved result in
