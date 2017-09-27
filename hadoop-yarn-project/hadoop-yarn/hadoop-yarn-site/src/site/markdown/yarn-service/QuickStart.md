@@ -194,32 +194,10 @@ If you are building from source code, make sure you use `-Pyarn-ui` in the `mvn`
   </property>
 ```
 
-## Service Discovery with YARN DNS
-YARN Service framework comes with a DNS server (backed by YARN Service Registry) which enables DNS based discovery of services deployed on YARN.
-That is, user can simply access their services in a well-defined naming format as below:
+# Try with Docker
+The above example is only for a non-docker container based service. YARN Service Framework also provides first-class support for managing docker based services.
+Most of the steps for managing docker based services are the same except that in docker the `Artifact` type for a component is `DOCKER` and the Artifact `id` is the name of the docker image.
+For details in how to setup docker on YARN, please check [Docker on YARN](../DockerContainers.md).
 
-```
-${COMPONENT_INSTANCE_NAME}.${SERVICE_NAME}.${USER}.${DOMAIN}
-```
-For example, in a cluster whose domain name is `yarncluster` (as defined by the `hadoop.registry.dns.domain-name` in `yarn-site.xml`), a service named `hbase` deployed by user `dev` 
-with two components `hbasemaster` and `regionserver` can be accessed as below:
-
-This URL points to the usual hbase master UI
-```
-http://hbasemaster-0.hbase.dev.yarncluster:16010/master-status
-```
-
-
-Note that YARN service framework assigns COMPONENT_INSTANCE_NAME for each container in a sequence of monotonically increasing integers. For example, `hbasemaster-0` gets
-assigned `0` since it is the first and only instance for the `hbasemaster` component. In case of `regionserver` component, it can have multiple containers
- and so be named as such: `regionserver-0`, `regionserver-1`, `regionserver-2` ... etc 
- 
-`Disclaimer`: The DNS implementation is still experimental. It should not be used as a fully-functional corporate DNS. 
-
-### Start the DNS server 
-By default, the DNS runs on non-privileged port `5353`.
-If it is configured to use the standard privileged port `53`, the DNS server needs to be run as root:
-```
-sudo su - -c "yarn org.apache.hadoop.registry.server.dns.RegistryDNSServer > /${HADOOP_LOG_FOLDER}/registryDNS.log 2>&1 &" root
-```
-Please refer to [YARN DNS doc](ServicesDiscovery.md) for the full list of configurations.
+With docker support, it also opens up a set of new possibilities to implement features such as discovering service containers on YARN with DNS.
+Check [ServiceDiscovery](ServiceDiscovery.md) for more details.

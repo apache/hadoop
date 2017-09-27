@@ -22,6 +22,8 @@ It also does all the heavy lifting work such as resolving the service definition
 failed containers, monitoring components' healthiness and readiness, ensuring dependency start order across components, flexing up/down components, 
 upgrading components etc. The end goal of the framework is to make sure the service is up and running as the state that user desired.
 
+In addition, it leverages a lot of features in YARN core to accomplish scheduling constraints, such as
+affinity and anti-affinity scheduling, log aggregation for services, automatically restart a container if it fails, and do in-place upgrade of a container.
 
 ### A Restful API-Server for deploying/managing services on YARN
 A restful API server is developed to allow users to deploy/manage their services on YARN via a simple JSON spec. This avoids users
@@ -34,44 +36,11 @@ support HA, distribute the load etc.
 
 ### Service Discovery
 A DNS server is implemented to enable discovering services on YARN via the standard mechanism: DNS lookup.
-The DNS server essentially exposes the information in YARN service registry by translating them into DNS records such as A record and SRV record.
-Clients can discover the IPs of containers via standard DNS lookup.
+
+The framework posts container information such as hostname and ip into the [YARN service registry](../registry/index.md). And the DNS server essentially exposes the
+information in YARN service registry by translating them into DNS records such as A record and SRV record.
+Clients can then discover the IPs of containers via standard DNS lookup.
+
 The previous read mechanisms of YARN Service Registry were limited to a registry specific (java) API and a REST interface and are difficult
-to wireup existing clients and services. The DNS based service discovery eliminates this gap. Please refer to this [DNS doc](ServiceDiscovery.md) 
+to wireup existing clients and services. The DNS based service discovery eliminates this gap. Please refer to this [Service Discovery doc](ServiceDiscovery.md)
 for more details.
-
-### Scheduling
-
-A host of scheduling features are being developed to support long running services.
-
-* Affinity and anti-affinity scheduling across containers ([YARN-6592](https://issues.apache.org/jira/browse/YARN-6592)).
-* Container resizing ([YARN-1197](https://issues.apache.org/jira/browse/YARN-1197))
-* Special handling of container preemption/reservation for services 
-
-### Container auto-restarts
-
-[YARN-3998](https://issues.apache.org/jira/browse/YARN-3998) implements a retry-policy to let NM re-launch a service container when it fails.
-The service REST API provides users a way to enable NodeManager to automatically restart the container if it fails.
-The advantage is that it avoids the entire cycle of releasing the failed containers, re-asking new containers, re-do resource localizations and so on, which
-greatly minimizes container downtime.
-
-
-### Container in-place upgrade
-
-[YARN-4726](https://issues.apache.org/jira/browse/YARN-4726) aims to support upgrading containers in-place, that is, without losing the container allocations.
-It opens up a few APIs in NodeManager to allow ApplicationMasters to upgrade their containers via a simple API call.
-Under the hood, NodeManager does below steps:
-* Downloading the new resources such as jars, docker container images, new configurations.
-* Stop the old container. 
-* Start the new container with the newly downloaded resources. 
-
-At the time of writing this document, core changes are done but the feature is not usable end-to-end.
-
-### Resource Profiles
-
-In [YARN-3926](https://issues.apache.org/jira/browse/YARN-3926), YARN introduces Resource Profiles which extends the YARN resource model for easier 
-resource-type management and profiles. 
-It primarily solves two problems:
-* Make it easy to support new resource types such as network bandwith([YARN-2140](https://issues.apache.org/jira/browse/YARN-2140)), disks([YARN-2139](https://issues.apache.org/jira/browse/YARN-2139)).
- Under the hood, it unifies the scheduler codebase to essentially parameterize the resource types.
-* User can specify the container resource requirement by a profile name, rather than fiddling with varying resource-requirements for each resource type.
