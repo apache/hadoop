@@ -93,7 +93,7 @@ public class SimpleTcpServer {
     LOG.info("Started listening to TCP requests at port " + boundPort + " for "
         + rpcProgram + " with workerCount " + workerCount);
   }
-
+  
   // boundPort will be set only after server starts
   public int getBoundPort() {
     return this.boundPort;

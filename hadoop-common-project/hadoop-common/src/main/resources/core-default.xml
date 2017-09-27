@@ -1344,16 +1344,16 @@
   <description>The implementation class of the S3A AbstractFileSystem.</description>
 </property>
 
-  <property>
-    <name>fs.s3a.list.version</name>
-    <value>2</value>
-    <description>
-      Select which version of the S3 SDK's List Objects API to use.  Currently
-      support 2 (default) and 1 (older API).
-    </description>
-  </property>
+<property>
+  <name>fs.s3a.list.version</name>
+  <value>2</value>
+  <description>
+    Select which version of the S3 SDK's List Objects API to use.  Currently
+    support 2 (default) and 1 (older API).
+  </description>
+</property>
 
-  <!-- Azure file system properties -->
+<!-- Azure file system properties -->
 <property>
   <name>fs.wasb.impl</name>
   <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value>
@@ -1459,21 +1459,20 @@
 </property>
 
 
-  <!-- Ozone file system properties -->
-  <property>
-    <name>fs.ozfs.impl</name>
-    <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
-    <description>The implementation class of the Ozone FileSystem.</description>
-  </property>
+<!-- Ozone file system properties -->
+<property>
+  <name>fs.ozfs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
+  <description>The implementation class of the Ozone FileSystem.</description>
+</property>
 
-  <property>
-    <name>fs.AbstractFileSystem.ozfs.impl</name>
-    <value>org.apache.hadoop.fs.ozone.OzFs</value>
-    <description>The implementation class of the OzFs AbstractFileSystem.</description>
-  </property>
+<property>
+  <name>fs.AbstractFileSystem.ozfs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.OzFs</value>
+  <description>The implementation class of the OzFs AbstractFileSystem.</description>
+</property>
 
-
-  <!-- ipc properties -->
+<!-- ipc properties -->
 
 <property>
   <name>ipc.client.idlethreshold</name>

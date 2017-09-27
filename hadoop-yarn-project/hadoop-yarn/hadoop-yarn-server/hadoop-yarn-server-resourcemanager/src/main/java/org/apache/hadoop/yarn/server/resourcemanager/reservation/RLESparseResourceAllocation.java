@@ -408,7 +408,7 @@ public class RLESparseResourceAllocation {
       // test for negative value and throws
       if (operator == RLEOperator.subtractTestNonNegative
           && (Resources.fitsIn(val, ZERO_RESOURCE)
-          && !Resources.equals(val, ZERO_RESOURCE))) {
+              && !Resources.equals(val, ZERO_RESOURCE))) {
         throw new PlanningException(
             "RLESparseResourceAllocation: merge failed as the "
                 + "resulting RLESparseResourceAllocation would be negative");
