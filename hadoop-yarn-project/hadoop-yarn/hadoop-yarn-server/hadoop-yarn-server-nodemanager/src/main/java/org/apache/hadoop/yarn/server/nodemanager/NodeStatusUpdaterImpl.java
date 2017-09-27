@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -115,11 +116,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
+  private ResourceCalculatorPlugin resourceCalculatorPlugin;
+  
   private Runnable statusUpdaterRunnable;
   private Thread  statusUpdater;
   private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
   Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
-
+  
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(NodeStatusUpdaterImpl.class.getName());
@@ -146,13 +149,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     
     int virtualCores =
         conf.getInt(
-            YarnConfiguration.NM_VCORES, YarnConfiguration.DEFAULT_NM_VCORES);
+             YarnConfiguration.NM_VCORES, YarnConfiguration.DEFAULT_NM_VCORES);
 
+    /*
     int GPUs =
         conf.getInt(
             YarnConfiguration.NM_GPUS, YarnConfiguration.DEFAULT_NM_GPUS);
-
-    int GPUAttribute = 0;
+    */
+    
+    resourceCalculatorPlugin = ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
+    int GPUs = resourceCalculatorPlugin.getNumGPUs();    
+    int GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
+    
     int pos = 1;
     while (Integer.bitCount(GPUAttribute) < GPUs) {
       GPUAttribute = GPUAttribute + pos;

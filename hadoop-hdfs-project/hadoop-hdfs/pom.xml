@@ -443,7 +443,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 </goals>
                 <configuration>
                   <target>
-                    <condition property="generator" value="Visual Studio 10" else="Visual Studio 10 Win64">
+                    <condition property="generator" value="Visual Studio 14" else="Visual Studio 14 Win64">
                       <equals arg1="Win32" arg2="${env.PLATFORM}" />
                     </condition>
                     <mkdir dir="${project.build.directory}/native"/>

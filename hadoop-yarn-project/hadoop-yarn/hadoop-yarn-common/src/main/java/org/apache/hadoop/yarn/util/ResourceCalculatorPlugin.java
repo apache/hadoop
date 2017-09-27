@@ -97,6 +97,13 @@ public abstract class ResourceCalculatorPlugin extends Configured {
    * @return number of GPUs
    */
   public abstract int getNumGPUs();
+  
+  /**
+   * Obtain the GPUs utilization information. 
+   *
+   * @return bit map set of gpu utlization.
+   */
+  public abstract int getGpuAttribute();
 
   /**
    * Create the ResourceCalculatorPlugin from the class name and configure it. If

@@ -174,4 +174,11 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     refreshIfNeeded();
     return -1;
   }
+  
+  /** {@inheritDoc} */
+  @Override
+  public int getGpuAttribute() {
+      //Not support
+      return 0;
+  }
 }

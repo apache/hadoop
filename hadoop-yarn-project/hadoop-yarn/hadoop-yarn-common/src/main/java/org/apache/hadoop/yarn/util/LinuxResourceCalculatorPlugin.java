@@ -22,11 +22,13 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.io.InputStreamReader;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,7 +58,17 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final String MEMFREE_STRING = "MemFree";
   private static final String SWAPFREE_STRING = "SwapFree";
   private static final String INACTIVE_STRING = "Inactive";
-
+  
+  public static final long REFRESH_GPU_INTERVAL_MS = 10* 1000; 
+  
+  private static final String REFRESH_GPU_CMD = "nvidia-smi --query-gpu=index, memory.total,memory.used --format=csv";
+  /**
+     The out put format of this command is:
+     index, memory.total [MiB], memory.used [MiB]
+     0, 1998 MiB, 0 MiB
+    */
+  private static final Pattern GPU_FORMAT =
+          Pattern.compile("^\\s*([0-9]{1,2})\\s*,\\s*([0-9]*)\\s*MiB,\\s*([0-9]+)\\s*MiB");   
   /**
    * Patterns for parsing /proc/cpuinfo
    */
@@ -75,13 +87,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     		            "[ \t]*([0-9]*)[ \t]*([0-9]*)[ \t].*");
   private CpuTimeTracker cpuTimeTracker;
 
-  /**
-   * Patterns for parsing /proc/driver/nvidia/gpus
-   */
-  private static final String PROCFS_GPUINFO = "/proc/driver/nvidia/gpus";
-  private static final Pattern GPU_FORMAT =
-          Pattern.compile("^GPU[ \t]:[ \t]*([0-9]*)");
-
   private String procfsMemFile;
   private String procfsCpuFile;
   private String procfsStatFile;
@@ -96,10 +101,11 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private int numProcessors = 0; // number of processors on the system
   private long cpuFrequency = 0L; // CPU frequency on the system (kHz)
   private int numGPUs = 0; // number of GPUs on the system
-
+  private int gpuAttribute = 0; // bit map of GPU utilization, 1 means free, 0 means occupied
+  private long lastRefreshGpuTime = 0L;
+  
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;
-  boolean readGpuInfoFile = false;
 
   /**
    * Get current time
@@ -110,7 +116,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
   public LinuxResourceCalculatorPlugin() {
-    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, PROCFS_GPUINFO,
+    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, null,
         ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS);
   }
 
@@ -257,53 +263,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     readCpuInfoFile = true;
   }
 
-  /**
-   * Read /proc/driver/nvidia/gpus, parse and calculate CPU information
-   */
-  private void readProcGpuInfoFile() {
-    // This directory needs to be read only once
-    if (readGpuInfoFile) {
-      return;
-    }
-    // Read "XXX" file
-    BufferedReader in = null;
-    InputStreamReader fReader = null;
-    try {
-      fReader = new InputStreamReader(
-              new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
-      in = new BufferedReader(fReader);
-    } catch (FileNotFoundException f) {
-      // shouldn't happen....
-      return;
-    }
-    Matcher mat = null;
-    try {
-      numGPUs = 0;
-      String str = in.readLine();
-      while (str != null) {
-        mat = GPU_FORMAT.matcher(str);
-        if (mat.find()) {
-          numGPUs++;
-        }
-        str = in.readLine();
-      }
-    } catch (IOException io) {
-      LOG.warn("Error reading the stream " + io);
-    } finally {
-      // Close the streams
-      try {
-        fReader.close();
-        try {
-          in.close();
-        } catch (IOException i) {
-          LOG.warn("Error closing the stream " + in);
-        }
-      } catch (IOException i) {
-        LOG.warn("Error closing the stream " + fReader);
-      }
-    }
-    readGpuInfoFile = true;
-  }
 
   /**
    * Read /proc/stat file, parse and calculate cumulative CPU
@@ -417,9 +376,67 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   /** {@inheritDoc} */
   @Override
   public int getNumGPUs() {
-    readProcGpuInfoFile();
+      refreshGpuIfNeeded();
     return numGPUs;
   }
+  
+  /** {@inheritDoc} */
+  @Override
+  public int getGpuAttribute() {
+      refreshGpuIfNeeded();
+      return gpuAttribute;
+  }
+  
+  private InputStreamReader getInputGpuStreamReader() throws Exception
+  {
+      if(procfsGpuFile == null){
+          Process pos = Runtime.getRuntime().exec(REFRESH_GPU_CMD);
+          pos.waitFor();
+          return new InputStreamReader(pos.getInputStream());
+          
+      } else {
+          return new InputStreamReader(
+                  new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
+      }
+  }
+  private void refreshGpuIfNeeded() {
+      
+    long now = System.currentTimeMillis();
+    if (now - lastRefreshGpuTime > REFRESH_GPU_INTERVAL_MS) {
+        lastRefreshGpuTime = now;
+      try {
+          InputStreamReader ir = getInputGpuStreamReader();
+           BufferedReader  input = new BufferedReader (ir);
+           String ln="";           
+           int gpuInfo = 0;
+           int gpuMask = 0;
+           Matcher mat = null;      
+           
+           while ((ln =input.readLine()) != null) {           
+               mat = GPU_FORMAT.matcher(ln);
+               if (mat.find()) {
+                 long index = Long.parseLong(mat.group(1));
+                 long totalMemory = Long.parseLong(mat.group(2));
+                 long usedMemory = Long.parseLong(mat.group(3));
+                 gpuMask |= (1<<index);
+                 if(usedMemory == 0){
+                     gpuInfo |= (1<<index);
+                 }
+              }               
+           }
+           input.close();
+           ir.close();
+           
+           numGPUs = Integer.bitCount(gpuMask);
+           gpuAttribute = gpuInfo;
+         } catch (java.io.IOException e) {
+             LOG.warn("error get GPU status info:" + e.toString());
+         }catch (Exception e) {
+             LOG.warn("error get GPU status info:" + e.toString());
+         }    
+    }
+  }
+  
 
   /**
    * Test the {@link LinuxResourceCalculatorPlugin}
@@ -441,6 +458,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     System.out.println("Cumulative CPU time (ms) : " +
             plugin.getCumulativeCpuTime());
     System.out.println("Number of GPUs : " + plugin.getNumGPUs());
+    System.out.println("GPUs attibute : " + plugin.getGpuAttribute());
 
     try {
       // Sleep so we can compute the CPU usage

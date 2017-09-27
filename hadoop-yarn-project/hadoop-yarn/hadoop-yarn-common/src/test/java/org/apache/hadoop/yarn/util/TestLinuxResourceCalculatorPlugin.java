@@ -143,6 +143,18 @@ public class TestLinuxResourceCalculatorPlugin {
     "procs_running 1\n" +
     "procs_blocked 0\n";
   
+  
+  static final String GPUINFO_FORMAT =                  
+          "index, memory.total [MiB], memory.used [MiB]\n" +
+          "0, 1998 MiB, %d MiB\n" +        
+          "1, 1998 MiB, %d MiB\n" +
+          "2, 1998 MiB, %d MiB\n" +
+          "3, 1998 MiB, %d MiB\n" +
+          "4, 1998 MiB, %d MiB\n" +
+          "5, 1998 MiB, %d MiB\n" +
+          "6, 1998 MiB, %d MiB\n" +
+          "7, 1998 MiB, %d MiB\n";
+  
   /**
    * Test parsing /proc/stat and /proc/cpuinfo
    * @throws IOException
@@ -234,5 +246,34 @@ public class TestLinuxResourceCalculatorPlugin {
                  1024L * (memFree + inactive + swapFree));
     assertEquals(plugin.getPhysicalMemorySize(), 1024L * memTotal);
     assertEquals(plugin.getVirtualMemorySize(), 1024L * (memTotal + swapTotal));
+  }
+  
+  private void InitialGPUTestFile(int gpu0, int gpu1, int gpu2, int gpu3, int gpu4, int gpu5, int gpu6, int gpu7)  throws IOException {
+      File tempFile = new File(FAKE_GPUFILE);
+      tempFile.deleteOnExit();
+      FileWriter fWriter = new FileWriter(FAKE_GPUFILE);
+      fWriter.write(String.format(GPUINFO_FORMAT,
+              gpu0, gpu1, gpu2, gpu3, gpu4, gpu5, gpu6, gpu7));
+      
+      //REFRESH_GPU_INTERVAL_MS;
+      fWriter.close();
+  }
+  /**
+   * Test parsing GPU information
+   * @throws IOException
+   */
+  @Test
+  public void parsingGPUFile() throws Exception {
+     
+      InitialGPUTestFile(0, 0, 0, 0, 0, 0, 0, 0);
+      assertEquals(8,plugin.getNumGPUs());
+      assertEquals(plugin.getGpuAttribute(),0xFF);
+      
+      InitialGPUTestFile(0, 0, 0, 0, 1, 1, 1, 1);
+      assertEquals(8, plugin.getNumGPUs());
+      assertEquals(plugin.getGpuAttribute(),0xFF);
+      Thread.sleep(LinuxResourceCalculatorPlugin.REFRESH_GPU_INTERVAL_MS +1);
+      assertEquals(8, plugin.getNumGPUs());
+      assertEquals(plugin.getGpuAttribute(),0x0F);      
   }
 }
