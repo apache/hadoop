@@ -68,7 +68,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
       LogAggregationWebUtils.getLogEndIndex(
           html, $("end"));
     } catch (NumberFormatException ne) {
-      html.h1()._("Invalid log start value: " + $("end"))._();
+      html.h1()._("Invalid log end value: " + $("end"))._();
       isValid = false;
     }
 
