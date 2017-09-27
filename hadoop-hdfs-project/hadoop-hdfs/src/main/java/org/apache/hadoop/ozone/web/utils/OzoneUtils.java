@@ -270,7 +270,7 @@ public final class OzoneUtils {
    */
   public static String getDatanodeIDPath(Configuration conf) {
     String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-    if (Strings.isNullOrEmpty(dataNodeIDPath)) {
+    if (dataNodeIDPath == null) {
       String metaPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
       if (Strings.isNullOrEmpty(metaPath)) {
         // this means meta data is not found, in theory should not happen at
