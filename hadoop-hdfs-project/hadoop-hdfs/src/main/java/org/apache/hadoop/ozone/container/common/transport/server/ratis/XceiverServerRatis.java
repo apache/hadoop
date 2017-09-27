@@ -97,8 +97,8 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
     if (Strings.isNullOrEmpty(storageDir)) {
       storageDir = ozoneConf.get(OzoneConfigKeys
-          .OZONE_CONTAINER_METADATA_DIRS);
-      Preconditions.checkNotNull(storageDir, "ozone.container.metadata.dirs " +
+          .OZONE_METADATA_DIRS);
+      Preconditions.checkNotNull(storageDir, "ozone.metadata.dirs " +
           "cannot be null, Please check your configs.");
       storageDir = storageDir.concat(ratisDir);
       LOG.warn("Storage directory for Ratis is not configured. Mapping Ratis " +

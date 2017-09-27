@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.utils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -28,6 +29,7 @@ import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.util.Time;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -38,6 +40,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -316,7 +319,7 @@ public final class OzoneUtils {
    */
   public static File getScmMetadirPath(Configuration conf) {
     String metaDirPath = conf.getTrimmed(OzoneConfigKeys
-        .OZONE_CONTAINER_METADATA_DIRS);
+        .OZONE_METADATA_DIRS);
     Preconditions.checkNotNull(metaDirPath);
     File dirPath = new File(metaDirPath);
     if (!dirPath.exists() && !dirPath.mkdirs()) {
@@ -324,6 +327,28 @@ public final class OzoneUtils {
           dirPath);
     }
     return dirPath;
+  }
+
+  /**
+   * Get the path for datanode id file.
+   *
+   * @param conf - Configuration
+   * @return the path of datanode id as string
+   */
+  public static String getDatanodeIDPath(Configuration conf) {
+    String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+    if (Strings.isNullOrEmpty(dataNodeIDPath)) {
+      String metaPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
+      if (Strings.isNullOrEmpty(metaPath)) {
+        // this means meta data is not found, in theory should not happen at
+        // this point because should've failed earlier.
+        throw new IllegalArgumentException("Unable to locate meta data" +
+            "directory when getting datanode id path");
+      }
+      dataNodeIDPath = Paths.get(metaPath,
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_PATH_DEFAULT).toString();
+    }
+    return dataNodeIDPath;
   }
 
   /**

@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachin
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.states.DatanodeState;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +105,7 @@ public class InitDatanodeState implements DatanodeState,
    * and persist the ID to a local file.
    */
   private void persistContainerDatanodeID() throws IOException {
-    String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+    String dataNodeIDPath = OzoneUtils.getDatanodeIDPath(conf);
     if (Strings.isNullOrEmpty(dataNodeIDPath)) {
       LOG.error("A valid file path is needed for config setting {}",
           ScmConfigKeys.OZONE_SCM_DATANODE_ID);

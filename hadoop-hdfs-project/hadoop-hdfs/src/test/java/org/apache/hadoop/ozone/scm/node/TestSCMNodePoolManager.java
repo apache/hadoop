@@ -57,7 +57,7 @@ public class TestSCMNodePoolManager {
 
   SCMNodePoolManager createNodePoolManager(OzoneConfiguration conf)
       throws IOException {
-    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     conf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);

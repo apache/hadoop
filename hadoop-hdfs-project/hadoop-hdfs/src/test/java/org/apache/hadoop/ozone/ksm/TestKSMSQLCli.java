@@ -159,7 +159,7 @@ public class TestKSMSQLCli {
   public void testKSMDB() throws Exception {
     String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
 
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + KSM_DB_NAME;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
 

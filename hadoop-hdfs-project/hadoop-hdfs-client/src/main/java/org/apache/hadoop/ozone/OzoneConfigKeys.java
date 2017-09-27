@@ -77,8 +77,8 @@ public final class OzoneConfigKeys {
       "ozone.trace.enabled";
   public static final boolean OZONE_TRACE_ENABLED_DEFAULT = false;
 
-  public static final String OZONE_CONTAINER_METADATA_DIRS =
-      "ozone.container.metadata.dirs";
+  public static final String OZONE_METADATA_DIRS =
+      "ozone.metadata.dirs";
 
   public static final String OZONE_METADATA_STORE_IMPL =
       "ozone.metastore.impl";

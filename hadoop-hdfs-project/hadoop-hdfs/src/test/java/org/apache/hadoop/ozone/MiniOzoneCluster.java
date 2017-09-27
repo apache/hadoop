@@ -113,9 +113,9 @@ public final class MiniOzoneCluster extends MiniDFSCluster
     setConf(i, dnConf, OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
         getInstanceStorageDir(i, -1).getCanonicalPath());
     String containerMetaDirs = dnConf.get(
-        OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS) + "-dn-" + i;
+        OzoneConfigKeys.OZONE_METADATA_DIRS) + "-dn-" + i;
     Path containerMetaDirPath = Paths.get(containerMetaDirs);
-    setConf(i, dnConf, OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+    setConf(i, dnConf, OzoneConfigKeys.OZONE_METADATA_DIRS,
         containerMetaDirs);
     Path containerRootPath =
         containerMetaDirPath.resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
@@ -476,7 +476,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       if (scmMetadataDir.isPresent()) {
         // if user specifies a path in the test, it is assumed that user takes
         // care of creating and cleaning up that directory after the tests.
-        conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+        conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
             scmMetadataDir.get());
         return;
       }
@@ -487,7 +487,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       Files.createDirectories(scmPath);
       Path containerPath = scmPath.resolve(OzoneConsts.CONTAINER_ROOT_PREFIX);
       Files.createDirectories(containerPath);
-      conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS, scmPath
+      conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath
           .toString());
 
       // TODO : Fix this, we need a more generic mechanism to map

@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.container.common.states.endpoint.HeartbeatEndpoin
 import org.apache.hadoop.ozone.container.common.states.endpoint.RegisterEndpointTask;
 import org.apache.hadoop.ozone.container.common.states.endpoint.VersionEndpointTask;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -112,7 +113,7 @@ public class RunningDatanodeState implements DatanodeState {
    */
   private StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto
       getContainerNodeID() {
-    String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+    String dataNodeIDPath = OzoneUtils.getDatanodeIDPath(conf);
     if (dataNodeIDPath == null || dataNodeIDPath.isEmpty()) {
       LOG.error("A valid file path is needed for config setting {}",
           ScmConfigKeys.OZONE_SCM_DATANODE_ID);
