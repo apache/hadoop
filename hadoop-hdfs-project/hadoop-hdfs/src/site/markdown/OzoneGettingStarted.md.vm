@@ -139,9 +139,9 @@ place  and not mingled with HDFS settings.
 ```
 
 * _*ozone.scm.datanode.id*_ Each datanode that speaks to SCM generates an ID
-just like HDFS. This ID is stored is a location pointed by this setting. If
-this setting is not valid, datanodes will fail to come up. Please note:
-This path that is will created by datanodes to store the datanode ID. Here is an example,
+just like HDFS.  This is an optional setting. Please note:
+This path will be created by datanodes if it doesn't exist already. Here is an
+ example,
 
 ```
    <property>
