@@ -40,7 +40,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_BLOCK_DELETION_MAX_RETRY;
 
 /**
@@ -58,7 +58,7 @@ public class TestDeletedBlockLog {
         TestDeletedBlockLog.class.getSimpleName());
     conf = new OzoneConfiguration();
     conf.setInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 20);
-    conf.set(OZONE_CONTAINER_METADATA_DIRS, testDir.getAbsolutePath());
+    conf.set(OZONE_METADATA_DIRS, testDir.getAbsolutePath());
     deletedBlockLog = new DeletedBlockLogImpl(conf);
   }
 

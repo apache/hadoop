@@ -44,7 +44,7 @@ import java.util.List;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import static org.junit.Assert.*;
 
 /**
@@ -62,7 +62,7 @@ public class TestMiniOzoneCluster {
   @BeforeClass
   public static void setup() {
     conf = new OzoneConfiguration();
-    conf.set(OZONE_CONTAINER_METADATA_DIRS,
+    conf.set(OZONE_METADATA_DIRS,
         TEST_ROOT.toString());
     conf.setBoolean(DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
     WRITE_TMP.mkdirs();
@@ -183,7 +183,7 @@ public class TestMiniOzoneCluster {
     Configuration ozoneConf = SCMTestUtils.getConf();
     File testDir = PathUtils.getTestDir(TestOzoneContainer.class);
     ozoneConf.set(DFS_DATANODE_DATA_DIR_KEY, testDir.getAbsolutePath());
-    ozoneConf.set(OZONE_CONTAINER_METADATA_DIRS,
+    ozoneConf.set(OZONE_METADATA_DIRS,
         TEST_ROOT.toString());
 
     // Each instance of SM will create an ozone container

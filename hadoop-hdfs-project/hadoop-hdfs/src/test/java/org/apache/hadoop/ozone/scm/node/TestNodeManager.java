@@ -102,7 +102,7 @@ public class TestNodeManager {
    */
   OzoneConfiguration getConf() {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     conf.setLong(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 100);
     return conf;

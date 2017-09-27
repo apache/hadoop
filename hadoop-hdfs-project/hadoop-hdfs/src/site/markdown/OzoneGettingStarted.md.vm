@@ -63,17 +63,17 @@ place  and not mingled with HDFS settings.
        <value>True</value>
     </property>
 ```
- *  _*ozone.container.metadata.dirs*_ Ozone is designed with modern hardware
+ *  _*ozone.metadata.dirs*_ Ozone is designed with modern hardware
  in mind. It tries to use SSDs effectively. So users can specify where the
- datanode metadata must reside. Usually you pick your fastest disk (SSD if
- you have them on your datanodes). Datanodes will write the container metadata
- to these disks. This is a required setting, if this is missing datanodes will
+ metadata must reside. Usually you pick your fastest disk (SSD if
+ you have them on your nodes). KSM, SCM and datanode will write the metadata
+ to these disks. This is a required setting, if this is missing Ozone will
  fail to come up. Here is an example,
 
 ```
    <property>
-      <name>ozone.container.metadata.dirs</name>
-      <value>/data/disk1/container/meta</value>
+      <name>ozone.metadata.dirs</name>
+      <value>/data/disk1/meta</value>
    </property>
 ```
 
@@ -135,10 +135,11 @@ Here is a quick summary of settings needed by Ozone.
 | Setting                        | Value                        | Comment |
 |--------------------------------|------------------------------|------------------------------------------------------------------|
 | ozone.enabled                  | True                         | This enables SCM and  containers in HDFS cluster.                |
-| ozone.container.metadata.dirs  | file path                    | The container metadata will be stored here in the datanode.      |
+| ozone.metadata.dirs            | file path                    | The metadata will be stored here.                                |
 | ozone.scm.names                | SCM server name              | Hostname:port or or IP:port address of SCM.                      |
-| ozone.scm.datanode.id          | file path                    | Data node ID is the location of  datanode's ID file              |
-| ozone.scm.block.client.address | SCM server name              | Used by services like KSM                                        |
+| ozone.scm.block.client.address | SCM server name and port     | Used by services like KSM                                        |
+| ozone.scm.client.address       | SCM server name and port     | Used by client side                                              |
+| ozone.scm.datanode.address     | SCM server name and port     | Used by datanode to talk to SCM                                  |
 | ozone.ksm.address              | KSM server name              | Used by Ozone handler and Ozone file system.                     |
 
  Here is a working example of`ozone-site.xml`.
@@ -153,30 +154,34 @@ Here is a quick summary of settings needed by Ozone.
         </property>
 
         <property>
-          <name>ozone.container.metadata.dirs</name>
-          <value>/data/disk1/scm/meta</value>
+          <name>ozone.metadata.dirs</name>
+          <value>/data/disk1/ozone/meta</value>
         </property>
-
 
         <property>
           <name>ozone.scm.names</name>
-          <value>scm.hadoop.apache.org</value>
+          <value>127.0.0.1</value>
         </property>
 
         <property>
-          <name>ozone.scm.datanode.id</name>
-          <value>/data/disk1/scm/meta/node/datanode.id</value>
-        </property>
-
-        <property>
-          <name>ozone.scm.block.client.address</name>
-          <value>scm.hadoop.apache.org</value>
+           <name>ozone.scm.client.address</name>
+           <value>127.0.0.1:9860</value>
         </property>
 
          <property>
-            <name>ozone.ksm.address</name>
-            <value>ksm.hadoop.apache.org</value>
-          </property>
+           <name>ozone.scm.block.client.address</name>
+           <value>127.0.0.1:9863</value>
+         </property>
+
+         <property>
+           <name>ozone.scm.datanode.address</name>
+           <value>127.0.0.1:9861</value>
+         </property>
+
+         <property>
+           <name>ozone.ksm.address</name>
+           <value>127.0.0.1:9874</value>
+         </property>
     </configuration>
 ```
 

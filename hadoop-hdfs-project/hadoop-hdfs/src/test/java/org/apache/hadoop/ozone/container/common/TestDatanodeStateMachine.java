@@ -102,7 +102,7 @@ public class TestDatanodeStateMachine {
     }
     conf.set(DFS_DATANODE_DATA_DIR_KEY,
         new File(testRoot, "data").getAbsolutePath());
-    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
         new File(testRoot, "scm").getAbsolutePath());
     path = Paths.get(path.toString(),
         TestDatanodeStateMachine.class.getSimpleName() + ".id").toString();

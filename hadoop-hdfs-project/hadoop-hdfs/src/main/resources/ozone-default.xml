@@ -59,7 +59,7 @@
   </property>
 
   <property>
-    <name>ozone.container.metadata.dirs</name>
+    <name>ozone.metadata.dirs</name>
     <value></value>
     <description>
       Ozone metadata dir path.

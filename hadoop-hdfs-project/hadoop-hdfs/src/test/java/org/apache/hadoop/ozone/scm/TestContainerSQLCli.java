@@ -171,7 +171,7 @@ public class TestContainerSQLCli {
   @Test
   public void testConvertBlockDB() throws Exception {
     String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + BLOCK_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
 
@@ -193,7 +193,7 @@ public class TestContainerSQLCli {
   @Test
   public void testConvertNodepoolDB() throws Exception {
     String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + NODEPOOL_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
 
@@ -220,7 +220,7 @@ public class TestContainerSQLCli {
   @Test
   public void testConvertOpenContainerDB() throws Exception {
     String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + OPEN_CONTAINERS_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
 
@@ -254,7 +254,7 @@ public class TestContainerSQLCli {
     String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
     // TODO : the following will fail due to empty Datanode list, need to fix.
     //String dnUUID = cluster.getDataNodes().get(0).getDatanodeUuid();
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS);
+    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + CONTAINER_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
     Connection conn;

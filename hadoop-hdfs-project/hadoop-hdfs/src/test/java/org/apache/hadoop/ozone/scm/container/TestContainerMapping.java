@@ -55,7 +55,7 @@ public class TestContainerMapping {
 
     testDir = GenericTestUtils
         .getTestDir(TestContainerMapping.class.getSimpleName());
-    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS,
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {

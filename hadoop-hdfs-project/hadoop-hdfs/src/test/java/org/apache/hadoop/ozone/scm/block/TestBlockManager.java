@@ -63,7 +63,7 @@ public class TestBlockManager {
     String path = GenericTestUtils
         .getTempPath(TestBlockManager.class.getSimpleName());
 
-    conf.set(OzoneConfigKeys.OZONE_CONTAINER_METADATA_DIRS, path);
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, path);
     testDir = Paths.get(path).toFile();
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {
