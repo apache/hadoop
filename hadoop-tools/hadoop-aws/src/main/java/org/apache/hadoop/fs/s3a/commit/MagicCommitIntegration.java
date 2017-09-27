@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 
 /**
- * Adds the code needed for S3A integration.
+ * Adds the code needed for S3A to support magic committers.
  * It's pulled out to keep S3A FS class slightly less complex.
  * This class can be instantiated even when magic commit is disabled;
  * in this case:
@@ -40,9 +40,9 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
  *   of {@link PutTracker}.</li>
  * </ol>
  */
-public class MagicCommitFSIntegration {
+public class MagicCommitIntegration {
   private static final Logger LOG =
-      LoggerFactory.getLogger(MagicCommitFSIntegration.class);
+      LoggerFactory.getLogger(MagicCommitIntegration.class);
   private final S3AFileSystem owner;
   private final boolean magicCommitEnabled;
 
@@ -51,7 +51,7 @@ public class MagicCommitFSIntegration {
    * @param owner owner class
    * @param magicCommitEnabled is magic commit enabled.
    */
-  public MagicCommitFSIntegration(S3AFileSystem owner,
+  public MagicCommitIntegration(S3AFileSystem owner,
       boolean magicCommitEnabled) {
     this.owner = owner;
     this.magicCommitEnabled = magicCommitEnabled;
@@ -93,11 +93,11 @@ public class MagicCommitFSIntegration {
           destKey,
           pendingObject,
           owner.createWriteOperationHelper(pendingObject));
+      LOG.debug("Created {}", tracker);
     } else {
       // standard multipart tracking
       tracker = new PutTracker(key);
     }
-    LOG.debug("Created {}", tracker);
     return tracker;
   }
 

@@ -46,7 +46,7 @@ import org.apache.hadoop.fs.Path;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.fs.s3a.S3ALambda.*;
+import static org.apache.hadoop.fs.s3a.Invoker.*;
 
 /**
  * Helper for low-level operations against an S3 Bucket for writing data
@@ -75,7 +75,7 @@ public class WriteOperationHelper {
       LoggerFactory.getLogger(WriteOperationHelper.class);
   private final S3AFileSystem owner;
   private final String key;
-  private final S3ALambda invoke;
+  private final Invoker invoker;
 
   /**
    * Constructor.
@@ -86,13 +86,13 @@ public class WriteOperationHelper {
     checkArgument(key != null, "No key");
     this.owner = owner;
     this.key = key;
-    this.invoke = new S3ALambda(new S3ARetryPolicy(owner.getConf()),
-        this::operationRetried,
-        S3ALambda.LOG_EVENT);
+    this.invoker = new Invoker(new S3ARetryPolicy(owner.getConf()),
+        this::operationRetried
+    );
   }
 
   /**
-   * Callback from {@link S3ALambda} when an operation is retried.
+   * Callback from {@link Invoker} when an operation is retried.
    * @param text text of the operation
    * @param ex exception
    * @param retries number of retries
@@ -116,10 +116,10 @@ public class WriteOperationHelper {
   public <T> T retry(String action,
       String path,
       boolean idempotent,
-      S3ALambda.Operation<T> operation)
+      Invoker.Operation<T> operation)
       throws IOException {
 
-    return invoke.retry(action, path, idempotent, operation);
+    return invoker.retry(action, path, idempotent, operation);
   }
 
   /**
@@ -239,8 +239,8 @@ public class WriteOperationHelper {
       String uploadId,
       List<PartETag> partETags,
       long length,
-      S3ALambda.Failure retrying) throws IOException {
-    return invoke.retry("Completing multipart commit", destination,
+      Retried retrying) throws IOException {
+    return invoker.retry("Completing multipart commit", destination,
         true,
         retrying,
         () -> {
@@ -299,10 +299,10 @@ public class WriteOperationHelper {
    */
   @Retries.Retry_translated
   public void abortMultipartUpload(String destKey, String uploadId,
-      S3ALambda.Failure retrying)
+      Retried retrying)
       throws IOException {
     LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
-    invoke.retry("aborting multipart commit", destKey, true,
+    invoker.retry("aborting multipart commit", destKey, true,
         retrying,
         () -> owner.abortMultipartUpload(
             destKey,
@@ -342,7 +342,7 @@ public class WriteOperationHelper {
   @Retries.Retry_translated
   public void abortMultipartCommit(String dest, String uploadId)
       throws IOException {
-    abortMultipartUpload(dest, uploadId, invoke.getRetryCallback());
+    abortMultipartUpload(dest, uploadId, invoker.getRetryCallback());
   }
 
   /**

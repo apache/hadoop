@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.Assume;
 import org.junit.Test;
@@ -36,9 +35,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
  * Test S3A Failure translation, including a functional test
@@ -73,13 +72,9 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
       writeDataset(fs, testpath, shortDataset, shortDataset.length, 1024, true);
       // here the file length is less. Probe the file to see if this is true,
       // with a spin and wait
-      LambdaTestUtils.eventually(30 * 1000, 1000,
-          new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-              assertEquals(shortLen, fs.getFileStatus(testpath).getLen());
-              return null;
-            }
+      eventually(30 * 1000, 1000,
+          () -> {
+            assertEquals(shortLen, fs.getFileStatus(testpath).getLen());
           });
 
       // here length is shorter. Assuming it has propagated to all replicas,
@@ -99,12 +94,8 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
           instream.read(instream.getPos(), buf, 0, buf.length));
 
       // now do a block read fully, again, backwards from the current pos
-      try {
-        instream.readFully(shortLen + 512, buf);
-        fail("Expected readFully to fail");
-      } catch (EOFException expected) {
-        LOG.debug("Expected EOF: ", expected);
-      }
+      intercept(EOFException.class, "", "readfully",
+          () -> instream.readFully(shortLen + 512, buf));
 
       assertIsEOF("read(offset)",
           instream.read(shortLen + 510, buf, 0, buf.length));
@@ -115,19 +106,10 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
       // delete the file. Reads must fail
       fs.delete(testpath, false);
 
-      try {
-        int r = instream.read();
-        fail("Expected an exception, got " + r);
-      } catch (FileNotFoundException e) {
-        // expected
-      }
-
-      try {
-        instream.readFully(2048, buf);
-        fail("Expected readFully to fail");
-      } catch (FileNotFoundException e) {
-        // expected
-      }
+      intercept(FileNotFoundException.class, "", "read()",
+          () -> instream.read());
+      intercept(FileNotFoundException.class, "", "readfully",
+          () -> instream.readFully(2048, buf));
 
     }
   }
@@ -168,7 +150,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     timer.end("removeKeys");
   }
 
-  @Test(expected = MultiObjectDeleteException.class)
+  @Test
   public void testMultiObjectDeleteNoPermissions() throws Throwable {
     Configuration conf = getConfiguration();
     String csvFile = conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
@@ -176,6 +158,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
         DEFAULT_CSVTEST_FILE.equals(csvFile));
     Path testFile = new Path(csvFile);
     S3AFileSystem fs = (S3AFileSystem)FileSystem.newInstance(testFile.toUri(), conf);
-    removeKeys(fs, fs.pathToKey(testFile));
+    intercept(MultiObjectDeleteException.class,
+        () -> removeKeys(fs, fs.pathToKey(testFile)));
   }
 }

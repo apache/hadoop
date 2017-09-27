@@ -67,10 +67,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.S3ALambda;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
@@ -218,12 +218,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /** Owner FS: only valid if configured with an owner FS. */
   private S3AFileSystem owner;
 
-  /** Lambda-invoker for IO. Until configured properly, use try-once. */
-  private S3ALambda invoke = new S3ALambda(RetryPolicies.TRY_ONCE_THEN_FAIL,
-      S3ALambda.NO_OP, S3ALambda.LOG_EVENT);
+  /** Invoker for IO. Until configured properly, use try-once. */
+  private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
+      Invoker.NO_OP
+  );
 
   /** Data access can have its own policies. */
-  private S3ALambda dataAccess;
+  private Invoker dataAccess;
 
   /**
    * A utility function to create DynamoDB instance.
@@ -270,9 +271,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
     initDataAccessRetries(conf);
 
     // set up a full retry policy
-    invoke = new S3ALambda(new S3ARetryPolicy(conf),
-        this::handleRetry,
-        this::handleLambdaFailure);
+    invoker = new Invoker(new S3ARetryPolicy(conf),
+        this::retryEvent
+    );
 
     initTable();
 
@@ -331,9 +332,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
     dataAccessRetryPolicy = RetryPolicies
         .exponentialBackoffRetry(maxRetries, MIN_RETRY_SLEEP_MSEC,
             TimeUnit.MILLISECONDS);
-    dataAccess = new S3ALambda(dataAccessRetryPolicy,
-        this::handleRetry,
-        this::handleLambdaFailure);
+    dataAccess = new Invoker(dataAccessRetryPolicy,
+        this::retryEvent
+    );
   }
 
   @Override
@@ -368,11 +369,11 @@ public class DynamoDBMetadataStore implements MetadataStore {
     if (tombstone) {
       Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
           PathMetadata.tombstone(path));
-      invoke.retry("put tombstone", path.toString(), true,
+      invoker.retry("put tombstone", path.toString(), true,
           () -> table.putItem(item));
     } else {
       PrimaryKey key = pathToKey(path);
-      invoke.retry("delete key", path.toString(), true,
+      invoker.retry("delete key", path.toString(), true,
           () -> table.deleteItem(key));
     }
   }
@@ -412,7 +413,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       throws IOException {
     checkPath(path);
     LOG.debug("Get from table {} in region {}: {}", tableName, region, path);
-    return S3ALambda.once("get", path.toString(),
+    return Invoker.once("get", path.toString(),
         () -> innerGet(path, wantEmptyDirectoryFlag));
   }
 
@@ -481,7 +482,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
 
     // find the children in the table
-    return S3ALambda.once("listChildren", path.toString(),
+    return Invoker.once("listChildren", path.toString(),
         () -> {
           final QuerySpec spec = new QuerySpec()
               .withHashKey(pathToParentKeyAttribute(path))
@@ -560,7 +561,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
       }
     }
 
-    S3ALambda.once("move", tableName,
+    Invoker.once("move", tableName,
         () -> processBatchWriteRequest(null, pathMetadataToItem(newItems)));
   }
 
@@ -718,14 +719,14 @@ public class DynamoDBMetadataStore implements MetadataStore {
         meta.isEmpty(), false);
 
     // First add any missing ancestors...
-    final Collection<PathMetadata> metasToPut = invoke.retry(
+    final Collection<PathMetadata> metasToPut = invoker.retry(
         "paths to put", path.toString(), true,
         () -> fullPathsToPut(p));
 
     // next add all children of the directory
     metasToPut.addAll(meta.getListing());
 
-    S3ALambda.once("put", path.toString(),
+    Invoker.once("put", path.toString(),
         () -> processBatchWriteRequest(null, pathMetadataToItem(metasToPut)));
   }
 
@@ -1014,7 +1015,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     final ProvisionedThroughput toProvision = new ProvisionedThroughput()
         .withReadCapacityUnits(readCapacity)
         .withWriteCapacityUnits(writeCapacity);
-    invoke.retry("provisionTable", tableName, true,
+    invoker.retry("provisionTable", tableName, true,
         () -> {
           final ProvisionedThroughputDescription p =
               table.updateTable(toProvision).getProvisionedThroughput();
@@ -1147,56 +1148,43 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   /**
-   * Callback from {@link S3ALambda} when an operation is retried.
+   * Callback from {@link Invoker} when an operation is retried.
    * @param text text of the operation
    * @param ex exception
    * @param attempts number of attempts
    * @param idempotent is the method idempotent
    */
-  void handleRetry(
+  void retryEvent(
       String text,
-      Exception ex,
-      int attempts,
-      boolean idempotent) {
-    if (attempts == 1) {
-      LOG.info("Retrying {}", text);
-    }
-    if (instrumentation != null) {
-      instrumentation.retrying();
-    }
-    if (owner != null) {
-      owner.metastoreOperationRetried(ex, attempts, idempotent);
-    }
-  }
-
-  /**
-   * Callback from {@link S3ALambda} after an operation has failed and before
-   * any retry logic is invoked.
-   * If the failure is from throttling, log at warn, so that the problem is
-   * noticed. But: only log once, even on retries
-   * @param text text of the operation
-   * @param ex exception
-   * @param attempts number of attempts
-   * @param idempotent is the method idempotent
-   */
-  void handleLambdaFailure(
-      String text,
-      Exception ex,
+      IOException ex,
       int attempts,
       boolean idempotent) {
     if (S3AUtils.isThrottleException(ex)) {
+      // throttled
       if (instrumentation != null) {
         instrumentation.throttled();
       }
       if (attempts == 1) {
         LOG.warn(
-            "DynamoDB IO limits reached in {}; consider increasing capacity",
-            text);
+            "DynamoDB IO limits reached in {}; consider increasing capacity: {}",
+            text, ex.toString());
+        LOG.debug("Throttled", ex);
       } else {
         LOG.debug(
-            "DynamoDB IO limits reached in {}; consider increasing capacity",
-            text);
+            "DynamoDB IO limits reached in {}; consider increasing capacity: {}",
+            text, ex.toString());
       }
+    } else if (attempts == 1) {
+      // not throttled. Log once
+      LOG.info("Retrying {}: {}", text, ex.toString());
+    }
+
+    if (instrumentation != null) {
+      // note a retry
+      instrumentation.retrying();
+    }
+    if (owner != null) {
+      owner.metastoreOperationRetried(ex, attempts, idempotent);
     }
   }
 

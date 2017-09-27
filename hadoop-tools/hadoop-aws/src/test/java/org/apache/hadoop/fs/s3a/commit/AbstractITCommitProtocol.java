@@ -33,10 +33,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.io.IntWritable;
@@ -722,16 +720,10 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // this is only task commit; there MUST be no part- files in the dest dir
     waitForConsistency();
     try {
-      RemoteIterator<LocatedFileStatus> files
-          = getFileSystem().listFiles(outDir, false);
-      iterateOverFiles(files,
-          new CallOnLocatedFileStatus() {
-            @Override
-            public void call(LocatedFileStatus status) throws Exception {
+      foreachFileStatus(getFileSystem().listFiles(outDir, false),
+          (status) ->
               assertFalse("task committed file to dest :" + status,
-                  status.getPath().toString().contains("part"));
-            }
-          });
+                  status.getPath().toString().contains("part")));
     } catch (FileNotFoundException ignored) {
       log().info("Outdir {} is not created by task commit phase ",
           outDir);

@@ -32,10 +32,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
 /**
- * Class to provide lambda expression access to AWS operations.
+ * Class to provide lambda expression invocation of AWS operations.
  *
  * The core retry logic is in
- * {@link #retryUntranslated(String, boolean, Failure, Failure, Operation)};
+ * {@link #retryUntranslated(String, boolean, Retried, Operation)};
  * the other {@code retry() and retryUntranslated()} calls are wrappers.
  *
  * The static {@link #once(String, String, Operation)} and
@@ -46,7 +46,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
  * the constructor; the standard retry policy is {@link S3ARetryPolicy},
  * though others may be used.
  *
- * The constructor also takes two {@link Failure} callbacks.
+ * The constructor also takes two {@link Retried} callbacks.
  * The {@code caughtCallback} is called whenever an exception (IOE or AWS)
  * is caught, before the retry processing looks at it.
  * The {@code retryCallback} is invoked after a retry is scheduled
@@ -59,8 +59,8 @@ import org.apache.hadoop.io.retry.RetryPolicy;
  * {@link #quietlyEval(String, String, Operation)} is a java 8 optional,
  * which can then be used in java8-expressions.
  */
-public class S3ALambda {
-  private static final Logger LOG = LoggerFactory.getLogger(S3ALambda.class);
+public class Invoker {
+  private static final Logger LOG = LoggerFactory.getLogger(Invoker.class);
 
   /**
    * Retry policy to use.
@@ -70,38 +70,26 @@ public class S3ALambda {
   /**
    * Default retry handler.
    */
-  private final Failure retryCallback;
-
-  /**
-   * Default catch callback.
-   */
-  private final Failure caughtCallback;
+  private final Retried retryCallback;
 
   /**
    * Instantiate.
    * @param retryPolicy retry policy for all operations.
    * @param retryCallback standard retry policy
-   * @param caughtCallback catch notification callback
    */
-  public S3ALambda(
+  public Invoker(
       RetryPolicy retryPolicy,
-      Failure retryCallback,
-      Failure caughtCallback) {
+      Retried retryCallback) {
     this.retryPolicy = retryPolicy;
     this.retryCallback = retryCallback;
-    this.caughtCallback = caughtCallback;
   }
 
   public RetryPolicy getRetryPolicy() {
     return retryPolicy;
   }
 
-  public Failure getRetryCallback() {
+  public Retried getRetryCallback() {
     return retryCallback;
-  }
-
-  public Failure getCaughtCallback() {
-    return caughtCallback;
   }
 
   /**
@@ -154,10 +142,11 @@ public class S3ALambda {
   public void retry(String action,
       String path,
       boolean idempotent,
-      Failure retrying, VoidOperation operation)
+      Retried retrying,
+      VoidOperation operation)
       throws IOException {
-    retry(action, path, idempotent,
-        retrying, () -> {
+    retry(action, path, idempotent, retrying,
+        () -> {
           operation.execute();
           return null;
         }
@@ -222,20 +211,19 @@ public class S3ALambda {
       String action,
       String path,
       boolean idempotent,
-      Failure retrying,
+      Retried retrying,
       Operation<T> operation)
       throws IOException {
     return retryUntranslated(
         toDescription(action, path),
         idempotent,
         retrying,
-        caughtCallback,
         () -> once(action, path, operation));
   }
 
   /**
    * Execute a function with retry processing and no translation.
-   * and the default retry and catching callback.
+   * and the default retry callback.
    * @param text description for the catching callback
    * @param idempotent does the operation have semantics
    * which mean that it can be retried even if was already executed?
@@ -250,7 +238,8 @@ public class S3ALambda {
       String text,
       boolean idempotent,
       Operation<T> operation) throws IOException {
-    return retryUntranslated(text, idempotent, retryCallback, caughtCallback, operation);
+    return retryUntranslated(text, idempotent,
+        retryCallback, operation);
   }
 
   /**
@@ -262,8 +251,6 @@ public class S3ALambda {
    * @param idempotent does the operation have semantics
    * which mean that it can be retried even if was already executed?
    * @param retrying callback on retries
-   * @param catching callback whenever an exception is caught; invoked
-   * before any retry.
    * @param operation operation to execute
    * @return the result of the call
    * @throws IOException any IOE raised
@@ -273,8 +260,7 @@ public class S3ALambda {
   public <T> T retryUntranslated(
       String text,
       boolean idempotent,
-      Failure retrying,
-      Failure catching,
+      Retried retrying,
       Operation<T> operation) throws IOException {
 
     Preconditions.checkArgument(retrying != null, "null retrying argument");
@@ -292,19 +278,27 @@ public class S3ALambda {
       // you only get here if the operation didn't complete
       // normally, hence caught != null
 
+      // translate the exception into an IOE for the retry logic
+      IOException translated;
+      if (caught instanceof IOException) {
+        translated = (IOException) caught;
+      } else {
+        translated = S3AUtils.translateException(text, "",
+            (SdkBaseException)caught);
+      }
+
+
       int attempts = retryCount + 1;
-      // initial failure notification
-      catching.onFailure(text, caught, retryCount, idempotent);
       try {
         // decide action base on operation, invocation count, etc
-        retryAction = retryPolicy.shouldRetry(caught, retryCount, 0,
+        retryAction = retryPolicy.shouldRetry(translated, retryCount, 0,
             idempotent);
         // is it a retry operation?
         shouldRetry = retryAction.action.equals(
             RetryPolicy.RetryAction.RETRY.action);
         if (shouldRetry) {
           // notify the callback
-          retrying.onFailure(text, caught, retryCount, idempotent);
+          retrying.onFailure(text, translated, retryCount, idempotent);
           // then sleep for the policy delay
           Thread.sleep(retryAction.delayMillis);
         }
@@ -327,10 +321,6 @@ public class S3ALambda {
         shouldRetry = false;
       }
     } while (shouldRetry);
-
-    // if the code gets here, then all retries have been exhausted
-    LOG.warn("{} failing after {} attempts: {}", text, retryCount,
-        caught.toString());
 
     if (caught instanceof IOException) {
       throw (IOException) caught;
@@ -406,19 +396,21 @@ public class S3ALambda {
 
   /**
    * Callback for retry and notification operations.
+   * Even if the interface is throwing up "raw" exceptions, this handler
+   * gets the translated one.
    */
   @FunctionalInterface
-  public interface Failure {
+  public interface Retried {
     /**
      * Retry event in progress (before any sleep).
      * @param text text passed in to the retry() Call.
-     * @param exception the caught exception
+     * @param exception the caught (and possibly translated) exception.
      * @param retries number of retries so far
      * @param idempotent is the request idempotent.
      */
     void onFailure(
         String text,
-        Exception exception,
+        IOException exception,
         int retries,
         boolean idempotent);
   }
@@ -426,16 +418,29 @@ public class S3ALambda {
   /**
    * No op for a retrying callback.
    */
-  public static final Failure NO_OP = (text, e, retries, idempotent) -> { };
+  public static final Retried NO_OP = new Retried() {
+    @Override
+    public void onFailure(String text,
+        IOException exception,
+        int retries,
+        boolean idempotent) {
+    }
+  };
 
   /**
    * Log summary at info, full stack at debug.
    */
-  public static final Failure LOG_EVENT = (t, e, r, i) -> {
-    LOG.info("{}: " + e, t);
-    if (r == 1) {
-      // stack on first attempt, to keep noise down
-      LOG.debug("{}: " + e, t, e);
+  public static final Retried LOG_EVENT = new Retried() {
+    @Override
+    public void onFailure(String text,
+        IOException exception,
+        int retries,
+        boolean idempotent) {
+      LOG.debug("{}: " + exception, text);
+      if (retries == 1) {
+        // stack on first attempt, to keep noise down
+        LOG.debug("{}: " + exception, text, exception);
+      }
     }
   };
 }

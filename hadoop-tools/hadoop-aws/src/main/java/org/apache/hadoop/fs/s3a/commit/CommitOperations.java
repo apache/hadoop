@@ -41,8 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.S3ALambda;
-import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -55,6 +54,11 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * The implementation of the various actions a committer needs.
  * This doesn't implement the protocol/binding to a specific execution engine,
  * just the operations needed to to build one.
+ *
+ * When invoking FS operations, it assumes that the underlying FS is implementing
+ * retries and exception translation: it does not attempt to duplicate that
+ * work.
+ *
  */
 public class CommitOperations {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -65,9 +69,6 @@ public class CommitOperations {
   /** Statistics. */
   private final S3AInstrumentation.CommitterStatistics statistics;
 
-  private final S3ALambda invoke;
-  private final S3ALambda.Failure onRetry;
-
   /**
    * Instantiate.
    * @param fs FS to bind to
@@ -76,11 +77,6 @@ public class CommitOperations {
     Preconditions.checkArgument(fs != null, "null fs");
     this.fs = fs;
     statistics = fs.newCommitterStatistics();
-    onRetry = fs::operationRetried;
-    invoke = new S3ALambda(
-        new S3ARetryPolicy(fs.getConf()),
-        onRetry,
-        S3ALambda.LOG_EVENT);
   }
 
   @Override
@@ -96,7 +92,6 @@ public class CommitOperations {
   private WriteOperationHelper createWriter(String destKey) {
     return fs.createWriteOperationHelper(destKey);
   }
-
 
   /** @return statistics. */
   protected S3AInstrumentation.CommitterStatistics getStatistics() {
@@ -284,7 +279,7 @@ public class CommitOperations {
     RemoteIterator<LocatedFileStatus> pendingFiles;
     try {
       pendingFiles = ls(pendingDir, recursive);
-    } catch (FileNotFoundException e) {
+    } catch (FileNotFoundException fnfe) {
       LOG.info("No directory to abort {}", pendingDir);
       return MaybeIOE.NONE;
     }
@@ -305,10 +300,7 @@ public class CommitOperations {
           }
         } finally {
           // quietly try to delete the pending file
-          S3ALambda.quietlyEval("delete", pendingFile.toString(),
-              () -> invoke.retry("delete", pendingFile.toString(), true,
-                  () -> fs.delete(pendingFile, false)
-              ));
+          S3AUtils.deleteQuietly(fs, pendingFile, false);
         }
       }
     }
@@ -324,8 +316,7 @@ public class CommitOperations {
    */
   protected RemoteIterator<LocatedFileStatus> ls(Path path, boolean recursive)
       throws IOException {
-    return invoke.retry("ls", path.toString(), true,
-        () -> fs.listFiles(path, recursive));
+    return fs.listFiles(path, recursive);
   }
 
   /**
@@ -335,8 +326,7 @@ public class CommitOperations {
    * @throws IOException failure
    */
   protected FileStatus getFileStatus(Path path) throws IOException {
-    return invoke.retry("getFileStatus", path.toString(), true,
-        () -> fs.getFileStatus(path));
+    return fs.getFileStatus(path);
   }
 
   /**
@@ -379,8 +369,7 @@ public class CommitOperations {
     Path markerPath = new Path(outputPath, _SUCCESS);
     LOG.debug("Touching success marker for job {}: {}", markerPath,
         successData);
-    invoke.retry("save", markerPath.toString(), true,
-        () -> successData.save(fs, markerPath, true));
+    successData.save(fs, markerPath, true);
   }
 
   /**

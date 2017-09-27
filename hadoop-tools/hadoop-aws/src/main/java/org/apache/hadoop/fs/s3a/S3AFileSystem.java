@@ -95,12 +95,11 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
-import org.apache.hadoop.fs.s3a.commit.MagicCommitFSIntegration;
+import org.apache.hadoop.fs.s3a.commit.MagicCommitIntegration;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
@@ -113,8 +112,8 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.Listing.ACCEPT_ALL;
-import static org.apache.hadoop.fs.s3a.S3ALambda.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
@@ -158,9 +157,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
   // APIs on an uninited filesystem.
-  private S3ALambda invoke = new S3ALambda(RetryPolicies.TRY_ONCE_THEN_FAIL,
-      S3ALambda.NO_OP, S3ALambda.LOG_EVENT);
-  private final S3ALambda.Failure onRetry = this::operationRetried;
+  private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
+      Invoker.LOG_EVENT);
+  private final Retried onRetry = this::operationRetried;
   private String bucket;
   private int maxKeys;
   private Listing listing;
@@ -191,7 +190,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
   private boolean useListV1;
-  private MagicCommitFSIntegration committerIntegration;
+  private MagicCommitIntegration committerIntegration;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -241,8 +240,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           S3ClientFactory.class);
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
           .createS3Client(name);
-      invoke = new S3ALambda(new S3ARetryPolicy(getConf()), onRetry,
-          S3ALambda.LOG_EVENT);
+      invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry
+      );
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
@@ -302,7 +301,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           CommitConstants.DEFAULT_MAGIC_COMMITTER_ENABLED);
       LOG.debug("Magic committer {} enabled",
           magicCommitterEnabled ? "is" : "is not");
-      committerIntegration = new MagicCommitFSIntegration(
+      committerIntegration = new MagicCommitIntegration(
           this, magicCommitterEnabled);
 
       boolean blockUploadEnabled = conf.getBoolean(FAST_UPLOAD, true);
@@ -354,7 +353,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Retries.Retry_translated
   protected void verifyBucketExists()
       throws FileNotFoundException, IOException {
-    if (!invoke.retry(
+    if (!invoker.retry(
         "doesBucketExist", bucket,
         true,
         () -> s3.doesBucketExist(bucket))) {
@@ -422,7 +421,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         new Date(new Date().getTime() - seconds * 1000);
     LOG.debug("Purging outstanding multipart uploads older than {}",
         purgeBefore);
-    invoke.retry("purging multipart uploads", bucket, true,
+    invoker.retry("purging multipart uploads", bucket, true,
         () -> transfers.abortMultipartUploads(bucket, purgeBefore));
   }
 
@@ -510,7 +509,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    */
   @Retries.Retry_translated
   public String getBucketLocation(String bucketName) throws IOException {
-    return invoke.retry("getBucketLocation()",
+    return invoker.retry("getBucketLocation()",
         bucketName,
         true,
         ()-> s3.getBucketLocation(bucketName));
@@ -695,7 +694,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             instrumentation,
             readAhead,
             inputPolicy,
-            invoke));
+            invoker));
   }
 
   /**
@@ -1148,7 +1147,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
-   * Callback from {@link S3ALambda} when an operation is retried.
+   * Callback from {@link Invoker} when an operation is retried.
    * @param text text of the operation
    * @param ex exception
    * @param retries number of retries
@@ -1163,7 +1162,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
-   * Callback from {@link S3ALambda} when an operation against a metastore
+   * Callback from {@link Invoker} when an operation against a metastore
    * is retried.
    * @param ex exception
    * @param retries number of retries
@@ -1200,7 +1199,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))){
       request.setSSECustomerKey(generateSSECustomerKey());
     }
-    ObjectMetadata meta = invoke.retryUntranslated(
+    ObjectMetadata meta = invoker.retryUntranslated(
         "GET " + key,
         true,
         () -> {
@@ -1225,7 +1224,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     incrementReadOperations();
     incrementStatistic(OBJECT_LIST_REQUESTS);
     validateListArguments(request);
-    return invoke.retryUntranslated(
+    return invoker.retryUntranslated(
         request.toString(),
         true,
         () -> {
@@ -1264,7 +1263,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       S3ListResult prevResult) throws IOException {
     incrementReadOperations();
     validateListArguments(request);
-    return invoke.retryUntranslated(
+    return invoker.retryUntranslated(
         request.toString(),
         true,
         () -> {
@@ -1314,7 +1313,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       throws AmazonClientException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
-    invoke.retryUntranslated("Delete "+ bucket + ":/" + key,
+    invoker.retryUntranslated("Delete "+ bucket + ":/" + key,
         DELETE_CONSIDERED_IDEMPOTENT,
         ()-> {
           incrementStatistic(OBJECT_DELETE_REQUESTS);
@@ -1373,7 +1372,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
     try {
-      invoke.retryUntranslated("delete",
+      invoker.retryUntranslated("delete",
           DELETE_CONSIDERED_IDEMPOTENT,
           () -> {
             incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
@@ -2043,6 +2042,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
+  @Retries.Retry_translated
   public FileStatus getFileStatus(final Path f) throws IOException {
     return innerGetFileStatus(f, false);
   }
@@ -2349,7 +2349,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     final ObjectMetadata om = newObjectMetadata(srcfile.length());
     Progressable progress = null;
     PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
-    invoke.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
+    invoker.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
         () -> executePut(putObjectRequest, progress));
     if (delSrc) {
       local.delete(src, false);
@@ -2687,7 +2687,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
         newObjectMetadata(0L),
         im);
-    invoke.retry("PUT 0-byte object ", objectName,
+    invoker.retry("PUT 0-byte object ", objectName,
          true,
         () -> putObjectDirect(putObjectRequest));
     incrementPutProgressStatistics(objectName, 0);
@@ -3097,7 +3097,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       request.setPrefix(prefix);
     }
 
-    return invoke.retry("listMultipartUpoloads", prefix, true,
+    return invoker.retry("listMultipartUpoloads", prefix, true,
         () -> s3.listMultipartUploads(request).getMultipartUploads());
   }
 

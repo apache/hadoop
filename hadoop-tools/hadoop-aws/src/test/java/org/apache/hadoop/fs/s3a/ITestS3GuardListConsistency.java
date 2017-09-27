@@ -53,14 +53,14 @@ import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
  */
 public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
-  private S3ALambda invoke;
+  private Invoker invoker;
 
   @Override
   public void setup() throws Exception {
     super.setup();
-    invoke = new S3ALambda(new S3ARetryPolicy(getConfiguration()),
-        S3ALambda.NO_OP,
-        S3ALambda.NO_OP);
+    invoker = new Invoker(new S3ARetryPolicy(getConfiguration()),
+        Invoker.NO_OP
+    );
   }
 
   @Override
@@ -559,7 +559,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
       String key, String delimiter) throws java.io.IOException {
     ListObjectsV2Request k = fs.createListObjectsRequest(key, delimiter)
         .getV2();
-    return invoke.retryUntranslated("list", true,
+    return invoker.retryUntranslated("list", true,
         () -> {
           return fs.getAmazonS3ClientForTesting("list").listObjectsV2(k);
         });

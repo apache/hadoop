@@ -85,7 +85,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private String serverSideEncryptionKey;
   private final S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
-  private final S3ALambda invoke;
+  private final Invoker invoker;
 
   /**
    * This is the actual position within the object, used by
@@ -115,7 +115,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param instrumentation instrumentation to update
    * @param readahead readahead bytes
    * @param inputPolicy IO policy
-   * @param invoke preconfigured lambda invoker
+   * @param invoker preconfigured invoker
    */
   public S3AInputStream(S3ObjectAttributes s3Attributes,
       long contentLength,
@@ -124,7 +124,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       S3AInstrumentation instrumentation,
       long readahead,
       S3AInputPolicy inputPolicy,
-      S3ALambda invoke) {
+      Invoker invoker) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()), "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
     Preconditions.checkArgument(contentLength >= 0, "Negative content length");
@@ -140,7 +140,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
     this.inputPolicy = inputPolicy;
     setReadahead(readahead);
-    this.invoke = invoke;
+    this.invoker = invoker;
   }
 
   /**
@@ -173,7 +173,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     }
     String text = String.format("Failed to %s %s at %d",
         (opencount == 0 ? "open" : "re-open"), uri, targetPos);
-    S3Object object = invoke.retry(text, uri, true,
+    S3Object object = invoker.retry(text, uri, true,
         () -> client.getObject(request));
     wrappedStream = object.getObjectContent();
     contentRangeStart = targetPos;

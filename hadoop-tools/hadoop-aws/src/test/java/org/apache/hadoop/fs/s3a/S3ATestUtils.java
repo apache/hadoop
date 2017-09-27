@@ -765,17 +765,19 @@ public final class S3ATestUtils {
    * An interface for use in lambda-expressions working with
    * directory tree listings.
    */
+  @FunctionalInterface
   public interface CallOnLocatedFileStatus {
     void call(LocatedFileStatus status) throws Exception;
   }
 
   /**
-   * Iterate over files.
+   * Apply an operation to every {@link LocatedFileStatus} in a remote
+   * iterator
    * @param iterator iterator from a list
    * @param eval closure to evaluate
    * @throws Exception anything in the closure, or iteration logic.
    */
-  public static void iterateOverFiles(
+  public static void foreachFileStatus(
       RemoteIterator<LocatedFileStatus> iterator,
       CallOnLocatedFileStatus eval) throws Exception {
     while(iterator.hasNext()) {
@@ -797,8 +799,8 @@ public final class S3ATestUtils {
       LOG.info("Empty path");
       return;
     }
-    iterateOverFiles(fileSystem.listFiles(path, recursive),
-        (LocatedFileStatus status) -> LOG.info("  {}", status));
+    foreachFileStatus(fileSystem.listFiles(path, recursive),
+        (status) -> LOG.info("  {}", status));
   }
 
   /**

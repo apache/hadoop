@@ -146,7 +146,7 @@ public final class S3AUtils {
   @SuppressWarnings("ThrowableInstanceNeverThrown")
   public static IOException translateException(String operation,
       String path,
-      AmazonClientException exception) {
+      SdkBaseException exception) {
     String message = String.format("%s%s: %s",
         operation,
         path != null ? (" on " + path) : "",
@@ -294,7 +294,7 @@ public final class S3AUtils {
    * @return an IOE which can be rethrown
    */
   private static InterruptedIOException translateInterruptedException(
-      AmazonClientException exception,
+      SdkBaseException exception,
       final Exception innerCause,
       String message) {
     InterruptedIOException ioe;
@@ -329,7 +329,7 @@ public final class S3AUtils {
         || ex instanceof ProvisionedThroughputExceededException
         || ex instanceof LimitExceededException
         || (ex instanceof AmazonServiceException
-        && 503  == ((AmazonServiceException)ex).getStatusCode());
+            && 503  == ((AmazonServiceException)ex).getStatusCode());
   }
 
   /**

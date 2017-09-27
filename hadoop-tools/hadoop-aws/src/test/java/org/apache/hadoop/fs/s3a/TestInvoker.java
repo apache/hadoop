@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
@@ -34,24 +36,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.AWSBadRequestException;
-import org.apache.hadoop.fs.s3a.AWSS3IOException;
-import org.apache.hadoop.fs.s3a.AWSServiceIOException;
-import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
-import org.apache.hadoop.fs.s3a.S3ALambda;
-import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ALambda.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
-
 /**
- * Test the {@link S3ALambda} code and the associated {@link S3ARetryPolicy}.
+ * Test the {@link Invoker} code and the associated {@link S3ARetryPolicy}.
  *
  * Some of the tests look at how Connection Timeout Exceptions are processed.
  * Because of how the AWS libraries shade the classes, there have been some
@@ -59,7 +54,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * the current match process based on classname works.
  */
 @SuppressWarnings("ThrowableNotThrown")
-public class TestS3ALambda extends Assert {
+public class TestInvoker extends Assert {
 
   /** Configuration to use for short retry intervals. */
   private static final Configuration FAST_RETRY_CONF;
@@ -86,10 +81,9 @@ public class TestS3ALambda extends Assert {
       new S3ARetryPolicy(FAST_RETRY_CONF);
 
   private int retryCount;
-  private int catchCount;
-  private S3ALambda invoke = new S3ALambda(RETRY_POLICY,
-      (text, e, retries, idempotent) -> retryCount++,
-      (text, e, retries, idempotent) -> catchCount++);
+  private Invoker invoker = new Invoker(RETRY_POLICY,
+      (text, e, retries, idempotent) -> retryCount++
+  );
   private static final AmazonClientException CLIENT_TIMEOUT_EXCEPTION =
       new AmazonClientException(new Local.ConnectTimeoutException("timeout"));
   private static final AmazonServiceException BAD_REQUEST = serviceException(
@@ -128,14 +122,13 @@ public class TestS3ALambda extends Assert {
   }
 
   private static <E extends Throwable> E verifyTranslated(Class<E> clazz,
-      AmazonClientException exception) throws Exception {
+      SdkBaseException exception) throws Exception {
     return verifyExceptionClass(clazz,
         translateException("test", "/", exception));
   }
 
   private void resetCounters() {
     retryCount = 0;
-    catchCount = 0;
   }
 
   @Test
@@ -235,10 +228,10 @@ public class TestS3ALambda extends Assert {
    * Repeatedly retry until a throttle eventually stops being raised.
    */
   @Test
-  public void testS3LambdaRetryOnThrottle() throws Throwable {
+  public void testRetryOnThrottle() throws Throwable {
 
     final AtomicInteger counter = new AtomicInteger(0);
-    invoke.retry("test", null, false,
+    invoker.retry("test", null, false,
         () -> {
           if (counter.incrementAndGet() < 5) {
             throw newThrottledException();
@@ -251,8 +244,8 @@ public class TestS3ALambda extends Assert {
    * or connectivity problem.
    */
   @Test(expected = AWSBadRequestException.class)
-  public void testS3LambdaRetryNonIdempotent() throws Throwable {
-    invoke.retry("test", null, false,
+  public void testNoRetryOfBadRequestNonIdempotent() throws Throwable {
+    invoker.retry("test", null, false,
         () -> {
           throw serviceException(400, "bad request");
         });
@@ -262,9 +255,9 @@ public class TestS3ALambda extends Assert {
    * AWS nested socket problems.
    */
   @Test
-  public void testS3LambdaRetryAWSConnectivity() throws Throwable {
+  public void testRetryAWSConnectivity() throws Throwable {
     final AtomicInteger counter = new AtomicInteger(0);
-    invoke.retry("test", null, false,
+    invoker.retry("test", null, false,
         () -> {
           if (counter.incrementAndGet() < RETRY_LIMIT_DEFAULT) {
             throw CLIENT_TIMEOUT_EXCEPTION;
@@ -277,17 +270,16 @@ public class TestS3ALambda extends Assert {
    * Repeatedly retry until eventually a bad request succeeds.
    */
   @Test
-  public void testS3LambdaRetryBadRequestIdempotent() throws Throwable {
+  public void testRetryBadRequestIdempotent() throws Throwable {
     final AtomicInteger counter = new AtomicInteger(0);
-    int attemptsBeforeSuccess = RETRY_LIMIT_DEFAULT;
-    invoke.retry("test", null, true,
+    final int attemptsBeforeSuccess = RETRY_LIMIT_DEFAULT;
+    invoker.retry("test", null, true,
         () -> {
           if (counter.incrementAndGet() < attemptsBeforeSuccess) {
             throw BAD_REQUEST;
           }
         });
     assertEquals(attemptsBeforeSuccess, counter.get());
-    assertEquals("catch count", attemptsBeforeSuccess - 1 , catchCount);
     assertEquals("retry count ", attemptsBeforeSuccess - 1, retryCount);
   }
 
@@ -359,7 +351,6 @@ public class TestS3ALambda extends Assert {
         RETRY_POLICY, RetryPolicy.RetryAction.FAIL,
         new NullPointerException(), 1, true);
     // catch notification didn't see it
-    assertEquals("catch count", 0, catchCount);
     assertEquals("retry count ", 0, retryCount);
   }
 
@@ -411,8 +402,44 @@ public class TestS3ALambda extends Assert {
   }
 
   @Test
-  public void testCatchingCallbackAwaysInvoked() throws Throwable {
+  public void testDynamoDBThrottleConversion() throws Throwable {
+    ProvisionedThroughputExceededException exceededException
+        = new ProvisionedThroughputExceededException("iops");
+    AWSServiceThrottledException ddb = verifyTranslated(
+        AWSServiceThrottledException.class, exceededException);
+    assertTrue(isThrottleException(exceededException));
+    assertTrue(isThrottleException(ddb));
+    assertRetryAction("Expected throttleing retry",
+        RETRY_POLICY,
+        RetryPolicy.RetryAction.RETRY,
+        ddb, 3, false);
+    // and briefly attempt an operation
+    CatchCallback catcher = new CatchCallback();
+    AtomicBoolean invoked = new AtomicBoolean(false);
+    invoker.retry("test", null, false, catcher,
+        () -> {
+          if (!invoked.getAndSet(true)) {
+            throw exceededException;
+          }
+        });
+    // to verify that the ex was translated by the time it
+    // got to the callback
+    verifyExceptionClass(AWSServiceThrottledException.class,
+        catcher.lastException);
+  }
 
+  /**
+   * Catch the exception and preserve it for later queries.
+   */
+  private static final class CatchCallback implements Retried {
+    private IOException lastException;
+    @Override
+    public void onFailure(String text,
+        IOException exception,
+        int retries,
+        boolean idempotent) {
+      lastException = exception;
+    }
   }
 
 }

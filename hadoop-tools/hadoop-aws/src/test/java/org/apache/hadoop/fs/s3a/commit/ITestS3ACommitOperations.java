@@ -54,6 +54,7 @@ import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.
 /**
  * Test the low-level binding of the S3A FS to the magic commit mechanism,
  * and handling of the commit operations.
+ * This is done with an inconsistent client.
  */
 public class ITestS3ACommitOperations extends AbstractCommitITest {
 
@@ -62,13 +63,18 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
   private static final byte[] DATASET = dataset(1000, 'a', 32);
   private static final String S3A_FACTORY_KEY = String.format(
       COMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
+  /**
+   * A compile time flag which allows you to disable failure reset before
+   * assertions and teardown.
+   * As S3A is now required to be resilient to failure on all FS operations,
+   * setting it to false ensures that even the assertions are checking
+   * the resilience codepaths.
+   */
+  private static boolean RESET_FAILURES_ENABLED = false;
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    // use the inconsistent client, but with delays set to a low value,
-    // throttling off except when enabled (because not all API calls do retries
-    // yet.
     conf.set(S3A_COMMITTER_FACTORY_KEY,
         MagicS3GuardCommitterFactory.CLASSNAME);
 
@@ -92,8 +98,8 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
   @Test
   public void testCreateTrackerNormalPath() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    MagicCommitFSIntegration integration
-        = new MagicCommitFSIntegration(fs, true);
+    MagicCommitIntegration integration
+        = new MagicCommitIntegration(fs, true);
     String filename = "notdelayed.txt";
     Path destFile = methodPath(filename);
     String origKey = fs.pathToKey(destFile);
@@ -109,8 +115,8 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
   @Test
   public void testCreateTrackerMagicPath() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    MagicCommitFSIntegration integration
-        = new MagicCommitFSIntegration(fs, true);
+    MagicCommitIntegration integration
+        = new MagicCommitIntegration(fs, true);
     String filename = "delayed.txt";
     Path destFile = methodPath(filename);
     String origKey = fs.pathToKey(destFile);
@@ -158,17 +164,24 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
 
     CommitOperations actions = newCommitOperations();
     // abort,; rethrow on failure
-//    setThrottling(1.0f, 2);
+    setThrottling(1.0f, 2);
     LOG.info("Abort call");
     actions.abortAllSinglePendingCommits(pendingDataPath.getParent(), true)
         .maybeRethrow();
-//    resetFailures();
+    resetFailures();
     assertPathDoesNotExist("pending file not deleted", pendingDataPath);
     assertPathDoesNotExist("dest file was created", destFile);
   }
 
   private CommitOperations newCommitOperations() {
     return new CommitOperations(getFileSystem());
+  }
+
+  @Override
+  protected void resetFailures() {
+    if (!RESET_FAILURES_ENABLED) {
+      super.resetFailures();
+    }
   }
 
   /**
