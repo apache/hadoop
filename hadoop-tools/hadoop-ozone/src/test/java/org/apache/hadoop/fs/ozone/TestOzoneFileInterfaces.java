@@ -21,6 +21,10 @@ package org.apache.hadoop.fs.ozone;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -32,6 +36,7 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -95,5 +100,27 @@ public class TestOzoneFileInterfaces {
   public void testFileSystemInit() throws IOException {
     Assert.assertTrue(fs instanceof OzoneFileSystem);
     Assert.assertEquals(fs.getUri().getScheme(), Constants.OZONE_URI_SCHEME);
+  }
+
+  @Test
+  public void testOzFsReadWrite() throws IOException {
+    long currentTime = Time.now();
+    int stringLen = 20;
+    String data = RandomStringUtils.randomAlphanumeric(stringLen);
+    String filePath = RandomStringUtils.randomAlphanumeric(5);
+    Path path = new Path("/" + filePath);
+    try (FSDataOutputStream stream = fs.create(path)) {
+      stream.writeBytes(data);
+    }
+
+    FileStatus status = fs.getFileStatus(path);
+    Assert.assertTrue(status.getModificationTime() < currentTime);
+
+    try (FSDataInputStream inputStream = fs.open(path)) {
+      byte[] buffer = new byte[stringLen];
+      inputStream.readFully(0, buffer);
+      String out = new String(buffer, 0, buffer.length);
+      Assert.assertEquals(out, data);
+    }
   }
 }

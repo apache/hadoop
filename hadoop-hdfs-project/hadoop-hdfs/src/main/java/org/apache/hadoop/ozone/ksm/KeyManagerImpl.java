@@ -192,7 +192,8 @@ public class KeyManagerImpl implements KeyManager {
           volumeName, bucketName, keyName);
       byte[] value = metadataManager.get(keyKey);
       if (value == null) {
-        LOG.debug("Key: {} not found", keyKey);
+        LOG.debug("volume:{} bucket:{} Key:{} not found",
+            volumeName, bucketName, keyName);
         throw new KSMException("Key not found",
             KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
       }
