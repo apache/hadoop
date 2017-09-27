@@ -2936,6 +2936,13 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_SCRIPT_OPTS =
       NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX + "opts";
 
+  /*
+   * Support to view apps for given user in secure cluster.
+   */
+  public static final String DISPLAY_APPS_FOR_LOGGED_IN_USER =
+      RM_PREFIX + "display.per-user-apps";
+  public static final boolean DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER = false;
+
   // RM and NM CSRF props
   public static final String REST_CSRF = "webapp.rest-csrf.";
   public static final String RM_CSRF_PREFIX = RM_PREFIX + REST_CSRF;

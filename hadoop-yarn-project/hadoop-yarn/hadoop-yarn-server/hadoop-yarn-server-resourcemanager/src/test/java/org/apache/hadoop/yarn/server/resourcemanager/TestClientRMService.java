@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -852,6 +853,12 @@ public class TestClientRMService {
     userSet.add(UserGroupInformation.getCurrentUser().getShortUserName());
     assertEquals("Incorrect number of applications for user", 3,
         rmService.getApplications(request).getApplicationList().size());
+
+    rmService.setDisplayPerUserApps(true);
+    userSet.clear();
+    assertEquals("Incorrect number of applications for user", 6,
+        rmService.getApplications(request).getApplicationList().size());
+    rmService.setDisplayPerUserApps(false);
 
     // Check tags
     request = GetApplicationsRequest.newInstance(
@@ -1792,5 +1799,71 @@ public class TestClientRMService {
     rm.stop();
     rpc.stopProxy(client, conf);
     new File(excludeFile).delete();
+  }
+
+  @Test
+  public void testGetApplicationsWithPerUserApps()
+      throws IOException, YarnException {
+    /*
+     * Submit 3 applications alternately in two queues
+     */
+    // Basic setup
+    YarnScheduler yarnScheduler = mockYarnScheduler();
+    RMContext rmContext = mock(RMContext.class);
+    mockRMContext(yarnScheduler, rmContext);
+    RMStateStore stateStore = mock(RMStateStore.class);
+    when(rmContext.getStateStore()).thenReturn(stateStore);
+
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler, null,
+        mock(ApplicationACLsManager.class), new Configuration());
+    when(rmContext.getDispatcher().getEventHandler())
+        .thenReturn(new EventHandler<Event>() {
+          public void handle(Event event) {
+          }
+        });
+
+    // Simulate Queue ACL manager which returns false always
+    QueueACLsManager queueAclsManager = mock(QueueACLsManager.class);
+    when(queueAclsManager.checkAccess(any(UserGroupInformation.class),
+        any(QueueACL.class), any(RMApp.class), any(String.class),
+        anyListOf(String.class))).thenReturn(false);
+
+    // Simulate app ACL manager which returns false always
+    ApplicationACLsManager appAclsManager = mock(ApplicationACLsManager.class);
+    when(appAclsManager.checkAccess(eq(UserGroupInformation.getCurrentUser()),
+        any(ApplicationAccessType.class), any(String.class),
+        any(ApplicationId.class))).thenReturn(false);
+    ClientRMService rmService = new ClientRMService(rmContext, yarnScheduler,
+        appManager, appAclsManager, queueAclsManager, null);
+    rmService.init(new Configuration());
+
+    // Initialize appnames and queues
+    String[] queues = {QUEUE_1, QUEUE_2};
+    String[] appNames = {MockApps.newAppName(), MockApps.newAppName(),
+        MockApps.newAppName()};
+    ApplicationId[] appIds = {getApplicationId(101), getApplicationId(102),
+        getApplicationId(103)};
+    List<String> tags = Arrays.asList("Tag1", "Tag2", "Tag3");
+
+    long[] submitTimeMillis = new long[3];
+    // Submit applications
+    for (int i = 0; i < appIds.length; i++) {
+      ApplicationId appId = appIds[i];
+      SubmitApplicationRequest submitRequest = mockSubmitAppRequest(appId,
+          appNames[i], queues[i % queues.length],
+          new HashSet<String>(tags.subList(0, i + 1)));
+      rmService.submitApplication(submitRequest);
+      submitTimeMillis[i] = System.currentTimeMillis();
+    }
+
+    // Test different cases of ClientRMService#getApplications()
+    GetApplicationsRequest request = GetApplicationsRequest.newInstance();
+    assertEquals("Incorrect total number of apps", 6,
+        rmService.getApplications(request).getApplicationList().size());
+
+    rmService.setDisplayPerUserApps(true);
+    assertEquals("Incorrect number of applications for user", 0,
+        rmService.getApplications(request).getApplicationList().size());
+    rmService.setDisplayPerUserApps(false);
   }
 }
