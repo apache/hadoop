@@ -18,6 +18,7 @@
 package org.apache.hadoop.scm;
 
 import com.google.common.base.Preconditions;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
     .ContainerCommandResponseProto;
 
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +38,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-
 /**
  * Netty client handler.
  */
@@ -44,12 +45,13 @@ public class XceiverClientHandler extends
     SimpleChannelInboundHandler<ContainerCommandResponseProto> {
 
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientHandler.class);
-  private final ConcurrentMap<String,
-      CompletableFuture<ContainerCommandResponseProto>> responses =
+  private final ConcurrentMap<String, ResponseFuture> responses =
       new ConcurrentHashMap<>();
 
   private final Pipeline pipeline;
   private volatile Channel channel;
+
+  private XceiverClientMetrics metrics;
 
   /**
    * Constructs a client that can communicate to a container server.
@@ -57,6 +59,7 @@ public class XceiverClientHandler extends
   public XceiverClientHandler(Pipeline pipeline) {
     super(false);
     this.pipeline = pipeline;
+    this.metrics = XceiverClientManager.getXceiverClientMetrics();
   }
 
   /**
@@ -76,11 +79,17 @@ public class XceiverClientHandler extends
       ContainerProtos.ContainerCommandResponseProto msg)
       throws Exception {
     Preconditions.checkNotNull(msg);
+    metrics.decrPendingContainerOpsMetrics(msg.getCmdType());
+
     String key = msg.getTraceID();
-    CompletableFuture<ContainerCommandResponseProto> future =
-        responses.remove(key);
-    if (future != null) {
-      future.complete(msg);
+    ResponseFuture response = responses.remove(key);
+
+    if (response != null) {
+      response.getFuture().complete(msg);
+
+      long requestTime = response.getRequestTime();
+      metrics.addContainerOpsLatency(msg.getCmdType(),
+          Time.monotonicNowNanos() - requestTime);
     } else {
       LOG.error("A reply received for message that was not queued. trace " +
           "ID: {}", msg.getTraceID());
@@ -130,13 +139,14 @@ public class XceiverClientHandler extends
     if (StringUtils.isEmpty(request.getTraceID())) {
       throw new IllegalArgumentException("Invalid trace ID");
     }
+    metrics.incrPendingContainerOpsMetrics(request.getCmdType());
 
-    CompletableFuture<ContainerCommandResponseProto> response =
-        new CompletableFuture<>();
-
-    CompletableFuture<ContainerCommandResponseProto> previous =
-        responses.putIfAbsent(request.getTraceID(), response);
-
+    CompletableFuture<ContainerCommandResponseProto> future
+        = new CompletableFuture<>();
+    ResponseFuture response = new ResponseFuture(future,
+        Time.monotonicNowNanos());
+    ResponseFuture previous = responses.putIfAbsent(
+        request.getTraceID(), response);
     if (previous != null) {
       LOG.error("Command with Trace already exists. Ignoring this command. " +
               "{}. Previous Command: {}", request.getTraceID(),
@@ -147,6 +157,28 @@ public class XceiverClientHandler extends
     }
 
     channel.writeAndFlush(request);
-    return response;
+    return response.getFuture();
+  }
+
+  /**
+   * Class wraps response future info.
+   */
+  static class ResponseFuture {
+    private final long requestTime;
+    private final CompletableFuture<ContainerCommandResponseProto> future;
+
+    ResponseFuture(CompletableFuture<ContainerCommandResponseProto> future,
+        long requestTime) {
+      this.future = future;
+      this.requestTime = requestTime;
+    }
+
+    public long getRequestTime() {
+      return requestTime;
+    }
+
+    public CompletableFuture<ContainerCommandResponseProto> getFuture() {
+      return future;
+    }
   }
 }

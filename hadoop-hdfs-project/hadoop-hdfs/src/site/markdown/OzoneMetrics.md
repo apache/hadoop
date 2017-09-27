@@ -44,6 +44,17 @@ many times a specific operation has been performed.
 Eg.`NumCreateContainer` tells us how many times create container has been
 invoked on this datanode.
 
+*Total number of pending operation* - This is an array which counts how
+many times a specific operation is waitting to be processed from the client
+point of view.
+Eg.`NumPendingCreateContainer` tells us how many create container requests that
+waitting to be processed.
+
+*Average latency of each pending operation in nanoseconds* - The average latency
+of the operation from the client point of view.
+Eg. `CreateContainerLatencyAvgTime` - This tells us the average latency of
+Create Container from the client point of view.
+
 *Number of bytes involved in a specific command* - This is an array that is
 maintained for all operations, but makes sense only for read and write
 operations.
