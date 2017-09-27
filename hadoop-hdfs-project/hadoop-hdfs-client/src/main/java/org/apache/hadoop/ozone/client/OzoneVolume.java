@@ -148,6 +148,7 @@ public class OzoneVolume {
       throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
+    OzoneClientUtils.verifyResourceName(bucketName);
     proxy.createBucket(name, bucketName);
   }
 
@@ -162,6 +163,7 @@ public class OzoneVolume {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
     Preconditions.checkNotNull(bucketArgs);
+    OzoneClientUtils.verifyResourceName(bucketName);
     proxy.createBucket(name, bucketName, bucketArgs);
   }
 
@@ -174,6 +176,7 @@ public class OzoneVolume {
   public OzoneBucket getBucket(String bucketName) throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
+    OzoneClientUtils.verifyResourceName(bucketName);
     OzoneBucket bucket = proxy.getBucketDetails(name, bucketName);
     bucket.setClientProxy(proxy);
     return bucket;
@@ -187,6 +190,7 @@ public class OzoneVolume {
   public void deleteBucket(String bucketName) throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(bucketName);
+    OzoneClientUtils.verifyResourceName(bucketName);
     proxy.deleteBucket(name, bucketName);
   }
 }

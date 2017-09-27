@@ -117,6 +117,14 @@ public class TestOzoneRpcClient {
   }
 
   @Test
+  public void testInvalidVolumeCreation() throws IOException {
+    thrown.expectMessage("Bucket or Volume name has an unsupported" +
+        " character : #");
+    String volumeName = "invalid#name";
+    store.createVolume(volumeName);
+  }
+
+  @Test
   public void testVolumeAlreadyExist()
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
@@ -245,6 +253,17 @@ public class TestOzoneRpcClient {
     Assert.assertEquals(true, bucket.getVersioning());
     Assert.assertEquals(StorageType.SSD, bucket.getStorageType());
     Assert.assertTrue(bucket.getAcls().contains(userAcl));
+  }
+
+  @Test
+  public void testInvalidBucketCreation() throws IOException {
+    thrown.expectMessage("Bucket or Volume name has an unsupported" +
+        " character : #");
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = "invalid#bucket";
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
   }
 
   @Test
