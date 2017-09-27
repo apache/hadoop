@@ -60,7 +60,7 @@ Add org.apache.hadoop.security.HttpCrossOriginFilterInitializer to hadoop.http.f
 | Property                                 | Default Value                                 | Description                                                                            |
 |:---------------------------------------- |:--------------------------------------------- |:-------------------------------------------------------------------------------------  |
 | hadoop.http.cross-origin.enabled         | `false`                                       | Enables cross origin support for all web-services                                      |
-| hadoop.http.cross-origin.allowed-origins | `*`                                           | Comma separated list of origins that are allowed, wildcards (`*`) and patterns allowed |
+| hadoop.http.cross-origin.allowed-origins | `*`                                           | Comma separated list of origins that are allowed. Values prefixed with `regex:` are interpreted as regular expressions. Values containing wildcards (`*`) are possible as well, here a regular expression is generated, the use is discouraged and support is only available for backward compatibility. |
 | hadoop.http.cross-origin.allowed-methods | `GET,POST,HEAD`                               | Comma separated list of methods that are allowed                                       |
 | hadoop.http.cross-origin.allowed-headers | `X-Requested-With,Content-Type,Accept,Origin` | Comma separated list of headers that are allowed                                       |
 | hadoop.http.cross-origin.max-age         | `1800`                                        | Number of seconds a pre-flighted request can be cached                                 |
