@@ -41,8 +41,53 @@ example of the tarball that will be generated.
 
 * `~/apache/hadoop/hadoop-dist/target/${project.version}.tar.gz`
 
+At this point we have an option to setup a physical cluster or run ozone via
+docker.
+
+Running Ozone via Docker
+------------------------
+
+This assumes that you have a running docker setup on the machine. Please run
+these following commands to see ozone in action.
+
+ Go to the directory where the docker compose files exist.
+
+
+ - `cd dev-support/compose/ozone`
+
+Tell docker to start ozone, this will start a KSM, SCM and a single datanode in
+the background.
+
+
+ - `docker-compose up -d`
+
+Now let us run some work load against ozone, to do that we will run corona.
+
+This will log into the datanode and run bash.
+
+ - `docker-compose exec datanode bash`
+ - `cd hadoop/bin`
+
+Now you can run the oz command shell or corona the ozone load generator.
+
+This is the command to run corona.
+
+ - `./hdfs corona -mode offline -validateWrites -numOfVolumes 1 -numOfBuckets 10 -numOfKeys 100`
+
+You can checkout the KSM UI to see the requests information.
+
+ - `http://localhost:9874/`
+
+If you need more datanode you can scale up:
+
+ - `docker-compose scale datanode=3`
+
+Running Ozone using a real cluster
+----------------------------------
+
 Please proceed to setup a hadoop cluster by creating the hdfs-site.xml and
 other configuration files that are needed for your cluster.
+
 
 ### Ozone Configuration
 
