@@ -476,7 +476,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
-  @Retries.Once_translated
+  @Retries.OnceTranslated
   public DirListingMetadata listChildren(final Path path) throws IOException {
     checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);

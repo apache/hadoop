@@ -206,7 +206,7 @@ public class WriteOperationHelper {
    * @return the upload result containing the ID
    * @throws IOException IO problem
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public String initiateMultiPartUpload() throws IOException {
     LOG.debug("Initiating Multipart upload to {}", key);
     final InitiateMultipartUploadRequest initiateMPURequest =
@@ -233,7 +233,7 @@ public class WriteOperationHelper {
    * @return the result of the operation.
    * @throws IOException on problems.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private CompleteMultipartUploadResult finalizeMultipartUpload(
       String destination,
       String uploadId,
@@ -272,7 +272,7 @@ public class WriteOperationHelper {
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public CompleteMultipartUploadResult completeMPUwithRetries(
       String uploadId,
       List<PartETag> partETags,
@@ -297,7 +297,7 @@ public class WriteOperationHelper {
    * @param retrying callback invoked on every retry
    * @throws IOException failure to abort
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public void abortMultipartUpload(String destKey, String uploadId,
       Retried retrying)
       throws IOException {
@@ -315,7 +315,7 @@ public class WriteOperationHelper {
    * @return a count of aborts
    * @throws IOException trouble; FileNotFoundExceptions are swallowed.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public int abortMultipartUploadsUnderPath(String prefix)
       throws IOException {
     LOG.debug("Aborting multipart uploads under {}", prefix);
@@ -339,7 +339,7 @@ public class WriteOperationHelper {
    * @param uploadId multipart operation Id
    * @throws IOException on problems.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public void abortMultipartCommit(String dest, String uploadId)
       throws IOException {
     abortMultipartUpload(dest, uploadId, invoker.getRetryCallback());
@@ -420,7 +420,7 @@ public class WriteOperationHelper {
    * @return the upload initiated
    * @throws IOException on problems
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public PutObjectResult putObject(PutObjectRequest putObjectRequest)
       throws IOException {
     return retry("put",
@@ -434,7 +434,7 @@ public class WriteOperationHelper {
    * @return the result of the operation
    * @throws IOException on problems
    */
-  @Retries.Once_translated
+  @Retries.OnceTranslated
   public UploadResult uploadObject(PutObjectRequest putObjectRequest)
       throws IOException {
     // no retry; rely on xfer manager logic
@@ -449,7 +449,7 @@ public class WriteOperationHelper {
    * @throws IOException on problems
    * @param destKey destination key
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public void revertCommit(String destKey) throws IOException {
     once("revert commit", destKey,
         () -> {
@@ -467,7 +467,7 @@ public class WriteOperationHelper {
    * @return the result of the operation.
    * @throws IOException on problems
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public UploadPartResult uploadPart(UploadPartRequest request)
       throws IOException {
     return retry("upload part",

@@ -772,7 +772,7 @@ public final class S3ATestUtils {
 
   /**
    * Apply an operation to every {@link LocatedFileStatus} in a remote
-   * iterator
+   * iterator.
    * @param iterator iterator from a list
    * @param eval closure to evaluate
    * @throws Exception anything in the closure, or iteration logic.

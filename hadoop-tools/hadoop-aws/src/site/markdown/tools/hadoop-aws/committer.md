@@ -28,8 +28,9 @@ For details on their internal design, see
 [S3A Committers: Architecture and Implementation](s3a_committer_architecture.html).
 
 
+## Introduction: The Commmit Problem 
 
-## Introduction: Using the "classic" committers to write to Amazon S3 is dangerous
+**Using the "classic" File Output Commmitters to write to Amazon S3 is dangerous**
 
 Normally, Hadoop uses the `FileOutputFormatCommitter` to manage the
 promotion of files created in a single task attempt to the final output of
@@ -46,7 +47,7 @@ process across the cluster may rename a file or directory to the same path.
 If the rename fails for any reason, either the data is at the original location,
 or it is at the destination, -in which case the rename actually successed.
 
-The `s3a://` filesystem client cannot meet these requirements.
+**The `s3a://` filesystem client cannot meet these requirements.*
 
 1. Amazon S3 has inconsistent directory listings unless S3Guard is enabled.
 1. The S3A mimics `rename()` by copying files and then deleting the originals.
@@ -184,7 +185,8 @@ what requirements they have of the S3 filesystem.
 | task abort process | delete local disk data | list all pending uploads and abort them |
 | job commit | list & complete pending uploads | list & complete pending uploads |
 
-
+The other metric is "maturity". There, the fact that the Staging committers
+are based on Netflix's production code counts in its favor.
 
 
 ### The Staging Committer
@@ -192,7 +194,7 @@ what requirements they have of the S3 filesystem.
 This is based on work from Netflix. It "stages" data into the local filesystem.
 It also requires the cluster to have HDFS, so that 
 
-Tasks write to URLs with "file://" schemas. When a task is committed,
+Tasks write to URLs with `file://` schemas. When a task is committed,
 its files are listed, uploaded to S3 as incompleted Multipart Uploads.
 The information needed to complete the uploads is saved to HDFS where
 it is committed through the standard "v1" commit algorithm.
@@ -306,31 +308,17 @@ to have S3Guard enabled.
 
 ## Using the Staging Committer 
 
-
-
-
-
-The initial option set:
-
-| option | meaning |
-|--------|---------|
-| `fs.s3a.committer.staging.conflict-mode` | how to resolve directory conflicts during commit: `fail`, `append`, or `replace`; defaults to `fail`. |
-| `fs.s3a.committer.staging.unique-filenames` | Should the committer generate unique filenames by including a unique ID in the name of each created file? |
-| `fs.s3a.committer.staging.uuid` | a UUID that identifies a write; `spark.sql.sources.writeJobUUID` is used if not set |
-| `fs.s3a.committer.staging.upload.size` | size, in bytes, to use for parts of the upload to S3; defaults: `10M` |
-| `fs.s3a.committer.tmp.path` | Directory in the cluster filesystem used for storing information on the uncommitted files. |
-| `fs.s3a.committer.threads` | number of threads to use to complete S3 uploads during job commit; default: `8` |
-| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | flag to control creation of `_SUCCESS` marker file on job completion. Default: `true` |
-| `fs.s3a.multipart.size` | Size in bytes of each part of a multipart upload. Default: `100M` |
-| `fs.s3a.buffer.dir` | Directory in local filesystem under which data is saved before being uploaded. Example: `/tmp/hadoop/s3a/` |
-
 Generated files are initially written to a local directory underneath one of the temporary
 directories listed in `fs.s3a.buffer.dir`.
 
-Temporary files are saved in HDFS (or other cluster filesystem )under the path
+
+The staging commmitter needs a path in the cluster filesystem
+(e.g. HDFS). This must be declared in `fs.s3a.committer.tmp.path`.
+
+Temporary files are saved in HDFS (or other cluster filesystem) under the path
 `${fs.s3a.committer.tmp.path}/${user}` where `user` is the name of the user running the job.
 The default value of `fs.s3a.committer.tmp.path` is `/tmp`, so the temporary directory
-for any application attempt will be a path `/tmp/${user}.
+for any application attempt will be a path `/tmp/${user}`.
 In the special case in which the local `file:` filesystem is the cluster filesystem, the
 location of the temporary directory is that of the JVM system property
 `java.io.tmpdir`.
@@ -339,6 +327,22 @@ The application attempt ID is used to create a unique path under this directory,
 resulting in a path `/tmp/${user}/${application-attempt-id}/` under which
 summary data of each task's pending commits are managed using the standard
 `FileOutputFormat` committer.
+
+
+The initial option set:
+
+| option | meaning |
+|--------|---------|
+| `fs.s3a.buffer.dir` | Directories in local filesystem under which data is saved before being uploaded. Example: `/tmp/hadoop/s3a/` |
+| `fs.s3a.multipart.size` | Size in bytes of each part of a multipart upload. Default: `100M` |
+| `fs.s3a.committer.tmp.path` | Path in the cluster filesystem used for storing information on the uncommitted files. |
+| `fs.s3a.committer.staging.conflict-mode` | how to resolve directory conflicts during commit: `fail`, `append`, or `replace`; defaults to `fail`. |
+| `fs.s3a.committer.staging.unique-filenames` | Should the committer generate unique filenames by including a unique ID in the name of each created file? |
+| `fs.s3a.committer.staging.uuid` | a UUID that identifies a write; `spark.sql.sources.writeJobUUID` is used if not set |
+| `fs.s3a.committer.staging.upload.size` | size, in bytes, to use for parts of the upload to S3; defaults: `10M` |
+| `fs.s3a.committer.threads` | number of threads to use to complete S3 uploads during job commit; default: `8` |
+| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | flag to control creation of `_SUCCESS` marker file on job completion. Default: `true` |
+
 
 ## Using the Magic committer
 
@@ -376,6 +380,27 @@ because the [S3Guard](s3guard.html) is used to provide consistency,
 *IMPORTANT*: only enable the magic committer against object stores which
 offer consistent listings. By default, Amazon S3 does not do this -which is
 why the option `fs.s3a.committer.magic.enabled` is disabled by default.
+
+
+Tip: you can verify that a bucket supports the magic committer through the
+`hadoop s3guard bucket-info` command:
+
+
+```bash
+> hadoop s3guard bucket-info -magic s3a://landsat-pds/
+
+Filesystem s3a://landsat-pds
+Location: us-west-2
+Filesystem s3a://landsat-pds is not using S3Guard
+The "magic" committer is not supported
+
+S3A Client
+	Endpoint: fs.s3a.endpoint=(unset)
+	Encryption: fs.s3a.server-side-encryption-algorithm=none
+	Input seek policy: fs.s3a.experimental.input.fadvise=normal
+2017-09-27 19:18:57,917 INFO util.ExitUtil: Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
+
+```
 
 ### `Directory for intermediate work cannot be on S3`
 

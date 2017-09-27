@@ -40,53 +40,53 @@ public class Retries {
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
-  public @interface Once_translated {
+  public @interface OnceTranslated {
     String value() default "";
-  };
+  }
 
   /**
    * No retry, exceptions are not translated.
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
-  public @interface Once_raw {
+  public @interface OnceRaw {
     String value() default "";
-  };
+  }
 
   /**
    * No retry, expect a bit of both.
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
-  public @interface Once_mixed {
+  public @interface OnceMixed {
     String value() default "";
-  };
+  }
 
   /**
    * Retried, exceptions are translated.
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
-  public @interface Retry_translated {
+  public @interface RetryTranslated {
     String value() default "";
-  };
+  }
 
   /**
    * Retried, no translation.
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
-  public @interface Retry_raw {
+  public @interface RetryRaw {
     String value() default "";
-  };
+  }
 
   /**
    * Retried, mixed translation.
    */
   @Documented
   @Retention(RetentionPolicy.SOURCE)
-  public @interface Retry_mixed {
+  public @interface RetryMixed {
     String value() default "";
-  };
+  }
 
 }

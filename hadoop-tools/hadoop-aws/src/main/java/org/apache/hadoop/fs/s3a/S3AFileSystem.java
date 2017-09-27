@@ -350,7 +350,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws FileNotFoundException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   protected void verifyBucketExists()
       throws FileNotFoundException, IOException {
     if (!invoker.retry(
@@ -390,7 +390,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     }
   }
 
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private void initMultipartUploads(Configuration conf) throws IOException {
     boolean purgeExistingMultipart = conf.getBoolean(PURGE_EXISTING_MULTIPART,
         DEFAULT_PURGE_EXISTING_MULTIPART);
@@ -413,7 +413,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param seconds time in seconds
    * @throws IOException on any failure, other than 403 "permission denied"
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public void abortOutstandingMultipartUploads(long seconds)
       throws IOException {
     Preconditions.checkArgument(seconds >=0);
@@ -495,7 +495,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the region in which a bucket is located
    * @throws IOException on any failure.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public String getBucketLocation() throws IOException {
     return getBucketLocation(bucket);
   }
@@ -507,7 +507,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the region in which a bucket is located
    * @throws IOException on any failure.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public String getBucketLocation(String bucketName) throws IOException {
     return invoker.retry("getBucketLocation()",
         bucketName,
@@ -1190,7 +1190,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the metadata
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   protected ObjectMetadata getObjectMetadata(String key) throws IOException {
     GetObjectMetadataRequest request =
         new GetObjectMetadataRequest(bucket, key);
@@ -1219,7 +1219,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the results
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   protected S3ListResult listObjects(S3ListRequest request) throws IOException {
     incrementReadOperations();
     incrementStatistic(OBJECT_LIST_REQUESTS);
@@ -1258,7 +1258,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the next result object
    * @throws IOException: none, just there for retryUntranslated.
    */
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   protected S3ListResult continueListObjects(S3ListRequest request,
       S3ListResult prevResult) throws IOException {
     incrementReadOperations();
@@ -1308,7 +1308,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * a mistaken attempt to delete the root directory.
    */
   @VisibleForTesting
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   protected void deleteObject(String key)
       throws AmazonClientException, IOException {
     blockRootDelete(key);
@@ -1332,7 +1332,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws AmazonClientException problems working with S3
    * @throws IOException IO failure
    */
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   void deleteObjectAtPath(Path f, String key, boolean isFile)
       throws AmazonClientException, IOException {
     if (isFile) {
@@ -1367,7 +1367,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * be deleted.
    * @throws AmazonClientException amazon-layer failure.
    */
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   private void deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
@@ -1493,7 +1493,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the upload initiated
    * @throws AmazonClientException on problems
    */
-  @Retries.Once_raw
+  @Retries.OnceRaw
   PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
       throws AmazonClientException {
     long len = getPutRequestLength(putObjectRequest);
@@ -1538,7 +1538,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the result of the operation.
    * @throws AmazonClientException on problems
    */
-  @Retries.Once_raw
+  @Retries.OnceRaw
   UploadPartResult uploadPart(UploadPartRequest request)
       throws AmazonClientException {
     long len = request.getPartSize();
@@ -1617,7 +1617,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws AmazonClientException amazon-layer failure.
    */
   @VisibleForTesting
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean clearKeys, boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
@@ -1659,7 +1659,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * have surfaced.
    * @throws IOException due to inability to delete a directory or file.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
       return innerDelete(innerGetFileStatus(f, true), recursive);
@@ -1683,7 +1683,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws IOException due to inability to delete a directory or file.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  @Retries.Retry_mixed
+  @Retries.RetryMixed
   private boolean innerDelete(S3AFileStatus status, boolean recursive)
       throws IOException, AmazonClientException {
     Path f = status.getPath();
@@ -1786,7 +1786,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws IOException IO problem
    * @throws AmazonClientException untranslated AWS client problem
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private void createFakeDirectoryIfNecessary(Path f)
       throws IOException, AmazonClientException {
     String key = pathToKey(f);
@@ -2042,7 +2042,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public FileStatus getFileStatus(final Path f) throws IOException {
     return innerGetFileStatus(f, false);
   }
@@ -2057,7 +2057,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws IOException on other problems.
    */
   @VisibleForTesting
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   S3AFileStatus innerGetFileStatus(final Path f,
       boolean needEmptyDirectoryFlag) throws IOException {
     incrementStatistic(INVOCATION_GET_FILE_STATUS);
@@ -2120,7 +2120,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private S3AFileStatus s3GetFileStatus(final Path path, String key,
       Set<Path> tombstones) throws IOException {
     if (!key.isEmpty()) {
@@ -2263,7 +2263,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return true if path exists in S3
    * @throws IOException IO failure
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private boolean s3Exists(final Path f) throws IOException {
     Path path = qualify(f);
     String key = pathToKey(path);
@@ -2317,7 +2317,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws AmazonClientException failure in the AWS SDK
    * @throws IllegalArgumentException if the source path is not on the local FS
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
       Path src, Path dst)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
@@ -2366,7 +2366,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return the upload result
    * @throws InterruptedIOException if the blocking was interrupted.
    */
-  @Retries.Once_raw
+  @Retries.OnceRaw
   UploadResult executePut(PutObjectRequest putObjectRequest,
       Progressable progress)
       throws InterruptedIOException {
@@ -2518,7 +2518,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws AmazonClientException on failures inside the AWS SDK
    * @throws IOException Other IO problems
    */
-  @Retries.Once_raw
+  @Retries.OnceRaw
   InitiateMultipartUploadResult initiateMultipartUpload(
       InitiateMultipartUploadRequest request) throws IOException {
     LOG.debug("Initiate multipart upload to {}", request.getKey());
@@ -2600,7 +2600,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param length  total length of file written
    */
   @InterfaceAudience.Private
-  @Retries.Retry_raw("Exceptions are swallowed")
+  @Retries.RetryRaw("Exceptions are swallowed")
   void finishedWrite(String key, long length) {
     LOG.debug("Finished write to {}, len {}", key, length);
     Path p = keyToQualifiedPath(key);
@@ -2628,7 +2628,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * Retry policy: retrying; exceptions swallowed.
    * @param path path
    */
-  @Retries.Retry_raw("Exceptions are swallowed")
+  @Retries.RetryRaw("Exceptions are swallowed")
   private void deleteUnnecessaryFakeDirectories(Path path) {
     List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
     while (!path.isRoot()) {
@@ -2658,7 +2658,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param objectName name of directory object.
    * @throws IOException IO failure
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private void createFakeDirectory(final String objectName)
       throws IOException {
     if (!objectName.endsWith("/")) {
@@ -2674,7 +2674,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param objectName object to create
    * @throws IOException IO failure
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   private void createEmptyObject(final String objectName)
       throws IOException {
     final InputStream im = new InputStream() {
@@ -3028,7 +3028,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws IOException if any I/O error occurred
    */
   @Override
-  @Retries.Once_translated
+  @Retries.OnceTranslated
   public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
       final PathFilter filter)
       throws FileNotFoundException, IOException {
@@ -3088,7 +3088,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws IOException IO failure, including any uprated AmazonClientException
    */
   @InterfaceAudience.Private
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public List<MultipartUpload> listMultipartUploads(String prefix)
       throws IOException {
     ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(
@@ -3107,7 +3107,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param destKey destination key
    * @param uploadId Upload ID
    */
-  @Retries.Once_raw
+  @Retries.OnceRaw
   void abortMultipartUpload(String destKey, String uploadId) {
     getAmazonS3Client().abortMultipartUpload(
         new AbortMultipartUploadRequest(getBucket(),
@@ -3134,7 +3134,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     boolean b = false;
     switch (capability) {
 
-    case CommitConstants.MAGIC_COMMITTER_ENABLED:
+    case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
       b = isMagicCommitEnabled();
       break;
 

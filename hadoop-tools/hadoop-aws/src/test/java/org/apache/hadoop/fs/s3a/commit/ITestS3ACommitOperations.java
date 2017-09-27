@@ -70,7 +70,7 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
    * setting it to false ensures that even the assertions are checking
    * the resilience codepaths.
    */
-  private static boolean RESET_FAILURES_ENABLED = false;
+  private static final boolean RESET_FAILURES_ENABLED = false;
 
   @Override
   protected Configuration createConfiguration() {

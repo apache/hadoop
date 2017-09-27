@@ -485,7 +485,7 @@ class S3ABlockOutputStream extends OutputStream implements
   /**
    * Return the stream capabilities.
    * This stream always returns false when queried about hflush and hsync.
-   * If asked about {@link CommitConstants#MAGIC_COMMITTER_OUTPUT_STREAM}
+   * If asked about {@link CommitConstants#STREAM_CAPABILITY_MAGIC_OUTPUT}
    * it will return true iff this is an active "magic" output stream.
    * @param capability string to query the stream support for.
    * @return true if the capability is supported by this instance.
@@ -495,7 +495,7 @@ class S3ABlockOutputStream extends OutputStream implements
     switch (capability) {
 
       // does the output stream have delayed visibility
-    case CommitConstants.MAGIC_COMMITTER_OUTPUT_STREAM:
+    case CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT:
       return putTracker.isCommitOutput();
 
       // The flush/sync options are absolutely not supported

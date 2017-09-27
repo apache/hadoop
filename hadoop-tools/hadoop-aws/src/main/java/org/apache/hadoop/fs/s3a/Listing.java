@@ -572,7 +572,7 @@ public class Listing {
      * @throws NoSuchElementException if there is no more data to list.
      */
     @Override
-    @Retries.Retry_translated
+    @Retries.RetryTranslated
     public S3ListResult next() throws IOException {
       if (firstListing) {
         // on the first listing, don't request more data.

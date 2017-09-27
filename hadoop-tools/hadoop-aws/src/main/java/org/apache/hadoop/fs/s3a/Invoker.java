@@ -101,7 +101,7 @@ public class Invoker {
    * @return the result of the function call
    * @throws IOException any IOE raised, or translated exception
    */
-  @Retries.Once_translated
+  @Retries.OnceTranslated
   public static <T> T once(String action, String path, Operation<T> operation)
       throws IOException {
     try {
@@ -118,7 +118,7 @@ public class Invoker {
    * @param operation operation to execute
    * @throws IOException any IOE raised, or translated exception
    */
-  @Retries.Once_translated
+  @Retries.OnceTranslated
   public static void once(String action, String path, VoidOperation operation)
       throws IOException {
     once(action, path,
@@ -138,7 +138,7 @@ public class Invoker {
    * @param operation operation to execute
    * @throws IOException any IOE raised, or translated exception
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public void retry(String action,
       String path,
       boolean idempotent,
@@ -162,7 +162,7 @@ public class Invoker {
    * @param operation operation to execute
    * @throws IOException any IOE raised, or translated exception
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public void retry(String action,
       String path,
       boolean idempotent,
@@ -182,7 +182,7 @@ public class Invoker {
    * @return the result of the call
    * @throws IOException any IOE raised, or translated exception
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public <T> T retry(String action,
       String path,
       boolean idempotent,
@@ -206,7 +206,7 @@ public class Invoker {
    * @return the result of the call
    * @throws IOException any IOE raised, or translated exception
    */
-  @Retries.Retry_translated
+  @Retries.RetryTranslated
   public <T> T retry(
       String action,
       String path,
@@ -233,7 +233,7 @@ public class Invoker {
    * @throws IOException any IOE raised
    * @throws RuntimeException any Runtime exception raised
    */
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   public <T> T retryUntranslated(
       String text,
       boolean idempotent,
@@ -256,7 +256,7 @@ public class Invoker {
    * @throws IOException any IOE raised
    * @throws SdkBaseException any AWS exception raised
    */
-  @Retries.Retry_raw
+  @Retries.RetryRaw
   public <T> T retryUntranslated(
       String text,
       boolean idempotent,

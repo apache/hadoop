@@ -157,7 +157,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     Assume.assumeTrue("CSV test file is not the default",
         DEFAULT_CSVTEST_FILE.equals(csvFile));
     Path testFile = new Path(csvFile);
-    S3AFileSystem fs = (S3AFileSystem)FileSystem.newInstance(testFile.toUri(), conf);
+    S3AFileSystem fs = (S3AFileSystem)testFile.getFileSystem(conf);
     intercept(MultiObjectDeleteException.class,
         () -> removeKeys(fs, fs.pathToKey(testFile)));
   }

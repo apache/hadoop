@@ -80,8 +80,16 @@ public final class CommitConstants {
    * returned in {@code StreamCapabilities}
    * Value: {@value}.
    */
-  public static final String MAGIC_COMMITTER_OUTPUT_STREAM
-      = MAGIC_COMMITTER_PREFIX + ".output.stream";
+  public static final String STREAM_CAPABILITY_MAGIC_OUTPUT
+      = "s3a:magic.output.stream";
+
+  /**
+   * Flag to indicate that a store supports magic committers.
+   * returned in {@code StreamCapabilities}
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_MAGIC_COMMITTER
+      = "s3a:magic.committer";
 
   /**
    * Is the committer enabled by default? No.
