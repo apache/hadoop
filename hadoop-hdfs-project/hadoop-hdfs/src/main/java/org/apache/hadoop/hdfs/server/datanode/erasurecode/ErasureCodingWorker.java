@@ -27,6 +27,8 @@ import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 
 import java.util.Collection;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -149,7 +151,12 @@ public final class ErasureCodingWorker {
     return conf;
   }
 
-  ThreadPoolExecutor getStripedReadPool() {
-    return stripedReadPool;
+  CompletionService<Void> createReadService() {
+    return new ExecutorCompletionService<>(stripedReadPool);
+  }
+
+  public void shutDown() {
+    stripedReconstructionPool.shutdown();
+    stripedReadPool.shutdown();
   }
 }

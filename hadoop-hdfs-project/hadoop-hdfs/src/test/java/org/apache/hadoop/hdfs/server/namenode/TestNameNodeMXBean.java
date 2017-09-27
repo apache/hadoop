@@ -556,13 +556,18 @@ public class TestNameNodeMXBean {
       assertEquals("Unexpected num windows", 3, windows.size());
       for (Map<String, List<Map<String, Object>>> window : windows) {
         final List<Map<String, Object>> ops = window.get("ops");
-        assertEquals("Unexpected num ops", 3, ops.size());
+        assertEquals("Unexpected num ops", 4, ops.size());
         for (Map<String, Object> op: ops) {
+          if (op.get("opType").equals("datanodeReport")) {
+            continue;
+          }
           final long count = Long.parseLong(op.get("totalCount").toString());
           final String opType = op.get("opType").toString();
           final int expected;
           if (opType.equals(TopConf.ALL_CMDS)) {
-            expected = 2*NUM_OPS;
+            expected = 2 * NUM_OPS + 2;
+          } else if (opType.equals("datanodeReport")) {
+            expected = 2;
           } else {
             expected = NUM_OPS;
           }

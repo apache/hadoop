@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,24 +32,30 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import org.junit.Ignore;
+import org.junit.After;
+import static org.junit.Assert.assertEquals;
+import org.junit.Before;
 import org.junit.Test;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestAuditLoggerWithCommands {
 
@@ -65,13 +72,15 @@ public class TestAuditLoggerWithCommands {
   static UserGroupInformation user2;
   private static NamenodeProtocols proto;
 
-  @BeforeClass
-  public static void initialize() throws Exception {
+  @Before
+  public void initialize() throws Exception {
     // start a cluster
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY,true);
     conf.setBoolean(DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    conf.setBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
     cluster.waitActive();
@@ -88,8 +97,9 @@ public class TestAuditLoggerWithCommands {
     fs = cluster.getFileSystem();
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
+    Server.getCurCall().set(null);
     fs.close();
     fs2.close();
     fileSys.close();
@@ -126,22 +136,29 @@ public class TestAuditLoggerWithCommands {
     Path path = new Path("/testdir/testdir1");
     fs.mkdirs(path);
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
+    verifySetQuota(path, HdfsConstants.QUOTA_RESET,
+        HdfsConstants.QUOTA_DONT_SET);
+    verifySetQuota(path, HdfsConstants.QUOTA_DONT_SET,
+        HdfsConstants.QUOTA_RESET);
+    verifySetQuota(path, HdfsConstants.QUOTA_DONT_SET,
+        HdfsConstants.BYTES_IN_INTEGER);
+    verifySetQuota(path, HdfsConstants.BYTES_IN_INTEGER,
+        HdfsConstants.BYTES_IN_INTEGER);
+    fileSys.close();
+  }
+
+  private void verifySetQuota(Path path, long nsQuota, long ssQuota)
+      throws IOException {
+    String operationName = cluster.getNamesystem().getQuotaCommand(
+        nsQuota, ssQuota);
+    String acePattern =
+        ".*allowed=false.*ugi=theDoctor.*cmd=.*" + operationName + ".*";
     try {
-      ((DistributedFileSystem)fileSys).setQuota(path, 10l, 10l);
-      fail("The operation should have failed with AccessControlException");
+      ((DistributedFileSystem) fileSys).setQuota(path, nsQuota, ssQuota);
+      fail("The operation should have failed");
     } catch (AccessControlException ace) {
     }
-    String acePattern =
-        ".*allowed=false.*ugi=theDoctor.*cmd=setQuota.*";
-    int length = verifyAuditLogs(acePattern);
-    fileSys.close();
-    try {
-      ((DistributedFileSystem)fileSys).setQuota(path, 10l, 10l);
-      fail("The operation should have failed with IOException");
-    } catch (IOException ace) {
-    }
-    assertTrue("Unexpected log from getContentSummary",
-        length == auditlog.getOutput().split("\n").length);
+    verifyAuditLogs(acePattern);
   }
 
   @Test
@@ -180,7 +197,7 @@ public class TestAuditLoggerWithCommands {
         ".*allowed=false.*ugi=theDoctor.*cmd=renameSnapshot.*";
     fs.mkdirs(srcDir);
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
-    cluster.getNamesystem().allowSnapshot(srcDir.toString());
+    ((DistributedFileSystem)fs).allowSnapshot(srcDir);
     try {
       fileSys.createSnapshot(srcDir);
       fail("The operation should have failed with AccessControlException");
@@ -215,7 +232,7 @@ public class TestAuditLoggerWithCommands {
     Path s1;
     fs.mkdirs(srcDir);
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
-    cluster.getNamesystem().allowSnapshot(srcDir.toString());
+    ((DistributedFileSystem)fs).allowSnapshot(srcDir);
     try {
       s1 = fs.createSnapshot(srcDir);
       fileSys.deleteSnapshot(srcDir, s1.getName());
@@ -237,12 +254,65 @@ public class TestAuditLoggerWithCommands {
   }
 
   @Test
+  public void testAllowSnapshot() throws Exception {
+    Path srcDir = new Path(System.getProperty("user.dir"), "/src");
+    fs.mkdirs(srcDir);
+    String pattern =
+        ".*allowed=true.*ugi=" +
+            System.getProperty("user.name")+".*cmd=allowSnapshot.*";
+    try {
+      ((DistributedFileSystem)fs).allowSnapshot(srcDir);
+      verifyAuditLogs(pattern);
+    } catch (Exception e) {
+      fail("The operation should not have failed with Exception");
+    }
+    fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
+    try {
+      ((DistributedFileSystem)fileSys).allowSnapshot(srcDir);
+      fail("The operation should have failed with AccessControlException");
+    } catch (AccessControlException ace) {
+    }
+    pattern =
+        ".*allowed=false.*ugi=theDoctor.*cmd=allowSnapshot.*";
+    verifyAuditLogs(pattern);
+    fs.delete(srcDir, true);
+    fileSys.close();
+  }
+
+  @Test
+  public void testDisallowSnapshot() throws Exception {
+    Path srcDir = new Path(System.getProperty("user.dir"), "/src");
+    fs.mkdirs(srcDir);
+    cluster.getNamesystem().allowSnapshot(srcDir.toString());
+    String pattern =
+        ".*allowed=true.*ugi=" +
+            System.getProperty("user.name")+".*cmd=disallowSnapshot.*";
+    try {
+      ((DistributedFileSystem)fs).disallowSnapshot(srcDir);
+      verifyAuditLogs(pattern);
+    } catch (Exception e) {
+      fail("The operation should not have failed with Exception");
+    }
+    cluster.getNamesystem().allowSnapshot(srcDir.toString());
+    fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
+    try {
+      ((DistributedFileSystem)fileSys).disallowSnapshot(srcDir);
+      fail("The operation should have failed with AccessControlException");
+    } catch (AccessControlException ace) {
+      pattern =
+          ".*allowed=false.*ugi=theDoctor.*cmd=disallowSnapshot.*";
+      verifyAuditLogs(pattern);
+    }
+    fileSys.close();
+  }
+
+  @Test
   public void testAddCacheDirective() throws Exception {
     removeExistingCachePools(null);
     proto.addCachePool(new CachePoolInfo("pool1").
         setMode(new FsPermission((short) 0)));
     CacheDirectiveInfo alpha = new CacheDirectiveInfo.Builder().
-        setPath(new Path("/alpha")).
+        setPath(new Path(System.getProperty("user.dir"), "/alpha")).
         setPool("pool1").
         build();
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
@@ -618,6 +688,579 @@ public class TestAuditLoggerWithCommands {
     return verifyAuditLogs(".*allowed=" + allowed + pattern);
   }
 
+  @Test
+  public void testMetaSave() throws Exception {
+    String aceMetaSave =
+        ".*allowed=true.*cmd=metaSave.*";
+    try {
+      ((DistributedFileSystem)fs).metaSave("test.log");
+      verifyAuditLogs(aceMetaSave);
+    } catch (Exception e) {
+      fail("The operation should not have failed with Exception");
+    }
+    try {
+      ((DistributedFileSystem)fileSys).metaSave("test.log");
+      fail("The operation should have failed with AccessControlException");
+    } catch (IOException ace) {
+      GenericTestUtils.assertExceptionContains("Access denied", ace);
+      aceMetaSave =
+          ".*allowed=false.*cmd=metaSave.*";
+      verifyAuditLogs(aceMetaSave);
+    }
+  }
+
+  @Test
+  public void testStartReconfiguration() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=startNamenodeReconfiguration.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      ((NameNodeRpcServer) cluster.getNameNodeRpc()).startReconfiguration();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("StartConfiguration should have passed!");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      ((NameNodeRpcServer)cluster.getNameNodeRpc()).startReconfiguration();
+      fail(
+          "startNameNodeReconfiguration should throw AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=startNamenodeReconfiguration.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testGetReconfigurationStatus() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=getNamenodeReconfigurationStatus.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      ((NameNodeRpcServer) cluster.getNameNodeRpc()).getReconfigurationStatus();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("getNamenodeReconfigurationStatus " +
+          " threw Exception!");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      ((NameNodeRpcServer)cluster.getNameNodeRpc()).getReconfigurationStatus();
+      fail("getNamenodeReconfigurationStatus " +
+          " did not throw AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=getNamenodeReconfigurationStatus.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testListReconfigurableProperties() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=listNamenodeReconfigurableProperties.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      ((NameNodeRpcServer) cluster.getNameNodeRpc()).
+          listReconfigurableProperties();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("listReconfigurableProperties " +
+          " threw Exception!");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      ((NameNodeRpcServer)cluster.getNameNodeRpc()).
+          listReconfigurableProperties();
+      fail("getNamenodeReconfigurationStatus " +
+          " did not throw AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=listNamenodeReconfigurableProperties.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testRefreshUserToGroupsMappings() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=refreshUserToGroupsMappings.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    ((NameNodeRpcServer)cluster.getNameNodeRpc()).
+        refreshUserToGroupsMappings();
+    verifyAuditLogs(auditLogString);
+  }
+
+  @Test
+  public void testRefreshSuperUserGroupsConfiguration() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=refreshSuperUserGroupsConfiguration.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      ((NameNodeRpcServer) cluster.getNameNodeRpc()).
+          refreshSuperUserGroupsConfiguration();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail(" The operation threw an exception");
+    }
+  }
+
+  @Test
+  public void testRefreshQueue() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=refreshCallQueue.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      ((NameNodeRpcServer) cluster.getNameNodeRpc()).refreshCallQueue();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail(" The operation threw an exception");
+    }
+  }
+
+  @Test
+  public void testRefreshServiceAcl() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=refreshServiceAcl.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      ((NameNodeRpcServer) cluster.getNameNodeRpc()).refreshServiceAcl();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail(" The operation threw an exception" + e);
+    }
+  }
+
+  @Test
+  public void testFinalizeRollingUpgrade() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=finalizeRollingUpgrade.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    fsNamesystem.setRollingUpgradeInfo(false, System.currentTimeMillis());
+    try {
+      fsNamesystem.finalizeRollingUpgrade();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("finalizeRollingUpgrade threw Exception");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.finalizeRollingUpgrade();
+      fail("finalizeRollingUpgrade should throw AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=finalizeRollingUpgrade.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testQueryRollingUpgrade() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=queryRollingUpgrade.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    fsNamesystem.setRollingUpgradeInfo(false, System.currentTimeMillis());
+    try {
+      fsNamesystem.queryRollingUpgrade();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("queryRollingUpgrade threw Exception");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.queryRollingUpgrade();
+      fail("queryRollingUpgrade should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=queryRollingUpgrade.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testRollEditLog() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=rollEditLog.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      fsNamesystem.rollEditLog();
+    } catch (Exception e) {
+      fail("rollEditLog threw Exception");
+    }
+    verifyAuditLogs(auditLogString);
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.rollEditLog();
+      fail("rollEditLog should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=rollEditLog.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testSetSafeMode() throws Exception {
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    verifySuccessfulSetSafeMode(fsNamesystem,
+        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    verifySuccessfulSetSafeMode(fsNamesystem,
+        HdfsConstants.SafeModeAction.SAFEMODE_GET);
+    verifySuccessfulSetSafeMode(fsNamesystem,
+        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    verifySuccessfulSetSafeMode(fsNamesystem,
+        HdfsConstants.SafeModeAction.SAFEMODE_FORCE_EXIT);
+    String auditLogString;
+    auditLogString =
+        ".*allowed=true.*cmd=safemode_get.*";
+    fsNamesystem.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_GET);
+    verifyAuditLogs(auditLogString);
+    auditLogString =
+        ".*allowed=true.*cmd=safemode_leave.*";
+    fsNamesystem.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    verifyAuditLogs(auditLogString);
+    auditLogString =
+        ".*allowed=true.*cmd=safemode_force_exit.*";
+    fsNamesystem.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_FORCE_EXIT);
+    verifyAuditLogs(auditLogString);
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    verifySafeModeAction(fsNamesystem,
+        HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    verifySafeModeAction(fsNamesystem,
+        HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    verifySafeModeAction(fsNamesystem,
+        HdfsConstants.SafeModeAction.SAFEMODE_FORCE_EXIT);
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+  }
+
+  @Test
+  public void testSetBalancerBandwidth() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=setBalancerBandwidth.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      fsNamesystem.setBalancerBandwidth(10);
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("setBalancerBandwidth threw exception!");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.setBalancerBandwidth(10);
+      fail(
+          "setBalancerBandwidth should have thrown AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=setBalancerBandwidth.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testRefreshNodes() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=refreshNodes.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      fsNamesystem.refreshNodes();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("refreshNodes threw exception!");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.refreshNodes();
+      fail(
+          "refreshNodes should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=refreshNodes.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testFinalizeUpgrade() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=finalizeUpgrade.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      fsNamesystem.finalizeUpgrade();
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("finalizeUpgrade threw Exception");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.finalizeUpgrade();
+      fail("finalizeUpgrade should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=finalizeUpgrade.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testSaveNamespace() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=saveNamespace.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    fsNamesystem.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    try {
+      fsNamesystem.saveNamespace(10, 10);
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("saveNamespace threw Exception");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.saveNamespace(10, 10);
+      fail("saveNamespace should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=saveNamespace.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testDatanodeReport() throws Exception {
+    String auditLogString =
+        ".*allowed=true.*cmd=datanodeReport.*";
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    try {
+      fsNamesystem.datanodeReport(HdfsConstants.DatanodeReportType.ALL);
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("datanodeReport threw Exception");
+    }
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    try {
+      fsNamesystem.datanodeReport(HdfsConstants.DatanodeReportType.ALL);
+      fail(
+          "datanodeReport should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=datanodeReport.*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  @Test
+  public void testRestoreFailedStorage() throws Exception {
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    verifyAuditRestoreFailedStorage(fsNamesystem, "check");
+    verifyAuditRestoreFailedStorage(fsNamesystem, "true");
+    verifyAuditRestoreFailedStorage(fsNamesystem, "false");
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    verifyAuditRestoreFailedStorageACE(fsNamesystem, "check");
+    verifyAuditRestoreFailedStorageACE(fsNamesystem, "true");
+    verifyAuditRestoreFailedStorageACE(fsNamesystem, "false");
+  }
+
+  @Test
+  public void testGetDatanodeStorageReport() throws Exception {
+    FSNamesystem fsNamesystem = spy(cluster.getNamesystem());
+    when(fsNamesystem.isExternalInvocation()).thenReturn(true);
+    Server.Call call = spy(new Server.Call(
+        1, 1, null, null, RPC.RpcKind.RPC_BUILTIN, new byte[] {1, 2, 3}));
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser(System.getProperty("user.name")));
+    Server.getCurCall().set(call);
+    DatanodeStorageReport[] reports  = fsNamesystem.getDatanodeStorageReport(
+        HdfsConstants.DatanodeReportType.ALL);
+    String auditLogString =
+        ".*allowed=true.*cmd=" + "getDatanodeStorageReport" + ".*";
+    verifyAuditLogs(auditLogString);
+    when(call.getRemoteUser()).thenReturn(
+        UserGroupInformation.createRemoteUser("theDoctor"));
+    auditLogString =
+        ".*allowed=false.*cmd=" + "getDatanodeStorageReport" + ".*";
+    try {
+      fsNamesystem.getDatanodeStorageReport(
+          HdfsConstants.DatanodeReportType.ALL);
+      fail("Should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  private void verifyAuditRestoreFailedStorageACE(
+      FSNamesystem fsNamesystem, String arg) throws IOException {
+    String operationName = fsNamesystem.getFailedStorageCommand(arg);
+    try {
+      fsNamesystem.restoreFailedStorage(arg);
+      fail(
+          "RestoreFailedStorage should have thrown AccessControlException!");
+    } catch (IOException ace) {
+      assertEquals("Unexpected Exception!",
+          ace.getClass(), AccessControlException.class);
+      String auditLogString =
+          ".*allowed=false.*cmd=" + operationName + ".*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
+  private void verifyAuditRestoreFailedStorage(
+      FSNamesystem fsNamesystem, String arg) throws IOException {
+    String operationName = fsNamesystem.getFailedStorageCommand(arg);
+    String auditLogString =
+        ".*allowed=true.*cmd=" + operationName + ".*";
+    try {
+      fsNamesystem.restoreFailedStorage(arg);
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail(
+          "The operation should not have failed with Exception");
+    }
+  }
+
+  private void verifySuccessfulSetSafeMode(FSNamesystem fsNamesystem,
+      HdfsConstants.SafeModeAction safeModeAction) throws IOException {
+    String operationName = safeModeAction.toString().toLowerCase();
+    String auditLogString =
+        ".*allowed=true.*cmd=" + operationName +".*";
+    try {
+      fsNamesystem.setSafeMode(safeModeAction);
+      verifyAuditLogs(auditLogString);
+    } catch (Exception e) {
+      fail("The operation should not have failed with Exception");
+    }
+  }
+
+  private void verifySafeModeAction(
+      FSNamesystem fsNamesystem, HdfsConstants.SafeModeAction safeModeAction)
+      throws IOException {
+    String operationName = safeModeAction.toString().toLowerCase();
+    String auditLogString;
+    try {
+      fsNamesystem.setSafeMode(safeModeAction);
+      fail("setSafeMode should have thrown an AccessControlException!");
+    } catch (AccessControlException ace) {
+      auditLogString =
+          ".*allowed=false.*cmd=" + operationName +".*";
+      verifyAuditLogs(auditLogString);
+    }
+  }
+
   private int verifyAuditLogs(String pattern) {
     int length = auditlog.getOutput().split("\n").length;
     String lastAudit = auditlog.getOutput().split("\n")[length - 1];
@@ -633,4 +1276,3 @@ public class TestAuditLoggerWithCommands {
     }
   }
 }
-

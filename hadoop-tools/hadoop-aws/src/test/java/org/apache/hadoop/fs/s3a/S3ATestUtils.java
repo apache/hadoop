@@ -697,24 +697,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Set a bucket specific property to a particular value.
-   * If the generic key passed in has an {@code fs.s3a. prefix},
-   * that's stripped off, so that when the the bucket properties are propagated
-   * down to the generic values, that value gets copied down.
-   * @param conf configuration to set
-   * @param bucket bucket name
-   * @param genericKey key; can start with "fs.s3a."
-   * @param value value to set
-   */
-  public static void setBucketOption(Configuration conf, String bucket,
-      String genericKey, String value) {
-    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
-        genericKey.substring(FS_S3A_PREFIX.length())
-        : genericKey;
-    conf.set(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey, value);
-  }
-
-  /**
    * Assert that a configuration option matches the expected value.
    * @param conf configuration
    * @param key option key

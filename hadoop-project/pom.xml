@@ -135,7 +135,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <native-maven-plugin.version>1.0-alpha-8</native-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.11.134</aws-java-sdk.version>
+    <aws-java-sdk.version>1.11.199</aws-java-sdk.version>
     <hsqldb.version>2.3.4</hsqldb.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
@@ -1205,6 +1205,15 @@
             <artifactId>bcprov-jdk15on</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <!-- HACK.  Transitive dependency for nimbus-jose-jwt.  Needed for
+             packaging.  Please re-check this version when updating
+             nimbus-jose-jwt.  Please read HADOOP-14903 for more details.
+          -->
+        <groupId>net.minidev</groupId>
+        <artifactId>json-smart</artifactId>
+        <version>2.3</version>
       </dependency>
       <dependency>
         <groupId>org.skyscreamer</groupId>
