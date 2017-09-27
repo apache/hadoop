@@ -31,6 +31,14 @@ public class Constants {
 
   public static final String OZONE_USER_DIR = "/user";
 
+  /** Local buffer directory. */
+  public static final String BUFFER_DIR_KEY = "fs.ozone.buffer.dir";
+
+  /** Temporary directory. */
+  public static final String BUFFER_TMP_KEY = "hadoop.tmp.dir";
+
+  public static final String OZONE_URI_DELIMITER = "/";
+
   private Constants() {
 
   }

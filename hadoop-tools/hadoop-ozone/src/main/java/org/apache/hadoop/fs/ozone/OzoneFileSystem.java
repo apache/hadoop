@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.fs.ozone;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.ParseException;
 import java.util.EnumSet;
 import java.util.Objects;
 
+import org.apache.hadoop.ozone.web.client.OzoneKey;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +42,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
@@ -48,6 +54,7 @@ import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_URI_SCHEME;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_USER_DIR;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_HTTP_SCHEME;
+import static org.apache.hadoop.fs.ozone.Constants.OZONE_URI_DELIMITER;
 
 /**
  * The Ozone Filesystem implementation.
@@ -76,13 +83,11 @@ public class OzoneFileSystem extends FileSystem {
     Objects.requireNonNull(name.getScheme(), "No scheme provided in " + name);
     assert getScheme().equals(name.getScheme());
 
-    uri = name;
     Path path = new Path(name.getPath());
     String hostStr = name.getAuthority();
     String volumeStr = null;
     String bucketStr = null;
 
-    LOG.info("Ozone URI for ozfs initialization is " + uri);
     while (path != null && !path.isRoot()) {
       bucketStr = volumeStr;
       volumeStr = path.getName();
@@ -98,6 +103,10 @@ public class OzoneFileSystem extends FileSystem {
     }
 
     try {
+      uri = new URIBuilder().setScheme(OZONE_URI_SCHEME).setHost(hostStr)
+          .setPath(OZONE_URI_DELIMITER + volumeStr + OZONE_URI_DELIMITER
+              + bucketStr + OZONE_URI_DELIMITER).build();
+      LOG.info("Ozone URI for ozfs initialization is " + uri);
       this.ozone = new OzoneRestClient(OZONE_HTTP_SCHEME + hostStr);
       try {
         this.userName =
@@ -143,7 +152,16 @@ public class OzoneFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    return null;
+    LOG.trace("open() path:{}", f);
+    final FileStatus fileStatus = getFileStatus(f);
+
+    if (fileStatus.isDirectory()) {
+      throw new FileNotFoundException("Can't open directory " + f + " to read");
+    }
+
+    return new FSDataInputStream(
+        new OzoneInputStream(getConf(), uri, bucket, pathToKey(f),
+            fileStatus.getLen(), bufferSize, statistics));
   }
 
   @Override
@@ -151,7 +169,31 @@ public class OzoneFileSystem extends FileSystem {
                                    boolean overwrite, int bufferSize,
                                    short replication, long blockSize,
                                    Progressable progress) throws IOException {
-    return null;
+    LOG.trace("create() path:{}", f);
+    final String key = pathToKey(f);
+    final FileStatus status;
+    try {
+      status = getFileStatus(f);
+      if (status.isDirectory()) {
+        throw new FileAlreadyExistsException(f + " is a directory");
+      } else {
+        if (!overwrite) {
+          // path references a file and overwrite is disabled
+          throw new FileAlreadyExistsException(f + " already exists");
+        }
+        LOG.debug("Overwriting file {}", f);
+        //TODO: Delete the existing file here
+      }
+    } catch (FileNotFoundException ignored) {
+      // This exception needs to ignored as this means that the file currently
+      // does not exists and a new file can thus be created.
+    }
+
+    final OzoneOutputStream stream =
+        new OzoneOutputStream(getConf(), uri, bucket, key, this.statistics);
+    // We pass null to FSDataOutputStream so it won't count writes that
+    // are being buffered to a file
+    return new FSDataOutputStream(stream, null);
   }
 
   @Override
@@ -162,13 +204,22 @@ public class OzoneFileSystem extends FileSystem {
       short replication,
       long blockSize,
       Progressable progress) throws IOException {
-    return null;
+    final Path parent = path.getParent();
+    if (parent != null) {
+      // expect this to raise an exception if there is no parent
+      if (!getFileStatus(parent).isDirectory()) {
+        throw new FileAlreadyExistsException("Not a directory: " + parent);
+      }
+    }
+    return create(path, permission, flags.contains(CreateFlag.OVERWRITE),
+        bufferSize, replication, blockSize, progress);
   }
 
   @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
-    return null;
+    throw new UnsupportedOperationException("append() Not implemented by the "
+        + getClass().getSimpleName() + " FileSystem implementation");
   }
 
   @Override
@@ -201,9 +252,80 @@ public class OzoneFileSystem extends FileSystem {
     return false;
   }
 
+  private OzoneKey getKeyStatus(String keyName) {
+    try {
+      return bucket.getKeyInfo(keyName);
+    } catch (OzoneException e) {
+      LOG.trace("Key:{} does not exists", keyName);
+      return null;
+    }
+  }
+
+  private long getModifiedTime(String modifiedTime, String key) {
+    try {
+      return OzoneUtils.formatDate(modifiedTime);
+    } catch (ParseException pe) {
+      LOG.error("Invalid time:{} for key:{}", modifiedTime, key, pe);
+      return 0;
+    }
+  }
+
+  private boolean isDirectory(OzoneKey key) {
+    LOG.trace("key name:{} size:{}", key.getObjectInfo().getKeyName(),
+        key.getObjectInfo().getSize());
+    return key.getObjectInfo().getKeyName().endsWith(OZONE_URI_DELIMITER)
+        && (key.getObjectInfo().getSize() == 0);
+  }
+
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    return null;
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    String key = pathToKey(qualifiedPath);
+
+    if (key.length() == 0) {
+      return new FileStatus(0, true, 1, 0,
+          getModifiedTime(bucket.getCreatedOn(), OZONE_URI_DELIMITER),
+          qualifiedPath);
+    }
+
+    // consider this a file and get key status
+    OzoneKey meta = getKeyStatus(key);
+    if (meta == null && !key.endsWith(OZONE_URI_DELIMITER)) {
+      // if that fails consider this a directory
+      key += OZONE_URI_DELIMITER;
+      meta = getKeyStatus(key);
+    }
+
+    if (meta == null) {
+      LOG.trace("File:{} not found", f);
+      throw new FileNotFoundException(f + ": No such file or directory!");
+    } else if (isDirectory(meta)) {
+      return new FileStatus(0, true, 1, 0,
+          getModifiedTime(meta.getObjectInfo().getModifiedOn(), key),
+          qualifiedPath);
+    } else {
+      return new FileStatus(meta.getObjectInfo().getSize(), false, 1,
+            getDefaultBlockSize(f),
+          getModifiedTime(meta.getObjectInfo().getModifiedOn(), key),
+          qualifiedPath);
+    }
+  }
+
+  /**
+   * Turn a path (relative or otherwise) into an Ozone key.
+   *
+   * @param path the path of the file.
+   * @return the key of the object that represents the file.
+   */
+  private String pathToKey(Path path) {
+    Objects.requireNonNull(path, "Path can not be null!");
+    if (!path.isAbsolute()) {
+      path = new Path(workingDir, path);
+    }
+    // removing leading '/' char
+    String key = path.toUri().getPath().substring(1);
+    LOG.trace("path for key:{} is:{}", key, path);
+    return key;
   }
 
   @Override
