@@ -97,6 +97,7 @@ public final class RequestDispatchObjectStoreChannelHandler
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
     super.exceptionCaught(ctx, cause);
-    IOUtils.cleanup(null, this.reqIn, this.reqOut, this.respIn, this.respOut);
+    IOUtils.cleanupWithLogger(null, this.reqIn, this.reqOut, this.respIn,
+        this.respOut);
   }
 }

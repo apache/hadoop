@@ -80,7 +80,7 @@ public final class RequestContentObjectStoreChannelHandler
         "ctx = {}, content = {}", ctx, content);
     content.content().readBytes(this.reqOut, content.content().readableBytes());
     if (content instanceof LastHttpContent) {
-      IOUtils.cleanup(null, this.reqOut);
+      IOUtils.cleanupWithLogger(null, this.reqOut);
       ctx.write(this.nettyResp.get());
       ChannelFuture respFuture = ctx.writeAndFlush(new ChunkedStream(
           this.respIn));
@@ -112,6 +112,6 @@ public final class RequestContentObjectStoreChannelHandler
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
     super.exceptionCaught(ctx, cause);
-    IOUtils.cleanup(null, this.reqOut, this.respIn);
+    IOUtils.cleanupWithLogger(null, this.reqOut, this.respIn);
   }
 }

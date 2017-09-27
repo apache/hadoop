@@ -152,7 +152,7 @@ public class TestStorageContainerManager {
         }
       }
     } finally {
-      IOUtils.cleanup(null, cluster);
+      IOUtils.cleanupWithLogger(null, cluster);
     }
   }
 

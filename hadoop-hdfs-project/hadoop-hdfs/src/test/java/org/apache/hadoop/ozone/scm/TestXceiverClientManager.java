@@ -66,7 +66,7 @@ public class TestXceiverClientManager {
 
   @AfterClass
   public static void shutdown() {
-    IOUtils.cleanup(null, cluster, storageContainerLocationClient);
+    IOUtils.cleanupWithLogger(null, cluster, storageContainerLocationClient);
   }
 
   @Test

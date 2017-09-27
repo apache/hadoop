@@ -165,7 +165,7 @@ public class TestContainerSQLCli {
 
   @After
   public void shutdown() throws InterruptedException {
-    IOUtils.cleanup(null, storageContainerLocationClient, cluster);
+    IOUtils.cleanupWithLogger(null, storageContainerLocationClient, cluster);
   }
 
   @Test

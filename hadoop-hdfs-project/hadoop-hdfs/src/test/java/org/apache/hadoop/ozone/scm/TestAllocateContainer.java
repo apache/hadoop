@@ -65,7 +65,7 @@ public class TestAllocateContainer {
     if(cluster != null) {
       cluster.shutdown();
     }
-    IOUtils.cleanup(null, storageContainerLocationClient, cluster);
+    IOUtils.cleanupWithLogger(null, storageContainerLocationClient, cluster);
   }
 
   @Test

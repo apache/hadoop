@@ -41,6 +41,6 @@ final class CloseableCleanupListener implements ChannelFutureListener {
 
   @Override
   public void operationComplete(ChannelFuture future) {
-    IOUtils.cleanup(null, closeables);
+    IOUtils.cleanupWithLogger(null, closeables);
   }
 }

@@ -68,7 +68,7 @@ public class TestOzoneRestWithMiniCluster {
 
   @AfterClass
   public static void shutdown() throws InterruptedException {
-    IOUtils.cleanup(null, ozoneClient, cluster);
+    IOUtils.cleanupWithLogger(null, ozoneClient, cluster);
   }
 
   @Test

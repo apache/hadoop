@@ -72,7 +72,7 @@ public class TestSCMMXBean {
 
   @AfterClass
   public static void shutdown() {
-    IOUtils.cleanup(null, cluster);
+    IOUtils.cleanupWithLogger(null, cluster);
   }
 
   @Test

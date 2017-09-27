@@ -235,7 +235,7 @@ public final class ObjectStoreJerseyContainer {
         this.exception = e;
         this.latch.countDown();
       } finally {
-        IOUtils.cleanup(null, this.reqIn, this.respOut);
+        IOUtils.cleanupWithLogger(null, this.reqIn, this.respOut);
         StorageHandlerBuilder.removeStorageHandler();
       }
       LOG.trace("end RequestRunner, nettyReq = {}", this.nettyReq);
@@ -281,7 +281,7 @@ public final class ObjectStoreJerseyContainer {
      */
     @Override
     public void finish() throws IOException {
-      IOUtils.cleanup(null, this.respOut);
+      IOUtils.cleanupWithLogger(null, this.respOut);
     }
 
     /**
