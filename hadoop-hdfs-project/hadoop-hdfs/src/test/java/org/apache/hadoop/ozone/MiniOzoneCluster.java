@@ -41,9 +41,9 @@ import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -512,11 +512,9 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       if (enableTrace.isPresent()) {
         conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY,
             enableTrace.get());
-        GenericTestUtils.setLogLevel(org.apache.log4j.Logger.getRootLogger(),
-            Level.ALL);
+        GenericTestUtils.setRootLogLevel(Level.TRACE);
       }
-      GenericTestUtils.setLogLevel(org.apache.log4j.Logger.getRootLogger(),
-          Level.INFO);
+      GenericTestUtils.setRootLogLevel(Level.INFO);
     }
 
     private void configureSCMheartbeat() {

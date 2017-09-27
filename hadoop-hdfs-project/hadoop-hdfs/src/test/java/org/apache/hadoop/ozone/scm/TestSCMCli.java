@@ -119,7 +119,7 @@ public class TestSCMCli {
 
   @AfterClass
   public static void shutdown() throws InterruptedException {
-    IOUtils.cleanup(null, storageContainerLocationClient, cluster);
+    IOUtils.cleanupWithLogger(null, storageContainerLocationClient, cluster);
   }
 
   @Test

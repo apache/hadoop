@@ -114,7 +114,7 @@ public class ContainerStorageLocation {
     scmUsedSaved = true;
 
     if (scmUsage instanceof CachingGetSpaceUsed) {
-      IOUtils.cleanup(null, ((CachingGetSpaceUsed) scmUsage));
+      IOUtils.cleanupWithLogger(null, ((CachingGetSpaceUsed) scmUsage));
     }
   }
 
@@ -185,7 +185,7 @@ public class ContainerStorageLocation {
       // not critical, log the error and continue.
       LOG.warn("Failed to write scmUsed to " + scmUsedFile, ioe);
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
   }
 }
