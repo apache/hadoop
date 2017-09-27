@@ -272,7 +272,7 @@ public class TestAggregatedLogFormat {
     String expectedContent = sb.toString();
     Assert.assertTrue("Log content incorrect", s.contains(expectedContent));
     
-     Assert.assertEquals(expectedLength, s.length());
+    Assert.assertEquals(expectedLength, s.length());
   }
 
   @Test(timeout=10000)

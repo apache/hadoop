@@ -909,7 +909,7 @@ public class LeafQueue extends AbstractCSQueue {
   protected Resource getHeadroom(User user, Resource queueCurrentLimit,
       Resource clusterResource, FiCaSchedulerApp application, Resource required) {
     return getHeadroom(user, queueCurrentLimit, clusterResource,
-	  computeUserLimit(application, clusterResource, required, user, null));
+      computeUserLimit(application, clusterResource, required, user, null));
   }
   
   private Resource getHeadroom(User user, Resource currentResourceLimit,
@@ -1037,7 +1037,7 @@ public class LeafQueue extends AbstractCSQueue {
     // queue-hard-limit * ulMin
     
     final int activeUsers = activeUsersManager.getNumActiveUsers();  
-    		
+            
     Resource limit =
         Resources.roundUp(
             resourceCalculator, 
@@ -1435,7 +1435,7 @@ public class LeafQueue extends AbstractCSQueue {
     Resource totalResource = node.getTotalResource();
 
     if (!Resources.fitsIn(capability, available)) {
-    	 return Resources.none();
+         return Resources.none();
     }
     if (!Resources.lessThanOrEqual(resourceCalculator, clusterResource,
         capability, totalResource)) {
@@ -1511,7 +1511,7 @@ public class LeafQueue extends AbstractCSQueue {
 
       //int allocated = Resources.allocateGPUs(capability, available, node.getTotalResource());
       //container.setGPULocation(allocated);
-  	
+      
       LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
       int allocated = Resources.allocateGPUs(capability, available);
       LOG.info("Allocated GPUs in bitvector format: " + allocated);

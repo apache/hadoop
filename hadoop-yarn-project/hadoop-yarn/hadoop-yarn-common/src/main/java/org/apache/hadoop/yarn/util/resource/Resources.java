@@ -325,16 +325,15 @@ public class Resources {
   }
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
-	  boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
+      boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
         smaller.getVirtualCores() <= bigger.getVirtualCores() &&
         smaller.getGPUs() <= bigger.getGPUs();
-	  if (fitsIn == true) {	     
-		  if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute())
-		  {
-		      fitsIn = false;
-		  }
-	  }
-	  return fitsIn;
+      if (fitsIn == true) {         
+          if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute()) {
+              fitsIn = false;
+          }
+      }
+      return fitsIn;
   }
 
 
@@ -351,16 +350,16 @@ public class Resources {
   }
 
   public static int allocateGPUs(Resource smaller, Resource bigger) {
-    if (smaller.getGPUAttribute() > 0) {    	
-    	 if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) == smaller.getGPUAttribute()){    		 
-    		 return smaller.getGPUAttribute();
-    	 }
-    	 else {
-    		 return 0;
-    	 }
+    if (smaller.getGPUAttribute() > 0) {        
+         if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) == smaller.getGPUAttribute()){             
+             return smaller.getGPUAttribute();
+         }
+         else {
+             return 0;
+         }
     }
     else {
-    	return allocateGPUsByCount(smaller.getGPUs(), bigger.getGPUAttribute());
+        return allocateGPUsByCount(smaller.getGPUs(), bigger.getGPUAttribute());
     }
   }
 
@@ -368,10 +367,9 @@ public class Resources {
   {
     int result = available;
     int availableCount = Integer.bitCount(available);
-    while(availableCount-- > requestCount)
-    {
-    	result &= result -1;
-    }	
+    while(availableCount-- > requestCount) {
+        result &= result -1;
+    }
     return result;
   }
 }

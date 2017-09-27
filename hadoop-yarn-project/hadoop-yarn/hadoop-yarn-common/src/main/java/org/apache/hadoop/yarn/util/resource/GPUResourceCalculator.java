@@ -34,14 +34,12 @@ public class GPUResourceCalculator extends ResourceCalculator {
   @Override
   public int computeAvailableContainers(Resource available, Resource required) {
     // Only consider GPU
-	if(!isInvalidDivisor(required))
-	{
-		return available.getGPUs() / required.getGPUs();
-	}
-	else 
-	{
-		return available.getGPUs();
-	}
+    if(!isInvalidDivisor(required)) {
+        return available.getGPUs() / required.getGPUs();
+    }
+    else {
+        return available.getGPUs();
+    }
   }
 
   @Override
@@ -59,24 +57,22 @@ public class GPUResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-	  if(!isInvalidDivisor(b))
-	  {
-		return (float)a.getGPUs() / b.getGPUs();
-	  }
-	  else
-	  {
-		  return (float)a.getGPUs();
-	  }
+      if(!isInvalidDivisor(b)) {
+        return (float)a.getGPUs() / b.getGPUs();
+      }
+      else {
+          return (float)a.getGPUs();
+      }
   }
 
   @Override
   public Resource divideAndCeil(Resource numerator, int denominator) {
     return Resources.createResource(
-    		numerator.getMemory(), 
-    		numerator.getVirtualCores(),
+            numerator.getMemory(), 
+            numerator.getVirtualCores(),
             divideAndCeil(numerator.getGPUs(), denominator),
             numerator.getGPUAttribute()
-    		);
+            );
   }
 
   @Override
@@ -88,11 +84,11 @@ public class GPUResourceCalculator extends ResourceCalculator {
             stepFactor.getGPUs()),
             maximumResource.getGPUs());
     return Resources.createResource(
-    		r.getMemory(), 
+            r.getMemory(), 
             r.getVirtualCores(),
-    		normalizedGPU,
-    		r.getGPUAttribute()
-    		);
+            normalizedGPU,
+            r.getGPUAttribute()
+            );
   }
 
   @Override
@@ -104,7 +100,7 @@ public class GPUResourceCalculator extends ResourceCalculator {
   @Override
   public Resource roundUp(Resource r, Resource stepFactor) {
     return Resources.createResource(
-    	r.getMemory(), 
+        r.getMemory(), 
         r.getVirtualCores(),
         roundUp(r.getGPUs(), stepFactor.getGPUs()),
         r.getGPUAttribute()
@@ -114,7 +110,7 @@ public class GPUResourceCalculator extends ResourceCalculator {
   @Override
   public Resource roundDown(Resource r, Resource stepFactor) {
     return Resources.createResource(
-    	 r.getMemory(), 
+         r.getMemory(), 
          r.getVirtualCores(),
          roundDown(r.getGPUs(), stepFactor.getGPUs()),
          r.getGPUAttribute()
@@ -125,7 +121,7 @@ public class GPUResourceCalculator extends ResourceCalculator {
   public Resource multiplyAndNormalizeUp(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
-    	r.getMemory(), 
+        r.getMemory(), 
         r.getVirtualCores(),
         roundUp((int)(r.getGPUs() * by + 0.5), stepFactor.getGPUs()),
         r.getGPUAttribute()
@@ -136,8 +132,8 @@ public class GPUResourceCalculator extends ResourceCalculator {
   public Resource multiplyAndNormalizeDown(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
-    	r.getMemory(), 
-    	r.getVirtualCores(),
+        r.getMemory(), 
+        r.getVirtualCores(),
         roundDown(
             (int)(r.getGPUs() * by),
             stepFactor.getGPUs()

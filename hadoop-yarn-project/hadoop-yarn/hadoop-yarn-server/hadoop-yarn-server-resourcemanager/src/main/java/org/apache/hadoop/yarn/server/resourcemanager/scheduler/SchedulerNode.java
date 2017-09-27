@@ -96,7 +96,7 @@ public abstract class SchedulerNode {
   public synchronized void setTotalResource(Resource resource){
     this.totalResourceCapability = resource;
     this.availableResource = Resources.subtract(totalResourceCapability,
-      this.usedResource);
+    this.usedResource);
   }
   
   /**

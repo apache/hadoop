@@ -34,11 +34,11 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public int computeAvailableContainers(Resource available, Resource required) {
     // Only consider memory
-	if(!isInvalidDivisor(required))	{
-		return available.getMemory() / required.getMemory();
-	}
-	else 
-		return available.getMemory(); 
+    if(!isInvalidDivisor(required))    {
+        return available.getMemory() / required.getMemory();
+    }
+    else 
+        return available.getMemory(); 
   }
 
   @Override
@@ -56,10 +56,10 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-	  if(!isInvalidDivisor(b))	{
-		  return (float)a.getMemory() / b.getMemory();
-	  }
-	  return (float)a.getMemory();
+      if(!isInvalidDivisor(b))    {
+          return (float)a.getMemory() / b.getMemory();
+      }
+      return (float)a.getMemory();
   }
 
   @Override
@@ -81,9 +81,9 @@ public class DefaultResourceCalculator extends ResourceCalculator {
             stepFactor.getMemory()),
             maximumResource.getMemory());
     return Resources.createResource(normalizedMemory,
-    		                        r.getVirtualCores(), 
-    		                        r.getGPUs(), 
-    		                        r.getGPUAttribute());
+                                    r.getVirtualCores(), 
+                                    r.getGPUs(), 
+                                    r.getGPUAttribute());
   }
 
   @Override

@@ -662,10 +662,9 @@ public class FifoScheduler extends
     Resource capability = request.getCapability();
     Resource available = node.getAvailableResource();
 
-    if (!Resources.fitsIn(capability, available)) 
-    {
-    	return 0;
-    }    	
+    if (!Resources.fitsIn(capability, available)) {
+        return 0;
+    }        
     int availableContainers = 
       node.getAvailableResource().getMemory() / capability.getMemory(); // TODO: A buggy
                                                                         // application
@@ -676,9 +675,8 @@ public class FifoScheduler extends
     int assignedContainers = 
       Math.min(assignableContainers, availableContainers);
     
-    if(capability.getGPUs() > 0)
-    {
-    	assignedContainers = Math.min(assignedContainers, available.getGPUs()/capability.getGPUs());
+    if(capability.getGPUs() > 0) {
+        assignedContainers = Math.min(assignedContainers, available.getGPUs()/capability.getGPUs());
     }
     
     if (assignedContainers > 0) {
@@ -694,13 +692,13 @@ public class FifoScheduler extends
               .getHttpAddress(), capability, priority, null);
         
         if(capability.getGPUs() > 0) {
-	        // Allocate!
-	        LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
-	        int allocatedGPU = Resources.allocateGPUs(capability, available);
-	        LOG.info("Allocated GPUs in bitvector format: " + allocatedGPU);
-	        container.setGPULocation(allocatedGPU);
-	        available.setGPUAttribute(available.getGPUAttribute() | allocatedGPU);
-	     }
+            // Allocate!
+            LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
+            int allocatedGPU = Resources.allocateGPUs(capability, available);
+            LOG.info("Allocated GPUs in bitvector format: " + allocatedGPU);
+            container.setGPULocation(allocatedGPU);
+            available.setGPUAttribute(available.getGPUAttribute() | allocatedGPU);
+         }
         // Inform the application
         RMContainer rmContainer =
             application.allocate(type, node, priority, request, container);
