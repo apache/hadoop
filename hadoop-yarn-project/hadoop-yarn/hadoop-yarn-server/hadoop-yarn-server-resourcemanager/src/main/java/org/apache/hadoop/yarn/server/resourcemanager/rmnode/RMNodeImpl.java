@@ -856,8 +856,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         containers = startEvent.getNMContainerStatuses();
         if (containers != null && !containers.isEmpty()) {
           for (NMContainerStatus container : containers) {
-            if (container.getContainerState() == ContainerState.RUNNING ||
-                container.getContainerState() == ContainerState.SCHEDULED) {
+            if (container.getContainerState() == ContainerState.RUNNING) {
               rmNode.launchedContainers.add(container.getContainerId());
             }
           }
@@ -1412,8 +1411,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       // Process running containers
-      if (remoteContainer.getState() == ContainerState.RUNNING ||
-          remoteContainer.getState() == ContainerState.SCHEDULED) {
+      if (remoteContainer.getState() == ContainerState.RUNNING) {
         ++numRemoteRunningContainers;
         if (!launchedContainers.contains(containerId)) {
           // Just launched container. RM knows about it the first time.

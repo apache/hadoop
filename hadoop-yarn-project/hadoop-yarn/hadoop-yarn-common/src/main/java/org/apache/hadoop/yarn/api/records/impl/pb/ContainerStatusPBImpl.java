@@ -25,6 +25,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos;
@@ -96,7 +97,8 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     sb.append("Diagnostics: ").append(getDiagnostics()).append(", ");
     sb.append("ExitStatus: ").append(getExitStatus()).append(", ");
     sb.append("IP: ").append(getIPs()).append(", ");
-    sb.append("Host: ").append(getHost());
+    sb.append("Host: ").append(getHost()).append(", ");
+    sb.append("ContainerSubState: ").append(getContainerSubState());
     sb.append("]");
     return sb.toString();
   }
@@ -213,6 +215,26 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     }
     builder.setState(convertToProtoFormat(state));
   }
+
+  @Override
+  public synchronized ContainerSubState getContainerSubState() {
+    ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasContainerSubState()) {
+      return null;
+    }
+    return ProtoUtils.convertFromProtoFormat(p.getContainerSubState());
+  }
+
+  @Override
+  public synchronized void setContainerSubState(ContainerSubState subState) {
+    maybeInitBuilder();
+    if (subState == null) {
+      builder.clearContainerSubState();
+      return;
+    }
+    builder.setContainerSubState(ProtoUtils.convertToProtoFormat(subState));
+  }
+
   @Override
   public synchronized ContainerId getContainerId() {
     ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
