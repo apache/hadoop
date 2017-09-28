@@ -41,8 +41,11 @@ public class TestConfigurableResource {
     assertEquals(
         configurableResource.getResource(clusterResource).getVirtualCores(), 1);
 
-    assertNull(configurableResource.getResource());
-    assertNull(configurableResource.getResource(null));
+    assertNull("The absolute resource should be null since object"
+            + " configurableResource is initialized with percentages",
+        configurableResource.getResource());
+    assertNull("The absolute resource should be null since cluster resource"
+        + " is null", configurableResource.getResource(null));
   }
 
   @Test

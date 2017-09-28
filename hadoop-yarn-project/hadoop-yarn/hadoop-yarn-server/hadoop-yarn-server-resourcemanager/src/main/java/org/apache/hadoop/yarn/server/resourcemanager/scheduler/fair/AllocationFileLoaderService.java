@@ -610,14 +610,14 @@ public class AllocationFileLoaderService extends AbstractService {
     checkMinAndMaxResource(minQueueResources, maxQueueResources, queueName);
   }
 
-  private void checkMinAndMaxResource(Map<String, Resource> minQueueResources,
-      Map<String, ConfigurableResource> maxQueueResources, String queueName) {
+  private void checkMinAndMaxResource(Map<String, Resource> minResources,
+      Map<String, ConfigurableResource> maxResources, String queueName) {
 
-    if (maxQueueResources.containsKey(queueName)
-        && minQueueResources.containsKey(queueName)) {
+    ConfigurableResource maxConfigurableResource = maxResources.get(queueName);
+    Resource minResource = minResources.get(queueName);
 
-      Resource maxResource = maxQueueResources.get(queueName).getResource();
-      Resource minResource = minQueueResources.get(queueName);
+    if (maxConfigurableResource != null && minResource != null) {
+      Resource maxResource = maxConfigurableResource.getResource();
 
       // check whether max resource is bigger or equals to min resource when max
       // resource are absolute values

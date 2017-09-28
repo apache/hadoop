@@ -43,6 +43,14 @@ public class ConfigurableResource {
     this.resource = resource;
   }
 
+  /**
+   * Get resource by multiplying the cluster resource and the percentage of
+   * each resource respectively. Return the absolute resource if either
+   * {@code percentages} or {@code clusterResource) is null.
+   *
+   * @param clusterResource the cluster resource
+   * @return resource
+   */
   public Resource getResource(Resource clusterResource) {
     if (percentages != null && clusterResource != null) {
       long memory = (long) (clusterResource.getMemorySize() * percentages[0]);
@@ -53,6 +61,11 @@ public class ConfigurableResource {
     }
   }
 
+  /**
+   * Get the absolute resource.
+   *
+   * @return the absolute resource
+   */
   public Resource getResource() {
     return resource;
   }
