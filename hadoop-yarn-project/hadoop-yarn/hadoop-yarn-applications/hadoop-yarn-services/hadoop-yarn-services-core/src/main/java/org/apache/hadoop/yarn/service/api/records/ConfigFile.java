@@ -26,7 +26,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,6 +48,11 @@ import java.util.Objects;
 public class ConfigFile implements Serializable {
   private static final long serialVersionUID = -7009402089417704612L;
 
+  /**
+   * Config Type.  XML, JSON, YAML, TEMPLATE, ENV and HADOOP_XML are supported.
+   **/
+  @XmlType(name = "config_type")
+  @XmlEnum
   public enum TypeEnum {
     XML("XML"), PROPERTIES("PROPERTIES"), JSON("JSON"), YAML("YAML"), TEMPLATE(
         "TEMPLATE"), ENV("ENV"), HADOOP_XML("HADOOP_XML"),;
