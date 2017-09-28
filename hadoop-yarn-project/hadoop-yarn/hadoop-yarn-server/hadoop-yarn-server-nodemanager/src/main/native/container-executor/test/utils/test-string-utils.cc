@@ -88,6 +88,39 @@
    rc = get_numbers_split_by_comma(input, &numbers, &n_numbers);
    std::cout << "Testing input=" << input << "\n";
    ASSERT_TRUE(0 != rc) << "Should failed\n";
-}
+ }
+
+   TEST_F(TestStringUtils, test_validate_container_id) {
+
+     const char *good_input[] = {
+         "container_e134_1499953498516_50875_01_000007",
+         "container_1499953498516_50875_01_000007",
+         "container_e1_12312_11111_02_000001"
+     };
+
+     const char *bad_input[] = {
+         "CONTAINER",
+         "container_e1_12312_11111_02_000001 | /tmp/file"
+             "container_e1_12312_11111_02_000001 || # /tmp/file",
+         "container_e1_12312_11111_02_000001 # /tmp/file",
+         "container_e1_12312_11111_02_000001' || touch /tmp/file #",
+         "ubuntu || touch /tmp/file #",
+         "''''''''"
+     };
+
+     int good_input_size = sizeof(good_input) / sizeof(char *);
+     int i = 0;
+     for (i = 0; i < good_input_size; i++) {
+       int op = validate_container_id(good_input[i]);
+       ASSERT_EQ(1, op);
+     }
+
+     int bad_input_size = sizeof(bad_input) / sizeof(char *);
+     int j = 0;
+     for (j = 0; j < bad_input_size; j++) {
+       int op = validate_container_id(bad_input[j]);
+       ASSERT_EQ(0, op);
+     }
+   }
 
 } // namespace ContainerExecutor

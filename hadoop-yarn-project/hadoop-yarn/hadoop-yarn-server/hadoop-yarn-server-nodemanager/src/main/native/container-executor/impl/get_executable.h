@@ -16,25 +16,14 @@
  * limitations under the License.
  */
 
-#include "module-configs.h"
-#include "util.h"
-#include "modules/common/constants.h"
+#ifndef __YARN_POSIX_CONTAINER_EXECUTOR_GET_EXECUTABLE_H__
+#define __YARN_POSIX_CONTAINER_EXECUTOR_GET_EXECUTABLE_H__
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
+/**
+ * Get the path to executable that is currently running
+ * @param argv0 the name of the executable
+ * @return the path to the currently running executable
+ */
+char* get_executable(char *argv0);
 
-#define ENABLED_CONFIG_KEY "module.enabled"
-
-int module_enabled(const struct section* section_cfg, const char* module_name) {
-  char* enabled_str = get_section_value(ENABLED_CONFIG_KEY, section_cfg);
-  int enabled = 0;
-  if (enabled_str && 0 == strcmp(enabled_str, "true")) {
-    enabled = 1;
-  } else {
-    fprintf(LOGFILE, "Module %s is disabled\n", module_name);
-  }
-
-  free(enabled_str);
-  return enabled;
-}
+#endif

@@ -29,11 +29,11 @@ public class DockerStopCommand extends DockerCommand {
 
   public DockerStopCommand(String containerName) {
     super(STOP_COMMAND);
-    super.addCommandArguments(containerName);
+    super.addCommandArguments("name", containerName);
   }
 
   public DockerStopCommand setGracePeriod(int value) {
-    super.addCommandArguments("--time=" + Integer.toString(value));
+    super.addCommandArguments("time", Integer.toString(value));
     return this;
   }
 }
