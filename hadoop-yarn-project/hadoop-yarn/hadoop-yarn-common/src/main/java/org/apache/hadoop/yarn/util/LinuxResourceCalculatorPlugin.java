@@ -390,11 +390,13 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private InputStreamReader getInputGpuStreamReader() throws Exception
   {
       if(procfsGpuFile == null){
+          LOG.info("exec:" + REFRESH_GPU_CMD);
           Process pos = Runtime.getRuntime().exec(REFRESH_GPU_CMD);
           pos.waitFor();
           return new InputStreamReader(pos.getInputStream());
           
       } else {
+          LOG.info("read GPU info from file:" + procfsGpuFile);
           return new InputStreamReader(
                   new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
       }
@@ -412,7 +414,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
            int gpuMask = 0;
            Matcher mat = null;      
            
-           while ((ln =input.readLine()) != null) {           
+           while ((ln =input.readLine()) != null) {  
+               LOG.info(ln);
                mat = GPU_FORMAT.matcher(ln);
                if (mat.find()) {
                  long index = Long.parseLong(mat.group(1));
@@ -433,7 +436,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
              LOG.warn("error get GPU status info:" + e.toString());
          }catch (Exception e) {
              LOG.warn("error get GPU status info:" + e.toString());
-         }    
+         }
+         LOG.info(ln);
     }
   }
   
