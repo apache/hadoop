@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -129,11 +128,9 @@ public class TestReencryption {
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 3);
     // Adjust configs for re-encrypt test cases
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REENCRYPT_BATCH_SIZE_KEY, 5);
-    conf.setTimeDuration(
-        DFSConfigKeys.DFS_NAMENODE_REENCRYPT_SLEEP_INTERVAL_KEY, 1,
-        TimeUnit.SECONDS);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
+    cluster.waitClusterUp();
     fs = cluster.getFileSystem();
     fsn = cluster.getNamesystem();
     fsWrapper = new FileSystemTestWrapper(fs);
@@ -1284,6 +1281,7 @@ public class TestReencryption {
     fsn = cluster.getNamesystem();
     getEzManager().pauseReencryptForTesting();
     cluster.waitActive();
+    cluster.waitClusterUp();
   }
 
   private void waitForReencryptedZones(final int expected)
@@ -1519,6 +1517,7 @@ public class TestReencryption {
     getEzManager().pauseReencryptForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
     waitForQueuedZones(1);
+    getEzManager().pauseReencryptUpdaterForTesting();
     getEzManager().resumeReencryptForTesting();
 
     LOG.info("Waiting for re-encrypt callables to run");
@@ -1529,7 +1528,6 @@ public class TestReencryption {
       }
     }, 100, 10000);
 
-    getEzManager().pauseReencryptUpdaterForTesting();
     dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.CANCEL);
 
     // now resume updater and verify status.
@@ -1609,7 +1607,7 @@ public class TestReencryption {
     cluster.getConfiguration(0)
         .unset(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
     cluster.restartNameNodes();
-    cluster.waitActive();
+    cluster.waitClusterUp();
 
     // test re-encrypt should fail
     try {
@@ -1673,6 +1671,9 @@ public class TestReencryption {
     }
 
     fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    // trigger the background thread to run, without having to
+    // wait for DFS_NAMENODE_REENCRYPT_SLEEP_INTERVAL_KEY
+    getHandler().notifyNewSubmission();
     waitForReencryptedFiles(zone.toString(), 10);
   }
 
