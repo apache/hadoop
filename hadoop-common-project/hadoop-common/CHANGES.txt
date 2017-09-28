@@ -20,6 +20,12 @@ Release 2.7.5 - UNRELEASED
     HADOOP-14702. Fix formatting issue and regression caused by conversion from
     APT to Markdown. (Doris Gu via iwasakims)
 
+    HADOOP-14881. LoadGenerator should use Time.monotonicNow() to measure
+    durations. (Bharat Viswanadham via jlowe)
+
+    HADOOP-14902. LoadGenerator#genFile write close timing is incorrectly
+    calculated. (Hanisha Koneru via jlowe)
+
 Release 2.7.4 - 2017-08-04
 
   INCOMPATIBLE CHANGES
