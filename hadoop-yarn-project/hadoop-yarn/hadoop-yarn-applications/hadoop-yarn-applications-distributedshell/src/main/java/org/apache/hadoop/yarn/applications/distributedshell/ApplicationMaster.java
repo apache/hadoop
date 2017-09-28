@@ -502,7 +502,7 @@ public class ApplicationMaster {
     containerGPUs = Integer.parseInt(cliParser.getOptionValue(
         "container_GPUs", "0"));
     containerGPUAttribute = Integer.parseInt(cliParser.getOptionValue(
-            "container_GPUAttribute", "0"));
+        "container_GPUAttribute", "0"));
     numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
         "num_containers", "1"));
     if (numTotalContainers == 0) {

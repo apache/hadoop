@@ -293,7 +293,7 @@
     in terms of GPUs. Requests lower than this will throw a
     InvalidResourceRequestException.</description>
     <name>yarn.scheduler.minimum-allocation-gpus</name>
-    <value>1</value>
+    <value>0</value>
   </property>
 
   <property>

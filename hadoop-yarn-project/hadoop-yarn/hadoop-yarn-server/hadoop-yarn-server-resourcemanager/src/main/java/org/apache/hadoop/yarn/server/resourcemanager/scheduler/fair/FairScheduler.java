@@ -517,7 +517,7 @@ public class FairScheduler extends
           + sched.getName() + ": resDueToMinShare = " + resDueToMinShare
           + ", resDueToFairShare = " + resDueToFairShare;
       LOG.info(message);
-      String vMessage = "PHILLY: Summary =====> MinShare: " + sched.getMinShare() + ", FairShare: "
+      String vMessage = "Summary =====> MinShare: " + sched.getMinShare() + ", FairShare: "
           + sched.getFairShare() + ", Demand: " + sched.getDemand() + ", MinShareTimeout: "
           + minShareTimeout + ", FairShareTimeout: " + fairShareTimeout + ", MinElapsed: "
           + (curTime - sched.getLastTimeAtMinShare()) + ", FairElapsed: "
@@ -935,7 +935,7 @@ public class FairScheduler extends
 
     synchronized (application) {
       if (!ask.isEmpty()) {
-        LOG.info("PHILLY: allocate: pre-update" +
+        LOG.info("allocate: pre-update" +
               " applicationAttemptId=" + appAttemptId +
               " application=" + application.getApplicationId());
         application.showRequests();
@@ -944,7 +944,7 @@ public class FairScheduler extends
         application.updateResourceRequests(ask);
 
         application.showRequests();
-        LOG.info("PHILLY: allocate: post-update" +
+        LOG.info("allocate: post-update" +
             " applicationAttemptId=" + appAttemptId +
             " #ask=" + ask.size() +
             " reservation= " + application.getCurrentReservation());
@@ -956,8 +956,8 @@ public class FairScheduler extends
           reqNum++;
         }
 
-        LOG.info("PHILLY: " + askString);
-        LOG.info("PHILLY: Preempting " + application.getPreemptionContainers().size()
+        LOG.info(askString);
+        LOG.info("Preempting " + application.getPreemptionContainers().size()
             + " container(s)");
       }
       
@@ -980,7 +980,7 @@ public class FairScheduler extends
    * Process a heartbeat update from a node.
    */
   private synchronized void nodeUpdate(RMNode nm) {
-    // MJTHIS: this is called by handle(), which processes various node events.
+    //  This is called by handle(), which processes various node events.
     // 'nm' has totalCapability that is expected to show total resource capacity.
     // More dynamic usage/availability information is stored at FSSchedulerNode below.
 
@@ -1078,7 +1078,7 @@ public class FairScheduler extends
 
   @VisibleForTesting
   synchronized void attemptScheduling(FSSchedulerNode node) {
-    // MJTHIS: two places that call this function:
+    // Two places that call this function:
     // 1. continuousSchedulingAttempt() by ContinuousSchedulingThread that continuously attempts to schedule resources
     // 2. nodeUpdate() that processes a heartbeat update from a node
 
@@ -1129,7 +1129,7 @@ public class FairScheduler extends
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {
         boolean assignedContainer = false;
-        // MJTHIS: follow this, then it will reach assignContainer() at FSAppAttempt.java
+        // Follow this, then it will reach assignContainer() at FSAppAttempt.java
         if (!queueMgr.getRootQueue().assignContainer(node).equals(
             Resources.none())) {
           assignedContainers++;

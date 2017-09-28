@@ -178,7 +178,6 @@ public class Resources {
     lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
     lhs.setGPUs(lhs.getGPUs() + rhs.getGPUs());
     
-    // MJTHIS: TODO: make sure if this works well with recovery scenarios
     assert (lhs.getGPUAttribute() & rhs.getGPUAttribute()) == 0 : "lhs GPU attribute is " +
             lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
 
@@ -194,8 +193,7 @@ public class Resources {
     lhs.setMemory(lhs.getMemory() - rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
     lhs.setGPUs(lhs.getGPUs() - rhs.getGPUs());
-    
-    // MJTHIS: TODO: make sure if this works well with recovery scenarios
+   
     assert (lhs.getGPUAttribute() | rhs.getGPUAttribute()) == lhs.getGPUAttribute() : "lhs GPU attribute is " +
             lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
 
@@ -326,8 +324,8 @@ public class Resources {
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
       boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
-        smaller.getVirtualCores() <= bigger.getVirtualCores() &&
-        smaller.getGPUs() <= bigger.getGPUs();
+                       smaller.getVirtualCores() <= bigger.getVirtualCores() &&
+                       smaller.getGPUs() <= bigger.getGPUs();
       if (fitsIn == true) {         
           if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute()) {
               fitsIn = false;
@@ -339,19 +337,24 @@ public class Resources {
 
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
-        Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()),
-        Math.min(lhs.getGPUs(), rhs.getGPUs()));
+                          Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()),
+                          Math.min(lhs.getGPUs(), rhs.getGPUs()));
   }
   
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
     return createResource(Math.max(lhs.getMemory(), rhs.getMemory()),
-        Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()),
-        Math.max(lhs.getGPUs(), rhs.getGPUs()));
+                          Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()),
+                          Math.max(lhs.getGPUs(), rhs.getGPUs()));
   }
 
+
+  // Calculate the candidate GPUs from bigger resource.
+  // If the request contains the GPU information, allocate according the request gpu attribute. 
+  // If the request does't contains the GPU information, sequencing allocate the free GPUs.
+   
   public static int allocateGPUs(Resource smaller, Resource bigger) {
     if (smaller.getGPUAttribute() > 0) {        
-         if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) == smaller.getGPUAttribute()){             
+         if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) == smaller.getGPUAttribute()){
              return smaller.getGPUAttribute();
          }
          else {
@@ -363,12 +366,13 @@ public class Resources {
     }
   }
 
+  //Sequencing allocate the free GPUs.
   private static int allocateGPUsByCount(int requestCount, int available)
   {
     int result = available;
     int availableCount = Integer.bitCount(available);
     while(availableCount-- > requestCount) {
-        result &= result -1;
+        result &= (result -1);
     }
     return result;
   }
