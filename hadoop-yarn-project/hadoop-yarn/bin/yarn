@@ -71,6 +71,7 @@ function print_usage(){
   echo "  nodemanager                           run a nodemanager on each slave"
   echo "  timelineserver                        run the timeline server"
   echo "  rmadmin                               admin tools"
+  echo "  router                                run the Router daemon"
   echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  scmadmin                              SharedCacheManager admin tools"
   echo "  version                               print the version"
@@ -177,6 +178,9 @@ fi
 if [ -d "$HADOOP_YARN_HOME/build/tools" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/build/tools
 fi
+if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-router/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-router/target/classes
+fi
 
 CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/${YARN_DIR}/*
 CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/${YARN_LIB_JARS_DIR}/*
@@ -220,6 +224,10 @@ if [ "$COMMAND" = "classpath" ] ; then
 elif [ "$COMMAND" = "rmadmin" ] ; then
   CLASS='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "router" ] ; then
+  CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/rt-config/log4j.properties
+  CLASS='org.apache.hadoop.yarn.server.router.Router'
+  YARN_OPTS="$YARN_OPTS $YARN_ROUTER_OPTS"
 elif [ "$COMMAND" = "scmadmin" ] ; then
   CLASS='org.apache.hadoop.yarn.client.SCMAdmin'
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
