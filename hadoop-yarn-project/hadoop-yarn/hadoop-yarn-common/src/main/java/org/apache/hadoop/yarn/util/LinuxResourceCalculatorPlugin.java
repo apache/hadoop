@@ -392,6 +392,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       if(procfsGpuFile == null){
           LOG.info("exec:" + REFRESH_GPU_CMD);
           Process pos = Runtime.getRuntime().exec(REFRESH_GPU_CMD);
+          pos.waitFor();
           return new InputStreamReader(pos.getInputStream());
           
       } else {
