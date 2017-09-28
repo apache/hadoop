@@ -437,7 +437,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
          }catch (Exception e) {
              LOG.warn("error get GPU status info:" + e.toString());
          }
-         LOG.info(ln);
     }
   }
   
