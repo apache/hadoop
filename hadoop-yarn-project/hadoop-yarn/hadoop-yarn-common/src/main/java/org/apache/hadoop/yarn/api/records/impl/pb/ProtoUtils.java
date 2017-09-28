@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -55,6 +56,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportPro
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerSubStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
@@ -85,7 +87,7 @@ public class ProtoUtils {
   /*
    * ContainerState
    */
-  private static String CONTAINER_STATE_PREFIX = "C_";
+  private final static String CONTAINER_STATE_PREFIX = "C_";
   public static ContainerStateProto convertToProtoFormat(ContainerState e) {
     return ContainerStateProto.valueOf(CONTAINER_STATE_PREFIX + e.name());
   }
@@ -94,9 +96,23 @@ public class ProtoUtils {
   }
 
   /*
+   * Container SubState
+   */
+  private final static String CONTAINER_SUB_STATE_PREFIX = "CSS_";
+  public static ContainerSubStateProto convertToProtoFormat(
+      ContainerSubState e) {
+    return ContainerSubStateProto.valueOf(
+        CONTAINER_SUB_STATE_PREFIX + e.name());
+  }
+  public static ContainerSubState convertFromProtoFormat(
+      ContainerSubStateProto e) {
+    return ContainerSubState.valueOf(
+        e.name().substring(CONTAINER_SUB_STATE_PREFIX.length()));
+  }
+  /*
    * NodeState
    */
-  private static String NODE_STATE_PREFIX = "NS_";
+  private final static String NODE_STATE_PREFIX = "NS_";
   public static NodeStateProto convertToProtoFormat(NodeState e) {
     return NodeStateProto.valueOf(NODE_STATE_PREFIX + e.name());
   }
