@@ -114,4 +114,12 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   public int getNumGPUs() {
     return getConf().getInt(NUM_GPUS, -1);
   }
+  
+
+  /** {@inheritDoc} */
+  @Override
+  public int getGpuAttribute() {
+    // not support;
+    return -1;
+  }
 }
