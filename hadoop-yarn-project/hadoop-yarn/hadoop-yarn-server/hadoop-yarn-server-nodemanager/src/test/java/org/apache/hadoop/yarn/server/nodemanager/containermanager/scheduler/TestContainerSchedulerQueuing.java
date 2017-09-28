@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -311,9 +312,8 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     List<ContainerStatus> containerStatuses = containerManager
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
-      Assert.assertEquals(
-          org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
-          status.getState());
+      Assert.assertEquals(ContainerSubState.SCHEDULED,
+          status.getContainerSubState());
     }
 
     ContainerScheduler containerScheduler =
@@ -378,13 +378,11 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.RUNNING,
+            status.getContainerSubState());
       } else {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.SCHEDULED,
+            status.getContainerSubState());
       }
     }
 
@@ -458,17 +456,15 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.RUNNING,
+            status.getContainerSubState());
       } else if (status.getContainerId().equals(createContainerId(
           maxOppQueueLength + 1))) {
         Assert.assertTrue(status.getDiagnostics().contains(
             "Opportunistic container queue is full"));
       } else {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.SCHEDULED,
+            status.getContainerSubState());
       }
       System.out.println("\nStatus : [" + status + "]\n");
     }
@@ -545,13 +541,11 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         Assert.assertTrue(status.getDiagnostics().contains(
             "Container Killed to make room for Guaranteed Container"));
       } else if (status.getContainerId().equals(createContainerId(1))) {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.SCHEDULED,
+            status.getContainerSubState());
       } else if (status.getContainerId().equals(createContainerId(2))) {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.RUNNING,
+            status.getContainerSubState());
       }
       System.out.println("\nStatus : [" + status + "]\n");
     }
@@ -799,8 +793,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
             "Container De-queued to meet NM queuing limits")) {
           deQueuedContainers++;
         }
-        if (status.getState() ==
-            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED) {
+        if (ContainerSubState.SCHEDULED == status.getContainerSubState()) {
           numQueuedOppContainers++;
         }
       }
@@ -1079,11 +1072,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     List<ContainerStatus> containerStatuses = containerManager
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
-      if (status.getState() ==
-          org.apache.hadoop.yarn.api.records.ContainerState.RUNNING) {
+      if (ContainerSubState.RUNNING == status.getContainerSubState()) {
         runningContainersNo++;
-      } else if (status.getState() ==
-          org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED) {
+      } else if (ContainerSubState.SCHEDULED == status.getContainerSubState()) {
         queuedContainersNo++;
       }
       System.out.println("\nStatus : [" + status + "]\n");
@@ -1106,34 +1097,27 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     }
 
     statRequest = GetContainerStatusesRequest.newInstance(statList);
-    HashMap<org.apache.hadoop.yarn.api.records.ContainerState, ContainerStatus>
-        map = new HashMap<>();
+    HashMap<ContainerSubState, ContainerStatus> map = new HashMap<>();
     for (int i=0; i < 10; i++) {
       containerStatuses = containerManager.getContainerStatuses(statRequest)
           .getContainerStatuses();
       for (ContainerStatus status : containerStatuses) {
         System.out.println("\nStatus : [" + status + "]\n");
-        map.put(status.getState(), status);
-        if (map.containsKey(
-                org.apache.hadoop.yarn.api.records.ContainerState.RUNNING) &&
-            map.containsKey(
-                org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED) &&
-            map.containsKey(
-                org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE)) {
+        map.put(status.getContainerSubState(), status);
+        if (map.containsKey(ContainerSubState.RUNNING) &&
+            map.containsKey(ContainerSubState.SCHEDULED) &&
+            map.containsKey(ContainerSubState.DONE)) {
           break;
         }
         Thread.sleep(1000);
       }
     }
     Assert.assertEquals(createContainerId(0),
-        map.get(org.apache.hadoop.yarn.api.records.ContainerState.RUNNING)
-            .getContainerId());
+        map.get(ContainerSubState.RUNNING).getContainerId());
     Assert.assertEquals(createContainerId(1),
-        map.get(org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE)
-            .getContainerId());
+        map.get(ContainerSubState.DONE).getContainerId());
     Assert.assertEquals(createContainerId(2),
-        map.get(org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED)
-            .getContainerId());
+        map.get(ContainerSubState.SCHEDULED).getContainerId());
   }
 
   /**
@@ -1186,13 +1170,11 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.RUNNING,
+            status.getContainerSubState());
       } else {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
-            status.getState());
+        Assert.assertEquals(ContainerSubState.SCHEDULED,
+            status.getContainerSubState());
       }
     }
 
