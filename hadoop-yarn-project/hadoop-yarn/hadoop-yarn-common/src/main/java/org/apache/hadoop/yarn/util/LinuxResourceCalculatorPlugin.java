@@ -61,7 +61,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   
   public static final long REFRESH_GPU_INTERVAL_MS = 10* 1000; 
   
-  private static final String REFRESH_GPU_CMD = "nvidia-smi --query-gpu=index, memory.total,memory.used --format=csv";
+  private static final String REFRESH_GPU_CMD = "nvidia-smi --query-gpu=index,memory.total,memory.used --format=csv";
   /**
      The out put format of this command is:
      index, memory.total [MiB], memory.used [MiB]
