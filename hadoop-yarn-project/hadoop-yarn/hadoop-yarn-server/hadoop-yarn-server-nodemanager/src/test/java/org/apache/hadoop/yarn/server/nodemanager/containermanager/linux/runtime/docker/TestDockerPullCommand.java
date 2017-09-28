@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,7 +43,12 @@ public class TestDockerPullCommand {
 
   @Test
   public void testGetCommandWithArguments() {
-    assertEquals("pull foo", dockerPullCommand.getCommandWithArguments());
+    assertEquals("pull", StringUtils.join(",",
+        dockerPullCommand.getDockerCommandWithArguments()
+            .get("docker-command")));
+    assertEquals("foo", StringUtils.join(",",
+        dockerPullCommand.getDockerCommandWithArguments().get("image")));
+    assertEquals(2, dockerPullCommand.getDockerCommandWithArguments().size());
   }
 
 

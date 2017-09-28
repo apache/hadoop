@@ -25,6 +25,6 @@ public class DockerLoadCommand extends DockerCommand {
 
   public DockerLoadCommand(String localImageFile) {
     super(LOAD_COMMAND);
-    super.addCommandArguments("--i=" + localImageFile);
+    super.addCommandArguments("image", localImageFile);
   }
 }

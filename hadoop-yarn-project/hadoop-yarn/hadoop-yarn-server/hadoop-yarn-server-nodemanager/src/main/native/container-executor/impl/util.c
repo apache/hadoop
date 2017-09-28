@@ -17,10 +17,10 @@
  */
 
 #include "util.h"
-#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <regex.h>
 
 char** split_delimiter(char *value, const char *delim) {
   char **return_values = NULL;
@@ -131,4 +131,62 @@ char* trim(const char* input) {
     strncpy(ret, val_begin, val_end - val_begin);
     ret[val_end - val_begin] = '\0';
     return ret;
+}
+
+int execute_regex_match(const char *regex_str, const char *input) {
+  regex_t regex;
+  int regex_match;
+  if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
+    fprintf(LOGFILE, "Unable to compile regex.");
+    fflush(LOGFILE);
+    exit(ERROR_COMPILING_REGEX);
+  }
+  regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);
+  regfree(&regex);
+  if(0 == regex_match) {
+    return 0;
+  }
+  return 1;
+}
+
+char* escape_single_quote(const char *str) {
+  int p = 0;
+  int i = 0;
+  char replacement[] = "'\"'\"'";
+  size_t replacement_length = strlen(replacement);
+  size_t ret_size = strlen(str) * replacement_length + 1;
+  char *ret = (char *) alloc_and_clear_memory(ret_size, sizeof(char));
+  if(ret == NULL) {
+    exit(OUT_OF_MEMORY);
+  }
+  while(str[p] != '\0') {
+    if(str[p] == '\'') {
+      strncat(ret, replacement, ret_size - strlen(ret));
+      i += replacement_length;
+    }
+    else {
+      ret[i] = str[p];
+      i++;
+    }
+    p++;
+  }
+  ret[i] = '\0';
+  return ret;
+}
+
+void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg) {
+  char *tmp = escape_single_quote(arg);
+  int alloc_block = 1024;
+  strcat(*str, param);
+  strcat(*str, "'");
+  if (strlen(*str) + strlen(tmp) > *size) {
+    *size = (strlen(*str) + strlen(tmp) + alloc_block) * sizeof(char);
+    *str = (char *) realloc(*str, *size);
+    if (*str == NULL) {
+      exit(OUT_OF_MEMORY);
+    }
+  }
+  strcat(*str, tmp);
+  strcat(*str, "' ");
+  free(tmp);
 }
