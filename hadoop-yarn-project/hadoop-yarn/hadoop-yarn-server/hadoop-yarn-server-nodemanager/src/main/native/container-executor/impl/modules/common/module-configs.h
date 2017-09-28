@@ -23,6 +23,7 @@
 #ifndef _MODULES_COMMON_MODULE_CONFIGS_H_
 #define _MODULES_COMMON_MODULE_CONFIGS_H_
 
+#include "configuration.h"
 
 /**
  * check if module enabled given name of module.

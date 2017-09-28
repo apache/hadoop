@@ -25,6 +25,6 @@ public class DockerRmCommand extends DockerCommand {
 
   public DockerRmCommand(String containerName) {
     super(RM_COMMAND);
-    super.addCommandArguments(containerName);
+    super.addCommandArguments("name", containerName);
   }
 }

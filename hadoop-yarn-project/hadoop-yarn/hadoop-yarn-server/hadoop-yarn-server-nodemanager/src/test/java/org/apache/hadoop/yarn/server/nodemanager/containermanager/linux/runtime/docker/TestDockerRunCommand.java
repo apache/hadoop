@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -56,8 +57,24 @@ public class TestDockerRunCommand {
     commands.add("launch_command");
     dockerRunCommand.setOverrideCommandWithArgs(commands);
     dockerRunCommand.removeContainerOnExit();
-    assertEquals("run --name=foo --user=user_id --device=source:dest --rm "
-            + "image_name launch_command",
-        dockerRunCommand.getCommandWithArguments());
+
+    assertEquals("run", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments()
+            .get("docker-command")));
+    assertEquals("foo", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments().get("name")));
+    assertEquals("user_id", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments().get("user")));
+    assertEquals("image_name", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments().get("image")));
+
+    assertEquals("source:dest", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments().get("devices")));
+    assertEquals("true", StringUtils
+        .join(",", dockerRunCommand.getDockerCommandWithArguments().get("rm")));
+    assertEquals("launch_command", StringUtils.join(",",
+        dockerRunCommand.getDockerCommandWithArguments()
+            .get("launch-command")));
+    assertEquals(7, dockerRunCommand.getDockerCommandWithArguments().size());
   }
 }

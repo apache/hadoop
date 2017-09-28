@@ -23,10 +23,21 @@
 #define _WITH_GETLINE
 #endif
 
-#include <stddef.h>
+#include "config.h"
 
-/** Define a platform-independent constant instead of using PATH_MAX */
-#define EXECUTOR_PATH_MAX 4096
+#define CONF_FILENAME "container-executor.cfg"
+
+// When building as part of a Maven build this value gets defined by using
+// container-executor.conf.dir property. See:
+//   hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/pom.xml
+// for details.
+// NOTE: if this ends up being a relative path it gets resolved relative to
+//       the location of the container-executor binary itself, not getwd(3)
+#ifndef HADOOP_CONF_DIR
+#error HADOOP_CONF_DIR must be defined
+#endif
+
+#include <stddef.h>
 
 // Configuration data structures.
 struct kv_pair {
@@ -206,5 +217,7 @@ int get_kv_key(const char *input, char *out, size_t out_len);
  *                 0 on success
  */
 int get_kv_value(const char *input, char *out, size_t out_len);
+
+char *get_config_path(const char* argv0);
 
 #endif

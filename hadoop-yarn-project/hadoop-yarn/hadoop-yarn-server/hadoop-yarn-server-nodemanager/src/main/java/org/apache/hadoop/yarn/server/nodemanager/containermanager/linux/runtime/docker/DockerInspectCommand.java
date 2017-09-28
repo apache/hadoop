@@ -26,16 +26,14 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
  */
 public class DockerInspectCommand extends DockerCommand {
   private static final String INSPECT_COMMAND = "inspect";
-  private String containerName;
 
   public DockerInspectCommand(String containerName) {
     super(INSPECT_COMMAND);
-    this.containerName = containerName;
+    super.addCommandArguments("name", containerName);
   }
 
   public DockerInspectCommand getContainerStatus() {
-    super.addCommandArguments("--format='{{.State.Status}}'");
-    super.addCommandArguments(containerName);
+    super.addCommandArguments("format", "{{.State.Status}}");
     return this;
   }
 
@@ -43,9 +41,8 @@ public class DockerInspectCommand extends DockerCommand {
     // Be sure to not use space in the argument, otherwise the
     // extract_values_delim method in container-executor binary
     // cannot parse the arguments correctly.
-    super.addCommandArguments("--format='{{range(.NetworkSettings.Networks)}}"
-        + "{{.IPAddress}},{{end}}{{.Config.Hostname}}'");
-    super.addCommandArguments(containerName);
+    super.addCommandArguments("format", "{{range(.NetworkSettings.Networks)}}"
+        + "{{.IPAddress}},{{end}}{{.Config.Hostname}}");
     return this;
   }
 }

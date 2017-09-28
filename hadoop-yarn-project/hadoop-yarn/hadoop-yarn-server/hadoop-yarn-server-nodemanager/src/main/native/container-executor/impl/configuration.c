@@ -21,6 +21,7 @@
 
 #include "configuration.h"
 #include "util.h"
+#include "get_executable.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -695,4 +696,20 @@ int get_kv_value(const char *input, char *out, size_t out_len) {
   out[val_len] = '\0';
 
   return 0;
+}
+
+char *get_config_path(const char *argv0) {
+  char *executable_file = get_executable((char *) argv0);
+  if (!executable_file) {
+    fprintf(ERRORFILE, "realpath of executable: %s\n",
+            errno != 0 ? strerror(errno) : "unknown");
+    return NULL;
+  }
+
+  const char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
+  char *conf_file = resolve_config_path(orig_conf_file, executable_file);
+  if (conf_file == NULL) {
+    fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
+  }
+  return conf_file;
 }
