@@ -896,7 +896,7 @@ public class TestNodeManager {
       nodeManager.sendHeartbeat(datanodeID, null);
       String status = nodeManager.getChillModeStatus();
       Assert.assertThat(status, CoreMatchers.containsString("Still in chill " +
-          "mode. Waiting on nodes to report in."));
+          "mode, waiting on nodes to report in."));
 
       // Should not exit chill mode since 10 nodes have not heartbeat yet.
       assertFalse(nodeManager.isOutOfNodeChillMode());
