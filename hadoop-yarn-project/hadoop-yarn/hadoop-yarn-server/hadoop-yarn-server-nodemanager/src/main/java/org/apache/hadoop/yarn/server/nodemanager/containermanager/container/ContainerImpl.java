@@ -34,6 +34,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.UpdateContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -714,7 +715,6 @@ public class ContainerImpl implements Container {
     case SCHEDULED:
     case PAUSED:
     case RESUMING:
-      return org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED;
     case RUNNING:
     case RELAUNCHING:
     case REINITIALIZING:
@@ -729,6 +729,36 @@ public class ContainerImpl implements Container {
     case DONE:
     default:
       return org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE;
+    }
+  }
+
+  // NOTE: Please update the doc in the ContainerSubState class as
+  //       well as the yarn_protos.proto file if this mapping is ever modified.
+  private ContainerSubState getContainerSubState() {
+    switch (stateMachine.getCurrentState()) {
+    case NEW:
+    case LOCALIZING:
+    case SCHEDULED:
+    case REINITIALIZING_AWAITING_KILL:
+    case RELAUNCHING:
+      return ContainerSubState.SCHEDULED;
+    case REINITIALIZING:
+    case PAUSING:
+    case KILLING:
+    case RUNNING:
+      return ContainerSubState.RUNNING;
+    case PAUSED:
+    case RESUMING:
+      return ContainerSubState.PAUSED;
+    case LOCALIZATION_FAILED:
+    case EXITED_WITH_SUCCESS:
+    case EXITED_WITH_FAILURE:
+    case CONTAINER_CLEANEDUP_AFTER_KILL:
+    case CONTAINER_RESOURCES_CLEANINGUP:
+      return ContainerSubState.COMPLETING;
+    case DONE:
+    default:
+      return ContainerSubState.DONE;
     }
   }
 
@@ -800,6 +830,7 @@ public class ContainerImpl implements Container {
           this.containerTokenIdentifier.getExecutionType());
       status.setIPs(ips == null ? null : Arrays.asList(ips.split(",")));
       status.setHost(host);
+      status.setContainerSubState(getContainerSubState());
       return status;
     } finally {
       this.readLock.unlock();

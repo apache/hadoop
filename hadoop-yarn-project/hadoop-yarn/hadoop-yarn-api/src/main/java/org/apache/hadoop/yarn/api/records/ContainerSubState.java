@@ -6,33 +6,52 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.api.records;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * <p>State of a <code>Container</code>.</p>
+ * Container Sub-State.
  */
-@Public
-@Stable
-public enum ContainerState {
-  /** New container */
-  NEW, 
-  
-  /** Running container */
-  RUNNING, 
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public enum ContainerSubState {
+  /*
+   * NEW, LOCALIZING, SCHEDULED,
+   * REINITIALIZING_AWAITING_KILL, RELAUNCHING,
+   */
+  SCHEDULED,
 
-  /** Completed container */
-  COMPLETE
+  /*
+   * RUNNING, REINITIALIZING, PAUSING, KILLING
+   */
+  RUNNING,
+
+  /*
+   * PAUSED, RESUMING
+   */
+  PAUSED,
+
+  /*
+   * LOCALIZATION_FAILED, EXITED_WITH_SUCCESS,
+   * EXITED_WITH_FAILURE,
+   * CONTAINER_CLEANEDUP_AFTER_KILL,
+   * CONTAINER_RESOURCES_CLEANINGUP
+   */
+  COMPLETING,
+
+  /*
+   * DONE
+   */
+  DONE
 }
