@@ -26,10 +26,11 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.*;
@@ -46,8 +47,9 @@ public class TestCommitterFactory extends Assert {
   private static final Path HTTP_PATH = new Path("http://hadoop.apache.org/");
   private static final Path HDFS_PATH = new Path("hdfs://localhost:8081/");
 
-  private TaskAttemptID attemptID = new TaskAttemptID("local", 0, TaskType.MAP, 1, 2);
-  private TaskAttemptContextImpl taskContext;
+  private JobID jobID = new JobID("local", 0);
+  private TaskAttemptID taskAttemptID =
+      new TaskAttemptID("local", 0, TaskType.MAP, 1, 2);
 
   /**
    * Set a factory for a schema, verify it works.
@@ -91,6 +93,10 @@ public class TestCommitterFactory extends Assert {
         getCommitterFactory(HTTP_PATH, conf);
   }
 
+  /**
+   * Verify that if the committer factory class is unknown, you cannot
+   * create committers.
+   */
   @Test
   public void testCommitterFactoryUnknown() throws Throwable {
     Configuration conf = new Configuration();
@@ -98,61 +104,154 @@ public class TestCommitterFactory extends Assert {
     conf.set(COMMITTER_FACTORY_CLASS, "unknown");
     intercept(RuntimeException.class,
         () -> getCommitterFactory(HDFS_PATH, conf));
-
-  }
-  @Test
-  public void testCommitterFactoryNamed() throws Throwable {
-    Configuration conf = new Configuration();
-    // set up for the schema factory
-    conf.set(COMMITTER_FACTORY_CLASS, NAMED_COMMITTER_FACTORY);
-    conf.set(COMMITTER_CLASSNAME, SimpleCommitter.class.getName());
-    NamedCommitterFactory factory =
-        (NamedCommitterFactory) getCommitterFactory(HDFS_PATH, conf);
-    SimpleCommitter sc = (SimpleCommitter) factory.createOutputCommitter(HDFS_PATH, taskContext);
-
-  }
-
-  @Test
-  public void testFileOutputFormatBinding() throws Throwable {
-    Configuration conf = new Configuration();
-//    conf.set(COMMITTER_FACTORY_CLASS, OtherFactory.class.getName());
-    conf.set(FileOutputFormat.OUTDIR, HTTP_PATH.toUri().toString());
-    bindSchemaFactory(conf);
-    taskContext = new TaskAttemptContextImpl(conf, attemptID);
-    TextOutputFormat<String, String> off = new TextOutputFormat<>();
-    OutputCommitter committer = off.getOutputCommitter(taskContext);
-    assertTrue("Wrong committer : " + committer,
-        committer instanceof SimpleCommitter);
   }
 
   /**
-   * Bind the schema to {@code CommitterFactory}.
+   * Verify that if the committer factory class is unknown, you cannot
+   * create committers.
+   */
+  @Test
+  public void testCommitterNullOutputPath() throws Throwable {
+    Configuration conf = new Configuration();
+    // set up for the schema factory
+    PathOutputCommitterFactory factory = getCommitterFactory(null, conf);
+    FileOutputCommitter committer = (FileOutputCommitter)
+        factory.createOutputCommitter(null, job(conf));
+    committer = (FileOutputCommitter)
+        factory.createOutputCommitter(null, taskAttempt(conf));
+    assertNull(committer.getOutputPath());
+    assertNull(committer.getWorkPath());
+
+  }
+
+  /**
+   * Verify that if you explicitly name a committer, that takes priority
+   * over any filesystem committer.
+   */
+  @Test
+  public void testNamedCommitterFactory() throws Throwable {
+    Configuration conf = new Configuration();
+    // set up for the schema factory
+    conf.set(COMMITTER_FACTORY_CLASS, NAMED_COMMITTER_FACTORY);
+    conf.set(NAMED_COMMITTER_CLASS, SimpleCommitter.class.getName());
+    NamedCommitterFactory factory =
+        (NamedCommitterFactory) getCommitterFactory(HDFS_PATH, conf);
+    SimpleCommitter sc = (SimpleCommitter)
+        factory.createOutputCommitter(HDFS_PATH, taskAttempt(conf));
+    sc = (SimpleCommitter) factory.createOutputCommitter(HDFS_PATH, job(conf));
+    assertEquals("Wrong output path from " + sc,
+        HDFS_PATH,
+        sc.getOutputPath());
+  }
+
+  /**
+   * Verify that if you explicitly name a committer and there's no
+   * path, the committer is picked up
+   */
+  @Test
+  public void testNamedCommitterFactoryNullPath() throws Throwable {
+    Configuration conf = new Configuration();
+    // set up for the schema factory
+    conf.set(COMMITTER_FACTORY_CLASS, NAMED_COMMITTER_FACTORY);
+    conf.set(NAMED_COMMITTER_CLASS, SimpleCommitter.class.getName());
+    SimpleCommitter sc = (SimpleCommitter)
+        getCommitterFactory(null, conf)
+            .createOutputCommitter(null, taskAttempt(conf));
+    assertNull(sc.getOutputPath());
+  }
+
+  private JobContextImpl job(Configuration conf) {
+    return new JobContextImpl(conf, jobID);
+  }
+
+  private TaskAttemptContextImpl taskAttempt(Configuration conf) {
+    return new TaskAttemptContextImpl(conf, taskAttemptID);
+  }
+
+  /**
+   * Verify that if you explicitly name a committer, that takes priority
+   * over any filesystem committer.
+   */
+  @Test
+  public void testFileOutputCommitterFactory() throws Throwable {
+    Configuration conf = new Configuration();
+    // set up for the schema factory
+    conf.set(COMMITTER_FACTORY_CLASS, FILE_COMMITTER_FACTORY);
+    conf.set(NAMED_COMMITTER_CLASS, SimpleCommitter.class.getName());
+    PathOutputCommitterFactory factory = getCommitterFactory(HDFS_PATH, conf);
+    FileOutputCommitter committer = (FileOutputCommitter)
+        factory.createOutputCommitter(HDFS_PATH, taskAttempt(conf));
+    committer = (FileOutputCommitter)
+        factory.createOutputCommitter(HDFS_PATH, job(conf));
+  }
+
+  /**
+   * Follow the entire committer chain down and create a new committer from
+   * the output format.
+   * @throws Throwable on a failure.
+   */
+  @Test
+  public void testFileOutputFormatBinding() throws Throwable {
+    Configuration conf = new Configuration();
+    conf.set(FileOutputFormat.OUTDIR, HTTP_PATH.toUri().toString());
+    bindSchemaFactory(conf);
+    TextOutputFormat<String, String> off = new TextOutputFormat<>();
+    SimpleCommitter committer = (SimpleCommitter)
+        off.getOutputCommitter(taskAttempt(conf));
+    assertEquals("Wrong output path from "+ committer,
+        HTTP_PATH,
+        committer.getOutputPath());
+  }
+
+  /**
+   * Follow the entire committer chain down and create a new committer from
+   * the output format.
+   * @throws Throwable on a failure.
+   */
+  @Test
+  public void testFileOutputFormatBindingNoPath() throws Throwable {
+    Configuration conf = new Configuration();
+    conf.unset(FileOutputFormat.OUTDIR);
+    // set up for the schema factory
+    conf.set(COMMITTER_FACTORY_CLASS, NAMED_COMMITTER_FACTORY);
+    conf.set(NAMED_COMMITTER_CLASS, SimpleCommitter.class.getName());
+    bindSchemaFactory(conf);
+    TextOutputFormat<String, String> off = new TextOutputFormat<>();
+    SimpleCommitter committer = (SimpleCommitter)
+        off.getOutputCommitter(taskAttempt(conf));
+    assertNull("Output path from "+ committer,
+        committer.getOutputPath());
+  }
+
+  /**
+   * Bind the http schema CommitterFactory to {@link SchemaFactory}.
    * @param conf config to patch
    */
   protected void bindSchemaFactory(Configuration conf) {
-    conf.set(COMMITTER_FACTORY_KEY,
-        SchemaFactory.class.getName());
+    conf.set(COMMITTER_FACTORY_KEY, SchemaFactory.class.getName());
   }
 
-  private Throwable verifyCauseClass(Throwable ex,
-      Class<? extends Throwable> clazz) throws Throwable {
+  /**
+   * Extract the (mandatory) cause of an exception,
+   * @param ex exception
+   * @param clazz expected class
+   * @return the cause, which will be of the expected type
+   * @throws AssertionError if there is a problem
+   */
+  private <E extends Throwable> E verifyCauseClass(Throwable ex,
+      Class<E> clazz) throws AssertionError {
     Throwable cause = ex.getCause();
     if (cause == null) {
-      throw ex;
+      throw new AssertionError("No cause", ex);
     }
     if (!cause.getClass().equals(clazz)) {
-      throw cause;
+      throw new AssertionError("Wrong cause class", cause);
     }
-    return cause;
+    return (E)cause;
   }
 
   @Test
   public void testBadCommitterFactory() throws Throwable {
-    expectFactoryConstructionFailure(COMMITTER_FACTORY_KEY);
-  }
-
-  @Test
-  public void testBadCommitterFactoryScheme() throws Throwable {
     expectFactoryConstructionFailure(COMMITTER_FACTORY_KEY);
   }
 
@@ -173,16 +272,20 @@ public class TestCommitterFactory extends Assert {
         ClassNotFoundException.class);
   }
 
-  private static class SimpleCommitter extends PathOutputCommitter {
+  public static final class SimpleCommitter extends PathOutputCommitter {
 
-    SimpleCommitter(Path outputPath,
+    private final Path outputPath;
+
+    public SimpleCommitter(Path outputPath,
         TaskAttemptContext context) throws IOException {
       super(outputPath, context);
+      this.outputPath = outputPath;
     }
 
-    SimpleCommitter(Path outputPath,
+    public SimpleCommitter(Path outputPath,
         JobContext context) throws IOException {
       super(outputPath, context);
+      this.outputPath = outputPath;
     }
 
     @Override
@@ -218,7 +321,7 @@ public class TestCommitterFactory extends Assert {
 
     @Override
     public Path getOutputPath() {
-      return null;
+      return outputPath;
     }
   }
 
