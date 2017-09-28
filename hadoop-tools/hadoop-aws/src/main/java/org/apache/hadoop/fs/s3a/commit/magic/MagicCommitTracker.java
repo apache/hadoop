@@ -90,7 +90,7 @@ public class MagicCommitTracker extends PutTracker {
    * @return true
    */
   @Override
-  public boolean isCommitOutput() {
+  public boolean isDelayedVisibility() {
     return false;
   }
 

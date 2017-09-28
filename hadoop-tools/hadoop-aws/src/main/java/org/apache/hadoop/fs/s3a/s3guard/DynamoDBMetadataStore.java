@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -225,6 +226,17 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /** Data access can have its own policies. */
   private Invoker dataAccess;
+
+  /**
+   * Total limit on the number of throttle events after which
+   * we stop warning in the log. Keeps the noise down.
+   */
+  private static final int THROTTLE_EVENT_LOG_LIMIT = 100;
+
+  /**
+   * Count of the total number of throttle events; used to crank back logging.
+   */
+  private AtomicInteger throttleEventCount = new AtomicInteger(0);
 
   /**
    * A utility function to create DynamoDB instance.
@@ -1164,7 +1176,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
       if (instrumentation != null) {
         instrumentation.throttled();
       }
-      if (attempts == 1) {
+      int eventCount = throttleEventCount.addAndGet(1);
+      if (attempts == 1 && eventCount < THROTTLE_EVENT_LOG_LIMIT) {
         LOG.warn(
             "DynamoDB IO limits reached in {}; consider increasing capacity: {}",
             text, ex.toString());
@@ -1175,8 +1188,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
             text, ex.toString());
       }
     } else if (attempts == 1) {
-      // not throttled. Log once
+      // not throttled. Log on the first attempt only
       LOG.info("Retrying {}: {}", text, ex.toString());
+      LOG.debug("Retrying {}", text, ex);
     }
 
     if (instrumentation != null) {

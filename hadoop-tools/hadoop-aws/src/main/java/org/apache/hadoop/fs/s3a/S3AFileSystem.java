@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Objects;
@@ -3131,8 +3132,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Override
   public boolean hasCapability(String capability) {
 
-    boolean b = false;
-    switch (capability) {
+    boolean b;
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
       b = isMagicCommitEnabled();

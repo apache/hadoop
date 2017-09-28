@@ -453,14 +453,12 @@ must be considered significantly misleading.
 Rename task attempt path to task committed path.
 
 ```python
-
 def needsTaskCommit(fs, jobAttemptPath, taskAttemptPath, dest):
   return fs.exists(taskAttemptPath)
 
 def commitTask(fs, jobAttemptPath, taskAttemptPath, dest):
   if fs.exists(taskAttemptPath) :
     mergePathsV2(fs. taskAttemptPath, dest)
-
 ```
 
 ### v2 Task Abort
@@ -472,7 +470,7 @@ def abortTask(fs, jobAttemptPath, taskAttemptPath, dest):
   fs.delete(taskAttemptPath, recursive=True)
 ```
 
-Cost: O(1) for normal filesystems, O(files) for object stores.
+Cost: `O(1)` for normal filesystems, `O(files)` for object stores.
 
 
 ### v2 Job Commit
@@ -502,7 +500,7 @@ def abortJob(fs, jobAttemptDir, dest):
   fs.delete(jobAttemptDir, recursive=True)
 ```
 
-Cost: O(1) for normal filesystems, O(files) for object stores.
+Cost: `O(1)` for normal filesystems, `O(files)` for object stores.
 
 ### v2 Task Recovery
 
@@ -515,12 +513,165 @@ Because the data has been renamed into the destination directory, it is nominall
 recoverable. However, this assumes that the number and name of generated
 files are constant on retried tasks.
 
-## Hadoop MRv1 Protocol
 
-Adding support for the original Hadoop MRv1 Protocols would take a lot of effort.
+## How MapReduce uses the committer an a task
+
+MapReduce runs each Mapper or Reducer in its own container; it
+gets its own process. Implicitly, this also means that each task gets
+its own instance of every filesystem.
 
 
-## Requirements of an S3A Committer
+
+
+### How MapReduce uses the committer in the Application Master
+
+The AM uses a committer to set up and commit the job. To support failure
+and recovery of the AM, `OutputCommitter.isRecoverySupported()`  is used
+to declare whether all the output of successful tasks can be used in the final
+job, or the entire job needs to be reset and repeated.
+`OutputCommitter.isCommitJobRepeatable()` addresses the other question:
+can a committer recover from a failure of the commit process itself.  
+
+A committer is created in the Application Master, and handed to an instance
+of `org.apache.hadoop.mapreduce.v2.app.commit.CommitterEventHandler`,
+which then manages the job-level lifecycle.
+
+If the MRv1 API is used, the committer is chosen from the value of
+`"mapred.output.committer.class"`; in the MRv2 API the output format
+is instantiated, then asked for a committer using a task and task attempt ID of
+0. A committer is obtained from the output format via a call to 
+`Committer.getOutputCommitter(taskContext)`, again using the task attempt context
+with the (job, 0, 0) task and attempt IDs. That is: even for the job committers,
+a task context is always passed in to the `OutputFormat` when requesting a committer.
+*It is critical for all implementations of `OutputCommitter.abortTask()` to
+be able to execute from the AM, rather than the container and host running
+the task. Furthermore, all information needed for the abort (paths, filesystem instances
+&c) *must* be retrieved from the `TaskAttemptContext` passed to the method,
+rather than relying on fields initiated from the context passed to the constructor.
+
+
+#### AM: Job setup: `OutputCommitter.setupJob()`
+
+This is initated in `org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.StartTransition`.
+It is queued for asynchronous execution in `org.apache.hadoop.mapreduce.v2.app.MRAppMaster.startJobs()`,
+which is invoked when the service is started. Thus: the job is set up when the
+AM is started.
+
+
+#### AM: Job Commit: `OutputCommitter.commitJob()`
+
+In the "default"/cluster filesystem, the `CommitterEventHandler` uses data in 
+the staging area defined in `yarn.app.mapreduce.am.staging-dir`
+(default `/tmp/hadoop-yarn/staging/$user/.staging`), in a subdirectory
+named from the job ID.
+
+Three paths are built up for using the filesystem for tracking the state
+of the commit process, with a goal of making the commit operation recoverable,
+where supported.
+
+
+| name |  role |
+|------|--------|
+| `COMMIT_STARTED` | mark the commencement of the job commit |
+| `COMMIT_SUCCESS` | mark the successful completion of the job commit |
+| `COMMIT_FAIL` | mark the failure of the job commit |
+
+These markers are used to manage job restart/failure of they happen during
+the job commit itself.
+
+When an AM starts up, it looks in its staging area for these files. as a way
+to determine the previous state of the job. If there are no `COMMIT_` marker files,
+the job is considered not to have attempted to commit itself yet.
+
+
+The presence of `COMMIT_SUCCESS` or `COMMIT_FAIL` are taken as evidence
+that the previous job completed successfully or unsucessfully; the AM
+then completes with a success/failure error code, without attempting to rerun
+the job.
+
+If `COMMIT_STARTED` exists but not either of the completion markers, then,
+if the committer declares that its job commit operation is repeatable
+(`Committer.isCommitJobRepeatable(jobContext) == true`), then an attempt
+is made to recommit the job, deleting the `COMMIT_STARTED` and commencing
+the commit process again.
+
+These `COMMIT_STARTED` files are simply 0-byte files, but are created
+with the overwrite bit only set to true if the job commit is considered
+repeatable:
+
+```java
+private void touchz(Path p, boolean overwrite) throws IOException {
+  fs.create(p, overwrite).close();
+}
+```
+That is: the atomicity of the `create(path, overwrite=false)` on the cluster
+filesystem is used to guarantee that only one process will attempt to commit
+a specific job.
+
+```java
+boolean commitJobIsRepeatable = committer.isCommitJobRepeatable(
+      event.getJobContext());
+try {
+  touchz(startCommitFile, commitJobIsRepeatable);
+  waitForValidCommitWindow(); 
+  committer.commitJob(event.getJobContext());
+  touchz(endCommitSuccessFile, commitJobIsRepeatable);
+} catch (Exception e) {
+  touchz(endCommitFailureFile, commitJobIsRepeatable);
+}
+```
+
+The `waitForValidCommitWindow()` operation is important: it declares that
+the committer must not commit unless there has been communication with the YARN
+Resource Manager with in `yarn.app.mapreduce.am.ob.committer.commit-window` milliseconds
+(default: 10,000). It does this by waiting until the next heartbeat it received.
+There's a s possible bug here: if the interval is set too small the thread may
+permanently spin waiting a callback within the window. Ignoring that, this algorithm
+guarantees that 
+
+1. As only one call can create a file with overwrite=false,
+   only one process's attempt to commit a non-repeatable job will proceed 
+  
+1. Only a process with contact with the YARN within the configured window 
+   may commit a job. 
+   
+1. Provided YARN heartbeats are only sent to the AM which successfully created
+the `COMMIT_STARTED` file, it will initiate the commit operation.
+
+Possible issues with this algorithm
+
+* The `COMMIT_STARTED` file is created before waiting to get a heartbeat. It
+may be that this AM has lost contact with YARN, but doesn't know it yet. When the
+YARN liveness protocols eventually time out, the AM will correctly terminate,
+but as the `COMMIT_STARTED` file has been created at this point, no other launched
+AM will be able to commit.
+
+* If two committers attempt to create `COMMIT_STARTED` files on a no-repeatable
+commit, one will succeed, wait for a heartbeat then attempt a (possibly slow) commit.
+The second committer will fail, and will *immediately* create a `COMMIT_FAILED` file.
+As a result, the state of the staging area will imply that the commit has failed,
+when really it is in progress, and that only the second process failed.
+
+It would seem safer to address this through
+1. Waiting for a heartbeat before creating the `COMMIT_STARTED` file.
+1. Maybe: not creating the `COMMIT_FAILED` file if the failure happens when
+trying to create the `COMMIT_STARTED` file. That is: only a process which
+successfully created the `COMMIT_STARTED` file may indicate that a commit has failed.
+
+
+### AM: Cancelling job commit
+
+The thread performing the commit is interrupted; the `CommitterEventHandler` 
+awaits for it to finish. (set in `yarn.app.mapreduce.am.job.committer.cancel-timeout`
+as milliseconds).
+
+### AM: Task Abort
+
+The AM may call the `OutputCommitter.taskAbort` on with a task attempt context,
+when handling the failure/loss of a container. That is: on container failure,
+the task abort operation is executed in the AM, using the AM's committer.
+
+# Requirements of an S3A Committer
 
 1. Support an eventually consistent S3 object store as a reliable direct
 destination of work through the S3A filesystem client.

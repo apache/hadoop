@@ -333,6 +333,9 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
   /**
    * Abort a task. Attempt load then abort all pending files,
    * then try to delete the task attempt path.
+   * This method may be called on the job committer, rather than the
+   * task one (such as in the MapReduce AM after a task container failure).
+   * It must extract all paths and state from the passed in context.
    * @param context task context
    * @throws IOException if there was some problem querying the path other
    * than it not actually existing.
@@ -344,7 +347,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
              new DurationInfo("Abort task %s", context.getTaskAttemptID())) {
       getCommitOperations().abortAllSinglePendingCommits(attemptPath, true);
     } finally {
-      deleteQuietly(getDestFS(), attemptPath, true);
+      deleteQuietly(attemptPath.getFileSystem(context.getConfiguration()),
+          attemptPath, true);
     }
   }
 

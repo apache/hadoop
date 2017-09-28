@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -381,7 +382,7 @@ class S3ABlockOutputStream extends OutputStream implements
           LOG.info("upload completion delayed until job commit");
         }
       }
-      if (putTracker.isCommitOutput()) {
+      if (putTracker.isDelayedVisibility()) {
         // track the number of bytes uploaded as commit operations.
         statistics.commitUploaded(bytes);
       }
@@ -492,11 +493,11 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public boolean hasCapability(String capability) {
-    switch (capability) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
 
       // does the output stream have delayed visibility
     case CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT:
-      return putTracker.isCommitOutput();
+      return putTracker.isDelayedVisibility();
 
       // The flush/sync options are absolutely not supported
     case "hflush":

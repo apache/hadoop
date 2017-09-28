@@ -59,7 +59,7 @@ public class PutTracker {
    * is closed. Default: false.
    * @return true if the output's visibility will be delayed.
    */
-  public boolean isCommitOutput() {
+  public boolean isDelayedVisibility() {
     return false;
   }
 

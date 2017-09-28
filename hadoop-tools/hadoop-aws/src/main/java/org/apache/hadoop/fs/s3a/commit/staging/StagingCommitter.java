@@ -823,6 +823,18 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     return commits.size();
   }
 
+  /**
+   * Abort the task.
+   * The API specifies that the task has not yet been committed, so there are
+   * no uploads that need to be cancelled.
+   * Accordingly just delete files on the local FS, and call abortTask in
+   * the wrapped committer.
+   * <b>Important: this may be called in the AM after a container failure.</b>
+   * When that occurs and the failed container was on a different host in the
+   * cluster, the local files will not be deleted.
+   * @param context task context
+   * @throws IOException any failure
+   */
   @Override
   public void abortTask(TaskAttemptContext context) throws IOException {
     // the API specifies that the task has not yet been committed, so there are
