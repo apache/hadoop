@@ -22,6 +22,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import java.net.InetSocketAddress;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.RMHAUtils;
@@ -38,8 +40,12 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
  */
 public class RMWebApp extends WebApp implements YarnWebParams {
 
+  private static final Log LOG =
+      LogFactory.getLog(RMWebApp.class.getName());
   private final ResourceManager rm;
   private boolean standby = false;
+  private final static String APISERVER =
+      "org.apache.hadoop.yarn.service.webapp.ApiServer";
 
   public RMWebApp(ResourceManager rm) {
     this.rm = rm;
@@ -53,6 +59,19 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     bind(RMWebApp.class).toInstance(this);
 
     if (rm != null) {
+      boolean enableServiceApi = rm.getConfig()
+          .getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE, false);
+      if (enableServiceApi) {
+        try {
+          // Use reflection here to load ApiServer class,
+          // this is done to avoid creating cyclic dependency
+          // between maven projects.
+          Class<?> apiServer = Class.forName(APISERVER);
+          bind(apiServer);
+        } catch (ClassNotFoundException e) {
+          LOG.warn("ApiServer REST API is not activated.");
+        }
+      }
       bind(ResourceManager.class).toInstance(rm);
     }
     route("/", RmController.class);

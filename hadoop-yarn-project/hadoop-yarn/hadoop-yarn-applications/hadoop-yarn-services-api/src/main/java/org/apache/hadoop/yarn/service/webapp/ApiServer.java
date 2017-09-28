@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.service.webapp;
 
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.VersionInfo;
@@ -57,6 +58,16 @@ import static org.apache.hadoop.yarn.service.conf.RestApiConstants.*;
 @Singleton
 @Path(CONTEXT_ROOT)
 public class ApiServer {
+
+  public ApiServer() {
+    super();
+  }
+  
+  @Inject
+  public ApiServer(Configuration conf) {
+    super();
+  }
+
   private static final Logger LOG =
       LoggerFactory.getLogger(ApiServer.class);
   private static Configuration YARN_CONFIG = new YarnConfiguration();
