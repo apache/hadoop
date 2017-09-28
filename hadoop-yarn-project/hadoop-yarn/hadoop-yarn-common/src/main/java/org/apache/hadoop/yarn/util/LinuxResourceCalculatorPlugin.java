@@ -59,7 +59,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final String SWAPFREE_STRING = "SwapFree";
   private static final String INACTIVE_STRING = "Inactive";
   
-  public static final long REFRESH_GPU_INTERVAL_MS = 10* 1000; 
+  public static final long REFRESH_GPU_INTERVAL_MS = 60 * 1000; 
   
   private static final String REFRESH_GPU_CMD = "nvidia-smi --query-gpu=index,memory.total,memory.used --format=csv";
   /**
@@ -392,7 +392,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       if(procfsGpuFile == null){
           LOG.info("exec:" + REFRESH_GPU_CMD);
           Process pos = Runtime.getRuntime().exec(REFRESH_GPU_CMD);
-          pos.waitFor();
           return new InputStreamReader(pos.getInputStream());
           
       } else {
@@ -405,6 +404,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       
     long now = System.currentTimeMillis();
     if (now - lastRefreshGpuTime > REFRESH_GPU_INTERVAL_MS) {
+        LOG.info("lastUpdateTime:" + lastRefreshGpuTime + " now:" + now);
         lastRefreshGpuTime = now;
       try {
           InputStreamReader ir = getInputGpuStreamReader();
