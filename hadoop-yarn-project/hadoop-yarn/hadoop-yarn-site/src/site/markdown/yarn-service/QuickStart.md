@@ -101,17 +101,41 @@ yarn service destroy ${SERVICE_NAME}
 ```
 
 ## Manage services on YARN via REST API
-Below steps walk you through deploying services on YARN via REST API.
- Refer to [API doc](YarnServiceAPI.md)  for the detailed API specificatiosn.
-### Start API-Server for deploying services on YARN
-API server is the service that sits in front of YARN ResourceManager and lets users submit their API specs via HTTP.
+
+YARN API Server REST API can be activated in two modes: embedded or standalone.
+
+### Start Embedded API-Server as part of ResourceManager
+For running inside ResourceManager, add this property to `yarn-site.xml` and restart ResourceManager.
+
+```
+  <property>
+    <description>
+      Enable services rest api on ResourceManager.
+    </description>
+    <name>yarn.webapp.api-service.enable</name>
+    <value>true</value>
+  </property>
+```
+
+Services can be deployed on YARN through the ResourceManager web endpoint.
+
+### Start Standalone API-Server for deploying services on YARN
+API server is the service that sits in front of YARN ResourceManager and lets users submit their service specs via HTTP.
 ```
  yarn --daemon start apiserver
  ```
 The above command starts the API Server on the localhost at port 9191 by default. 
 
+Refer to [API doc](YarnServiceAPI.md)  for the detailed API specificatiosn.
+
 ### Deploy a service
-POST the aforementioned example service definition to the api-server endpoint: 
+
+POST the aforementioned example service definition to the ResourceManager api-server endpoint:
+```
+POST  http://localhost:8088/ws/v1/services
+```
+
+Or standalone API server:
 ```
 POST  http://localhost:9191/ws/v1/services
 ```
