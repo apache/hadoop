@@ -699,7 +699,7 @@ public final class OzoneClientUtils {
    * @return a default instance of {@link CloseableHttpClient}.
    */
   public static CloseableHttpClient newHttpClient() {
-    return OzoneClientUtils.newHttpClient(null);
+    return OzoneClientUtils.newHttpClient(new OzoneConfiguration());
   }
 
   /**
