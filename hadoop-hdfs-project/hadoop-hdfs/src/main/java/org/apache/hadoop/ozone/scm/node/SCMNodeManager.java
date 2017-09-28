@@ -320,7 +320,7 @@ public class SCMNodeManager
     if (isOutOfNodeChillMode()) {
       return "Out of chill mode." + getNodeStatus();
     } else {
-      return "Still in chill mode. Waiting on nodes to report in."
+      return "Still in chill mode, waiting on nodes to report in."
           + getNodeStatus();
     }
   }
@@ -330,10 +330,10 @@ public class SCMNodeManager
    * @return - String
    */
   private String getNodeStatus() {
-    final String chillModeStatus = " %d of out of total "
-        + "%d nodes have reported in.";
-    return String.format(chillModeStatus, totalNodes.get(),
-        getMinimumChillModeNodes());
+    return isOutOfNodeChillMode() ?
+        String.format(" %d nodes have reported in.", totalNodes.get()) :
+        String.format(" %d nodes reported, minimal %d nodes required.",
+            totalNodes.get(), getMinimumChillModeNodes());
   }
 
   /**
