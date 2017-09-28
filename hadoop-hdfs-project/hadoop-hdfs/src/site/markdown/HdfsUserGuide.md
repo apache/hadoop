@@ -257,7 +257,7 @@ During start up the NameNode loads the file system state from the fsimage and th
 fsck
 ----
 
-HDFS supports the fsck command to check for various inconsistencies. It it is designed for reporting problems with various files, for example, missing blocks for a file or under-replicated blocks. Unlike a traditional fsck utility for native file systems, this command does not correct the errors it detects. Normally NameNode automatically corrects most of the recoverable failures. By default fsck ignores open files but provides an option to select all files during reporting. The HDFS fsck command is not a Hadoop shell command. It can be run as `bin/hdfs fsck`. For command usage, see [fsck](./HDFSCommands.html#fsck). fsck can be run on the whole file system or on a subset of files.
+HDFS supports the fsck command to check for various inconsistencies. It is designed for reporting problems with various files, for example, missing blocks for a file or under-replicated blocks. Unlike a traditional fsck utility for native file systems, this command does not correct the errors it detects. Normally NameNode automatically corrects most of the recoverable failures. By default fsck ignores open files but provides an option to select all files during reporting. The HDFS fsck command is not a Hadoop shell command. It can be run as `bin/hdfs fsck`. For command usage, see [fsck](./HDFSCommands.html#fsck). fsck can be run on the whole file system or on a subset of files.
 
 fetchdt
 -------
