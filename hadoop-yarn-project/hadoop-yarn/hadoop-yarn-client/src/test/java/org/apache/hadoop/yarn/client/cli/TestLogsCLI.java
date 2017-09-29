@@ -30,6 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Matchers.*;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -300,6 +301,17 @@ public class TestLogsCLI {
     pw.println("                                              end and positive values as");
     pw.println("                                              bytes to read from the");
     pw.println("                                              beginning.");
+    pw.println(" -size_limit_mb <Size Limit>                  Use this option to limit the");
+    pw.println("                                              size of the total logs which");
+    pw.println("                                              could be fetched. By");
+    pw.println("                                              default, we only allow to");
+    pw.println("                                              fetch at most 10240 MB logs.");
+    pw.println("                                              If the total log size is");
+    pw.println("                                              larger than the specified");
+    pw.println("                                              number, the CLI would fail.");
+    pw.println("                                              The user could specify -1 to");
+    pw.println("                                              ignore the size limit and");
+    pw.println("                                              fetch all logs.");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
     Assert.assertTrue(sysOutStream.toString().contains(appReportStr));
@@ -563,8 +575,7 @@ public class TestLogsCLI {
             containerId0.toString() });
     assertTrue(exitCode == -1);
     assertTrue(sysErrStream.toString().contains(
-      "Logs for container " + containerId0.toString()
-          + " are not present in this log-file."));
+        "Can not find any log file matching the pattern"));
     sysErrStream.reset();
 
     // uploaded two logs for container3. The first log is named as syslog.
@@ -750,7 +761,7 @@ public class TestLogsCLI {
       Set<String> logsSet = new HashSet<String>();
       logsSet.add(fileName);
       doReturn(logsSet).when(cli).getMatchedContainerLogFiles(
-          any(ContainerLogsRequest.class), anyBoolean());
+          any(ContainerLogsRequest.class), anyBoolean(), anyBoolean());
       ClientResponse mockReponse = mock(ClientResponse.class);
       doReturn(Status.OK).when(mockReponse).getStatusInfo();
       doReturn(fis).when(mockReponse).getEntityInputStream();
@@ -795,6 +806,7 @@ public class TestLogsCLI {
     doReturn(nodeId).when(mockContainerReport1).getAssignedNode();
     doReturn("http://localhost:2345").when(mockContainerReport1)
         .getNodeHttpAddress();
+
     ContainerId containerId2 = ContainerId.newContainerId(appAttemptId, 2);
     ContainerReport mockContainerReport2 = mock(ContainerReport.class);
     doReturn(containerId2).when(mockContainerReport2).getContainerId();
@@ -812,7 +824,19 @@ public class TestLogsCLI {
     LogsCLI cli = spy(new LogsCLIForTest(mockYarnClient));
     doReturn(0).when(cli).printContainerLogsFromRunningApplication(
         any(Configuration.class), any(ContainerLogsRequest.class),
-        any(LogCLIHelpers.class), anyBoolean());
+        any(LogCLIHelpers.class), anyBoolean(), anyBoolean());
+    Set<String> logTypes = new HashSet<>();
+    logTypes.add("ALL");
+    ContainerLogsRequest mockContainer1 = mock(ContainerLogsRequest.class);
+    doReturn(logTypes).when(mockContainer1).getLogTypes();
+    ContainerLogsRequest mockContainer2 = mock(ContainerLogsRequest.class);
+    doReturn(logTypes).when(mockContainer2).getLogTypes();
+    Map<String, ContainerLogsRequest> matchedLogTypes = new HashMap<>();
+    matchedLogTypes.put(containerId1.toString(), mockContainer1);
+    matchedLogTypes.put(containerId2.toString(), mockContainer2);
+    doReturn(matchedLogTypes).when(cli).getMatchedLogTypesForRunningApp(
+        anyListOf(ContainerLogsRequest.class), anyBoolean(),
+        anyBoolean());
 
     cli.setConf(new YarnConfiguration());
     int exitCode = cli.run(new String[] {"-applicationId", appId.toString()});
@@ -825,7 +849,7 @@ public class TestLogsCLI {
     // printContainerLogsFromRunningApplication twice
     verify(cli, times(2)).printContainerLogsFromRunningApplication(
         any(Configuration.class), logsRequestCaptor.capture(),
-        any(LogCLIHelpers.class), anyBoolean());
+        any(LogCLIHelpers.class), anyBoolean(), anyBoolean());
 
     // Verify that the log-type is "ALL"
     List<ContainerLogsRequest> capturedRequests =
@@ -839,9 +863,12 @@ public class TestLogsCLI {
     mockYarnClient = createMockYarnClientWithException(
         YarnApplicationState.RUNNING, ugi.getShortUserName());
     LogsCLI cli2 = spy(new LogsCLIForTest(mockYarnClient));
+    ContainerLogsRequest newOption = mock(ContainerLogsRequest.class);
+    doReturn(newOption).when(cli2).getMatchedOptionForRunningApp(
+        any(ContainerLogsRequest.class), anyBoolean(), anyBoolean());
     doReturn(0).when(cli2).printContainerLogsFromRunningApplication(
         any(Configuration.class), any(ContainerLogsRequest.class),
-        any(LogCLIHelpers.class), anyBoolean());
+        any(LogCLIHelpers.class), anyBoolean(), anyBoolean());
     doReturn("123").when(cli2).getNodeHttpAddressFromRMWebString(
         any(ContainerLogsRequest.class));
     cli2.setConf(new YarnConfiguration());
@@ -851,7 +878,7 @@ public class TestLogsCLI {
     assertTrue(exitCode == 0);
     verify(cli2, times(1)).printContainerLogsFromRunningApplication(
         any(Configuration.class), logsRequestCaptor.capture(),
-        any(LogCLIHelpers.class), anyBoolean());
+        any(LogCLIHelpers.class), anyBoolean(), anyBoolean());
   }
 
   @Test (timeout = 15000)
