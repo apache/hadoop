@@ -159,13 +159,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     
     resourceCalculatorPlugin = ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
     int GPUs = resourceCalculatorPlugin.getNumGPUs();    
-    int GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
-    
-    int pos = 1;
-    while (Integer.bitCount(GPUAttribute) < GPUs) {
-      GPUAttribute = GPUAttribute + pos;
-      pos = pos << 1;
-    }
+    long GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
 
     this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute);
     metrics.addResource(totalResource);

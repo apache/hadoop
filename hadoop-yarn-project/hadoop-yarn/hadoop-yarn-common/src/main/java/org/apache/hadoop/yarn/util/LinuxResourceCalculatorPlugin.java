@@ -382,7 +382,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   
   /** {@inheritDoc} */
   @Override
-  public int getGpuAttribute() {
+  public long getGpuAttribute() {
       refreshGpuIfNeeded();
       return gpuAttribute;
   }

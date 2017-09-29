@@ -414,7 +414,7 @@ public class BuilderUtils {
     return resource;
   }
 
-  public static Resource newResource(int memory, int vCores, int GPUs, int GPUAttribute) {
+  public static Resource newResource(int memory, int vCores, int GPUs, long GPUAttribute) {
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);

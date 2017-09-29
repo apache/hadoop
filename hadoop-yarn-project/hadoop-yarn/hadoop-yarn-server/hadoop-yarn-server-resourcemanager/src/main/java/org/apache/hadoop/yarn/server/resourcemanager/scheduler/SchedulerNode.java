@@ -229,9 +229,6 @@ public abstract class SchedulerNode {
 
     Resources.addTo(availableResource, resource);
     Resources.subtractFrom(usedResource, resource);
-
-    //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
-    //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
   }
 
   private synchronized void deductAvailableResource(Resource resource) {
@@ -243,10 +240,7 @@ public abstract class SchedulerNode {
 
     Resources.subtractFrom(availableResource, resource);
     Resources.addTo(usedResource, resource);
-
-    //assert Integer.bitCount(availableResource.getGPUAttribute()) == availableResource.getGPUs();
-    //assert Integer.bitCount(usedResource.getGPUAttribute()) == usedResource.getGPUs();
-  }
+    }
 
   /**
    * Reserve container for the attempt on this node.

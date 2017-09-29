@@ -103,7 +103,7 @@ public abstract class ResourceCalculatorPlugin extends Configured {
    *
    * @return bit map set of gpu utlization.
    */
-  public abstract int getGpuAttribute();
+  public abstract long getGpuAttribute();
 
   /**
    * Create the ResourceCalculatorPlugin from the class name and configure it. If

@@ -118,8 +118,8 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   /** {@inheritDoc} */
   @Override
-  public int getGpuAttribute() {
+  public long getGpuAttribute() {
     // not support;
-    return -1;
+    return 0;
   }
 }
