@@ -170,7 +170,7 @@ this request gets the info of volume */volume-of-bilbo*, the client receives a r
       "owner" : { "name" : "bilbo" },
       "quota" : { "unit" : "TB", "size" : 1048576 },
       "volumeName" : "volume-of-bilbo",
-      "createdOn" : null,
+      "createdOn" : "Tue, 27 Jun 2017 07:42:04 GMT",
       "createdBy" : "root"
     }
 
@@ -211,7 +211,7 @@ this request gets all volumes owned by *bilbo* and each volume's name contains p
           "owner" : { "name" : "bilbo"},
           "quota" : { "unit" : "TB", "size" : 2 },
           "volumeName" : "Jan-vol1",
-          "createdOn" : null,
+          "createdOn" : "Tue, 27 Jun 2017 07:42:04 GMT",
           "createdBy" : root
       },
       ...
@@ -334,6 +334,7 @@ this request gets the info of bucket */volume-of-bilbo/bucket-0*. The client rec
     {
       "volumeName" : "volume-of-bilbo",
       "bucketName" : "bucket-0",
+      "createdOn" : "Tue, 27 Jun 2017 08:55:25 GMT",
       "acls" : [ ],
       "versioning" : "DISABLED",
       "storageType" : "DISK"
@@ -373,6 +374,7 @@ this request lists all the buckets under volume *volume-of-bilbo*, and the resul
       "buckets" : [ {
         "volumeName" : "volume-of-bilbo",
         "bucketName" : "bucket-0",
+        "createdOn" : "Tue, 27 Jun 2017 08:55:25 GMT",
         "acls" : [ ],
         "versioning" : null,
         "storageType" : "DISK",
@@ -493,7 +495,8 @@ this request returns information of the key */volume-of-bilbo/bucket-0/file-0*. 
     {
       "version" : 0,
       "md5hash" : null,
-      "createdOn" : null,
+      "createdOn" : "Mon, 26 Jun 2017 04:23:30 GMT",
+      "modifiedOn" : "Mon, 26 Jun 2017 04:23:30 GMT",
       "size" : 0,
       "keyName" : "file-0"
     }
@@ -536,7 +539,8 @@ this request list keys under bucket */volume-of-bilbo/bucket-0*, the listing res
       "keyList" : [ {
           "version" : 0,
           "md5hash" : null,
-          "createdOn" : null,
+          "createdOn" : "Mon, 26 Jun 2017 04:23:30 GMT",
+          "modifiedOn" : "Mon, 26 Jun 2017 04:23:30 GMT",
           "size" : 0,
           "keyName" : "file-0"
           },
