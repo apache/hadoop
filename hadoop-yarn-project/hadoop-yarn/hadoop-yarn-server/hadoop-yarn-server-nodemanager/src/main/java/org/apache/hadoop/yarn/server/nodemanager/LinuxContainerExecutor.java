@@ -532,8 +532,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         if (!Optional.fromNullable(e.getErrorOutput()).or("").isEmpty()) {
           builder.append("Exception message: " + e.getErrorOutput() + "\n");
         }
-        builder.append("Stack trace: "
-            + StringUtils.stringifyException(e) + "\n");
+        //Skip stack trace
         String output = e.getOutput();
         if (output != null && !e.getOutput().isEmpty()) {
           builder.append("Shell output: " + output + "\n");
