@@ -222,4 +222,67 @@ public abstract class AbstractContractRenameTest extends
     assertPathDoesNotExist("not deleted",
         new Path(srcDir, "source.txt"));
   }
+
+  /**
+   * Test that after renaming, the nested subdirectory is moved along with all
+   * its ancestors.
+   */
+  @Test
+  public void testRenamePopulatesDirectoryAncestors() throws IOException {
+    final FileSystem fs = getFileSystem();
+    final Path src = path("testRenamePopulatesDirectoryAncestors/source");
+    fs.mkdirs(src);
+    final String nestedDir = "/dir1/dir2/dir3/dir4";
+    fs.mkdirs(path(src + nestedDir));
+
+    Path dst = path("testRenamePopulatesDirectoryAncestorsNew");
+
+    fs.rename(src, dst);
+    validateAncestorsMoved(src, dst, nestedDir);
+  }
+
+  /**
+   * Test that after renaming, the nested file is moved along with all its
+   * ancestors. It is similar to {@link #testRenamePopulatesDirectoryAncestors}.
+   */
+  @Test
+  public void testRenamePopulatesFileAncestors() throws IOException {
+    final FileSystem fs = getFileSystem();
+    final Path src = path("testRenamePopulatesFileAncestors/source");
+    fs.mkdirs(src);
+    final String nestedFile = "/dir1/dir2/dir3/file4";
+    byte[] srcDataset = dataset(256, 'a', 'z');
+    writeDataset(fs, path(src + nestedFile), srcDataset, srcDataset.length,
+        1024, false);
+
+    Path dst = path("testRenamePopulatesFileAncestorsNew");
+
+    fs.rename(src, dst);
+    validateAncestorsMoved(src, dst, nestedFile);
+  }
+
+  /**
+   * Validate that the nested path and its ancestors should have been moved.
+   *
+   * @param src the source root to move
+   * @param dst the destination root to move
+   * @param nestedPath the nested path to move
+   */
+  private void validateAncestorsMoved(Path src, Path dst, String nestedPath)
+      throws IOException {
+    assertIsDirectory(dst);
+    assertPathDoesNotExist("src path should not exist", path(src + nestedPath));
+    assertPathExists("dst path should exist", path(dst + nestedPath));
+
+    Path path = new Path(nestedPath).getParent();
+    while (path != null && !path.isRoot()) {
+      final Path parentSrc = path(src + path.toString());
+      assertPathDoesNotExist(parentSrc + " is not deleted", parentSrc);
+      final Path parentDst = path(dst + path.toString());
+      assertPathExists(parentDst + " should exist after rename", parentDst);
+      assertIsDirectory(parentDst);
+      path = path.getParent();
+    }
+  }
+
 }

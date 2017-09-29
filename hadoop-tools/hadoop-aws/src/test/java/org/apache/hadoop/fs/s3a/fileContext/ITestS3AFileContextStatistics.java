@@ -39,7 +39,9 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(fileContextTestHelper.getTestRootPath(fc, "test"), true);
+    if (fc != null) {
+      fc.delete(fileContextTestHelper.getTestRootPath(fc, "test"), true);
+    }
   }
 
   @Override

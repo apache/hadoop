@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
@@ -38,12 +39,18 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
     return SCALE_TEST_TIMEOUT_MILLIS;
   }
 
+  /**
+   * Create a configuration, possibly patching in S3Guard options.
+   * @return a configuration
+   */
   @Override
   protected Configuration createConfiguration() {
     Configuration newConf = super.createConfiguration();
     newConf.setLong(MULTIPART_SIZE, MULTIPART_SETTING);
     newConf.setBoolean(FAST_UPLOAD, true);
     newConf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_DISK);
+    // patch in S3Guard options
+    maybeEnableS3Guard(newConf);
     return newConf;
   }
 

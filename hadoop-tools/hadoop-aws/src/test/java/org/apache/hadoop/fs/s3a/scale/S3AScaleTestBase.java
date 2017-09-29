@@ -126,7 +126,7 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
    * @return a configuration with which to create FS instances
    */
   protected Configuration createScaleConfiguration() {
-    return new Configuration();
+    return super.createConfiguration();
   }
 
   protected Path getTestPath() {

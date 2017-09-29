@@ -19,21 +19,23 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.util.concurrent.Callable;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -42,20 +44,37 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
 
+  private static final String SERVICE_AMAZON_S3_STATUS_CODE_403
+      = "Service: Amazon S3; Status Code: 403;";
+  private static final String KEY_1
+      = "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=";
+  private static final String KEY_2
+      = "G61nz31Q7+zpjJWbakxfTOZW4VS0UmQWAq2YXhcTXoo=";
+  private static final String KEY_3
+      = "NTx0dUPrxoo9+LbNiT/gqf3z9jILqL6ilismFmJO50U=";
+  private static final String KEY_4
+      = "msdo3VvvZznp66Gth58a91Hxe/UpExMkwU9BHkIjfW8=";
+  private static final int TEST_FILE_LEN = 2048;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
+  /**
+   * Filesystem created with a different key.
+   */
+  private FileSystem fsKeyB;
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    S3ATestUtils.disableFilesystemCaching(conf);
+    disableFilesystemCaching(conf);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
         getSSEAlgorithm().getMethod());
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY,
-        "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
+    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, KEY_1);
     return conf;
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    super.teardown();
+    IOUtils.closeStream(fsKeyB);
   }
 
   /**
@@ -73,29 +92,28 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
 
-    final Path[] path = new Path[1];
-    intercept(java.nio.file.AccessDeniedException.class,
-        "Service: Amazon S3; Status Code: 403;",
-        new Callable<Void>() {
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+        new Callable<FileStatus>() {
           @Override
-          public Void call() throws Exception {
-            int len = 2048;
+          public FileStatus call() throws Exception {
+            int len = TEST_FILE_LEN;
             describe("Create an encrypted file of size " + len);
-            String src = createFilename(len);
-            path[0] = writeThenReadFile(src, len);
+            Path src = path("testCreateFileAndReadWithDifferentEncryptionKey");
+            writeThenReadFile(src, len);
 
             //extract the test FS
-            FileSystem fileSystem = createNewFileSystemWithSSECKey(
+            fsKeyB = createNewFileSystemWithSSECKey(
                 "kX7SdwVc/1VXJr76kfKnkQ3ONYhxianyL2+C3rPVT9s=");
             byte[] data = dataset(len, 'a', 'z');
-            ContractTestUtils.verifyFileContents(fileSystem, path[0], data);
-            throw new Exception("Fail");
+            ContractTestUtils.verifyFileContents(fsKeyB, src, data);
+            return fsKeyB.getFileStatus(src);
           }
         });
   }
 
   /**
-   * While each object has it's own key and should be distinct, this verifies
+   * While each object has its own key and should be distinct, this verifies
    * that hadoop treats object keys as a filesystem path.  So if a top level
    * dir is encrypted with keyA, a sublevel dir cannot be accessed with a
    * different keyB.
@@ -108,29 +126,23 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testCreateSubdirWithDifferentKey() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
-    final Path[] path = new Path[1];
-    intercept(java.nio.file.AccessDeniedException.class,
+    intercept(AccessDeniedException.class,
         "Service: Amazon S3; Status Code: 403;",
-        new Callable<Void>() {
+        new Callable<FileStatus>() {
           @Override
-          public Void call() throws Exception {
-
-            path[0] = S3ATestUtils.createTestPath(
-                new Path(createFilename("dir/"))
-            );
-            Path nestedDirectory = S3ATestUtils.createTestPath(
-                new Path(createFilename("dir/nestedDir/"))
-            );
-            FileSystem fsKeyB = createNewFileSystemWithSSECKey(
-                "G61nz31Q7+zpjJWbakxfTOZW4VS0UmQWAq2YXhcTXoo=");
-            getFileSystem().mkdirs(path[0]);
+          public FileStatus call() throws Exception {
+            Path base = path("testCreateSubdirWithDifferentKey");
+            Path nestedDirectory = new Path(base, "nestedDir");
+            fsKeyB = createNewFileSystemWithSSECKey(
+                KEY_2);
+            getFileSystem().mkdirs(base);
             fsKeyB.mkdirs(nestedDirectory);
-
-            throw new Exception("Exception should be thrown.");
+            // expected to fail
+            return fsKeyB.getFileStatus(nestedDirectory);
           }
         });
-    rm(getFileSystem(), path[0], true, false);
   }
 
   /**
@@ -146,23 +158,18 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
 
-    final Path[] path = new Path[1];
-    intercept(java.nio.file.AccessDeniedException.class,
-        "Service: Amazon S3; Status Code: 403;",
-        new Callable<Void>() {
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+        new Callable<Boolean>() {
           @Override
-          public Void call() throws Exception {
-
-            int len = 2048;
-            String src = createFilename(len);
-            path[0] = writeThenReadFile(src, len);
-
-            FileSystem fsKeyB = createNewFileSystemWithSSECKey(
-                "NTx0dUPrxoo9+LbNiT/gqf3z9jILqL6ilismFmJO50U=");
-            fsKeyB.rename(path[0],
-                new Path(createFilename("different-path.txt")));
-
-            throw new Exception("Exception should be thrown.");
+          public Boolean call() throws Exception {
+            int len = TEST_FILE_LEN;
+            Path src = path(createFilename(len));
+            writeThenReadFile(src, len);
+            fsKeyB = createNewFileSystemWithSSECKey(KEY_3);
+            Path dest = path(createFilename("different-path.txt"));
+            getFileSystem().mkdirs(dest.getParent());
+            return fsKeyB.rename(src, dest);
           }
         });
   }
@@ -178,11 +185,11 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
 
-    String src = createFilename("original-path.txt");
-    Path path = writeThenReadFile(src, 2048);
-    Path newPath = path(createFilename("different-path.txt"));
-    getFileSystem().rename(path, newPath);
-    byte[] data = dataset(2048, 'a', 'z');
+    Path src = path("original-path.txt");
+    writeThenReadFile(src, TEST_FILE_LEN);
+    Path newPath = path("different-path.txt");
+    getFileSystem().rename(src, newPath);
+    byte[] data = dataset(TEST_FILE_LEN, 'a', 'z');
     ContractTestUtils.verifyFileContents(getFileSystem(), newPath, data);
   }
 
@@ -196,32 +203,27 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testListEncryptedDir() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
-    Path nestedDirectory = S3ATestUtils.createTestPath(
-         path(createFilename("/a/b/c/"))
-    );
+    final Path pathABC = path("testListEncryptedDir/a/b/c/");
+    final Path pathAB = pathABC.getParent();
+    final Path pathA = pathAB.getParent();
+
+    final Path nestedDirectory = createTestPath(pathABC);
     assertTrue(getFileSystem().mkdirs(nestedDirectory));
 
-    final FileSystem fsKeyB = createNewFileSystemWithSSECKey(
-        "msdo3VvvZznp66Gth58a91Hxe/UpExMkwU9BHkIjfW8=");
+    fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
 
-    fsKeyB.listFiles(S3ATestUtils.createTestPath(
-        path(createFilename("/a/"))
-    ), true);
-    fsKeyB.listFiles(S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/"))
-    ), true);
+    fsKeyB.listFiles(pathA, true);
+    fsKeyB.listFiles(pathAB, true);
 
     //Until this point, no exception is thrown about access
-    intercept(java.nio.file.AccessDeniedException.class,
-        "Service: Amazon S3; Status Code: 403;",
-        new Callable<Void>() {
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+        new Callable<RemoteIterator<LocatedFileStatus>>() {
           @Override
-          public Void call() throws Exception {
-            fsKeyB.listFiles(S3ATestUtils.createTestPath(
-                path(createFilename("/a/b/c/"))
-            ), false);
-            throw new Exception("Exception should be thrown.");
+          public RemoteIterator<LocatedFileStatus> call() throws Exception {
+            return fsKeyB.listFiles(pathABC, false);
           }
         });
 
@@ -234,25 +236,16 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     final FileSystem unencryptedFileSystem = contract.getTestFileSystem();
 
     //unencrypted can access until the final directory
-    unencryptedFileSystem.listFiles(S3ATestUtils.createTestPath(
-        path(createFilename("/a/"))
-    ), true);
-    unencryptedFileSystem.listFiles(S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/"))
-    ), true);
-    intercept(org.apache.hadoop.fs.s3a.AWSS3IOException.class,
-        "Bad Request (Service: Amazon S3; Status Code: 400; Error" +
-            " Code: 400 Bad Request;",
-        new Callable<Void>() {
+    unencryptedFileSystem.listFiles(pathA, true);
+    unencryptedFileSystem.listFiles(pathAB, true);
+    AWSS3IOException ex = intercept(AWSS3IOException.class,
+        new Callable<RemoteIterator<LocatedFileStatus>>() {
           @Override
-          public Void call() throws Exception {
-            unencryptedFileSystem.listFiles(S3ATestUtils.createTestPath(
-                path(createFilename("/a/b/c/"))
-            ), false);
-            throw new Exception("Exception should be thrown.");
+          public RemoteIterator<LocatedFileStatus> call() throws Exception {
+            return unencryptedFileSystem.listFiles(pathABC, false);
           }
         });
-    rm(getFileSystem(), path(createFilename("/")), true, false);
+    assertStatusCode(ex, 400);
   }
 
   /**
@@ -264,35 +257,30 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testListStatusEncryptedDir() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
 
-    Path nestedDirectory = S3ATestUtils.createTestPath(
-         path(createFilename("/a/b/c/"))
-    );
-    assertTrue(getFileSystem().mkdirs(nestedDirectory));
+    final Path pathABC = path("testListStatusEncryptedDir/a/b/c/");
+    final Path pathAB = pathABC.getParent();
+    final Path pathA = pathAB.getParent();
+    assertTrue(getFileSystem().mkdirs(pathABC));
 
-    final FileSystem fsKeyB = createNewFileSystemWithSSECKey(
-        "msdo3VvvZznp66Gth58a91Hxe/UpExMkwU9BHkIjfW8=");
+    fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
 
-    fsKeyB.listStatus(S3ATestUtils.createTestPath(
-        path(createFilename("/a/"))));
-    fsKeyB.listStatus(S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/"))));
+    fsKeyB.listStatus(pathA);
+    fsKeyB.listStatus(pathAB);
 
     //Until this point, no exception is thrown about access
-    intercept(java.nio.file.AccessDeniedException.class,
-        "Service: Amazon S3; Status Code: 403;",
-        new Callable<Void>() {
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+        new Callable<FileStatus[]>() {
           @Override
-          public Void call() throws Exception {
-            fsKeyB.listStatus(S3ATestUtils.createTestPath(
-                path(createFilename("/a/b/c/"))));
-
-            throw new Exception("Exception should be thrown.");
+          public FileStatus[] call() throws Exception {
+            return fsKeyB.listStatus(pathABC);
           }
         });
 
     //Now try it with an unencrypted filesystem.
-    Configuration conf = this.createConfiguration();
+    Configuration conf = createConfiguration();
     conf.unset(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM);
     conf.unset(Constants.SERVER_SIDE_ENCRYPTION_KEY);
 
@@ -301,22 +289,17 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     final FileSystem unencryptedFileSystem = contract.getTestFileSystem();
 
     //unencrypted can access until the final directory
-    unencryptedFileSystem.listStatus(S3ATestUtils.createTestPath(
-        path(createFilename("/a/"))));
-    unencryptedFileSystem.listStatus(S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/"))));
-    intercept(org.apache.hadoop.fs.s3a.AWSS3IOException.class,
-        "Bad Request (Service: Amazon S3; Status Code: 400; Error Code: 400" +
-            " Bad Request;", new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
+    unencryptedFileSystem.listStatus(pathA);
+    unencryptedFileSystem.listStatus(pathAB);
 
-            unencryptedFileSystem.listStatus(S3ATestUtils.createTestPath(
-                path(createFilename("/a/b/c/"))));
-            throw new Exception("Exception should be thrown.");
+    AWSS3IOException ex = intercept(AWSS3IOException.class,
+        new Callable<FileStatus[]>() {
+          @Override
+          public FileStatus[] call() throws Exception {
+            return unencryptedFileSystem.listStatus(pathABC);
           }
         });
-    rm(getFileSystem(), path(createFilename("/")), true, false);
+    assertStatusCode(ex, 400);
   }
 
   /**
@@ -328,32 +311,24 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testListStatusEncryptedFile() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
+    final Path pathABC = path("testListStatusEncryptedFile/a/b/c/");
+    assertTrue(getFileSystem().mkdirs(pathABC));
 
-    Path nestedDirectory = S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/c/"))
-    );
-    assertTrue(getFileSystem().mkdirs(nestedDirectory));
+    final Path fileToStat = new Path(pathABC, "fileToStat.txt");
+    writeThenReadFile(fileToStat, TEST_FILE_LEN);
 
-    String src = createFilename("/a/b/c/fileToStat.txt");
-    final Path fileToStat =  writeThenReadFile(src, 2048);
-
-    final FileSystem fsKeyB = createNewFileSystemWithSSECKey(
-        "msdo3VvvZznp66Gth58a91Hxe/UpExMkwU9BHkIjfW8=");
+    fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
 
     //Until this point, no exception is thrown about access
-    intercept(java.nio.file.AccessDeniedException.class,
-        "Service: Amazon S3; Status Code: 403;",
-        new Callable<Void>() {
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+        new Callable<FileStatus[]>() {
           @Override
-          public Void call() throws Exception {
-        fsKeyB.listStatus(S3ATestUtils.createTestPath(fileToStat));
-
-        throw new Exception("Exception should be thrown.");
+          public FileStatus[] call() throws Exception {
+            return fsKeyB.listStatus(S3ATestUtils.createTestPath(fileToStat));
       }});
-    rm(getFileSystem(), path(createFilename("/")), true, false);
   }
-
-
 
 
   /**
@@ -366,35 +341,29 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   public void testDeleteEncryptedObjectWithDifferentKey() throws Exception {
     assumeEnabled();
     skipIfEncryptionTestsDisabled(getConfiguration());
+    assumeS3GuardState(false, getConfiguration());
+    final Path pathABC = path("testDeleteEncryptedObjectWithDifferentKey/a/b/c/");
 
-    Path nestedDirectory = S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/c/"))
-    );
-    assertTrue(getFileSystem().mkdirs(nestedDirectory));
-    String src = createFilename("/a/b/c/filetobedeleted.txt");
-    final Path fileToDelete =  writeThenReadFile(src, 2048);
-
-    final FileSystem fsKeyB = createNewFileSystemWithSSECKey(
-        "msdo3VvvZznp66Gth58a91Hxe/UpExMkwU9BHkIjfW8=");
-    intercept(java.nio.file.AccessDeniedException.class,
-        "Forbidden (Service: Amazon S3; Status Code: 403; Error Code: " +
-        "403 Forbidden",
-          new Callable<Void>() {
+    final Path pathAB = pathABC.getParent();
+    final Path pathA = pathAB.getParent();
+    assertTrue(getFileSystem().mkdirs(pathABC));
+    final Path fileToDelete = new Path(pathABC, "filetobedeleted.txt");
+    writeThenReadFile(fileToDelete, TEST_FILE_LEN);
+    fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
+    intercept(AccessDeniedException.class,
+        SERVICE_AMAZON_S3_STATUS_CODE_403,
+          new Callable<Boolean>() {
             @Override
-            public Void call() throws Exception {
-
-              fsKeyB.delete(fileToDelete, false);
-              throw new Exception("Exception should be thrown.");
+            public Boolean call() throws Exception {
+              return fsKeyB.delete(fileToDelete, false);
             }
           });
 
-  //This is possible
-    fsKeyB.delete(S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/c/"))), true);
-    fsKeyB.delete(S3ATestUtils.createTestPath(
-        path(createFilename("/a/b/"))), true);
-    fsKeyB.delete(S3ATestUtils.createTestPath(
-        path(createFilename("/a/"))), true);
+    //This is possible
+    fsKeyB.delete(pathABC, true);
+    fsKeyB.delete(pathAB, true);
+    fsKeyB.delete(pathA, true);
+    assertPathDoesNotExist("expected recursive delete", fileToDelete);
   }
 
   private FileSystem createNewFileSystemWithSSECKey(String sseCKey) throws
@@ -412,4 +381,5 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   protected S3AEncryptionMethods getSSEAlgorithm() {
     return S3AEncryptionMethods.SSE_C;
   }
+
 }
