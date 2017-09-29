@@ -61,12 +61,12 @@ public class Resources {
     }
 
     @Override
-    public int getGPUAttribute() {
+    public long getGPUAttribute() {
       return 0;
     }
 
     @Override
-    public void setGPUAttribute(int GPUAttribute) {
+    public void setGPUAttribute(long GPUAttribute) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -117,12 +117,12 @@ public class Resources {
     }
 
     @Override
-    public int getGPUAttribute() {
-      return Integer.MAX_VALUE;
+    public long getGPUAttribute() {
+      return Long.MAX_VALUE;
     }
 
     @Override
-    public void setGPUAttribute(int GPUAttribute) {
+    public void setGPUAttribute(long GPUAttribute) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -152,7 +152,7 @@ public class Resources {
     return createResource(memory, cores, GPUs, 0);
   }
 
-  public static Resource createResource(int memory, int cores, int GPUs, int GPUAttribute) {
+  public static Resource createResource(int memory, int cores, int GPUs, long GPUAttribute) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
@@ -352,7 +352,7 @@ public class Resources {
   // If the request contains the GPU information, allocate according the request gpu attribute. 
   // If the request does't contains the GPU information, sequencing allocate the free GPUs.
    
-  public static int allocateGPUs(Resource smaller, Resource bigger) {
+  public static long allocateGPUs(Resource smaller, Resource bigger) {
     if (smaller.getGPUAttribute() > 0) {        
          if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) == smaller.getGPUAttribute()){
              return smaller.getGPUAttribute();
@@ -367,10 +367,10 @@ public class Resources {
   }
 
   //Sequencing allocate the free GPUs.
-  private static int allocateGPUsByCount(int requestCount, int available)
+  private static long allocateGPUsByCount(int requestCount, long available)
   {
-    int result = available;
-    int availableCount = Integer.bitCount(available);
+    long result = available;
+    int availableCount = Long.bitCount(available);
     while(availableCount-- > requestCount) {
         result &= (result -1);
     }

@@ -694,7 +694,7 @@ public class FifoScheduler extends
         if(capability.getGPUs() > 0) {
             // Allocate!
             LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
-            int allocatedGPU = Resources.allocateGPUs(capability, available);
+            long allocatedGPU = Resources.allocateGPUs(capability, available);
             LOG.info("Allocated GPUs in bitvector format: " + allocatedGPU);
             container.setGPULocation(allocatedGPU);
             available.setGPUAttribute(available.getGPUAttribute() | allocatedGPU);

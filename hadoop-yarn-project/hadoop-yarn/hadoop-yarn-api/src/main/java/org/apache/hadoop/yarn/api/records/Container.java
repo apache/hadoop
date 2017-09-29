@@ -126,7 +126,7 @@ public abstract class Container implements Comparable<Container> {
 
   @Private
   @Unstable
-  public abstract void setGPULocation(int GPULocation);
+  public abstract void setGPULocation(long GPULocation);
 
   /**
    * Get the <code>Priority</code> at which the <code>Container</code> was

@@ -141,7 +141,7 @@ class NodesPage extends RmView {
         String gpuAttribute = "";
         //Append '0' before the gpu attribute to match GPU capacity.
         if(totalGPU > 0){
-            gpuAttribute = Integer.toBinaryString(info.getAvailableGPUAttribute());
+            gpuAttribute = Long.toBinaryString(info.getAvailableGPUAttribute());
             StringBuffer sb = new StringBuffer();
             int needZero = totalGPU - gpuAttribute.length();          
             while(needZero-- > 0){

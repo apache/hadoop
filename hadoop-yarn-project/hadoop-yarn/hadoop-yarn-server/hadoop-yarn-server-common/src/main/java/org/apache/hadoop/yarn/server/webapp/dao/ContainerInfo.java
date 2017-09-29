@@ -39,7 +39,7 @@ public class ContainerInfo {
   protected int allocatedMB;
   protected int allocatedVCores;
   protected int allocatedGPUs;
-  protected int allocatedGPUAttribute;
+  protected long allocatedGPUAttribute;
   protected String assignedNodeId;
   protected int priority;
   protected long startedTime;
@@ -93,7 +93,7 @@ public class ContainerInfo {
     return allocatedGPUs;
   }
 
-  public int getAllocatedGPUAttribute() {
+  public long getAllocatedGPUAttribute() {
     return allocatedGPUAttribute;
   }
 

@@ -66,7 +66,7 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Stable
-  public static Resource newInstance(int memory, int vCores, int GPUs, int GPUAttribute) {
+  public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
@@ -159,7 +159,7 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Evolving
-  public abstract int getGPUAttribute();
+  public abstract long getGPUAttribute();
 
   /**
    * Set <em>GPU allocation information</em>.
@@ -173,7 +173,7 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Evolving
-  public abstract void setGPUAttribute(int GPUAttribute);
+  public abstract void setGPUAttribute(long GPUAttribute);
 
   @Override
   public int hashCode() {

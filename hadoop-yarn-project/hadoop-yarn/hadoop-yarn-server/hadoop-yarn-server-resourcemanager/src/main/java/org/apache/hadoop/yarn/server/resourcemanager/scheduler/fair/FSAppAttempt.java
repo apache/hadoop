@@ -535,7 +535,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       }
 
       LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
-      int allocated = Resources.allocateGPUs(capability, available);
+      long allocated = Resources.allocateGPUs(capability, available);
       LOG.info("Allocated GPUs in bitvector format: " + allocated);
       container.setGPULocation(allocated);
 

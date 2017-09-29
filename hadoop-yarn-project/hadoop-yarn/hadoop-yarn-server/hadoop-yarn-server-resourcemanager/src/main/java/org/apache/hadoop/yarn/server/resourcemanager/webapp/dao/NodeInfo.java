@@ -51,7 +51,7 @@ public class NodeInfo {
   protected long availableVirtualCores;
   protected int usedGPUs;
   protected int availableGPUs;
-  protected int availableGPUAttribute;
+  protected long availableGPUAttribute;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
 
   public NodeInfo() {
@@ -150,7 +150,7 @@ public class NodeInfo {
     return this.availableGPUs;
   }
   
-  public int getAvailableGPUAttribute(){
+  public long getAvailableGPUAttribute(){
       return this.availableGPUAttribute;
   }
   public ArrayList<String> getNodeLabels() {

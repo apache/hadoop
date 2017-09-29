@@ -206,7 +206,7 @@ public class ContainerPBImpl extends Container {
   }
 
   @Override
-  public void setGPULocation(int GPULocation) {
+  public void setGPULocation(long GPULocation) {
     maybeInitBuilder();
     if (resource == null)
       builder.clearResource();
