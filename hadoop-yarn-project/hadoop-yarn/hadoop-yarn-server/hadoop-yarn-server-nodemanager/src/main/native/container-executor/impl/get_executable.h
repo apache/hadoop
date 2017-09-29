@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+#ifndef __YARN_POSIX_CONTAINER_EXECUTOR_GET_EXECUTABLE_H__
+#define __YARN_POSIX_CONTAINER_EXECUTOR_GET_EXECUTABLE_H__
 
 /**
- * Test helper for MemoryRMStateStore will make sure the event.
+ * Get the path to executable that is currently running
+ * @param argv0 the name of the executable
+ * @return the path to the currently running executable
  */
-public class MockRMMemoryStateStore extends MemoryRMStateStore {
-  @SuppressWarnings("rawtypes")
-  @Override
-  protected EventHandler getRMStateStoreEventHandler() {
-    return rmStateStoreEventHandler;
-  }
-}
+char* get_executable(char *argv0);
+
+#endif

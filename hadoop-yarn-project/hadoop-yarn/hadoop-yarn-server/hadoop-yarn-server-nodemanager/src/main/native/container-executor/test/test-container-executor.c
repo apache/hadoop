@@ -19,6 +19,7 @@
 #include "container-executor.h"
 #include "utils/string-utils.h"
 #include "util.h"
+#include "get_executable.h"
 #include "test/test-container-executor-common.h"
 
 #include <inttypes.h>
@@ -1155,145 +1156,6 @@ void test_trim_function() {
   free(trimmed);
 }
 
-void test_sanitize_docker_command() {
-
-  char *input[] = {
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=$CID --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --hostname=test.host.name --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu' || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run ''''''''",
-    "inspect --format='{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}' container_e111_1111111111111_1111_01_111111",
-    "rm container_e111_1111111111111_1111_01_111111",
-    "stop container_e111_1111111111111_1111_01_111111",
-    "pull ubuntu",
-    "pull registry.com/user/ubuntu",
-    "--config=/yarn/local/cdir/ pull registry.com/user/ubuntu"
-  };
-  char *expected_output[] = {
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='$CID' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --hostname='test.host.name' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu'\"'\"'' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run ''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"'' ",
-      "inspect --format='{{range(.NetworkSettings.Networks)}}{{.IPAddress}},{{end}}{{.Config.Hostname}}' container_e111_1111111111111_1111_01_111111",
-      "rm container_e111_1111111111111_1111_01_111111",
-      "stop container_e111_1111111111111_1111_01_111111",
-      "pull ubuntu",
-      "pull registry.com/user/ubuntu",
-      "--config=/yarn/local/cdir/ pull registry.com/user/ubuntu"
-  };
-
-  int input_size = sizeof(input) / sizeof(char *);
-  int i = 0;
-  for(i = 0;  i < input_size; i++) {
-    char *command = (char *) calloc(strlen(input[i]) + 1 , sizeof(char));
-    strncpy(command, input[i], strlen(input[i]));
-    char *op = sanitize_docker_command(command);
-    if(strncmp(expected_output[i], op, strlen(expected_output[i])) != 0) {
-      printf("FAIL: expected output %s does not match actual output '%s'\n", expected_output[i], op);
-      exit(1);
-    }
-    free(command);
-  }
-}
-
-void test_validate_docker_image_name() {
-
-  char *good_input[] = {
-    "ubuntu",
-    "ubuntu:latest",
-    "ubuntu:14.04",
-    "ubuntu:LATEST",
-    "registry.com:5000/user/ubuntu",
-    "registry.com:5000/user/ubuntu:latest",
-    "registry.com:5000/user/ubuntu:0.1.2.3",
-    "registry.com/user/ubuntu",
-    "registry.com/user/ubuntu:latest",
-    "registry.com/user/ubuntu:0.1.2.3",
-    "registry.com/user/ubuntu:test-image",
-    "registry.com/user/ubuntu:test_image",
-    "registry.com/ubuntu",
-    "user/ubuntu",
-    "user/ubuntu:0.1.2.3",
-    "user/ubuntu:latest",
-    "user/ubuntu:test_image",
-    "user/ubuntu.test:test_image",
-    "user/ubuntu-test:test-image",
-    "registry.com/ubuntu/ubuntu/ubuntu"
-  };
-
-  char *bad_input[] = {
-    "UBUNTU",
-    "registry.com|5000/user/ubuntu",
-    "registry.com | 5000/user/ubuntu",
-    "ubuntu' || touch /tmp/file #",
-    "ubuntu || touch /tmp/file #",
-    "''''''''",
-    "bad_host_name:5000/user/ubuntu",
-    "registry.com:foo/ubuntu/ubuntu/ubuntu",
-    "registry.com/ubuntu:foo/ubuntu/ubuntu"
-  };
-
-  int good_input_size = sizeof(good_input) / sizeof(char *);
-  int i = 0;
-  for(i = 0; i < good_input_size; i++) {
-    int op = validate_docker_image_name(good_input[i]);
-    if(0 != op) {
-      printf("\nFAIL: docker image name %s is invalid", good_input[i]);
-      exit(1);
-    }
-  }
-
-  int bad_input_size = sizeof(bad_input) / sizeof(char *);
-  int j = 0;
-  for(j = 0; j < bad_input_size; j++) {
-    int op = validate_docker_image_name(bad_input[j]);
-    if(1 != op) {
-      printf("\nFAIL: docker image name %s is valid, expected invalid", bad_input[j]);
-      exit(1);
-    }
-  }
-}
-
-void test_validate_container_id() {
-  char *good_input[] = {
-    "container_e134_1499953498516_50875_01_000007",
-    "container_1499953498516_50875_01_000007",
-    "container_e1_12312_11111_02_000001"
-  };
-
-  char *bad_input[] = {
-    "CONTAINER",
-    "container_e1_12312_11111_02_000001 | /tmp/file"
-    "container_e1_12312_11111_02_000001 || # /tmp/file",
-    "container_e1_12312_11111_02_000001 # /tmp/file",
-    "container_e1_12312_11111_02_000001' || touch /tmp/file #",
-    "ubuntu || touch /tmp/file #",
-    "''''''''"
-  };
-
-  int good_input_size = sizeof(good_input) / sizeof(char *);
-  int i = 0;
-  for(i = 0; i < good_input_size; i++) {
-    int op = validate_container_id(good_input[i]);
-    if(1 != op) {
-      printf("FAIL: docker container name %s is invalid\n", good_input[i]);
-      exit(1);
-    }
-  }
-
-  int bad_input_size = sizeof(bad_input) / sizeof(char *);
-  int j = 0;
-  for(j = 0; j < bad_input_size; j++) {
-    int op = validate_container_id(bad_input[j]);
-    if(0 != op) {
-      printf("FAIL: docker container name %s is valid, expected invalid\n", bad_input[j]);
-      exit(1);
-    }
-  }
-}
-
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1387,15 +1249,6 @@ int main(int argc, char **argv) {
 
   printf("\nTesting is_feature_enabled()\n");
   test_is_feature_enabled();
-
-  printf("\nTesting sanitize docker commands()\n");
-  test_sanitize_docker_command();
-
-  printf("\nTesting validate_docker_image_name()\n");
-  test_validate_docker_image_name();
-
-  printf("\nTesting validate_container_id()\n");
-  test_validate_container_id();
 
   test_check_user(0);
 

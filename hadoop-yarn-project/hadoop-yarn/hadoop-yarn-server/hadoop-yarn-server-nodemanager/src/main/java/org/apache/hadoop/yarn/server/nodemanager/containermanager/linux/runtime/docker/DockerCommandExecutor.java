@@ -88,8 +88,7 @@ public final class DockerCommandExecutor {
       dockerOp.disableFailureLogging();
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Running docker command: "
-          + dockerCommand.getCommandWithArguments());
+      LOG.debug("Running docker command: " + dockerCommand);
     }
     try {
       String result = privilegedOperationExecutor

@@ -31,6 +31,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADD
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY;
@@ -44,6 +45,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collection;
@@ -74,6 +77,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
@@ -451,6 +455,85 @@ public class DFSUtil {
     }
 
     return principals;
+  }
+
+  /**
+   * Returns list of Journalnode addresses from the configuration.
+   *
+   * @param conf configuration
+   * @return list of journalnode host names
+   * @throws URISyntaxException
+   * @throws IOException
+   */
+  public static Set<String> getJournalNodeAddresses(
+      Configuration conf) throws URISyntaxException, IOException {
+    Set<String> journalNodeList = new HashSet<>();
+    String journalsUri = "";
+    try {
+      journalsUri = conf.get(DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+      if (journalsUri == null) {
+        Collection<String> nameserviceIds = DFSUtilClient.
+            getNameServiceIds(conf);
+        for (String nsId : nameserviceIds) {
+          journalsUri = DFSUtilClient.getConfValue(
+              null, nsId, conf, DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+          if (journalsUri == null) {
+            Collection<String> nnIds = DFSUtilClient.getNameNodeIds(conf, nsId);
+            for (String nnId : nnIds) {
+              String suffix = DFSUtilClient.concatSuffixes(nsId, nnId);
+              journalsUri = DFSUtilClient.getConfValue(
+                  null, suffix, conf, DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+              if (journalsUri == null ||
+                  !journalsUri.startsWith("qjournal://")) {
+                return journalNodeList;
+              } else {
+                LOG.warn(DFS_NAMENODE_SHARED_EDITS_DIR_KEY +" is to be " +
+                    "configured as nameservice" +
+                    " specific key(append it with nameserviceId), no need" +
+                    " to append it with namenodeId");
+                URI uri = new URI(journalsUri);
+                List<InetSocketAddress> socketAddresses = Util.
+                    getAddressesList(uri);
+                for (InetSocketAddress is : socketAddresses) {
+                  journalNodeList.add(is.getHostName());
+                }
+              }
+            }
+          } else if (!journalsUri.startsWith("qjournal://")) {
+            return journalNodeList;
+          } else {
+            URI uri = new URI(journalsUri);
+            List<InetSocketAddress> socketAddresses = Util.
+                getAddressesList(uri);
+            for (InetSocketAddress is : socketAddresses) {
+              journalNodeList.add(is.getHostName());
+            }
+          }
+        }
+      } else {
+        if (!journalsUri.startsWith("qjournal://")) {
+          return journalNodeList;
+        } else {
+          URI uri = new URI(journalsUri);
+          List<InetSocketAddress> socketAddresses = Util.getAddressesList(uri);
+          for (InetSocketAddress is : socketAddresses) {
+            journalNodeList.add(is.getHostName());
+          }
+        }
+      }
+    } catch(UnknownHostException e) {
+      LOG.error("The conf property " + DFS_NAMENODE_SHARED_EDITS_DIR_KEY
+          + " is not properly set with correct journal node hostnames");
+      throw new UnknownHostException(journalsUri);
+    } catch(URISyntaxException e)  {
+      LOG.error("The conf property " + DFS_NAMENODE_SHARED_EDITS_DIR_KEY
+          + "is not set properly with correct journal node uri");
+      throw new URISyntaxException(journalsUri, "The conf property " +
+          DFS_NAMENODE_SHARED_EDITS_DIR_KEY + "is not" +
+          " properly set with correct journal node uri");
+    }
+
+    return journalNodeList;
   }
 
   /**

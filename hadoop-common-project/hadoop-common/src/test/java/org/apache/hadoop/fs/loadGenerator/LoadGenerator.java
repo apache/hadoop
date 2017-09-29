@@ -277,9 +277,9 @@ public class LoadGenerator extends Configured implements Tool {
      * the entire file */
     private void read() throws IOException {
       String fileName = files.get(r.nextInt(files.size()));
-      long startTime = Time.now();
+      long startTimestamp = Time.monotonicNow();
       InputStream in = fc.open(new Path(fileName));
-      executionTime[OPEN] += (Time.now()-startTime);
+      executionTime[OPEN] += (Time.monotonicNow() - startTimestamp);
       totalNumOfOps[OPEN]++;
       while (in.read(buffer) != -1) {}
       in.close();
@@ -299,9 +299,9 @@ public class LoadGenerator extends Configured implements Tool {
       double fileSize = 0;
       while ((fileSize = r.nextGaussian()+2)<=0) {}
       genFile(file, (long)(fileSize*BLOCK_SIZE));
-      long startTime = Time.now();
+      long startTimestamp = Time.monotonicNow();
       fc.delete(file, true);
-      executionTime[DELETE] += (Time.now()-startTime);
+      executionTime[DELETE] += (Time.monotonicNow() - startTimestamp);
       totalNumOfOps[DELETE]++;
     }
     
@@ -310,9 +310,9 @@ public class LoadGenerator extends Configured implements Tool {
      */
     private void list() throws IOException {
       String dirName = dirs.get(r.nextInt(dirs.size()));
-      long startTime = Time.now();
+      long startTimestamp = Time.monotonicNow();
       fc.listStatus(new Path(dirName));
-      executionTime[LIST] += (Time.now()-startTime);
+      executionTime[LIST] += (Time.monotonicNow() - startTimestamp);
       totalNumOfOps[LIST]++;
     }
 
@@ -320,14 +320,15 @@ public class LoadGenerator extends Configured implements Tool {
      * The file is filled with 'a'.
      */
     private void genFile(Path file, long fileSize) throws IOException {
-      long startTime = Time.now();
+      long startTimestamp = Time.monotonicNow();
       FSDataOutputStream out = null;
+      boolean isOutClosed = false;
       try {
         out = fc.create(file,
             EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
             CreateOpts.createParent(), CreateOpts.bufferSize(4096),
             CreateOpts.repFac((short) 3));
-        executionTime[CREATE] += (Time.now() - startTime);
+        executionTime[CREATE] += (Time.monotonicNow() - startTimestamp);
         numOfOps[CREATE]++;
 
         long i = fileSize;
@@ -337,11 +338,15 @@ public class LoadGenerator extends Configured implements Tool {
           i -= s;
         }
 
-        startTime = Time.now();
-        executionTime[WRITE_CLOSE] += (Time.now() - startTime);
+        startTime = Time.monotonicNow();
+        out.close();
+        executionTime[WRITE_CLOSE] += (Time.monotonicNow() - startTime);
         numOfOps[WRITE_CLOSE]++;
+        isOutClosed = true;
       } finally {
-        IOUtils.cleanupWithLogger(LOG, out);
+        if (!isOutClosed && out != null) {
+          out.close();
+        }
       }
     }
   }

@@ -81,6 +81,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -2811,6 +2812,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String confName = null;
       String confValue = null;
       String confInclude = null;
+      String confTag = null;
       boolean confFinal = false;
       boolean fallbackAllowed = false;
       boolean fallbackEntered = false;
@@ -2825,6 +2827,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             confName = null;
             confValue = null;
             confFinal = false;
+            confTag = null;
             confSource.clear();
 
             // First test for short format configuration
@@ -2843,9 +2846,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                 confSource.add(StringInterner.weakIntern(
                     reader.getAttributeValue(i)));
               } else if ("tag".equals(propertyAttr)) {
-                //Read tags and put them in propertyTagsMap
-                readTagFromConfig(reader.getAttributeValue(i), confName,
-                    confValue, confSource);
+                confTag = StringInterner
+                    .weakIntern(reader.getAttributeValue(i));
               }
             }
             break;
@@ -2937,9 +2939,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             break;
           case "tag":
             if (token.length() > 0) {
-              //Read tags and put them in propertyTagsMap
-              readTagFromConfig(token.toString(), confName,
-                  confValue, confSource);
+              confTag = StringInterner.weakIntern(token.toString());
             }
             break;
           case "include":
@@ -2956,6 +2956,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               break;
             }
             confSource.add(name);
+            //Read tags and put them in propertyTagsMap
+            if (confTag != null) {
+              readTagFromConfig(confTag, confName, confValue, confSource);
+            }
+
             DeprecatedKeyInfo keyInfo =
                 deprecations.getDeprecatedKeyMap().get(confName);
             if (keyInfo != null) {
@@ -3001,21 +3006,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         if (confSource.size() > 0) {
           for (String source : confSource) {
             PropertyTag tag1 = this.getPropertyTag(tagStr,
-                source.split("-")[0]);
-            if (propertyTagsMap.containsKey(tag1)) {
-              propertyTagsMap.get(tag1)
-                  .setProperty(confName, confValue);
-            } else {
-              Properties props = new Properties();
-              props.setProperty(confName, confValue);
-              propertyTagsMap.put(tag1, props);
+                FilenameUtils.getName(source).split("-")[0]);
+            if (tag1 != null) {
+              //Handle property with no/null value
+              if (confValue == null) {
+                confValue = "";
+              }
+              if (propertyTagsMap.containsKey(tag1)) {
+                propertyTagsMap.get(tag1).setProperty(confName, confValue);
+              } else {
+                Properties props = new Properties();
+                props.setProperty(confName, confValue);
+                propertyTagsMap.put(tag1, props);
+              }
             }
           }
         } else {
-          //If no source is set try to find tag in CorePropertyTag
-          if (propertyTagsMap
-              .containsKey(CorePropertyTag.valueOf(tagStr)
-              )) {
+          // If no source is set try to find tag in CorePropertyTag
+          if (propertyTagsMap.containsKey(CorePropertyTag.valueOf(tagStr))) {
             propertyTagsMap.get(CorePropertyTag.valueOf(tagStr))
                 .setProperty(confName, confValue);
           } else {
@@ -3025,11 +3033,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                 props);
           }
         }
-      } catch (IllegalArgumentException iae) {
-        //Log the invalid tag and continue to parse rest of the
-        // properties.
+      } catch (Exception ex) {
+        // Log the invalid tag and continue to parse rest of the properties.
         LOG.info("Invalid tag '" + tagStr + "' found for "
-            + "property:" + confName, iae);
+            + "property:" + confName + " Source:" + Arrays
+            .toString(confSource.toArray()), ex);
       }
 
     }

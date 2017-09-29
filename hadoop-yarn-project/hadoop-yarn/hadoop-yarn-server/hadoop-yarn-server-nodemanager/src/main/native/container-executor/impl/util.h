@@ -19,7 +19,11 @@
 #ifndef __YARN_POSIX_CONTAINER_EXECUTOR_UTIL_H__
 #define __YARN_POSIX_CONTAINER_EXECUTOR_UTIL_H__
 
+/** Define a platform-independent constant instead of using PATH_MAX, set to 4K */
+#define EXECUTOR_PATH_MAX 4096
+
 #include <stdio.h>
+#include <stdlib.h>
 
 enum errorcodes {
   INVALID_ARGUMENT_NUMBER = 1,
@@ -62,7 +66,7 @@ enum errorcodes {
   ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS = 38,
   ERROR_SANITIZING_DOCKER_COMMAND = 39,
   DOCKER_IMAGE_INVALID = 40,
-  DOCKER_CONTAINER_NAME_INVALID = 41,
+  // DOCKER_CONTAINER_NAME_INVALID = 41, (NOT USED)
   ERROR_COMPILING_REGEX = 42
 };
 
@@ -118,5 +122,45 @@ void free_values(char **values);
  * @return the trimmed string allocated with malloc
 */
 char* trim(const char *input);
+
+/**
+ * Run a regex to check if the provided input matches against it
+ * @param regex_str Regex to run
+ * @param input String to run the regex against
+ * @return 0 on match, non-zero on no match
+ */
+int execute_regex_match(const char *regex_str, const char *input);
+
+/**
+ * Helper function to escape single-quotes in a string. The assumption is that the string passed will be enclosed in
+ * single quotes and passed to bash for a command invocation.
+ * @param str The string in which to esacpe single quotes
+ * @return String with single quotes escaped, must be freed by the user.
+ */
+char* escape_single_quote(const char *str);
+
+/**
+ * Helper function to quote the argument to a parameter and then append it to the provided string.
+ * @param str Buffer to which the param='arg' string must be appended
+ * @param size Size of the buffer
+ * @param param Param name
+ * @param arg Argument to be quoted
+ */
+void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg);
+
+/**
+ * Helper function to allocate and clear a block of memory. It'll call exit if the allocation fails.
+ * @param num Num of elements to be allocated
+ * @param size Size of each element
+ * @return Pointer to the allocated memory, must be freed by the user
+ */
+inline void* alloc_and_clear_memory(size_t num, size_t size) {
+  void *ret = calloc(num, size);
+  if (ret == NULL) {
+    printf("Could not allocate memory, exiting\n");
+    exit(OUT_OF_MEMORY);
+  }
+  return ret;
+}
 
 #endif

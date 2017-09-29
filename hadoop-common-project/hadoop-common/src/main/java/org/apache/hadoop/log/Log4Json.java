@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingJsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ContainerNode;
 import org.apache.log4j.Layout;
 import org.apache.log4j.helpers.ISO8601DateFormat;
@@ -105,6 +106,7 @@ public class Log4Json extends Layout {
    * configuration it must be done in a static intializer block.
    */
   private static final JsonFactory factory = new MappingJsonFactory();
+  private static final ObjectReader READER = new ObjectMapper(factory).reader();
   public static final String DATE = "date";
   public static final String EXCEPTION_CLASS = "exceptionclass";
   public static final String LEVEL = "level";
@@ -252,8 +254,7 @@ public class Log4Json extends Layout {
    * @throws IOException on any parsing problems
    */
   public static ContainerNode parse(String json) throws IOException {
-    ObjectMapper mapper = new ObjectMapper(factory);
-    JsonNode jsonNode = mapper.readTree(json);
+    JsonNode jsonNode = READER.readTree(json);
     if (!(jsonNode instanceof ContainerNode)) {
       throw new IOException("Wrong JSON data: " + json);
     }

@@ -575,7 +575,7 @@ public class StripedBlockUtil {
    * TODO: consider parity cells
    */
   @VisibleForTesting
-  static class StripingCell {
+  public static class StripingCell {
     final ErasureCodingPolicy ecPolicy;
     /** Logical order in a block group, used when doing I/O to a block group. */
     final int idxInBlkGroup;

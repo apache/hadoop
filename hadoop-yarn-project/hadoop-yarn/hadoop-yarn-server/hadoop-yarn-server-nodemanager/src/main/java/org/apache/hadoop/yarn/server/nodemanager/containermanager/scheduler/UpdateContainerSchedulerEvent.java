@@ -21,33 +21,37 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
     .Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
+
 /**
  * Update Event consumed by the {@link ContainerScheduler}.
  */
 public class UpdateContainerSchedulerEvent extends ContainerSchedulerEvent {
 
-  private ContainerTokenIdentifier updatedToken;
-  private boolean isResourceChange;
-  private boolean isExecTypeUpdate;
-  private boolean isIncrease;
+  private final UpdateContainerTokenEvent containerEvent;
+  private final ContainerTokenIdentifier originalToken;
 
   /**
    * Create instance of Event.
    *
-   * @param originalContainer Original Container.
-   * @param updatedToken Updated Container Token.
-   * @param isResourceChange is this a Resource Change.
-   * @param isExecTypeUpdate is this an ExecTypeUpdate.
-   * @param isIncrease is this a Container Increase.
+   * @param container Container.
+   * @param origToken The Original Container Token.
+   * @param event The Container Event.
    */
-  public UpdateContainerSchedulerEvent(Container originalContainer,
-      ContainerTokenIdentifier updatedToken, boolean isResourceChange,
-      boolean isExecTypeUpdate, boolean isIncrease) {
-    super(originalContainer, ContainerSchedulerEventType.UPDATE_CONTAINER);
-    this.updatedToken = updatedToken;
-    this.isResourceChange = isResourceChange;
-    this.isExecTypeUpdate = isExecTypeUpdate;
-    this.isIncrease = isIncrease;
+  public UpdateContainerSchedulerEvent(Container container,
+      ContainerTokenIdentifier origToken, UpdateContainerTokenEvent event) {
+    super(container, ContainerSchedulerEventType.UPDATE_CONTAINER);
+    this.containerEvent = event;
+    this.originalToken = origToken;
+  }
+
+  /**
+   * Original Token before update.
+   *
+   * @return Container Token.
+   */
+  public ContainerTokenIdentifier getOriginalToken() {
+    return this.originalToken;
   }
 
   /**
@@ -56,7 +60,7 @@ public class UpdateContainerSchedulerEvent extends ContainerSchedulerEvent {
    * @return Container Token.
    */
   public ContainerTokenIdentifier getUpdatedToken() {
-    return updatedToken;
+    return containerEvent.getUpdatedToken();
   }
 
   /**
@@ -64,7 +68,7 @@ public class UpdateContainerSchedulerEvent extends ContainerSchedulerEvent {
    * @return isResourceChange.
    */
   public boolean isResourceChange() {
-    return isResourceChange;
+    return containerEvent.isResourceChange();
   }
 
   /**
@@ -72,7 +76,7 @@ public class UpdateContainerSchedulerEvent extends ContainerSchedulerEvent {
    * @return isExecTypeUpdate.
    */
   public boolean isExecTypeUpdate() {
-    return isExecTypeUpdate;
+    return containerEvent.isExecTypeUpdate();
   }
 
   /**
@@ -80,6 +84,6 @@ public class UpdateContainerSchedulerEvent extends ContainerSchedulerEvent {
    * @return isIncrease.
    */
   public boolean isIncrease() {
-    return isIncrease;
+    return containerEvent.isIncrease();
   }
 }

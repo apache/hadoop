@@ -22,25 +22,25 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 /**
  * A response of add an ErasureCoding policy.
  */
-public class AddECPolicyResponse {
+public class AddErasureCodingPolicyResponse {
   private boolean succeed;
   private ErasureCodingPolicy policy;
   private String errorMsg;
 
-  public AddECPolicyResponse(ErasureCodingPolicy policy) {
+  public AddErasureCodingPolicyResponse(ErasureCodingPolicy policy) {
     this.policy = policy;
     this.succeed = true;
   }
 
-  public AddECPolicyResponse(ErasureCodingPolicy policy,
-      String errorMsg) {
+  public AddErasureCodingPolicyResponse(ErasureCodingPolicy policy,
+                                        String errorMsg) {
     this.policy = policy;
     this.errorMsg = errorMsg;
     this.succeed = false;
   }
 
-  public AddECPolicyResponse(ErasureCodingPolicy policy,
-      HadoopIllegalArgumentException e) {
+  public AddErasureCodingPolicyResponse(ErasureCodingPolicy policy,
+                                        HadoopIllegalArgumentException e) {
     this(policy, e.getMessage());
   }
 

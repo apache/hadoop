@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -36,8 +38,15 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerError;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -492,5 +501,50 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       Assert.fail("Should throw if a different request obj is used");
     } catch (YarnException e) {
     }
+  }
+
+  @Test
+  public void testAllocateResponse() throws Exception {
+    interceptor.registerApplicationMaster(
+        RegisterApplicationMasterRequest.newInstance(null, 0, null));
+    AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
+
+    Map<SubClusterId, List<AllocateResponse>> asyncResponseSink =
+        interceptor.getAsyncResponseSink();
+
+    ContainerId cid = ContainerId.newContainerId(attemptId, 0);
+    ContainerStatus cStatus = Records.newRecord(ContainerStatus.class);
+    cStatus.setContainerId(cid);
+    Container container =
+        Container.newInstance(cid, null, null, null, null, null);
+
+    AllocateResponse response = Records.newRecord(AllocateResponse.class);
+    response.setAllocatedContainers(Collections.singletonList(container));
+    response.setCompletedContainersStatuses(Collections.singletonList(cStatus));
+    response.setUpdatedNodes(
+        Collections.singletonList(Records.newRecord(NodeReport.class)));
+    response.setNMTokens(
+        Collections.singletonList(Records.newRecord(NMToken.class)));
+    response.setUpdatedContainers(
+        Collections.singletonList(Records.newRecord(UpdatedContainer.class)));
+    response.setUpdateErrors(Collections
+        .singletonList(Records.newRecord(UpdateContainerError.class)));
+    response.setAvailableResources(Records.newRecord(Resource.class));
+    response.setPreemptionMessage(Records.newRecord(PreemptionMessage.class));
+
+    List<AllocateResponse> list = new ArrayList<>();
+    list.add(response);
+    asyncResponseSink.put(SubClusterId.newInstance("SC-1"), list);
+
+    response = interceptor.allocate(allocateRequest);
+
+    Assert.assertEquals(1, response.getAllocatedContainers().size());
+    Assert.assertNotNull(response.getAvailableResources());
+    Assert.assertEquals(1, response.getCompletedContainersStatuses().size());
+    Assert.assertEquals(1, response.getUpdatedNodes().size());
+    Assert.assertNotNull(response.getPreemptionMessage());
+    Assert.assertEquals(1, response.getNMTokens().size());
+    Assert.assertEquals(1, response.getUpdatedContainers().size());
+    Assert.assertEquals(1, response.getUpdateErrors().size());
   }
 }

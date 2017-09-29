@@ -109,6 +109,17 @@ abstract public class MountdBase {
     }
   }
 
+  public void stop() {
+    if (udpBoundPort > 0) {
+      rpcProgram.unregister(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
+      udpBoundPort = 0;
+    }
+    if (tcpBoundPort > 0) {
+      rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
+      tcpBoundPort = 0;
+    }
+  }
+
   /**
    * Priority of the mountd shutdown hook.
    */
@@ -117,8 +128,7 @@ abstract public class MountdBase {
   private class Unregister implements Runnable {
     @Override
     public synchronized void run() {
-      rpcProgram.unregister(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
-      rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
+      stop();
     }
   }
 

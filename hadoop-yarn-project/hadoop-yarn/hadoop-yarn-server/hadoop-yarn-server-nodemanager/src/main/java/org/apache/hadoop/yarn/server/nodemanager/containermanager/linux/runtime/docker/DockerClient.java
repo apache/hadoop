@@ -23,7 +23,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +34,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.List;
+import java.util.Map;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -68,10 +70,25 @@ public final class DockerClient {
           TMP_FILE_SUFFIX, new
           File(tmpDirPath));
 
-      Writer writer = new OutputStreamWriter(new FileOutputStream(dockerCommandFile),
-          "UTF-8");
+      Writer writer = new OutputStreamWriter(
+          new FileOutputStream(dockerCommandFile), "UTF-8");
       PrintWriter printWriter = new PrintWriter(writer);
-      printWriter.print(cmd.getCommandWithArguments());
+      printWriter.println("[docker-command-execution]");
+      for (Map.Entry<String, List<String>> entry :
+          cmd.getDockerCommandWithArguments().entrySet()) {
+        if (entry.getKey().contains("=")) {
+          throw new ContainerExecutionException(
+              "'=' found in entry for docker command file, key = " + entry
+                  .getKey() + "; value = " + entry.getValue());
+        }
+        if (entry.getValue().contains("\n")) {
+          throw new ContainerExecutionException(
+              "'\\n' found in entry for docker command file, key = " + entry
+                  .getKey() + "; value = " + entry.getValue());
+        }
+        printWriter.println("  " + entry.getKey() + "=" + StringUtils
+            .join(",", entry.getValue()));
+      }
       printWriter.close();
 
       return dockerCommandFile.getAbsolutePath();

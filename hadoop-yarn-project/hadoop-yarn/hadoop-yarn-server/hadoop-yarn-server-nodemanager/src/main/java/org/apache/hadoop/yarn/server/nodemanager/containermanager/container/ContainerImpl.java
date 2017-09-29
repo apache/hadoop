@@ -33,6 +33,9 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.hadoop.yarn.api.records.ContainerSubState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.UpdateContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -308,8 +311,8 @@ public class ContainerImpl implements Container {
         UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.NEW, ContainerState.DONE,
         ContainerEventType.KILL_CONTAINER, new KillOnNewTransition())
-    .addTransition(ContainerState.NEW, ContainerState.DONE,
-            ContainerEventType.PAUSE_CONTAINER, new KillOnPauseTransition())
+    .addTransition(ContainerState.NEW, ContainerState.NEW,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN, new UpdateTransition())
 
     // From LOCALIZING State
     .addTransition(ContainerState.LOCALIZING,
@@ -325,8 +328,9 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.LOCALIZING, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER,
         new KillBeforeRunningTransition())
-    .addTransition(ContainerState.LOCALIZING, ContainerState.KILLING,
-        ContainerEventType.PAUSE_CONTAINER, new KillOnPauseTransition())
+    .addTransition(ContainerState.LOCALIZING, ContainerState.LOCALIZING,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN, new UpdateTransition())
+
 
     // From LOCALIZATION_FAILED State
     .addTransition(ContainerState.LOCALIZATION_FAILED,
@@ -351,6 +355,9 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.LOCALIZATION_FAILED,
         ContainerState.LOCALIZATION_FAILED,
         ContainerEventType.RESOURCE_FAILED)
+    .addTransition(ContainerState.LOCALIZATION_FAILED,
+        ContainerState.LOCALIZATION_FAILED,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN, new UpdateTransition())
 
     // From SCHEDULED State
     .addTransition(ContainerState.SCHEDULED, ContainerState.RUNNING,
@@ -364,6 +371,9 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.SCHEDULED, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER,
         new KillBeforeRunningTransition())
+    .addTransition(ContainerState.SCHEDULED, ContainerState.SCHEDULED,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
 
     // From RUNNING State
     .addTransition(ContainerState.RUNNING,
@@ -376,10 +386,16 @@ public class ContainerImpl implements Container {
             ContainerState.EXITED_WITH_FAILURE),
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
         new RetryFailureTransition())
-    .addTransition(ContainerState.RUNNING, ContainerState.REINITIALIZING,
+    .addTransition(ContainerState.RUNNING,
+        EnumSet.of(ContainerState.RUNNING,
+            ContainerState.REINITIALIZING,
+            ContainerState.REINITIALIZING_AWAITING_KILL),
         ContainerEventType.REINITIALIZE_CONTAINER,
         new ReInitializeContainerTransition())
-    .addTransition(ContainerState.RUNNING, ContainerState.REINITIALIZING,
+    .addTransition(ContainerState.RUNNING,
+        EnumSet.of(ContainerState.RUNNING,
+            ContainerState.REINITIALIZING,
+            ContainerState.REINITIALIZING_AWAITING_KILL),
         ContainerEventType.ROLLBACK_REINIT,
         new RollbackContainerTransition())
     .addTransition(ContainerState.RUNNING, ContainerState.RUNNING,
@@ -398,9 +414,16 @@ public class ContainerImpl implements Container {
         ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
         new KilledExternallyTransition())
     .addTransition(ContainerState.RUNNING, ContainerState.PAUSING,
-    ContainerEventType.PAUSE_CONTAINER, new PauseContainerTransition())
+        ContainerEventType.PAUSE_CONTAINER, new PauseContainerTransition())
+    .addTransition(ContainerState.RUNNING, ContainerState.RUNNING,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
+
 
     // From PAUSING State
+    .addTransition(ContainerState.PAUSING, ContainerState.PAUSING,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        new ResourceLocalizedWhileRunningTransition())
     .addTransition(ContainerState.PAUSING, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER, new KillTransition())
     .addTransition(ContainerState.PAUSING, ContainerState.PAUSING,
@@ -420,6 +443,12 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.PAUSING, ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
         new KilledExternallyTransition())
+    .addTransition(ContainerState.PAUSING, ContainerState.PAUSING,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        new ResourceLocalizedWhileRunningTransition())
+    .addTransition(ContainerState.PAUSING, ContainerState.PAUSING,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
 
     // From PAUSED State
     .addTransition(ContainerState.PAUSED, ContainerState.KILLING,
@@ -429,6 +458,10 @@ public class ContainerImpl implements Container {
         UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.PAUSED, ContainerState.PAUSED,
         ContainerEventType.PAUSE_CONTAINER)
+    // This can happen during re-initialization.
+    .addTransition(ContainerState.PAUSED, ContainerState.PAUSED,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        new ResourceLocalizedWhileRunningTransition())
     .addTransition(ContainerState.PAUSED, ContainerState.RESUMING,
         ContainerEventType.RESUME_CONTAINER, new ResumeContainerTransition())
     // In case something goes wrong then container will exit from the
@@ -444,6 +477,9 @@ public class ContainerImpl implements Container {
         ContainerState.EXITED_WITH_SUCCESS,
         ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
         new ExitedWithSuccessTransition(true))
+    .addTransition(ContainerState.PAUSED, ContainerState.PAUSED,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
 
     // From RESUMING State
     .addTransition(ContainerState.RESUMING, ContainerState.KILLING,
@@ -453,6 +489,10 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.RESUMING, ContainerState.RESUMING,
         ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
         UPDATE_DIAGNOSTICS_TRANSITION)
+    // This can happen during re-initialization
+    .addTransition(ContainerState.RESUMING, ContainerState.RESUMING,
+        ContainerEventType.RESOURCE_LOCALIZED,
+        new ResourceLocalizedWhileRunningTransition())
     // In case something goes wrong then container will exit from the
     // RESUMING state
     .addTransition(ContainerState.RESUMING,
@@ -467,6 +507,10 @@ public class ContainerImpl implements Container {
         ContainerState.EXITED_WITH_SUCCESS,
         ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
         new ExitedWithSuccessTransition(true))
+    .addTransition(ContainerState.RESUMING, ContainerState.RESUMING,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
+    // NOTE - We cannot get a PAUSE_CONTAINER while in RESUMING state.
 
     // From REINITIALIZING State
     .addTransition(ContainerState.REINITIALIZING,
@@ -478,7 +522,8 @@ public class ContainerImpl implements Container {
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
         new ExitedWithFailureTransition(true))
     .addTransition(ContainerState.REINITIALIZING,
-        ContainerState.REINITIALIZING,
+        EnumSet.of(ContainerState.REINITIALIZING,
+            ContainerState.REINITIALIZING_AWAITING_KILL),
         ContainerEventType.RESOURCE_LOCALIZED,
         new ResourceLocalizedWhileReInitTransition())
     .addTransition(ContainerState.REINITIALIZING, ContainerState.RUNNING,
@@ -490,12 +535,39 @@ public class ContainerImpl implements Container {
         UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.REINITIALIZING, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER, new KillTransition())
-    .addTransition(ContainerState.REINITIALIZING, ContainerState.KILLING,
-        ContainerEventType.PAUSE_CONTAINER, new KillOnPauseTransition())
+    .addTransition(ContainerState.REINITIALIZING, ContainerState.PAUSING,
+        ContainerEventType.PAUSE_CONTAINER, new PauseContainerTransition())
     .addTransition(ContainerState.REINITIALIZING,
+        ContainerState.REINITIALIZING,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
+
+    // from REINITIALIZING_AWAITING_KILL
+    .addTransition(ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerState.EXITED_WITH_SUCCESS,
+        ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
+        new ExitedWithSuccessTransition(true))
+    .addTransition(ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerState.EXITED_WITH_FAILURE,
+        ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+        new ExitedWithFailureTransition(true))
+    .addTransition(ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
+        UPDATE_DIAGNOSTICS_TRANSITION)
+    .addTransition(ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerState.KILLING,
+        ContainerEventType.KILL_CONTAINER, new KillTransition())
+    .addTransition(ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerState.SCHEDULED, ContainerEventType.PAUSE_CONTAINER)
+    .addTransition(ContainerState.REINITIALIZING_AWAITING_KILL,
         ContainerState.SCHEDULED,
         ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
         new KilledForReInitializationTransition())
+    .addTransition(ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerState.REINITIALIZING_AWAITING_KILL,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
 
     // From RELAUNCHING State
     .addTransition(ContainerState.RELAUNCHING, ContainerState.RUNNING,
@@ -511,6 +583,10 @@ public class ContainerImpl implements Container {
         ContainerEventType.KILL_CONTAINER, new KillTransition())
     .addTransition(ContainerState.RELAUNCHING, ContainerState.KILLING,
         ContainerEventType.PAUSE_CONTAINER, new KillOnPauseTransition())
+    .addTransition(ContainerState.RELAUNCHING, ContainerState.RELAUNCHING,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN,
+        new NotifyContainerSchedulerOfUpdateTransition())
+
 
     // From CONTAINER_EXITED_WITH_SUCCESS State
     .addTransition(ContainerState.EXITED_WITH_SUCCESS, ContainerState.DONE,
@@ -524,6 +600,10 @@ public class ContainerImpl implements Container {
         ContainerState.EXITED_WITH_SUCCESS,
         EnumSet.of(ContainerEventType.KILL_CONTAINER,
             ContainerEventType.PAUSE_CONTAINER))
+    // No transition - assuming container is on its way to completion
+    .addTransition(ContainerState.EXITED_WITH_SUCCESS,
+        ContainerState.EXITED_WITH_SUCCESS,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN)
 
     // From EXITED_WITH_FAILURE State
     .addTransition(ContainerState.EXITED_WITH_FAILURE, ContainerState.DONE,
@@ -537,6 +617,10 @@ public class ContainerImpl implements Container {
                    ContainerState.EXITED_WITH_FAILURE,
         EnumSet.of(ContainerEventType.KILL_CONTAINER,
             ContainerEventType.PAUSE_CONTAINER))
+    // No transition - assuming container is on its way to completion
+    .addTransition(ContainerState.EXITED_WITH_FAILURE,
+        ContainerState.EXITED_WITH_FAILURE,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN)
 
     // From KILLING State.
     .addTransition(ContainerState.KILLING,
@@ -572,6 +656,9 @@ public class ContainerImpl implements Container {
         ContainerState.KILLING,
         EnumSet.of(ContainerEventType.CONTAINER_LAUNCHED,
             ContainerEventType.PAUSE_CONTAINER))
+    // No transition - assuming container is on its way to completion
+    .addTransition(ContainerState.KILLING, ContainerState.KILLING,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN)
 
     // From CONTAINER_CLEANEDUP_AFTER_KILL State.
     .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
@@ -589,6 +676,10 @@ public class ContainerImpl implements Container {
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
             ContainerEventType.PAUSE_CONTAINER))
+    // No transition - assuming container is on its way to completion
+    .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+        ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN)
 
     // From DONE
     .addTransition(ContainerState.DONE, ContainerState.DONE,
@@ -606,6 +697,9 @@ public class ContainerImpl implements Container {
         EnumSet.of(ContainerEventType.RESOURCE_FAILED,
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE))
+    // No transition - assuming container is on its way to completion
+    .addTransition(ContainerState.DONE, ContainerState.DONE,
+        ContainerEventType.UPDATE_CONTAINER_TOKEN)
 
     // create the topology tables
     .installTopology();
@@ -616,16 +710,15 @@ public class ContainerImpl implements Container {
   public org.apache.hadoop.yarn.api.records.ContainerState getCurrentState() {
     switch (stateMachine.getCurrentState()) {
     case NEW:
-      return org.apache.hadoop.yarn.api.records.ContainerState.NEW;
     case LOCALIZING:
     case LOCALIZATION_FAILED:
     case SCHEDULED:
     case PAUSED:
     case RESUMING:
-      return org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED;
     case RUNNING:
     case RELAUNCHING:
     case REINITIALIZING:
+    case REINITIALIZING_AWAITING_KILL:
     case EXITED_WITH_SUCCESS:
     case EXITED_WITH_FAILURE:
     case KILLING:
@@ -636,6 +729,36 @@ public class ContainerImpl implements Container {
     case DONE:
     default:
       return org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE;
+    }
+  }
+
+  // NOTE: Please update the doc in the ContainerSubState class as
+  //       well as the yarn_protos.proto file if this mapping is ever modified.
+  private ContainerSubState getContainerSubState() {
+    switch (stateMachine.getCurrentState()) {
+    case NEW:
+    case LOCALIZING:
+    case SCHEDULED:
+    case REINITIALIZING_AWAITING_KILL:
+    case RELAUNCHING:
+      return ContainerSubState.SCHEDULED;
+    case REINITIALIZING:
+    case PAUSING:
+    case KILLING:
+    case RUNNING:
+      return ContainerSubState.RUNNING;
+    case PAUSED:
+    case RESUMING:
+      return ContainerSubState.PAUSED;
+    case LOCALIZATION_FAILED:
+    case EXITED_WITH_SUCCESS:
+    case EXITED_WITH_FAILURE:
+    case CONTAINER_CLEANEDUP_AFTER_KILL:
+    case CONTAINER_RESOURCES_CLEANINGUP:
+      return ContainerSubState.COMPLETING;
+    case DONE:
+    default:
+      return ContainerSubState.DONE;
     }
   }
 
@@ -707,6 +830,7 @@ public class ContainerImpl implements Container {
           this.containerTokenIdentifier.getExecutionType());
       status.setIPs(ips == null ? null : Arrays.asList(ips.split(",")));
       status.setHost(host);
+      status.setContainerSubState(getContainerSubState());
       return status;
     } finally {
       this.readLock.unlock();
@@ -929,6 +1053,45 @@ public class ContainerImpl implements Container {
 
   }
 
+  static class UpdateTransition extends ContainerTransition {
+    @Override
+    public void transition(
+        ContainerImpl container, ContainerEvent event) {
+      UpdateContainerTokenEvent updateEvent = (UpdateContainerTokenEvent)event;
+      // Update the container token
+      container.setContainerTokenIdentifier(updateEvent.getUpdatedToken());
+      if (updateEvent.isResourceChange()) {
+        try {
+          // Persist change in the state store.
+          container.context.getNMStateStore().storeContainerResourceChanged(
+              container.containerId,
+              container.getContainerTokenIdentifier().getVersion(),
+              container.getResource());
+        } catch (IOException e) {
+          LOG.warn("Could not store container [" + container.containerId
+              + "] resource change..", e);
+        }
+      }
+    }
+  }
+
+  static class NotifyContainerSchedulerOfUpdateTransition extends
+      UpdateTransition {
+    @Override
+    public void transition(
+        ContainerImpl container, ContainerEvent event) {
+
+      UpdateContainerTokenEvent updateEvent = (UpdateContainerTokenEvent)event;
+      // Save original token
+      ContainerTokenIdentifier originalToken =
+          container.containerTokenIdentifier;
+      super.transition(container, updateEvent);
+      container.dispatcher.getEventHandler().handle(
+          new UpdateContainerSchedulerEvent(container,
+              originalToken, updateEvent));
+    }
+  }
+
   /**
    * State transition when a NEW container receives the INIT_CONTAINER
    * message.
@@ -1074,12 +1237,15 @@ public class ContainerImpl implements Container {
   /**
    * Transition to start the Re-Initialization process.
    */
-  static class ReInitializeContainerTransition extends ContainerTransition {
+  static class ReInitializeContainerTransition implements
+      MultipleArcTransition<ContainerImpl, ContainerEvent, ContainerState> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public void transition(ContainerImpl container, ContainerEvent event) {
+    public ContainerState transition(
+        ContainerImpl container, ContainerEvent event) {
       container.reInitContext = createReInitContext(container, event);
+      boolean resourcesPresent = false;
       try {
         // 'reInitContext.newResourceSet' can be
         // a) current container resourceSet (In case of Restart)
@@ -1101,6 +1267,7 @@ public class ContainerImpl implements Container {
           container.dispatcher.getEventHandler().handle(
               new ContainersLauncherEvent(container,
                   ContainersLauncherEventType.CLEANUP_CONTAINER_FOR_REINIT));
+          resourcesPresent = true;
         }
         container.metrics.reInitingContainer();
         NMAuditLogger.logSuccess(container.user,
@@ -1112,7 +1279,11 @@ public class ContainerImpl implements Container {
             " re-initialization failure..", e);
         container.addDiagnostics("Error re-initializing due to" +
             "[" + e.getMessage() + "]");
+        return ContainerState.RUNNING;
       }
+      return resourcesPresent ?
+          ContainerState.REINITIALIZING_AWAITING_KILL :
+          ContainerState.REINITIALIZING;
     }
 
     protected ReInitializationContext createReInitContext(
@@ -1164,11 +1335,14 @@ public class ContainerImpl implements Container {
    * If all dependencies are met, then restart Container with new bits.
    */
   static class ResourceLocalizedWhileReInitTransition
-      extends ContainerTransition {
+      implements MultipleArcTransition
+      <ContainerImpl, ContainerEvent, ContainerState> {
+
 
     @SuppressWarnings("unchecked")
     @Override
-    public void transition(ContainerImpl container, ContainerEvent event) {
+    public ContainerState transition(
+        ContainerImpl container, ContainerEvent event) {
       ContainerResourceLocalizedEvent rsrcEvent =
           (ContainerResourceLocalizedEvent) event;
       container.reInitContext.newResourceSet.resourceLocalized(
@@ -1180,7 +1354,9 @@ public class ContainerImpl implements Container {
         container.dispatcher.getEventHandler().handle(
             new ContainersLauncherEvent(container,
                 ContainersLauncherEventType.CLEANUP_CONTAINER_FOR_REINIT));
+        return ContainerState.REINITIALIZING_AWAITING_KILL;
       }
+      return ContainerState.REINITIALIZING;
     }
   }
 
