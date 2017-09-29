@@ -49,10 +49,13 @@ public class TestNativeAzureFileSystemAuthorizationWithOwner
     Path testPath = new Path(parentDir, "test.data");
 
     authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRule(parentDir.toString(),
+        WasbAuthorizationOperations.WRITE.toString(), true);
     // additional rule used for assertPathExists
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRule(testPath.getParent().toString(),
+        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRule(parentDir.getParent().toString(),
+        WasbAuthorizationOperations.READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
