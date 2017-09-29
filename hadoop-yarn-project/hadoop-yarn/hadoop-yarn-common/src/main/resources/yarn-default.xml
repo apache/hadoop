@@ -3126,9 +3126,9 @@
 
   <property>
     <description>
-      Size of LRU cache for Router ClientRM Service.
+      Size of LRU cache for Router ClientRM Service and RMAdmin Service.
     </description>
-    <name>yarn.router.clientrm.cache-max-size</name>
+    <name>yarn.router.pipeline.cache-max-size</name>
     <value>25</value>
   </property>
 
