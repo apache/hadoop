@@ -80,6 +80,7 @@ class NodesPage extends RmView {
               .th(".vcores", "VCores Avail")
               .th(".GPUs", "GPUs Used")
               .th(".GPUs", "GPUs Avail")
+              .th(".GPUs", "GPUs Avail attribute")
               .th(".nodeManagerVersion", "Version")._()._().tbody();
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
@@ -136,6 +137,20 @@ class NodesPage extends RmView {
           String httpAddress = info.getNodeHTTPAddress();
           row.td().a("//" + httpAddress, httpAddress)._();
         }
+        int totalGPU = info.getUsedGPUs() + info.getAvailableGPUs();
+        String gpuAttribute = "";
+        //Append '0' before the gpu attribute to match GPU capacity.
+        if(totalGPU > 0){
+            gpuAttribute = Integer.toBinaryString(info.getAvailableGPUAttribute());
+            StringBuffer sb = new StringBuffer();
+            int needZero = totalGPU - gpuAttribute.length();          
+            while(needZero-- > 0){
+                sb.append("0");
+            }
+            sb.append(gpuAttribute);
+            gpuAttribute = sb.toString();
+        }
+        
         row.td().br().$title(String.valueOf(info.getLastHealthUpdate()))._()
             ._(Times.format(info.getLastHealthUpdate()))._()
             .td(info.getHealthReport())
@@ -148,6 +163,7 @@ class NodesPage extends RmView {
             .td(String.valueOf(info.getAvailableVirtualCores()))
             .td(String.valueOf(info.getUsedGPUs()))
             .td(String.valueOf(info.getAvailableGPUs()))
+            .td(gpuAttribute)
             .td(ni.getNodeManagerVersion())._();
       }
       tbody._()._();
@@ -156,7 +172,7 @@ class NodesPage extends RmView {
 
   @Override
   protected void preHead(Page.HTML<_> html) {
-    commonPreHead(html);
+    commonPreHead(html);  
     String type = $(NODE_STATE);
     String title = "Nodes of the cluster";
     if (type != null && !type.isEmpty()) {
