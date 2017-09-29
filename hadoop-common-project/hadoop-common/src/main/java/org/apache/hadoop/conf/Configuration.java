@@ -755,6 +755,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     REGISTERED_TAG_CLASS.put("core", CorePropertyTag.class);
     REGISTERED_TAG_CLASS.put("hdfs", HDFSPropertyTag.class);
     REGISTERED_TAG_CLASS.put("yarn", YarnPropertyTag.class);
+    REGISTERED_TAG_CLASS.put("ozone", OzonePropertyTag.class);
 
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
