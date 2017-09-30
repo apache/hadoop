@@ -101,11 +101,11 @@ The allocation file must be in XML format. The format contains five types of ele
 
     * **aclAdministerApps**: a list of users and/or groups that can administer a queue. Currently the only administrative action is killing an application. Refer to the ACLs section below for more info on the format of this list and how queue ACLs work.
 
-    * **minSharePreemptionTimeout**: number of seconds the queue is under its minimum share before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
+    * **minSharePreemptionTimeout**: number of seconds the queue is under its minimum share before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue. Default value is Long.MAX_VALUE, which means that it will not preempt containers until you set a meaningful value.
 
-    * **fairSharePreemptionTimeout**: number of seconds the queue is under its fair share threshold before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
+    * **fairSharePreemptionTimeout**: number of seconds the queue is under its fair share threshold before it will try to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue. Default value is Long.MAX_VALUE, which means that it will not preempt containers until you set a meaningful value.
 
-    * **fairSharePreemptionThreshold**: the fair share preemption threshold for the queue. If the queue waits fairSharePreemptionTimeout without receiving fairSharePreemptionThreshold\*fairShare resources, it is allowed to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue.
+    * **fairSharePreemptionThreshold**: the fair share preemption threshold for the queue. If the queue waits fairSharePreemptionTimeout without receiving fairSharePreemptionThreshold\*fairShare resources, it is allowed to preempt containers to take resources from other queues. If not set, the queue will inherit the value from its parent queue. Default value is 0.5f.
 
     * **allowPreemptionFrom**: determines whether the scheduler is allowed to preempt resources from the queue. The default is true. If a queue has this property set to false, this property will apply recursively to all child queues.
 
@@ -113,11 +113,11 @@ The allocation file must be in XML format. The format contains five types of ele
 
 * **A userMaxAppsDefault element**: which sets the default running app limit for any users whose limit is not otherwise specified.
 
-* **A defaultFairSharePreemptionTimeout element**: which sets the fair share preemption timeout for the root queue; overridden by fairSharePreemptionTimeout element in root queue.
+* **A defaultFairSharePreemptionTimeout element**: which sets the fair share preemption timeout for the root queue; overridden by fairSharePreemptionTimeout element in root queue. Default is set to Long.MAX_VALUE.
 
-* **A defaultMinSharePreemptionTimeout element**: which sets the min share preemption timeout for the root queue; overridden by minSharePreemptionTimeout element in root queue.
+* **A defaultMinSharePreemptionTimeout element**: which sets the min share preemption timeout for the root queue; overridden by minSharePreemptionTimeout element in root queue. Default is set to Long.MAX_VALUE.
 
-* **A defaultFairSharePreemptionThreshold element**: which sets the fair share preemption threshold for the root queue; overridden by fairSharePreemptionThreshold element in root queue.
+* **A defaultFairSharePreemptionThreshold element**: which sets the fair share preemption threshold for the root queue; overridden by fairSharePreemptionThreshold element in root queue. Default is set to 0.5f.
 
 * **A queueMaxAppsDefault element**: which sets the default running app limit for queues; overridden by maxRunningApps element in each queue.
 
