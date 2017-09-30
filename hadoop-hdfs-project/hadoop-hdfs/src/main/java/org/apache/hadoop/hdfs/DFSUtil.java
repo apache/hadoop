@@ -1457,7 +1457,27 @@ public class DFSUtil {
         "It should be a positive, non-zero integer value.");
     return blocksReplWorkMultiplier;
   }
-  
+
+  /**
+   * Get DFS_SPS_WORK_MULTIPLIER_PER_ITERATION from
+   * configuration.
+   *
+   * @param conf Configuration
+   * @return Value of DFS_SPS_WORK_MULTIPLIER_PER_ITERATION
+   */
+  public static int getSPSWorkMultiplier(Configuration conf) {
+    int spsWorkMultiplier = conf
+        .getInt(
+            DFSConfigKeys.DFS_SPS_WORK_MULTIPLIER_PER_ITERATION,
+            DFSConfigKeys.DFS_SPS_WORK_MULTIPLIER_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (spsWorkMultiplier > 0),
+        DFSConfigKeys.DFS_SPS_WORK_MULTIPLIER_PER_ITERATION +
+        " = '" + spsWorkMultiplier + "' is invalid. " +
+        "It should be a positive, non-zero integer value.");
+    return spsWorkMultiplier;
+  }
+
   /**
    * Get SPNEGO keytab Key from configuration
    * 

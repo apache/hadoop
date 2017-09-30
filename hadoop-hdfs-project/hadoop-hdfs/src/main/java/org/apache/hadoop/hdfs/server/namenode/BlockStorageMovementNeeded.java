@@ -29,11 +29,14 @@ import java.util.Map;
 import java.util.Queue;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser.TraverseInfo;
 import org.apache.hadoop.hdfs.server.namenode.StoragePolicySatisfier.ItemInfo;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A Class to track the block collection IDs (Inode's ID) for which physical
@@ -53,11 +56,11 @@ public class BlockStorageMovementNeeded {
       new LinkedList<ItemInfo>();
 
   /**
-   * Map of rootId and number of child's. Number of child's indicate the number
-   * of files pending to satisfy the policy.
+   * Map of startId and number of child's. Number of child's indicate the
+   * number of files pending to satisfy the policy.
    */
-  private final Map<Long, Integer> pendingWorkForDirectory =
-      new HashMap<Long, Integer>();
+  private final Map<Long, DirPendingWorkInfo> pendingWorkForDirectory =
+      new HashMap<Long, DirPendingWorkInfo>();
 
   private final Namesystem namesystem;
 
@@ -66,12 +69,15 @@ public class BlockStorageMovementNeeded {
 
   private final StoragePolicySatisfier sps;
 
-  private Daemon fileInodeIdCollector;
+  private Daemon inodeIdCollector;
+
+  private final int maxQueuedItem;
 
   public BlockStorageMovementNeeded(Namesystem namesystem,
-      StoragePolicySatisfier sps) {
+      StoragePolicySatisfier sps, int queueLimit) {
     this.namesystem = namesystem;
     this.sps = sps;
+    this.maxQueuedItem = queueLimit;
   }
 
   /**
@@ -88,15 +94,24 @@ public class BlockStorageMovementNeeded {
   /**
    * Add the itemInfo to tracking list for which storage movement
    * expected if necessary.
-   * @param rootId
-   *            - root inode id
+   * @param startId
+   *            - start id
    * @param itemInfoList
    *            - List of child in the directory
    */
-  private synchronized void addAll(Long rootId,
-      List<ItemInfo> itemInfoList) {
+  @VisibleForTesting
+  public synchronized void addAll(long startId,
+      List<ItemInfo> itemInfoList, boolean scanCompleted) {
     storageMovementNeeded.addAll(itemInfoList);
-    pendingWorkForDirectory.put(rootId, itemInfoList.size());
+    DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startId);
+    if (pendingWork == null) {
+      pendingWork = new DirPendingWorkInfo();
+      pendingWorkForDirectory.put(startId, pendingWork);
+    }
+    pendingWork.addPendingWorkCount(itemInfoList.size());
+    if (scanCompleted) {
+      pendingWork.markScanCompleted();
+    }
   }
 
   /**
@@ -118,6 +133,25 @@ public class BlockStorageMovementNeeded {
     }
   }
 
+  /**
+   * Returns queue remaining capacity.
+   */
+  public synchronized int remainingCapacity() {
+    int size = storageMovementNeeded.size();
+    if (size >= maxQueuedItem) {
+      return 0;
+    } else {
+      return (maxQueuedItem - size);
+    }
+  }
+
+  /**
+   * Returns queue size.
+   */
+  public synchronized int size() {
+    return storageMovementNeeded.size();
+  }
+
   public synchronized void clearAll() {
     spsDirsToBeTraveresed.clear();
     storageMovementNeeded.clear();
@@ -131,20 +165,20 @@ public class BlockStorageMovementNeeded {
   public synchronized void removeItemTrackInfo(ItemInfo trackInfo)
       throws IOException {
     if (trackInfo.isDir()) {
-      // If track is part of some root then reduce the pending directory work
-      // count.
-      long rootId = trackInfo.getRootId();
-      INode inode = namesystem.getFSDirectory().getInode(rootId);
+      // If track is part of some start inode then reduce the pending
+      // directory work count.
+      long startId = trackInfo.getStartId();
+      INode inode = namesystem.getFSDirectory().getInode(startId);
       if (inode == null) {
         // directory deleted just remove it.
-        this.pendingWorkForDirectory.remove(rootId);
+        this.pendingWorkForDirectory.remove(startId);
       } else {
-        if (pendingWorkForDirectory.get(rootId) != null) {
-          Integer pendingWork = pendingWorkForDirectory.get(rootId) - 1;
-          pendingWorkForDirectory.put(rootId, pendingWork);
-          if (pendingWork <= 0) {
-            namesystem.removeXattr(rootId, XATTR_SATISFY_STORAGE_POLICY);
-            pendingWorkForDirectory.remove(rootId);
+        DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startId);
+        if (pendingWork != null) {
+          pendingWork.decrementPendingWorkCount();
+          if (pendingWork.isDirWorkDone()) {
+            namesystem.removeXattr(startId, XATTR_SATISFY_STORAGE_POLICY);
+            pendingWorkForDirectory.remove(startId);
           }
         }
       }
@@ -161,7 +195,7 @@ public class BlockStorageMovementNeeded {
     Iterator<ItemInfo> iterator = storageMovementNeeded.iterator();
     while (iterator.hasNext()) {
       ItemInfo next = iterator.next();
-      if (next.getRootId() == trackId) {
+      if (next.getStartId() == trackId) {
         iterator.remove();
       }
     }
@@ -208,7 +242,17 @@ public class BlockStorageMovementNeeded {
    * Take dir tack ID from the spsDirsToBeTraveresed queue and collect child
    * ID's to process for satisfy the policy.
    */
-  private class FileInodeIdCollector implements Runnable {
+  private class StorageMovementPendingInodeIdCollector extends FSTreeTraverser
+      implements Runnable {
+
+    private int remainingCapacity = 0;
+
+    private List<ItemInfo> currentBatch = new ArrayList<>(maxQueuedItem);
+
+    StorageMovementPendingInodeIdCollector(FSDirectory dir) {
+      super(dir);
+    }
+
     @Override
     public void run() {
       LOG.info("Starting FileInodeIdCollector!.");
@@ -216,38 +260,36 @@ public class BlockStorageMovementNeeded {
         try {
           if (!namesystem.isInSafeMode()) {
             FSDirectory fsd = namesystem.getFSDirectory();
-            Long rootINodeId = spsDirsToBeTraveresed.poll();
-            if (rootINodeId == null) {
+            Long startINodeId = spsDirsToBeTraveresed.poll();
+            if (startINodeId == null) {
               // Waiting for SPS path
               synchronized (spsDirsToBeTraveresed) {
                 spsDirsToBeTraveresed.wait(5000);
               }
             } else {
-              INode rootInode = fsd.getInode(rootINodeId);
-              if (rootInode != null) {
-                // TODO : HDFS-12291
-                // 1. Implement an efficient recursive directory iteration
-                // mechanism and satisfies storage policy for all the files
-                // under the given directory.
-                // 2. Process files in batches,so datanodes workload can be
-                // handled.
-                List<ItemInfo> itemInfoList =
-                    new ArrayList<>();
-                for (INode childInode : rootInode.asDirectory()
-                    .getChildrenList(Snapshot.CURRENT_STATE_ID)) {
-                  if (childInode.isFile()
-                      && childInode.asFile().numBlocks() != 0) {
-                    itemInfoList.add(
-                        new ItemInfo(rootINodeId, childInode.getId()));
-                  }
+              INode startInode = fsd.getInode(startINodeId);
+              if (startInode != null) {
+                try {
+                  remainingCapacity = remainingCapacity();
+                  readLock();
+                  traverseDir(startInode.asDirectory(), startINodeId,
+                      HdfsFileStatus.EMPTY_NAME,
+                      new SPSTraverseInfo(startINodeId));
+                } finally {
+                  readUnlock();
                 }
-                if (itemInfoList.isEmpty()) {
-                  // satisfy track info is empty, so remove the xAttr from the
-                  // directory
-                  namesystem.removeXattr(rootINodeId,
+                // Mark startInode traverse is done
+                addAll(startInode.getId(), currentBatch, true);
+                currentBatch.clear();
+
+                // check if directory was empty and no child added to queue
+                DirPendingWorkInfo dirPendingWorkInfo =
+                    pendingWorkForDirectory.get(startInode.getId());
+                if (dirPendingWorkInfo.isDirWorkDone()) {
+                  namesystem.removeXattr(startInode.getId(),
                       XATTR_SATISFY_STORAGE_POLICY);
+                  pendingWorkForDirectory.remove(startInode.getId());
                 }
-                addAll(rootINodeId, itemInfoList);
               }
             }
           }
@@ -256,17 +298,140 @@ public class BlockStorageMovementNeeded {
         }
       }
     }
+
+    @Override
+    protected void checkPauseForTesting() throws InterruptedException {
+      // TODO implement if needed
+    }
+
+    @Override
+    protected boolean processFileInode(INode inode, TraverseInfo traverseInfo)
+        throws IOException, InterruptedException {
+      assert getFSDirectory().hasReadLock();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Processing {} for statisy the policy",
+            inode.getFullPathName());
+      }
+      if (!inode.isFile()) {
+        return false;
+      }
+      if (inode.isFile() && inode.asFile().numBlocks() != 0) {
+        currentBatch.add(new ItemInfo(
+            ((SPSTraverseInfo) traverseInfo).getStartId(), inode.getId()));
+        remainingCapacity--;
+      }
+      return true;
+    }
+
+    @Override
+    protected boolean canSubmitCurrentBatch() {
+      return remainingCapacity <= 0;
+    }
+
+    @Override
+    protected void checkINodeReady(long startId) throws IOException {
+      FSNamesystem fsn = ((FSNamesystem) namesystem);
+      fsn.checkNameNodeSafeMode("NN is in safe mode,"
+          + "cannot satisfy the policy.");
+      // SPS work should be cancelled when NN goes to standby. Just
+      // double checking for sanity.
+      fsn.checkOperation(NameNode.OperationCategory.WRITE);
+    }
+
+    @Override
+    protected void submitCurrentBatch(long startId)
+        throws IOException, InterruptedException {
+      // Add current child's to queue
+      addAll(startId, currentBatch, false);
+      currentBatch.clear();
+    }
+
+    @Override
+    protected void throttle() throws InterruptedException {
+      assert !getFSDirectory().hasReadLock();
+      assert !namesystem.hasReadLock();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("StorageMovementNeeded queue remaining capacity is zero,"
+            + " waiting for some free slots.");
+      }
+      remainingCapacity = remainingCapacity();
+      // wait for queue to be free
+      while (remainingCapacity <= 0) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Waiting for storageMovementNeeded queue to be free!");
+        }
+        Thread.sleep(5000);
+        remainingCapacity = remainingCapacity();
+      }
+    }
+
+    @Override
+    protected boolean canTraverseDir(INode inode) throws IOException {
+      return true;
+    }
   }
 
-  public void start() {
-    fileInodeIdCollector = new Daemon(new FileInodeIdCollector());
-    fileInodeIdCollector.setName("FileInodeIdCollector");
-    fileInodeIdCollector.start();
+  /**
+   * Info for directory recursive scan.
+   */
+  public static class DirPendingWorkInfo {
+
+    private int pendingWorkCount = 0;
+    private boolean fullyScanned = false;
+
+    /**
+     * Increment the pending work count for directory.
+     */
+    public synchronized void addPendingWorkCount(int count) {
+      this.pendingWorkCount = this.pendingWorkCount + count;
+    }
+
+    /**
+     * Decrement the pending work count for directory one track info is
+     * completed.
+     */
+    public synchronized void decrementPendingWorkCount() {
+      this.pendingWorkCount--;
+    }
+
+    /**
+     * Return true if all the pending work is done and directory fully
+     * scanned, otherwise false.
+     */
+    public synchronized boolean isDirWorkDone() {
+      return (pendingWorkCount <= 0 && fullyScanned);
+    }
+
+    /**
+     * Mark directory scan is completed.
+     */
+    public synchronized void markScanCompleted() {
+      this.fullyScanned = true;
+    }
   }
 
-  public void stop() {
-    if (fileInodeIdCollector != null) {
-      fileInodeIdCollector.interrupt();
+  public void init() {
+    inodeIdCollector = new Daemon(new StorageMovementPendingInodeIdCollector(
+        namesystem.getFSDirectory()));
+    inodeIdCollector.setName("FileInodeIdCollector");
+    inodeIdCollector.start();
+  }
+
+  public void close() {
+    if (inodeIdCollector != null) {
+      inodeIdCollector.interrupt();
+    }
+  }
+
+  class SPSTraverseInfo extends TraverseInfo {
+    private long startId;
+
+    SPSTraverseInfo(long startId) {
+      this.startId = startId;
+    }
+
+    public long getStartId() {
+      return startId;
     }
   }
 }

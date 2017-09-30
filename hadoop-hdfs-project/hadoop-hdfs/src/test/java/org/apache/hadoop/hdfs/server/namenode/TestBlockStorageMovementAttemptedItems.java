@@ -41,7 +41,7 @@ public class TestBlockStorageMovementAttemptedItems {
   public void setup() throws Exception {
     unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded(
         Mockito.mock(Namesystem.class),
-        Mockito.mock(StoragePolicySatisfier.class));
+        Mockito.mock(StoragePolicySatisfier.class), 100);
     StoragePolicySatisfier sps = Mockito.mock(StoragePolicySatisfier.class);
     bsmAttemptedItems = new BlockStorageMovementAttemptedItems(100,
         selfRetryTimeout, unsatisfiedStorageMovementFiles, sps);

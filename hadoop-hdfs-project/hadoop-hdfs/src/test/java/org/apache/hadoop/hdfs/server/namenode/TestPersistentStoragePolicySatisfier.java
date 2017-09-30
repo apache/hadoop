@@ -191,7 +191,7 @@ public class TestPersistentStoragePolicySatisfier {
       DFSTestUtil.waitExpectedStorageType(
           parentFileName, StorageType.ARCHIVE, 3, timeout, fs);
       DFSTestUtil.waitExpectedStorageType(
-          childFileName, StorageType.DEFAULT, 3, timeout, fs);
+          childFileName, StorageType.ARCHIVE, 3, timeout, fs);
 
     } finally {
       clusterShutdown();
@@ -232,7 +232,9 @@ public class TestPersistentStoragePolicySatisfier {
       DFSTestUtil.waitExpectedStorageType(
           parentFileName, StorageType.ARCHIVE, 2, timeout, fs);
       DFSTestUtil.waitExpectedStorageType(
-          childFileName, StorageType.DEFAULT, 3, timeout, fs);
+          childFileName, StorageType.DISK, 1, timeout, fs);
+      DFSTestUtil.waitExpectedStorageType(
+          childFileName, StorageType.ARCHIVE, 2, timeout, fs);
     } finally {
       clusterShutdown();
     }
@@ -269,7 +271,7 @@ public class TestPersistentStoragePolicySatisfier {
       DFSTestUtil.waitExpectedStorageType(
           parentFileName, StorageType.ARCHIVE, 3, timeout, fs);
       DFSTestUtil.waitExpectedStorageType(
-          childFileName, StorageType.DEFAULT, 3, timeout, fs);
+          childFileName, StorageType.ARCHIVE, 3, timeout, fs);
     } finally {
       clusterShutdown();
     }

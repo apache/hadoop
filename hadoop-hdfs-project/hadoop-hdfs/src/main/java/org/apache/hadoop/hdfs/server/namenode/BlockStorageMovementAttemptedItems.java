@@ -101,7 +101,7 @@ public class BlockStorageMovementAttemptedItems {
   public void add(ItemInfo itemInfo, boolean allBlockLocsAttemptedToSatisfy) {
     synchronized (storageMovementAttemptedItems) {
       AttemptedItemInfo attemptedItemInfo = new AttemptedItemInfo(
-          itemInfo.getRootId(), itemInfo.getTrackId(), monotonicNow(),
+          itemInfo.getStartId(), itemInfo.getTrackId(), monotonicNow(),
           allBlockLocsAttemptedToSatisfy);
       storageMovementAttemptedItems.put(itemInfo.getTrackId(),
           attemptedItemInfo);
@@ -260,7 +260,7 @@ public class BlockStorageMovementAttemptedItems {
           synchronized (storageMovementAttemptedResults) {
             if (!isExistInResult(blockCollectionID)) {
               ItemInfo candidate = new ItemInfo(
-                  itemInfo.getRootId(), blockCollectionID);
+                  itemInfo.getStartId(), blockCollectionID);
               blockStorageMovementNeeded.add(candidate);
               iter.remove();
               LOG.info("TrackID: {} becomes timed out and moved to needed "
@@ -315,7 +315,7 @@ public class BlockStorageMovementAttemptedItems {
           // blockStorageMovementNeeded#removeIteamTrackInfo() for cleaning
           // the xAttr
           ItemInfo itemInfo = new ItemInfo((attemptedItemInfo != null)
-              ? attemptedItemInfo.getRootId() : trackId, trackId);
+              ? attemptedItemInfo.getStartId() : trackId, trackId);
           switch (status) {
           case FAILURE:
             if (attemptedItemInfo != null) {
@@ -345,7 +345,7 @@ public class BlockStorageMovementAttemptedItems {
             if (attemptedItemInfo != null) {
               if (!attemptedItemInfo.isAllBlockLocsAttemptedToSatisfy()) {
                 blockStorageMovementNeeded
-                    .add(new ItemInfo(attemptedItemInfo.getRootId(), trackId));
+                    .add(new ItemInfo(attemptedItemInfo.getStartId(), trackId));
                 LOG.warn("{} But adding trackID back to retry queue as some of"
                     + " the blocks couldn't find matching target nodes in"
                     + " previous SPS iteration.", msg);

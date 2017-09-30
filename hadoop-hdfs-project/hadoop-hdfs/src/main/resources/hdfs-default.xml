@@ -4510,6 +4510,29 @@
 </property>
 
 <property>
+  <name>dfs.storage.policy.satisfier.queue.limit</name>
+  <value>1000</value>
+  <description>
+    Storage policy satisfier queue size. This queue contains the currently
+    scheduled file's inode ID for statisfy the policy.
+    Default value is 1000.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.work.multiplier.per.iteration</name>
+  <value>1</value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This determines the total amount of block transfers to begin in
+    one iteration, for satisfy the policy. The actual number is obtained by
+    multiplying this multiplier with the total number of live nodes in the
+    cluster. The result number is the number of blocks to begin transfers
+    immediately. This number can be any positive, non-zero integer.
+  </description>
+</property>
+
+<property>
   <name>dfs.storage.policy.satisfier.recheck.timeout.millis</name>
   <value>300000</value>
   <description>

@@ -77,7 +77,8 @@ public class StoragePolicySatisfier implements Runnable {
   private final BlockStorageMovementNeeded storageMovementNeeded;
   private final BlockStorageMovementAttemptedItems storageMovementsMonitor;
   private volatile boolean isRunning = false;
-
+  private int spsWorkMultiplier;
+  private long blockCount = 0L;
   /**
    * Represents the collective analysis status for all blocks.
    */
@@ -106,7 +107,9 @@ public class StoragePolicySatisfier implements Runnable {
       final BlockManager blkManager, Configuration conf) {
     this.namesystem = namesystem;
     this.storageMovementNeeded = new BlockStorageMovementNeeded(namesystem,
-        this);
+        this, conf.getInt(
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
+            DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_DEFAULT));
     this.blockManager = blkManager;
     this.storageMovementsMonitor = new BlockStorageMovementAttemptedItems(
         conf.getLong(
@@ -117,6 +120,7 @@ public class StoragePolicySatisfier implements Runnable {
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT),
         storageMovementNeeded,
         this);
+    this.spsWorkMultiplier = DFSUtil.getSPSWorkMultiplier(conf);
   }
 
   /**
@@ -143,7 +147,7 @@ public class StoragePolicySatisfier implements Runnable {
     // Ensure that all the previously submitted block movements(if any) have to
     // be stopped in all datanodes.
     addDropSPSWorkCommandsToAllDNs();
-    storageMovementNeeded.start();
+    storageMovementNeeded.init();
     storagePolicySatisfierThread = new Daemon(this);
     storagePolicySatisfierThread.setName("StoragePolicySatisfier");
     storagePolicySatisfierThread.start();
@@ -164,7 +168,7 @@ public class StoragePolicySatisfier implements Runnable {
       return;
     }
 
-    storageMovementNeeded.stop();
+    storageMovementNeeded.close();
 
     storagePolicySatisfierThread.interrupt();
     this.storageMovementsMonitor.stop();
@@ -268,9 +272,13 @@ public class StoragePolicySatisfier implements Runnable {
             }
           }
         }
-        // TODO: We can think to make this as configurable later, how frequently
-        // we want to check block movements.
-        Thread.sleep(3000);
+        int numLiveDn = namesystem.getFSDirectory().getBlockManager()
+            .getDatanodeManager().getNumLiveDataNodes();
+        if (storageMovementNeeded.size() == 0
+            || blockCount > (numLiveDn * spsWorkMultiplier)) {
+          Thread.sleep(3000);
+          blockCount = 0L;
+        }
       } catch (Throwable t) {
         handleException(t);
       }
@@ -380,6 +388,11 @@ public class StoragePolicySatisfier implements Runnable {
 
     assignBlockMovingInfosToCoordinatorDn(blockCollection.getId(),
         blockMovingInfos, coordinatorNode);
+    int count = 0;
+    for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
+      count = count + blkMovingInfo.getSources().length;
+    }
+    blockCount = blockCount + count;
     return status;
   }
 
@@ -840,7 +853,7 @@ public class StoragePolicySatisfier implements Runnable {
    *          - file inode/blockcollection id.
    */
   public void satisfyStoragePolicy(Long inodeId) {
-    //For file rootId and trackId is same
+    //For file startId and trackId is same
     storageMovementNeeded.add(new ItemInfo(inodeId, inodeId));
     if (LOG.isDebugEnabled()) {
       LOG.debug("Added track info for inode {} to block "
@@ -864,19 +877,19 @@ public class StoragePolicySatisfier implements Runnable {
    * policy.
    */
   public static class ItemInfo {
-    private long rootId;
+    private long startId;
     private long trackId;
 
-    public ItemInfo(long rootId, long trackId) {
-      this.rootId = rootId;
+    public ItemInfo(long startId, long trackId) {
+      this.startId = startId;
       this.trackId = trackId;
     }
 
     /**
-     * Return the root of the current track Id.
+     * Return the start inode id of the current track Id.
      */
-    public long getRootId() {
-      return rootId;
+    public long getStartId() {
+      return startId;
     }
 
     /**
@@ -890,7 +903,7 @@ public class StoragePolicySatisfier implements Runnable {
      * Returns true if the tracking path is a directory, false otherwise.
      */
     public boolean isDir() {
-      return (rootId != trackId);
+      return (startId != trackId);
     }
   }
 }

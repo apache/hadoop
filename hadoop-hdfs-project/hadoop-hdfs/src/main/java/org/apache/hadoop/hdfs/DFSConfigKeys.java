@@ -618,6 +618,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.storage.policy.satisfier.enabled";
   public static final boolean DFS_STORAGE_POLICY_SATISFIER_ENABLED_DEFAULT =
       false;
+  public static final String  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY =
+      "dfs.storage.policy.satisfier.queue.limit";
+  public static final int  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_DEFAULT =
+      1000;
+  public static final String DFS_SPS_WORK_MULTIPLIER_PER_ITERATION =
+      "dfs.storage.policy.satisfier.work.multiplier.per.iteration";
+  public static final int DFS_SPS_WORK_MULTIPLIER_PER_ITERATION_DEFAULT =
+      1;
   public static final String DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY =
       "dfs.storage.policy.satisfier.recheck.timeout.millis";
   public static final int DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_DEFAULT =
