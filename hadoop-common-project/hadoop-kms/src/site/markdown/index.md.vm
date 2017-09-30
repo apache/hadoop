@@ -80,6 +80,8 @@ The password file is looked up in the Hadoop's configuration directory via the c
 
 NOTE: You need to restart the KMS for the configuration changes to take effect.
 
+NOTE: The KMS server can choose any `KeyProvider` implementation as the backing provider. The example here uses a JavaKeyStoreProvider, which should only be used for experimental purposes and never be used in production. For detailed usage and caveats of JavaKeyStoreProvider, please see [Keystore Passwords section of the Credential Provider API](../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html#Keystore_Passwords).
+
 $H3 KMS HTTP Configuration
 
 KMS pre-configures the HTTP port to 9600.
