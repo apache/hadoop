@@ -27,7 +27,7 @@ import static org.apache.hadoop.fs.azure.SecureStorageInterfaceImpl.KEY_USE_CONT
  * to access storage.
  */
 public class TestNativeAzureFSAuthWithBlobSpecificKeys
-    extends TestNativeAzureFileSystemAuthorizationWithOwner {
+    extends TestNativeAzureFileSystemAuthorization {
 
   @Override
   public Configuration getConfiguration() {

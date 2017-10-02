@@ -20,12 +20,14 @@ package org.apache.hadoop.fs.azure;
 
 import java.io.FileNotFoundException;
 import java.security.PrivilegedExceptionAction;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -39,7 +41,7 @@ import org.junit.rules.ExpectedException;
 import com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * Test class to hold all WASB authorization tests.
@@ -49,6 +51,13 @@ public class TestNativeAzureFileSystemAuthorization
 
   @VisibleForTesting
   protected MockWasbAuthorizerImpl authorizer;
+
+  @VisibleForTesting
+  protected static final short STICKYBIT_PERMISSION_CONSTANT = 1700;
+  @VisibleForTesting
+  protected static final String READ = WasbAuthorizationOperations.READ.toString();
+  @VisibleForTesting
+  protected static final String WRITE = WasbAuthorizationOperations.WRITE.toString();
 
   @Override
   public Configuration getConfiguration() {
@@ -85,14 +94,16 @@ public class TestNativeAzureFileSystemAuthorization
   /**
    * Setup up permissions to allow a recursive delete for cleanup purposes.
    */
-  protected void allowRecursiveDelete(NativeAzureFileSystem fs, String path) {
+  protected void allowRecursiveDelete(NativeAzureFileSystem fs, String path)
+      throws IOException {
 
     int index = path.lastIndexOf('/');
     String parent = (index == 0) ? "/" : path.substring(0, index);
 
     authorizer.deleteAllAuthRules();
-    authorizer.addAuthRule(parent, WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule((path.endsWith("*") ? path : path+"*"), WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRule(parent, WRITE, getCurrentUserShortName(), true);
+    authorizer.addAuthRule((path.endsWith("*") ? path : path+"*"), WRITE,
+        getCurrentUserShortName(), true);
     fs.updateWasbAuthorizer(authorizer);
   }
 
@@ -106,7 +117,14 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
-   * Positive test to verify Create access check
+   * get current user short name for user context
+   */
+  protected String getCurrentUserShortName() throws IOException {
+    return UserGroupInformation.getCurrentUser().getShortUserName();
+  }
+
+  /**
+   * Positive test to verify Create access check.
    * The file is created directly under an existing folder.
    * No intermediate folders need to be created.
    * @throws Throwable
@@ -117,8 +135,8 @@ public class TestNativeAzureFileSystemAuthorization
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner("/", READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -143,9 +161,9 @@ public class TestNativeAzureFileSystemAuthorization
     Path parentDir = new Path("/testCreateAccessCheckPositive/1/2/3");
     Path testPath = new Path(parentDir, "test.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -172,9 +190,9 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("create", testPath);
 
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -198,9 +216,9 @@ public class TestNativeAzureFileSystemAuthorization
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), READ.toString(), true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -226,7 +244,7 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("create", testPath);
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), false);
+    authorizer.addAuthRuleForOwner("/", WRITE, false);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -250,8 +268,8 @@ public class TestNativeAzureFileSystemAuthorization
     Path intermediateFolders = new Path(parentDir, "1/2/3/");
     Path testPath = new Path(intermediateFolders, "test.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -277,8 +295,8 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("liststatus", testPath);
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), false);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), READ, false);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -302,9 +320,10 @@ public class TestNativeAzureFileSystemAuthorization
     Path srcPath = new Path(parentDir, "test1.dat");
     Path dstPath = new Path(parentDir, "test2.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parentDir */
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true); /* for rename */
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    /* to create parentDir */
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    /* for rename */
+    authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE, true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -333,9 +352,9 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("rename", srcPath);
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dir */
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), false);
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    /* to create parent dir */
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE, false);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -365,11 +384,11 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("rename", dstPath);
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dir */
-    authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(parentDstDir.toString(), WasbAuthorizationOperations.WRITE.toString(), false);
-    authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(parentDstDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true); /* to create parent dir */
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), WRITE, false);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -396,11 +415,11 @@ public class TestNativeAzureFileSystemAuthorization
     Path parentDstDir = new Path("/testRenameAccessCheckPositiveDst");
     Path dstPath = new Path(parentDstDir, "test2.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); /* to create parent dirs */
-    authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(parentDstDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(parentSrcDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(parentDstDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true); /* to create parent dirs */
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -429,8 +448,8 @@ public class TestNativeAzureFileSystemAuthorization
     Path parentDir = new Path("/testReadAccessCheckPositive");
     Path testPath = new Path(parentDir, "test.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     FSDataInputStream inputStream = null;
@@ -470,8 +489,8 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("read", testPath);
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), false);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), READ, false);
     fs.updateWasbAuthorizer(authorizer);
 
     FSDataInputStream inputStream = null;
@@ -507,8 +526,8 @@ public class TestNativeAzureFileSystemAuthorization
     Path parentDir = new Path("/");
     Path testPath = new Path(parentDir, "test.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
     try {
       fs.create(testPath);
@@ -532,8 +551,8 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("delete", testPath);
 
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
     try {
       fs.create(testPath);
@@ -542,8 +561,8 @@ public class TestNativeAzureFileSystemAuthorization
 
       /* Remove permissions for delete to force failure */
       authorizer.deleteAllAuthRules();
-      authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), false);
-      authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+      authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE, false);
+      authorizer.addAuthRuleForOwner(parentDir.toString(), READ, true);
       fs.updateWasbAuthorizer(authorizer);
 
       fs.delete(testPath, false);
@@ -551,8 +570,8 @@ public class TestNativeAzureFileSystemAuthorization
     finally {
       /* Restore permissions to force a successful delete */
       authorizer.deleteAllAuthRules();
-      authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-      authorizer.addAuthRule(parentDir.toString(), WasbAuthorizationOperations.READ.toString(), true);
+      authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE, true);
+      authorizer.addAuthRuleForOwner(parentDir.toString(), READ, true);
       fs.updateWasbAuthorizer(authorizer);
 
       fs.delete(testPath, false);
@@ -572,11 +591,11 @@ public class TestNativeAzureFileSystemAuthorization
     Path childPath = new Path(parentDir, "1/2");
     Path testPath = new Path(childPath, "test.dat");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true); // for create and delete
-    authorizer.addAuthRule(childPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule("/testDeleteIntermediateFolder*",
-        WasbAuthorizationOperations.WRITE.toString(), true); // for recursive delete
+    authorizer.addAuthRuleForOwner("/", WRITE, true); // for create and delete
+    authorizer.addAuthRuleForOwner(childPath.toString(), READ, true);
+    authorizer.addAuthRuleForOwner("/", READ, true);
+    authorizer.addAuthRuleForOwner("/testDeleteIntermediateFolder*",
+        WRITE, true); // for recursive delete
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -592,6 +611,365 @@ public class TestNativeAzureFileSystemAuthorization
   }
 
   /**
+   * Test to verify access check failure leaves intermediate folders undeleted.
+   * @throws Throwable
+   */
+  @Test
+  public void testDeleteAuthCheckFailureLeavesFilesUndeleted() throws Throwable {
+
+    Path parentDir = new Path("/testDeleteAuthCheckFailureLeavesFilesUndeleted");
+    Path testPath1 = new Path(parentDir, "child1/test.dat");
+    Path testPath2 = new Path(parentDir, "child2/test.dat");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner("/testDeleteAuthCheckFailureLeavesFilesUndeleted*",
+        WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.create(testPath1);
+      fs.create(testPath2);
+      ContractTestUtils.assertPathExists(fs, "testPath1 was not created", testPath1);
+      ContractTestUtils.assertPathExists(fs, "testPath2 was not created", testPath2);
+
+      // revoke write on one of the child folders
+      authorizer.deleteAllAuthRules();
+      authorizer.addAuthRuleForOwner("/", WRITE, true);
+      authorizer.addAuthRuleForOwner("/testDeleteAuthCheckFailureLeavesFilesUndeleted",
+        WRITE, true);
+      authorizer.addAuthRuleForOwner("/testDeleteAuthCheckFailureLeavesFilesUndeleted/child2",
+        WRITE, true);
+      authorizer.addAuthRuleForOwner("/testDeleteAuthCheckFailureLeavesFilesUndeleted/child1",
+          WRITE, false);
+
+      assertFalse(fs.delete(parentDir, true));
+
+      // Assert that only child2 contents are deleted
+      ContractTestUtils.assertPathExists(fs, "child1 is deleted!", testPath1);
+      ContractTestUtils.assertPathDoesNotExist(fs, "child2 exists after deletion!", testPath2);
+      ContractTestUtils.assertPathDoesNotExist(fs, "child2 exists after deletion!",
+          new Path("/testDeleteAuthCheckFailureLeavesFilesUndeleted/childPath2"));
+      ContractTestUtils.assertPathExists(fs, "parentDir is deleted!", parentDir);
+
+    }
+    finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Positive test to verify file delete with sticky bit on parent.
+   * @throws Throwable
+   */
+  @Test
+  public void testSingleFileDeleteWithStickyBitPositive() throws Throwable {
+
+    Path parentDir = new Path("/testSingleFileDeleteWithStickyBitPositive");
+    Path testPath = new Path(parentDir, "test.dat");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner("/testSingleFileDeleteWithStickyBitPositive",
+        WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.create(testPath);
+      ContractTestUtils.assertPathExists(fs, "testPath was not created", testPath);
+
+      // set stickybit on parent directory
+      fs.setPermission(parentDir, new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+
+      assertTrue(fs.delete(testPath, true));
+      ContractTestUtils.assertPathDoesNotExist(fs,
+        "testPath exists after deletion!", testPath);
+    }
+    finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Negative test to verify file delete fails when sticky bit is set on parent
+   * and non-owner user performs delete
+   * @throws Throwable
+   */
+  @Test
+  public void testSingleFileDeleteWithStickyBitNegative() throws Throwable {
+
+    final Path parentDir = new Path("/testSingleFileDeleteWithStickyBitNegative");
+    final Path testPath = new Path(parentDir, "test.dat");
+
+    expectedEx.expect(WasbAuthorizationException.class);
+    expectedEx.expectMessage(String.format("%s has sticky bit set. File %s cannot be deleted.",
+        parentDir.toString(), testPath.toString()));
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner("/testSingleFileDeleteWithStickyBitNegative",
+        WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.create(testPath);
+      ContractTestUtils.assertPathExists(fs, "testPath was not created", testPath);
+      // set stickybit on parent directory
+      fs.setPermission(parentDir, new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+
+      UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
+          "dummyUser", new String[] {"dummygroup"});
+
+      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          authorizer.addAuthRule(parentDir.toString(), WRITE,
+              getCurrentUserShortName(), true);
+          fs.delete(testPath, true);
+          return null;
+        }
+      });
+    }
+    finally {
+      ContractTestUtils.assertPathExists(fs, "testPath should not be deleted!", testPath);
+
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Positive test to verify file and folder delete succeeds with stickybit
+   * when the owner of the files deletes the file.
+   * @throws Throwable
+   */
+  @Test
+  public void testRecursiveDeleteSucceedsWithStickybit() throws Throwable {
+
+    final Path parentDir = new Path("/testRecursiveDeleteSucceedsWithStickybit");
+    final Path testFilePath = new Path(parentDir, "child/test.dat");
+    final Path testFolderPath = new Path(parentDir, "child/testDirectory");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner("/testRecursiveDeleteSucceedsWithStickybit*",
+        WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.create(testFilePath);
+      ContractTestUtils.assertPathExists(fs, "file was not created", testFilePath);
+      fs.mkdirs(testFolderPath);
+      ContractTestUtils.assertPathExists(fs, "folder was not created", testFolderPath);
+      // set stickybit on child directory
+      fs.setPermission(new Path(parentDir, "child"),
+        new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+      // perform delete as owner of the files
+      assertTrue(fs.delete(parentDir, true));
+      ContractTestUtils.assertPathDoesNotExist(fs, "parentDir exists after deletion!", parentDir);
+    }
+    finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Test to verify delete fails for child files and folders when
+   * non-owner user performs delete and stickybit is set on parent
+   * @throws Throwable
+   */
+  @Test
+  public void testRecursiveDeleteFailsWithStickybit() throws Throwable {
+
+    final Path parentDir = new Path("/testRecursiveDeleteFailsWithStickybit");
+    Path testFilePath = new Path(parentDir, "child/test.dat");
+    Path testFolderPath = new Path(parentDir, "child/testDirectory");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner("/testRecursiveDeleteFailsWithStickybit*",
+        WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.create(testFilePath);
+      ContractTestUtils.assertPathExists(fs, "file was not created", testFilePath);
+      fs.mkdirs(testFolderPath);
+      ContractTestUtils.assertPathExists(fs, "folder was not created", testFolderPath);
+
+      // set stickybit on child directory
+      fs.setPermission(new Path(parentDir, "child"),
+        new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+
+      UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
+          "dummyUser", new String[] {"dummygroup"});
+
+      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          // Add auth rules for dummyuser
+          authorizer.addAuthRule("/", WRITE,
+              getCurrentUserShortName(), true);
+          authorizer.addAuthRule("/testRecursiveDeleteFailsWithStickybit*",
+              WRITE, getCurrentUserShortName(), true);
+
+          assertFalse(fs.delete(parentDir, true));
+          return null;
+        }
+      });
+
+      ContractTestUtils.assertPathExists(fs, "parentDir is deleted!", parentDir);
+      ContractTestUtils.assertPathExists(fs, "file is deleted!", testFilePath);
+      ContractTestUtils.assertPathExists(fs, "folder is deleted!", testFolderPath);
+    }
+    finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Test delete scenario where sticky bit check leaves files/folders not owned
+   * by a specific user intact and the files owned by him/her are deleted
+   * @throws Throwable
+   */
+  @Test
+  public void testDeleteSucceedsForOnlyFilesOwnedByUserWithStickybitSet()
+    throws Throwable {
+
+    final Path parentDir = new Path("/testDeleteSucceedsForOnlyFilesOwnedByUserWithStickybitSet");
+    final Path testFilePath = new Path(parentDir, "test.dat");
+    final Path testFolderPath = new Path(parentDir, "testDirectory");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(
+        "/testDeleteSucceedsForOnlyFilesOwnedByUserWithStickybitSet*",
+        WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.create(testFilePath);
+      ContractTestUtils.assertPathExists(fs, "file was not created", testFilePath);
+
+      fs.setPermission(parentDir, new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+
+      UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
+          "dummyuser", new String[] {"dummygroup"});
+      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          authorizer.addAuthRule("/", WRITE,
+              getCurrentUserShortName(), true);
+          authorizer.addAuthRule("/testDeleteSucceedsForOnlyFilesOwnedByUserWithStickybitSet*",
+              WRITE, getCurrentUserShortName(), true);
+
+          fs.create(testFolderPath); // the folder will have owner as dummyuser
+          ContractTestUtils.assertPathExists(fs, "folder was not created", testFolderPath);
+          assertFalse(fs.delete(parentDir, true));
+
+          ContractTestUtils.assertPathDoesNotExist(fs, "folder should have been deleted!",
+            testFolderPath);
+          ContractTestUtils.assertPathExists(fs, "parentDir is deleted!", parentDir);
+          ContractTestUtils.assertPathExists(fs, "file is deleted!", testFilePath);
+          return null;
+        }
+      });
+    }
+    finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Test delete scenario where sticky bit is set and the owner of parent
+   * directory can delete child files/folders which he does not own.
+   * This is according to the sticky bit behaviour specified in hdfs permission
+   * guide which is as follows - The sticky bit can be set on directories,
+   * preventing anyone except the superuser, directory owner or file owner
+   * from deleting or moving the files within the directory
+   * @throws Throwable
+   */
+  @Test
+  public void testDeleteSucceedsForParentDirectoryOwnerUserWithStickybit() throws Throwable {
+
+    final Path parentDir = new Path("/testDeleteSucceedsForParentDirectoryOwnerUserWithStickybit");
+    final Path testFilePath = new Path(parentDir, "test.dat");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(
+        "/testDeleteSucceedsForParentDirectoryOwnerUserWithStickybit*",
+        WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      // create folder with owner as current user
+      fs.mkdirs(parentDir);
+      ContractTestUtils.assertPathExists(fs, "folder was not created", parentDir);
+
+      // create child with owner as dummyUser
+      UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
+          "dummyUser", new String[] {"dummygroup"});
+      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          authorizer.addAuthRule("/testDeleteSucceedsForParentDirectoryOwnerUserWithStickybit",
+              WRITE, getCurrentUserShortName(), true);
+          fs.create(testFilePath);
+          ContractTestUtils.assertPathExists(fs, "file was not created", testFilePath);
+
+          fs.setPermission(parentDir,
+            new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+          return null;
+        }
+      });
+
+      // invoke delete as current user
+      assertTrue(fs.delete(parentDir, true));
+      ContractTestUtils.assertPathDoesNotExist(fs, "parentDir is not deleted!", parentDir);
+      ContractTestUtils.assertPathDoesNotExist(fs, "file is not deleted!", testFilePath);
+    }
+    finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Test to verify delete of root succeeds with proper permissions and
+   * leaves root after delete.
+   * @throws Throwable
+   */
+  @Test
+  public void testDeleteScenarioForRoot() throws Throwable {
+    Path rootPath = new Path("/");
+    Path parentDir = new Path("/testDeleteScenarioForRoot");
+    Path testPath1 = new Path(parentDir, "child1/test.dat");
+    Path testPath2 = new Path(parentDir, "child2/testFolder");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner("/testDeleteScenarioForRoot*",
+            WRITE, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.create(testPath1);
+      fs.create(testPath2);
+      ContractTestUtils.assertPathExists(fs, "testPath1 was not created", testPath1);
+      ContractTestUtils.assertPathExists(fs, "testPath2 was not created", testPath2);
+
+      assertFalse(fs.delete(rootPath, true));
+
+      ContractTestUtils.assertPathDoesNotExist(fs, "file exists after deletion!", testPath1);
+      ContractTestUtils.assertPathDoesNotExist(fs, "folder exists after deletion!", testPath2);
+      ContractTestUtils.assertPathDoesNotExist(fs, "parentDir exists after deletion!", parentDir);
+      ContractTestUtils.assertPathExists(fs, "Root should not have been deleted!", rootPath);
+    }
+    finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
    * Positive test for getFileStatus.
    * @throws Throwable
    */
@@ -599,7 +977,7 @@ public class TestNativeAzureFileSystemAuthorization
   public void testGetFileStatusPositive() throws Throwable {
 
     Path testPath = new Path("/");
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", READ, true);
     ContractTestUtils.assertIsDirectory(fs, testPath);
   }
 
@@ -612,9 +990,9 @@ public class TestNativeAzureFileSystemAuthorization
 
     Path testPath = new Path("/testMkdirsAccessCheckPositive/1/2/3");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -636,9 +1014,9 @@ public class TestNativeAzureFileSystemAuthorization
 
     Path testPath = new Path("/testMkdirsWithExistingHierarchyCheckPositive1");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -647,8 +1025,8 @@ public class TestNativeAzureFileSystemAuthorization
 
       /* Don't need permissions to create a directory that already exists */
       authorizer.deleteAllAuthRules();
-      authorizer.addAuthRule(testPath.getParent().toString(),
-          WasbAuthorizationOperations.READ.toString(), true); // for assert
+      authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+          READ, true); // for assert
 
       fs.mkdirs(testPath);
       ContractTestUtils.assertIsDirectory(fs, testPath);
@@ -667,18 +1045,18 @@ public class TestNativeAzureFileSystemAuthorization
     Path childPath2 = new Path(childPath1, "2");
     Path childPath3 = new Path(childPath2, "3");
 
-    authorizer.addAuthRule("/",
-        WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner("/",
+        WRITE, true);
 
-    authorizer.addAuthRule(childPath1.toString(),
-        WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner(childPath1.toString(),
+        WRITE, true);
 
-    authorizer.addAuthRule(childPath1.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(childPath3.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner(childPath1.getParent().toString(),
+        READ, true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ, true);
+    authorizer.addAuthRuleForOwner(childPath3.getParent().toString(),
+        READ, true);
 
     fs.updateWasbAuthorizer(authorizer);
 
@@ -713,7 +1091,7 @@ public class TestNativeAzureFileSystemAuthorization
 
     setExpectedFailureMessage("mkdirs", testPath);
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), false);
+    authorizer.addAuthRuleForOwner("/", WRITE, false);
     fs.updateWasbAuthorizer(authorizer);
 
     try {
@@ -735,11 +1113,94 @@ public class TestNativeAzureFileSystemAuthorization
 
     Path testPath = new Path("/");
 
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     Path testPathWithTripleSlash = new Path("wasb:///" + testPath);
     fs.listStatus(testPathWithTripleSlash);
+  }
+
+    /**
+   * Test case when owner matches current user
+   */
+  @Test
+  public void testOwnerPermissionPositive() throws Throwable {
+
+    Path parentDir = new Path("/testOwnerPermissionPositive");
+    Path testPath = new Path(parentDir, "test.data");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE, true);
+    // additional rule used for assertPathExists
+    authorizer.addAuthRuleForOwner(parentDir.toString(), READ, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      // creates parentDir with owner as current user
+      fs.mkdirs(parentDir);
+      ContractTestUtils.assertPathExists(fs, "parentDir does not exist", parentDir);
+
+      fs.create(testPath);
+      fs.getFileStatus(testPath);
+      ContractTestUtils.assertPathExists(fs, "testPath does not exist", testPath);
+
+      fs.delete(parentDir, true);
+      ContractTestUtils.assertPathDoesNotExist(fs, "testPath does not exist", testPath);
+
+    } finally {
+      allowRecursiveDelete(fs, parentDir.toString());
+      fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Negative test case for owner does not match current user
+   */
+  @Test
+  public void testOwnerPermissionNegative() throws Throwable {
+
+    final Path parentDir = new Path("/testOwnerPermissionNegative");
+    final Path childDir = new Path(parentDir, "childDir");
+
+    setExpectedFailureMessage("mkdirs", childDir);
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDir.toString(), WRITE, true);
+
+    fs.updateWasbAuthorizer(authorizer);
+
+    try{
+      fs.mkdirs(parentDir);
+      UserGroupInformation ugiSuperUser = UserGroupInformation.createUserForTesting(
+          "testuser", new String[] {});
+
+      ugiSuperUser.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+          fs.mkdirs(childDir);
+          return null;
+        }
+      });
+
+    } finally {
+       allowRecursiveDelete(fs, parentDir.toString());
+       fs.delete(parentDir, true);
+    }
+  }
+
+  /**
+   * Test to verify that retrieving owner information does not
+   * throw when file/folder does not exist
+   */
+  @Test
+  public void testRetrievingOwnerDoesNotFailWhenFileDoesNotExist()
+    throws Throwable {
+
+    Path testdirectory = new Path("/testDirectory123454565");
+
+    String owner = fs.getOwnerForPath(testdirectory);
+    assertEquals("", owner);
   }
 
   /**
@@ -752,8 +1213,8 @@ public class TestNativeAzureFileSystemAuthorization
 
     final Path testPath = new Path("/testSetOwnerNegative");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     String owner = null;
@@ -787,9 +1248,9 @@ public class TestNativeAzureFileSystemAuthorization
 
     final Path testPath = new Path("/testSetOwnerPositive");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     final String newOwner = "user2";
@@ -834,9 +1295,9 @@ public class TestNativeAzureFileSystemAuthorization
     final Path testPath = new Path("/testSetOwnerPositiveWildcard");
 
     authorizer.init(conf);
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     final String newOwner = "newowner";
@@ -882,9 +1343,9 @@ public class TestNativeAzureFileSystemAuthorization
     final Path testPath = new Path("/testSetOwnerFailsForIllegalSetup");
 
     authorizer.init(conf);
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(testPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(testPath.getParent().toString(),
+        READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     String owner = null;
@@ -922,13 +1383,13 @@ public class TestNativeAzureFileSystemAuthorization
     Path srcFilePath = new Path(srcPath, "file.txt");
     Path dstFilePath = new Path(dstPath, "file.txt");
 
-    authorizer.addAuthRule("/", WasbAuthorizationOperations.WRITE.toString(), true);
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
     /* Remove nextline after fixing createInternal from FolderRenamePending */
-    authorizer.addAuthRule(testPath.toString(), WasbAuthorizationOperations.WRITE.toString(), true);
-    authorizer.addAuthRule(srcPath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
-    authorizer.addAuthRule(dstFilePath.getParent().toString(),
-        WasbAuthorizationOperations.READ.toString(), true);
+    authorizer.addAuthRuleForOwner(testPath.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(srcPath.getParent().toString(),
+        READ, true);
+    authorizer.addAuthRuleForOwner(dstFilePath.getParent().toString(),
+        READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
     try {

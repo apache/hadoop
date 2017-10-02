@@ -28,7 +28,7 @@ import static org.apache.hadoop.fs.azure.CachingAuthorizer.KEY_AUTH_SERVICE_CACH
  * Test class to hold all WASB authorization caching related tests.
  */
 public class TestNativeAzureFSAuthorizationCaching
-    extends TestNativeAzureFileSystemAuthorizationWithOwner {
+    extends TestNativeAzureFileSystemAuthorization {
 
   private static final int DUMMY_TTL_VALUE = 5000;
 
