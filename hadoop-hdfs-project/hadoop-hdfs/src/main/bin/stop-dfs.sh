@@ -102,7 +102,7 @@ fi
 
 JOURNAL_NODES=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -journalNodes 2>&-)
 
-if [[ "{$JOURNAL_NODES-}" != $'\n' ]]; then
+if [[ "${#JOURNAL_NODES}" != 0 ]]; then
   echo "Stopping journal nodes [${JOURNAL_NODES}]"
 
   hadoop_uservar_su hdfs journalnode "${HADOOP_HDFS_HOME}/bin/hdfs" \
