@@ -111,6 +111,8 @@
 
     <menu name="Ozone" inherit="top">
       <item name="Getting Started" href="hadoop-project-dist/hadoop-hdfs/OzoneGettingStarted.html"/>
+      <item name="Ozone Overview"
+            href="hadoop-project-dist/hadoop-hdfs/OzoneOverview.html"/>
       <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/OzoneCommandShell.html"/>
       <item name="Ozone Rest API" href="hadoop-project-dist/hadoop-hdfs/OzoneRest.html"/>
       <item name="Ozone Metrics" href="hadoop-project-dist/hadoop-hdfs/OzoneMetrics.html"/>
