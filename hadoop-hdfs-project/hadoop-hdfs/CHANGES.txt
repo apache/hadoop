@@ -28,6 +28,8 @@ Release 2.6.6 - UNRELEASED
 
     HDFS-10270. TestJMXGet:testNameNode() fails. Contributed by Gergely Novák.
 
+    HDFS-9743. Fix TestLazyPersistFiles#testFallbackToDiskFull (kihwal)
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES
