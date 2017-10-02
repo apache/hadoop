@@ -503,6 +503,8 @@ Release 2.7.3 - 2016-08-25
 
     HDFS-8709. Clarify automatic sync in FSEditLog#logEdit. (wang)
 
+    HDFS-8865. Improve quota initialization performance. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
