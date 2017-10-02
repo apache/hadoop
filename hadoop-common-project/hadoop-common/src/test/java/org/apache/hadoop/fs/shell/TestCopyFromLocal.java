@@ -115,10 +115,10 @@ public class TestCopyFromLocal {
     Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
     int numFiles = TestCopyFromLocal.initialize(dir);
     int maxThreads = Runtime.getRuntime().availableProcessors() * 2;
-    int randThreads = RandomUtils.nextInt(maxThreads);
-    int numActualThreads = randThreads == 0 ? 1 : randThreads;
-    String numThreads = Integer.toString(numActualThreads);
-    run(new TestMultiThreadedCopy(numActualThreads, numFiles), "-t", numThreads,
+    int randThreads = RandomUtils.nextInt(maxThreads - 1) + 1;
+    String numThreads = Integer.toString(randThreads);
+    run(new TestMultiThreadedCopy(randThreads,
+        randThreads == 1 ? 0 : numFiles), "-t", numThreads,
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
@@ -144,6 +144,7 @@ public class TestCopyFromLocal {
   }
 
   private class TestMultiThreadedCopy extends CopyFromLocal {
+    public static final String NAME = "testCopyFromLocal";
     private int expectedThreads;
     private int expectedCompletedTaskCount;
 
@@ -164,9 +165,9 @@ public class TestCopyFromLocal {
       // 2) There are no active tasks in the executor
       // 3) Executor has shutdown correctly
       ThreadPoolExecutor executor = getExecutor();
-      Assert.assertEquals(executor.getCompletedTaskCount(),
-          expectedCompletedTaskCount);
-      Assert.assertEquals(executor.getActiveCount(), 0);
+      Assert.assertEquals(expectedCompletedTaskCount,
+          executor.getCompletedTaskCount());
+      Assert.assertEquals(0, executor.getActiveCount());
       Assert.assertTrue(executor.isTerminated());
     }
   }
