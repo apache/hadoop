@@ -35,6 +35,8 @@ Release 2.7.5 - UNRELEASED
     TestRefreshUserMappings.testRefreshSuperUserGroupsConfiguration
     test failure. (Rakesh R via kihwal)
 
+    HDFS-8865. Improve quota initialization performance. Contributed by Kihwal Lee.
+
 Release 2.7.4 - 2017-08-04
 
   INCOMPATIBLE CHANGES
@@ -502,8 +504,6 @@ Release 2.7.3 - 2016-08-25
     exception. (xyao)
 
     HDFS-8709. Clarify automatic sync in FSEditLog#logEdit. (wang)
-
-    HDFS-8865. Improve quota initialization performance. (kihwal)
 
   OPTIMIZATIONS
 
