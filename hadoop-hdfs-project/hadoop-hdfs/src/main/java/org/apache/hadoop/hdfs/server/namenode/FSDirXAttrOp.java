@@ -184,6 +184,10 @@ class FSDirXAttrOp {
     return fsd.getAuditFileInfo(iip);
   }
 
+  /**
+   * Remove xattrs from the inode, and return the <em>removed</em> xattrs.
+   * @return the <em>removed</em> xattrs.
+   */
   static List<XAttr> unprotectedRemoveXAttrs(
       FSDirectory fsd, final INodesInPath iip, final List<XAttr> toRemove)
       throws IOException {
