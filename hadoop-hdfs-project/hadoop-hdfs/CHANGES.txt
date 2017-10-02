@@ -30,6 +30,8 @@ Release 2.6.6 - UNRELEASED
 
     HDFS-9743. Fix TestLazyPersistFiles#testFallbackToDiskFull (kihwal)
 
+    HDFS-8865. Improve quota initialization performance. Contributed by Kihwal Lee.
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES
@@ -60,8 +62,6 @@ Release 2.6.5 - 2016-10-08
 
     HDFS-10870. Wrong dfs.namenode.acls.enabled default in HdfsPermissionsGuide.apt.vm.
     (John Zhuge via lei)
-
-    HDFS-8865. Improve quota initialization performance. (kihwal)
 
   OPTIMIZATIONS
 
