@@ -24,7 +24,6 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Proxy;
@@ -107,7 +106,7 @@ public final class OzoneClientFactory {
     ClientProtocol proxy = (ClientProtocol) Proxy.newProxyInstance(
         OzoneClientInvocationHandler.class.getClassLoader(),
         new Class<?>[]{ClientProtocol.class}, clientHandler);
-    return new OzoneClient(proxy);
+    return new OzoneClient(configuration, proxy);
   }
 
   /**

@@ -54,11 +54,12 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_JSCSIRPC_ADDRESS_KEY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_JSCSI_PORT_DEFAULT;
-
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
+    .OZONE_KSM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_BIND_HOST_DEFAULT;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_PORT_DEFAULT;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
+    .OZONE_KSM_PORT_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
@@ -437,6 +438,16 @@ public final class OzoneClientUtils {
     } else {
       return Optional.of(port);
     }
+  }
+
+  /**
+   * Returns the cache value to be used for list calls.
+   * @param conf Configuration object
+   * @return list cache size
+   */
+  public static int getListCacheSize(Configuration conf) {
+    return conf.getInt(OzoneConfigKeys.OZONE_CLIENT_LIST_CACHE_SIZE,
+        OzoneConfigKeys.OZONE_CLIENT_LIST_CACHE_SIZE_DEFAULT);
   }
 
   /**

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 
 import java.io.Closeable;
@@ -75,11 +76,12 @@ public class OzoneClient implements Closeable {
   /**
    * Creates a new OzoneClient object, generally constructed
    * using {@link OzoneClientFactory}.
-   * @param proxy
+   * @param conf Configuration object
+   * @param proxy ClientProtocol proxy instance
    */
-  public OzoneClient(ClientProtocol proxy) {
+  public OzoneClient(Configuration conf, ClientProtocol proxy) {
     this.proxy = proxy;
-    this.objectStore = new ObjectStore(this.proxy);
+    this.objectStore = new ObjectStore(conf, this.proxy);
   }
 
   /**

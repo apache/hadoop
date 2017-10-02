@@ -32,7 +32,6 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -93,13 +92,15 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
-  public Iterator<OzoneVolume> listVolumes(String volumePrefix)
+  public List<OzoneVolume> listVolumes(String volumePrefix, String prevKey,
+                                       int maxListResult)
       throws IOException {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   @Override
-  public Iterator<OzoneVolume> listVolumes(String volumePrefix, String user)
+  public List<OzoneVolume> listVolumes(String user, String volumePrefix,
+                                       String prevKey, int maxListResult)
       throws IOException {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
@@ -164,8 +165,9 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
-  public Iterator<OzoneBucket> listBuckets(
-      String volumeName, String bucketPrefix) throws IOException {
+  public List<OzoneBucket> listBuckets(String volumeName, String bucketPrefix,
+                                       String prevBucket, int maxListResult)
+      throws IOException {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
 
@@ -190,8 +192,9 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
-  public Iterator<OzoneKey> listKeys(
-      String volumeName, String bucketName, String keyPrefix)
+  public List<OzoneKey> listKeys(String volumeName, String bucketName,
+                                 String keyPrefix, String prevKey,
+                                 int maxListResult)
       throws IOException {
     throw new UnsupportedOperationException("Not yet implemented.");
   }

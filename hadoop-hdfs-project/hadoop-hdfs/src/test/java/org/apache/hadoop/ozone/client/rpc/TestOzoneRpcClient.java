@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.client.rpc;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -45,6 +46,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,7 +63,7 @@ public class TestOzoneRpcClient {
   private static ObjectStore store = null;
 
   /**
-   * Create a MiniDFSCluster for testing.
+   * Create a MiniOzoneCluster for testing.
    * <p>
    * Ozone is made active by setting OZONE_ENABLED = true and
    * OZONE_HANDLER_TYPE_KEY = "distributed"
@@ -403,8 +405,248 @@ public class TestOzoneRpcClient {
     bucket.getKey(keyName);
   }
 
+  @Test
+  public void listVolumeTest() throws IOException, OzoneException {
+    String volBase = "vol-" + RandomStringUtils.randomNumeric(3);
+    //Create 10 volume vol-<random>-a-0-<random> to vol-<random>-a-9-<random>
+    String volBaseNameA = volBase + "-a-";
+    for(int i = 0; i < 10; i++) {
+      store.createVolume(
+          volBaseNameA + i + "-" + RandomStringUtils.randomNumeric(5));
+    }
+    //Create 10 volume vol-<random>-b-0-<random> to vol-<random>-b-9-<random>
+    String volBaseNameB = volBase + "-b-";
+    for(int i = 0; i < 10; i++) {
+      store.createVolume(
+          volBaseNameB + i + "-" + RandomStringUtils.randomNumeric(5));
+    }
+    Iterator<OzoneVolume> volIterator = store.listVolumes(volBase);
+    int totalVolumeCount = 0;
+    while(volIterator.hasNext()) {
+      volIterator.next();
+      totalVolumeCount++;
+    }
+    Assert.assertEquals(20, totalVolumeCount);
+    Iterator<OzoneVolume> volAIterator = store.listVolumes(volBaseNameA);
+    for(int i = 0; i < 10; i++) {
+      Assert.assertTrue(volAIterator.next().getName()
+          .startsWith(volBaseNameA + i + "-"));
+    }
+    Assert.assertFalse(volAIterator.hasNext());
+    Iterator<OzoneVolume> volBIterator = store.listVolumes(volBaseNameB);
+    for(int i = 0; i < 10; i++) {
+      Assert.assertTrue(volBIterator.next().getName()
+          .startsWith(volBaseNameB + i + "-"));
+    }
+    Assert.assertFalse(volBIterator.hasNext());
+    Iterator<OzoneVolume> iter = store.listVolumes(volBaseNameA + "1-");
+    Assert.assertTrue(iter.next().getName().startsWith(volBaseNameA + "1-"));
+    Assert.assertFalse(iter.hasNext());
+  }
+
+  @Test
+  public void listBucketTest()
+      throws IOException, OzoneException {
+    String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
+    String volumeB = "vol-b-" + RandomStringUtils.randomNumeric(5);
+    store.createVolume(volumeA);
+    store.createVolume(volumeB);
+    OzoneVolume volA = store.getVolume(volumeA);
+    OzoneVolume volB = store.getVolume(volumeB);
+
+    //Create 10 buckets in  vol-a-<random> and 10 in vol-b-<random>
+    String bucketBaseNameA = "bucket-a-";
+    for(int i = 0; i < 10; i++) {
+      volA.createBucket(
+          bucketBaseNameA + i + "-" + RandomStringUtils.randomNumeric(5));
+      volB.createBucket(
+          bucketBaseNameA + i + "-" + RandomStringUtils.randomNumeric(5));
+    }
+    //Create 10 buckets in vol-a-<random> and 10 in vol-b-<random>
+    String bucketBaseNameB = "bucket-b-";
+    for(int i = 0; i < 10; i++) {
+      volA.createBucket(
+          bucketBaseNameB + i + "-" + RandomStringUtils.randomNumeric(5));
+      volB.createBucket(
+          bucketBaseNameB + i + "-" + RandomStringUtils.randomNumeric(5));
+    }
+    Iterator<OzoneBucket> volABucketIter =
+        volA.listBuckets("bucket-");
+    int volABucketCount = 0;
+    while(volABucketIter.hasNext()) {
+      volABucketIter.next();
+      volABucketCount++;
+    }
+    Assert.assertEquals(20, volABucketCount);
+    Iterator<OzoneBucket> volBBucketIter =
+        volA.listBuckets("bucket-");
+    int volBBucketCount = 0;
+    while(volBBucketIter.hasNext()) {
+      volBBucketIter.next();
+      volBBucketCount++;
+    }
+    Assert.assertEquals(20, volBBucketCount);
+
+    Iterator<OzoneBucket> volABucketAIter =
+        volA.listBuckets("bucket-a-");
+    int volABucketACount = 0;
+    while(volABucketAIter.hasNext()) {
+      volABucketAIter.next();
+      volABucketACount++;
+    }
+    Assert.assertEquals(10, volABucketACount);
+    Iterator<OzoneBucket> volBBucketBIter =
+        volA.listBuckets("bucket-b-");
+    int volBBucketBCount = 0;
+    while(volBBucketBIter.hasNext()) {
+      volBBucketBIter.next();
+      volBBucketBCount++;
+    }
+    Assert.assertEquals(10, volBBucketBCount);
+    Iterator<OzoneBucket> volABucketBIter = volA.listBuckets("bucket-b-");
+    for(int i = 0; i < 10; i++) {
+      Assert.assertTrue(volABucketBIter.next().getName()
+          .startsWith(bucketBaseNameB + i + "-"));
+    }
+    Assert.assertFalse(volABucketBIter.hasNext());
+    Iterator<OzoneBucket> volBBucketAIter = volB.listBuckets("bucket-a-");
+    for(int i = 0; i < 10; i++) {
+      Assert.assertTrue(volBBucketAIter.next().getName()
+          .startsWith(bucketBaseNameA + i + "-"));
+    }
+    Assert.assertFalse(volBBucketAIter.hasNext());
+
+  }
+
+  @Test
+  public void listKeyTest()
+      throws IOException, OzoneException {
+    String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
+    String volumeB = "vol-b-" + RandomStringUtils.randomNumeric(5);
+    String bucketA = "buc-a-" + RandomStringUtils.randomNumeric(5);
+    String bucketB = "buc-b-" + RandomStringUtils.randomNumeric(5);
+    store.createVolume(volumeA);
+    store.createVolume(volumeB);
+    OzoneVolume volA = store.getVolume(volumeA);
+    OzoneVolume volB = store.getVolume(volumeB);
+    volA.createBucket(bucketA);
+    volA.createBucket(bucketB);
+    volB.createBucket(bucketA);
+    volB.createBucket(bucketB);
+    OzoneBucket volAbucketA = volA.getBucket(bucketA);
+    OzoneBucket volAbucketB = volA.getBucket(bucketB);
+    OzoneBucket volBbucketA = volB.getBucket(bucketA);
+    OzoneBucket volBbucketB = volB.getBucket(bucketB);
+
+    /*
+    Create 10 keys in  vol-a-<random>/buc-a-<random>,
+    vol-a-<random>/buc-b-<random>, vol-b-<random>/buc-a-<random> and
+    vol-b-<random>/buc-b-<random>
+     */
+    String keyBaseA = "key-a-";
+    for (int i = 0; i < 10; i++) {
+      byte[] value = RandomStringUtils.randomAscii(10240).getBytes();
+      OzoneOutputStream one = volAbucketA.createKey(
+          keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      one.write(value);
+      one.close();
+      OzoneOutputStream two = volAbucketB.createKey(
+          keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      two.write(value);
+      two.close();
+      OzoneOutputStream three = volBbucketA.createKey(
+          keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      three.write(value);
+      three.close();
+      OzoneOutputStream four = volBbucketB.createKey(
+          keyBaseA + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      four.write(value);
+      four.close();
+    }
+    /*
+    Create 10 keys in  vol-a-<random>/buc-a-<random>,
+    vol-a-<random>/buc-b-<random>, vol-b-<random>/buc-a-<random> and
+    vol-b-<random>/buc-b-<random>
+     */
+    String keyBaseB = "key-b-";
+    for (int i = 0; i < 10; i++) {
+      byte[] value = RandomStringUtils.randomAscii(10240).getBytes();
+      OzoneOutputStream one = volAbucketA.createKey(
+          keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      one.write(value);
+      one.close();
+      OzoneOutputStream two = volAbucketB.createKey(
+          keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      two.write(value);
+      two.close();
+      OzoneOutputStream three = volBbucketA.createKey(
+          keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      three.write(value);
+      three.close();
+      OzoneOutputStream four = volBbucketB.createKey(
+          keyBaseB + i + "-" + RandomStringUtils.randomNumeric(5),
+          value.length);
+      four.write(value);
+      four.close();
+    }
+    Iterator<OzoneKey> volABucketAIter =
+        volAbucketA.listKeys("key-");
+    int volABucketAKeyCount = 0;
+    while(volABucketAIter.hasNext()) {
+      volABucketAIter.next();
+      volABucketAKeyCount++;
+    }
+    Assert.assertEquals(20, volABucketAKeyCount);
+    Iterator<OzoneKey> volABucketBIter =
+        volAbucketB.listKeys("key-");
+    int volABucketBKeyCount = 0;
+    while(volABucketBIter.hasNext()) {
+      volABucketBIter.next();
+      volABucketBKeyCount++;
+    }
+    Assert.assertEquals(20, volABucketBKeyCount);
+    Iterator<OzoneKey> volBBucketAIter =
+        volBbucketA.listKeys("key-");
+    int volBBucketAKeyCount = 0;
+    while(volBBucketAIter.hasNext()) {
+      volBBucketAIter.next();
+      volBBucketAKeyCount++;
+    }
+    Assert.assertEquals(20, volBBucketAKeyCount);
+    Iterator<OzoneKey> volBBucketBIter =
+        volBbucketB.listKeys("key-");
+    int volBBucketBKeyCount = 0;
+    while(volBBucketBIter.hasNext()) {
+      volBBucketBIter.next();
+      volBBucketBKeyCount++;
+    }
+    Assert.assertEquals(20, volBBucketBKeyCount);
+    Iterator<OzoneKey> volABucketAKeyAIter =
+        volAbucketA.listKeys("key-a-");
+    int volABucketAKeyACount = 0;
+    while(volABucketAKeyAIter.hasNext()) {
+      volABucketAKeyAIter.next();
+      volABucketAKeyACount++;
+    }
+    Assert.assertEquals(10, volABucketAKeyACount);
+    Iterator<OzoneKey> volABucketAKeyBIter =
+        volAbucketA.listKeys("key-b-");
+    for(int i = 0; i < 10; i++) {
+      Assert.assertTrue(volABucketAKeyBIter.next().getName()
+          .startsWith("key-b-" + i + "-"));
+    }
+    Assert.assertFalse(volABucketBIter.hasNext());
+  }
+
   /**
-   * Close OzoneClient and shutdown MiniDFSCluster.
+   * Close OzoneClient and shutdown MiniOzoneCluster.
    */
   @AfterClass
   public static void shutdown() throws IOException {

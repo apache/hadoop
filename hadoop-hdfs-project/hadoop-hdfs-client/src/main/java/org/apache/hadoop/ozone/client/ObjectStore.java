@@ -19,9 +19,15 @@
 package org.apache.hadoop.ozone.client;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * ObjectStore class is responsible for the client operations that can be
@@ -36,11 +42,18 @@ public class ObjectStore {
   private final ClientProtocol proxy;
 
   /**
-   * Creates an instance of ObjectStore with the proxy.
-   * @param proxy ClientProtocol proxy
+   * Cache size to be used for listVolume calls.
    */
-  public ObjectStore(ClientProtocol proxy) {
+  private int listCacheSize;
+
+  /**
+   * Creates an instance of ObjectStore.
+   * @param conf Configuration object.
+   * @param proxy ClientProtocol proxy.
+   */
+  public ObjectStore(Configuration conf, ClientProtocol proxy) {
     this.proxy = proxy;
+    this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
   }
 
   /**
@@ -78,8 +91,39 @@ public class ObjectStore {
     Preconditions.checkNotNull(volumeName);
     OzoneClientUtils.verifyResourceName(volumeName);
     OzoneVolume volume = proxy.getVolumeDetails(volumeName);
-    volume.setClientProxy(proxy);
     return volume;
+  }
+
+
+  /**
+   * Returns Iterator to iterate over all the volumes in object store.
+   * The result can be restricted using volume prefix, will return all
+   * volumes if volume prefix is null.
+   *
+   * @param volumePrefix Volume prefix to match
+   * @return {@code Iterator<OzoneVolume>}
+   */
+  public Iterator<OzoneVolume> listVolumes(String volumePrefix)
+      throws IOException {
+    return new VolumeIterator(volumePrefix);
+  }
+
+  /**
+   * Returns Iterator to iterate over the List of volumes owned by a specific
+   * user. The result can be restricted using volume prefix, will return all
+   * volumes if volume prefix is null. If user is null, returns the volume of
+   * current user.
+   *
+   * @param user User Name
+   * @param volumePrefix Volume prefix to match
+   * @return {@code Iterator<OzoneVolume>}
+   */
+  public Iterator<OzoneVolume> listVolumes(String user, String volumePrefix)
+      throws IOException {
+    if(Strings.isNullOrEmpty(user)) {
+      user = UserGroupInformation.getCurrentUser().getShortUserName();
+    }
+    return new VolumeIterator(user, volumePrefix);
   }
 
   /**
@@ -92,4 +136,74 @@ public class ObjectStore {
     OzoneClientUtils.verifyResourceName(volumeName);
     proxy.deleteVolume(volumeName);
   }
+
+  /**
+   * An Iterator to iterate over {@link OzoneVolume} list.
+   */
+  private class VolumeIterator implements Iterator<OzoneVolume> {
+
+    private String user = null;
+    private String volPrefix = null;
+
+    private Iterator<OzoneVolume> currentIterator;
+    private OzoneVolume currentValue;
+
+    /**
+     * Creates an Iterator to iterate over all volumes in the cluster,
+     * which matches the volume prefix.
+     * @param volPrefix prefix to match
+     */
+    VolumeIterator(String volPrefix) {
+      this(null, volPrefix);
+    }
+
+    /**
+     * Creates an Iterator to iterate over all volumes of the user,
+     * which matches volume prefix.
+     * @param user user name
+     * @param volPrefix volume prefix to match
+     */
+    VolumeIterator(String user, String volPrefix) {
+      this.user = user;
+      this.volPrefix = volPrefix;
+      this.currentValue = null;
+      this.currentIterator = getNextListOfVolumes(null).iterator();
+    }
+
+    @Override
+    public boolean hasNext() {
+      if(!currentIterator.hasNext()) {
+        currentIterator = getNextListOfVolumes(
+            currentValue.getName()).iterator();
+      }
+      return currentIterator.hasNext();
+    }
+
+    @Override
+    public OzoneVolume next() {
+      if(hasNext()) {
+        currentValue = currentIterator.next();
+        return currentValue;
+      }
+      throw new NoSuchElementException();
+    }
+
+    /**
+     * Returns the next set of volume list using proxy.
+     * @param prevVolume previous volume, this will be excluded from the result
+     * @return {@code List<OzoneVolume>}
+     */
+    private List<OzoneVolume> getNextListOfVolumes(String prevVolume) {
+      try {
+        //if user is null, we do list of all volumes.
+        if(user != null) {
+          return proxy.listVolumes(user, volPrefix, prevVolume, listCacheSize);
+        }
+        return proxy.listVolumes(volPrefix, prevVolume, listCacheSize);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
 }

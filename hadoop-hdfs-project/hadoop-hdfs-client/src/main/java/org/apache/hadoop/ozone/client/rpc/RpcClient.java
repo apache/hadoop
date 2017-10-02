@@ -66,7 +66,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -81,14 +80,13 @@ public class RpcClient implements ClientProtocol {
   private static final Logger LOG =
       LoggerFactory.getLogger(RpcClient.class);
 
+  private final Configuration conf;
   private final StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private final KeySpaceManagerProtocolClientSideTranslatorPB
       keySpaceManagerClient;
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
-
-
   private final UserGroupInformation ugi;
   private final OzoneAcl.OzoneACLRights userRights;
   private final OzoneAcl.OzoneACLRights groupRights;
@@ -100,12 +98,12 @@ public class RpcClient implements ClientProtocol {
     */
   public RpcClient(Configuration conf) throws IOException {
     Preconditions.checkNotNull(conf);
+    this.conf = conf;
     this.ugi = UserGroupInformation.getCurrentUser();
     this.userRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_USER_RIGHTS,
         KSMConfigKeys.OZONE_KSM_USER_RIGHTS_DEFAULT);
     this.groupRights = conf.getEnum(KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS,
         KSMConfigKeys.OZONE_KSM_GROUP_RIGHTS_DEFAULT);
-
     long ksmVersion =
         RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
     InetSocketAddress ksmAddress = OzoneClientUtils
@@ -219,10 +217,15 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     Preconditions.checkNotNull(volumeName);
     KsmVolumeArgs volume = keySpaceManagerClient.getVolumeInfo(volumeName);
-    return new OzoneVolume(volume.getVolume(), volume.getAdminName(),
-        volume.getOwnerName(), volume.getQuotaInBytes(),
+    return new OzoneVolume(
+        conf,
+        this,
+        volume.getVolume(),
+        volume.getAdminName(),
+        volume.getOwnerName(),
+        volume.getQuotaInBytes(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
-        map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+            map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
   }
 
   @Override
@@ -238,15 +241,41 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
-  public Iterator<OzoneVolume> listVolumes(String volumePrefix)
+  public List<OzoneVolume> listVolumes(String volumePrefix, String prevVolume,
+                                       int maxListResult)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    List<KsmVolumeArgs> volumes = keySpaceManagerClient.listAllVolumes(
+        volumePrefix, prevVolume, maxListResult);
+
+    return volumes.stream().map(volume -> new OzoneVolume(
+        conf,
+        this,
+        volume.getVolume(),
+        volume.getAdminName(),
+        volume.getOwnerName(),
+        volume.getQuotaInBytes(),
+        volume.getAclMap().ozoneAclGetProtobuf().stream().
+            map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
+        .collect(Collectors.toList());
   }
 
   @Override
-  public Iterator<OzoneVolume> listVolumes(String volumePrefix, String user)
+  public List<OzoneVolume> listVolumes(String user, String volumePrefix,
+                                       String prevVolume, int maxListResult)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    List<KsmVolumeArgs> volumes = keySpaceManagerClient.listVolumeByUser(
+        user, volumePrefix, prevVolume, maxListResult);
+
+    return volumes.stream().map(volume -> new OzoneVolume(
+        conf,
+        this,
+        volume.getVolume(),
+        volume.getAdminName(),
+        volume.getOwnerName(),
+        volume.getQuotaInBytes(),
+        volume.getAclMap().ozoneAclGetProtobuf().stream().
+            map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -371,17 +400,32 @@ public class RpcClient implements ClientProtocol {
     Preconditions.checkNotNull(bucketName);
     KsmBucketInfo bucketArgs =
         keySpaceManagerClient.getBucketInfo(volumeName, bucketName);
-    return new OzoneBucket(bucketArgs.getVolumeName(),
-                           bucketArgs.getBucketName(),
-                           bucketArgs.getAcls(),
-                           bucketArgs.getStorageType(),
-                           bucketArgs.getIsVersionEnabled());
+    return new OzoneBucket(
+        conf,
+        this,
+        bucketArgs.getVolumeName(),
+        bucketArgs.getBucketName(),
+        bucketArgs.getAcls(),
+        bucketArgs.getStorageType(),
+        bucketArgs.getIsVersionEnabled());
   }
 
   @Override
-  public Iterator<OzoneBucket> listBuckets(
-      String volumeName, String bucketPrefix) throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+  public List<OzoneBucket> listBuckets(String volumeName, String bucketPrefix,
+                                       String prevBucket, int maxListResult)
+      throws IOException {
+    List<KsmBucketInfo> buckets = keySpaceManagerClient.listBuckets(
+        volumeName, prevBucket, bucketPrefix, maxListResult);
+
+    return buckets.stream().map(bucket -> new OzoneBucket(
+        conf,
+        this,
+        bucket.getVolumeName(),
+        bucket.getBucketName(),
+        bucket.getAcls(),
+        bucket.getStorageType(),
+        bucket.getIsVersionEnabled()))
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -441,10 +485,19 @@ public class RpcClient implements ClientProtocol {
   }
 
   @Override
-  public Iterator<OzoneKey> listKeys(
-      String volumeName, String bucketName, String keyPrefix)
+  public List<OzoneKey> listKeys(String volumeName, String bucketName,
+                                 String keyPrefix, String prevKey,
+                                 int maxListResult)
       throws IOException {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    List<KsmKeyInfo> keys = keySpaceManagerClient.listKeys(
+        volumeName, bucketName, prevKey, keyPrefix, maxListResult);
+
+    return keys.stream().map(key -> new OzoneKey(
+        key.getVolumeName(),
+        key.getBucketName(),
+        key.getKeyName(),
+        key.getDataSize()))
+        .collect(Collectors.toList());
   }
 
   @Override

@@ -121,6 +121,13 @@ public final class OzoneConfigKeys {
   public static final int OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT = 5000;
 
   /**
+   * Configuration property to configure the cache size of client list calls.
+   */
+  public static final String OZONE_CLIENT_LIST_CACHE_SIZE =
+      "ozone.client.list.cache";
+  public static final int OZONE_CLIENT_LIST_CACHE_SIZE_DEFAULT = 1000;
+
+  /**
    * Configuration properties for Ozone Block Deleting Service.
    */
   public static final String OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS =
