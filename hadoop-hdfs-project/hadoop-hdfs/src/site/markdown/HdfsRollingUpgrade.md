@@ -179,7 +179,7 @@ Below are the steps for rolling downgrade without downtime:
     1. Start *NN2* as standby normally.
     1. Failover from *NN1* to *NN2*
        so that *NN2* becomes active and *NN1* becomes standby.
-    1. Shutdown and upgrade *NN1*.
+    1. Shutdown and downgrade *NN1*.
     1. Start *NN1* as standby normally.
 1. Finalize Rolling Downgrade
     1. Run "[`hdfs dfsadmin -rollingUpgrade finalize`](#dfsadmin_-rollingUpgrade)"
