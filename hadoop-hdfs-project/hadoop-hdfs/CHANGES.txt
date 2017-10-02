@@ -61,6 +61,8 @@ Release 2.6.5 - 2016-10-08
     HDFS-10870. Wrong dfs.namenode.acls.enabled default in HdfsPermissionsGuide.apt.vm.
     (John Zhuge via lei)
 
+    HDFS-8865. Improve quota initialization performance. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-10653. Optimize conversion from path string to components. (Daryn
