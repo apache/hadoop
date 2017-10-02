@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client;
 
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -27,13 +28,20 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * A class that encapsulates OzoneBucket.
  */
 public class OzoneBucket {
 
+  /**
+   * The proxy used for connecting to the cluster and perform
+   * client operations.
+   */
+  private final ClientProtocol proxy;
   /**
    * Name of the volume in which the bucket belongs to.
    */
@@ -59,35 +67,31 @@ public class OzoneBucket {
   private Boolean versioning;
 
   /**
-   * The proxy used for connecting to the cluster and perform
-   * client operations.
+   * Cache size to be used for listKey calls.
    */
-  private ClientProtocol proxy;
+  private int listCacheSize;
 
   /**
    * Constructs OzoneBucket instance.
+   * @param conf Configuration object.
+   * @param proxy ClientProtocol proxy.
    * @param volumeName Name of the volume the bucket belongs to.
    * @param bucketName Name of the bucket.
    * @param acls ACLs associated with the bucket.
    * @param storageType StorageType of the bucket.
    * @param versioning versioning status of the bucket.
    */
-  public OzoneBucket(String volumeName, String bucketName,
+  public OzoneBucket(Configuration conf, ClientProtocol proxy,
+                     String volumeName, String bucketName,
                      List<OzoneAcl> acls, StorageType storageType,
                      Boolean versioning) {
+    this.proxy = proxy;
     this.volumeName = volumeName;
     this.name = bucketName;
     this.acls = acls;
     this.storageType = storageType;
     this.versioning = versioning;
-  }
-
-  /**
-   * Sets the proxy using which client operations are performed.
-   * @param clientProxy
-   */
-  public void setClientProxy(ClientProtocol clientProxy) {
-    this.proxy = clientProxy;
+    this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
   }
 
   /**
@@ -222,6 +226,18 @@ public class OzoneBucket {
   }
 
   /**
+   * Returns Iterator to iterate over all keys in the bucket.
+   * The result can be restricted using key prefix, will return all
+   * keys if key prefix is null.
+   *
+   * @param keyPrefix Bucket prefix to match
+   * @return {@code Iterator<OzoneKey>}
+   */
+  public Iterator<OzoneKey> listKeys(String keyPrefix) {
+    return new KeyIterator(keyPrefix);
+  }
+
+  /**
    * Deletes key from the bucket.
    * @param key Name of the key to be deleted.
    * @throws IOException
@@ -230,5 +246,60 @@ public class OzoneBucket {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(key);
     proxy.deleteKey(volumeName, name, key);
+  }
+
+  /**
+   * An Iterator to iterate over {@link OzoneKey} list.
+   */
+  private class KeyIterator implements Iterator<OzoneKey> {
+
+    private String keyPrefix = null;
+
+    private Iterator<OzoneKey> currentIterator;
+    private OzoneKey currentValue;
+
+
+    /**
+     * Creates an Iterator to iterate over all keys in the bucket,
+     * which matches volume prefix.
+     * @param keyPrefix
+     */
+    KeyIterator(String keyPrefix) {
+      this.keyPrefix = keyPrefix;
+      this.currentValue = null;
+      this.currentIterator = getNextListOfKeys(null).iterator();
+    }
+
+    @Override
+    public boolean hasNext() {
+      if(!currentIterator.hasNext()) {
+        currentIterator = getNextListOfKeys(
+            currentValue.getName()).iterator();
+      }
+      return currentIterator.hasNext();
+    }
+
+    @Override
+    public OzoneKey next() {
+      if(hasNext()) {
+        currentValue = currentIterator.next();
+        return currentValue;
+      }
+      throw new NoSuchElementException();
+    }
+
+    /**
+     * Gets the next set of key list using proxy.
+     * @param prevKey
+     * @return {@code List<OzoneVolume>}
+     */
+    private List<OzoneKey> getNextListOfKeys(String prevKey) {
+      try {
+        return proxy.listKeys(volumeName, name, keyPrefix, prevKey,
+            listCacheSize);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 }

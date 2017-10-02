@@ -30,7 +30,6 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -106,22 +105,37 @@ public interface ClientProtocol {
   void deleteVolume(String volumeName) throws IOException;
 
   /**
-   * Returns the List of Volumes owned by current user.
+   * Lists all volumes in the cluster that matches the volumePrefix,
+   * size of the returned list depends on maxListResult. If volume prefix
+   * is null, returns all the volumes. The caller has to make multiple calls
+   * to read all volumes.
+   *
    * @param volumePrefix Volume prefix to match
-   * @return {@link OzoneVolume} Iterator
+   * @param prevVolume Starting point of the list, this volume is excluded
+   * @param maxListResult Max number of volumes to return.
+   * @return {@code List<OzoneVolume>}
    * @throws IOException
    */
-  Iterator<OzoneVolume> listVolumes(String volumePrefix)
+  List<OzoneVolume> listVolumes(String volumePrefix, String prevVolume,
+                                int maxListResult)
       throws IOException;
 
   /**
-   * Returns the List of Volumes owned by the specific user.
-   * @param volumePrefix Volume prefix to match
+   * Lists all volumes in the cluster that are owned by the specified
+   * user and matches the volumePrefix, size of the returned list depends on
+   * maxListResult. If the user is null, return volumes owned by current user.
+   * If volume prefix is null, returns all the volumes. The caller has to make
+   * multiple calls to read all volumes.
+   *
    * @param user User Name
-   * @return  {@link OzoneVolume} Iterator
+   * @param volumePrefix Volume prefix to match
+   * @param prevVolume Starting point of the list, this volume is excluded
+   * @param maxListResult Max number of volumes to return.
+   * @return {@code List<OzoneVolume>}
    * @throws IOException
    */
-  Iterator<OzoneVolume> listVolumes(String volumePrefix, String user)
+  List<OzoneVolume> listVolumes(String user, String volumePrefix,
+                                    String prevVolume, int maxListResult)
       throws IOException;
 
   /**
@@ -219,13 +233,18 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
-   * Returns the List of Buckets in the Volume.
+   * Returns the List of Buckets in the Volume that matches the bucketPrefix,
+   * size of the returned list depends on maxListResult. The caller has to make
+   * multiple calls to read all volumes.
    * @param volumeName Name of the Volume
    * @param bucketPrefix Bucket prefix to match
-   * @return {@link OzoneBucket} Iterator
+   * @param prevBucket Starting point of the list, this bucket is excluded
+   * @param maxListResult Max number of buckets to return.
+   * @return {@code List<OzoneBucket>}
    * @throws IOException
    */
-  Iterator<OzoneBucket> listBuckets(String volumeName, String bucketPrefix)
+  List<OzoneBucket> listBuckets(String volumeName, String bucketPrefix,
+                                String prevBucket, int maxListResult)
       throws IOException;
 
   /**
@@ -265,14 +284,19 @@ public interface ClientProtocol {
 
 
   /**
-   * Returns list of {@link OzoneKey} in {Volume/Bucket}.
+   * Returns list of Keys in {Volume/Bucket} that matches the keyPrefix,
+   * size of the returned list depends on maxListResult. The caller has
+   * to make multiple calls to read all keys.
    * @param volumeName Name of the Volume
    * @param bucketName Name of the Bucket
-   * @return {@link OzoneKey} Iterator
+   * @param keyPrefix Bucket prefix to match
+   * @param prevKey Starting point of the list, this key is excluded
+   * @param maxListResult Max number of buckets to return.
+   * @return {@code List<OzoneKey>}
    * @throws IOException
    */
-  Iterator<OzoneKey> listKeys(String volumeName, String bucketName,
-                          String keyPrefix)
+  List<OzoneKey> listKeys(String volumeName, String bucketName,
+                          String keyPrefix, String prevKey, int maxListResult)
       throws IOException;
 
 
