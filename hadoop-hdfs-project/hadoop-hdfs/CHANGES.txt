@@ -23,6 +23,9 @@ Release 2.6.6 - UNRELEASED
 
     HDFS-9072. Fix random failures in TestJMXGet (J.Andreina via kihwal)
 
+    HDFS-9740. Use a reasonable limit in DFSTestUtil.waitForMetric()
+    (Chang Li via vinayakumarb)
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES

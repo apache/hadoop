@@ -1721,6 +1721,6 @@ public class DFSTestUtil {
           throw new UnhandledException("Test failed due to unexpected exception", e);
         }
       }
-    }, 1000, Integer.MAX_VALUE);
+    }, 1000, 60000);
   }
 }
