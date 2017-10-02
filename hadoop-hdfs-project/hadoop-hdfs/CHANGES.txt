@@ -21,6 +21,8 @@ Release 2.6.6 - UNRELEASED
     HDFS-11352. Potential deadlock in NN when failing over.
     (Eric Krogen via aajisaka)
 
+    HDFS-9072. Fix random failures in TestJMXGet (J.Andreina via kihwal)
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES

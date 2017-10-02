@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.JMXGet;
@@ -114,10 +115,12 @@ public class TestJMXGet {
     assertTrue("error printAllValues", checkPrintAllValues(jmx));
 
     //get some data from different source
+    DFSTestUtil.waitForMetric(jmx, "NumLiveDataNodes", numDatanodes);
     assertEquals(numDatanodes, Integer.parseInt(
         jmx.getValue("NumLiveDataNodes")));
     assertGauge("CorruptBlocks", Long.parseLong(jmx.getValue("CorruptBlocks")),
                 getMetrics("FSNamesystem"));
+    DFSTestUtil.waitForMetric(jmx, "NumOpenConnections", numDatanodes);
     assertEquals(numDatanodes, Integer.parseInt(
         jmx.getValue("NumOpenConnections")));
 
@@ -161,6 +164,7 @@ public class TestJMXGet {
     String serviceName = "DataNode";
     jmx.setService(serviceName);
     jmx.init();
+    DFSTestUtil.waitForMetric(jmx, "BytesWritten", fileSize);
     assertEquals(fileSize, Integer.parseInt(jmx.getValue("BytesWritten")));
 
     cluster.shutdown();
