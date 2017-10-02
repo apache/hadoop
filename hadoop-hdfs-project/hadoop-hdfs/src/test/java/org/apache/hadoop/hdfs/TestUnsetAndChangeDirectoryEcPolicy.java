@@ -362,4 +362,17 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
           + ecFilePath, e);
     }
   }
+
+  /**
+   * Test unsetEcPolicy is persisted correctly in edit log.
+   */
+  @Test
+  public void testUnsetEcPolicyInEditLog() throws IOException {
+    fs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
+    Assert.assertEquals(ecPolicy, fs.getErasureCodingPolicy(new Path("/")));
+    fs.getClient().unsetErasureCodingPolicy("/");
+
+    cluster.restartNameNode(true);
+    Assert.assertNull(fs.getErasureCodingPolicy(new Path("/")));
+  }
 }
