@@ -320,8 +320,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           builder.append("Exception message: ");
           builder.append(e.getMessage()).append("\n");
         }
-        builder.append("Stack trace: ");
-        builder.append(StringUtils.stringifyException(e)).append("\n");
+
         if (!shExec.getOutput().isEmpty()) {
           builder.append("Shell output: ");
           builder.append(shExec.getOutput()).append("\n");
