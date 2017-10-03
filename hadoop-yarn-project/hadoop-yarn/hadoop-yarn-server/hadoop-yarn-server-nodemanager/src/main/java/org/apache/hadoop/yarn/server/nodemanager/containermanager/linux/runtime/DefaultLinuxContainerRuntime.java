@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
@@ -69,6 +70,11 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   public void initialize(Configuration conf)
       throws ContainerExecutionException {
     this.conf = conf;
+  }
+
+  @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    return true;
   }
 
   @Override
