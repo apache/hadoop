@@ -38,8 +38,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -133,6 +131,8 @@ import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Implementation of Job interface. Maintains the state machines of Job.
  * The read and write calls use ReadWriteLock for concurrency.
@@ -147,7 +147,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private static final TaskCompletionEvent[]
     EMPTY_TASK_COMPLETION_EVENTS = new TaskCompletionEvent[0];
 
-  private static final Log LOG = LogFactory.getLog(JobImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobImpl.class);
 
   //The maximum fraction of fetch failures allowed for a map
   private float maxAllowedFetchFailuresFraction;

@@ -24,8 +24,6 @@ import java.util.Map;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -40,10 +38,13 @@ import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestMapReduceChildJVM {
 
-  private static final Log LOG = LogFactory.getLog(TestMapReduceChildJVM.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMapReduceChildJVM.class);
 
   @Test (timeout = 30000)
   public void testCommandLine() throws Exception {

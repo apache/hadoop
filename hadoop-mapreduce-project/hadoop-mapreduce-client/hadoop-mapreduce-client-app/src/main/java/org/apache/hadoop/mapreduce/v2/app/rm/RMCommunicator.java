@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -61,13 +59,16 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
  */
 public abstract class RMCommunicator extends AbstractService
     implements RMHeartbeatHandler {
-  private static final Log LOG = LogFactory.getLog(RMCommunicator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMCommunicator.class);
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
   private final AtomicBoolean stopped;
