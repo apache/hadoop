@@ -18,13 +18,9 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.cblock.CBlockConfigKeys;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.OzonePropertyTag;
 import org.apache.hadoop.conf.TestConfigurationFieldsBase;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.scm.ScmConfigKeys;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Tests if configuration constants documented in ozone-defaults.xml.
@@ -40,32 +36,4 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     errorIfMissingConfigProps = true;
     errorIfMissingXmlProps = true;
   }
-
-  @Test
-  public void testOzoneTags() {
-    Configuration config = new OzoneConfiguration();
-    config.reloadConfiguration();
-
-    // To load default resources
-    config.get("ozone.enabled");
-    assertEquals(87,
-        config.getAllPropertiesByTag(OzonePropertyTag.OZONE).size());
-    assertEquals(15, config.getAllPropertiesByTag(OzonePropertyTag.KSM)
-        .size());
-    assertEquals(6, config.getAllPropertiesByTag(OzonePropertyTag.SCM)
-        .size());
-    assertEquals(6, config.getAllPropertiesByTag(OzonePropertyTag.MANAGEMENT)
-        .size());
-    assertEquals(7, config.getAllPropertiesByTag(OzonePropertyTag.SECURITY)
-        .size());
-    assertEquals(9, config.getAllPropertiesByTag(OzonePropertyTag.PERFORMANCE)
-        .size());
-    assertEquals(1, config.getAllPropertiesByTag(OzonePropertyTag.DEBUG)
-        .size());
-    assertEquals(3, config.getAllPropertiesByTag(OzonePropertyTag.REQUIRED)
-        .size());
-    assertEquals(2, config.getAllPropertiesByTag(OzonePropertyTag.RATIS)
-        .size());
-  }
-
 }

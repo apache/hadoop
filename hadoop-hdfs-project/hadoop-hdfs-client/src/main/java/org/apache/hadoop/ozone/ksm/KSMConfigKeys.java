@@ -57,7 +57,7 @@ public final class KSMConfigKeys {
 
   // LevelDB cache file uses an off-heap cache in LevelDB of 128 MB.
   public static final String OZONE_KSM_DB_CACHE_SIZE_MB =
-      "ozone.ksm.leveldb.cache.size.mb";
+      "ozone.ksm.db.cache.size.mb";
   public static final int OZONE_KSM_DB_CACHE_SIZE_DEFAULT = 128;
 
   public static final String OZONE_KSM_USER_MAX_VOLUME =

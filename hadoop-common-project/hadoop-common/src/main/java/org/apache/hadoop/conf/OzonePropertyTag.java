@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public enum OzonePropertyTag implements PropertyTag {
   OZONE,
+  CBLOCK,
   MANAGEMENT,
   SECURITY,
   PERFORMANCE,
