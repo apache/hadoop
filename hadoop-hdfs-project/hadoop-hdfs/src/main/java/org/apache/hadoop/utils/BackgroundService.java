@@ -96,7 +96,7 @@ public abstract class BackgroundService {
   public class PeriodicalTask implements Runnable {
     @Override
     public void run() {
-      LOG.info("Running background service : {}", serviceName);
+      LOG.debug("Running background service : {}", serviceName);
       BackgroundTaskQueue tasks = getTasks();
       if (tasks.isEmpty()) {
         // No task found, or some problems to init tasks
@@ -104,7 +104,7 @@ public abstract class BackgroundService {
         return;
       }
 
-      LOG.info("Number of background tasks to execute : {}", tasks.size());
+      LOG.debug("Number of background tasks to execute : {}", tasks.size());
       CompletionService<BackgroundTaskResult> taskCompletionService =
           new ExecutorCompletionService<>(exec);
 
