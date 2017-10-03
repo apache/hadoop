@@ -38,8 +38,8 @@ public class YarnVersionInfo extends VersionInfo {
     super("yarn");
   }
   /**
-   * Get the Yarn version.
-   * @return the Yarn version string, eg. "0.6.3-dev"
+   * Get the YARN version.
+   * @return the YARN version string, eg. "0.6.3-dev"
    */
   public static String getVersion() {
     return YARN_VERSION_INFO._getVersion();
@@ -62,7 +62,7 @@ public class YarnVersionInfo extends VersionInfo {
   }
 
   /**
-   * The date that Yarn was compiled.
+   * The date that YARN was compiled.
    * @return the compilation date in unix date format
    */
   public static String getDate() {
@@ -78,14 +78,14 @@ public class YarnVersionInfo extends VersionInfo {
   }
   
   /**
-   * Get the subversion URL for the root Yarn directory.
+   * Get the subversion URL for the root YARN directory.
    */
   public static String getUrl() {
     return YARN_VERSION_INFO._getUrl();
   }
 
   /**
-   * Get the checksum of the source files from which Yarn was
+   * Get the checksum of the source files from which YARN was
    * built.
    **/
   public static String getSrcChecksum() {
@@ -102,7 +102,7 @@ public class YarnVersionInfo extends VersionInfo {
   
   public static void main(String[] args) {
     LOG.debug("version: "+ getVersion());
-    System.out.println("Yarn " + getVersion());
+    System.out.println("YARN " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());
     System.out.println("From source with checksum " + getSrcChecksum());

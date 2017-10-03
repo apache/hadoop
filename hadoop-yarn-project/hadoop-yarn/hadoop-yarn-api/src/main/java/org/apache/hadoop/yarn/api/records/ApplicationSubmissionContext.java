@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.util.Records;
  *   <li>
  *     maxAppAttempts. The maximum number of application attempts.
  *     It should be no larger than the global number of max attempts in the
- *     Yarn configuration.
+ *     YARN configuration.
  *   </li>
  *   <li>
  *     attemptFailuresValidityInterval. The default value is -1.

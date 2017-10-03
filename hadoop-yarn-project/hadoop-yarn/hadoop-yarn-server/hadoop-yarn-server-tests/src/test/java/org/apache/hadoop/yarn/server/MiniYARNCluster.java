@@ -102,11 +102,11 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>
- * Embedded Yarn minicluster for testcases that need to interact with a cluster.
+ * Embedded YARN minicluster for testcases that need to interact with a cluster.
  * </p>
  * <p>
  * In a real cluster, resource request matching is done using the hostname, and
- * by default Yarn minicluster works in the exact same way as a real cluster.
+ * by default YARN minicluster works in the exact same way as a real cluster.
  * </p>
  * <p>
  * If a testcase needs to use multiple nodes and exercise resource request

@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
- * Yarn internal application-related utilities
+ * YARN internal application-related utilities
  */
 @Private
 public class Apps {

@@ -181,7 +181,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
 
   // True if the Mock RM is running, false otherwise.
-  // This property allows us to write tests for specific scenario as Yarn RM
+  // This property allows us to write tests for specific scenario as YARN RM
   // down e.g. network issue, failover.
   private boolean isRunning;
 

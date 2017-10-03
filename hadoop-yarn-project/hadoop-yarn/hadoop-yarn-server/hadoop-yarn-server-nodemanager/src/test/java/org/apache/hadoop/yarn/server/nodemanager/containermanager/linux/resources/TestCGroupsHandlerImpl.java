@@ -118,7 +118,7 @@ public class TestCGroupsHandlerImpl {
 
   /**
    * Create configuration where the cgroups are premounted.
-   * @param myHierarchy Yarn cgroup
+   * @param myHierarchy YARN cgroup
    * @return configuration object
    */
   private Configuration createNoMountConfiguration(String myHierarchy) {
@@ -396,7 +396,7 @@ public class TestCGroupsHandlerImpl {
     File mtab = createPremountedCgroups(parentDir, false);
     File mountPoint = new File(parentDir, "cpu");
 
-    // Initialize Yarn classes
+    // Initialize YARN classes
     Configuration confNoMount = createNoMountConfiguration(myHierarchy);
     CGroupsHandlerImpl cGroupsHandler = new CGroupsHandlerImpl(confNoMount,
         privilegedOperationExecutorMock, mtab.getAbsolutePath());
@@ -555,7 +555,7 @@ public class TestCGroupsHandlerImpl {
     assertTrue("Could not create dirs",
         new File(newMountPoint, "cpu").mkdirs());
 
-    // Initialize Yarn classes
+    // Initialize YARN classes
     Configuration confMount = createMountConfiguration();
     confMount.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH,
         parentDir.getAbsolutePath() + Path.SEPARATOR + newMountPointDir);

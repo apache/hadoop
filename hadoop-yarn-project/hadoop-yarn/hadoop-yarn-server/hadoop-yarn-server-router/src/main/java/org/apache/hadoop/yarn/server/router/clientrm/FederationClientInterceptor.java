@@ -206,7 +206,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * Yarn Router forwards every getNewApplication requests to any RM. During
+   * YARN Router forwards every getNewApplication requests to any RM. During
    * this operation there will be no communication with the State Store. The
    * Router will forward the requests to any SubCluster. The Router will retry
    * to submit the request on #numSubmitRetries different SubClusters. The
@@ -425,7 +425,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    *
    * Possible failures and behaviors:
@@ -490,7 +490,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    *
    * Possible failure:

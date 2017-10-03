@@ -80,7 +80,7 @@ public final class FederationPolicyUtils {
    * and configuration as fallback.
    *
    * @param queue the queue of the application
-   * @param conf the Yarn configuration
+   * @param conf the YARN configuration
    * @param federationFacade state store facade
    * @return SubClusterPolicyConfiguration recreated
    */
@@ -139,7 +139,7 @@ public final class FederationPolicyUtils {
    *
    * @param queue the queue of the application
    * @param oldPolicy the previous policy instance (can be null)
-   * @param conf the Yarn configuration
+   * @param conf the YARN configuration
    * @param federationFacade state store facade
    * @param homeSubClusterId home sub-cluster id
    * @return FederationAMRMProxyPolicy recreated

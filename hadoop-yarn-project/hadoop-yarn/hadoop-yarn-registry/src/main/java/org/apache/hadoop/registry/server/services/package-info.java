@@ -21,7 +21,7 @@
  * <ul>
  *   <li>
  *     The {@link org.apache.hadoop.registry.server.services.RegistryAdminService}
- *     extends the shared Yarn Registry client with registry setup and
+ *     extends the shared YARN Registry client with registry setup and
  *     (potentially asynchronous) administrative actions.
  *   </li>
  *   <li>
