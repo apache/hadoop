@@ -610,6 +610,8 @@ public class TestOpportunisticContainerAllocatorAMService {
                 .newInstance(ExecutionType.OPPORTUNISTIC, true))), null);
     List<Container> allocatedContainers =
         allocateResponse.getAllocatedContainers();
+    allocatedContainers.addAll(
+        am1.allocate(null, null).getAllocatedContainers());
     Assert.assertEquals(2, allocatedContainers.size());
     Container container = allocatedContainers.get(0);
     // Start Container in NM

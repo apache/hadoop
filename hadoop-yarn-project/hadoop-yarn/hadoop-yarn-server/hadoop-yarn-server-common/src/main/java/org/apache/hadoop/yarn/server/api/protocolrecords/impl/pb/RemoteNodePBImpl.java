@@ -118,6 +118,25 @@ public class RemoteNodePBImpl extends RemoteNode {
   }
 
   @Override
+  public String getRackName() {
+    RemoteNodeProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasRackName()) {
+      return null;
+    }
+    return (p.getRackName());
+  }
+
+  @Override
+  public void setRackName(String rackName) {
+    maybeInitBuilder();
+    if (rackName == null) {
+      builder.clearRackName();
+      return;
+    }
+    builder.setRackName(rackName);
+  }
+
+  @Override
   public int hashCode() {
     return getProto().hashCode();
   }

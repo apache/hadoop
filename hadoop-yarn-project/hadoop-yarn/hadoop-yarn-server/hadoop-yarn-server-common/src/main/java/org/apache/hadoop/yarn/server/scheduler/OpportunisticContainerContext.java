@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
@@ -35,8 +34,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import static org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator.Allocation;
 import static org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator.AllocationParams;
 import static org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator.ContainerIdGenerator;
+import static org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator.EnrichedResourceRequest;
 
 /**
  * This encapsulates application specific information used by the
@@ -53,7 +54,8 @@ public class OpportunisticContainerContext {
       new ContainerIdGenerator();
 
   private volatile List<RemoteNode> nodeList = new LinkedList<>();
-  private final Map<String, RemoteNode> nodeMap = new LinkedHashMap<>();
+  private final LinkedHashMap<String, RemoteNode> nodeMap =
+      new LinkedHashMap<>();
 
   private final Set<String> blacklist = new HashSet<>();
 
@@ -61,7 +63,8 @@ public class OpportunisticContainerContext {
   // Resource Name (host/rack/any) and capability. This mapping is required
   // to match a received Container to an outstanding OPPORTUNISTIC
   // ResourceRequest (ask).
-  private final TreeMap<SchedulerRequestKey, Map<Resource, ResourceRequest>>
+  private final TreeMap
+      <SchedulerRequestKey, Map<Resource, EnrichedResourceRequest>>
       outstandingOpReqs = new TreeMap<>();
 
   public AllocationParams getAppParams() {
@@ -107,7 +110,7 @@ public class OpportunisticContainerContext {
     return blacklist;
   }
 
-  public TreeMap<SchedulerRequestKey, Map<Resource, ResourceRequest>>
+  public TreeMap<SchedulerRequestKey, Map<Resource, EnrichedResourceRequest>>
       getOutstandingOpReqs() {
     return outstandingOpReqs;
   }
@@ -125,36 +128,32 @@ public class OpportunisticContainerContext {
     for (ResourceRequest request : resourceAsks) {
       SchedulerRequestKey schedulerKey = SchedulerRequestKey.create(request);
 
-      // TODO: Extend for Node/Rack locality. We only handle ANY requests now
-      if (!ResourceRequest.isAnyLocation(request.getResourceName())) {
-        continue;
-      }
-
-      if (request.getNumContainers() == 0) {
-        continue;
-      }
-
-      Map<Resource, ResourceRequest> reqMap =
+      Map<Resource, EnrichedResourceRequest> reqMap =
           outstandingOpReqs.get(schedulerKey);
       if (reqMap == null) {
         reqMap = new HashMap<>();
         outstandingOpReqs.put(schedulerKey, reqMap);
       }
 
-      ResourceRequest resourceRequest = reqMap.get(request.getCapability());
-      if (resourceRequest == null) {
-        resourceRequest = request;
-        reqMap.put(request.getCapability(), request);
+      EnrichedResourceRequest eReq = reqMap.get(request.getCapability());
+      if (eReq == null) {
+        eReq = new EnrichedResourceRequest(request);
+        reqMap.put(request.getCapability(), eReq);
+      }
+      // Set numContainers only for ANY request
+      if (ResourceRequest.isAnyLocation(request.getResourceName())) {
+        eReq.getRequest().setResourceName(ResourceRequest.ANY);
+        eReq.getRequest().setNumContainers(request.getNumContainers());
       } else {
-        resourceRequest.setNumContainers(
-            resourceRequest.getNumContainers() + request.getNumContainers());
+        eReq.addLocation(request.getResourceName(), request.getNumContainers());
       }
       if (ResourceRequest.isAnyLocation(request.getResourceName())) {
         LOG.info("# of outstandingOpReqs in ANY (at "
             + "priority = " + schedulerKey.getPriority()
             + ", allocationReqId = " + schedulerKey.getAllocationRequestId()
             + ", with capability = " + request.getCapability() + " ) : "
-            + resourceRequest.getNumContainers());
+            + ", with location = " + request.getResourceName() + " ) : "
+            + ", numContainers = " + eReq.getRequest().getNumContainers());
       }
     }
   }
@@ -163,25 +162,34 @@ public class OpportunisticContainerContext {
    * This method matches a returned list of Container Allocations to any
    * outstanding OPPORTUNISTIC ResourceRequest.
    * @param capability Capability
-   * @param allocatedContainers Allocated Containers
+   * @param allocations Allocations.
    */
   public void matchAllocationToOutstandingRequest(Resource capability,
-      List<Container> allocatedContainers) {
-    for (Container c : allocatedContainers) {
+      List<Allocation> allocations) {
+    for (OpportunisticContainerAllocator.Allocation allocation : allocations) {
       SchedulerRequestKey schedulerKey =
-          SchedulerRequestKey.extractFrom(c);
-      Map<Resource, ResourceRequest> asks =
+          SchedulerRequestKey.extractFrom(allocation.getContainer());
+      Map<Resource, EnrichedResourceRequest> asks =
           outstandingOpReqs.get(schedulerKey);
 
       if (asks == null) {
         continue;
       }
 
-      ResourceRequest rr = asks.get(capability);
-      if (rr != null) {
-        rr.setNumContainers(rr.getNumContainers() - 1);
-        if (rr.getNumContainers() == 0) {
+      EnrichedResourceRequest err = asks.get(capability);
+      if (err != null) {
+        int numContainers = err.getRequest().getNumContainers();
+        numContainers--;
+        err.getRequest().setNumContainers(numContainers);
+        if (numContainers == 0) {
           asks.remove(capability);
+          if (asks.size() == 0) {
+            outstandingOpReqs.remove(schedulerKey);
+          }
+        } else {
+          if (!ResourceRequest.isAnyLocation(allocation.getResourceName())) {
+            err.removeLocation(allocation.getResourceName());
+          }
         }
       }
     }
