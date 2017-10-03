@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -180,16 +181,21 @@ public class PathOutputCommitterFactory extends Configured {
     String key = COMMITTER_FACTORY_CLASS;
     if (conf.getTrimmed(key) == null && outputPath != null) {
       // there is no explicit factory and there's an output path
+      // Get the scheme of the destination
       String scheme = outputPath.toUri().getScheme();
+
+      // and see if it has a key
       String schemeKey = String.format(COMMITTER_FACTORY_SCHEME_PATTERN,
           scheme);
-
-      String factoryClass = conf.getTrimmed(schemeKey);
-      if (factoryClass != null) {
+      if (StringUtils.isNotEmpty(conf.getTrimmed(schemeKey))) {
+        LOG.debug("Using schema-specific factory for {}", outputPath);
+        // it does, so use that key
         key = schemeKey;
       }
     } else {
-      // no explicit factory. The default will be used
+      // Either there's an explicit committer factory declared, or
+      // there's no output path, so trying to do schema-specific lookup
+      // cannot work.
     }
     Class<? extends PathOutputCommitterFactory> factory =
         conf.getClass(key,
