@@ -47,6 +47,24 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
   }
 
   /**
+   * Create new Instance.
+   * @param nodeId NodeId.
+   * @param httpAddress Http address.
+   * @param rackName Rack Name.
+   * @return RemoteNode instance.
+   */
+  @Private
+  @Unstable
+  public static RemoteNode newInstance(NodeId nodeId, String httpAddress,
+      String rackName) {
+    RemoteNode remoteNode = Records.newRecord(RemoteNode.class);
+    remoteNode.setNodeId(nodeId);
+    remoteNode.setHttpAddress(httpAddress);
+    remoteNode.setRackName(rackName);
+    return remoteNode;
+  }
+
+  /**
    * Get {@link NodeId}.
    * @return NodeId.
    */
@@ -79,6 +97,22 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
   public abstract void setHttpAddress(String httpAddress);
 
   /**
+   * Get Rack Name.
+   * @return Rack Name.
+   */
+  @Private
+  @Unstable
+  public abstract String getRackName();
+
+  /**
+   * Set Rack Name.
+   * @param rackName Rack Name.
+   */
+  @Private
+  @Unstable
+  public abstract void setRackName(String rackName);
+
+  /**
    * Use the underlying {@link NodeId} comparator.
    * @param other RemoteNode.
    * @return Comparison.
@@ -92,6 +126,7 @@ public abstract class RemoteNode implements Comparable<RemoteNode> {
   public String toString() {
     return "RemoteNode{" +
         "nodeId=" + getNodeId() + ", " +
+        "rackName=" + getRackName() + ", " +
         "httpAddress=" + getHttpAddress() + "}";
   }
 }

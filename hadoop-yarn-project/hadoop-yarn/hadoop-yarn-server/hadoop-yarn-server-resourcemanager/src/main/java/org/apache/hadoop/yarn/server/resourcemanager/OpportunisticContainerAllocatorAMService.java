@@ -432,8 +432,12 @@ public class OpportunisticContainerAllocatorAMService
   private RemoteNode convertToRemoteNode(NodeId nodeId) {
     SchedulerNode node =
         ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(nodeId);
-    return node != null ? RemoteNode.newInstance(nodeId, node.getHttpAddress())
-        : null;
+    if (node != null) {
+      RemoteNode rNode = RemoteNode.newInstance(nodeId, node.getHttpAddress());
+      rNode.setRackName(node.getRackName());
+      return rNode;
+    }
+    return null;
   }
 
   private static ApplicationAttemptId getAppAttemptId() throws YarnException {

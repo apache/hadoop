@@ -223,6 +223,22 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     }
 
     /**
+     * Set the <code>executionTypeRequest</code> of the request with 'ensure
+     * execution type' flag set to true.
+     * @see ResourceRequest#setExecutionTypeRequest(
+     * ExecutionTypeRequest)
+     * @param executionType <code>executionType</code> of the request.
+     * @return {@link ResourceRequestBuilder}
+     */
+    @Public
+    @Evolving
+    public ResourceRequestBuilder executionType(ExecutionType executionType) {
+      resourceRequest.setExecutionTypeRequest(
+          ExecutionTypeRequest.newInstance(executionType, true));
+      return this;
+    }
+
+    /**
      * Set the <code>allocationRequestId</code> of the request.
      * @see ResourceRequest#setAllocationRequestId(long)
      * @param allocationRequestId
