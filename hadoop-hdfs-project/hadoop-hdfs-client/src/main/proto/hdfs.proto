@@ -410,6 +410,7 @@ message HdfsFileStatusProto {
     HAS_ACL   = 0x01; // has ACLs
     HAS_CRYPT = 0x02; // encrypted
     HAS_EC    = 0x04; // erasure coded
+    SNAPSHOT_ENABLED    = 0x08; // SNAPSHOT ENABLED
   }
   required FileType fileType = 1;
   required bytes path = 2;          // local name of inode encoded java UTF8

@@ -57,7 +57,8 @@ public class HdfsFileStatus extends FileStatus {
   public enum Flags {
     HAS_ACL,
     HAS_CRYPT,
-    HAS_EC;
+    HAS_EC,
+    SNAPSHOT_ENABLED
   }
   private final EnumSet<Flags> flags;
 
@@ -245,6 +246,15 @@ public class HdfsFileStatus extends FileStatus {
   /** @return the storage policy id */
   public final byte getStoragePolicy() {
     return storagePolicy;
+  }
+
+  /**
+   * Check if directory is Snapshot enabled or not.
+   *
+   * @return true if directory is snapshot enabled
+   */
+  public boolean isSnapshotEnabled() {
+    return flags.contains(Flags.SNAPSHOT_ENABLED);
   }
 
   @Override

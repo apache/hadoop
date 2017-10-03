@@ -138,6 +138,10 @@ public class JsonUtil {
         m.put("ecPolicy", status.getErasureCodingPolicy().getName());
       }
     }
+    if (status.isSnapshotEnabled()) {
+      m.put("snapshotEnabled", status.isSnapshotEnabled());
+    }
+
     m.put("accessTime", status.getAccessTime());
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());

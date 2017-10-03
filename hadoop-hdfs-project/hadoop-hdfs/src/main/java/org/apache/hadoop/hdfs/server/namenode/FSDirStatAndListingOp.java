@@ -412,6 +412,8 @@ class FSDirStatAndListingOp {
         .unprotectedGetErasureCodingPolicy(fsd.getFSNamesystem(), iip);
     final boolean isErasureCoded = (ecPolicy != null);
 
+    boolean isSnapShottable = false;
+
     if (node.isFile()) {
       final INodeFile fileNode = node.asFile();
       size = fileNode.computeFileSize(snapshot);
@@ -432,6 +434,8 @@ class FSDirStatAndListingOp {
           loc = new LocatedBlocks();
         }
       }
+    } else if (node.isDirectory()) {
+      isSnapShottable = node.asDirectory().isSnapshottable();
     }
 
     int childrenNum = node.isDirectory() ?
@@ -449,6 +453,9 @@ class FSDirStatAndListingOp {
     }
     if (isErasureCoded) {
       flags.add(HdfsFileStatus.Flags.HAS_EC);
+    }
+    if(isSnapShottable){
+      flags.add(HdfsFileStatus.Flags.SNAPSHOT_ENABLED);
     }
     return createFileStatus(
         size,

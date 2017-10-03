@@ -950,6 +950,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
+
   public GetFileLinkInfoResponseProto getFileLinkInfo(RpcController controller,
       GetFileLinkInfoRequestProto req) throws ServiceException {
     try {
