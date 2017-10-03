@@ -35,8 +35,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -90,6 +88,8 @@ import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Allocates the container from the ResourceManager scheduler.
@@ -97,7 +97,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class RMContainerAllocator extends RMContainerRequestor
     implements ContainerAllocator {
 
-  static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
+  static final Logger LOG = LoggerFactory.getLogger(RMContainerAllocator.class);
   
   public static final 
   float DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART = 0.05f;

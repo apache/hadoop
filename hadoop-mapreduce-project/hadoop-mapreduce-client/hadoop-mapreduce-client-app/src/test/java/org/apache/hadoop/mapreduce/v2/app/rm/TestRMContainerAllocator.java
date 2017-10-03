@@ -48,8 +48,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -154,12 +152,14 @@ import org.junit.Test;
 
 import com.google.common.base.Supplier;
 import org.mockito.InOrder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unchecked")
 public class TestRMContainerAllocator {
 
-  static final Log LOG = LogFactory
-      .getLog(TestRMContainerAllocator.class);
+  static final Logger LOG = LoggerFactory
+      .getLogger(TestRMContainerAllocator.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 

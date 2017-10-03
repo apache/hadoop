@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Task;
@@ -69,11 +67,13 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
 public class TestTaskImpl {
 
-  private static final Log LOG = LogFactory.getLog(TestTaskImpl.class);    
+  private static final Logger LOG = LoggerFactory.getLogger(TestTaskImpl.class);
   
   private JobConf conf;
   private TaskAttemptListener taskAttemptListener;

@@ -32,8 +32,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Counters;
@@ -92,6 +90,8 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -101,7 +101,7 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
-  private static final Log LOG = LogFactory.getLog(TaskImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TaskImpl.class);
   private static final String SPECULATION = "Speculation: ";
 
   protected final JobConf conf;
