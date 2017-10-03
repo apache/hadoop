@@ -120,7 +120,7 @@ public class KeyDeletingService extends BackgroundService {
           }
           return results::size;
         } else {
-          LOG.info("No pending deletion key found in KSM");
+          LOG.debug("No pending deletion key found in KSM");
         }
       } catch (IOException e) {
         LOG.error("Unable to get pending deletion keys, retry in"

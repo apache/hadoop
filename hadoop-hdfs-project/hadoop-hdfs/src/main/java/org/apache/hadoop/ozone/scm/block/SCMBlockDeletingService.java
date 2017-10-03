@@ -100,7 +100,7 @@ public class SCMBlockDeletingService extends BackgroundService {
     public EmptyTaskResult call() throws Exception {
       // Scan SCM DB in HB interval and collect a throttled list of
       // to delete blocks.
-      LOG.info("Running DeletedBlockTransactionScanner");
+      LOG.debug("Running DeletedBlockTransactionScanner");
       DatanodeDeletedBlockTransactions transactions =
           getToDeleteContainerBlocks();
       if (transactions != null && !transactions.isEmpty()) {
@@ -114,7 +114,7 @@ public class SCMBlockDeletingService extends BackgroundService {
           nodeManager.addDatanodeCommand(datanodeID,
               new DeleteBlocksCommand(dnTXs));
           LOG.info("Added delete block command for datanode {} in the queue,"
-                  + " number delete block transactions: {}, TxID list: {}",
+                  + " number of delete block transactions: {}, TxID list: {}",
               datanodeID, dnTXs.size(),
               String.join(",", transactions.getTransactionIDList(datanodeID)));
 
@@ -133,7 +133,7 @@ public class SCMBlockDeletingService extends BackgroundService {
         // Get a limited number of TXs to send via HB at a time.
         txs = deletedBlockLog
             .getTransactions(BLOCK_DELETE_TX_PER_REQUEST_LIMIT);
-        LOG.info("Scanned deleted blocks log and got {} delTX to process",
+        LOG.debug("Scanned deleted blocks log and got {} delTX to process",
             txs.size());
       } catch (IOException e) {
         // We may tolerant a number of failures for sometime
@@ -183,7 +183,7 @@ public class SCMBlockDeletingService extends BackgroundService {
         first.add(tx);
         transactions.put(dnID, first);
       }
-      LOG.info("Transaction added: {} <- TX({})", dnID, tx.getTxID());
+      LOG.debug("Transaction added: {} <- TX({})", dnID, tx.getTxID());
     }
 
     Set<DatanodeID> getDatanodes() {
