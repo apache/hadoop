@@ -84,15 +84,15 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected AbstractS3GuardCommitter createCommitter(
+  protected AbstractS3GuardCommitter createCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
-    return new StagingCommitter(getOutDir(), context);
+    return new StagingCommitter(outputPath, context);
   }
 
   @Override
-  public AbstractS3GuardCommitter createCommitter(JobContext context)
-      throws IOException {
-    return new StagingCommitter(getOutDir(), context);
+  protected AbstractS3GuardCommitter createCommitter(Path outputPath,
+      JobContext context) throws IOException {
+    return new StagingCommitter(outputPath, context);
   }
 
   public AbstractS3GuardCommitter createFailingCommitter(

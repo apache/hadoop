@@ -47,14 +47,19 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
@@ -204,7 +209,20 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * @return new committer
    * @throws IOException failure
    */
+  protected AbstractS3GuardCommitter createCommitter(
+      TaskAttemptContext context) throws IOException {
+    return createCommitter(getOutDir(), context);
+  }
+
+  /**
+   * Create a committer for a task and a given output path.
+   * @param outputPath path
+   * @param context task context
+   * @return new committer
+   * @throws IOException failure
+   */
   protected abstract AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
       TaskAttemptContext context) throws IOException;
 
   /**
@@ -213,7 +231,20 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * @return new committer
    * @throws IOException failure
    */
+  protected AbstractS3GuardCommitter createCommitter(JobContext context)
+      throws IOException {
+    return createCommitter(getOutDir(), context);
+  }
+
+  /**
+   * Create a committer for a job and a given output path.
+   * @param outputPath path
+   * @param context job context
+   * @return new committer
+   * @throws IOException failure
+   */
   protected abstract AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
       JobContext context) throws IOException;
 
   protected abstract String getCommitterFactoryName();
@@ -243,7 +274,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
-   * Lambda Interface for creating committers, designed to allow
+   * Functional interface for creating committers, designed to allow
    * different factories to be used to create different failure modes.
    */
   @FunctionalInterface
@@ -1253,6 +1284,60 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     committer.commitJob(jContext);
     // validate output
     verifySuccessMarker(outDir);
+  }
+
+  /**
+   * Create a committer with no output path, then use it to abort
+   * a task. This mimics the action of an AM when a container fails and
+   * the AM wants to abort the task attempt.
+   * @throws Throwable
+   */
+  @Test
+  public void testAMWorkflow() throws Throwable {
+    describe("Create a committer with a null output path & use as an AM");
+    JobData jobData = startJob(true);
+    JobContext jContext = jobData.jContext;
+    TaskAttemptContext tContext = jobData.tContext;
+    AbstractS3GuardCommitter committer = jobData.committer;
+
+
+    JobId newJobId = MRBuilderUtils.newJobId(1, 1, 1);
+    org.apache.hadoop.mapreduce.v2.api.records.TaskId taskID =
+        MRBuilderUtils.newTaskId(newJobId, 0, TaskType.MAP);
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+        MRBuilderUtils.newTaskAttemptId(taskID, 0);
+    Configuration conf = jContext.getConfiguration();
+    TaskAttemptContext newAttempt = new TaskAttemptContextImpl(
+        conf,
+        TypeConverter.fromYarn(attemptID));
+
+    // bind
+    LoggingTextOutputFormat.bind(conf);
+    conf.set(S3A_COMMITTER_FACTORY_KEY, getCommitterFactoryName());
+
+    OutputFormat<?, ?> outputFormat
+        = ReflectionUtils.newInstance(newAttempt
+        .getOutputFormatClass(), conf);
+    Path outputPath = FileOutputFormat.getOutputPath(newAttempt);
+    assertNotNull("null output path in new task attempt", outputPath);
+
+    AbstractS3GuardCommitter committer2 = (AbstractS3GuardCommitter)
+        outputFormat.getOutputCommitter(newAttempt);
+
+
+    committer2.abortTask(tContext);
+
+    assertNoMultipartUploadsPending(getOutDir());
+
+  }
+
+  /**
+   * Create a directory tree of a hive-style partition structure
+   * then write into it as if it already existed.
+   */
+  @Test
+  public void testPartitionedTreeOutput() throws Throwable {
+    describe("test writing into an existing partitioned tree");
   }
 
   protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {

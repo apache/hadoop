@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
+import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -39,15 +40,19 @@ public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
   }
 
   @Override
-  protected AbstractS3GuardCommitter createCommitter(TaskAttemptContext context)
+  protected AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
+      TaskAttemptContext context)
       throws IOException {
-    return new DirectoryStagingCommitter(getOutDir(), context);
+    return new DirectoryStagingCommitter(outputPath, context);
   }
 
   @Override
-  public AbstractS3GuardCommitter createCommitter(JobContext context)
+  public AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
+      JobContext context)
       throws IOException {
-    return new DirectoryStagingCommitter(getOutDir(), context);
+    return new DirectoryStagingCommitter(outputPath, context);
   }
 
   @Override

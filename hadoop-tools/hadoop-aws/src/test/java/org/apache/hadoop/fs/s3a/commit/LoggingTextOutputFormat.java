@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -44,6 +46,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class LoggingTextOutputFormat<K, V> extends TextOutputFormat<K, V> {
   private static final Logger LOG =
       LoggerFactory.getLogger(LoggingTextOutputFormat.class);
+
+  public static final String NAME
+      = "org.apache.hadoop.fs.s3a.commit.LoggingTextOutputFormat";
 
   @Override
   public LoggingLineRecordWriter<K, V> getRecordWriter(TaskAttemptContext job)
@@ -116,4 +121,13 @@ public class LoggingTextOutputFormat<K, V> extends TextOutputFormat<K, V> {
     }
   }
 
+  /**
+   * Bind to a configuration for job submission.
+   * @param conf configuration
+   */
+  public static void bind(Configuration conf) {
+    conf.setClass(MRJobConfig.OUTPUT_FORMAT_CLASS_ATTR,
+        LoggingTextOutputFormat.class,
+        OutputFormat.class);
+  }
 }

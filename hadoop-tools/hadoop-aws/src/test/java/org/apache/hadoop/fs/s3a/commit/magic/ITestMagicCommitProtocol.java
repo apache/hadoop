@@ -79,15 +79,19 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected AbstractS3GuardCommitter createCommitter(TaskAttemptContext context)
+  protected AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
+      TaskAttemptContext context)
       throws IOException {
-    return new MagicS3GuardCommitter(getOutDir(), context);
+    return new MagicS3GuardCommitter(outputPath, context);
   }
 
   @Override
-  public AbstractS3GuardCommitter createCommitter(JobContext context)
+  public AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
+      JobContext context)
       throws IOException {
-    return new MagicS3GuardCommitter(getOutDir(), context);
+    return new MagicS3GuardCommitter(outputPath, context);
   }
 
   public AbstractS3GuardCommitter createFailingCommitter(

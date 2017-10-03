@@ -48,8 +48,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableInconsistentS3Client;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
 /**
- * Test case for committer operations; sets up the config for delayed commit
- * and the S3 committer.
+ * Base test suite for committer operations.
  *
  * By default, these tests enable the inconsistent committer, with
  * a delay of {@link #CONSISTENCY_DELAY}; they may also have throttling

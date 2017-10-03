@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitter;
+import org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -43,15 +44,18 @@ public class ITestPartitionedCommitProtocol extends ITestStagingCommitProtocol {
 
   @Override
   protected AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
       TaskAttemptContext context)
       throws IOException {
-    return new PartitionedStagingCommitter(getOutDir(), context);
+    return new PartitionedStagingCommitter(outputPath, context);
   }
 
   @Override
-  public AbstractS3GuardCommitter createCommitter(JobContext context)
+  public AbstractS3GuardCommitter createCommitter(
+      Path outputPath,
+      JobContext context)
       throws IOException {
-    return new PartitionedStagingCommitter(getOutDir(), context);
+    return new PartitionedStagingCommitter(outputPath, context);
   }
 
   @Override

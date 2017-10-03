@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -50,6 +52,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * attempt context and a possibly null path.
  *
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class PathOutputCommitterFactory extends Configured {
   private static final Logger LOG =
       LoggerFactory.getLogger(PathOutputCommitterFactory.class);
@@ -107,7 +111,8 @@ public class PathOutputCommitterFactory extends Configured {
    * @return a new committer
    * @throws IOException problems instantiating the committer
    */
-  public PathOutputCommitter createOutputCommitter(Path outputPath,
+  public PathOutputCommitter createOutputCommitter(
+      Path outputPath,
       TaskAttemptContext context) throws IOException {
     return createFileOutputCommitter(outputPath, context);
   }
@@ -122,7 +127,9 @@ public class PathOutputCommitterFactory extends Configured {
    * @return the committer to use
    * @throws IOException problems instantiating the committer
    */
-  public PathOutputCommitter createOutputCommitter(Path outputPath,
+  @InterfaceAudience.Private
+  public PathOutputCommitter createOutputCommitter(
+      Path outputPath,
       JobContext context) throws IOException {
     return createFileOutputCommitter(outputPath, context);
   }
@@ -135,7 +142,8 @@ public class PathOutputCommitterFactory extends Configured {
    * @return the committer to use
    * @throws IOException problems instantiating the committer
    */
-  protected final PathOutputCommitter createFileOutputCommitter(Path outputPath,
+  protected final PathOutputCommitter createFileOutputCommitter(
+      Path outputPath,
       JobContext context) throws IOException {
     LOG.debug("Creating FileOutputCommitter for path {} and context {}",
         outputPath, context);
@@ -151,7 +159,8 @@ public class PathOutputCommitterFactory extends Configured {
    * @return the committer to use
    * @throws IOException problems instantiating the committer
    */
-  protected final PathOutputCommitter createFileOutputCommitter(Path outputPath,
+  protected final PathOutputCommitter createFileOutputCommitter(
+      Path outputPath,
       TaskAttemptContext context) throws IOException {
     LOG.debug("Creating FileOutputCommitter for path {} and context {}",
         outputPath, context);
