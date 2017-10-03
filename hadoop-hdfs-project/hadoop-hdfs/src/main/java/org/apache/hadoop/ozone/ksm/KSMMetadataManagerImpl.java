@@ -137,7 +137,12 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     return DFSUtil.string2Bytes(bucketKeyString);
   }
 
-  private String getBucketKeyPrefix(String volume, String bucket) {
+  /**
+   * @param volume
+   * @param bucket
+   * @return
+   */
+  private String getBucketWithDBPrefix(String volume, String bucket) {
     StringBuffer sb = new StringBuffer();
     sb.append(OzoneConsts.KSM_VOLUME_PREFIX)
         .append(volume)
@@ -148,7 +153,7 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     return sb.toString();
   }
 
-  private String getKeyKeyPrefix(String volume, String bucket, String key) {
+  private String getKeyWithDBPrefix(String volume, String bucket, String key) {
     String keyVB = OzoneConsts.KSM_KEY_PREFIX + volume
         + OzoneConsts.KSM_KEY_PREFIX + bucket
         + OzoneConsts.KSM_KEY_PREFIX;
@@ -156,11 +161,8 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
   }
 
   @Override
-  public byte[] getDBKeyForKey(String volume, String bucket, String key) {
-    String keyKeyString = OzoneConsts.KSM_KEY_PREFIX + volume
-        + OzoneConsts.KSM_KEY_PREFIX + bucket + OzoneConsts.KSM_KEY_PREFIX
-        + key;
-    return DFSUtil.string2Bytes(keyKeyString);
+  public byte[] getDBKeyBytes(String volume, String bucket, String key) {
+    return DFSUtil.string2Bytes(getKeyWithDBPrefix(volume, bucket, key));
   }
 
   @Override
@@ -247,8 +249,7 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
    */
   public boolean isBucketEmpty(String volume, String bucket)
       throws IOException {
-    String keyRootName = OzoneConsts.KSM_KEY_PREFIX + volume
-        + OzoneConsts.KSM_KEY_PREFIX + bucket + OzoneConsts.KSM_KEY_PREFIX;
+    String keyRootName = getKeyWithDBPrefix(volume, bucket, null);
     byte[] keyRoot = DFSUtil.string2Bytes(keyRootName);
     ImmutablePair<byte[], byte[]> firstKey = store.peekAround(0, keyRoot);
     if (firstKey != null) {
@@ -281,7 +282,8 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     // A bucket starts with /#volume/#bucket_prefix
     MetadataKeyFilter filter = (preKey, currentKey, nextKey) -> {
       if (currentKey != null) {
-        String bucketNamePrefix = getBucketKeyPrefix(volumeName, bucketPrefix);
+        String bucketNamePrefix =
+                getBucketWithDBPrefix(volumeName, bucketPrefix);
         String bucket = DFSUtil.bytes2String(currentKey);
         return bucket.startsWith(bucketNamePrefix);
       }
@@ -329,15 +331,15 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
           ResultCodes.FAILED_BUCKET_NOT_FOUND);
     }
 
-    MetadataKeyFilter filter =
-        new KeyPrefixFilter(getKeyKeyPrefix(volumeName, bucketName, keyPrefix));
+    MetadataKeyFilter filter = new KeyPrefixFilter(
+                getKeyWithDBPrefix(volumeName, bucketName, keyPrefix));
 
     List<Map.Entry<byte[], byte[]>> rangeResult;
     if (!Strings.isNullOrEmpty(startKey)) {
       //Since we are excluding start key from the result,
       // the maxNumOfBuckets is incremented.
       rangeResult = store.getRangeKVs(
-          getDBKeyForKey(volumeName, bucketName, startKey),
+          getDBKeyBytes(volumeName, bucketName, startKey),
           maxKeys + 1, filter);
       //Remove start key from result.
       rangeResult.remove(0);

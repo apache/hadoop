@@ -100,7 +100,7 @@ public class KeyManagerImpl implements KeyManager {
       byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       byte[] keyKey =
-          metadataManager.getDBKeyForKey(volumeName, bucketName, keyName);
+          metadataManager.getDBKeyBytes(volumeName, bucketName, keyName);
 
       //Check if the volume exists
       if (metadataManager.get(volumeKey) == null) {
@@ -188,7 +188,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
     try {
-      byte[] keyKey = metadataManager.getDBKeyForKey(
+      byte[] keyKey = metadataManager.getDBKeyBytes(
           volumeName, bucketName, keyName);
       byte[] value = metadataManager.get(keyKey);
       if (value == null) {
@@ -216,7 +216,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
     try {
-      byte[] objectKey = metadataManager.getDBKeyForKey(
+      byte[] objectKey = metadataManager.getDBKeyBytes(
           volumeName, bucketName, keyName);
       byte[] objectValue = metadataManager.get(objectKey);
       if (objectValue == null) {
