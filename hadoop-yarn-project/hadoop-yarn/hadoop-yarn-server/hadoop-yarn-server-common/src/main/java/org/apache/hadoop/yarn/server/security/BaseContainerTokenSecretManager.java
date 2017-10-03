@@ -23,14 +23,14 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * SecretManager for ContainerTokens. Extended by both RM and NM and hence is
@@ -40,8 +40,8 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 public class BaseContainerTokenSecretManager extends
     SecretManager<ContainerTokenIdentifier> {
 
-  private static Log LOG = LogFactory
-    .getLog(BaseContainerTokenSecretManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BaseContainerTokenSecretManager.class);
 
   protected int serialNo = new SecureRandom().nextInt();
 
@@ -86,11 +86,9 @@ public class BaseContainerTokenSecretManager extends
 
   @Override
   public byte[] createPassword(ContainerTokenIdentifier identifier) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating password for " + identifier.getContainerID()
-          + " for user " + identifier.getUser() + " to be run on NM "
-          + identifier.getNmHostAddress());
-    }
+    LOG.debug("Creating password for {} for user {} to be run on NM {}",
+        identifier.getContainerID(), identifier.getUser(),
+        identifier.getNmHostAddress());
     this.readLock.lock();
     try {
       return createPassword(identifier.getBytes(),
@@ -114,11 +112,9 @@ public class BaseContainerTokenSecretManager extends
   protected byte[] retrievePasswordInternal(ContainerTokenIdentifier identifier,
       MasterKeyData masterKey)
       throws org.apache.hadoop.security.token.SecretManager.InvalidToken {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Retrieving password for " + identifier.getContainerID()
-          + " for user " + identifier.getUser() + " to be run on NM "
-          + identifier.getNmHostAddress());
-    }
+    LOG.debug("Retrieving password for {} for user {} to be run on NM {}",
+        identifier.getContainerID(), identifier.getUser(),
+        identifier.getNmHostAddress());
     return createPassword(identifier.getBytes(), masterKey.getSecretKey());
   }
 

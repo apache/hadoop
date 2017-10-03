@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -67,10 +65,12 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AppBlock extends HtmlBlock {
 
-  private static final Log LOG = LogFactory.getLog(AppBlock.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AppBlock.class);
   protected ApplicationBaseProtocol appBaseProt;
   protected Configuration conf;
   protected ApplicationId appID = null;
