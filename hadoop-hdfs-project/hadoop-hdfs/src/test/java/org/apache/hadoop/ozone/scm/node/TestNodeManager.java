@@ -907,7 +907,7 @@ public class TestNodeManager {
       assertTrue(nodeManager.isOutOfNodeChillMode());
       status = nodeManager.getChillModeStatus();
       Assert.assertThat(status,
-          CoreMatchers.containsString("Manual chill mode is set to false."));
+          CoreMatchers.containsString("Out of chill mode."));
       assertFalse((nodeManager.isInManualChillMode()));
 
 
@@ -916,7 +916,8 @@ public class TestNodeManager {
       assertFalse(nodeManager.isOutOfNodeChillMode());
       status = nodeManager.getChillModeStatus();
       Assert.assertThat(status,
-          CoreMatchers.containsString("Manual chill mode is set to true."));
+          CoreMatchers.containsString("Out of startup chill mode," +
+              " but in manual chill mode."));
       assertTrue((nodeManager.isInManualChillMode()));
 
 
