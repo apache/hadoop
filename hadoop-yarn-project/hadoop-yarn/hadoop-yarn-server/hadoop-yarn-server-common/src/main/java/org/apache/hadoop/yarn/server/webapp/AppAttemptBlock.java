@@ -26,8 +26,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -46,10 +44,13 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AppAttemptBlock extends HtmlBlock {
 
-  private static final Log LOG = LogFactory.getLog(AppAttemptBlock.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AppAttemptBlock.class);
   protected ApplicationBaseProtocol appBaseProt;
   protected ApplicationAttemptId appAttemptId = null;
 

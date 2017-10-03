@@ -19,11 +19,9 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import com.google.inject.Inject;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.GenericsUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
@@ -60,8 +58,6 @@ public class ErrorsAndWarningsBlock extends HtmlBlock {
 
   @Override
   protected void render(Block html) {
-    Log log = LogFactory.getLog(ErrorsAndWarningsBlock.class);
-
     boolean isAdmin = false;
     UserGroupInformation callerUGI = this.getCallerUGI();
 
@@ -78,7 +74,7 @@ public class ErrorsAndWarningsBlock extends HtmlBlock {
       return;
     }
 
-    if (log instanceof Log4JLogger) {
+    if (GenericsUtil.isLog4jLogger(ErrorsAndWarningsBlock.class)) {
       html.__(ErrorMetrics.class);
       html.__(WarningMetrics.class);
       html.div().button().$onclick("reloadPage()").b("View data for the last ")
@@ -180,8 +176,7 @@ public class ErrorsAndWarningsBlock extends HtmlBlock {
       cutoffs.add((now - 43200 * 1000) / 1000);
       cutoffs.add((now - 84600 * 1000) / 1000);
 
-      Log log = LogFactory.getLog(ErrorsAndWarningsBlock.class);
-      if (log instanceof Log4JLogger) {
+      if (GenericsUtil.isLog4jLogger(ErrorsAndWarningsBlock.class)) {
         appender =
             Log4jWarningErrorMetricsAppender.findAppender();
       }
@@ -193,8 +188,7 @@ public class ErrorsAndWarningsBlock extends HtmlBlock {
 
     @Override
     protected void render(Block html) {
-      Log log = LogFactory.getLog(ErrorsAndWarningsBlock.class);
-      if (log instanceof Log4JLogger) {
+      if (GenericsUtil.isLog4jLogger(ErrorsAndWarningsBlock.class)) {
         Hamlet.DIV<Hamlet> div =
             html.div().$class("metrics").$style("padding-bottom: 20px");
         div.h3(tableHeading).table("#metricsoverview").thead()

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -42,6 +40,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -180,8 +180,8 @@ public class OpportunisticContainerAllocator {
     }
   }
 
-  private static final Log LOG =
-      LogFactory.getLog(OpportunisticContainerAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OpportunisticContainerAllocator.class);
 
   private static final ResourceCalculator RESOURCE_CALCULATOR =
       new DominantResourceCalculator();
@@ -255,12 +255,11 @@ public class OpportunisticContainerAllocator {
           appContext.getContainerIdGenerator(), appContext.getBlacklist(),
           appAttId, appContext.getNodeMap(), userName, containers, anyAsk);
       if (!containers.isEmpty()) {
-        LOG.info("Opportunistic allocation requested for ["
-            + "priority=" + anyAsk.getPriority()
-            + ", allocationRequestId=" + anyAsk.getAllocationRequestId()
-            + ", num_containers=" + anyAsk.getNumContainers()
-            + ", capability=" + anyAsk.getCapability() + "]"
-            + " allocated = " + containers.keySet());
+        LOG.info("Opportunistic allocation requested for [priority={}, "
+            + "allocationRequestId={}, num_containers={}, capability={}] "
+            + "allocated = {}", anyAsk.getPriority(),
+            anyAsk.getAllocationRequestId(), anyAsk.getNumContainers(),
+            anyAsk.getCapability(), containers.keySet());
       }
     }
     return containers;
@@ -286,8 +285,7 @@ public class OpportunisticContainerAllocator {
     }
     if (nodesForScheduling.isEmpty()) {
       LOG.warn("No nodes available for allocating opportunistic containers. [" +
-          "allNodes=" + allNodes + ", " +
-          "blacklist=" + blacklist + "]");
+          "allNodes={}, blacklist={}]", allNodes, blacklist);
       return;
     }
     int numAllocated = 0;
@@ -305,9 +303,9 @@ public class OpportunisticContainerAllocator {
       }
       cList.add(container);
       numAllocated++;
-      LOG.info("Allocated [" + container.getId() + "] as opportunistic.");
+      LOG.info("Allocated [{}] as opportunistic.", container.getId());
     }
-    LOG.info("Allocated " + numAllocated + " opportunistic containers.");
+    LOG.info("Allocated {} opportunistic containers.", numAllocated);
   }
 
   private Container buildContainer(long rmIdentifier,
