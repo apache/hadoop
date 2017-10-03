@@ -395,15 +395,18 @@ public abstract class ApplicationSubmissionContext {
    * Set the flag which indicates whether to keep containers across application
    * attempts.
    * <p>
-   * If the flag is true, running containers will not be killed when application
-   * attempt fails and these containers will be retrieved by the new application
-   * attempt on registration via
+   * For managed AM, if the flag is true, running containers will not be killed
+   * when application attempt fails and these containers will be retrieved by
+   * the new application attempt on registration via
    * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}.
    * </p>
-   * 
-   * @param keepContainers
-   *          the flag which indicates whether to keep containers across
-   *          application attempts.
+   * <p>
+   * For unmanaged AM, if the flag is true, RM allows re-register and returns
+   * the running containers in the same attempt back to the UAM for HA.
+   * </p>
+   *
+   * @param keepContainers the flag which indicates whether to keep containers
+   *          across application attempts.
    */
   @Public
   @Stable

@@ -241,17 +241,18 @@ public abstract class AbstractYarnScheduler
     ApplicationId appId = currentAttempt.getApplicationId();
     SchedulerApplication<T> app = applications.get(appId);
     List<Container> containerList = new ArrayList<Container>();
-    RMApp appImpl = this.rmContext.getRMApps().get(appId);
-    if (appImpl.getApplicationSubmissionContext().getUnmanagedAM()) {
-      return containerList;
-    }
     if (app == null) {
       return containerList;
     }
     Collection<RMContainer> liveContainers =
         app.getCurrentAppAttempt().getLiveContainers();
-    ContainerId amContainerId = rmContext.getRMApps().get(appId)
-        .getCurrentAppAttempt().getMasterContainer().getId();
+    ContainerId amContainerId = null;
+    // For UAM, amContainer would be null
+    if (rmContext.getRMApps().get(appId).getCurrentAppAttempt()
+        .getMasterContainer() != null) {
+      amContainerId = rmContext.getRMApps().get(appId).getCurrentAppAttempt()
+          .getMasterContainer().getId();
+    }
     for (RMContainer rmContainer : liveContainers) {
       if (!rmContainer.getContainerId().equals(amContainerId)) {
         containerList.add(rmContainer.getContainer());
