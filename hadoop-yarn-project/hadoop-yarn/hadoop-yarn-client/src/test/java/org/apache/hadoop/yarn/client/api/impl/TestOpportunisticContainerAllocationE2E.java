@@ -88,7 +88,7 @@ import static org.junit.Assert.assertNotNull;
  * Class that tests the allocation of OPPORTUNISTIC containers through the
  * centralized ResourceManager.
  */
-public class TestOpportunisticContainerAllocation {
+public class TestOpportunisticContainerAllocationE2E {
   private static Configuration conf = null;
   private static MiniYARNCluster yarnCluster = null;
   private static YarnClient yarnClient = null;
