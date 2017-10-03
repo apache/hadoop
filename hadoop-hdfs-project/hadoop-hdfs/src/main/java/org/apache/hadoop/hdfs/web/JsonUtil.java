@@ -135,6 +135,10 @@ public class JsonUtil {
     if (status.isErasureCoded()) {
       m.put("ecBit", true);
     }
+    if (status.isSnapshotEnabled()) {
+      m.put("snapshotEnabled", status.isSnapshotEnabled());
+    }
+
     m.put("accessTime", status.getAccessTime());
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());

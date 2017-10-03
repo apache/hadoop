@@ -440,6 +440,7 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
             "pathSuffix"      : "",
             "permission"      : "777",
             "replication"     : 0,
+            "snapshotEnabled" : true
             "type"            : "DIRECTORY"    //enum {FILE, DIRECTORY, SYMLINK}
           }
         }
@@ -485,6 +486,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
                 "pathSuffix"      : "bar",
                 "permission"      : "711",
                 "replication"     : 0,
+                "snapshotEnabled" : true
                 "type"            : "DIRECTORY"
               },
               ...

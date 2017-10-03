@@ -44,9 +44,10 @@ message FileStatusProto {
     FT_SYMLINK = 3;
   }
   enum Flags {
-    HAS_ACL    = 0x01; // has ACLs
-    HAS_CRYPT  = 0x02; // encrypted
-    HAS_EC     = 0x04; // erasure coded
+    HAS_ACL           = 0x01; // has ACLs
+    HAS_CRYPT         = 0x02; // encrypted
+    HAS_EC            = 0x04; // erasure coded
+    SNAPSHOT_ENABLED  = 0x08; // snapshot enabled
   }
   required FileType fileType            = 1;
   required string path                  = 2;

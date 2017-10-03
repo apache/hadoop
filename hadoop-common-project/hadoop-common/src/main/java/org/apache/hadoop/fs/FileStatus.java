@@ -60,7 +60,8 @@ public class FileStatus implements Writable, Comparable<Object>,
     HAS_ACL,
     HAS_CRYPT,
     HAS_EC,
-  };
+    SNAPSHOT_ENABLED
+  }
   private static final Set<AttrFlags> NONE = Collections.<AttrFlags>emptySet();
   private static Set<AttrFlags> flags(boolean acl, boolean crypt, boolean ec) {
     if (!(acl || crypt || ec)) {
@@ -274,6 +275,15 @@ public class FileStatus implements Writable, Comparable<Object>,
   }
 
   /**
+   * Check if directory is Snapshot enabled or not.
+   *
+   * @return true if directory is snapshot enabled
+   */
+  public boolean isSnapshotEnabled() {
+    return attr.contains(AttrFlags.SNAPSHOT_ENABLED);
+  }
+
+  /**
    * Get the owner of the file.
    * @return owner of the file. The string could be empty if there is no
    *         notion of owner of a file in a filesystem or if it could not 
@@ -328,6 +338,19 @@ public class FileStatus implements Writable, Comparable<Object>,
    */  
   protected void setGroup(String group) {
     this.group = (group == null) ? "" :  group;
+  }
+
+  /**
+   * Sets Snapshot enabled flag.
+   *
+   * @param isSnapShotEnabled When true, SNAPSHOT_ENABLED flag is set
+   */
+  public void setSnapShotEnabledFlag(boolean isSnapShotEnabled) {
+    if (isSnapShotEnabled) {
+      attr.add(AttrFlags.SNAPSHOT_ENABLED);
+    } else {
+      attr.remove(AttrFlags.SNAPSHOT_ENABLED);
+    }
   }
 
   /**
@@ -485,5 +508,7 @@ public class FileStatus implements Writable, Comparable<Object>,
       throw new InvalidObjectException("No type in deserialized FileStatus");
     }
   }
+
+
 
 }
