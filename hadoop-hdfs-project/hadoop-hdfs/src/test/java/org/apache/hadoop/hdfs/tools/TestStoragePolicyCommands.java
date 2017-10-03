@@ -18,11 +18,12 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -38,12 +39,12 @@ public class TestStoragePolicyCommands {
   private static final short REPL = 1;
   private static final int SIZE = 128;
 
-  private static Configuration conf;
-  private static MiniDFSCluster cluster;
-  private static DistributedFileSystem fs;
+  protected static Configuration conf;
+  protected static MiniDFSCluster cluster;
+  protected static FileSystem fs;
 
   @Before
-  public void clusterSetUp() throws IOException {
+  public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
     cluster.waitActive();

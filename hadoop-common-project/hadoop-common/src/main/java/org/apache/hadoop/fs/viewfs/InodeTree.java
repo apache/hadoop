@@ -407,7 +407,8 @@ abstract class InodeTree<T> {
         for (int j = 1; j <= i; ++j) {
           failedAt.append('/').append(path[j]);
         }
-        throw (new FileNotFoundException(failedAt.toString()));
+        throw (new FileNotFoundException("File/Directory does not exist: "
+            + failedAt.toString()));
       }
 
       if (nextInode instanceof INodeLink) {
