@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
-import java.util.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.collections.map.HashedMap;
@@ -62,6 +61,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -131,7 +131,17 @@ public class SCMNodeManager
   private final int maxHBToProcessPerLoop;
   private final String clusterID;
   private final VersionInfo version;
-  private Optional<Boolean> inManualChillMode;
+  /**
+   * During start up of SCM, it will enter into chill mode and will be there
+   * until number of Datanodes registered reaches {@code chillModeNodeCount}.
+   * This flag is for tracking startup chill mode.
+   */
+  private AtomicBoolean inStartupChillMode;
+  /**
+   * Administrator can put SCM into chill mode manually.
+   * This flag is for tracking manual chill mode.
+   */
+  private AtomicBoolean inManualChillMode;
   private final CommandQueue commandQueue;
   // Node manager MXBean
   private ObjectName nmInfoBean;
@@ -173,7 +183,10 @@ public class SCMNodeManager
     executorService = HadoopExecutors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
-    this.inManualChillMode = Optional.empty();
+
+    LOG.info("Entering startup chill mode.");
+    this.inStartupChillMode = new AtomicBoolean(true);
+    this.inManualChillMode = new AtomicBoolean(false);
 
     Preconditions.checkState(heartbeatCheckerIntervalMs > 0);
     executorService.schedule(this, heartbeatCheckerIntervalMs,
@@ -286,11 +299,7 @@ public class SCMNodeManager
    */
   @Override
   public boolean isOutOfNodeChillMode() {
-    if (inManualChillMode.isPresent()) {
-      return !inManualChillMode.get();
-    }
-
-    return (totalNodes.get() >= getMinimumChillModeNodes());
+    return !inStartupChillMode.get() && !inManualChillMode.get();
   }
 
   /**
@@ -298,7 +307,8 @@ public class SCMNodeManager
    */
   @Override
   public void clearChillModeFlag() {
-    this.inManualChillMode = Optional.empty();
+    LOG.info("Clearing manual chill mode flag.");
+    this.inManualChillMode.getAndSet(false);
   }
 
   /**
@@ -307,22 +317,15 @@ public class SCMNodeManager
    */
   @Override
   public String getChillModeStatus() {
-    if (inManualChillMode.isPresent() && inManualChillMode.get()) {
-      return "Manual chill mode is set to true." +
-          getNodeStatus();
-    }
-
-    if (inManualChillMode.isPresent() && !inManualChillMode.get()) {
-      return "Manual chill mode is set to false." +
-          getNodeStatus();
-    }
-
-    if (isOutOfNodeChillMode()) {
-      return "Out of chill mode." + getNodeStatus();
-    } else {
+    if (inStartupChillMode.get()) {
       return "Still in chill mode, waiting on nodes to report in."
           + getNodeStatus();
     }
+    if (inManualChillMode.get()) {
+      return "Out of startup chill mode, but in manual chill mode." +
+          getNodeStatus();
+    }
+    return "Out of chill mode." + getNodeStatus();
   }
 
   /**
@@ -344,19 +347,24 @@ public class SCMNodeManager
    */
   @Override
   public boolean isInManualChillMode() {
-    if (this.inManualChillMode.isPresent()) {
-      return this.inManualChillMode.get();
-    }
-    return false;
+    return inManualChillMode.get();
   }
 
   /**
    * Forcefully exits the chill mode even if we have not met the minimum
-   * criteria of exiting the chill mode.
+   * criteria of exiting the chill mode. This will exit from both startup
+   * and manual chill mode.
    */
   @Override
   public void forceExitChillMode() {
-    this.inManualChillMode = Optional.of(false);
+    if(inStartupChillMode.get()) {
+      LOG.info("Leaving startup chill mode.");
+      inStartupChillMode.getAndSet(false);
+    }
+    if(inManualChillMode.get()) {
+      LOG.info("Leaving manual chill mode.");
+      inManualChillMode.getAndSet(false);
+    }
   }
 
   /**
@@ -364,7 +372,8 @@ public class SCMNodeManager
    */
   @Override
   public void forceEnterChillMode() {
-    this.inManualChillMode = Optional.of(true);
+    LOG.info("Entering manual chill mode.");
+    inManualChillMode.getAndSet(true);
   }
 
   /**
@@ -727,6 +736,12 @@ public class SCMNodeManager
     healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
     healthyNodeCount.incrementAndGet();
     nodeStats.put(datanodeID.getDatanodeUuid(), new SCMNodeStat());
+
+    if(inStartupChillMode.get() &&
+        totalNodes.get() >= getMinimumChillModeNodes()) {
+      inStartupChillMode.getAndSet(false);
+      LOG.info("Leaving startup chill mode.");
+    }
 
     // TODO: define node pool policy for non-default node pool.
     // For now, all nodes are added to the "DefaultNodePool" upon registration
