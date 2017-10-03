@@ -87,7 +87,7 @@ message AllocateRequestProto {
   optional ResourceBlacklistRequestProto blacklist_request = 3;
   optional int32 response_id = 4;
   optional float progress = 5;
-  repeated UpdateContainerRequestProto update_requests = 6;
+  repeated UpdateContainerRequestProto update_requests = 7;
 }
 
 message NMTokenProto {
