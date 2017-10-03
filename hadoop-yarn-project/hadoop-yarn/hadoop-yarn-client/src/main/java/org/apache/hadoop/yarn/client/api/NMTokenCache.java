@@ -35,7 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
  * NMTokenCache manages NMTokens required for an Application Master
  * communicating with individual NodeManagers.
  * <p>
- * By default Yarn client libraries {@link AMRMClient} and {@link NMClient} use
+ * By default YARN client libraries {@link AMRMClient} and {@link NMClient} use
  * {@link #getSingleton()} instance of the cache.
  * <ul>
  *   <li>

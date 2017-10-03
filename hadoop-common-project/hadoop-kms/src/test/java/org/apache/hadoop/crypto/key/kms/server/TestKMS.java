@@ -2208,7 +2208,7 @@ public class TestKMS {
         "hadoop.kms.authentication.delegation-token.renew-interval.sec", "5");
     writeConf(confDir, conf);
 
-    // Running as a service (e.g. Yarn in practice).
+    // Running as a service (e.g. YARN in practice).
     runServer(null, null, confDir, new KMSCallable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -2223,7 +2223,7 @@ public class TestKMS {
         final InetSocketAddress kmsAddr =
             new InetSocketAddress(getKMSUrl().getHost(), getKMSUrl().getPort());
 
-        // Job 1 (e.g. Yarn log aggregation job), with user DT.
+        // Job 1 (e.g. YARN log aggregation job), with user DT.
         final Collection<Token<?>> job1Token = new HashSet<>();
         doAs("client", new PrivilegedExceptionAction<Void>() {
           @Override
@@ -2268,7 +2268,7 @@ public class TestKMS {
         });
         Assert.assertFalse(job1Token.isEmpty());
 
-        // job 2 (e.g. Another Yarn log aggregation job, with user DT.
+        // job 2 (e.g. Another YARN log aggregation job, with user DT.
         doAs("client", new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {

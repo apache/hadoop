@@ -367,7 +367,7 @@ public abstract class ApplicationReport {
    * Get the AMRM token of the application.
    * <p>
    * The AMRM token is required for AM to RM scheduling operations. For 
-   * managed Application Masters Yarn takes care of injecting it. For unmanaged
+   * managed Application Masters YARN takes care of injecting it. For unmanaged
    * Applications Masters, the token must be obtained via this method and set
    * in the {@link org.apache.hadoop.security.UserGroupInformation} of the
    * current user.

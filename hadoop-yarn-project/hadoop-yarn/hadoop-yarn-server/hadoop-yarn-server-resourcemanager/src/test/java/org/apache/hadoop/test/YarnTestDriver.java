@@ -22,7 +22,7 @@ import org.apache.hadoop.util.ProgramDriver;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.TestZKRMStateStorePerf;
 
 /**
- * Driver for Yarn tests.
+ * Driver for YARN tests.
  *
  */
 public class YarnTestDriver {
