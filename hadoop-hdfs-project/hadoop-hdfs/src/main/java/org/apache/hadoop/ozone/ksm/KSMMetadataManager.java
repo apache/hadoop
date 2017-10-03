@@ -114,7 +114,7 @@ public interface KSMMetadataManager {
    * @param key - key name
    * @return bytes of DB key.
    */
-  byte[] getDBKeyForKey(String volume, String bucket, String key);
+  byte[] getDBKeyBytes(String volume, String bucket, String key);
 
   /**
    * Returns the DB key name of a deleted key in KSM metadata store.
