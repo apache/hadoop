@@ -113,22 +113,18 @@ public class RandomTreeWalk extends TreeWalk {
     final long len = isDir ? 0 : r.nextInt(Integer.MAX_VALUE);
     final int nblocks = 0 == len ? 0 : (((int)((len - 1) / blocksize)) + 1);
     BlockLocation[] blocks = genBlocks(r, nblocks, blocksize, len);
-    try {
-      return new LocatedFileStatus(new FileStatus(
-          len,              /* long length,             */
-          isDir,            /* boolean isdir,           */
-          1,                /* int block_replication,   */
-          blocksize,        /* long blocksize,          */
-          0L,               /* long modification_time,  */
-          0L,               /* long access_time,        */
-          null,             /* FsPermission permission, */
-          "hadoop",         /* String owner,            */
-          "hadoop",         /* String group,            */
-          name),            /* Path path                */
-          blocks);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    return new LocatedFileStatus(new FileStatus(
+        len,              /* long length,             */
+        isDir,            /* boolean isdir,           */
+        1,                /* int block_replication,   */
+        blocksize,        /* long blocksize,          */
+        0L,               /* long modification_time,  */
+        0L,               /* long access_time,        */
+        null,             /* FsPermission permission, */
+        "hadoop",         /* String owner,            */
+        "hadoop",         /* String group,            */
+        name),            /* Path path                */
+        blocks);
   }
 
   BlockLocation[] genBlocks(Random r, int nblocks, int blocksize, long len) {
