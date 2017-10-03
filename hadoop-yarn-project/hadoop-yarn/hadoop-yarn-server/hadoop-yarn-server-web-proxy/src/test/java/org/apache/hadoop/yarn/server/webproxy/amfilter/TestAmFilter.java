@@ -159,13 +159,7 @@ public class TestAmFilter {
     spy.proxyUriBases = new HashMap<>();
     spy.proxyUriBases.put(rm1, rm1Url);
     spy.proxyUriBases.put(rm2, rm2Url);
-
-    Collection<String> rmIds = new ArrayList<>(Arrays.asList(rm1, rm2));
-    Mockito.doReturn(rmIds).when(spy).getRmIds(Mockito.any());
-    Mockito.doReturn(rm1Url).when(spy)
-        .getUrlByRmId(Mockito.any(), Mockito.eq(rm2));
-    Mockito.doReturn(rm2Url).when(spy)
-        .getUrlByRmId(Mockito.any(), Mockito.eq(rm1));
+    spy.rmUrls = new String[] { rm1, rm2 };
 
     assertEquals(spy.findRedirectUrl(), rm1Url);
   }
