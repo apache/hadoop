@@ -17,12 +17,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha3-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-fs2img</artifactId>
-  <version>3.0.0-alpha3-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <description>fs2img</description>
   <name>fs2img</name>
   <packaging>jar</packaging>
