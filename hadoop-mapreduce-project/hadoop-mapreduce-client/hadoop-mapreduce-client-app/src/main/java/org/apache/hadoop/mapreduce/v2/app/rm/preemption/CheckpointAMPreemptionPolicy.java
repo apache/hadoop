@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -44,6 +42,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This policy works in combination with an implementation of task
@@ -75,8 +75,8 @@ public class CheckpointAMPreemptionPolicy implements AMPreemptionPolicy {
   @SuppressWarnings("rawtypes")
   private EventHandler eventHandler;
 
-  static final Log LOG = LogFactory
-      .getLog(CheckpointAMPreemptionPolicy.class);
+  static final Logger LOG = LoggerFactory
+      .getLogger(CheckpointAMPreemptionPolicy.class);
 
   public CheckpointAMPreemptionPolicy() {
     this(Collections.synchronizedSet(new HashSet<TaskAttemptId>()),

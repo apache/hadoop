@@ -23,8 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpConfig.Policy;
@@ -90,6 +88,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This module is responsible for talking to the 
@@ -98,7 +98,7 @@ import org.apache.hadoop.yarn.webapp.WebApps;
  */
 public class MRClientService extends AbstractService implements ClientService {
 
-  static final Log LOG = LogFactory.getLog(MRClientService.class);
+  static final Logger LOG = LoggerFactory.getLogger(MRClientService.class);
   
   private MRClientProtocol protocolHandler;
   private Server server;

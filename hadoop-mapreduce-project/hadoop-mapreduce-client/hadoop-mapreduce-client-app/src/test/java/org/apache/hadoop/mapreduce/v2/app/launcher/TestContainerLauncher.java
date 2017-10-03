@@ -42,8 +42,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
@@ -93,6 +91,8 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestContainerLauncher {
 
@@ -101,7 +101,8 @@ public class TestContainerLauncher {
   Configuration conf;
   Server server;
 
-  static final Log LOG = LogFactory.getLog(TestContainerLauncher.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestContainerLauncher.class);
 
   @Test (timeout = 10000)
   public void testPoolSize() throws InterruptedException {
@@ -446,7 +447,7 @@ public class TestContainerLauncher {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(15000);
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error("Setup thread sleep interrupted: ", e);
         throw new UndeclaredThrowableException(e);
       }
       status.setState(ContainerState.RUNNING);

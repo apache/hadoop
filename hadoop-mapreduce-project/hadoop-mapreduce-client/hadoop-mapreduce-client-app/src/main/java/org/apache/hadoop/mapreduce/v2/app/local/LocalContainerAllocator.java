@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.local;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobCounter;
@@ -55,6 +53,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Allocates containers locally. Doesn't allocate a real container;
@@ -63,8 +63,8 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 public class LocalContainerAllocator extends RMCommunicator
     implements ContainerAllocator {
 
-  private static final Log LOG =
-      LogFactory.getLog(LocalContainerAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LocalContainerAllocator.class);
 
   @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;

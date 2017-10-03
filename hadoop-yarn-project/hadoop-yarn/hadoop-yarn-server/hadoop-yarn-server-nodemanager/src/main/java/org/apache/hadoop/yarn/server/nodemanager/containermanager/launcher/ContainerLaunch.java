@@ -89,7 +89,6 @@ import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerLaunch implements Callable<Integer> {
 
@@ -1022,8 +1021,6 @@ public class ContainerLaunch implements Callable<Integer> {
 
     public abstract void command(List<String> command) throws IOException;
 
-    public abstract void whitelistedEnv(String key, String value) throws IOException;
-
     protected static final String ENV_PRELAUNCH_STDOUT = "PRELAUNCH_OUT";
     protected static final String ENV_PRELAUNCH_STDERR = "PRELAUNCH_ERR";
 
@@ -1163,11 +1160,6 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
-    public void whitelistedEnv(String key, String value) throws IOException {
-      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
-    }
-
-    @Override
     public void setStdOut(final Path stdout) throws IOException {
       line("export ", ENV_PRELAUNCH_STDOUT, "=\"", stdout.toString(), "\"");
       // tee is needed for DefaultContainerExecutor error propagation to stdout
@@ -1259,12 +1251,6 @@ public class ContainerLaunch implements Callable<Integer> {
     @Override
     public void command(List<String> command) throws IOException {
       lineWithLenCheck("@call ", StringUtils.join(" ", command));
-      errorCheck();
-    }
-
-    @Override
-    public void whitelistedEnv(String key, String value) throws IOException {
-      lineWithLenCheck("@set ", key, "=", value);
       errorCheck();
     }
 
@@ -1387,17 +1373,6 @@ public class ContainerLaunch implements Callable<Integer> {
 
     if (!Shell.WINDOWS) {
       environment.put("JVM_PID", "$$");
-    }
-
-    /**
-     * Modifiable environment variables
-     */
-    
-    // allow containers to override these variables
-    String[] whitelist = conf.get(YarnConfiguration.NM_ENV_WHITELIST, YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
-    
-    for(String whitelistEnvVariable : whitelist) {
-      putEnvIfAbsent(environment, whitelistEnvVariable.trim());
     }
 
     // variables here will be forced in, even if the container has specified them.

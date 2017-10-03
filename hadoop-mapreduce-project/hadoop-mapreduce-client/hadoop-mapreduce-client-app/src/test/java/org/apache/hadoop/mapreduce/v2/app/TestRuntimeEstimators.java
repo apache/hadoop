@@ -29,8 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
@@ -81,6 +79,8 @@ import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestRuntimeEstimators {
@@ -98,7 +98,8 @@ public class TestRuntimeEstimators {
 
   AppContext myAppContext;
 
-  private static final Log LOG = LogFactory.getLog(TestRuntimeEstimators.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRuntimeEstimators.class);
 
   private final AtomicInteger slotsInUse = new AtomicInteger(0);
 
