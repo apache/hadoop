@@ -89,8 +89,9 @@ public final class OzoneConfigKeys {
   public static final String OZONE_METADATA_STORE_IMPL_DEFAULT =
       OZONE_METADATA_STORE_IMPL_ROCKSDB;
 
-  public static final String OZONE_KEY_CACHE = "ozone.key.cache.size";
-  public static final int OZONE_KEY_CACHE_DEFAULT = 1024;
+  public static final String OZONE_CONTAINER_CACHE_SIZE =
+      "ozone.container.cache.size";
+  public static final int OZONE_CONTAINER_CACHE_DEFAULT = 1024;
 
   public static final String OZONE_SCM_BLOCK_SIZE_KEY =
       "ozone.scm.block.size";
@@ -158,9 +159,6 @@ public final class OzoneConfigKeys {
       = ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY;
   public static final String DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT
       = ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT;
-  /** A unique ID to identify a Ratis server. */
-  public static final String DFS_CONTAINER_RATIS_SERVER_ID =
-      "dfs.container.ratis.server.id";
   public static final String DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR =
       "dfs.container.ratis.datanode.storage.dir";
 

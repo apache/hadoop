@@ -49,7 +49,7 @@ public final class CBlockConfigKeys {
       4096;
 
   public static final String DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_KEY =
-      "dfs.storage.service.handler.count";
+      "dfs.cblock.service.handler.count";
   public static final int DFS_CBLOCK_SERVICERPC_HANDLER_COUNT_DEFAULT = 10;
 
   public static final String DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY =
@@ -82,7 +82,7 @@ public final class CBlockConfigKeys {
    * Cache size in 1000s of entries. 256 indicates 256 * 1024.
    */
   public static final String DFS_CBLOCK_CACHE_QUEUE_SIZE_KB =
-      "dfs.cblock.cache.cache.size.in.kb";
+      "dfs.cblock.cache.queue.size.in.kb";
   public static final int DFS_CBLOCK_CACHE_QUEUE_SIZE_KB_DEFAULT = 256;
 
   /**
@@ -148,7 +148,7 @@ public final class CBlockConfigKeys {
   public static final int DFS_CBLOCK_SCM_PORT_DEFAULT = 9860;
 
   public static final String DFS_CBLOCK_CONTAINER_SIZE_GB_KEY =
-      "dfs.cblock.container.size";
+      "dfs.cblock.container.size.gb";
   public static final int DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT =
       5;
 

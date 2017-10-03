@@ -59,8 +59,8 @@ public final class ContainerCache extends LRUMap {
    */
   public synchronized static ContainerCache getInstance(Configuration conf) {
     if (cache == null) {
-      int cacheSize = conf.getInt(OzoneConfigKeys.OZONE_KEY_CACHE,
-          OzoneConfigKeys.OZONE_KEY_CACHE_DEFAULT);
+      int cacheSize = conf.getInt(OzoneConfigKeys.OZONE_CONTAINER_CACHE_SIZE,
+          OzoneConfigKeys.OZONE_CONTAINER_CACHE_DEFAULT);
       cache = new ContainerCache(cacheSize, LOAD_FACTOR, true);
     }
     return cache;
