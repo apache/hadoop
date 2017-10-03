@@ -1287,10 +1287,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
-   * Create a committer with no output path, then use it to abort
+   * Create a committer through reflection then use it to abort
    * a task. This mimics the action of an AM when a container fails and
    * the AM wants to abort the task attempt.
-   * @throws Throwable
    */
   @Test
   public void testAMWorkflow() throws Throwable {
@@ -1323,12 +1322,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
     AbstractS3GuardCommitter committer2 = (AbstractS3GuardCommitter)
         outputFormat.getOutputCommitter(newAttempt);
-
-
     committer2.abortTask(tContext);
-
     assertNoMultipartUploadsPending(getOutDir());
-
   }
 
   /**

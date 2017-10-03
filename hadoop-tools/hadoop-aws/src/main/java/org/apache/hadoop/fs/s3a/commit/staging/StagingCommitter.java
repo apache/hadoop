@@ -776,7 +776,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
               File localFile = new File(path.toUri().getPath());
               String relative = Paths.getRelativePath(attemptPath, path);
               // TODO: Why isn't this being used?
-              String partition = getPartition(relative);
+              String partition = Paths.getPartition(relative);
               String key = getFinalKey(relative, context);
               Path destPath = getDestS3AFS().keyToQualifiedPath(key);
               SinglePendingCommit commit = getCommitOperations()
@@ -890,17 +890,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
       // the attempt to build the working path failed
       LOG.debug("{}: Failed to delete working path", getRole(), e);
     }
-  }
-
-  /**
-   * Returns the partition of a relative file path, or null if the path is a
-   * file name with no relative directory.
-   *
-   * @param relative a relative file path
-   * @return the partition of the relative file path
-   */
-  protected final String getPartition(String relative) {
-    return Paths.getParent(relative);
   }
 
   /**

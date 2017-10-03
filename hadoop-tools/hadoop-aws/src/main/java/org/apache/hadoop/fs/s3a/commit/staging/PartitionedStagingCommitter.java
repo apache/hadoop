@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
-import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -74,7 +73,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
   protected int commitTaskInternal(TaskAttemptContext context,
       List<FileStatus> taskOutput) throws IOException {
     Path attemptPath = getTaskAttemptPath(context);
-    Set<String> partitions = getPartitions(attemptPath, taskOutput);
+    Set<String> partitions = Paths.getPartitions(attemptPath, taskOutput);
 
     // enforce conflict resolution, but only if the mode is FAIL. for APPEND,
     // it doesn't matter that the partitions are already there, and for REPLACE,
@@ -137,36 +136,4 @@ public class PartitionedStagingCommitter extends StagingCommitter {
     }
   }
 
-  /**
-   * Get the set of partitions from the list of files being staged.
-   * This is all immediate parents of those files. If a file is in the root
-   * dir, the partition is declared to be
-   * {@link StagingCommitterConstants#TABLE_ROOT}.
-   * @param attemptPath path for the attempt
-   * @param taskOutput list of output files.
-   * @return list of partitions.
-   * @throws IOException IO failure
-   */
-  protected Set<String> getPartitions(Path attemptPath,
-      List<FileStatus> taskOutput)
-      throws IOException {
-    // get a list of partition directories
-    Set<String> partitions = Sets.newLinkedHashSet();
-    for (FileStatus fileStatus : taskOutput) {
-      // sanity check the output paths
-      Path outputFile = fileStatus.getPath();
-      if (!fileStatus.isFile()) {
-        throw new PathIsDirectoryException(outputFile.toString());
-      }
-      String partition = getPartition(
-          Paths.getRelativePath(attemptPath, outputFile));
-      if (partition != null) {
-        partitions.add(partition);
-      } else {
-        partitions.add(StagingCommitterConstants.TABLE_ROOT);
-      }
-    }
-
-    return partitions;
-  }
 }

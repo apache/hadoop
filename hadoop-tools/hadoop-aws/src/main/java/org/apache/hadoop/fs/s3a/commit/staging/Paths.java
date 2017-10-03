@@ -20,14 +20,19 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Sets;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -212,6 +217,50 @@ public final class Paths {
     String dir = dirs[rand.nextInt(dirs.length)];
 
     return FileSystem.getLocal(conf).makeQualified(new Path(dir));
+  }
+
+  /**
+   * Returns the partition of a relative file path, or null if the path is a
+   * file name with no relative directory.
+   *
+   * @param relative a relative file path
+   * @return the partition of the relative file path
+   */
+  protected static final String getPartition(String relative) {
+    return getParent(relative);
+  }
+
+  /**
+   * Get the set of partitions from the list of files being staged.
+   * This is all immediate parents of those files. If a file is in the root
+   * dir, the partition is declared to be
+   * {@link StagingCommitterConstants#TABLE_ROOT}.
+   * @param attemptPath path for the attempt
+   * @param taskOutput list of output files.
+   * @return list of partitions.
+   * @throws IOException IO failure
+   */
+  protected static Set<String> getPartitions(Path attemptPath,
+      List<FileStatus> taskOutput)
+      throws IOException {
+    // get a list of partition directories
+    Set<String> partitions = Sets.newLinkedHashSet();
+    for (FileStatus fileStatus : taskOutput) {
+      // sanity check the output paths
+      Path outputFile = fileStatus.getPath();
+      if (!fileStatus.isFile()) {
+        throw new PathIsDirectoryException(outputFile.toString());
+      }
+      String partition = getPartition(
+          getRelativePath(attemptPath, outputFile));
+      if (partition != null) {
+        partitions.add(partition);
+      } else {
+        partitions.add(TABLE_ROOT);
+      }
+    }
+
+    return partitions;
   }
 
   /**
