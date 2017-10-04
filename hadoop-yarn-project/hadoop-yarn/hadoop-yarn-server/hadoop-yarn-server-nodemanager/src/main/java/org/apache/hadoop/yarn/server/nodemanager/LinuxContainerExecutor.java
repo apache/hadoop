@@ -420,6 +420,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
+  protected void updateEnvForWhitelistVars(Map<String, String> env) {
+    if (linuxContainerRuntime.useWhitelistEnv(env)) {
+      super.updateEnvForWhitelistVars(env);
+    }
+  }
+
+  @Override
   public int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
     Container container = ctx.getContainer();

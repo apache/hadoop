@@ -26,10 +26,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -44,7 +42,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -95,10 +92,15 @@ public abstract class ContainerExecutor implements Configurable {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final ReadLock readLock = lock.readLock();
   private final WriteLock writeLock = lock.writeLock();
+  private String[] whitelistVars;
 
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    if (conf != null) {
+      whitelistVars = conf.get(YarnConfiguration.NM_ENV_WHITELIST,
+          YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
+    }
   }
 
   @Override
@@ -323,6 +325,8 @@ public abstract class ContainerExecutor implements Configurable {
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
       Map<Path, List<String>> resources, List<String> command, Path logDir,
       String user, String outFilename) throws IOException {
+    updateEnvForWhitelistVars(environment);
+
     ContainerLaunch.ShellScriptBuilder sb =
         ContainerLaunch.ShellScriptBuilder.create();
 
@@ -333,23 +337,11 @@ public abstract class ContainerExecutor implements Configurable {
     sb.stdout(logDir, CONTAINER_PRE_LAUNCH_STDOUT);
     sb.stderr(logDir, CONTAINER_PRE_LAUNCH_STDERR);
 
-    Set<String> whitelist = new HashSet<>();
-
-    whitelist.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
-    whitelist.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
-    whitelist.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
-    whitelist.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
-    whitelist.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
-    whitelist.add(ApplicationConstants.Environment.JAVA_HOME.name());
 
     if (environment != null) {
       sb.echo("Setting up env variables");
       for (Map.Entry<String, String> env : environment.entrySet()) {
-        if (!whitelist.contains(env.getKey())) {
-          sb.env(env.getKey(), env.getValue());
-        } else {
-          sb.whitelistedEnv(env.getKey(), env.getValue());
-        }
+        sb.env(env.getKey(), env.getValue());
       }
     }
 
@@ -648,6 +640,28 @@ public abstract class ContainerExecutor implements Configurable {
     } finally {
       readLock.unlock();
     }
+  }
+
+  /**
+   * Propagate variables from the nodemanager's environment into the
+   * container's environment if unspecified by the container.
+   * @param env the environment to update
+   * @see org.apache.hadoop.yarn.conf.YarnConfiguration#NM_ENV_WHITELIST
+   */
+  protected void updateEnvForWhitelistVars(Map<String, String> env) {
+    for(String var : whitelistVars) {
+      if (!env.containsKey(var)) {
+        String val = getNMEnvVar(var);
+        if (val != null) {
+          env.put(var, val);
+        }
+      }
+    }
+  }
+
+  @VisibleForTesting
+  protected String getNMEnvVar(String varname) {
+    return System.getenv(varname);
   }
 
   /**
