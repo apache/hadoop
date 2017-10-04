@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
-import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;

@@ -18,7 +18,7 @@ package org.apache.hadoop.ozone.container.replication;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.TestUtils
     .ReplicationDatanodeStateManager;
 import org.apache.hadoop.ozone.container.TestUtils.ReplicationNodeManagerMock;

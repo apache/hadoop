@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.junit.Test;

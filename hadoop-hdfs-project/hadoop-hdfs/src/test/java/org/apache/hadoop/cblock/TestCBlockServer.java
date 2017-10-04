@@ -21,7 +21,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.cblock.meta.VolumeInfo;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.cblock.util.MockStorageClient;
-import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

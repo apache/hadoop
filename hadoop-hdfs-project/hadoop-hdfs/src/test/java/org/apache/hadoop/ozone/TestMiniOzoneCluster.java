@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;

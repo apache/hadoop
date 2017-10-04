@@ -20,7 +20,7 @@ package org.apache.hadoop.cblock.jscsiHelper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.cblock.proto.MountVolumeResponse;
 import org.apache.hadoop.cblock.util.KeyUtil;
-import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.jscsi.target.Configuration;
 import org.jscsi.target.Target;
