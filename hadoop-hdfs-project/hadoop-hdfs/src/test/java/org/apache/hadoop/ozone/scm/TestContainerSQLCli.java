@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
 import org.apache.hadoop.ozone.scm.cli.SQLCLI;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
@@ -50,13 +51,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.KB;
 import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
-import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
+//import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -97,6 +97,9 @@ public class TestContainerSQLCli {
   private HashMap<String, String> blockContainerMap;
 
   private final static long DEFAULT_BLOCK_SIZE = 4 * KB;
+  private static OzoneProtos.ReplicationFactor factor;
+  private static OzoneProtos.ReplicationType type;
+
 
   @Before
   public void setup() throws Exception {
@@ -107,8 +110,15 @@ public class TestContainerSQLCli {
     conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 2);
     conf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(2
-    )
+    if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
+        ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT)){
+      factor = OzoneProtos.ReplicationFactor.THREE;
+      type = OzoneProtos.ReplicationType.RATIS;
+    } else {
+      factor = OzoneProtos.ReplicationFactor.ONE;
+      type = OzoneProtos.ReplicationType.STAND_ALONE;
+    }
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(2)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =
@@ -134,7 +144,8 @@ public class TestContainerSQLCli {
       Thread.sleep(100);
     }
     assertEquals(2, nodeManager.getAllNodes().size());
-    AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+    AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE, type,
+        factor);
     pipeline1 = ab1.getPipeline();
     blockContainerMap.put(ab1.getKey(), pipeline1.getContainerName());
 
@@ -146,7 +157,7 @@ public class TestContainerSQLCli {
     // although each retry will create a block and assign to a container. So
     // the size of blockContainerMap will vary each time the test is run.
     while (true) {
-      ab2 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+      ab2 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE, type, factor);
       pipeline2 = ab2.getPipeline();
       blockContainerMap.put(ab2.getKey(), pipeline2.getContainerName());
       if (!pipeline1.getContainerName().equals(pipeline2.getContainerName())) {
@@ -213,38 +224,6 @@ public class TestContainerSQLCli {
       assertTrue(expectedPool.remove(datanodeUUID).equals(poolName));
     }
     assertEquals(0, expectedPool.size());
-
-    Files.delete(Paths.get(dbOutPath));
-  }
-
-  @Test
-  public void testConvertOpenContainerDB() throws Exception {
-    String dbOutPath = cluster.getDataDirectory() + "/out_sql.db";
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
-    String dbPath = dbRootPath + "/" + OPEN_CONTAINERS_DB;
-    String[] args = {"-p", dbPath, "-o", dbOutPath};
-
-    cli.run(args);
-
-    Connection conn = connectDB(dbOutPath);
-    String sql = "SELECT * FROM openContainer";
-    ResultSet rs = executeQuery(conn, sql);
-    HashSet<String> expectedContainer = new HashSet<>();
-    expectedContainer.add(pipeline1.getContainerName());
-    expectedContainer.add(pipeline2.getContainerName());
-    // the number of allocated blocks can vary, and they can be located
-    // at either of the two containers. We only check if the total used
-    // is equal to block size * # of blocks.
-    long totalUsed = 0;
-    while(rs.next()) {
-      String containerName = rs.getString("containerName");
-      long containerUsed = rs.getLong("containerUsed");
-      totalUsed += containerUsed;
-      assertTrue(expectedContainer.remove(containerName));
-    }
-    assertEquals(0, expectedContainer.size());
-    assertEquals(blockContainerMap.keySet().size() * DEFAULT_BLOCK_SIZE,
-        totalUsed);
 
     Files.delete(Paths.get(dbOutPath));
   }

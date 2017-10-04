@@ -93,9 +93,9 @@ public final class OzoneConfigKeys {
       "ozone.container.cache.size";
   public static final int OZONE_CONTAINER_CACHE_DEFAULT = 1024;
 
-  public static final String OZONE_SCM_BLOCK_SIZE_KEY =
-      "ozone.scm.block.size";
-  public static final long OZONE_SCM_BLOCK_SIZE_DEFAULT = 256 * OzoneConsts.MB;
+  public static final String OZONE_SCM_BLOCK_SIZE_IN_MB =
+      "ozone.scm.block.size.in.mb";
+  public static final long OZONE_SCM_BLOCK_SIZE_DEFAULT = 256;
 
   /**
    * Ozone administrator users delimited by comma.

@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.ozone.ksm.helpers;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 
 /**
  * Args for key. Client use this to specify key's attributes on  key creation
@@ -25,15 +27,26 @@ public final class KsmKeyArgs {
   private final String volumeName;
   private final String bucketName;
   private final String keyName;
-
   private final long dataSize;
+  private final ReplicationType type;
+  private final ReplicationFactor factor;
 
   private KsmKeyArgs(String volumeName, String bucketName, String keyName,
-      long dataSize) {
+      long dataSize, ReplicationType type, ReplicationFactor factor) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
     this.dataSize = dataSize;
+    this.type = type;
+    this.factor = factor;
+  }
+
+  public ReplicationType getType() {
+    return type;
+  }
+
+  public ReplicationFactor getFactor() {
+    return factor;
   }
 
   public String getVolumeName() {
@@ -60,6 +73,9 @@ public final class KsmKeyArgs {
     private String bucketName;
     private String keyName;
     private long dataSize;
+    private ReplicationType type;
+    private ReplicationFactor factor;
+
 
     public Builder setVolumeName(String volume) {
       this.volumeName = volume;
@@ -81,8 +97,19 @@ public final class KsmKeyArgs {
       return this;
     }
 
+    public Builder setType(ReplicationType type) {
+      this.type = type;
+      return this;
+    }
+
+    public Builder  setFactor(ReplicationFactor factor) {
+      this.factor = factor;
+      return this;
+    }
+
     public KsmKeyArgs build() {
-      return new KsmKeyArgs(volumeName, bucketName, keyName, dataSize);
+      return new KsmKeyArgs(volumeName, bucketName, keyName, dataSize,
+          type, factor);
     }
   }
 }

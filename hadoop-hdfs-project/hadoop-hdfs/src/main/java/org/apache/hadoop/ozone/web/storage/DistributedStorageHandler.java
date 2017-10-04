@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -82,6 +83,9 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final OzoneAcl.OzoneACLRights userRights;
   private final OzoneAcl.OzoneACLRights groupRights;
   private int chunkSize;
+  private final boolean useRatis;
+  private final OzoneProtos.ReplicationType type;
+  private final OzoneProtos.ReplicationFactor factor;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -98,6 +102,17 @@ public final class DistributedStorageHandler implements StorageHandler {
     this.keySpaceManagerClient = keySpaceManagerClient;
     this.storageContainerLocationClient = storageContainerLocation;
     this.xceiverClientManager = new XceiverClientManager(conf);
+    this.useRatis = conf.getBoolean(
+        ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
+        ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
+
+    if(useRatis) {
+      type = OzoneProtos.ReplicationType.RATIS;
+      factor = OzoneProtos.ReplicationFactor.THREE;
+    } else {
+      type = OzoneProtos.ReplicationType.STAND_ALONE;
+      factor = OzoneProtos.ReplicationFactor.ONE;
+    }
 
     chunkSize = conf.getInt(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
         ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT);
@@ -390,6 +405,8 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
         .setDataSize(args.getSize())
+        .setType(xceiverClientManager.getType())
+        .setFactor(xceiverClientManager.getFactor())
         .build();
     // contact KSM to allocate a block for key.
     KsmKeyInfo keyInfo = keySpaceManagerClient.allocateKey(keyArgs);

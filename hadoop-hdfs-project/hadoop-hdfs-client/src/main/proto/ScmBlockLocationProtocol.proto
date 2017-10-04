@@ -61,6 +61,9 @@ message ScmLocatedBlockProto {
 */
 message AllocateScmBlockRequestProto {
   required uint64 size = 1;
+  required hadoop.hdfs.ozone.ReplicationType type = 2;
+  required hadoop.hdfs.ozone.ReplicationFactor factor = 3;
+
 }
 
 /**

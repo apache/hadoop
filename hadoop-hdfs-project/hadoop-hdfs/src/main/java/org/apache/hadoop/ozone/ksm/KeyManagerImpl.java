@@ -17,8 +17,8 @@
 package org.apache.hadoop.ozone.ksm;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
@@ -41,12 +41,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
+
 
 /**
  * Implementation of keyManager.
@@ -61,14 +66,17 @@ public class KeyManagerImpl implements KeyManager {
   private final ScmBlockLocationProtocol scmBlockClient;
   private final KSMMetadataManager metadataManager;
   private final long scmBlockSize;
+  private final boolean useRatis;
   private final BackgroundService keyDeletingService;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       KSMMetadataManager metadataManager, OzoneConfiguration conf) {
     this.scmBlockClient = scmBlockClient;
     this.metadataManager = metadataManager;
-    this.scmBlockSize = conf.getLong(OZONE_SCM_BLOCK_SIZE_KEY,
-        OZONE_SCM_BLOCK_SIZE_DEFAULT);
+    this.scmBlockSize = conf.getLong(OZONE_SCM_BLOCK_SIZE_IN_MB,
+        OZONE_SCM_BLOCK_SIZE_DEFAULT) * OzoneConsts.MB;
+    this.useRatis = conf.getBoolean(DFS_CONTAINER_RATIS_ENABLED_KEY,
+        DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
     int svcInterval = conf.getInt(
         OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
         OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
@@ -96,6 +104,19 @@ public class KeyManagerImpl implements KeyManager {
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
+    ReplicationFactor factor = args.getFactor();
+    ReplicationType type = args.getType();
+
+    // If user does not specify a replication strategy or
+    // replication factor, KSM will use defaults.
+    if(factor == null) {
+      factor = useRatis ? ReplicationFactor.THREE: ReplicationFactor.ONE;
+    }
+
+    if(type == null) {
+      type = useRatis ? ReplicationType.RATIS : ReplicationType.STAND_ALONE;
+    }
+
     try {
       byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
       byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
@@ -137,7 +158,7 @@ public class KeyManagerImpl implements KeyManager {
       while (targetSize > 0) {
         long allocateSize = Math.min(targetSize, scmBlockSize);
         AllocatedBlock allocatedBlock =
-            scmBlockClient.allocateBlock(allocateSize);
+            scmBlockClient.allocateBlock(allocateSize, type, factor);
         KsmKeyLocationInfo subKeyInfo = new KsmKeyLocationInfo.Builder()
             .setContainerName(allocatedBlock.getPipeline().getContainerName())
             .setBlockID(allocatedBlock.getKey())

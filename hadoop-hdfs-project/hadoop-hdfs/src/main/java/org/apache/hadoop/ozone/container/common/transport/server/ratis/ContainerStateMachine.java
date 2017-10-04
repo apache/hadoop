@@ -64,7 +64,10 @@ public class ContainerStateMachine extends BaseStateMachine {
       throws IOException {
     super.initialize(id, properties, raftStorage);
     storage.init(raftStorage);
-//  TODO handle snapshots
+    //  TODO handle snapshots
+
+    // TODO: Add a flag that tells you that initialize has been called.
+    // Check with Ratis if this feature is done in Ratis.
   }
 
   @Override

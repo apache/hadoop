@@ -1,19 +1,18 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package org.apache.hadoop.ozone.tools;
@@ -35,6 +34,7 @@ import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -95,6 +95,7 @@ public final class Corona extends Configured implements Tool {
   private static final String NUM_OF_BUCKETS = "numOfBuckets";
   private static final String NUM_OF_KEYS = "numOfKeys";
   private static final String KEY_SIZE = "keySize";
+  private static final String RATIS = "ratis";
 
   private static final String MODE_DEFAULT = "offline";
   private static final String SOURCE_DEFAULT =
@@ -120,6 +121,8 @@ public final class Corona extends Configured implements Tool {
   private String numOfVolumes;
   private String numOfBuckets;
   private String numOfKeys;
+  private boolean useRatis;
+  private int replicationFactor = 0;
 
   private int keySize;
 
@@ -164,19 +167,28 @@ public final class Corona extends Configured implements Tool {
     objectStore = ozoneClient.getObjectStore();
   }
 
+  /**
+   * @param args arguments
+   */
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new OzoneConfiguration();
+    int res = ToolRunner.run(conf, new Corona(conf), args);
+    System.exit(res);
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     GenericOptionsParser parser = new GenericOptionsParser(getConf(),
         getOptions(), args);
     parseOptions(parser.getCommandLine());
-    if(printUsage) {
+    if (printUsage) {
       usage();
       return 0;
     }
     LOG.info("Number of Threads: " + numOfThreads);
     processor = Executors.newFixedThreadPool(Integer.parseInt(numOfThreads));
     addShutdownHook();
-    if(mode.equals("online")) {
+    if (mode.equals("online")) {
       LOG.info("Mode: online");
       throw new UnsupportedOperationException("Not yet implemented.");
     } else {
@@ -192,7 +204,7 @@ public final class Corona extends Configured implements Tool {
       }
     }
     Thread validator = null;
-    if(validateWrites) {
+    if (validateWrites) {
       totalWritesValidated = 0L;
       writeValidationSuccessCount = 0L;
       writeValidationFailureCount = 0L;
@@ -210,7 +222,7 @@ public final class Corona extends Configured implements Tool {
     processor.awaitTermination(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
     completed = true;
     progressbar.join();
-    if(validateWrites) {
+    if (validateWrites) {
       validator.join();
     }
     ozoneClient.close();
@@ -269,6 +281,12 @@ public final class Corona extends Configured implements Tool {
         "created in offline mode");
     Option optKeySize = OptionBuilder.create(KEY_SIZE);
 
+    OptionBuilder.withArgName(RATIS);
+    OptionBuilder.hasArg();
+    OptionBuilder.withDescription("Use Ratis as the default replication " +
+        "strategy");
+    Option optRatis = OptionBuilder.create(RATIS);
+
     options.addOption(optHelp);
     options.addOption(optMode);
     options.addOption(optSource);
@@ -278,6 +296,7 @@ public final class Corona extends Configured implements Tool {
     options.addOption(optNumOfBuckets);
     options.addOption(optNumOfKeys);
     options.addOption(optKeySize);
+    options.addOption(optRatis);
     return options;
   }
 
@@ -306,7 +325,11 @@ public final class Corona extends Configured implements Tool {
 
     keySize = cmdLine.hasOption(KEY_SIZE) ?
         Integer.parseInt(cmdLine.getOptionValue(KEY_SIZE)) : KEY_SIZE_DEFAULT;
+    useRatis = cmdLine.hasOption(RATIS);
 
+    //To-do if replication factor is not mentioned throw an exception
+    replicationFactor = useRatis ?
+        Integer.parseInt(cmdLine.getOptionValue(RATIS)) : 0;
   }
 
   private void usage() {
@@ -336,75 +359,6 @@ public final class Corona extends Configured implements Tool {
     System.out.println();
   }
 
-  private class OfflineProcessor implements Runnable {
-
-    private int totalBuckets;
-    private int totalKeys;
-    private OzoneVolume volume;
-
-    OfflineProcessor(String volumeName) throws Exception {
-      this.totalBuckets = Integer.parseInt(numOfBuckets);
-      this.totalKeys = Integer.parseInt(numOfKeys);
-      LOG.trace("Creating volume: {}", volumeName);
-      long start = System.nanoTime();
-      objectStore.createVolume(volumeName);
-      volumeCreationTime.getAndAdd(System.nanoTime() - start);
-      numberOfVolumesCreated.getAndIncrement();
-      volume = objectStore.getVolume(volumeName);
-    }
-
-    @Override
-    public void run() {
-      for (int j = 0; j < totalBuckets; j++) {
-        String bucketName = "bucket-" + j + "-" +
-            RandomStringUtils.randomNumeric(5);
-        try {
-          LOG.trace("Creating bucket: {} in volume: {}",
-              bucketName, volume.getName());
-          long start = System.nanoTime();
-          volume.createBucket(bucketName);
-          bucketCreationTime.getAndAdd(System.nanoTime() - start);
-          numberOfBucketsCreated.getAndIncrement();
-          OzoneBucket bucket = volume.getBucket(bucketName);
-          for (int k = 0; k < totalKeys; k++) {
-            String key = "key-" + k + "-" +
-                RandomStringUtils.randomNumeric(5);
-            byte[] value = DFSUtil.string2Bytes(
-                RandomStringUtils.randomAscii(keySize));
-            try {
-              LOG.trace("Adding key: {} in bucket: {} of volume: {}",
-                  key, bucket, volume);
-              long keyCreateStart = System.nanoTime();
-              OzoneOutputStream os = bucket.createKey(key, value.length);
-              keyCreationTime.getAndAdd(System.nanoTime() - keyCreateStart);
-              long keyWriteStart = System.nanoTime();
-              os.write(value);
-              os.close();
-              keyWriteTime.getAndAdd(System.nanoTime() - keyWriteStart);
-              totalBytesWritten.getAndAdd(value.length);
-              numberOfKeysAdded.getAndIncrement();
-              if(validateWrites) {
-                boolean validate = validationQueue.offer(
-                    new KeyValue(bucket, key, value));
-                if(validate) {
-                  LOG.trace("Key {}, is queued for validation.", key);
-                }
-              }
-            } catch (Exception e) {
-              exception = true;
-              LOG.error("Exception while adding key: {} in bucket: {}" +
-                  " of volume: {}.", key, bucket, volume, e);
-            }
-          }
-        } catch (Exception e) {
-          exception = true;
-          LOG.error("Exception while creating bucket: {}" +
-              " in volume: {}.", bucketName, volume, e);
-        }
-      }
-    }
-  }
-
   /**
    * Adds ShutdownHook to print statistics.
    */
@@ -417,7 +371,7 @@ public final class Corona extends Configured implements Tool {
     Supplier<Long> currentValue;
     long maxValue;
 
-    if(mode.equals("online")) {
+    if (mode.equals("online")) {
       throw new UnsupportedOperationException("Not yet implemented.");
     } else {
       currentValue = () -> numberOfKeysAdded.get();
@@ -429,73 +383,6 @@ public final class Corona extends Configured implements Tool {
         new ProgressBar(System.out, currentValue, maxValue));
     progressBarThread.setName("ProgressBar");
     return progressBarThread;
-  }
-
-  private class ProgressBar implements Runnable {
-
-    private static final long REFRESH_INTERVAL = 1000L;
-
-    private PrintStream stream;
-    private Supplier<Long> currentValue;
-    private long maxValue;
-
-    ProgressBar(PrintStream stream, Supplier<Long> currentValue,
-                long maxValue) {
-      this.stream = stream;
-      this.currentValue = currentValue;
-      this.maxValue = maxValue;
-    }
-
-    @Override
-    public void run() {
-      try {
-        stream.println();
-        long value;
-        while((value = currentValue.get()) < maxValue) {
-          print(value);
-          if(completed) {
-            break;
-          }
-          Thread.sleep(REFRESH_INTERVAL);
-        }
-        if(exception) {
-          stream.println();
-          stream.println("Incomplete termination, " +
-              "check log for exception.");
-        } else {
-          print(maxValue);
-        }
-        stream.println();
-      } catch (InterruptedException e) {
-      }
-    }
-
-    /**
-     * Given current value prints the progress bar.
-     *
-     * @param value
-     */
-    private void print(long value) {
-      stream.print('\r');
-      double percent = 100.0 * value / maxValue;
-      StringBuilder sb = new StringBuilder();
-      sb.append(" " + String.format("%.2f", percent) + "% |");
-
-      for (int i = 0; i <= percent; i++) {
-        sb.append('█');
-      }
-      for (int j = 0; j < 100 - percent; j++) {
-        sb.append(' ');
-      }
-      sb.append("|  ");
-      sb.append(value + "/" + maxValue);
-      long timeInSec = TimeUnit.SECONDS.convert(
-          System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
-      String timeToPrint = String.format("%d:%02d:%02d", timeInSec / 3600,
-          (timeInSec % 3600) / 60, timeInSec % 60);
-      sb.append(" Time: " + timeToPrint);
-      stream.print(sb);
-    }
   }
 
   /**
@@ -578,7 +465,7 @@ public final class Corona extends Configured implements Tool {
     out.println("Time spent in key creation: " + prettyKeyCreationTime);
     out.println("Time spent in writing keys: " + prettyKeyWriteTime);
     out.println("Total bytes written: " + totalBytesWritten);
-    if(validateWrites) {
+    if (validateWrites) {
       out.println("Total number of writes validated: " +
           totalWritesValidated);
       out.println("Writes validated: " +
@@ -608,7 +495,7 @@ public final class Corona extends Configured implements Tool {
    */
   @VisibleForTesting
   int getNumberOfBucketsCreated() {
-    return  numberOfBucketsCreated.get();
+    return numberOfBucketsCreated.get();
   }
 
   /**
@@ -617,7 +504,7 @@ public final class Corona extends Configured implements Tool {
    */
   @VisibleForTesting
   long getNumberOfKeysAdded() {
-    return  numberOfKeysAdded.get();
+    return numberOfKeysAdded.get();
   }
 
   /**
@@ -657,40 +544,6 @@ public final class Corona extends Configured implements Tool {
   }
 
   /**
-   * Validates the write done in ozone cluster.
-   */
-  private class Validator implements Runnable {
-
-    @Override
-    public void run() {
-      while(!completed) {
-        try {
-          KeyValue kv = validationQueue.poll(5, TimeUnit.SECONDS);
-          if(kv != null) {
-
-            OzoneInputStream is = kv.bucket.readKey(kv.key);
-            byte[] value = new byte[kv.value.length];
-            int length = is.read(value);
-            totalWritesValidated++;
-            if (length == kv.value.length && Arrays.equals(value, kv.value)) {
-              writeValidationSuccessCount++;
-            } else {
-              writeValidationFailureCount++;
-              LOG.warn("Data validation error for key {}/{}/{}",
-                  kv.bucket.getVolumeName(), kv.bucket, kv.key);
-              LOG.warn("Expected: {}, Actual: {}",
-                  DFSUtil.bytes2String(kv.value),
-                  DFSUtil.bytes2String(value));
-            }
-          }
-        } catch (IOException | InterruptedException ex) {
-          LOG.error("Exception while validating write: " + ex.getMessage());
-        }
-      }
-    }
-  }
-
-  /**
    * Wrapper to hold ozone key-value pair.
    */
   private static class KeyValue {
@@ -721,12 +574,185 @@ public final class Corona extends Configured implements Tool {
     }
   }
 
+  private class OfflineProcessor implements Runnable {
+
+    private int totalBuckets;
+    private int totalKeys;
+    private OzoneVolume volume;
+
+    OfflineProcessor(String volumeName) throws Exception {
+      this.totalBuckets = Integer.parseInt(numOfBuckets);
+      this.totalKeys = Integer.parseInt(numOfKeys);
+      LOG.trace("Creating volume: {}", volumeName);
+      long start = System.nanoTime();
+      objectStore.createVolume(volumeName);
+      volumeCreationTime.getAndAdd(System.nanoTime() - start);
+      numberOfVolumesCreated.getAndIncrement();
+      volume = objectStore.getVolume(volumeName);
+    }
+
+    @Override
+    public void run() {
+      OzoneProtos.ReplicationType type = OzoneProtos.ReplicationType
+          .STAND_ALONE;
+      OzoneProtos.ReplicationFactor factor = OzoneProtos.ReplicationFactor.ONE;
+
+      if (useRatis) {
+        type = OzoneProtos.ReplicationType.RATIS;
+        factor = replicationFactor != 0 ?
+            OzoneProtos.ReplicationFactor.valueOf(replicationFactor) :
+            OzoneProtos.ReplicationFactor.THREE;
+
+      }
+      for (int j = 0; j < totalBuckets; j++) {
+        String bucketName = "bucket-" + j + "-" +
+            RandomStringUtils.randomNumeric(5);
+        try {
+          LOG.trace("Creating bucket: {} in volume: {}",
+              bucketName, volume.getName());
+          long start = System.nanoTime();
+          volume.createBucket(bucketName);
+          bucketCreationTime.getAndAdd(System.nanoTime() - start);
+          numberOfBucketsCreated.getAndIncrement();
+          OzoneBucket bucket = volume.getBucket(bucketName);
+          for (int k = 0; k < totalKeys; k++) {
+            String key = "key-" + k + "-" +
+                RandomStringUtils.randomNumeric(5);
+            byte[] value = DFSUtil.string2Bytes(
+                RandomStringUtils.randomAscii(keySize));
+            try {
+              LOG.trace("Adding key: {} in bucket: {} of volume: {}",
+                  key, bucket, volume);
+              long keyCreateStart = System.nanoTime();
+              OzoneOutputStream os = bucket.createKey(key, value.length,
+                  type, factor);
+              keyCreationTime.getAndAdd(System.nanoTime() - keyCreateStart);
+              long keyWriteStart = System.nanoTime();
+              os.write(value);
+              os.close();
+              keyWriteTime.getAndAdd(System.nanoTime() - keyWriteStart);
+              totalBytesWritten.getAndAdd(value.length);
+              numberOfKeysAdded.getAndIncrement();
+              if (validateWrites) {
+                boolean validate = validationQueue.offer(
+                    new KeyValue(bucket, key, value));
+                if (validate) {
+                  LOG.trace("Key {}, is queued for validation.", key);
+                }
+              }
+            } catch (Exception e) {
+              exception = true;
+              LOG.error("Exception while adding key: {} in bucket: {}" +
+                  " of volume: {}.", key, bucket, volume, e);
+            }
+          }
+        } catch (Exception e) {
+          exception = true;
+          LOG.error("Exception while creating bucket: {}" +
+              " in volume: {}.", bucketName, volume, e);
+        }
+      }
+    }
+  }
+
+  private class ProgressBar implements Runnable {
+
+    private static final long REFRESH_INTERVAL = 1000L;
+
+    private PrintStream stream;
+    private Supplier<Long> currentValue;
+    private long maxValue;
+
+    ProgressBar(PrintStream stream, Supplier<Long> currentValue,
+        long maxValue) {
+      this.stream = stream;
+      this.currentValue = currentValue;
+      this.maxValue = maxValue;
+    }
+
+    @Override
+    public void run() {
+      try {
+        stream.println();
+        long value;
+        while ((value = currentValue.get()) < maxValue) {
+          print(value);
+          if (completed) {
+            break;
+          }
+          Thread.sleep(REFRESH_INTERVAL);
+        }
+        if (exception) {
+          stream.println();
+          stream.println("Incomplete termination, " +
+              "check log for exception.");
+        } else {
+          print(maxValue);
+        }
+        stream.println();
+      } catch (InterruptedException e) {
+      }
+    }
+
+    /**
+     * Given current value prints the progress bar.
+     *
+     * @param value
+     */
+    private void print(long value) {
+      stream.print('\r');
+      double percent = 100.0 * value / maxValue;
+      StringBuilder sb = new StringBuilder();
+      sb.append(" " + String.format("%.2f", percent) + "% |");
+
+      for (int i = 0; i <= percent; i++) {
+        sb.append('█');
+      }
+      for (int j = 0; j < 100 - percent; j++) {
+        sb.append(' ');
+      }
+      sb.append("|  ");
+      sb.append(value + "/" + maxValue);
+      long timeInSec = TimeUnit.SECONDS.convert(
+          System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+      String timeToPrint = String.format("%d:%02d:%02d", timeInSec / 3600,
+          (timeInSec % 3600) / 60, timeInSec % 60);
+      sb.append(" Time: " + timeToPrint);
+      stream.print(sb);
+    }
+  }
+
   /**
-   * @param args arguments
+   * Validates the write done in ozone cluster.
    */
-  public static void main(String[] args) throws Exception {
-    Configuration conf = new OzoneConfiguration();
-    int res = ToolRunner.run(conf, new Corona(conf), args);
-    System.exit(res);
+  private class Validator implements Runnable {
+
+    @Override
+    public void run() {
+      while (!completed) {
+        try {
+          KeyValue kv = validationQueue.poll(5, TimeUnit.SECONDS);
+          if (kv != null) {
+
+            OzoneInputStream is = kv.bucket.readKey(kv.key);
+            byte[] value = new byte[kv.value.length];
+            int length = is.read(value);
+            totalWritesValidated++;
+            if (length == kv.value.length && Arrays.equals(value, kv.value)) {
+              writeValidationSuccessCount++;
+            } else {
+              writeValidationFailureCount++;
+              LOG.warn("Data validation error for key {}/{}/{}",
+                  kv.bucket.getVolumeName(), kv.bucket, kv.key);
+              LOG.warn("Expected: {}, Actual: {}",
+                  DFSUtil.bytes2String(kv.value),
+                  DFSUtil.bytes2String(value));
+            }
+          }
+        } catch (IOException | InterruptedException ex) {
+          LOG.error("Exception while validating write: " + ex.getMessage());
+        }
+      }
+    }
   }
 }

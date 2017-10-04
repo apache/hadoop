@@ -61,14 +61,15 @@ public interface Mapping extends Closeable {
   /**
    * Allocates a new container for a given keyName and replication factor.
    *
-   * @param containerName - Name.
    * @param replicationFactor - replication factor of the container.
+   * @param containerName - Name.
+   * @param owner
    * @return - Container Info.
    * @throws IOException
    */
   ContainerInfo allocateContainer(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor replicationFactor,
-      String containerName) throws IOException;
+      String containerName, OzoneProtos.Owner owner) throws IOException;
 
   /**
    * Deletes a container from SCM.
@@ -95,4 +96,10 @@ public interface Mapping extends Closeable {
    */
   OzoneProtos.LifeCycleState updateContainerState(String containerName,
       OzoneProtos.LifeCycleEvent event) throws IOException;
+
+  /**
+   * Returns the container State Manager.
+   * @return ContainerStateManager
+   */
+  ContainerStateManager getStateManager();
 }

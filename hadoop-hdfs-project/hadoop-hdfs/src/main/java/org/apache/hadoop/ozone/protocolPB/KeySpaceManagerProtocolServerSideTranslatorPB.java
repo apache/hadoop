@@ -308,6 +308,8 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
           .setDataSize(keyArgs.getDataSize())
+          .setType(keyArgs.getType())
+          .setFactor(keyArgs.getFactor())
           .build();
       KsmKeyInfo keyInfo = impl.allocateKey(ksmKeyArgs);
       resp.setKeyInfo(keyInfo.getProtobuf());

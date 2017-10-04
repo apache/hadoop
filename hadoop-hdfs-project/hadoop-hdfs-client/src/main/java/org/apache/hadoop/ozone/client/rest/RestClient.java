@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.IOException;
 import java.util.List;
@@ -171,10 +172,20 @@ public class RestClient implements ClientProtocol {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
 
+  /**
+   * Writes a key in an existing bucket.
+   *
+   * @param volumeName Name of the Volume
+   * @param bucketName Name of the Bucket
+   * @param keyName Name of the Key
+   * @param size Size of the data
+   * @param type
+   * @param factor @return {@link OzoneOutputStream}
+   */
   @Override
-  public OzoneOutputStream createKey(
-      String volumeName, String bucketName, String keyName, long size)
-      throws IOException {
+  public OzoneOutputStream createKey(String volumeName, String bucketName,
+      String keyName, long size, OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor factor) throws IOException {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
 

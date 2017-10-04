@@ -20,6 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -84,7 +85,7 @@ public class TestContainerMapping {
     ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
-        UUID.randomUUID().toString());
+        UUID.randomUUID().toString(), OzoneProtos.Owner.OZONE);
     Assert.assertNotNull(containerInfo);
   }
 
@@ -101,7 +102,7 @@ public class TestContainerMapping {
       ContainerInfo containerInfo = mapping.allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(),
-          UUID.randomUUID().toString());
+          UUID.randomUUID().toString(), OzoneProtos.Owner.OZONE);
 
       Assert.assertNotNull(containerInfo);
       Assert.assertNotNull(containerInfo.getPipeline());
@@ -116,7 +117,8 @@ public class TestContainerMapping {
     String containerName = UUID.randomUUID().toString();
     Pipeline pipeline = mapping.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName).getPipeline();
+        xceiverClientManager.getFactor(), containerName,
+        OzoneProtos.Owner.OZONE).getPipeline();
     Assert.assertNotNull(pipeline);
     Pipeline newPipeline = mapping.getContainer(containerName).getPipeline();
     Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
@@ -128,11 +130,13 @@ public class TestContainerMapping {
     String containerName = UUID.randomUUID().toString();
     Pipeline pipeline = mapping.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName).getPipeline();
+        xceiverClientManager.getFactor(), containerName,
+        OzoneProtos.Owner.OZONE).getPipeline();
     Assert.assertNotNull(pipeline);
     thrown.expectMessage("Specified container already exists.");
     mapping.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
+        xceiverClientManager.getFactor(), containerName,
+        OzoneProtos.Owner.OZONE);
   }
 
   @Test
@@ -148,6 +152,7 @@ public class TestContainerMapping {
     nodeManager.setChillmode(true);
     thrown.expectMessage("Unable to create container while in chill mode");
     mapping.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
+        xceiverClientManager.getFactor(), containerName,
+        OzoneProtos.Owner.OZONE);
   }
 }

@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.scm.block;
 
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
@@ -31,12 +32,15 @@ import java.util.List;
  */
 public interface BlockManager extends Closeable {
   /**
-   *  Allocates a new block for a given size.
-   * @param size - size of the block to be allocated
-   * @return - the allocated pipeline and key for the block
+   * Allocates a new block for a given size.
+   * @param size - Block Size
+   * @param type Replication Type
+   * @param factor - Replication Factor
+   * @return AllocatedBlock
    * @throws IOException
    */
-  AllocatedBlock allocateBlock(long size) throws IOException;
+  AllocatedBlock allocateBlock(long size, OzoneProtos.ReplicationType type,
+      OzoneProtos.ReplicationFactor factor) throws IOException;
 
   /**
    *  Give the key to the block, get the pipeline info.

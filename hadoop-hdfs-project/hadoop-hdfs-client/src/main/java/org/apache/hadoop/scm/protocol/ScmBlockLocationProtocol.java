@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.scm.protocol;
 
 import java.io.IOException;
@@ -25,6 +24,8 @@ import java.util.Set;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 
 /**
  * ScmBlockLocationProtocol is used by an HDFS node to find the set of nodes
@@ -41,8 +42,7 @@ public interface ScmBlockLocationProtocol {
    * @return allocated blocks for each block key
    * @throws IOException if there is any failure
    */
-  Set<AllocatedBlock> getBlockLocations(Set<String> keys)
-      throws IOException;
+  Set<AllocatedBlock> getBlockLocations(Set<String> keys) throws IOException;
 
   /**
    * Asks SCM where a block should be allocated. SCM responds with the
@@ -51,7 +51,8 @@ public interface ScmBlockLocationProtocol {
    * @return allocated block accessing info (key, pipeline).
    * @throws IOException
    */
-  AllocatedBlock allocateBlock(long size) throws IOException;
+  AllocatedBlock allocateBlock(long size, ReplicationType type,
+      ReplicationFactor factor) throws IOException;
 
   /**
    * Delete blocks for a set of object keys.
@@ -59,9 +60,7 @@ public interface ScmBlockLocationProtocol {
    * @param keyBlocksInfoList Map of object key and its blocks.
    * @return list of block deletion results.
    * @throws IOException if there is any failure.
-   *
    */
-  List<DeleteBlockGroupResult> deleteKeyBlocks(
-      List<BlockGroup> keyBlocksInfoList) throws IOException;
-
+  List<DeleteBlockGroupResult>
+      deleteKeyBlocks(List<BlockGroup> keyBlocksInfoList) throws IOException;
 }

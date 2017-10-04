@@ -511,7 +511,10 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
-        .setDataSize(args.getDataSize()).build();
+        .setDataSize(args.getDataSize())
+        .setType(args.getType())
+        .setFactor(args.getFactor())
+        .build();
     req.setKeyArgs(keyArgs);
 
     final LocateKeyResponse resp;

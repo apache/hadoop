@@ -276,10 +276,10 @@ public class ChunkGroupOutputStream extends OutputStream {
     // case we should revert the above allocateKey to KSM.
     // check index as sanity check
     int index = 0;
-    String containerKey;
+    String blockID;
     ChunkGroupOutputStream groupOutputStream = new ChunkGroupOutputStream();
     for (KsmKeyLocationInfo subKeyInfo : keyInfo.getKeyLocationList()) {
-      containerKey = subKeyInfo.getBlockID();
+      blockID = subKeyInfo.getBlockID();
 
       Preconditions.checkArgument(index++ == subKeyInfo.getIndex());
       String containerName = subKeyInfo.getContainerName();
@@ -290,8 +290,13 @@ public class ChunkGroupOutputStream extends OutputStream {
       // create container if needed
       if (subKeyInfo.getShouldCreateContainer()) {
         try {
-          // Block manager sets the container creation stage begin.
+          storageContainerLocationClient.notifyObjectCreationStage(
+              NotifyObjectCreationStageRequestProto.Type.container,
+              containerName,
+              NotifyObjectCreationStageRequestProto.Stage.begin);
+
           ContainerProtocolCalls.createContainer(xceiverClient, requestId);
+
           storageContainerLocationClient.notifyObjectCreationStage(
               NotifyObjectCreationStageRequestProto.Type.container,
               containerName,
@@ -307,7 +312,7 @@ public class ChunkGroupOutputStream extends OutputStream {
         }
       }
 
-      groupOutputStream.addStream(containerKey, keyInfo.getKeyName(),
+      groupOutputStream.addStream(blockID, keyInfo.getKeyName(),
           xceiverClientManager, xceiverClient, requestId, chunkSize,
           subKeyInfo.getLength());
     }

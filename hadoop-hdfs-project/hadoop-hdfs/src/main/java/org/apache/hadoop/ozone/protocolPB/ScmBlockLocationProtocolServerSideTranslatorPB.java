@@ -104,7 +104,8 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
       throws ServiceException {
     try {
       AllocatedBlock allocatedBlock =
-          impl.allocateBlock(request.getSize());
+          impl.allocateBlock(request.getSize(), request.getType(),
+              request.getFactor());
       if (allocatedBlock != null) {
         return
             AllocateScmBlockResponseProto.newBuilder()

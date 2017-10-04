@@ -225,6 +225,8 @@ message KeyArgs {
     required string bucketName = 2;
     required string keyName = 3;
     optional uint64 dataSize = 4;
+    optional hadoop.hdfs.ozone.ReplicationType type = 5;
+    optional hadoop.hdfs.ozone.ReplicationFactor factor = 6;
 }
 
 message KeyLocation {

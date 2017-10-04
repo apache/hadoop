@@ -36,6 +36,9 @@ message Pipeline {
     repeated DatanodeIDProto members = 2;
     required string containerName = 3;
     optional LifeCycleState state = 4 [default = OPEN];
+    optional ReplicationType type = 5 [default = STAND_ALONE];
+    optional ReplicationFactor factor = 6 [default = ONE];
+    optional string pipelineName = 7;
 }
 
 message KeyValue {
@@ -107,9 +110,12 @@ enum LifeCycleEvent {
 }
 
 message SCMContainerInfo {
-    required LifeCycleState state = 1;
-    required Pipeline pipeline = 2;
-    optional int64 stateEnterTime = 3;
+    // TODO : Remove the container name from pipeline.
+    required string containerName = 1;
+    required LifeCycleState state = 2;
+    required Pipeline pipeline = 3;
+    optional int64 stateEnterTime = 4;
+    optional Owner owner = 5 [default = OZONE];
 }
 
 enum ReplicationType {
@@ -121,4 +127,11 @@ enum ReplicationType {
 enum ReplicationFactor {
     ONE = 1;
     THREE = 3;
+}
+
+enum Owner {
+    OZONE = 1;
+    CBLOCK = 2;
+    // In future --
+    //HDFS = 3;
 }

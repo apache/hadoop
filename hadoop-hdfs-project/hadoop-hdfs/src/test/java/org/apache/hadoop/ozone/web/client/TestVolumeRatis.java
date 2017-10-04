@@ -18,11 +18,21 @@
 
 package org.apache.hadoop.ozone.web.client;
 
-import org.apache.hadoop.ozone.RatisTestHelper;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
+
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.*;
 import org.junit.rules.Timeout;
 
+import java.io.File;
 import java.io.IOException;
 
 /** The same as {@link TestVolume} except that this test is Ratis enabled. */
@@ -30,21 +40,41 @@ import java.io.IOException;
 public class TestVolumeRatis {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
-
-  private static RatisTestHelper.RatisTestSuite suite;
   private static OzoneRestClient ozoneClient;
+  private static MiniOzoneCluster cluster;
 
   @BeforeClass
   public static void init() throws Exception {
-//    suite = new RatisTestHelper.RatisTestSuite(TestVolumeRatis.class);
-//    ozoneClient = suite.newOzoneRestClient();
+    OzoneConfiguration conf = new OzoneConfiguration();
+
+    // This enables Ratis in the cluster.
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY, true);
+
+
+    String path = GenericTestUtils
+        .getTempPath(TestVolume.class.getSimpleName());
+    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    FileUtils.deleteDirectory(new File(path));
+
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
+
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    DataNode dataNode = cluster.getDataNodes().get(0);
+    final int port = dataNode.getInfoPort();
+
+    ozoneClient = new OzoneRestClient(
+        String.format("http://localhost:%d", port));
   }
 
   @AfterClass
   public static void shutdown() {
-    if (suite != null) {
-      suite.close();
+    if (cluster != null) {
+      cluster.shutdown();
     }
+
   }
 
   @Test

@@ -18,40 +18,65 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.RatisTestHelper;
+import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import static org.apache.hadoop.ozone.web.client.TestKeys.*;
+import static org.apache.hadoop.ozone.web.client.TestKeys.PutHelper;
+import static org.apache.hadoop.ozone.web.client.TestKeys.getMultiPartKey;
+import static org.apache.hadoop.ozone.web.client.TestKeys.runTestGetKeyInfo;
+import static org.apache.hadoop.ozone.web.client.TestKeys.runTestPutAndDeleteKey;
+import static org.apache.hadoop.ozone.web.client.TestKeys.runTestPutAndGetKey;
+import static org.apache.hadoop.ozone.web.client.TestKeys.runTestPutAndGetKeyWithDnRestart;
+import static org.apache.hadoop.ozone.web.client.TestKeys.runTestPutAndListKey;
+import static org.apache.hadoop.ozone.web.client.TestKeys.runTestPutKey;
 
 /** The same as {@link TestKeys} except that this test is Ratis enabled. */
-@Ignore("Disabling Ratis tests for pipeline work.")
 public class TestKeysRatis {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
-
-  private static RatisTestHelper.RatisTestSuite suite;
-  private static String path;
-  private static OzoneRestClient ozoneRestClient;
+  private static MiniOzoneCluster ozoneCluster = null;
+  static private String path;
+  private static OzoneRestClient ozoneRestClient = null;
 
   @BeforeClass
   public static void init() throws Exception {
-    suite = new RatisTestHelper.RatisTestSuite(TestKeysRatis.class);
-    path = suite.getConf().get(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT);
-    ozoneRestClient = suite.newOzoneRestClient();
+    OzoneConfiguration conf = new OzoneConfiguration();
+
+    path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
+    path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
+        OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
+    conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
+    Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
+
+    ozoneCluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    DataNode dataNode = ozoneCluster.getDataNodes().get(0);
+    final int port = dataNode.getInfoPort();
+    ozoneRestClient = new OzoneRestClient(
+        String.format("http://localhost:%d", port));
   }
 
+  /**
+   * shutdown MiniDFSCluster.
+   */
   @AfterClass
   public static void shutdown() {
-    if (suite != null) {
-      suite.close();
+    if (ozoneCluster != null) {
+      ozoneCluster.shutdown();
     }
   }
+
 
   @Test
   public void testPutKey() throws Exception {
@@ -64,11 +89,11 @@ public class TestKeysRatis {
   @Test
   public void testPutAndGetKeyWithDnRestart() throws Exception {
     runTestPutAndGetKeyWithDnRestart(
-        new PutHelper(ozoneRestClient, path), suite.getCluster());
+        new PutHelper(ozoneRestClient, path), ozoneCluster);
     String delimiter = RandomStringUtils.randomAlphanumeric(1);
     runTestPutAndGetKeyWithDnRestart(
         new PutHelper(ozoneRestClient, path, getMultiPartKey(delimiter)),
-        suite.getCluster());
+        ozoneCluster);
   }
 
   @Test
