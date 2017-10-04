@@ -51,6 +51,19 @@ public class TestSerializationFactory {
     SerializationFactory factory = new SerializationFactory(conf);
   }
 
+  /**
+   * Test the case when {@code IO_SERIALIZATIONS_KEY}
+   * is not set at all, because something unset this key.
+   * This shouldn't result in any error, the defaults present
+   * in construction should be used in this case.
+   */
+  @Test
+  public void testSerializationKeyIsUnset() {
+    Configuration conf = new Configuration();
+    conf.unset(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY);
+    SerializationFactory factory = new SerializationFactory(conf);
+  }
+
   @Test
   public void testSerializationKeyIsInvalid() {
     Configuration conf = new Configuration();
