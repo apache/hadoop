@@ -33,8 +33,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
@@ -54,6 +52,8 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.WebResource.Builder;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The Router webservice util class.
@@ -62,8 +62,8 @@ public final class RouterWebServiceUtil {
 
   private static String user = "YarnRouter";
 
-  private static final Log LOG =
-      LogFactory.getLog(RouterWebServiceUtil.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RouterWebServiceUtil.class.getName());
 
   private final static String PARTIAL_REPORT = "Partial Report ";
 

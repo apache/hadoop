@@ -23,8 +23,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -36,10 +34,12 @@ import org.apache.hadoop.yarn.proto.YarnSecurityTestTokenProtos.NMTokenIdentifie
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 
 import com.google.protobuf.TextFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class NMTokenIdentifierNewForTest extends NMTokenIdentifier {
 
-  private static Log LOG = LogFactory.getLog(NMTokenIdentifierNewForTest.class);
+  private static Logger LOG = LoggerFactory.getLogger(NMTokenIdentifierNewForTest.class);
 
   public static final Text KIND = new Text("NMToken");
   

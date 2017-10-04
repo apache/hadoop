@@ -23,8 +23,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
@@ -40,10 +38,12 @@ import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationContextProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTestTokenProtos.ContainerTokenIdentifierForTestProto;
 
 import com.google.protobuf.TextFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContainerTokenIdentifierForTest extends ContainerTokenIdentifier {
 
-  private static Log LOG = LogFactory.getLog(ContainerTokenIdentifier.class);
+  private static Logger LOG = LoggerFactory.getLogger(ContainerTokenIdentifier.class);
 
   public static final Text KIND = new Text("ContainerToken");
   
