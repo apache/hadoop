@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone;
+package org.apache.hadoop.conf;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * Configuration for ozone.

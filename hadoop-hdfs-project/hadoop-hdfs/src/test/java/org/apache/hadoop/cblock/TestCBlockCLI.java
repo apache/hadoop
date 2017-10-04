@@ -20,7 +20,7 @@ package org.apache.hadoop.cblock;
 import org.apache.hadoop.cblock.cli.CBlockCli;
 import org.apache.hadoop.cblock.meta.VolumeDescriptor;
 import org.apache.hadoop.cblock.util.MockStorageClient;
-import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;

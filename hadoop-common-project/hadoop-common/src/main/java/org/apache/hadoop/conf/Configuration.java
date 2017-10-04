@@ -3554,7 +3554,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param group Group to which enum belongs.Ex hdfs,yarn
    * @return Properties with all matching properties
    */
-  private PropertyTag getPropertyTag(String tagStr, String group) {
+  public PropertyTag getPropertyTag(String tagStr, String group) {
     PropertyTag tag = null;
     if (REGISTERED_TAG_CLASS.containsKey(group)) {
       tag = (PropertyTag) Enum.valueOf(REGISTERED_TAG_CLASS.get(group), tagStr);

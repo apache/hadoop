@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.conf;
 
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.io.Writer;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -32,6 +36,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.HttpServer2;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.security.krb5.Config;
 
 /**
  * A servlet to print out the running configuration data.
@@ -43,6 +50,10 @@ public class ConfServlet extends HttpServlet {
 
   protected static final String FORMAT_JSON = "json";
   protected static final String FORMAT_XML = "xml";
+  private static final String COMMAND = "cmd";
+  private static final Logger LOG = LoggerFactory.getLogger(ConfServlet.class);
+  private static final Configuration OZONE_CONFIG = new OzoneConfiguration();
+
 
   /**
    * Return the Configuration of the daemon hosting this servlet.
@@ -65,27 +76,72 @@ public class ConfServlet extends HttpServlet {
     final ServletContext servletContext = getServletContext();
     if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
         !HttpServer2.isInstrumentationAccessAllowed(servletContext,
-                                                   request, response)) {
+            request, response)) {
       return;
     }
 
     String format = parseAcceptHeader(request);
-    if (FORMAT_XML.equals(format)) {
-      response.setContentType("text/xml; charset=utf-8");
-    } else if (FORMAT_JSON.equals(format)) {
-      response.setContentType("application/json; charset=utf-8");
-    }
-
-    String name = request.getParameter("name");
+    String cmd = request.getParameter(COMMAND);
     Writer out = response.getWriter();
+
     try {
-      writeResponse(getConfFromContext(), out, format, name);
+      if (cmd == null) {
+        if (FORMAT_XML.equals(format)) {
+          response.setContentType("text/xml; charset=utf-8");
+        } else if (FORMAT_JSON.equals(format)) {
+          response.setContentType("application/json; charset=utf-8");
+        }
+
+        String name = request.getParameter("name");
+        writeResponse(getConfFromContext(), out, format, name);
+      } else {
+        processConfigTagRequest(request, out);
+      }
     } catch (BadFormatException bfe) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST, bfe.getMessage());
     } catch (IllegalArgumentException iae) {
       response.sendError(HttpServletResponse.SC_NOT_FOUND, iae.getMessage());
     }
     out.close();
+  }
+
+  private void processConfigTagRequest(HttpServletRequest request,
+      Writer out) throws IOException {
+    String cmd = request.getParameter(COMMAND);
+    Gson gson = new Gson();
+    Configuration config = getOzoneConfig();
+
+    config.get("ozone.enabled");
+    switch (cmd) {
+    case "getOzoneTags":
+      LOG.debug(
+          "Sending json for tags:" + gson.toJson(OzonePropertyTag.values()));
+      out.write(gson.toJson(OzonePropertyTag.values()));
+      break;
+    case "getPropertyByTag":
+      String tags = request.getParameter("tags");
+      String tagGroup = request.getParameter("group");
+      LOG.debug("Getting all properties for tags:" + tags + " group:" +
+          tagGroup);
+      List<PropertyTag> tagList = new ArrayList<>();
+      for (String tag : tags.split(",")) {
+        if (config.getPropertyTag(tag, tagGroup) != null) {
+          tagList.add(config.getPropertyTag(tag, tagGroup));
+        }
+      }
+      Properties properties = config.getAllPropertiesByTags(tagList);
+
+      properties.stringPropertyNames().forEach(key -> {
+        if(config.get(key) != null){
+          properties.put(key,config.get(key));
+        }
+      });
+      out.write(gson.toJsonTree(properties).toString());
+      break;
+    default:
+      throw new IllegalArgumentException(cmd + " is not a valid command.");
+    }
+
   }
 
   @VisibleForTesting
@@ -121,6 +177,10 @@ public class ConfServlet extends HttpServlet {
     public BadFormatException(String msg) {
       super(msg);
     }
+  }
+
+  private static Configuration getOzoneConfig() {
+    return OZONE_CONFIG;
   }
 
 }

@@ -21,6 +21,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.scm.block.DeletedBlockLog;

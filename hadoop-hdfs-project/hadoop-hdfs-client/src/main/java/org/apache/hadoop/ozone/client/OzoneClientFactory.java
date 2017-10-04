@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.OzoneConfiguration;
+import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
