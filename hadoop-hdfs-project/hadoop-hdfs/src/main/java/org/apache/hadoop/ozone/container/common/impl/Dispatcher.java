@@ -88,6 +88,8 @@ public class Dispatcher implements ContainerDispatcher {
   @Override
   public ContainerCommandResponseProto dispatch(
       ContainerCommandRequestProto msg) {
+    LOG.trace("Command {}, trace ID: {} ", msg.getCmdType().toString(),
+        msg.getTraceID());
     long startNanos = System.nanoTime();
     ContainerCommandResponseProto resp = null;
     try {

@@ -42,6 +42,8 @@ import static org.apache.hadoop.scm.ScmConfigKeys
     .SCM_CONTAINER_CLIENT_MAX_SIZE_KEY;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos
+    .ReplicationType.RATIS;
 
 /**
  * XceiverClientManager is responsible for the lifecycle of XceiverClient
@@ -146,7 +148,7 @@ public class XceiverClientManager implements Closeable {
           new Callable<XceiverClientSpi>() {
           @Override
           public XceiverClientSpi call() throws Exception {
-            XceiverClientSpi client = useRatis ?
+            XceiverClientSpi client = pipeline.getType() == RATIS ?
                     XceiverClientRatis.newXceiverClientRatis(pipeline, conf)
                     : new XceiverClient(pipeline, conf);
             client.connect();

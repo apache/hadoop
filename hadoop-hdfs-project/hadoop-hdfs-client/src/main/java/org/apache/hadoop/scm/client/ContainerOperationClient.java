@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.scm.client;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
-import org.apache.hadoop.scm.XceiverClientSpi;
-import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.XceiverClientManager;
+import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.protocolPB
+    .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.storage.ContainerProtocolCalls;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,9 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState.ALLOCATED;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState.OPEN;
 
 /**
  * This class provides the client-facing APIs of container operations.
@@ -84,29 +89,94 @@ public class ContainerOperationClient implements ScmClient {
           storageContainerLocationClient.allocateContainer(
               xceiverClientManager.getType(),
               xceiverClientManager.getFactor(), containerId);
-
       client = xceiverClientManager.acquireClient(pipeline);
-      String traceID = UUID.randomUUID().toString();
-      storageContainerLocationClient.notifyObjectCreationStage(
-          NotifyObjectCreationStageRequestProto.Type.container,
-          containerId,
-          NotifyObjectCreationStageRequestProto.Stage.begin);
-      ContainerProtocolCalls.createContainer(client, traceID);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Created container " + containerId
-            + " leader:" + pipeline.getLeader()
-            + " machines:" + pipeline.getMachines());
+
+      // Allocated State means that SCM has allocated this pipeline in its
+      // namespace. The client needs to create the pipeline on the machines
+      // which was choosen by the SCM.
+      Preconditions.checkState(pipeline.getLifeCycleState() == ALLOCATED ||
+          pipeline.getLifeCycleState() == OPEN, "Unexpected pipeline state");
+      if (pipeline.getLifeCycleState() == ALLOCATED) {
+        createPipeline(client, pipeline);
       }
-      storageContainerLocationClient.notifyObjectCreationStage(
-          NotifyObjectCreationStageRequestProto.Type.container,
-          containerId,
-          NotifyObjectCreationStageRequestProto.Stage.complete);
+      // TODO : Container Client State needs to be updated.
+      createContainer(containerId, client, pipeline);
       return pipeline;
     } finally {
       if (client != null) {
         xceiverClientManager.releaseClient(client);
       }
     }
+  }
+
+  /**
+   * Create a container over pipeline specified by the SCM.
+   *
+   * @param containerId - Container ID
+   * @param client - Client to communicate with Datanodes
+   * @param pipeline - A pipeline that is already created.
+   * @throws IOException
+   */
+  public void createContainer(String containerId, XceiverClientSpi client,
+      Pipeline pipeline) throws IOException {
+    String traceID = UUID.randomUUID().toString();
+    storageContainerLocationClient.notifyObjectCreationStage(
+        NotifyObjectCreationStageRequestProto.Type.container,
+        containerId,
+        NotifyObjectCreationStageRequestProto.Stage.begin);
+    ContainerProtocolCalls.createContainer(client, traceID);
+    storageContainerLocationClient.notifyObjectCreationStage(
+        NotifyObjectCreationStageRequestProto.Type.container,
+        containerId,
+        NotifyObjectCreationStageRequestProto.Stage.complete);
+
+    // Let us log this info after we let SCM know that we have completed the
+    // creation state.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created container " + containerId
+          + " leader:" + pipeline.getLeader()
+          + " machines:" + pipeline.getMachines());
+    }
+  }
+
+  /**
+   * Creates a pipeline over the machines choosen by the SCM.
+   *
+   * @param client - Client
+   * @param pipeline - pipeline to be createdon Datanodes.
+   * @throws IOException
+   */
+  private void createPipeline(XceiverClientSpi client, Pipeline pipeline)
+      throws IOException {
+
+    Preconditions.checkNotNull(pipeline.getPipelineName(), "Pipeline " +
+        "name cannot be null when client create flag is set.");
+
+    // Pipeline creation is a three step process.
+    //
+    // 1. Notify SCM that this client is doing a create pipeline on
+    // datanodes.
+    //
+    // 2. Talk to Datanodes to create the pipeline.
+    //
+    // 3. update SCM that pipeline creation was successful.
+    storageContainerLocationClient.notifyObjectCreationStage(
+        NotifyObjectCreationStageRequestProto.Type.pipeline,
+        pipeline.getPipelineName(),
+        NotifyObjectCreationStageRequestProto.Stage.begin);
+
+    client.createPipeline(pipeline.getPipelineName(),
+        pipeline.getMachines());
+
+    storageContainerLocationClient.notifyObjectCreationStage(
+        NotifyObjectCreationStageRequestProto.Type.pipeline,
+        pipeline.getPipelineName(),
+        NotifyObjectCreationStageRequestProto.Stage.complete);
+
+    // TODO : Should we change the state on the client side ??
+    // That makes sense, but it is not needed for the client to work.
+    LOG.debug("Pipeline creation successful. Pipeline: {}",
+        pipeline.toString());
   }
 
   /**
@@ -122,24 +192,18 @@ public class ContainerOperationClient implements ScmClient {
       Pipeline pipeline =
           storageContainerLocationClient.allocateContainer(type, factor,
               containerId);
+      client = xceiverClientManager.acquireClient(pipeline);
+
+      // Allocated State means that SCM has allocated this pipeline in its
+      // namespace. The client needs to create the pipeline on the machines
+      // which was choosen by the SCM.
+      if (pipeline.getLifeCycleState() == ALLOCATED) {
+        createPipeline(client, pipeline);
+      }
+
       // connect to pipeline leader and allocate container on leader datanode.
       client = xceiverClientManager.acquireClient(pipeline);
-      String traceID = UUID.randomUUID().toString();
-      storageContainerLocationClient.notifyObjectCreationStage(
-          NotifyObjectCreationStageRequestProto.Type.container,
-          containerId,
-          NotifyObjectCreationStageRequestProto.Stage.begin);
-
-      ContainerProtocolCalls.createContainer(client, traceID);
-      LOG.info("Created container " + containerId +
-          " leader:" + pipeline.getLeader() +
-          " machines:" + pipeline.getMachines() +
-          " replication factor:" + factor);
-
-      storageContainerLocationClient.notifyObjectCreationStage(
-          NotifyObjectCreationStageRequestProto.Type.container,
-          containerId,
-          NotifyObjectCreationStageRequestProto.Stage.complete);
+      createContainer(containerId, client, pipeline);
       return pipeline;
     } finally {
       if (client != null) {
@@ -192,10 +256,12 @@ public class ContainerOperationClient implements ScmClient {
       ContainerProtocolCalls.deleteContainer(client, force, traceID);
       storageContainerLocationClient
           .deleteContainer(pipeline.getContainerName());
-      LOG.info("Deleted container {}, leader: {}, machines: {} ",
-          pipeline.getContainerName(),
-          pipeline.getLeader(),
-          pipeline.getMachines());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Deleted container {}, leader: {}, machines: {} ",
+            pipeline.getContainerName(),
+            pipeline.getLeader(),
+            pipeline.getMachines());
+      }
     } finally {
       if (client != null) {
         xceiverClientManager.releaseClient(client);
@@ -231,10 +297,12 @@ public class ContainerOperationClient implements ScmClient {
       ReadContainerResponseProto response =
           ContainerProtocolCalls.readContainer(client,
               pipeline.getContainerName(), traceID);
-      LOG.info("Read container {}, leader: {}, machines: {} ",
-          pipeline.getContainerName(),
-          pipeline.getLeader(),
-          pipeline.getMachines());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Read container {}, leader: {}, machines: {} ",
+            pipeline.getContainerName(),
+            pipeline.getLeader(),
+            pipeline.getMachines());
+      }
       return response.getContainerData();
     } finally {
       if (client != null) {

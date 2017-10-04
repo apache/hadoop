@@ -16,22 +16,27 @@
  */
 package org.apache.hadoop.ozone.scm.pipelines.standalone;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineManager;
+import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Standalone Manager Impl to prove that pluggable interface
  * works with current tests.
  */
 public class StandaloneManagerImpl implements PipelineManager {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StandaloneManagerImpl.class);
   private final NodeManager nodeManager;
   private final ContainerPlacementPolicy placementPolicy;
   private final long containerSize;
@@ -49,31 +54,6 @@ public class StandaloneManagerImpl implements PipelineManager {
     this.containerSize =  containerSize;
   }
 
-  /**
-   * Translates a list of nodes, ordered such that the first is the leader, into
-   * a corresponding {@link Pipeline} object.
-   *
-   * @param nodes - list of datanodes on which we will allocate the container.
-   * The first of the list will be the leader node.
-   * @param containerName container name
-   * @return pipeline corresponding to nodes
-   */
-  private static Pipeline newPipelineFromNodes(final List<DatanodeID> nodes,
-      final String containerName) {
-    Preconditions.checkNotNull(nodes);
-    Preconditions.checkArgument(nodes.size() > 0);
-    String leaderId = nodes.get(0).getDatanodeUuid();
-    Pipeline pipeline = new Pipeline(leaderId);
-    for (DatanodeID node : nodes) {
-      pipeline.addMember(node);
-    }
-
-    // The default state of a pipeline is operational, so not setting
-    // explicit state here.
-
-    pipeline.setContainerName(containerName);
-    return pipeline;
-  }
 
   /**
    * This function is called by the Container Manager while allocating a new
@@ -90,7 +70,12 @@ public class StandaloneManagerImpl implements PipelineManager {
       .ReplicationFactor replicationFactor) throws IOException {
     List<DatanodeID> datanodes = placementPolicy.chooseDatanodes(
         replicationFactor.getNumber(), containerSize);
-    return newPipelineFromNodes(datanodes, containerName);
+    Pipeline pipeline = PipelineSelector.newPipelineFromNodes(datanodes);
+    String pipelineName = "SA-" + UUID.randomUUID().toString().substring(3);
+    pipeline.setContainerName(containerName);
+    pipeline.setPipelineName(pipelineName);
+    LOG.info("Creating new standalone pipeline: {}", pipeline.toString());
+    return pipeline;
   }
 
   /**

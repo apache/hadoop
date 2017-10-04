@@ -978,6 +978,7 @@ public class TestKeySpaceManager {
     KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
     keyArgs.setSize(4096);
 
+
     OutputStream stream = storageHandler.newKeyWriter(keyArgs);
     stream.close();
 

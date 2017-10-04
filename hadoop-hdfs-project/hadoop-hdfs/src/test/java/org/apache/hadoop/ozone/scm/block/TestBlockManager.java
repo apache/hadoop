@@ -21,8 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.MockNodeManager;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -53,6 +55,8 @@ public class TestBlockManager {
   private static BlockManagerImpl blockManager;
   private static File testDir;
   private final static long DEFAULT_BLOCK_SIZE = 128 * MB;
+  private static OzoneProtos.ReplicationFactor factor;
+  private static OzoneProtos.ReplicationType type;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -67,11 +71,19 @@ public class TestBlockManager {
     testDir = Paths.get(path).toFile();
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {
-      throw new IOException("Unable to create test diectory path");
+      throw new IOException("Unable to create test directory path");
     }
     nodeManager = new MockNodeManager(true, 10);
     mapping = new ContainerMapping(conf, nodeManager, 128);
     blockManager = new BlockManagerImpl(conf, nodeManager, mapping, 128);
+    if(conf.getBoolean(ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY,
+        ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT)){
+      factor = OzoneProtos.ReplicationFactor.THREE;
+      type = OzoneProtos.ReplicationType.RATIS;
+    } else {
+      factor = OzoneProtos.ReplicationFactor.ONE;
+      type = OzoneProtos.ReplicationType.STAND_ALONE;
+    }
   }
 
   @AfterClass
@@ -88,13 +100,15 @@ public class TestBlockManager {
 
   @Test
   public void testAllocateBlock() throws Exception {
-    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
+        type, factor);
     Assert.assertNotNull(block);
   }
 
   @Test
   public void testGetAllocatedBlock() throws IOException {
-    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
+        type, factor);
     Assert.assertNotNull(block);
     Pipeline pipeline = blockManager.getBlock(block.getKey());
     Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
@@ -103,7 +117,8 @@ public class TestBlockManager {
 
   @Test
   public void testDeleteBlock() throws Exception {
-    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+    AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
+        type, factor);
     Assert.assertNotNull(block);
     blockManager.deleteBlocks(Collections.singletonList(block.getKey()));
 
@@ -123,7 +138,8 @@ public class TestBlockManager {
   public void testAllocateOversizedBlock() throws IOException {
     long size = 6 * GB;
     thrown.expectMessage("Unsupported block size");
-    AllocatedBlock block = blockManager.allocateBlock(size);
+    AllocatedBlock block = blockManager.allocateBlock(size,
+        type, factor);
   }
 
   @Test
@@ -137,6 +153,7 @@ public class TestBlockManager {
   public void testChillModeAllocateBlockFails() throws IOException {
     nodeManager.setChillmode(true);
     thrown.expectMessage("Unable to create block while in chill mode");
-    blockManager.allocateBlock(DEFAULT_BLOCK_SIZE);
+    blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
+        type, factor);
   }
 }

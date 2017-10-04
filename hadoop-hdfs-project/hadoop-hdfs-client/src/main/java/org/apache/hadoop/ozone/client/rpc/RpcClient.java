@@ -51,6 +51,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocolPB.KSMPBHelper;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -430,7 +431,8 @@ public class RpcClient implements ClientProtocol {
 
   @Override
   public OzoneOutputStream createKey(
-      String volumeName, String bucketName, String keyName, long size)
+      String volumeName, String bucketName, String keyName, long size,
+      OzoneProtos.ReplicationType type, OzoneProtos.ReplicationFactor factor)
       throws IOException {
     String requestId = UUID.randomUUID().toString();
     KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
@@ -438,6 +440,8 @@ public class RpcClient implements ClientProtocol {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(size)
+        .setType(type)
+        .setFactor(factor)
         .build();
 
     KsmKeyInfo keyInfo = keySpaceManagerClient.allocateKey(keyArgs);

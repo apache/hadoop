@@ -43,16 +43,6 @@ import java.util.TreeMap;
  * A pipeline represents the group of machines over which a container lives.
  */
 public class Pipeline {
-  private String containerName;
-  private String leaderID;
-  private Map<String, DatanodeID> datanodes;
-  /**
-   * Allows you to maintain private data on pipelines.
-   * This is not serialized via protobuf, just allows us to maintain some
-   * private data.
-   */
-  private byte[] data;
-
   static final String PIPELINE_INFO = "PIPELINE_INFO_FILTER";
   private static final ObjectWriter WRITER;
 
@@ -69,10 +59,18 @@ public class Pipeline {
     WRITER = mapper.writer(filters);
   }
 
-  @JsonFilter(PIPELINE_INFO)
-  class MixIn {
-  }
-
+  private String containerName;
+  private String leaderID;
+  private Map<String, DatanodeID> datanodes;
+  private OzoneProtos.LifeCycleState lifeCycleState;
+  private OzoneProtos.ReplicationType type;
+  private OzoneProtos.ReplicationFactor factor;
+  private String pipelineName;
+  /**
+   * Allows you to maintain private data on pipelines. This is not serialized
+   * via protobuf, just allows us to maintain some private data.
+   */
+  private byte[] data;
   /**
    * Constructs a new pipeline data structure.
    *
@@ -98,9 +96,22 @@ public class Pipeline {
     }
 
     newPipeline.setContainerName(pipeline.getContainerName());
+    newPipeline.setLifeCycleState(pipeline.getState());
+    newPipeline.setType(pipeline.getType());
+    newPipeline.setFactor(pipeline.getFactor());
+    if (pipeline.hasPipelineName()) {
+      newPipeline.setPipelineName(pipeline.getPipelineName());
+    }
     return newPipeline;
   }
 
+  public OzoneProtos.ReplicationFactor getFactor() {
+    return factor;
+  }
+
+  public void setFactor(OzoneProtos.ReplicationFactor factor) {
+    this.factor = factor;
+  }
 
   /**
    * Adds a member to the pipeline.
@@ -167,6 +178,17 @@ public class Pipeline {
     }
     builder.setLeaderID(leaderID);
     builder.setContainerName(this.containerName);
+
+    if (this.getLifeCycleState() != null) {
+      builder.setState(this.getLifeCycleState());
+    }
+    if (this.getType() != null) {
+      builder.setType(this.getType());
+    }
+
+    if (this.getFactor() != null) {
+      builder.setFactor(this.getFactor());
+    }
     return builder.build();
   }
 
@@ -189,16 +211,6 @@ public class Pipeline {
   }
 
   /**
-   * Set private data on pipeline.
-   * @param data -- private data.
-   */
-  public void setData(byte[] data) {
-    if (data != null) {
-      this.data = Arrays.copyOf(data, data.length);
-    }
-  }
-
-  /**
    * Returns private data that is set on this pipeline.
    *
    * @return blob, the user can interpret it any way they like.
@@ -211,13 +223,85 @@ public class Pipeline {
     }
   }
 
+  /**
+   * Set private data on pipeline.
+   *
+   * @param data -- private data.
+   */
+  public void setData(byte[] data) {
+    if (data != null) {
+      this.data = Arrays.copyOf(data, data.length);
+    }
+  }
+
+  /**
+   * Gets the State of the pipeline.
+   *
+   * @return - LifeCycleStates.
+   */
+  public OzoneProtos.LifeCycleState getLifeCycleState() {
+    return lifeCycleState;
+  }
+
+  /**
+   * Sets the lifecycleState.
+   *
+   * @param lifeCycleStates - Enum
+   */
+  public void setLifeCycleState(OzoneProtos.LifeCycleState lifeCycleStates) {
+    this.lifeCycleState = lifeCycleStates;
+  }
+
+  /**
+   * Gets the pipeline Name.
+   *
+   * @return - Name of the pipeline
+   */
+  public String getPipelineName() {
+    return pipelineName;
+  }
+
+  /**
+   * Sets the pipeline name.
+   *
+   * @param pipelineName - Sets the name.
+   */
+  public void setPipelineName(String pipelineName) {
+    this.pipelineName = pipelineName;
+  }
+
+  /**
+   * Returns the type.
+   *
+   * @return type - Standalone, Ratis, Chained.
+   */
+  public OzoneProtos.ReplicationType getType() {
+    return type;
+  }
+
+  /**
+   * Sets the type of this pipeline.
+   *
+   * @param type - Standalone, Ratis, Chained.
+   */
+  public void setType(OzoneProtos.ReplicationType type) {
+    this.type = type;
+  }
+
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
         .append("[");
     datanodes.keySet().stream()
-        .forEach(id -> b.append(id.endsWith(leaderID)? "*" + id : id));
+        .forEach(id -> b.append(id.endsWith(leaderID) ? "*" + id : id));
     b.append("] container:").append(containerName);
+    b.append(" name:").append(getPipelineName());
+    if (getType() != null) {
+      b.append(" type:").append(getType().toString());
+    }
+    if (getLifeCycleState() != null) {
+      b.append(" State:").append(getLifeCycleState().toString());
+    }
     return b.toString();
   }
 
@@ -229,5 +313,9 @@ public class Pipeline {
    */
   public String toJsonString() throws IOException {
     return WRITER.writeValueAsString(this);
+  }
+
+  @JsonFilter(PIPELINE_INFO)
+  class MixIn {
   }
 }

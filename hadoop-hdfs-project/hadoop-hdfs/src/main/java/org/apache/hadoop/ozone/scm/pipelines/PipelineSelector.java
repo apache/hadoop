@@ -51,9 +51,9 @@ public class PipelineSelector {
   private final StandaloneManagerImpl standaloneManager;
   private final long containerSize;
 
-
   /**
    * Constructs a pipeline Selector.
+   *
    * @param nodeManager - node manager
    * @param conf - Ozone Config
    */
@@ -69,6 +69,30 @@ public class PipelineSelector {
             containerSize);
     this.ratisManager =
         new RatisManagerImpl(this.nodeManager, placementPolicy, containerSize);
+  }
+
+  /**
+   * Translates a list of nodes, ordered such that the first is the leader, into
+   * a corresponding {@link Pipeline} object.
+   *
+   * @param nodes - list of datanodes on which we will allocate the container.
+   * The first of the list will be the leader node.
+   * @return pipeline corresponding to nodes
+   */
+  public static Pipeline newPipelineFromNodes(final List<DatanodeID> nodes) {
+    Preconditions.checkNotNull(nodes);
+    Preconditions.checkArgument(nodes.size() > 0);
+    String leaderId = nodes.get(0).getDatanodeUuid();
+    Pipeline pipeline = new Pipeline(leaderId);
+    for (DatanodeID node : nodes) {
+      pipeline.addMember(node);
+    }
+
+    // A Standalone pipeline is always open, no action from the client
+    // is needed to make it open.
+    pipeline.setType(ReplicationType.STAND_ALONE);
+    pipeline.setLifeCycleState(OzoneProtos.LifeCycleState.OPEN);
+    return pipeline;
   }
 
   /**
@@ -106,13 +130,15 @@ public class PipelineSelector {
 
   /**
    * Return the pipeline manager from the replication type.
+   *
    * @param replicationType - Replication Type Enum.
    * @return pipeline Manager.
-   * @throws IllegalArgumentException
+   * @throws IllegalArgumentException If an pipeline type gets added
+   * and this function is not modified we will throw.
    */
   private PipelineManager getPipelineManager(ReplicationType replicationType)
       throws IllegalArgumentException {
-    switch(replicationType){
+    switch (replicationType) {
     case RATIS:
       return this.ratisManager;
     case STAND_ALONE:
@@ -131,7 +157,6 @@ public class PipelineSelector {
    * container. The client specifies what kind of replication pipeline is needed
    * and based on the replication type in the request appropriate Interface is
    * invoked.
-   *
    */
 
   public Pipeline getReplicationPipeline(ReplicationType replicationType,

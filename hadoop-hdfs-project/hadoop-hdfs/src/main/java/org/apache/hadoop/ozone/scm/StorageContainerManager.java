@@ -571,9 +571,14 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   public Pipeline allocateContainer(OzoneProtos.ReplicationType replicationType,
       OzoneProtos.ReplicationFactor replicationFactor, String containerName)
       throws IOException {
+
+    //TODO : FIX ME : Pass the owner argument to this function.
+    // This causes a lot of test change and cblock change to filing
+    // another JIRA to fix it.
+    final OzoneProtos.Owner owner = OzoneProtos.Owner.OZONE;
     checkAdminAccess();
     return scmContainerManager.allocateContainer(replicationType,
-        replicationFactor, containerName).getPipeline();
+        replicationFactor, containerName, owner).getPipeline();
   }
 
   /**
@@ -839,17 +844,21 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   }
 
   /**
-   * Asks SCM where a block should be allocated. SCM responds with the set
-   * of datanodes and leader that should be used creating this block.
+   * Asks SCM where a block should be allocated. SCM responds with the set of
+   * datanodes that should be used creating this block.
    *
    * @param size - size of the block.
-   * @return - allocated block accessing info (key, pipeline and leader).
+   * @param type - Replication type.
+   * @param factor
+   * @return allocated block accessing info (key, pipeline).
    * @throws IOException
    */
   @Override
-  public AllocatedBlock allocateBlock(final long size) throws IOException {
-    return scmBlockManager.allocateBlock(size);
+  public AllocatedBlock allocateBlock(long size, OzoneProtos.ReplicationType
+      type, OzoneProtos.ReplicationFactor factor) throws IOException {
+    return scmBlockManager.allocateBlock(size, type, factor);
   }
+
 
   /**
    * Delete blocks for a set of object keys.

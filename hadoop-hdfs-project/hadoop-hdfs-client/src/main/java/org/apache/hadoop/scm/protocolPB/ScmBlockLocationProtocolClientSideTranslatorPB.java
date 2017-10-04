@@ -27,23 +27,17 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .AllocateScmBlockRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .AllocateScmBlockResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmKeyBlocksResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .GetScmBlockLocationsRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .GetScmBlockLocationsResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .ScmLocatedBlockProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos
-    .KeyBlocks;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmBlockLocationsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmBlockLocationsResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.ScmLocatedBlockProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -121,12 +115,16 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
    * @throws IOException
    */
   @Override
-  public AllocatedBlock allocateBlock(long size) throws IOException {
+  public AllocatedBlock allocateBlock(long size, OzoneProtos.ReplicationType
+      type, OzoneProtos.ReplicationFactor factor) throws IOException {
     Preconditions.checkArgument(size > 0,
         "block size must be greater than 0");
 
     AllocateScmBlockRequestProto request = AllocateScmBlockRequestProto
-        .newBuilder().setSize(size).build();
+        .newBuilder()
+        .setSize(size).setType(type)
+        .setFactor(factor)
+        .build();
     final AllocateScmBlockResponseProto response;
     try {
       response = rpcProxy.allocateScmBlock(NULL_RPC_CONTROLLER, request);

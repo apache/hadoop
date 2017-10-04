@@ -20,14 +20,15 @@ package org.apache.hadoop.scm;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .ContainerCommandRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
-    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.ratis.RatisHelper;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
+import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.shaded.com.google.protobuf.ByteString;
@@ -36,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -67,6 +69,70 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     this.pipeline = pipeline;
     this.rpcType = rpcType;
   }
+
+  /**
+   *  {@inheritDoc}
+   */
+  public void createPipeline(String clusterId, List<DatanodeID> datanodes)
+      throws IOException {
+    final RaftPeer[] newPeers = datanodes.stream().map(RatisHelper::toRaftPeer)
+        .toArray(RaftPeer[]::new);
+    reinitialize(datanodes, newPeers);
+  }
+
+  /**
+   * Returns Ratis as pipeline Type.
+   * @return - Ratis
+   */
+  @Override
+  public OzoneProtos.ReplicationType getPipelineType() {
+    return OzoneProtos.ReplicationType.RATIS;
+  }
+
+  private void reinitialize(List<DatanodeID> datanodes, RaftPeer[] newPeers)
+      throws IOException {
+    if (datanodes.isEmpty()) {
+      return;
+    }
+
+    IOException exception = null;
+    for (DatanodeID d : datanodes) {
+      try {
+        reinitialize(d, newPeers);
+      } catch (IOException ioe) {
+        if (exception == null) {
+          exception = new IOException(
+              "Failed to reinitialize some of the RaftPeer(s)", ioe);
+        } else {
+          exception.addSuppressed(ioe);
+        }
+      }
+    }
+    if (exception != null) {
+      throw exception;
+    }
+  }
+
+  /**
+   * Adds a new peers to the Ratis Ring.
+   * @param datanode - new datanode
+   * @param newPeers - Raft machines
+   * @throws IOException - on Failure.
+   */
+  private void reinitialize(DatanodeID datanode, RaftPeer[] newPeers)
+      throws IOException {
+    final RaftPeer p = RatisHelper.toRaftPeer(datanode);
+    try (RaftClient client = RatisHelper.newRaftClient(rpcType, p)) {
+      client.reinitialize(newPeers, p.getId());
+    } catch (IOException ioe) {
+      LOG.error("Failed to reinitialize RaftPeer:{} datanode: {}  ",
+          p, datanode, ioe);
+      throw new IOException("Failed to reinitialize RaftPeer " + p
+          + "(datanode=" + datanode + ")", ioe);
+    }
+  }
+
+
 
   @Override
   public Pipeline getPipeline() {

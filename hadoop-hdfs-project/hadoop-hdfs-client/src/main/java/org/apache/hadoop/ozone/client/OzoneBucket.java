@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -195,10 +196,12 @@ public class OzoneBucket {
    * @return OzoneOutputStream to which the data has to be written.
    * @throws IOException
    */
-  public OzoneOutputStream createKey(String key, long size)throws IOException {
+  public OzoneOutputStream createKey(String key, long size, OzoneProtos
+      .ReplicationType type, OzoneProtos.ReplicationFactor factor)
+      throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(key);
-    return proxy.createKey(volumeName, name, key, size);
+    return proxy.createKey(volumeName, name, key, size, type, factor);
   }
 
   /**

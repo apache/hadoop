@@ -34,11 +34,13 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 /**
  * A Client for the storageContainer protocol.
@@ -153,5 +155,28 @@ public class XceiverClient extends XceiverClientSpi {
     XceiverClientHandler handler =
         channelFuture.channel().pipeline().get(XceiverClientHandler.class);
     return handler.sendCommandAsync(request);
+  }
+
+  /**
+   * Create a pipeline.
+   *
+   * @param pipelineID - Name of the pipeline.
+   * @param datanodes - Datanodes
+   */
+  @Override
+  public void createPipeline(String pipelineID, List<DatanodeID> datanodes)
+      throws IOException {
+    // For stand alone pipeline, there is no notion called setup pipeline.
+    return;
+  }
+
+  /**
+   * Returns pipeline Type.
+   *
+   * @return - Stand Alone as the type.
+   */
+  @Override
+  public OzoneProtos.ReplicationType getPipelineType() {
+    return OzoneProtos.ReplicationType.STAND_ALONE;
   }
 }

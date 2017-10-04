@@ -19,14 +19,17 @@
 package org.apache.hadoop.scm;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.ContainerCommandRequestProto;
-import org.apache.hadoop.hdfs.ozone.protocol.proto
-    .ContainerProtos.ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandRequestProto;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -99,12 +102,28 @@ public abstract class XceiverClientSpi implements Closeable {
 
   /**
    * Sends a given command to server gets a waitable future back.
+   *
    * @param request Request
    * @return Response to the command
    * @throws IOException
    */
-  public abstract CompletableFuture<ContainerCommandResponseProto> sendCommandAsync(
-      ContainerCommandRequestProto request)
+  public abstract CompletableFuture<ContainerCommandResponseProto>
+      sendCommandAsync(ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException;
 
+  /**
+   * Create a pipeline.
+   *
+   * @param pipelineID - Name of the pipeline.
+   * @param datanodes - Datanodes
+   */
+  public abstract void createPipeline(String pipelineID,
+      List<DatanodeID> datanodes) throws IOException;
+
+  /**
+   * Returns pipeline Type.
+   *
+   * @return - {Stand_Alone, Ratis or Chained}
+   */
+  public abstract OzoneProtos.ReplicationType getPipelineType();
 }
