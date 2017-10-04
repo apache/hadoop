@@ -23,6 +23,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.Map;
+
 /** An abstraction for various container runtime implementations. Examples
  * include Process Tree, Docker, Appc runtimes etc., These implementations
  * are meant for low-level OS container support - dependencies on
@@ -47,4 +49,13 @@ public interface ContainerRuntime {
   /** Any container cleanup that may be required. */
   void reapContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException;
+
+  /**
+   * Whether to propagate the whitelist of environment variables from the
+   * nodemanager environment into the container environment.
+   * @param env the container's environment variables
+   * @return true if whitelist variables should be propagated, false otherwise
+   * @see org.apache.hadoop.yarn.conf.YarnConfiguration#NM_ENV_WHITELIST
+   */
+  boolean useWhitelistEnv(Map<String, String> env);
 }

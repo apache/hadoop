@@ -54,8 +54,17 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     dockerLinuxContainerRuntime.initialize(conf);
   }
 
+  @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    LinuxContainerRuntime runtime = pickContainerRuntime(env);
+    return runtime.useWhitelistEnv(env);
+  }
+
   private LinuxContainerRuntime pickContainerRuntime(Container container) {
-    Map<String, String> env = container.getLaunchContext().getEnvironment();
+    return pickContainerRuntime(container.getLaunchContext().getEnvironment());
+  }
+
+  private LinuxContainerRuntime pickContainerRuntime(Map<String, String> env) {
     LinuxContainerRuntime runtime;
 
     if (DockerLinuxContainerRuntime.isDockerContainerRequested(env)){

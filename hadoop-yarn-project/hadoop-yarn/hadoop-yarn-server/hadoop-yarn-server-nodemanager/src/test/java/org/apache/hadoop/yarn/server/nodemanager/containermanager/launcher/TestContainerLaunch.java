@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.junit.matchers.JUnitMatchers.containsString;
+import static org.junit.Assume.assumeFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +33,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -85,12 +88,15 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.ShellScriptBuilder;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -99,7 +105,6 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreServic
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.hamcrest.CoreMatchers;
@@ -169,9 +174,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         commands.add("/bin/sh ./\\\"" + badSymlink + "\\\"");
       }
 
-      new DefaultContainerExecutor()
-          .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()), tempFile.getName());
+      DefaultContainerExecutor executor = new DefaultContainerExecutor();
+      executor.setConf(conf);
+      executor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()),
+          tempFile.getName());
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -238,9 +245,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } else {
         commands.add("/bin/sh ./\\\"" + symLink + "\\\"");
       }
-      new DefaultContainerExecutor()
-          .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()));
+      DefaultContainerExecutor executor = new DefaultContainerExecutor();
+      executor.setConf(conf);
+      executor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()));
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -275,6 +283,99 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     }
   }
 
+  @Test(timeout = 20000)
+  public void testWriteEnvExport() throws Exception {
+    // Valid only for unix
+    assumeFalse(Shell.WINDOWS);
+    File shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("HADOOP_COMMON_HOME", "/opt/hadoopcommon");
+    env.put("HADOOP_MAPRED_HOME", "/opt/hadoopbuild");
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    FileOutputStream fos = new FileOutputStream(shellFile);
+    List<String> commands = new ArrayList<String>();
+    final Map<String, String> nmEnv = new HashMap<>();
+    nmEnv.put("HADOOP_COMMON_HOME", "nodemanager_common_home");
+    nmEnv.put("HADOOP_HDFS_HOME", "nodemanager_hdfs_home");
+    nmEnv.put("HADOOP_YARN_HOME", "nodemanager_yarn_home");
+    nmEnv.put("HADOOP_MAPRED_HOME", "nodemanager_mapred_home");
+    DefaultContainerExecutor defaultContainerExecutor =
+        new DefaultContainerExecutor() {
+          @Override
+          protected String getNMEnvVar(String varname) {
+            return nmEnv.get(varname);
+          }
+        };
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST,
+        "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
+    defaultContainerExecutor.setConf(conf);
+    defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
+        new Path(localLogDir.getAbsolutePath()), "user");
+    String shellContent =
+        new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
+            StandardCharsets.UTF_8);
+    Assert.assertTrue(shellContent
+        .contains("export HADOOP_COMMON_HOME=\"/opt/hadoopcommon\""));
+    // Whitelisted variable overridden by container
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_MAPRED_HOME=\"/opt/hadoopbuild\""));
+    // Available in env but not in whitelist
+    Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
+    // Available in env and in whitelist
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_YARN_HOME=\"nodemanager_yarn_home\""));
+    fos.flush();
+    fos.close();
+  }
+
+  @Test(timeout = 20000)
+  public void testWriteEnvExportDocker() throws Exception {
+    // Valid only for unix
+    assumeFalse(Shell.WINDOWS);
+    File shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("HADOOP_COMMON_HOME", "/opt/hadoopcommon");
+    env.put("HADOOP_MAPRED_HOME", "/opt/hadoopbuild");
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    FileOutputStream fos = new FileOutputStream(shellFile);
+    List<String> commands = new ArrayList<String>();
+    final Map<String, String> nmEnv = new HashMap<>();
+    nmEnv.put("HADOOP_COMMON_HOME", "nodemanager_common_home");
+    nmEnv.put("HADOOP_HDFS_HOME", "nodemanager_hdfs_home");
+    nmEnv.put("HADOOP_YARN_HOME", "nodemanager_yarn_home");
+    nmEnv.put("HADOOP_MAPRED_HOME", "nodemanager_mapred_home");
+    DockerLinuxContainerRuntime dockerRuntime =
+        new DockerLinuxContainerRuntime(
+            mock(PrivilegedOperationExecutor.class));
+    LinuxContainerExecutor lce =
+        new LinuxContainerExecutor(dockerRuntime) {
+          @Override
+          protected String getNMEnvVar(String varname) {
+            return nmEnv.get(varname);
+          }
+        };
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST,
+        "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
+    lce.setConf(conf);
+    lce.writeLaunchEnv(fos, env, resources, commands,
+        new Path(localLogDir.getAbsolutePath()), "user");
+    String shellContent =
+        new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
+            StandardCharsets.UTF_8);
+    Assert.assertTrue(shellContent
+        .contains("export HADOOP_COMMON_HOME=\"/opt/hadoopcommon\""));
+    // Whitelisted variable overridden by container
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_MAPRED_HOME=\"/opt/hadoopbuild\""));
+    // Verify no whitelisted variables inherited from NM env
+    Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
+    Assert.assertFalse(shellContent.contains("HADOOP_YARN_HOME"));
+    fos.flush();
+    fos.close();
+  }
+
   @Test (timeout = 20000)
   public void testInvalidEnvSyntaxDiagnostics() throws IOException  {
 
@@ -293,9 +394,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           "\"workflowName\":\"\n\ninsert table " +
           "\npartition (cd_education_status)\nselect cd_demo_sk, cd_gender, " );
       List<String> commands = new ArrayList<String>();
-      new DefaultContainerExecutor()
-          .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()));
+      DefaultContainerExecutor executor = new DefaultContainerExecutor();
+      executor.setConf(conf);
+      executor.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()));
       fos.flush();
       fos.close();
 
@@ -373,6 +475,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       List<String> commands = new ArrayList<String>();
       commands.add(command);
       ContainerExecutor exec = new DefaultContainerExecutor();
+      exec.setConf(conf);
       exec.writeLaunchEnv(fos, env, resources, commands,
           new Path(localLogDir.getAbsolutePath()));
       fos.flush();

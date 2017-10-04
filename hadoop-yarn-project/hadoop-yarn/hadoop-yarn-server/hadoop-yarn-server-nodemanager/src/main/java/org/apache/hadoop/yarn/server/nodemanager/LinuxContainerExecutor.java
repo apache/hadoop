@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -284,6 +283,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       String locId, InetSocketAddress nmAddr, List<String> localDirs) {
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
       localDirs);
+  }
+
+  @Override
+  protected void updateEnvForWhitelistVars(Map<String, String> env) {
+    if (linuxContainerRuntime.useWhitelistEnv(env)) {
+      super.updateEnvForWhitelistVars(env);
+    }
   }
 
   @Override

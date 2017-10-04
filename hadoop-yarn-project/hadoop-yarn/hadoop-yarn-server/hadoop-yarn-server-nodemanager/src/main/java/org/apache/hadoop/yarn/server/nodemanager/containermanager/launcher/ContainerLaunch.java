@@ -625,8 +625,6 @@ public class ContainerLaunch implements Callable<Integer> {
 
     public abstract void command(List<String> command) throws IOException;
 
-    public abstract void whitelistedEnv(String key, String value) throws IOException;
-
     public abstract void env(String key, String value) throws IOException;
 
     public final void symlink(Path src, Path dst) throws IOException {
@@ -707,11 +705,6 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
-    public void whitelistedEnv(String key, String value) {
-      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
-    }
-
-    @Override
     public void env(String key, String value) {
       line("export ", key, "=\"", value, "\"");
     }
@@ -779,12 +772,6 @@ public class ContainerLaunch implements Callable<Integer> {
     @Override
     public void command(List<String> command) throws IOException {
       lineWithLenCheck("@call ", StringUtils.join(" ", command));
-      errorCheck();
-    }
-
-    @Override
-    public void whitelistedEnv(String key, String value) throws IOException {
-      lineWithLenCheck("@set ", key, "=", value);
       errorCheck();
     }
 
@@ -888,17 +875,6 @@ public class ContainerLaunch implements Callable<Integer> {
 
     if (!Shell.WINDOWS) {
       environment.put("JVM_PID", "$$");
-    }
-
-    /**
-     * Modifiable environment variables
-     */
-    
-    // allow containers to override these variables
-    String[] whitelist = conf.get(YarnConfiguration.NM_ENV_WHITELIST, YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
-    
-    for(String whitelistEnvVariable : whitelist) {
-      putEnvIfAbsent(environment, whitelistEnvVariable.trim());
     }
 
     // variables here will be forced in, even if the container has specified them.
