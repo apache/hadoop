@@ -41,13 +41,13 @@
             <tr>
                 <th>Metric name</th>
                 <th>Number of ops</th>
-                <th>Average time</th>
+                <th>Average time (ms)</th>
             </tr>
             </thead>
             <tr ng-repeat="(key,metric) in $ctrl.metrics.numavgs">
                 <td>{{key}}</td>
-                <td>{{metric.numOps}}</td>
-                <td>{{metric.avgTime}}</td>
+                <td>{{metric.numOps | number}}</td>
+                <td>{{metric.avgTime | number:2}}</td>
             </tr>
         </table>
     </div>
