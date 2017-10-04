@@ -18,20 +18,29 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.google.common.collect.Lists;
+import org.junit.After;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.hasItem;
 
 /**
  * Test partitioned staging committer's logic for putting data in the right
@@ -50,13 +59,21 @@ public class TestStagingPartitionedFileListing
     return new PartitionedStagingCommitter(OUTPUT_PATH, getTAC());
   }
 
+  private FileSystem attemptFS;
+  private Path attemptPath;
+
+  @After
+  public void cleanupAttempt() {
+    cleanup("teardown", attemptFS, attemptPath);
+  }
+
   @Test
   public void testTaskOutputListing() throws Exception {
     PartitionedStagingCommitter committer = newTaskCommitter();
 
     // create files in the attempt path that should be found by getTaskOutput
-    Path attemptPath = committer.getTaskAttemptPath(getTAC());
-    FileSystem attemptFS = attemptPath.getFileSystem(
+    attemptPath = committer.getTaskAttemptPath(getTAC());
+    attemptFS = attemptPath.getFileSystem(
         getTAC().getConfiguration());
     attemptFS.delete(attemptPath, true);
 
@@ -81,7 +98,7 @@ public class TestStagingPartitionedFileListing
       Collections.sort(actualFiles);
       assertEquals("File sets should match", expectedFiles, actualFiles);
     } finally {
-      attemptFS.delete(attemptPath, true);
+      deleteQuietly(attemptFS, attemptPath, true);
     }
 
   }
@@ -91,8 +108,8 @@ public class TestStagingPartitionedFileListing
     PartitionedStagingCommitter committer = newTaskCommitter();
 
     // create files in the attempt path that should be found by getTaskOutput
-    Path attemptPath = committer.getTaskAttemptPath(getTAC());
-    FileSystem attemptFS = attemptPath.getFileSystem(
+    attemptPath = committer.getTaskAttemptPath(getTAC());
+    attemptFS = attemptPath.getFileSystem(
         getTAC().getConfiguration());
     attemptFS.delete(attemptPath, true);
 
@@ -124,8 +141,96 @@ public class TestStagingPartitionedFileListing
       Collections.sort(actualFiles);
       assertEquals("File sets should match", expectedFiles, actualFiles);
     } finally {
-      attemptFS.delete(attemptPath, true);
+      deleteQuietly(attemptFS, attemptPath, true);
     }
 
   }
+
+  @Test
+  public void testPartitionsResolution() throws Throwable {
+
+    File tempDir = getTempDir();
+    File partitionsDir = new File(tempDir, "partitions");
+
+    attemptPath = new Path(partitionsDir.toURI());
+    attemptFS = FileSystem.getLocal(getJob().getConfiguration());
+    deleteQuietly(attemptFS, attemptPath, true);
+    attemptFS.mkdirs(attemptPath);
+    // initial partitioning -> empty
+    assertTrue(Paths.getPartitions(attemptPath, new ArrayList<>(0)).isEmpty());
+    String oct2017 = "year=2017/month=10";
+    Path octLog = new Path(attemptPath, oct2017 + "/log-2017-10-04.txt");
+    touch(attemptFS, octLog);
+    assertThat(listPartitions(attemptFS, attemptPath), hasItem(oct2017));
+
+    // add a root entry and it ends up under the table_root entry
+    Path rootFile = new Path(attemptPath, "root.txt");
+    touch(attemptFS, rootFile);
+    assertThat(listPartitions(attemptFS, attemptPath),
+        allOf(hasItem(oct2017),
+            hasItem(StagingCommitterConstants.TABLE_ROOT)));
+  }
+
+  /**
+   * List files in a filesystem using {@code listFiles()},
+   * then get all the partitions.
+   * @param fs filesystem
+   * @param base base of tree
+   * @return a list of partitions
+   * @throws IOException failure
+   */
+  private Set<String> listPartitions(FileSystem fs, Path base)
+      throws IOException {
+    List<FileStatus> statusList = mapLocatedFiles(
+        fs.listFiles(base, true), s -> (FileStatus) s);
+    return Paths.getPartitions(base, statusList);
+  }
+
+  @Test
+  public void testUUIDPart() throws Throwable {
+    assertUUIDAdded("/part-0000", "/part-0000-UUID");
+  }
+
+  @Test
+  public void testUUIDPartSuffix() throws Throwable {
+    assertUUIDAdded("/part-0000.gz.csv", "/part-0000-UUID.gz.csv");
+  }
+
+  @Test
+  public void testUUIDDottedPath() throws Throwable {
+    assertUUIDAdded("/parent.dir/part-0000", "/parent.dir/part-0000-UUID");
+  }
+
+  @Test
+  public void testUUIDPartUUID() throws Throwable {
+    assertUUIDAdded("/part-0000-UUID.gz.csv", "/part-0000-UUID.gz.csv");
+  }
+
+  @Test
+  public void testUUIDParentUUID() throws Throwable {
+    assertUUIDAdded("/UUID/part-0000.gz.csv", "/UUID/part-0000.gz.csv");
+  }
+
+  @Test
+  public void testUUIDDir() throws Throwable {
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        () -> Paths.addUUID("/dest/", "UUID"));
+  }
+
+  @Test
+  public void testUUIDEmptyDir() throws Throwable {
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> Paths.addUUID("", "UUID"));
+  }
+  @Test
+  public void testEmptyUUID() throws Throwable {
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> Paths.addUUID("part-0000.gz", ""));
+  }
+
+  private void assertUUIDAdded(String path, String expected) {
+    String added = Paths.addUUID(path, "UUID");
+    assertEquals("from " + path, expected, added);
+  }
+
 }

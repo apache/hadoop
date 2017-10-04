@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.PartETag;
@@ -47,8 +48,9 @@ import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.flatmapLocatedFiles;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
 /**
  * The implementation of the various actions a committer needs.
@@ -283,28 +285,30 @@ public class CommitOperations {
       LOG.info("No directory to abort {}", pendingDir);
       return MaybeIOE.NONE;
     }
-    MaybeIOE outcome = MaybeIOE.NONE;
     if (!pendingFiles.hasNext()) {
       LOG.debug("No files to abort under {}", pendingDir);
     }
-    while (pendingFiles.hasNext()) {
-      Path pendingFile = pendingFiles.next().getPath();
-      if (pendingFile.getName().endsWith(CommitConstants.PENDING_SUFFIX)) {
-        try {
-          abortSingleCommit(SinglePendingCommit.load(fs, pendingFile));
-        } catch (FileNotFoundException e) {
-          LOG.debug("listed file already deleted: {}", pendingFile);
-        } catch (IOException | IllegalArgumentException e) {
-          if (outcome == null) {
-            outcome = new MaybeIOE(makeIOE(pendingFile.toString(), e));
+
+    List<MaybeIOE> outcomes = flatmapLocatedFiles(pendingFiles,
+        (status) -> {
+          Optional<MaybeIOE> outcome = Optional.empty();
+          Path pendingFile = status.getPath();
+          if (pendingFile.getName().endsWith(CommitConstants.PENDING_SUFFIX)) {
+            try {
+              abortSingleCommit(SinglePendingCommit.load(fs, pendingFile));
+            } catch (FileNotFoundException e) {
+              LOG.debug("listed file already deleted: {}", pendingFile);
+            } catch (IOException | IllegalArgumentException e) {
+              outcome = Optional.of(
+                  new MaybeIOE(makeIOE(pendingFile.toString(), e)));
+            } finally {
+              // quietly try to delete the pending file
+              S3AUtils.deleteQuietly(fs, pendingFile, false);
+            }
           }
-        } finally {
-          // quietly try to delete the pending file
-          S3AUtils.deleteQuietly(fs, pendingFile, false);
-        }
-      }
-    }
-    return outcome;
+          return outcome;
+    });
+    return outcomes.isEmpty() ? MaybeIOE.NONE : outcomes.get(0);
   }
 
   /**

@@ -25,10 +25,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBLocalClientFactory;
@@ -762,30 +760,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * An interface for use in lambda-expressions working with
-   * directory tree listings.
-   */
-  @FunctionalInterface
-  public interface CallOnLocatedFileStatus {
-    void call(LocatedFileStatus status) throws Exception;
-  }
-
-  /**
-   * Apply an operation to every {@link LocatedFileStatus} in a remote
-   * iterator.
-   * @param iterator iterator from a list
-   * @param eval closure to evaluate
-   * @throws Exception anything in the closure, or iteration logic.
-   */
-  public static void foreachFileStatus(
-      RemoteIterator<LocatedFileStatus> iterator,
-      CallOnLocatedFileStatus eval) throws Exception {
-    while(iterator.hasNext()) {
-      eval.call(iterator.next());
-    }
-  }
-
-  /**
    * List a directory.
    * @param fileSystem FS
    * @param path path
@@ -799,22 +773,18 @@ public final class S3ATestUtils {
       LOG.info("Empty path");
       return;
     }
-    foreachFileStatus(fileSystem.listFiles(path, recursive),
+    S3AUtils.applyLocatedFiles(fileSystem.listFiles(path, recursive),
         (status) -> LOG.info("  {}", status));
   }
 
   /**
    * Path filter which ignores any file which starts with . or _.
    */
-  public static class FilterTempFiles implements PathFilter {
-    @Override
-    public boolean accept(Path path) {
-      String name = path.getName();
-      return !name.startsWith("_") && !name.startsWith(".");
-    }
-  }
-
-  public static final PathFilter TEMP_FILE_FILTER = new FilterTempFiles();
+  public static final PathFilter TEMP_FILE_FILTER =
+      (Path path) -> {
+        String name = path.getName();
+        return !name.startsWith("_") && !name.startsWith(".");
+      };
 
   /**
    * Turn on the inconsistent S3A FS client in a configuration,

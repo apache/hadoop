@@ -62,6 +62,7 @@ public final class LambdaTestUtils {
    * Interface to implement for converting a timeout into some form
    * of exception to raise.
    */
+  @FunctionalInterface
   public interface TimeoutHandler {
 
     /**

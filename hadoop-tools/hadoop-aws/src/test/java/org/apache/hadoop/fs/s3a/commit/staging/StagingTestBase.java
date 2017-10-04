@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -324,6 +325,7 @@ public class StagingTestBase {
 
     private C jobCommitter = null;
     private TaskAttemptContext tac = null;
+    private File tempDir;
 
     @Before
     public void setupTask() throws Exception {
@@ -336,6 +338,7 @@ public class StagingTestBase {
       // get the task's configuration copy so modifications take effect
       String tmp = System.getProperty(
           StagingCommitterConstants.JAVA_IO_TMPDIR);
+      tempDir = new File(tmp);
       tac.getConfiguration().set(Constants.BUFFER_DIR, tmp + "/buffer");
       tac.getConfiguration().set(CommitConstants.FS_S3A_COMMITTER_TMP_PATH,
           tmp + "/cluster");
@@ -350,6 +353,10 @@ public class StagingTestBase {
     }
 
     abstract C newTaskCommitter() throws Exception;
+
+    protected File getTempDir() {
+      return tempDir;
+    }
   }
 
   /**

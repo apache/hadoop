@@ -248,8 +248,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should name the commits file with the task ID: " + results,
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
-    PendingSet pending = PendingSet.load(dfs,
-        stats[0].getPath());
+    PendingSet pending = PendingSet.load(dfs, stats[0].getPath());
     assertEquals("Should have one pending commit", 1, pending.size());
     SinglePendingCommit commit = pending.getCommits().get(0);
     assertEquals("Should write to the correct bucket:" + results,

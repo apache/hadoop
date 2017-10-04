@@ -331,17 +331,84 @@ summary data of each task's pending commits are managed using the standard
 
 The initial option set:
 
-| option | meaning |
+| Option | Meaning |
 |--------|---------|
 | `fs.s3a.buffer.dir` | Directories in local filesystem under which data is saved before being uploaded. Example: `/tmp/hadoop/s3a/` |
 | `fs.s3a.multipart.size` | Size in bytes of each part of a multipart upload. Default: `100M` |
 | `fs.s3a.committer.tmp.path` | Path in the cluster filesystem used for storing information on the uncommitted files. |
 | `fs.s3a.committer.staging.conflict-mode` | how to resolve directory conflicts during commit: `fail`, `append`, or `replace`; defaults to `fail`. |
-| `fs.s3a.committer.staging.unique-filenames` | Should the committer generate unique filenames by including a unique ID in the name of each created file? |
+| `fs.s3a.committer.staging.unique-filenames` | Should the committer generate unique filenames by including a unique ID in the name of each created file?  Default: false|
 | `fs.s3a.committer.staging.uuid` | a UUID that identifies a write; `spark.sql.sources.writeJobUUID` is used if not set |
 | `fs.s3a.committer.staging.upload.size` | size, in bytes, to use for parts of the upload to S3; defaults: `10M` |
 | `fs.s3a.committer.threads` | number of threads to use to complete S3 uploads during job commit; default: `8` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | flag to control creation of `_SUCCESS` marker file on job completion. Default: `true` |
+
+
+## The "Partitioned" Staging Committer
+
+This committer an extension of the "Directory" committer which has a special conflict resolution
+policy designed to support operations which insert new data into a directory tree structured
+using Hive's partitioning strategy: different levels of the tree represent different columns.
+
+For example, log data could be partitioned by `YEAR` and then by `MONTH`, with different
+entries underneath.
+```
+logs/YEAR=2017/MONTH=01/
+  log-20170101.avro
+  log-20170102.avro
+  ...
+  log-20170131.avro
+
+logs/YEAR=2017/MONTH=02/
+  log-20170201.avro
+  log-20170202.avro
+  ...
+  log-20170227.avro
+
+logs/YEAR=2017/MONTH=03/
+logs/YEAR=2017/MONTH=04/
+...
+```
+
+A partitioned structure like this allows for queries using Hive or Spark to filter out
+files which do not contain relevant data.
+
+What the partitioned committer does is, where the tooling permits, allows callers
+to add data to an existing partitioned layout*.
+
+More specifically, it does this by having a conflict resolution options which
+only act on invididual partitions, rather than across the entire output tree.
+
+| `fs.s3a.committer.staging.conflict-mode` | Meaning |
+| -----------------------------------------|---------|
+| `fail` | Fail if the destination partition(s) exist |
+| `replace` | Delete the existing data partitions before committing the new data |
+| `append` | Add the new data to the existing partitions |
+
+
+As an example, if a job was writing the file
+`logs/YEAR=2017/MONTH=02/log-20170228.avro`, then with a policy of `fail`,
+the job would fail. With a policy of `replace`, then entire directory 
+`logs/YEAR=2017/MONTH=02/` would be deleted before the new file `log-20170228.avro`
+was written. With the policy of `append`, the new file would be added to 
+the existing set of files.
+
+
+
+
+### Notes
+
+1. A deep partition tree can itself be a performance problem in S3 and the s3a client,
+or, more specifically. a problem with applications which use recursive directory tree
+walks to work with data.
+
+1. The outcome if you have more than one job trying simultaneously to write data
+to the same destination with any policy other than "append" is undefined.
+
+1. In the `append` operation, there is no check for conflict with file names.
+If, in the example above, the file `log-20170228.avro` already existed,
+it would be overridden. Set `fs.s3a.committer.staging.unique-filenames` to `true`
+to ensure that a UUID is included in every filename to avoid this.
 
 
 ## Using the Magic committer

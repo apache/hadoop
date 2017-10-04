@@ -25,8 +25,10 @@ import java.util.Random;
 import java.util.Set;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -59,13 +61,17 @@ public final class Paths {
    *   /example/part-0000  ==&gt; /example/part-0000-0ab34
    *   /example/part-0001.gz.csv  ==&gt; /example/part-0001-0ab34.gz.csv
    *   /example/part-0002-0abc3.gz.csv  ==&gt; /example/part-0002-0abc3.gz.csv
+   *   /example0abc3/part-0002.gz.csv  ==&gt; /example0abc3/part-0002.gz.csv
    * </pre>
    *
-   * @param pathStr path as a string
-   * @param uuid UUID to append
+   *
+   * @param pathStr path as a string; must not have a trailing "/".
+   * @param uuid UUID to append; must not be empty
    * @return new path.
    */
   public static String addUUID(String pathStr, String uuid) {
+    Preconditions.checkArgument(StringUtils.isNotEmpty(pathStr), "empty path");
+    Preconditions.checkArgument(StringUtils.isNotEmpty(uuid), "empty uuid");
     // In some cases, Spark will add the UUID to the filename itself.
     if (pathStr.contains(uuid)) {
       return pathStr;
@@ -74,6 +80,8 @@ public final class Paths {
     int dot; // location of the first '.' in the file name
     int lastSlash = pathStr.lastIndexOf('/');
     if (lastSlash >= 0) {
+      Preconditions.checkState(lastSlash + 1 < pathStr.length(),
+          "Bad path: " + pathStr);
       dot = pathStr.indexOf('.', lastSlash);
     } else {
       dot = pathStr.indexOf('.');
@@ -226,7 +234,7 @@ public final class Paths {
    * @param relative a relative file path
    * @return the partition of the relative file path
    */
-  protected static final String getPartition(String relative) {
+  protected static String getPartition(String relative) {
     return getParent(relative);
   }
 
@@ -240,7 +248,7 @@ public final class Paths {
    * @return list of partitions.
    * @throws IOException IO failure
    */
-  protected static Set<String> getPartitions(Path attemptPath,
+  public static Set<String> getPartitions(Path attemptPath,
       List<FileStatus> taskOutput)
       throws IOException {
     // get a list of partition directories
@@ -253,11 +261,7 @@ public final class Paths {
       }
       String partition = getPartition(
           getRelativePath(attemptPath, outputFile));
-      if (partition != null) {
-        partitions.add(partition);
-      } else {
-        partitions.add(TABLE_ROOT);
-      }
+      partitions.add(partition != null ? partition : TABLE_ROOT);
     }
 
     return partitions;

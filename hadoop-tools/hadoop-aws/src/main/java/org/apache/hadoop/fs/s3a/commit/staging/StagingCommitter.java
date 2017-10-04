@@ -29,18 +29,15 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -426,18 +423,11 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
         "No attemptPath path in {}", this);
 
     LOG.debug("Scanning {} for files to commit", attemptPath);
-    FileSystem attemptFS = getTaskAttemptFilesystem(context);
-    RemoteIterator<LocatedFileStatus> iter = attemptFS
-        .listFiles(attemptPath, true);
 
-    List<FileStatus> stats = Lists.newArrayList();
-    while (iter.hasNext()) {
-      FileStatus stat = iter.next();
-      if (filter.accept(stat.getPath())) {
-        stats.add(stat);
-      }
-    }
-    return stats;
+    return flatmapLocatedFiles(
+        getTaskAttemptFilesystem(context)
+            .listFiles(attemptPath, true),
+        s -> maybe(filter.accept(s.getPath()), s));
   }
 
   /**

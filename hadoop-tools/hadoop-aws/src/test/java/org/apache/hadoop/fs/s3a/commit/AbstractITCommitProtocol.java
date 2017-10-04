@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
@@ -64,6 +65,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
@@ -751,7 +753,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // this is only task commit; there MUST be no part- files in the dest dir
     waitForConsistency();
     try {
-      foreachFileStatus(getFileSystem().listFiles(outDir, false),
+      applyLocatedFiles(getFileSystem().listFiles(outDir, false),
           (status) ->
               assertFalse("task committed file to dest :" + status,
                   status.getPath().toString().contains("part")));

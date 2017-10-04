@@ -39,7 +39,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
@@ -58,10 +60,12 @@ import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -898,6 +902,84 @@ public final class S3AUtils {
     } catch (IOException e) {
       LOG.warn("Failed to delete {}", path, e);
     }
+  }
+
+
+  /**
+   * An interface for use in lambda-expressions working with
+   * directory tree listings.
+   */
+  @FunctionalInterface
+  public interface CallOnLocatedFileStatus {
+    void call(LocatedFileStatus status) throws IOException;
+  }
+
+  /**
+   * An interface for use in lambda-expressions working with
+   * directory tree listings.
+   */
+  @FunctionalInterface
+  public interface LocatedFileStatusMap<T> {
+    T call(LocatedFileStatus status) throws IOException;
+  }
+
+  /**
+   * Apply an operation to every {@link LocatedFileStatus} in a remote
+   * iterator.
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static void applyLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      CallOnLocatedFileStatus eval) throws IOException {
+    while (iterator.hasNext()) {
+      eval.call(iterator.next());
+    }
+  }
+
+  /**
+   * Map an operation to every {@link LocatedFileStatus} in a remote
+   * iterator, returning a list of the results.
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static <T> List<T> mapLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      LocatedFileStatusMap<T> eval) throws IOException {
+    final List<T> results = new ArrayList<>();
+    applyLocatedFiles(iterator,
+        (s) -> results.add(eval.call(s)));
+    return results;
+  }
+
+  /**
+   * Map an operation to every {@link LocatedFileStatus} in a remote
+   * iterator, returning a list of the all results which were not empty
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static <T> List<T> flatmapLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      LocatedFileStatusMap<Optional<T>> eval) throws IOException {
+    final List<T> results = new ArrayList<>();
+    applyLocatedFiles(iterator,
+        (s) -> eval.call(s).map(r -> results.add(r)));
+    return results;
+  }
+
+  /**
+   * Convert a value into a non-empty Optional instance if
+   * the value of {@code include} is true.
+   * @param include flag to indicate the value is to be included.
+   * @param value value to return
+   * @param <T> type of option.
+   * @return if include is false, Optional.empty. Otherwise, the value.
+   */
+  public static <T> Optional<T> maybe(boolean include, T value) {
+    return include ? Optional.of(value) : Optional.empty();
   }
 
   /**
