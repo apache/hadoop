@@ -29,6 +29,7 @@ import org.apache.hadoop.security.SecurityUtilTestHelper;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -294,11 +295,12 @@ public class TestContainerAllocation {
             int containerVersion, NodeId nodeId, String appSubmitter,
             Resource capability, Priority priority, long createTime,
             LogAggregationContext logAggregationContext, String nodeLabelExp,
-            ContainerType containerType) {
+            ContainerType containerType, ExecutionType executionType) {
           numRetries++;
           return super.createContainerToken(containerId, containerVersion,
               nodeId, appSubmitter, capability, priority, createTime,
-              logAggregationContext, nodeLabelExp, containerType);
+              logAggregationContext, nodeLabelExp, containerType,
+              executionType);
         }
       };
     }
