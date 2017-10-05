@@ -1731,7 +1731,7 @@
   <property>
     <description>Max time to wait for a process to come up when trying to cleanup a container</description>
     <name>yarn.nodemanager.process-kill-wait.ms</name>
-    <value>2000</value>
+    <value>5000</value>
   </property>
 
   <property>
