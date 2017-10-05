@@ -275,7 +275,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       sb.writeLocalWrapperScript(launchDst, pidFile);
     } else {
       LOG.info("Container " + containerIdStr
-          + " was marked as inactive. Returning terminated error");
+          + " pid file not set. Returning terminated error");
       return ExitCode.TERMINATED.getExitCode();
     }
     
