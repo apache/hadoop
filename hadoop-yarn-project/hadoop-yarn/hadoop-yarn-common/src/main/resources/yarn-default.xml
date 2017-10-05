@@ -1654,10 +1654,10 @@
   <property>
     <description>
     Adjustment to the container OS scheduling priority.  In Linux, passed
-    directly to the nice command.
+    directly to the nice command. If unspecified then containers are launched
+    without any explicit OS priority.
     </description>
     <name>yarn.nodemanager.container-executor.os.sched.priority.adjustment</name>
-    <value>0</value>
   </property>
 
   <property>
