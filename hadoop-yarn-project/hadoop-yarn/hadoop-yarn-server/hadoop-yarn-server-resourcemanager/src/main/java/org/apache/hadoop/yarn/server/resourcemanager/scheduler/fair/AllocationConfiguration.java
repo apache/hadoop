@@ -292,7 +292,8 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    * @param queue the target queue's name
    * @return the max allocation on this queue
    */
-  @VisibleForTesting ConfigurableResource getMaxResources(String queue) {
+  @VisibleForTesting
+  ConfigurableResource getMaxResources(String queue) {
     ConfigurableResource maxQueueResource = maxQueueResources.get(queue);
     if (maxQueueResource == null) {
       maxQueueResource = queueMaxResourcesDefault;
