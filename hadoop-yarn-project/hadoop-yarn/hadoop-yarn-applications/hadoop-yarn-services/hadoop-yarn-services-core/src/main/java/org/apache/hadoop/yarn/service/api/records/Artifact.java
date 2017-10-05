@@ -23,9 +23,6 @@ import io.swagger.annotations.ApiModelProperty;
 import java.io.Serializable;
 import java.util.Objects;
 
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlType;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -45,11 +42,6 @@ public class Artifact implements Serializable {
 
   private String id = null;
 
-  /**
-   * Artifact Type.  DOCKER, TARBALL or SERVICE
-   **/
-  @XmlType(name = "artifact_type")
-  @XmlEnum
   public enum TypeEnum {
     DOCKER("DOCKER"), TARBALL("TARBALL"), SERVICE("SERVICE");
 

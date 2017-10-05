@@ -336,8 +336,6 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_WEBAPP_UI2_WARFILE_PATH = "yarn."
       + "webapp.ui2.war-file-path";
-  public static final String YARN_API_SERVICES_ENABLE = "yarn."
-      + "webapp.api-service.enable";
 
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
