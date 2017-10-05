@@ -642,7 +642,7 @@ public class ContainerLaunch implements Callable<Integer> {
           .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
               + "distribution directory}</value>\n")
           .append("</property>\n<property>\n")
-          .append("  <name>mapreduce.reduce.e nv</name>\n")
+          .append("  <name>mapreduce.reduce.env</name>\n")
           .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
               + "distribution directory}</value>\n")
           .append("</property>\n");
