@@ -141,6 +141,7 @@
       <item name="Graceful Decommission" href="hadoop-yarn/hadoop-yarn-site/GracefulDecommission.html"/>
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
       <item name="YARN Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
+      <item name="Shared Cache" href="hadoop-yarn/hadoop-yarn-site/SharedCache.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
