@@ -50,6 +50,13 @@ export default Ember.Controller.extend({
     html = html + '><a href="yarn-nodes">Nodes<span class="sr-only">' +
         '(current)</span></a></li>';
     return Ember.String.htmlSafe(html);
+  }.property('currentPath'),
+
+  isQueuesTabActive: function() {
+    var path = this.get('currentPath');
+    if (path === 'yarn-queues') {
+      return true;
+    }
+    return false;
   }.property('currentPath')
 });
-

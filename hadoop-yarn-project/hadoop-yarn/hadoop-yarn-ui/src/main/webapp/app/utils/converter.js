@@ -165,5 +165,11 @@ export default {
       unit = "GB";
     }
     return value.toFixed(1) + " " + unit;
+  },
+  floatToFixed: function(value, fixed=2) {
+    if (value && value.toFixed) {
+      return parseFloat(value.toFixed(fixed));
+    }
+    return value;
   }
 };
