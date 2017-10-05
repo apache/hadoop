@@ -14,6 +14,9 @@ Release 2.7.5 - UNRELEASED
 
     HDFS-12131. Add some of the FSNamesystem JMX values as metrics.
     (Erik Krogen via wang, shv)
+    
+    HDFS-12420. Add an option to disallow 'namenode format -force'.
+    (Ajay Kumar via Arpit Agarwal, zhz)
 
   OPTIMIZATIONS
 
