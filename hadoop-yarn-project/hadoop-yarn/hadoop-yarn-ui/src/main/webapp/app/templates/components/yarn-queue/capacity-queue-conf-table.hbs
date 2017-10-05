@@ -20,7 +20,7 @@
   <thead>
     <tr>
       <td><b>Configurations</b></td>
-      <td>Value</td>
+      <td><b>Value</b></td>
     </tr>
   </thead>
   <tbody>
@@ -32,10 +32,12 @@
       <td>Configured Max Capacity</td>
       <td>{{queue.maxCapacity}}</td>
     </tr>
+  {{#if queue.state}}
     <tr>
       <td>State</td>
       <td>{{queue.state}}</td>
     </tr>
+  {{/if}}
   {{#if queue.isLeafQueue}}
     <tr>
       <td>User Limit Percent</td>
