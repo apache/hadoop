@@ -25,9 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlType;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,11 +43,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class ReadinessCheck implements Serializable {
   private static final long serialVersionUID = -3836839816887186801L;
 
-  /**
-   * Type. HTTP and PORT
-   **/
-  @XmlType(name = "type")
-  @XmlEnum
   public enum TypeEnum {
     HTTP("HTTP"),
     PORT("PORT");
