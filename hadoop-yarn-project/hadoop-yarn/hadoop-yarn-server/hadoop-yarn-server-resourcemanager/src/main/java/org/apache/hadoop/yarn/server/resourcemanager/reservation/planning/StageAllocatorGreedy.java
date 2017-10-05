@@ -43,7 +43,7 @@ public class StageAllocatorGreedy implements StageAllocator {
   public Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
       RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageEarliestStart, long stageDeadline, String user,
+      long stageEarliestStart, long stageDeadline, long period, String user,
       ReservationId oldId) throws PlanningException {
 
     Resource totalCapacity = plan.getTotalCapacity();
@@ -69,7 +69,7 @@ public class StageAllocatorGreedy implements StageAllocator {
 
     RLESparseResourceAllocation netAvailable =
         plan.getAvailableResourceOverTime(user, oldId, stageEarliestStart,
-            stageDeadline, 0);
+            stageDeadline, period);
 
     netAvailable =
         RLESparseResourceAllocation.merge(plan.getResourceCalculator(),
