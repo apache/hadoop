@@ -4343,4 +4343,15 @@
       If no suffix is specified then milliseconds is assumed.
     </description>
   </property>
+
+  <property>
+    <name>dfs.reformat.disabled</name>
+    <value>false</value>
+    <description>
+      Disable reformat of NameNode. If it's value is set to "true"
+      and metadata directories already exist then attempt to format NameNode
+      will throw NameNodeFormatException.
+    </description>
+  </property>
+
 </configuration>
