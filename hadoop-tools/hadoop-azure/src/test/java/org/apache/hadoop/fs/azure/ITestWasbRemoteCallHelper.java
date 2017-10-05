@@ -357,7 +357,7 @@ public class ITestWasbRemoteCallHelper
 
     performop(mockHttpClient);
 
-    int expectedNumberOfInvocations = isAuthorizationCachingEnabled ? 1 : 2;
+    int expectedNumberOfInvocations = isAuthorizationCachingEnabled ? 2 : 3;
     Mockito.verify(mockHttpClient, times(expectedNumberOfInvocations)).execute(Mockito.argThat(new HttpGetForServiceLocal()));
     Mockito.verify(mockHttpClient, times(expectedNumberOfInvocations)).execute(Mockito.argThat(new HttpGetForService2()));
   }
