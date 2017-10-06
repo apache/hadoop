@@ -35,8 +35,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -113,7 +111,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.After;
@@ -344,19 +341,10 @@ public class TestRMAppAttemptTransitions {
     ((AsyncDispatcher)this.spyRMContext.getDispatcher()).stop();
   }
   
-
   private String getProxyUrl(RMAppAttempt appAttempt) {
-    String url = null;
-    final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-    try {
-      String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, appAttempt
-          .getAppAttemptId().getApplicationId());
-      url = result.toASCIIString();
-    } catch (URISyntaxException ex) {
-      Assert.fail();
-    }
+    String url = rmContext.getAppProxyUrl(conf,
+        appAttempt.getAppAttemptId().getApplicationId());
+    Assert.assertNotEquals("N/A", url);
     return url;
   }
 
@@ -552,7 +540,7 @@ public class TestRMAppAttemptTransitions {
     if (unmanagedAM) {
       verifyUrl(trackingUrl, applicationAttempt.getTrackingUrl());
     } else {
-      assertEquals(getProxyUrl(applicationAttempt), 
+      assertEquals(getProxyUrl(applicationAttempt),
           applicationAttempt.getTrackingUrl());
     }
     // TODO - need to add more checks relevant to this state
