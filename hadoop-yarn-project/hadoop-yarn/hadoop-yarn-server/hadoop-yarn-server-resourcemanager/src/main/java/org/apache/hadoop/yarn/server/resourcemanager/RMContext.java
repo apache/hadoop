@@ -159,4 +159,6 @@ public interface RMContext extends ApplicationMasterServiceContext {
   String getHAZookeeperConnectionState();
 
   ResourceManager getResourceManager();
+
+  String getAppProxyUrl(Configuration conf, ApplicationId applicationId);
 }

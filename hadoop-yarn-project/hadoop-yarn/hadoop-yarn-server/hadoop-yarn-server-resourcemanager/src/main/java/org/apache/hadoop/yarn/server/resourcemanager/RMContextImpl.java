@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +56,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -70,6 +76,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class RMContextImpl implements RMContext {
 
+  private static final Log LOG = LogFactory.getLog(RMContextImpl.class);
+  private static final String UNAVAILABLE = "N/A";
   /**
    * RM service contexts which runs through out RM life span. These are created
    * once during start of RM.
@@ -81,6 +89,8 @@ public class RMContextImpl implements RMContext {
    * ACTIVE->STANDBY.
    */
   private RMActiveServiceContext activeServiceContext;
+
+  private String proxyHostAndPort = null;
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -115,7 +125,7 @@ public class RMContextImpl implements RMContext {
     ConfigurationProvider provider = new LocalConfigurationProvider();
     setConfigurationProvider(provider);
   }
-  
+
   @VisibleForTesting
   // helper constructor for tests
   public RMContextImpl(Dispatcher rmDispatcher,
@@ -524,7 +534,7 @@ public class RMContextImpl implements RMContext {
   public PlacementManager getQueuePlacementManager() {
     return this.activeServiceContext.getQueuePlacementManager();
   }
-  
+
   @Override
   public void setQueuePlacementManager(PlacementManager placementMgr) {
     this.activeServiceContext.setQueuePlacementManager(placementMgr);
@@ -549,6 +559,29 @@ public class RMContextImpl implements RMContext {
   @Override
   public RMAppLifetimeMonitor getRMAppLifetimeMonitor() {
     return this.activeServiceContext.getRMAppLifetimeMonitor();
+  }
+
+  String getProxyHostAndPort(Configuration conf) {
+    if (proxyHostAndPort == null) {
+      proxyHostAndPort = WebAppUtils.getProxyHostAndPort(conf);
+    }
+    return proxyHostAndPort;
+  }
+
+  @Override
+  public String getAppProxyUrl(Configuration conf, ApplicationId applicationId)
+  {
+    try {
+      final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
+      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme,
+          getProxyHostAndPort(conf));
+      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, applicationId);
+      return result.toASCIIString();
+    } catch(URISyntaxException e) {
+      LOG.warn("Could not generate default proxy tracking URL for " +
+          applicationId);
+      return UNAVAILABLE;
+    }
   }
 
   // Note: Read java doc before adding any services over here.

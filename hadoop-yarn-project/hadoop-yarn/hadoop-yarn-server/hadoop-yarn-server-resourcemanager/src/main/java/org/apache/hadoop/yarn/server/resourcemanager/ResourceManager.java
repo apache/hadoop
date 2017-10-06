@@ -1068,7 +1068,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
             .withCSRFProtection(YarnConfiguration.RM_CSRF_PREFIX)
             .withXFSProtection(YarnConfiguration.RM_XFS_PREFIX)
             .at(webAppAddress);
-    String proxyHostAndPort = WebAppUtils.getProxyHostAndPort(conf);
+    String proxyHostAndPort = rmContext.getProxyHostAndPort(conf);
     if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
         equals(proxyHostAndPort)) {
       if (HAUtil.isHAEnabled(conf)) {
