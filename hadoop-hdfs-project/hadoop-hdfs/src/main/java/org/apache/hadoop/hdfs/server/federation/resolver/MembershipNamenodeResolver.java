@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoR
 import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateNamenodeRegistrationRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
+import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,6 +222,28 @@ public class MembershipNamenodeResolver
         report.getClusterId(), report.getBlockPoolId(), report.getRpcAddress(),
         report.getServiceAddress(), report.getLifelineAddress(),
         report.getWebAddress(), report.getState(), report.getSafemode());
+
+    if (report.statsValid()) {
+      MembershipStats stats = MembershipStats.newInstance();
+      stats.setNumOfFiles(report.getNumFiles());
+      stats.setNumOfBlocks(report.getNumBlocks());
+      stats.setNumOfBlocksMissing(report.getNumBlocksMissing());
+      stats.setNumOfBlocksPendingReplication(
+          report.getNumOfBlocksPendingReplication());
+      stats.setNumOfBlocksUnderReplicated(
+          report.getNumOfBlocksUnderReplicated());
+      stats.setNumOfBlocksPendingDeletion(
+          report.getNumOfBlocksPendingDeletion());
+      stats.setAvailableSpace(report.getAvailableSpace());
+      stats.setTotalSpace(report.getTotalSpace());
+      stats.setNumOfDecommissioningDatanodes(
+          report.getNumDecommissioningDatanodes());
+      stats.setNumOfActiveDatanodes(report.getNumLiveDatanodes());
+      stats.setNumOfDeadDatanodes(report.getNumDeadDatanodes());
+      stats.setNumOfDecomActiveDatanodes(report.getNumDecomLiveDatanodes());
+      stats.setNumOfDecomDeadDatanodes(report.getNumDecomDeadDatanodes());
+      record.setStats(stats);
+    }
 
     if (report.getState() != UNAVAILABLE) {
       // Set/update our last contact time

@@ -89,6 +89,9 @@ public class Router extends CompositeService {
   private RouterAdminServer adminServer;
   private InetSocketAddress adminAddress;
 
+  /** HTTP interface and web application. */
+  private RouterHttpServer httpServer;
+
   /** Interface with the State Store. */
   private StateStoreService stateStore;
 
@@ -166,6 +169,14 @@ public class Router extends CompositeService {
       // Create admin server
       this.adminServer = createAdminServer();
       addService(this.adminServer);
+    }
+
+    if (conf.getBoolean(
+        DFSConfigKeys.DFS_ROUTER_HTTP_ENABLE,
+        DFSConfigKeys.DFS_ROUTER_HTTP_ENABLE_DEFAULT)) {
+      // Create HTTP server
+      this.httpServer = createHttpServer();
+      addService(this.httpServer);
     }
 
     if (conf.getBoolean(
@@ -351,6 +362,31 @@ public class Router extends CompositeService {
    */
   public InetSocketAddress getAdminServerAddress() {
     return adminAddress;
+  }
+
+  /////////////////////////////////////////////////////////
+  // HTTP server
+  /////////////////////////////////////////////////////////
+
+  /**
+   * Create an HTTP server for this Router.
+   *
+   * @return HTTP server for this Router.
+   */
+  protected RouterHttpServer createHttpServer() {
+    return new RouterHttpServer(this);
+  }
+
+  /**
+   * Get the current HTTP socket address for the router.
+   *
+   * @return InetSocketAddress HTTP address.
+   */
+  public InetSocketAddress getHttpServerAddress() {
+    if (httpServer != null) {
+      return httpServer.getHttpAddress();
+    }
+    return null;
   }
 
   /////////////////////////////////////////////////////////
