@@ -79,6 +79,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -699,9 +701,28 @@ public class NativeAzureFileSystem extends FileSystem {
    * Configuration property used to specify list of users that can perform
    * chown operation when authorization is enabled in WASB.
    */
-  public static final String AZURE_CHOWN_USERLIST_PROPERTY_NAME = "fs.azure.chown.allowed.userlist";
+  public static final String AZURE_CHOWN_USERLIST_PROPERTY_NAME =
+      "fs.azure.chown.allowed.userlist";
 
   static final String AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
+
+  /**
+   * Configuration property used to specify list of daemon users that can
+   * perform chmod operation when authorization is enabled in WASB.
+   */
+  public static final String AZURE_DAEMON_USERLIST_PROPERTY_NAME =
+      "fs.azure.daemon.userlist";
+
+  static final String AZURE_DAEMON_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
+
+  /**
+   * Configuration property used to specify list of users that can perform
+   * chmod operation when authorization is enabled in WASB.
+   */
+  public static final String AZURE_CHMOD_USERLIST_PROPERTY_NAME =
+          "fs.azure.chmod.allowed.userlist";
+
+  static final String AZURE_CHMOD_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
 
   static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME =
       "fs.azure.block.location.impersonatedhost";
@@ -1189,7 +1210,9 @@ public class NativeAzureFileSystem extends FileSystem {
   private DelegationTokenAuthenticatedURL authURL;
   private DelegationTokenAuthenticatedURL.Token authToken = new DelegationTokenAuthenticatedURL.Token();
   private String credServiceUrl;
-
+  private List<String> chownAllowedUsers;
+  private List<String> chmodAllowedUsers;
+  private List<String> daemonUsers;
   /**
    * Configuration key to enable authorization support in WASB.
    */
@@ -1366,6 +1389,19 @@ public class NativeAzureFileSystem extends FileSystem {
       this.authorizer =
           new RemoteWasbAuthorizerImpl();
       authorizer.init(conf);
+
+      this.chmodAllowedUsers =
+          Arrays.asList(conf.getTrimmedStrings(
+              AZURE_CHMOD_USERLIST_PROPERTY_NAME,
+                  AZURE_CHMOD_USERLIST_PROPERTY_DEFAULT_VALUE));
+      this.chownAllowedUsers =
+          Arrays.asList(conf.getTrimmedStrings(
+              AZURE_CHOWN_USERLIST_PROPERTY_NAME,
+                  AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE));
+      this.daemonUsers =
+          Arrays.asList(conf.getTrimmedStrings(
+              AZURE_DAEMON_USERLIST_PROPERTY_NAME,
+                  AZURE_DAEMON_USERLIST_PROPERTY_DEFAULT_VALUE));
     }
 
     if (UserGroupInformation.isSecurityEnabled() && kerberosSupportEnabled) {
@@ -3446,6 +3482,27 @@ public class NativeAzureFileSystem extends FileSystem {
     if (metadata == null) {
       throw new FileNotFoundException("File doesn't exist: " + p);
     }
+
+    // If authorization is enabled, check if the user is
+    // part of chmod allowed list or a daemon user or owner of the file/folder
+    if (azureAuthorization) {
+      UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+
+      // Check if the user is part of chown allowed list or a daemon user.
+      if (!isAllowedUser(currentUgi.getShortUserName(), chmodAllowedUsers)
+          && !isAllowedUser(currentUgi.getShortUserName(), daemonUsers)) {
+
+        //Check if the user is the owner of the file.
+        String owner = metadata.getPermissionStatus().getUserName();
+        if (!currentUgi.getShortUserName().equals(owner)) {
+          throw new WasbAuthorizationException(
+              String.format("user '%s' does not have the privilege to "
+                  + "change the permission of files/folders.",
+                      currentUgi.getShortUserName()));
+        }
+      }
+    }
+
     permission = applyUMask(permission,
         metadata.isDir() ? UMaskApplyMode.ChangeExistingDirectory
             : UMaskApplyMode.ChangeExistingFile);
@@ -3491,26 +3548,14 @@ public class NativeAzureFileSystem extends FileSystem {
     *  to change the ownership of file/folder
     */
     if (this.azureAuthorization && username != null) {
-      String[] listOfUsers = getConf().getTrimmedStrings(AZURE_CHOWN_USERLIST_PROPERTY_NAME,
-        AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE);
-      boolean shouldSkipUserCheck = listOfUsers.length == 1 && listOfUsers[0].equals("*");
-      // skip the check if the chown allowed users config value is set as '*'
-      if (!shouldSkipUserCheck) {
-        UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
-        UserGroupInformation actualUgi = currentUgi.getRealUser();
+      UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
 
-        if (actualUgi == null) {
-          actualUgi = currentUgi;
-        }
-
-        List<String> userList = Arrays.asList(listOfUsers);
-        if (userList.contains("*")) {
-          throw new IllegalArgumentException("User list must contain "
-          + "either '*' or list of user names, but not both.");
-        } else if (!userList.contains(actualUgi.getShortUserName())) {
-          throw new WasbAuthorizationException(String.format("user '%s' does not have the privilege to change the ownership of files/folders.",
-            actualUgi.getShortUserName()));
-        }
+      if (!isAllowedUser(currentUgi.getShortUserName(),
+          chownAllowedUsers)) {
+          throw new WasbAuthorizationException(
+            String.format("user '%s' does not have the privilege to change "
+                + "the ownership of files/folders.",
+                    currentUgi.getShortUserName()));
       }
     }
 
@@ -3526,6 +3571,38 @@ public class NativeAzureFileSystem extends FileSystem {
     } else {
       store.changePermissionStatus(key, newPermissionStatus);
     }
+  }
+
+  /**
+   * Is the user allowed?
+   * <ol>
+   *   <li>No user: false</li>
+   *   <li>Empty list: false</li>
+   *   <li>List == ["*"]: true</li>
+   *   <li>Otherwise: is the user in the list?</li>
+   * </ol>
+   * @param username user to check; may be null
+   * @param userList list of users; may be null or empty
+   * @return
+   * @throws IllegalArgumentException if the userList is invalid.
+   */
+  private boolean isAllowedUser(String username, List<String> userList) {
+
+    if (null == userList || userList.isEmpty()) {
+      return false;
+    }
+
+    boolean shouldSkipUserCheck = userList.size() == 1
+        && userList.get(0).equals("*");
+
+    // skip the check if the allowed users config value is set as '*'
+    if (!shouldSkipUserCheck) {
+      Preconditions.checkArgument(!userList.contains("*"),
+        "User list must contain either '*' or a list of user names,"
+            + " but not both.");
+      return userList.contains(username);
+    }
+    return true;
   }
 
   @Override
@@ -3778,5 +3855,32 @@ public class NativeAzureFileSystem extends FileSystem {
           }
       }
     return owner;
+  }
+
+  /**
+   * Helper method to update the chownAllowedUsers in tests.
+   * @param chownAllowedUsers list of chown allowed users
+   */
+  @VisibleForTesting
+  void updateChownAllowedUsers(List<String> chownAllowedUsers) {
+    this.chownAllowedUsers = chownAllowedUsers;
+  }
+
+  /**
+   * Helper method to update the chmodAllowedUsers in tests.
+   * @param chmodAllowedUsers list of chmod allowed users
+   */
+  @VisibleForTesting
+  void updateChmodAllowedUsers(List<String> chmodAllowedUsers) {
+    this.chmodAllowedUsers = chmodAllowedUsers;
+  }
+
+  /**
+   * Helper method to update the daemonUsers in tests.
+   * @param daemonUsers list of daemon users
+   */
+  @VisibleForTesting
+  void updateDaemonUsers(List<String> daemonUsers) {
+    this.daemonUsers = daemonUsers;
   }
 }

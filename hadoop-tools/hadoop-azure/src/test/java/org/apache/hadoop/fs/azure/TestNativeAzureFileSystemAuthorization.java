@@ -21,10 +21,14 @@ package org.apache.hadoop.fs.azure;
 import java.io.FileNotFoundException;
 import java.security.PrivilegedExceptionAction;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -49,6 +53,8 @@ import static org.junit.Assert.assertEquals;
 public class TestNativeAzureFileSystemAuthorization
   extends AbstractWasbTestBase {
 
+  private static final short FULL_PERMISSION_WITH_STICKYBIT = 1777;
+
   @VisibleForTesting
   protected MockWasbAuthorizerImpl authorizer;
 
@@ -66,6 +72,8 @@ public class TestNativeAzureFileSystemAuthorization
     conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost/");
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1 , user2");
     conf.set(KEY_AUTH_SERVICE_CACHING_ENABLE, "false");
+    conf.set(NativeAzureFileSystem.AZURE_CHMOD_USERLIST_PROPERTY_NAME, "user1 , user2");
+    conf.set(NativeAzureFileSystem.AZURE_DAEMON_USERLIST_PROPERTY_NAME, "hive , hcs , yarn");
     return conf;
   }
 
@@ -925,7 +933,7 @@ public class TestNativeAzureFileSystemAuthorization
 
       // create child with owner as dummyUser
       UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
-          "dummyUser", new String[] {"dummygroup"});
+          "user1", new String[] {"dummygroup"});
       dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
@@ -1226,16 +1234,13 @@ public class TestNativeAzureFileSystemAuthorization
    */
   @Test
   public void testSetOwnerThrowsForUnauthorisedUsers() throws Throwable {
-
-    expectedEx.expect(WasbAuthorizationException.class);
-
     Path testPath = new Path("/testSetOwnerNegative");
 
     authorizer.addAuthRuleForOwner("/", WRITE, true);
-    authorizer.addAuthRuleForOwner(testPath.toString(), READ, true);
+    authorizer.addAuthRuleForOwner("/", READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
-    String owner = null;
+    final String owner;
     UserGroupInformation unauthorisedUser = UserGroupInformation.createUserForTesting(
           "unauthoriseduser", new String[] {"group1"});
     try {
@@ -1246,13 +1251,17 @@ public class TestNativeAzureFileSystemAuthorization
       unauthorisedUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
+        try {
           fs.setOwner(testPath, "newowner", null);
-          return null;
+          fail("Failing test because setOwner call was expected to throw");
+        } catch (WasbAuthorizationException wex) {
+          // check that the owner is not modified
+          assertOwnerEquals(testPath, owner);
+        }
+        return null;
         }
       });
     } finally {
-      // check that the owner is not modified
-      assertEquals(owner, fs.getFileStatus(testPath).getOwner());
       fs.delete(testPath, false);
     }
   }
@@ -1288,8 +1297,8 @@ public class TestNativeAzureFileSystemAuthorization
       @Override
       public Void run() throws Exception {
           fs.setOwner(testPath, newOwner, newGroup);
-          assertEquals(newOwner, fs.getFileStatus(testPath).getOwner());
-          assertEquals(newGroup, fs.getFileStatus(testPath).getGroup());
+        assertOwnerEquals(testPath, newOwner);
+        assertEquals(newGroup, fs.getFileStatus(testPath).getGroup());
           return null;
         }
       });
@@ -1305,19 +1314,17 @@ public class TestNativeAzureFileSystemAuthorization
    * */
   @Test
   public void testSetOwnerSucceedsForAnyUserWhenWildCardIsSpecified() throws Throwable {
+    fs.updateChownAllowedUsers(Collections.singletonList("*"));
+    final Path testPath = new Path("/testSetOwnerPositiveWildcard");
 
     Configuration conf = fs.getConf();
-    conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "*");
-    fs.setConf(conf);
-    Path testPath = new Path("/testSetOwnerPositiveWildcard");
-
     authorizer.init(conf);
     authorizer.addAuthRuleForOwner("/", WRITE, true);
     authorizer.addAuthRuleForOwner(testPath.getParent().toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
-    String newOwner = "newowner";
-    String newGroup = "newgroup";
+    final String newOwner = "newowner";
+    final String newGroup = "newgroup";
 
     UserGroupInformation user = UserGroupInformation.createUserForTesting(
           "anyuser", new String[]{"group1"});
@@ -1334,7 +1341,7 @@ public class TestNativeAzureFileSystemAuthorization
       @Override
       public Void run() throws Exception {
           fs.setOwner(testPath, newOwner, newGroup);
-          assertEquals(newOwner, fs.getFileStatus(testPath).getOwner());
+          assertOwnerEquals(testPath, newOwner);
           assertEquals(newGroup, fs.getFileStatus(testPath).getGroup());
           return null;
         }
@@ -1350,20 +1357,16 @@ public class TestNativeAzureFileSystemAuthorization
    */
   @Test
   public void testSetOwnerFailsForIllegalSetup() throws Throwable {
+    fs.updateChownAllowedUsers(Arrays.asList("user1", "*"));
 
-    expectedEx.expect(IllegalArgumentException.class);
+    final Path testPath = new Path("/testSetOwnerFailsForIllegalSetup");
 
     Configuration conf = fs.getConf();
-    conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1, *");
-    fs.setConf(conf);
-    Path testPath = new Path("/testSetOwnerFailsForIllegalSetup");
-
     authorizer.init(conf);
     authorizer.addAuthRuleForOwner("/", WRITE, true);
     authorizer.addAuthRuleForOwner(testPath.getParent().toString(), READ, true);
     fs.updateWasbAuthorizer(authorizer);
 
-    String owner = null;
     UserGroupInformation user = UserGroupInformation.createUserForTesting(
           "anyuser", new String[]{"group1"});
     try {
@@ -1371,18 +1374,22 @@ public class TestNativeAzureFileSystemAuthorization
       fs.mkdirs(testPath);
       ContractTestUtils.assertPathExists(fs, "test path does not exist", testPath);
 
-      owner = fs.getFileStatus(testPath).getOwner();
+      final String owner = fs.getFileStatus(testPath).getOwner();
 
       user.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
+        try {
           fs.setOwner(testPath, "newowner", null);
+          fail("Failing test because setOwner call was expected to throw");
+        } catch (IllegalArgumentException iex) {
+          // check that the owner is not modified
+          assertOwnerEquals(testPath, owner);
+        }
           return null;
         }
       });
     } finally {
-      // check that the owner is not modified
-      assertEquals(owner, fs.getFileStatus(testPath).getOwner());
       fs.delete(testPath, false);
     }
   }
@@ -1433,4 +1440,219 @@ public class TestNativeAzureFileSystemAuthorization
       fs.delete(testPath, true);
     }
   }
+
+  /**
+   * Negative test for setPermission when Authorization is enabled.
+   */
+  @Test
+  public void testSetPermissionThrowsForUnauthorisedUsers() throws Throwable {
+    //setPermission is called by a user who is not a daemon user
+    //and not chmodAllowedUsers and not owner of the file/folder.
+    //This test validates a authorization exception during setPermission call
+    testSetPermission("/testSetPermissionNegative", null, null, "unauthorizeduser",
+            true, false);
+  }
+
+  /**
+   * Positive test for setPermission when Authorization is enabled.
+   */
+  @Test
+  public void testSetPermissionForAuthorisedUsers() throws Throwable {
+    //user1 is already part of chmodAllowedUsers.
+    //This test validates the allowed user can do setPermission
+    testSetPermission("/testSetPermissionPositive", null, null, "user1",
+        false, false);
+  }
+
+  /**
+   * Positive test for setPermission as owner when Authorization is enabled.
+   */
+  @Test
+  public void testSetPermissionForOwner() throws Throwable {
+    //setPermission is called by the owner and expect a success
+    //during setPermission call
+    testSetPermission("/testSetPermissionPositiveOwner",
+            null, null, null, false, false);
+  }
+
+  /**
+   * Test setPermission when wildcard is specified in allowed user list.
+   */
+  @Test
+  public void testSetPermissionWhenWildCardInAllowedUserList() throws Throwable {
+    //Allow all to setPermission and expect a success
+    //during setPermission call
+    List<String> chmodAllowedUsers = Collections.singletonList("*");
+
+    testSetPermission("/testSetPermissionWhenWildCardInAllowedUserList",
+            chmodAllowedUsers, null, "testuser", false, false);
+  }
+
+  /**
+   * Test setPermission when invalid configuration value for allowed user list
+   * i.e. wildcard character and a username.
+   */
+  @Test
+  public void testSetPermissionForInvalidAllowedUserList() throws Throwable {
+    //Setting up an invalid chmodAllowedUsers and expects a failure
+    //during setPermission call
+    List<String> chmodAllowedUsers = Arrays.asList("*", "testuser");
+
+    testSetPermission("/testSetPermissionForInvalidAllowedUserList",
+        chmodAllowedUsers, null, "testuser", true, true);
+  }
+
+  /**
+   * Test setPermission for a daemon user.
+   */
+  @Test
+  public void testSetPermissionForDaemonUser() throws Throwable {
+    //hive user is already setup as daemon user.
+    //This test validates the daemon user can do setPermission
+    testSetPermission("/testSetPermissionForDaemonUser", null,
+       null, "hive", false, false);
+  }
+
+  /**
+   * Test setPermission when invalid configuration value for daemon user list
+   * i.e. wildcard character and a daemon username.
+   */
+  @Test
+  public void testSetPermissionForInvalidDaemonUserList() throws Throwable {
+
+    List<String> daemonUsers = Arrays.asList("*", "hive");
+
+    testSetPermission("/testSetPermissionForInvalidDaemonUserList", null,
+        daemonUsers, "testuser", true, true);
+
+  }
+
+  /**
+   * Helper method to test setPermission scenarios. This method handles both positive
+   * and negative scenarios of setPermission tests
+   */
+  private void testSetPermission(String path,
+      List<String> chmodAllowedUsers,
+      List<String> daemonUsers,
+      String user,
+      boolean isSetPermissionFailureCase,
+      boolean isInvalidSetup) throws Throwable {
+
+    final FsPermission filePermission;
+
+    final Path testPath = new Path(path);
+    final FsPermission newPermission = new FsPermission(FULL_PERMISSION_WITH_STICKYBIT);
+    authorizer.addAuthRule("/", WRITE, getCurrentUserShortName(), true);
+    authorizer.addAuthRule("/", READ, getCurrentUserShortName(), true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    if (chmodAllowedUsers != null && !chmodAllowedUsers.isEmpty()) {
+      fs.updateChmodAllowedUsers(chmodAllowedUsers);
+    }
+
+    if (daemonUsers != null && !daemonUsers.isEmpty()) {
+      fs.updateDaemonUsers(daemonUsers);
+    }
+
+    UserGroupInformation testUser = (user != null) ? UserGroupInformation.createUserForTesting(
+            user, new String[] {"testgrp"}) : null;
+    try {
+      fs.mkdirs(testPath);
+      ContractTestUtils.assertPathExists(fs, "test path does not exist",
+          testPath);
+      filePermission = fs.getFileStatus(testPath).getPermission();
+
+      if (isSetPermissionFailureCase) {
+        executeSetPermissionFailure(testUser, testPath, filePermission,
+            newPermission, isInvalidSetup);
+      } else {
+        executeSetPermissionSuccess(testUser, testPath, filePermission,
+            newPermission);
+      }
+
+    } finally {
+      fs.delete(testPath, false);
+    }
+  }
+
+  /**
+   * This method expects a failure while invoking setPermission call
+   * and validates whether the failure is as expected
+   *
+   */
+  private void executeSetPermissionFailure(UserGroupInformation testUser,
+      Path testPath, FsPermission oldPermission, FsPermission newPermission,
+      boolean isInvalidSetup)
+          throws Throwable {
+    testUser.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        try {
+          //READ access required for getFileStatus
+          authorizer.addAuthRule("/", READ, getCurrentUserShortName(), true);
+          fs.setPermission(testPath, newPermission);
+          fail("Failing test because setPermission was expected to throw");
+
+        } catch (IllegalArgumentException iex) {
+          if (!isInvalidSetup) {
+            //fail if IllegalArgumentException is not expected
+            fail("Failing test because IllegalArgumentException"
+                + " is not expected to throw");
+          }
+          // check that the file permission is not modified.
+          assertPermissionEquals(testPath, oldPermission);
+        } catch (WasbAuthorizationException wex) {
+          if (isInvalidSetup) {
+            //fail if WasbAuthorizationException is not expected
+            fail("Failing test because WasbAuthorizationException"
+                + " is not expected to throw");
+          }
+          // check that the file permission is not modified.
+          assertPermissionEquals(testPath, oldPermission);
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * This method expects a success while invoking setPermission call
+   * and validates whether the new permissions are set
+   *
+   */
+  private void executeSetPermissionSuccess(UserGroupInformation testUser,
+      Path testPath, FsPermission oldPermission, FsPermission newPermission)
+          throws Throwable {
+    //If user is given, then use doAs
+    if (testUser != null) {
+      testUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          fs.setPermission(testPath, newPermission);
+          return null;
+        }
+      });
+    } else {
+      //If user is not given, then run in current user context
+      fs.setPermission(testPath, newPermission);
+    }
+
+    // check that the file permission is modified
+    assertPermissionEquals(testPath, newPermission);
+    // check old permission is not equals to new permission
+    assertNotEquals(newPermission, oldPermission);
+  }
+
+  private void assertPermissionEquals(Path path, FsPermission newPermission)
+      throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    assertEquals("Wrong permissions in " + status,
+        newPermission, status.getPermission());
+  }
+
+  private void assertOwnerEquals(Path path, String owner) throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    assertEquals("Wrong owner in " + status, owner, status.getOwner());
+  }
+
 }
