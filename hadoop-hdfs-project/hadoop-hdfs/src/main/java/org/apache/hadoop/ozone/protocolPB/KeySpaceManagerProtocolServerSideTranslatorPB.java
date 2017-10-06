@@ -23,10 +23,20 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.AllocateBlockRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.AllocateBlockResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CommitKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CommitKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto
@@ -81,6 +91,7 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.List
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -303,16 +314,26 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
         LocateKeyResponse.newBuilder();
     try {
       KeyArgs keyArgs = request.getKeyArgs();
+      OzoneProtos.ReplicationType type =
+          keyArgs.hasType()? keyArgs.getType() : null;
+      OzoneProtos.ReplicationFactor factor =
+          keyArgs.hasFactor()? keyArgs.getFactor() : null;
       KsmKeyArgs ksmKeyArgs = new KsmKeyArgs.Builder()
           .setVolumeName(keyArgs.getVolumeName())
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
           .setDataSize(keyArgs.getDataSize())
-          .setType(keyArgs.getType())
-          .setFactor(keyArgs.getFactor())
+          .setType(type)
+          .setFactor(factor)
           .build();
-      KsmKeyInfo keyInfo = impl.allocateKey(ksmKeyArgs);
-      resp.setKeyInfo(keyInfo.getProtobuf());
+      if (keyArgs.hasDataSize()) {
+        ksmKeyArgs.setDataSize(keyArgs.getDataSize());
+      } else {
+        ksmKeyArgs.setDataSize(0);
+      }
+      OpenKeySession openKey = impl.openKey(ksmKeyArgs);
+      resp.setKeyInfo(openKey.getKeyInfo().getProtobuf());
+      resp.setID(openKey.getId());
       resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
@@ -332,7 +353,6 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
           .setVolumeName(keyArgs.getVolumeName())
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
-          .setDataSize(keyArgs.getDataSize())
           .build();
       KsmKeyInfo keyInfo = impl.lookupKey(ksmKeyArgs);
       resp.setKeyInfo(keyInfo.getProtobuf());
@@ -430,6 +450,49 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
       for(KsmKeyInfo key : keys) {
         resp.addKeyInfo(key.getProtobuf());
       }
+      resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public CommitKeyResponse commitKey(RpcController controller,
+      CommitKeyRequest request) throws ServiceException {
+    CommitKeyResponse.Builder resp =
+        CommitKeyResponse.newBuilder();
+    try {
+      KeyArgs keyArgs = request.getKeyArgs();
+      KsmKeyArgs ksmKeyArgs = new KsmKeyArgs.Builder()
+          .setVolumeName(keyArgs.getVolumeName())
+          .setBucketName(keyArgs.getBucketName())
+          .setKeyName(keyArgs.getKeyName())
+          .build();
+      int id = request.getClientID();
+      impl.commitKey(ksmKeyArgs, id);
+      resp.setStatus(Status.OK);
+    } catch (IOException e) {
+      resp.setStatus(exceptionToResponseStatus(e));
+    }
+    return resp.build();
+  }
+
+  @Override
+  public AllocateBlockResponse allocateBlock(RpcController controller,
+      AllocateBlockRequest request) throws ServiceException {
+    AllocateBlockResponse.Builder resp =
+        AllocateBlockResponse.newBuilder();
+    try {
+      KeyArgs keyArgs = request.getKeyArgs();
+      KsmKeyArgs ksmKeyArgs = new KsmKeyArgs.Builder()
+          .setVolumeName(keyArgs.getVolumeName())
+          .setBucketName(keyArgs.getBucketName())
+          .setKeyName(keyArgs.getKeyName())
+          .build();
+      int id = request.getClientID();
+      KsmKeyLocationInfo newLocation = impl.allocateBlock(ksmKeyArgs, id);
+      resp.setKeyLocation(newLocation.getProtobuf());
       resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));

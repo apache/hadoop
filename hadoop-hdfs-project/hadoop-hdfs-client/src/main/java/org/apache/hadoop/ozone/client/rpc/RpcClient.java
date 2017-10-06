@@ -43,6 +43,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.ksm.protocolPB
@@ -444,10 +445,16 @@ public class RpcClient implements ClientProtocol {
         .setFactor(factor)
         .build();
 
-    KsmKeyInfo keyInfo = keySpaceManagerClient.allocateKey(keyArgs);
+    OpenKeySession openKey = keySpaceManagerClient.openKey(keyArgs);
     ChunkGroupOutputStream groupOutputStream =
-        ChunkGroupOutputStream.getFromKsmKeyInfo(keyInfo, xceiverClientManager,
-            storageContainerLocationClient, chunkSize, requestId);
+        new ChunkGroupOutputStream.Builder()
+            .setHandler(openKey)
+            .setXceiverClientManager(xceiverClientManager)
+            .setScmClient(storageContainerLocationClient)
+            .setKsmClient(keySpaceManagerClient)
+            .setChunkSize(chunkSize)
+            .setRequestID(requestId)
+            .build();
     return new OzoneOutputStream(groupOutputStream);
   }
 

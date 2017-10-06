@@ -1062,4 +1062,24 @@
       exceed this count then the oldest idle connection is evicted.
     </description>
   </property>
+
+  <property>
+    <name>ozone.key.preallocation.maxsize</name>
+    <value>134217728</value>
+    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <description>
+      When a new key write request is sent to KSM, if a size is requested, at most
+      128MB of size is allocated at request time. If client needs more space for the
+      write, separate block allocation requests will be made.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.list.cache</name>
+    <value>1000</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Configuration property to configure the cache size of client list calls.
+    </description>
+  </property>
 </configuration>

@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -70,7 +71,7 @@ public class TestMultipleContainerReadWrite {
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
     // set to as small as 100 bytes per block.
-    conf.setLong(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB, 100);
+    conf.setLong(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB, 1);
     conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 5);
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
@@ -110,9 +111,9 @@ public class TestMultipleContainerReadWrite {
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 
-    String dataString = RandomStringUtils.randomAscii(500);
+    String dataString = RandomStringUtils.randomAscii(3 * (int)OzoneConsts.MB);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
-    keyArgs.setSize(500);
+    keyArgs.setSize(3 * (int)OzoneConsts.MB);
 
     try (OutputStream outputStream = storageHandler.newKeyWriter(keyArgs)) {
       outputStream.write(dataString.getBytes());
@@ -126,10 +127,14 @@ public class TestMultipleContainerReadWrite {
     // checking whether container meta data has the chunk file persisted.
     MetricsRecordBuilder containerMetrics = getMetrics(
         "StorageContainerMetrics");
-    assertCounter("numWriteChunk", 5L, containerMetrics);
-    assertCounter("numReadChunk", 5L, containerMetrics);
+    assertCounter("numWriteChunk", 3L, containerMetrics);
+    assertCounter("numReadChunk", 3L, containerMetrics);
   }
 
+  // Disable this test, because this tests assumes writing beyond a specific
+  // size is not allowed. Which is not true for now. Keeping this test in case
+  // we add this restrict in the future.
+  @Ignore
   @Test
   public void testErrorWrite() throws Exception {
     String userName = "user" + RandomStringUtils.randomNumeric(5);

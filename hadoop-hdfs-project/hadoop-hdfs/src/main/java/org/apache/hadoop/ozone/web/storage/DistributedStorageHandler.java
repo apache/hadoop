@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.conf.OzoneConfiguration;
@@ -409,10 +410,16 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setFactor(xceiverClientManager.getFactor())
         .build();
     // contact KSM to allocate a block for key.
-    KsmKeyInfo keyInfo = keySpaceManagerClient.allocateKey(keyArgs);
+    OpenKeySession openKey = keySpaceManagerClient.openKey(keyArgs);
     ChunkGroupOutputStream groupOutputStream =
-        ChunkGroupOutputStream.getFromKsmKeyInfo(keyInfo, xceiverClientManager,
-            storageContainerLocationClient, chunkSize, args.getRequestID());
+        new ChunkGroupOutputStream.Builder()
+            .setHandler(openKey)
+            .setXceiverClientManager(xceiverClientManager)
+            .setScmClient(storageContainerLocationClient)
+            .setKsmClient(keySpaceManagerClient)
+            .setChunkSize(chunkSize)
+            .setRequestID(args.getRequestID())
+            .build();
     return new OzoneOutputStream(groupOutputStream);
   }
 

@@ -126,6 +126,27 @@ public interface KSMMetadataManager {
   byte[] getDeletedKeyName(byte[] keyName);
 
   /**
+   * Returns the DB key name of a open key in KSM metadata store.
+   * Should be #open# prefix followed by actual key name.
+   * @param keyName - key name
+   * @param id - the id for this open
+   * @return bytes of DB key.
+   */
+  byte[] getOpenKeyNameBytes(String keyName, int id);
+
+  /**
+   * Returns the full name of a key given volume name, bucket name and key name.
+   * Generally done by padding certain delimiters.
+   *
+   * @param volumeName - volume name
+   * @param bucketName - bucket name
+   * @param keyName - key name
+   * @return the full key name.
+   */
+  String getKeyWithDBPrefix(String volumeName, String bucketName,
+      String keyName);
+
+  /**
    * Given a volume, check if it is empty,
    * i.e there are no buckets inside it.
    * @param volume - Volume name

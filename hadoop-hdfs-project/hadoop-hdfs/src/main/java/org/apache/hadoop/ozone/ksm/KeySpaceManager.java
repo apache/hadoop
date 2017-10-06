@@ -28,7 +28,9 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -466,12 +468,36 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
    * @throws IOException
    */
   @Override
-  public KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException {
+  public OpenKeySession openKey(KsmKeyArgs args) throws IOException {
     try {
       metrics.incNumKeyAllocates();
-      return keyManager.allocateKey(args);
+      return keyManager.openKey(args);
     } catch (Exception ex) {
       metrics.incNumKeyAllocateFails();
+      throw ex;
+    }
+  }
+
+  @Override
+  public void commitKey(KsmKeyArgs args, int clientID)
+      throws IOException {
+    try {
+      metrics.incNumKeyCommits();
+      keyManager.commitKey(args, clientID);
+    } catch (Exception ex) {
+      metrics.incNumKeyCommitFails();
+      throw ex;
+    }
+  }
+
+  @Override
+  public KsmKeyLocationInfo allocateBlock(KsmKeyArgs args, int clientID)
+      throws IOException {
+    try {
+      metrics.incNumBlockAllocateCalls();
+      return keyManager.allocateBlock(args, clientID);
+    } catch (Exception ex) {
+      metrics.incNumBlockAllocateCallFails();
       throw ex;
     }
   }

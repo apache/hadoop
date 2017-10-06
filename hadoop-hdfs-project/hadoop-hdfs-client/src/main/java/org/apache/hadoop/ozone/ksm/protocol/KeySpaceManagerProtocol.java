@@ -21,7 +21,9 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import java.io.IOException;
@@ -129,13 +131,35 @@ public interface KeySpaceManagerProtocol {
   void setBucketProperty(KsmBucketArgs args) throws IOException;
 
   /**
-   * Allocate a block to a container, the block is returned to the client.
+   * Open the given key and return an open key session.
    *
    * @param args the args of the key.
-   * @return KsmKeyInfo isntacne that client uses to talk to container.
+   * @return OpenKeySession instance that client uses to talk to container.
    * @throws IOException
    */
-  KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException;
+  OpenKeySession openKey(KsmKeyArgs args) throws IOException;
+
+  /**
+   * Commit a key. This will make the change from the client visible. The client
+   * is identified by the clientID.
+   *
+   * @param args the key to commit
+   * @param clientID the client identification
+   * @throws IOException
+   */
+  void commitKey(KsmKeyArgs args, int clientID) throws IOException;
+
+  /**
+   * Allocate a new block, it is assumed that the client is having an open key
+   * session going on. This block will be appended to this open key session.
+   *
+   * @param args the key to append
+   * @param clientID the client identification
+   * @return an allocated block
+   * @throws IOException
+   */
+  KsmKeyLocationInfo allocateBlock(KsmKeyArgs args, int clientID)
+      throws IOException;
 
   /**
    * Look up for the container of an existing key.

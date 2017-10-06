@@ -255,6 +255,9 @@ message LocateKeyRequest {
 message LocateKeyResponse {
     required Status status = 1;
     optional KeyInfo keyInfo = 2;
+    // clients' followup request may carry this ID for stateful operations (similar
+    // to a cookie).
+    optional uint32 ID = 3;
 }
 
 message SetBucketPropertyRequest {
@@ -285,6 +288,25 @@ message ListKeysRequest {
 message ListKeysResponse {
     required Status status = 1;
     repeated KeyInfo keyInfo = 2;
+}
+
+message AllocateBlockRequest {
+    required KeyArgs keyArgs = 1;
+    required uint32 clientID = 2;
+}
+
+message AllocateBlockResponse {
+    required Status status = 1;
+    required KeyLocation keyLocation = 2;
+}
+
+message CommitKeyRequest {
+    required KeyArgs keyArgs = 1;
+    required uint32 clientID = 2;
+}
+
+message CommitKeyResponse {
+    required Status status = 1;
 }
 
 /**
@@ -380,4 +402,16 @@ service KeySpaceManagerService {
     */
     rpc listKeys(ListKeysRequest)
     returns(ListKeysResponse);
+
+    /**
+      Commit a key.
+    */
+    rpc commitKey(CommitKeyRequest)
+    returns(CommitKeyResponse);
+
+    /**
+      Allocate a new block for a key.
+    */
+    rpc allocateBlock(AllocateBlockRequest)
+    returns(AllocateBlockResponse);
 }

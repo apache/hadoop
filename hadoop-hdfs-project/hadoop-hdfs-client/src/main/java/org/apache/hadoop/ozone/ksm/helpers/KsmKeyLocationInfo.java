@@ -28,7 +28,7 @@ public final class KsmKeyLocationInfo {
   private final String blockID;
   private final boolean shouldCreateContainer;
   // the id of this subkey in all the subkeys.
-  private final int index;
+  private int index;
   private final long length;
   private final long offset;
 
@@ -57,6 +57,10 @@ public final class KsmKeyLocationInfo {
 
   public int getIndex() {
     return index;
+  }
+
+  public void setIndex(int idx) {
+    index = idx;
   }
 
   public long getLength() {
