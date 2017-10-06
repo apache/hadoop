@@ -20,8 +20,11 @@ package org.apache.hadoop.ozone.client.io;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
@@ -56,53 +59,126 @@ public class ChunkGroupOutputStream extends OutputStream {
   // array list's get(index) is O(1)
   private final ArrayList<ChunkOutputStreamEntry> streamEntries;
   private int currentStreamIndex;
-  private long totalSize;
   private long byteOffset;
+  private final KeySpaceManagerProtocolClientSideTranslatorPB ksmClient;
+  private final
+      StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
+  private final KsmKeyArgs keyArgs;
+  private final int openID;
+  private final XceiverClientManager xceiverClientManager;
+  private final int chunkSize;
+  private final String requestID;
 
+  /**
+   * A constructor for testing purpose only.
+   */
+  @VisibleForTesting
   public ChunkGroupOutputStream() {
+    streamEntries = new ArrayList<>();
+    ksmClient = null;
+    scmClient = null;
+    keyArgs = null;
+    openID = -1;
+    xceiverClientManager = null;
+    chunkSize = 0;
+    requestID = null;
+  }
+
+  /**
+   * For testing purpose only. Not building output stream from blocks, but
+   * taking from externally.
+   *
+   * @param outputStream
+   * @param length
+   */
+  @VisibleForTesting
+  public synchronized void addStream(OutputStream outputStream, long length) {
+    streamEntries.add(new ChunkOutputStreamEntry(outputStream, length));
+  }
+
+  public ChunkGroupOutputStream(
+      OpenKeySession handler, XceiverClientManager xceiverClientManager,
+      StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
+      KeySpaceManagerProtocolClientSideTranslatorPB ksmClient,
+      int chunkSize, String requestId) throws IOException {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
-    this.totalSize = 0;
     this.byteOffset = 0;
+    this.ksmClient = ksmClient;
+    this.scmClient = scmClient;
+    KsmKeyInfo info = handler.getKeyInfo();
+    this.keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(info.getVolumeName())
+        .setBucketName(info.getBucketName())
+        .setKeyName(info.getKeyName())
+        .setDataSize(info.getDataSize()).build();
+    this.openID = handler.getId();
+    this.xceiverClientManager = xceiverClientManager;
+    this.chunkSize = chunkSize;
+    this.requestID = requestId;
+    LOG.debug("Expecting open key with one block, but got" +
+        info.getKeyLocationList().size());
+    // server may return any number of blocks, (0 to any)
+    int idx = 0;
+    for (KsmKeyLocationInfo subKeyInfo : info.getKeyLocationList()) {
+      subKeyInfo.setIndex(idx++);
+      checkKeyLocationInfo(subKeyInfo);
+    }
   }
+
+  private void checkKeyLocationInfo(KsmKeyLocationInfo subKeyInfo)
+      throws IOException {
+    String containerKey = subKeyInfo.getBlockID();
+    String containerName = subKeyInfo.getContainerName();
+    Pipeline pipeline = scmClient.getContainer(containerName);
+    XceiverClientSpi xceiverClient =
+        xceiverClientManager.acquireClient(pipeline);
+    // create container if needed
+    if (subKeyInfo.getShouldCreateContainer()) {
+      try {
+        scmClient.notifyObjectCreationStage(
+            NotifyObjectCreationStageRequestProto.Type.container,
+            containerName,
+            NotifyObjectCreationStageRequestProto.Stage.begin);
+        ContainerProtocolCalls.createContainer(xceiverClient, requestID);
+        scmClient.notifyObjectCreationStage(
+            NotifyObjectCreationStageRequestProto.Type.container,
+            containerName,
+            NotifyObjectCreationStageRequestProto.Stage.complete);
+      } catch (StorageContainerException ex) {
+        if (ex.getResult().equals(Result.CONTAINER_EXISTS)) {
+          //container already exist, this should never happen
+          LOG.debug("Container {} already exists.", containerName);
+        } else {
+          LOG.error("Container creation failed for {}.", containerName, ex);
+          throw ex;
+        }
+      }
+    }
+    streamEntries.add(new ChunkOutputStreamEntry(containerKey,
+        keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
+        chunkSize, subKeyInfo.getLength()));
+  }
+
 
   @VisibleForTesting
   public long getByteOffset() {
     return byteOffset;
   }
 
-  /**
-   * Append another stream to the end of the list. Note that the streams are not
-   * actually created to this point, only enough meta data about the stream is
-   * stored. When something is to be actually written to the stream, the stream
-   * will be created (if not already).
-   *
-   * @param containerKey the key to store in the container
-   * @param key the ozone key
-   * @param xceiverClientManager xceiver manager instance
-   * @param xceiverClient xceiver manager instance
-   * @param requestID the request id
-   * @param chunkSize the chunk size for this key chunks
-   * @param length the total length of this key
-   */
-  public synchronized void addStream(String containerKey, String key,
-      XceiverClientManager xceiverClientManager, XceiverClientSpi xceiverClient,
-      String requestID, int chunkSize, long length) {
-    streamEntries.add(new ChunkOutputStreamEntry(containerKey, key,
-        xceiverClientManager, xceiverClient, requestID, chunkSize, length));
-    totalSize += length;
-  }
-
-  @VisibleForTesting
-  public synchronized void addStream(OutputStream outputStream, long length) {
-    streamEntries.add(new ChunkOutputStreamEntry(outputStream, length));
-    totalSize += length;
-  }
 
   @Override
   public synchronized void write(int b) throws IOException {
     if (streamEntries.size() <= currentStreamIndex) {
-      throw new IndexOutOfBoundsException();
+      Preconditions.checkNotNull(ksmClient);
+      // allocate a new block, if a exception happens, log an error and
+      // throw exception to the caller directly, and the write fails.
+      try {
+        allocateNewBlock(currentStreamIndex);
+      } catch (IOException ioe) {
+        LOG.error("Allocate block fail when writing.");
+        throw ioe;
+      }
     }
     ChunkOutputStreamEntry entry = streamEntries.get(currentStreamIndex);
     entry.write(b);
@@ -137,15 +213,21 @@ public class ChunkGroupOutputStream extends OutputStream {
     if (len == 0) {
       return;
     }
-    if (streamEntries.size() <= currentStreamIndex) {
-      throw new IOException("Write out of stream range! stream index:" +
-          currentStreamIndex);
-    }
-    if (totalSize - byteOffset < len) {
-      throw new IOException("Can not write " + len + " bytes with only " +
-          (totalSize - byteOffset) + " byte space");
-    }
+    int succeededAllocates = 0;
     while (len > 0) {
+      if (streamEntries.size() <= currentStreamIndex) {
+        Preconditions.checkNotNull(ksmClient);
+        // allocate a new block, if a exception happens, log an error and
+        // throw exception to the caller directly, and the write fails.
+        try {
+          allocateNewBlock(currentStreamIndex);
+          succeededAllocates += 1;
+        } catch (IOException ioe) {
+          LOG.error("Try to allocate more blocks for write failed, already " +
+              "allocated " + succeededAllocates + " blocks for this write.");
+          throw ioe;
+        }
+      }
       // in theory, this condition should never violate due the check above
       // still do a sanity check.
       Preconditions.checkArgument(currentStreamIndex < streamEntries.size());
@@ -161,6 +243,21 @@ public class ChunkGroupOutputStream extends OutputStream {
     }
   }
 
+  /**
+   * Contact KSM to get a new block. Set the new block with the index (e.g.
+   * first block has index = 0, second has index = 1 etc.)
+   *
+   * The returned block is made to new ChunkOutputStreamEntry to write.
+   *
+   * @param index the index of the block.
+   * @throws IOException
+   */
+  private void allocateNewBlock(int index) throws IOException {
+    KsmKeyLocationInfo subKeyInfo = ksmClient.allocateBlock(keyArgs, openID);
+    subKeyInfo.setIndex(index);
+    checkKeyLocationInfo(subKeyInfo);
+  }
+
   @Override
   public synchronized void flush() throws IOException {
     for (int i = 0; i <= currentStreamIndex; i++) {
@@ -168,10 +265,73 @@ public class ChunkGroupOutputStream extends OutputStream {
     }
   }
 
+  /**
+   * Commit the key to KSM, this will add the blocks as the new key blocks.
+   *
+   * @throws IOException
+   */
   @Override
   public synchronized void close() throws IOException {
     for (ChunkOutputStreamEntry entry : streamEntries) {
-      entry.close();
+      if (entry != null) {
+        entry.close();
+      }
+    }
+    if (keyArgs != null) {
+      // in test, this could be null
+      keyArgs.setDataSize(byteOffset);
+      ksmClient.commitKey(keyArgs, openID);
+    } else {
+      LOG.warn("Closing ChunkGroupOutputStream, but key args is null");
+    }
+  }
+
+  /**
+   * Builder class of ChunkGroupOutputStream.
+   */
+  public static class Builder {
+    private OpenKeySession openHandler;
+    private XceiverClientManager xceiverManager;
+    private StorageContainerLocationProtocolClientSideTranslatorPB scmClient;
+    private KeySpaceManagerProtocolClientSideTranslatorPB ksmClient;
+    private int chunkSize;
+    private String requestID;
+
+    public Builder setHandler(OpenKeySession handler) {
+      this.openHandler = handler;
+      return this;
+    }
+
+    public Builder setXceiverClientManager(XceiverClientManager manager) {
+      this.xceiverManager = manager;
+      return this;
+    }
+
+    public Builder setScmClient(
+        StorageContainerLocationProtocolClientSideTranslatorPB client) {
+      this.scmClient = client;
+      return this;
+    }
+
+    public Builder setKsmClient(
+        KeySpaceManagerProtocolClientSideTranslatorPB client) {
+      this.ksmClient = client;
+      return this;
+    }
+
+    public Builder setChunkSize(int size) {
+      this.chunkSize = size;
+      return this;
+    }
+
+    public Builder setRequestID(String id) {
+      this.requestID = id;
+      return this;
+    }
+
+    public ChunkGroupOutputStream build() throws IOException {
+      return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
+          ksmClient, chunkSize, requestID);
     }
   }
 
@@ -265,57 +425,5 @@ public class ChunkGroupOutputStream extends OutputStream {
         this.outputStream.close();
       }
     }
-  }
-
-  public static ChunkGroupOutputStream getFromKsmKeyInfo(
-      KsmKeyInfo keyInfo, XceiverClientManager xceiverClientManager,
-      StorageContainerLocationProtocolClientSideTranslatorPB
-          storageContainerLocationClient,
-      int chunkSize, String requestId) throws IOException {
-    // TODO: the following createContainer and key writes may fail, in which
-    // case we should revert the above allocateKey to KSM.
-    // check index as sanity check
-    int index = 0;
-    String blockID;
-    ChunkGroupOutputStream groupOutputStream = new ChunkGroupOutputStream();
-    for (KsmKeyLocationInfo subKeyInfo : keyInfo.getKeyLocationList()) {
-      blockID = subKeyInfo.getBlockID();
-
-      Preconditions.checkArgument(index++ == subKeyInfo.getIndex());
-      String containerName = subKeyInfo.getContainerName();
-      Pipeline pipeline =
-          storageContainerLocationClient.getContainer(containerName);
-      XceiverClientSpi xceiverClient =
-          xceiverClientManager.acquireClient(pipeline);
-      // create container if needed
-      if (subKeyInfo.getShouldCreateContainer()) {
-        try {
-          storageContainerLocationClient.notifyObjectCreationStage(
-              NotifyObjectCreationStageRequestProto.Type.container,
-              containerName,
-              NotifyObjectCreationStageRequestProto.Stage.begin);
-
-          ContainerProtocolCalls.createContainer(xceiverClient, requestId);
-
-          storageContainerLocationClient.notifyObjectCreationStage(
-              NotifyObjectCreationStageRequestProto.Type.container,
-              containerName,
-              NotifyObjectCreationStageRequestProto.Stage.complete);
-        } catch (StorageContainerException ex) {
-          if (ex.getResult().equals(Result.CONTAINER_EXISTS)) {
-            //container already exist, this should never happen
-            LOG.debug("Container {} already exists.", containerName);
-          } else {
-            LOG.error("Container creation failed for {}.", containerName, ex);
-            throw ex;
-          }
-        }
-      }
-
-      groupOutputStream.addStream(blockID, keyInfo.getKeyName(),
-          xceiverClientManager, xceiverClient, requestId, chunkSize,
-          subKeyInfo.getLength());
-    }
-    return groupOutputStream;
   }
 }

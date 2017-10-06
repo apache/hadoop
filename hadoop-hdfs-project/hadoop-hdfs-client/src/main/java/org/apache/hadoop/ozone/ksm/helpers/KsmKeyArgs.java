@@ -27,7 +27,7 @@ public final class KsmKeyArgs {
   private final String volumeName;
   private final String bucketName;
   private final String keyName;
-  private final long dataSize;
+  private long dataSize;
   private final ReplicationType type;
   private final ReplicationFactor factor;
 
@@ -63,6 +63,10 @@ public final class KsmKeyArgs {
 
   public long getDataSize() {
     return dataSize;
+  }
+
+  public void setDataSize(long size) {
+    dataSize = size;
   }
 
   /**

@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.ksm;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 
 import java.io.IOException;
 import java.util.List;
@@ -39,22 +41,39 @@ public interface KeyManager {
   void stop() throws IOException;
 
   /**
-   * Given the args of a key to put, return a pipeline for the key. Writes
-   * the key to pipeline mapping to meta data.
+   * After calling commit, the key will be made visible. There can be multiple
+   * open key writes in parallel (identified by client id). The most recently
+   * committed one will be the one visible.
    *
-   * Note that this call only allocate a block for key, and adds the
-   * corresponding entry to metadata. The block will be returned to client side
-   * handler DistributedStorageHandler. Which will make another call to
-   * datanode to create container (if needed) and writes the key.
+   * @param args the key to commit.
+   * @param clientID the client that is committing.
+   * @throws IOException
+   */
+  void commitKey(KsmKeyArgs args, int clientID) throws IOException;
+
+  /**
+   * A client calls this on an open key, to request to allocate a new block,
+   * and appended to the tail of current block list of the open client.
+   *
+   * @param args the key to append
+   * @param clientID the client requesting block.
+   * @return the reference to the new block.
+   * @throws IOException
+   */
+  KsmKeyLocationInfo allocateBlock(KsmKeyArgs args, int clientID)
+      throws IOException;
+  /**
+   * Given the args of a key to put, write an open key entry to meta data.
    *
    * In case that the container creation or key write failed on
    * DistributedStorageHandler, this key's metadata will still stay in KSM.
+   * TODO garbage collect the open keys that never get closed
    *
    * @param args the args of the key provided by client.
-   * @return a KsmKeyInfo instance client uses to talk to container.
+   * @return a OpenKeySession instance client uses to talk to container.
    * @throws Exception
    */
-  KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException;
+  OpenKeySession openKey(KsmKeyArgs args) throws IOException;
 
   /**
    * Look up an existing key. Return the info of the key to client side, which

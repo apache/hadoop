@@ -141,6 +141,11 @@ public final class OzoneConfigKeys {
   public static final int OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT
       = 300000; // 300s for default
 
+  public static final String OZONE_KEY_PREALLOCATION_MAXSIZE =
+      "ozone.key.preallocation.maxsize";
+  public static final long OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT
+      = 128 * OzoneConsts.MB;
+
   public static final String OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER =
       "ozone.block.deleting.limit.per.task";
   public static final int OZONE_BLOCK_DELETING_LIMIT_PER_CONTAINER_DEFAULT

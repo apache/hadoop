@@ -232,14 +232,15 @@ public class TestKSMSQLCli {
     sql = "SELECT * FROM keyInfo";
     rs = executeQuery(conn, sql);
     HashMap<String, List<String>> expectedMap2 = new HashMap<>();
+    // no data written, data size will be 0
     expectedMap2.put(keyName0,
-        Arrays.asList(volumeName0, bucketName0, Integer.toString(100)));
+        Arrays.asList(volumeName0, bucketName0, "0"));
     expectedMap2.put(keyName1,
-        Arrays.asList(volumeName1, bucketName1, Integer.toString(200)));
+        Arrays.asList(volumeName1, bucketName1, "0"));
     expectedMap2.put(keyName2,
-        Arrays.asList(volumeName0, bucketName2, Integer.toString(300)));
+        Arrays.asList(volumeName0, bucketName2, "0"));
     expectedMap2.put(keyName3,
-        Arrays.asList(volumeName0, bucketName2, Integer.toString(400)));
+        Arrays.asList(volumeName0, bucketName2, "0"));
     while (rs.next()) {
       String volumeName = rs.getString("volumeName");
       String bucketName = rs.getString("bucketName");

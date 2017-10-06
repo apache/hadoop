@@ -56,6 +56,8 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numBucketLists;
   private @Metric MutableCounterLong numKeyLists;
   private @Metric MutableCounterLong numVolumeLists;
+  private @Metric MutableCounterLong numKeyCommits;
+  private @Metric MutableCounterLong numAllocateBlockCalls;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -73,6 +75,8 @@ public class KSMMetrics {
   private @Metric MutableCounterLong numBucketListFails;
   private @Metric MutableCounterLong numKeyListFails;
   private @Metric MutableCounterLong numVolumeListFails;
+  private @Metric MutableCounterLong numKeyCommitFails;
+  private @Metric MutableCounterLong numBlockAllocateCallFails;
 
   public KSMMetrics() {
   }
@@ -205,6 +209,23 @@ public class KSMMetrics {
   public void incNumKeyDeletes() {
     numKeyOps.incr();
     numKeyDeletes.incr();
+  }
+
+  public void incNumKeyCommits() {
+    numKeyOps.incr();
+    numKeyCommits.incr();
+  }
+
+  public void incNumKeyCommitFails() {
+    numKeyCommitFails.incr();
+  }
+
+  public void incNumBlockAllocateCalls() {
+    numAllocateBlockCalls.incr();
+  }
+
+  public void incNumBlockAllocateCallFails() {
+    numBlockAllocateCallFails.incr();
   }
 
   public void incNumBucketListFails() {
@@ -367,6 +388,26 @@ public class KSMMetrics {
   @VisibleForTesting
   public long getNumVolumeListFails() {
     return numVolumeListFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumKeyCommits() {
+    return numKeyCommits.value();
+  }
+
+  @VisibleForTesting
+  public long getNumKeyCommitFails() {
+    return numKeyCommitFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBlockAllocates() {
+    return numAllocateBlockCalls.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBlockAllocateFails() {
+    return numBlockAllocateCallFails.value();
   }
 
   public void unRegister() {

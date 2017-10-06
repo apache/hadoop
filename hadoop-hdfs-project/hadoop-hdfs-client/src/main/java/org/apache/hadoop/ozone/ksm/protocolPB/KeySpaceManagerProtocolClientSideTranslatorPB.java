@@ -28,8 +28,18 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
+import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocol.KeySpaceManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.AllocateBlockRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.AllocateBlockResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CommitKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.CommitKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.BucketArgs;
 import org.apache.hadoop.ozone.protocol.proto
@@ -498,24 +508,23 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
   }
 
   /**
-   * Allocate a block for a key, then use the returned meta info to talk to data
-   * node to actually write the key.
+   * Create a new open session of the key, then use the returned meta info to
+   * talk to data node to actually write the key.
    * @param args the args for the key to be allocated
    * @return a handler to the key, returned client
    * @throws IOException
    */
   @Override
-  public KsmKeyInfo allocateKey(KsmKeyArgs args) throws IOException {
+  public OpenKeySession openKey(KsmKeyArgs args) throws IOException {
     LocateKeyRequest.Builder req = LocateKeyRequest.newBuilder();
-    KeyArgs keyArgs = KeyArgs.newBuilder()
+    KeyArgs.Builder keyArgs = KeyArgs.newBuilder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
-        .setKeyName(args.getKeyName())
-        .setDataSize(args.getDataSize())
-        .setType(args.getType())
-        .setFactor(args.getFactor())
-        .build();
-    req.setKeyArgs(keyArgs);
+        .setKeyName(args.getKeyName());
+    if (args.getDataSize() > 0) {
+      keyArgs.setDataSize(args.getDataSize());
+    }
+    req.setKeyArgs(keyArgs.build());
 
     final LocateKeyResponse resp;
     try {
@@ -524,11 +533,61 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
       throw ProtobufHelper.getRemoteException(e);
     }
     if (resp.getStatus() != Status.OK) {
-      throw new IOException("Create key failed, error:" +
+      throw new IOException("Create key failed, error:" + resp.getStatus());
+    }
+    return new OpenKeySession(resp.getID(),
+        KsmKeyInfo.getFromProtobuf(resp.getKeyInfo()));
+  }
+
+  @Override
+  public KsmKeyLocationInfo allocateBlock(KsmKeyArgs args, int clientID)
+      throws IOException {
+    AllocateBlockRequest.Builder req = AllocateBlockRequest.newBuilder();
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setDataSize(args.getDataSize()).build();
+    req.setKeyArgs(keyArgs);
+    req.setClientID(clientID);
+
+    final AllocateBlockResponse resp;
+    try {
+      resp = rpcProxy.allocateBlock(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new IOException("Allocate block failed, error:" +
           resp.getStatus());
     }
-    return KsmKeyInfo.getFromProtobuf(resp.getKeyInfo());
+    return KsmKeyLocationInfo.getFromProtobuf(resp.getKeyLocation());
   }
+
+  @Override
+  public void commitKey(KsmKeyArgs args, int clientID)
+      throws IOException {
+    CommitKeyRequest.Builder req = CommitKeyRequest.newBuilder();
+    KeyArgs keyArgs = KeyArgs.newBuilder()
+        .setVolumeName(args.getVolumeName())
+        .setBucketName(args.getBucketName())
+        .setKeyName(args.getKeyName())
+        .setDataSize(args.getDataSize()).build();
+    req.setKeyArgs(keyArgs);
+    req.setClientID(clientID);
+
+    final CommitKeyResponse resp;
+    try {
+      resp = rpcProxy.commitKey(NULL_RPC_CONTROLLER, req.build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    if (resp.getStatus() != Status.OK) {
+      throw new IOException("Commit key failed, error:" +
+          resp.getStatus());
+    }
+  }
+
 
   @Override
   public KsmKeyInfo lookupKey(KsmKeyArgs args) throws IOException {

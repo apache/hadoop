@@ -53,6 +53,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
+import static org.apache.hadoop.ozone.OzoneConsts.OPEN_KEY_ID_DELIMINATOR;
+import static org.apache.hadoop.ozone.OzoneConsts.OPEN_KEY_PREFIX;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_DB_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
@@ -153,7 +155,8 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     return sb.toString();
   }
 
-  private String getKeyWithDBPrefix(String volume, String bucket, String key) {
+  @Override
+  public String getKeyWithDBPrefix(String volume, String bucket, String key) {
     String keyVB = OzoneConsts.KSM_KEY_PREFIX + volume
         + OzoneConsts.KSM_KEY_PREFIX + bucket
         + OzoneConsts.KSM_KEY_PREFIX;
@@ -169,6 +172,12 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
   public byte[] getDeletedKeyName(byte[] keyName) {
     return DFSUtil.string2Bytes(
         DELETING_KEY_PREFIX + DFSUtil.bytes2String(keyName));
+  }
+
+  @Override
+  public byte[] getOpenKeyNameBytes(String keyName, int id) {
+    return DFSUtil.string2Bytes(OPEN_KEY_PREFIX + id +
+        OPEN_KEY_ID_DELIMINATOR + keyName);
   }
 
   /**

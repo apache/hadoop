@@ -990,6 +990,57 @@ public class TestKeySpaceManager {
     Assert.assertTrue((OzoneUtils.formatDate(keyInfo.getModifiedOn())
         / 1000) >= (currentTime / 1000));
     Assert.assertEquals(keyName, keyInfo.getKeyName());
-    Assert.assertEquals(4096, keyInfo.getSize());
+    // with out data written, the size would be 0
+    Assert.assertEquals(0, keyInfo.getSize());
+  }
+
+  /**
+   * Test that the write can proceed without having to set the right size.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testWriteSize() throws IOException, OzoneException {
+    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String adminName = "admin" + RandomStringUtils.randomNumeric(5);
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    VolumeArgs createVolumeArgs = new VolumeArgs(volumeName, userArgs);
+    createVolumeArgs.setUserName(userName);
+    createVolumeArgs.setAdminName(adminName);
+    storageHandler.createVolume(createVolumeArgs);
+
+    BucketArgs bucketArgs = new BucketArgs(bucketName, createVolumeArgs);
+    bucketArgs.setAddAcls(new LinkedList<>());
+    bucketArgs.setRemoveAcls(new LinkedList<>());
+    bucketArgs.setStorageType(StorageType.DISK);
+    storageHandler.createBucket(bucketArgs);
+
+    String dataString = RandomStringUtils.randomAscii(100);
+    // write a key without specifying size at all
+    String keyName = "testKey";
+    KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
+    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
+      stream.write(dataString.getBytes());
+    }
+    byte[] data = new byte[dataString.length()];
+    try (InputStream in = storageHandler.newKeyReader(keyArgs)) {
+      in.read(data);
+    }
+    Assert.assertEquals(dataString, DFSUtil.bytes2String(data));
+
+    // write a key with a size, but write above it.
+    String keyName1 = "testKey1";
+    KeyArgs keyArgs1 = new KeyArgs(keyName1, bucketArgs);
+    keyArgs1.setSize(30);
+    try (OutputStream stream = storageHandler.newKeyWriter(keyArgs1)) {
+      stream.write(dataString.getBytes());
+    }
+    byte[] data1 = new byte[dataString.length()];
+    try (InputStream in = storageHandler.newKeyReader(keyArgs1)) {
+      in.read(data1);
+    }
+    Assert.assertEquals(dataString, DFSUtil.bytes2String(data1));
   }
 }

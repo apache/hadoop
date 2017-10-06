@@ -32,7 +32,7 @@ public final class KsmKeyInfo {
   private final String bucketName;
   // name of key client specified
   private final String keyName;
-  private final long dataSize;
+  private long dataSize;
   private List<KsmKeyLocationInfo> keyLocationList;
   private final long creationTime;
   private final long modificationTime;
@@ -65,8 +65,16 @@ public final class KsmKeyInfo {
     return dataSize;
   }
 
+  public void setDataSize(long size) {
+    this.dataSize = size;
+  }
+
   public List<KsmKeyLocationInfo> getKeyLocationList() {
     return keyLocationList;
+  }
+
+  public void appendKeyLocation(KsmKeyLocationInfo newLocation) {
+    keyLocationList.add(newLocation);
   }
 
   public long getCreationTime() {

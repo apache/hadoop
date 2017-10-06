@@ -176,7 +176,7 @@ public class TestKSMMetrcis {
         .getInternalState(ksmManager, "keyManager");
     KeyManager mockKm = Mockito.spy(bucketManager);
 
-    Mockito.doReturn(null).when(mockKm).allocateKey(null);
+    Mockito.doReturn(null).when(mockKm).openKey(null);
     Mockito.doNothing().when(mockKm).deleteKey(null);
     Mockito.doReturn(null).when(mockKm).lookupKey(null);
     Mockito.doReturn(null).when(mockKm).listKeys(null, null, null, null, 0);
@@ -192,7 +192,7 @@ public class TestKSMMetrcis {
     assertCounter("NumKeyLists", 1L, ksmMetrics);
 
     // inject exception to test for Failure Metrics
-    Mockito.doThrow(exception).when(mockKm).allocateKey(null);
+    Mockito.doThrow(exception).when(mockKm).openKey(null);
     Mockito.doThrow(exception).when(mockKm).deleteKey(null);
     Mockito.doThrow(exception).when(mockKm).lookupKey(null);
     Mockito.doThrow(exception).when(mockKm).listKeys(
@@ -284,7 +284,7 @@ public class TestKSMMetrcis {
    */
   private void doKeyOps() {
     try {
-      ksmManager.allocateKey(null);
+      ksmManager.openKey(null);
     } catch (IOException ignored) {
     }
 
