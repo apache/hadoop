@@ -21,6 +21,9 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +37,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
@@ -82,6 +86,9 @@ public class FederationMetrics implements FederationMBean {
 
   /** Format for a date. */
   private static final String DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
+
+  /** Prevent holding the page from load too long. */
+  private static final long TIME_OUT = TimeUnit.SECONDS.toMillis(1);
 
 
   /** Router interface. */
@@ -353,8 +360,8 @@ public class FederationMetrics implements FederationMBean {
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
       RouterRpcServer rpcServer = this.router.getRpcServer();
-      DatanodeInfo[] live =
-          rpcServer.getDatanodeReport(DatanodeReportType.LIVE);
+      DatanodeInfo[] live = rpcServer.getDatanodeReport(
+          DatanodeReportType.LIVE, TIME_OUT);
 
       if (live.length > 0) {
         float totalDfsUsed = 0;
@@ -446,7 +453,14 @@ public class FederationMetrics implements FederationMBean {
 
   @Override
   public String getHostAndPort() {
-    // TODO this should be the HTTP address
+    InetSocketAddress address = this.router.getHttpServerAddress();
+    if (address != null) {
+      try {
+        String hostname = InetAddress.getLocalHost().getHostName();
+        int port = address.getPort();
+        return hostname + ":" + port;
+      } catch (UnknownHostException ignored) { }
+    }
     return "Unknown";
   }
 
@@ -477,6 +491,11 @@ public class FederationMetrics implements FederationMBean {
       LOG.error("Cannot fetch block pool ID metrics: {}", e.getMessage());
       return "";
     }
+  }
+
+  @Override
+  public String getRouterStatus() {
+    return "RUNNING";
   }
 
   /**

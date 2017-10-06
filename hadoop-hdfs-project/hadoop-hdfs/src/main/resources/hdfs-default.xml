@@ -4802,6 +4802,62 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.http-address</name>
+    <value>0.0.0.0:50071</value>
+    <description>
+      HTTP address that handles the web requests to the Router.
+      The value of this property will take the form of router-host1:http-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTP server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.http-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.https-address</name>
+    <value>0.0.0.0:50072</value>
+    <description>
+      HTTPS address that handles the web requests to the Router.
+      The value of this property will take the form of router-host1:https-port.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.https-bind-host</name>
+    <value></value>
+    <description>
+      The actual address the HTTPS server will bind to. If this optional
+      address is set, it overrides only the hostname portion of
+      dfs.federation.router.https-address. This is useful for making the name
+      node listen on all interfaces by setting it to 0.0.0.0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.http.enable</name>
+    <value>true</value>
+    <description>
+      If the HTTP service to handle client requests in the router is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.metrics.enable</name>
+    <value>true</value>
+    <description>
+      If the metrics service in the router is enabled.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.file.resolver.client.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.MockResolver</value>
     <description>
