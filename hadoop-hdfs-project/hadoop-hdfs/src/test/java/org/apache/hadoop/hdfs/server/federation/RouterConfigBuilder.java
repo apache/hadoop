@@ -29,6 +29,7 @@ public class RouterConfigBuilder {
 
   private boolean enableRpcServer = false;
   private boolean enableAdminServer = false;
+  private boolean enableHttpServer = false;
   private boolean enableHeartbeat = false;
   private boolean enableLocalHeartbeat = false;
   private boolean enableStateStore = false;
@@ -45,6 +46,7 @@ public class RouterConfigBuilder {
   public RouterConfigBuilder all() {
     this.enableRpcServer = true;
     this.enableAdminServer = true;
+    this.enableHttpServer = true;
     this.enableHeartbeat = true;
     this.enableLocalHeartbeat = true;
     this.enableStateStore = true;
@@ -64,6 +66,11 @@ public class RouterConfigBuilder {
 
   public RouterConfigBuilder admin(boolean enable) {
     this.enableAdminServer = enable;
+    return this;
+  }
+
+  public RouterConfigBuilder http(boolean enable) {
+    this.enableHttpServer = enable;
     return this;
   }
 
@@ -90,6 +97,10 @@ public class RouterConfigBuilder {
     return this.admin(true);
   }
 
+  public RouterConfigBuilder http() {
+    return this.http(true);
+  }
+
   public RouterConfigBuilder heartbeat() {
     return this.heartbeat(true);
   }
@@ -108,6 +119,8 @@ public class RouterConfigBuilder {
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_RPC_ENABLE, this.enableRpcServer);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_ADMIN_ENABLE,
         this.enableAdminServer);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_HTTP_ENABLE,
+        this.enableHttpServer);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
         this.enableHeartbeat);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,
