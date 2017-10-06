@@ -150,13 +150,13 @@ public class FSParentQueue extends FSQueue {
         }
       }
       // Cap demand to maxShare to limit allocation to maxShare
-      demand = Resources.componentwiseMin(demand, maxShare);
+      demand = Resources.componentwiseMin(demand, getMaxShare());
     } finally {
       writeLock.unlock();
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("The updated demand for " + getName() + " is " + demand +
-          "; the max is " + maxShare);
+          "; the max is " + getMaxShare());
     }    
   }
   
@@ -300,7 +300,7 @@ public class FSParentQueue extends FSQueue {
         ", Policy: " + policy.getName() +
         ", FairShare: " + getFairShare() +
         ", SteadyFairShare: " + getSteadyFairShare() +
-        ", MaxShare: " + maxShare +
+        ", MaxShare: " + getMaxShare() +
         ", MinShare: " + minShare +
         ", ResourceUsage: " + getResourceUsage() +
         ", Demand: " + getDemand() +

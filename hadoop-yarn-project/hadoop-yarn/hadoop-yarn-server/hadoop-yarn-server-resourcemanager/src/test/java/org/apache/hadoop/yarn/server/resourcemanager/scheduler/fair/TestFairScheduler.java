@@ -4611,7 +4611,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     QueueManager queueMgr = scheduler.getQueueManager();
     FSLeafQueue oldQueue = queueMgr.getLeafQueue("queue1", true);
     FSQueue queue2 = queueMgr.getLeafQueue("queue2", true);
-    queue2.setMaxShare(Resource.newInstance(1024, 1));
+    queue2.setMaxShare(
+        new ConfigurableResource(Resource.newInstance(1024, 1)));
 
     ApplicationAttemptId appAttId =
         createSchedulingRequest(1024, 1, "queue1", "user1", 3);
@@ -5209,6 +5210,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     Resource maxResource = Resources.createResource(1024 * 8);
+    ConfigurableResource maxResourceConf =
+        new ConfigurableResource(maxResource);
 
     FSAppAttempt app1 = mock(FSAppAttempt.class);
     Mockito.when(app1.getDemand()).thenReturn(maxResource);
@@ -5220,15 +5223,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     FSLeafQueue aQueue =
         new FSLeafQueue("root.queue1.a", scheduler, queue1);
-    aQueue.setMaxShare(maxResource);
+    aQueue.setMaxShare(maxResourceConf);
     aQueue.addApp(app1, true);
 
     FSLeafQueue bQueue =
         new FSLeafQueue("root.queue1.b", scheduler, queue1);
-    bQueue.setMaxShare(maxResource);
+    bQueue.setMaxShare(maxResourceConf);
     bQueue.addApp(app2, true);
 
-    queue1.setMaxShare(maxResource);
+    queue1.setMaxShare(maxResourceConf);
     queue1.addChildQueue(aQueue);
     queue1.addChildQueue(bQueue);
 
@@ -5266,7 +5269,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue child1 =
         scheduler.getQueueManager().getLeafQueue("parent.child1", false);
     Resource resource = Resource.newInstance(4 * GB, 4);
-    child1.setMaxShare(resource);
+    child1.setMaxShare(new ConfigurableResource(resource));
     FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(resource);
     Mockito.when(app.getResourceUsage()).thenReturn(resource);
@@ -5295,7 +5298,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         childQueueString, child1.dumpState());
     FSParentQueue parent =
         scheduler.getQueueManager().getParentQueue("parent", false);
-    parent.setMaxShare(resource);
+    parent.setMaxShare(new ConfigurableResource(resource));
     parent.updateDemand();
 
     String parentQueueString = "{Name: root.parent,"
