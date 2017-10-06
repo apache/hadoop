@@ -247,9 +247,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
      * - HOSTNAME = string
      * - PORT = integer
      *
-     * If multiple hosts are provider, the Factory will create a
-     * {@link LoadBalancingKMSClientProvider} that round-robins requests
-     * across the provided list of hosts.
+     * This will always create a {@link LoadBalancingKMSClientProvider}
+     * if the uri is correct.
      */
     @Override
     public KeyProvider createProvider(URI providerUri, Configuration conf)
@@ -276,30 +275,26 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           }
           hostsPart = t[0];
         }
-        return createProvider(providerUri, conf, origUrl, port, hostsPart);
+        return createProvider(conf, origUrl, port, hostsPart);
       }
       return null;
     }
 
-    private KeyProvider createProvider(URI providerUri, Configuration conf,
+    private KeyProvider createProvider(Configuration conf,
         URL origUrl, int port, String hostsPart) throws IOException {
       String[] hosts = hostsPart.split(";");
-      if (hosts.length == 1) {
-        return new KMSClientProvider(providerUri, conf);
-      } else {
-        KMSClientProvider[] providers = new KMSClientProvider[hosts.length];
-        for (int i = 0; i < hosts.length; i++) {
-          try {
-            providers[i] =
-                new KMSClientProvider(
-                    new URI("kms", origUrl.getProtocol(), hosts[i], port,
-                        origUrl.getPath(), null, null), conf);
-          } catch (URISyntaxException e) {
-            throw new IOException("Could not instantiate KMSProvider..", e);
-          }
+      KMSClientProvider[] providers = new KMSClientProvider[hosts.length];
+      for (int i = 0; i < hosts.length; i++) {
+        try {
+          providers[i] =
+              new KMSClientProvider(
+                  new URI("kms", origUrl.getProtocol(), hosts[i], port,
+                      origUrl.getPath(), null, null), conf);
+        } catch (URISyntaxException e) {
+          throw new IOException("Could not instantiate KMSProvider.", e);
         }
-        return new LoadBalancingKMSClientProvider(providers, conf);
       }
+      return new LoadBalancingKMSClientProvider(providers, conf);
     }
   }
 
@@ -1028,7 +1023,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       } catch (Exception e) {
-        throw new IOException(e);
+        if (e instanceof IOException) {
+          throw (IOException) e;
+        } else {
+          throw new IOException(e);
+        }
       }
     }
     return tokens;

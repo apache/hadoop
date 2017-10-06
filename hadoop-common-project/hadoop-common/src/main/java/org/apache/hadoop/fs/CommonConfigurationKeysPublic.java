@@ -726,6 +726,35 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  /** Default value is the number of providers specified. */
+  public static final String KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY =
+      "hadoop.security.kms.client.failover.max.retries";
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String KMS_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_KEY =
+      "hadoop.security.kms.client.failover.sleep.base.millis";
+  /**  Default value is 100 ms. */
+  public static final int KMS_CLIENT_FAILOVER_SLEEP_BASE_MILLIS_DEFAULT  = 100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String KMS_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_KEY =
+      "hadoop.security.kms.client.failover.sleep.max.millis";
+  /** Default value is 2 secs. */
+  public static final int KMS_CLIENT_FAILOVER_SLEEP_MAX_MILLIS_DEFAULT  = 2000;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY = 
     "hadoop.security.java.secure.random.algorithm";
   /** Defalt value for HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY */
