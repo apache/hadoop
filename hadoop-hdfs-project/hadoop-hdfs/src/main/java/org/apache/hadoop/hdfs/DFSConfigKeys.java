@@ -1252,6 +1252,25 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       FEDERATION_ROUTER_PREFIX + "admin.enable";
   public static final boolean DFS_ROUTER_ADMIN_ENABLE_DEFAULT = true;
 
+  // HDFS Router-based federation web
+  public static final String DFS_ROUTER_HTTP_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "http.enable";
+  public static final boolean DFS_ROUTER_HTTP_ENABLE_DEFAULT = true;
+  public static final String DFS_ROUTER_HTTP_ADDRESS_KEY =
+      FEDERATION_ROUTER_PREFIX + "http-address";
+  public static final int    DFS_ROUTER_HTTP_PORT_DEFAULT = 50071;
+  public static final String DFS_ROUTER_HTTP_BIND_HOST_KEY =
+      FEDERATION_ROUTER_PREFIX + "http-bind-host";
+  public static final String DFS_ROUTER_HTTP_ADDRESS_DEFAULT =
+      "0.0.0.0:" + DFS_ROUTER_HTTP_PORT_DEFAULT;
+  public static final String DFS_ROUTER_HTTPS_ADDRESS_KEY =
+      FEDERATION_ROUTER_PREFIX + "https-address";
+  public static final int    DFS_ROUTER_HTTPS_PORT_DEFAULT = 50072;
+  public static final String DFS_ROUTER_HTTPS_BIND_HOST_KEY =
+      FEDERATION_ROUTER_PREFIX + "https-bind-host";
+  public static final String DFS_ROUTER_HTTPS_ADDRESS_DEFAULT =
+      "0.0.0.0:" + DFS_ROUTER_HTTPS_PORT_DEFAULT;
+
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY
