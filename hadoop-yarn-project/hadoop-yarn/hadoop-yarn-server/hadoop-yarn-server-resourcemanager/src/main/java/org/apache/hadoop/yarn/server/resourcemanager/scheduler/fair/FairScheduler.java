@@ -1518,7 +1518,8 @@ public class FairScheduler extends
       if ((queue.getParent() != null) &&
           !configuredLeafQueues.contains(queue.getName()) &&
           !configuredParentQueues.contains(queue.getName())) {
-        Resource max = queue.getParent().getMaxChildQueueResource();
+        ConfigurableResource max = queue.getParent().
+            getMaxChildQueueResource();
 
         if (max != null) {
           queue.setMaxShare(max);

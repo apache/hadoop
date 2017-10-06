@@ -81,7 +81,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     String queueName = "root.queue1";
     FSLeafQueue schedulable = new FSLeafQueue(queueName, scheduler, null);
-    schedulable.setMaxShare(maxResource);
+    schedulable.setMaxShare(new ConfigurableResource(maxResource));
     assertEquals(schedulable.getMetrics().getMaxApps(), Integer.MAX_VALUE);
     assertEquals(schedulable.getMetrics().getSchedulingPolicy(),
         SchedulingPolicy.DEFAULT_POLICY.getName());

@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -287,19 +288,60 @@ public class FairSchedulerConfiguration extends Configuration {
    * 
    * @throws AllocationConfigurationException
    */
-  public static Resource parseResourceConfigValue(String val)
+  public static ConfigurableResource parseResourceConfigValue(String val)
       throws AllocationConfigurationException {
+    ConfigurableResource configurableResource;
     try {
       val = StringUtils.toLowerCase(val);
-      int memory = findResource(val, "mb");
-      int vcores = findResource(val, "vcores");
-      return BuilderUtils.newResource(memory, vcores);
+      if (val.contains("%")) {
+        configurableResource = new ConfigurableResource(
+            getResourcePercentage(val));
+      } else {
+        int memory = findResource(val, "mb");
+        int vcores = findResource(val, "vcores");
+        configurableResource = new ConfigurableResource(
+            BuilderUtils.newResource(memory, vcores));
+      }
     } catch (AllocationConfigurationException ex) {
       throw ex;
     } catch (Exception ex) {
       throw new AllocationConfigurationException(
           "Error reading resource config", ex);
     }
+    return configurableResource;
+  }
+
+  private static double[] getResourcePercentage(
+      String val) throws AllocationConfigurationException {
+    double[] resourcePercentage = new double[ResourceType.values().length];
+    String[] strings = val.split(",");
+    if (strings.length == 1) {
+      double percentage = findPercentage(strings[0], "");
+      for (int i = 0; i < ResourceType.values().length; i++) {
+        resourcePercentage[i] = percentage/100;
+      }
+    } else {
+      resourcePercentage[0] = findPercentage(val, "memory")/100;
+      resourcePercentage[1] = findPercentage(val, "cpu")/100;
+    }
+    return resourcePercentage;
+  }
+
+  private static double findPercentage(String val, String units)
+    throws AllocationConfigurationException {
+    final Pattern pattern =
+        Pattern.compile("((\\d+)(\\.\\d*)?)\\s*%\\s*" + units);
+    Matcher matcher = pattern.matcher(val);
+    if (!matcher.find()) {
+      if (units.equals("")) {
+        throw new AllocationConfigurationException("Invalid percentage: " +
+            val);
+      } else {
+        throw new AllocationConfigurationException("Missing resource: " +
+            units);
+      }
+    }
+    return Double.parseDouble(matcher.group(1));
   }
 
   public long getUpdateInterval() {
@@ -307,8 +349,8 @@ public class FairSchedulerConfiguration extends Configuration {
   }
   
   private static int findResource(String val, String units)
-    throws AllocationConfigurationException {
-    Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
+      throws AllocationConfigurationException {
+    final Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
     Matcher matcher = pattern.matcher(val);
     if (!matcher.find()) {
       throw new AllocationConfigurationException("Missing resource: " + units);
