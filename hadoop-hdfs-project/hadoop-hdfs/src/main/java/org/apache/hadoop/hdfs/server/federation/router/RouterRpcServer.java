@@ -1091,6 +1091,19 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
+    return getDatanodeReport(type, 0);
+  }
+
+  /**
+   * Get the datanode report with a timeout.
+   * @param type Type of the datanode.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return List of datanodes.
+   * @throws IOException If it cannot get the report.
+   */
+  public DatanodeInfo[] getDatanodeReport(
+      DatanodeReportType type, long timeOutMs) throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
 
     Map<String, DatanodeInfo> datanodesMap = new LinkedHashMap<>();
     RemoteMethod method = new RemoteMethod("getDatanodeReport",
@@ -1098,7 +1111,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
 
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, Object> results =
-        rpcClient.invokeConcurrent(nss, method, true, false);
+        rpcClient.invokeConcurrent(nss, method, true, false, timeOutMs);
     for (Entry<FederationNamespaceInfo, Object> entry : results.entrySet()) {
       FederationNamespaceInfo ns = entry.getKey();
       DatanodeInfo[] result = (DatanodeInfo[]) entry.getValue();

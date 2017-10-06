@@ -33,6 +33,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_CACHE_TIME_TO_LIVE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HEARTBEAT_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY;
@@ -134,6 +137,7 @@ public class RouterDFSCluster {
     private String nameserviceId;
     private String namenodeId;
     private int rpcPort;
+    private int httpPort;
     private DFSClient client;
     private Configuration conf;
     private RouterClient adminClient;
@@ -164,6 +168,10 @@ public class RouterDFSCluster {
       return this.rpcPort;
     }
 
+    public int getHttpPort() {
+      return this.httpPort;
+    }
+
     public FileContext getFileContext() {
       return this.fileContext;
     }
@@ -182,6 +190,10 @@ public class RouterDFSCluster {
         } catch (UnsupportedFileSystemException e) {
           this.fileContext = null;
         }
+      }
+      InetSocketAddress httpAddress = router.getHttpServerAddress();
+      if (httpAddress != null) {
+        this.httpPort = httpAddress.getPort();
       }
     }
 
@@ -399,14 +411,19 @@ public class RouterDFSCluster {
 
         conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + "." + suffix,
             "127.0.0.1:" + context.rpcPort);
-        conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + suffix,
-            "127.0.0.1:" + context.servicePort);
         conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY + "." + suffix,
             "127.0.0.1:" + context.httpPort);
         conf.set(DFS_NAMENODE_RPC_BIND_HOST_KEY + "." + suffix,
             "0.0.0.0");
-        conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY + "." + suffix,
-            "0.0.0.0");
+
+        // If the service port is enabled by default, we need to set them up
+        boolean servicePortEnabled = false;
+        if (servicePortEnabled) {
+          conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + suffix,
+              "127.0.0.1:" + context.servicePort);
+          conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY + "." + suffix,
+              "0.0.0.0");
+        }
       }
     }
 
@@ -446,6 +463,10 @@ public class RouterDFSCluster {
 
     conf.set(DFS_ROUTER_ADMIN_ADDRESS_KEY, "127.0.0.1:0");
     conf.set(DFS_ROUTER_ADMIN_BIND_HOST_KEY, "0.0.0.0");
+
+    conf.set(DFS_ROUTER_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFS_ROUTER_HTTPS_ADDRESS_KEY, "127.0.0.1:0");
+    conf.set(DFS_ROUTER_HTTP_BIND_HOST_KEY, "0.0.0.0");
 
     conf.set(DFS_ROUTER_DEFAULT_NAMESERVICE, nameservices.get(0));
     conf.setLong(DFS_ROUTER_HEARTBEAT_INTERVAL_MS, heartbeatInterval);

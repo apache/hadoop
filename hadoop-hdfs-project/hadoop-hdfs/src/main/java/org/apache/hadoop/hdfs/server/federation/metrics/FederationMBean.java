@@ -201,4 +201,11 @@ public interface FederationMBean {
    * @return Host and port of the router.
    */
   String getBlockPoolId();
+
+  /**
+   * Get the current state of the router.
+   *
+   * @return String label for the current router state.
+   */
+  String getRouterStatus();
 }
