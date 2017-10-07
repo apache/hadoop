@@ -36,7 +36,7 @@ public class OzoneQuota {
   private int size;
 
   /** Quota Units.*/
-  public enum Units {UNDEFINED, BYTES, MB, GB, TB}
+  public enum Units {UNDEFINED, BYTES, KB, MB, GB, TB}
 
   /**
    * Returns size.
