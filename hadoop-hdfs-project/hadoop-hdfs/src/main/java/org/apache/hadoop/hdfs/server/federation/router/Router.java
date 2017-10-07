@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.newActiveNamenodeResolver;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.newFileSubclusterResolver;
-import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -35,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -44,8 +42,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
-import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,12 +105,6 @@ public class Router extends CompositeService {
   /** JVM pauses (GC and others). */
   private JvmPauseMonitor pauseMonitor;
 
-
-  /** Usage string for help message. */
-  private static final String USAGE = "Usage: java Router";
-
-  /** Priority of the Router shutdown hook. */
-  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
 
   /////////////////////////////////////////////////////////
@@ -249,35 +239,6 @@ public class Router extends CompositeService {
       }
     }.start();
   }
-
-  /**
-   * Main run loop for the router.
-   *
-   * @param argv parameters.
-   */
-  public static void main(String[] argv) {
-    if (DFSUtil.parseHelpArgument(argv, Router.USAGE, System.out, true)) {
-      System.exit(0);
-    }
-
-    try {
-      StringUtils.startupShutdownMessage(Router.class, argv, LOG);
-
-      Router router = new Router();
-
-      ShutdownHookManager.get().addShutdownHook(
-          new CompositeServiceShutdownHook(router), SHUTDOWN_HOOK_PRIORITY);
-
-      Configuration conf = new HdfsConfiguration();
-      router.init(conf);
-      router.start();
-    } catch (Throwable e) {
-      LOG.error("Failed to start router", e);
-      terminate(1, e);
-    }
-  }
-
-
 
   /////////////////////////////////////////////////////////
   // RPC Server

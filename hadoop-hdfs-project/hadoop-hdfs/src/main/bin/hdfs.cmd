@@ -59,7 +59,7 @@ if "%1" == "--loglevel" (
     )
   )
 
-  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto router federation debug
+  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto dfsrouter dfsrouteradmin debug
   for %%i in ( %hdfscommands% ) do (
     if %hdfs-command% == %%i set hdfscommand=true
   )
@@ -179,12 +179,12 @@ goto :eof
   set CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
   goto :eof
 
-:router
-  set CLASS=org.apache.hadoop.hdfs.server.federation.router.Router
+:dfsrouter
+  set CLASS=org.apache.hadoop.hdfs.server.federation.router.DFSRouter
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_ROUTER_OPTS%
   goto :eof
 
-:federation
+:dfsrouteradmin
   set CLASS=org.apache.hadoop.hdfs.tools.federation.RouterAdmin
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_ROUTER_OPTS%
   goto :eof
@@ -229,7 +229,8 @@ goto :eof
   @echo   secondarynamenode    run the DFS secondary namenode
   @echo   namenode             run the DFS namenode
   @echo   journalnode          run the DFS journalnode
-  @echo   router               run the DFS router
+  @echo   dfsrouter            run the DFS router
+  @echo   dfsrouteradmin       manage Router-based federation
   @echo   zkfc                 run the ZK Failover Controller daemon
   @echo   datanode             run a DFS datanode
   @echo   dfsadmin             run a DFS admin client
