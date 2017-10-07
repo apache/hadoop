@@ -39,10 +39,11 @@ function hadoop_usage
   hadoop_add_subcommand "debug" admin "run a Debug Admin to execute HDFS debug commands"
   hadoop_add_subcommand "dfs" client "run a filesystem command on the file system"
   hadoop_add_subcommand "dfsadmin" admin "run a DFS admin client"
+  hadoop_add_subcommand "dfsrouter" daemon "run the DFS router"
+  hadoop_add_subcommand "dfsrouteradmin" admin "manage Router-based federation"
   hadoop_add_subcommand "diskbalancer" daemon "Distributes data evenly among disks on a given node"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
-  hadoop_add_subcommand "federation" admin "manage Router-based federation"
   hadoop_add_subcommand "fetchdt" client "fetch a delegation token from the NameNode"
   hadoop_add_subcommand "fsck" admin "run a DFS filesystem checking utility"
   hadoop_add_subcommand "getconf" client "get config values from configuration"
@@ -58,7 +59,6 @@ function hadoop_usage
   hadoop_add_subcommand "oiv" admin "apply the offline fsimage viewer to an fsimage"
   hadoop_add_subcommand "oiv_legacy" admin "apply the offline fsimage viewer to a legacy fsimage"
   hadoop_add_subcommand "portmap" daemon "run a portmap service"
-  hadoop_add_subcommand "router" daemon "run the DFS router"
   hadoop_add_subcommand "secondarynamenode" daemon "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" client "diff two snapshots of a directory or diff the current directory contents with a snapshot"
   hadoop_add_subcommand "storagepolicies" admin "list/get/set block storage policies"
@@ -106,6 +106,13 @@ function hdfscmd_case
     ;;
     dfsadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSAdmin
+    ;;
+    dfsrouter)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.federation.router.DFSRouter'
+    ;;
+    dfsrouteradmin)
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.federation.RouterAdmin'
     ;;
     diskbalancer)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DiskBalancerCLI
@@ -177,13 +184,6 @@ function hdfscmd_case
     portmap)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
-    ;;
-    router)
-      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.federation.router.Router'
-    ;;
-    federation)
-      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.federation.RouterAdmin'
     ;;
     secondarynamenode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
