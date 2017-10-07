@@ -247,7 +247,8 @@ public class OzoneVolume {
     public boolean hasNext() {
       if(!currentIterator.hasNext()) {
         currentIterator = getNextListOfBuckets(
-            currentValue.getName()).iterator();
+            currentValue != null ? currentValue.getName() : null)
+            .iterator();
       }
       return currentIterator.hasNext();
     }

@@ -174,7 +174,8 @@ public class ObjectStore {
     public boolean hasNext() {
       if(!currentIterator.hasNext()) {
         currentIterator = getNextListOfVolumes(
-            currentValue.getName()).iterator();
+            currentValue != null ? currentValue.getName() : null)
+            .iterator();
       }
       return currentIterator.hasNext();
     }

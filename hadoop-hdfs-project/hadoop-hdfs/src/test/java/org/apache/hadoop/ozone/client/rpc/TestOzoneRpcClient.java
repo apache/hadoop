@@ -409,7 +409,7 @@ public class TestOzoneRpcClient {
   }
 
   @Test
-  public void listVolumeTest() throws IOException, OzoneException {
+  public void testListVolume() throws IOException, OzoneException {
     String volBase = "vol-" + RandomStringUtils.randomNumeric(3);
     //Create 10 volume vol-<random>-a-0-<random> to vol-<random>-a-9-<random>
     String volBaseNameA = volBase + "-a-";
@@ -448,7 +448,7 @@ public class TestOzoneRpcClient {
   }
 
   @Test
-  public void listBucketTest()
+  public void testListBucket()
       throws IOException, OzoneException {
     String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
     String volumeB = "vol-b-" + RandomStringUtils.randomNumeric(5);
@@ -522,7 +522,19 @@ public class TestOzoneRpcClient {
   }
 
   @Test
-  public void listKeyTest()
+  public void testListBucketsOnEmptyVolume()
+      throws IOException, OzoneException {
+    String volume = "vol-" + RandomStringUtils.randomNumeric(5);
+    store.createVolume(volume);
+    OzoneVolume vol = store.getVolume(volume);
+    Iterator<OzoneBucket> buckets = vol.listBuckets("");
+    while(buckets.hasNext()) {
+      Assert.fail();
+    }
+  }
+
+  @Test
+  public void testListKey()
       throws IOException, OzoneException {
     String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
     String volumeB = "vol-b-" + RandomStringUtils.randomNumeric(5);
@@ -654,6 +666,21 @@ public class TestOzoneRpcClient {
           .startsWith("key-b-" + i + "-"));
     }
     Assert.assertFalse(volABucketBIter.hasNext());
+  }
+
+  @Test
+  public void testListKeyOnEmptyBucket()
+      throws IOException, OzoneException {
+    String volume = "vol-" + RandomStringUtils.randomNumeric(5);
+    String bucket = "buc-" + RandomStringUtils.randomNumeric(5);
+    store.createVolume(volume);
+    OzoneVolume vol = store.getVolume(volume);
+    vol.createBucket(bucket);
+    OzoneBucket buc = vol.getBucket(bucket);
+    Iterator<OzoneKey> keys = buc.listKeys("");
+    while(keys.hasNext()) {
+      Assert.fail();
+    }
   }
 
   /**
