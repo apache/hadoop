@@ -164,11 +164,11 @@ The rest of the options are documented in [hdfs-default.xml](./hdfs-default.xml)
 
 Once the Router is configured, it can be started:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs start router
+    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs start dfsrouter
 
 And to stop it:
 
-    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs stop router
+    [hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --script $HADOOP_PREFIX/bin/hdfs stop dfsrouter
 
 ### Mount table management
 
@@ -179,10 +179,10 @@ For example, if we to mount `/data/app1` in the federated namespace, it is recom
 The federation admin tool supports managing the mount table.
 For example, to create three mount points and list them:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /tmp ns1 /tmp
-    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /data/app1 ns2 /data/app1
-    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -add /data/app2 ns3 /data/app2
-    [hdfs]$ $HADOOP_HOME/bin/hdfs federation -ls
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /tmp ns1 /tmp
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data/app1 ns2 /data/app1
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data/app2 ns3 /data/app2
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -ls
 
 If a mount point is not set, the Router will map it to the default namespace `dfs.federation.router.default.nameserviceId`.
 
