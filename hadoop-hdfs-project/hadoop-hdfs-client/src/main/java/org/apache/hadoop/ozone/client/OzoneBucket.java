@@ -277,7 +277,8 @@ public class OzoneBucket {
     public boolean hasNext() {
       if(!currentIterator.hasNext()) {
         currentIterator = getNextListOfKeys(
-            currentValue.getName()).iterator();
+            currentValue != null ? currentValue.getName() : null)
+            .iterator();
       }
       return currentIterator.hasNext();
     }
