@@ -53,7 +53,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.function.BiConsumer;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
@@ -129,8 +128,7 @@ public class TestContainerServer {
     conf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR, dir);
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
-    return XceiverServerRatis.newXceiverServerRatis(UUID.randomUUID()
-            .toString(), conf, dispatcher);
+    return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher);
   }
 
   static void initXceiverServerRatis(

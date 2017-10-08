@@ -56,7 +56,8 @@ public class TestCorona {
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = new MiniOzoneCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+        .numDataNodes(5).build();
   }
 
   /**
@@ -115,4 +116,23 @@ public class TestCorona {
     System.setOut(originalStream);
   }
 
+  @Test
+  public void ratisTest() throws Exception {
+    List<String> args = new ArrayList<>();
+    args.add("-numOfVolumes");
+    args.add("1");
+    args.add("-numOfBuckets");
+    args.add("1");
+    args.add("-numOfKeys");
+    args.add("10");
+    args.add("-ratis");
+    args.add("3");
+    Corona corona = new Corona(conf);
+    int res = ToolRunner.run(conf, corona,
+        args.toArray(new String[0]));
+    Assert.assertEquals(1, corona.getNumberOfVolumesCreated());
+    Assert.assertEquals(1, corona.getNumberOfBucketsCreated());
+    Assert.assertEquals(10, corona.getNumberOfKeysAdded());
+    Assert.assertEquals(0, res);
+  }
 }

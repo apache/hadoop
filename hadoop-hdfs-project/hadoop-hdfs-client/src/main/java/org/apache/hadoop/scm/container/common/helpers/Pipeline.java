@@ -299,6 +299,9 @@ public class Pipeline {
     if (getType() != null) {
       b.append(" type:").append(getType().toString());
     }
+    if (getFactor() != null) {
+      b.append(" factor:").append(getFactor().toString());
+    }
     if (getLifeCycleState() != null) {
       b.append(" State:").append(getLifeCycleState().toString());
     }

@@ -68,7 +68,8 @@ public class PipelineSelector {
         new StandaloneManagerImpl(this.nodeManager, placementPolicy,
             containerSize);
     this.ratisManager =
-        new RatisManagerImpl(this.nodeManager, placementPolicy, containerSize);
+        new RatisManagerImpl(this.nodeManager, placementPolicy, containerSize,
+            conf);
   }
 
   /**

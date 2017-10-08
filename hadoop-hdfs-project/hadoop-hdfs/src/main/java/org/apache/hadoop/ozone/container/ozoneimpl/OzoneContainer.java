@@ -116,8 +116,8 @@ public class OzoneContainer {
 
     server = new XceiverServerSpi[]{
         new XceiverServer(this.ozoneConfig, this.dispatcher),
-      XceiverServerRatis.newXceiverServerRatis(datanodeID
-          .getDatanodeUuid().toString(), ozoneConfig, dispatcher)
+      XceiverServerRatis
+          .newXceiverServerRatis(datanodeID, ozoneConfig, dispatcher)
     };
   }
 

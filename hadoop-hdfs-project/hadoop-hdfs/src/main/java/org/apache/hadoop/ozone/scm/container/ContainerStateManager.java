@@ -274,7 +274,7 @@ public class ContainerStateManager {
     writeLock.lock();
     try {
       ContainerKey key = new ContainerKey(owner, type, replicationFactor,
-          info.getState());
+          blockInfo.getState());
       PriorityQueue<BlockContainerInfo> queue = containers.get(key);
       Preconditions.checkNotNull(queue);
       queue.add(blockInfo);
