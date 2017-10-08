@@ -1602,6 +1602,9 @@ public class PBHelperClient {
         case HAS_EC:
           f.add(HdfsFileStatus.Flags.HAS_EC);
           break;
+        case SNAPSHOT_ENABLED:
+          f.add(HdfsFileStatus.Flags.SNAPSHOT_ENABLED);
+          break;
         default:
           // ignore unknown
           break;
@@ -2155,6 +2158,8 @@ public class PBHelperClient {
     int flags = fs.hasAcl()   ? HdfsFileStatusProto.Flags.HAS_ACL_VALUE   : 0;
     flags |= fs.isEncrypted() ? HdfsFileStatusProto.Flags.HAS_CRYPT_VALUE : 0;
     flags |= fs.isErasureCoded() ? HdfsFileStatusProto.Flags.HAS_EC_VALUE : 0;
+    flags |= fs.isSnapshotEnabled() ? HdfsFileStatusProto.Flags
+        .SNAPSHOT_ENABLED_VALUE : 0;
     builder.setFlags(flags);
     return builder.build();
   }

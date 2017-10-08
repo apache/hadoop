@@ -20,30 +20,15 @@
 #include "configuration.h"
 #include "container-executor.h"
 #include "util.h"
+#include "get_executable.h"
 #include "modules/gpu/gpu-module.h"
 #include "modules/cgroups/cgroups-operations.h"
 
 #include <errno.h>
 #include <grp.h>
-#include <limits.h>
 #include <unistd.h>
-#include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-
-#define CONF_FILENAME "container-executor.cfg"
-
-// When building as part of a Maven build this value gets defined by using
-// container-executor.conf.dir property. See:
-//   hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/pom.xml
-// for details.
-// NOTE: if this ends up being a relative path it gets resolved relative to
-//       the location of the container-executor binary itself, not getwd(3)
-#ifndef HADOOP_CONF_DIR
-  #error HADOOP_CONF_DIR must be defined
-#endif
 
 static void display_usage(FILE *stream) {
   fprintf(stream,
@@ -145,25 +130,21 @@ of whether an explicit checksetup operation is requested. */
 static void assert_valid_setup(char *argv0) {
   int ret;
   char *executable_file = get_executable(argv0);
-  if (!executable_file) {
-    fprintf(ERRORFILE,"realpath of executable: %s\n",
-      errno != 0 ? strerror(errno) : "unknown");
+  if (!executable_file || executable_file[0] == 0) {
+    fprintf(ERRORFILE, "realpath of executable: %s\n",
+            errno != 0 ? strerror(errno) : "unknown");
     flush_and_close_log_files();
-    exit(-1);
+    exit(INVALID_CONFIG_FILE);
   }
 
-  char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
-  char *conf_file = resolve_config_path(orig_conf_file, executable_file);
+  char *conf_file = get_config_path(argv0);
 
   if (conf_file == NULL) {
-    free(executable_file);
-    fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
 
   if (check_configuration_permissions(conf_file) != 0) {
-    free(executable_file);
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }

@@ -463,12 +463,28 @@ The service is expected to return a response in JSON format for GETDELEGATIONTOK
 
 When authorization is enabled, only the users listed in the following configuration
 are allowed to change the owning user of files/folders in WASB. The configuration
-value takes a comma seperated list of user names who are allowed to perform chown.
+value takes a comma separated list of user names who are allowed to perform chown.
 
 ```xml
 <property>
   <name>fs.azure.chown.allowed.userlist</name>
   <value>user1,user2</value>
+</property>
+```
+### chmod behaviour when authorization is enabled in WASB
+
+When authorization is enabled, only the owner and the users listed in the
+following configurations are allowed to change the permissions of files/folders in WASB.
+The configuration value takes a comma separated list of user names who are allowed to perform chmod.
+
+```xml
+<property>
+  <name>fs.azure.daemon.userlist</name>
+  <value>user1,user2</value>
+</property>
+<property>
+  <name>fs.azure.chmod.allowed.userlist</name>
+  <value>userA,userB</value>
 </property>
 ```
 

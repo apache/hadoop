@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -42,14 +40,19 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -61,6 +64,10 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class OpportunisticContainerAllocator {
 
+  private static final int NODE_LOCAL_LOOP = 0;
+  private static final int RACK_LOCAL_LOOP = 1;
+  private static final int OFF_SWITCH_LOOP = 2;
+
   /**
    * This class encapsulates application specific parameters used to build a
    * Container.
@@ -70,6 +77,7 @@ public class OpportunisticContainerAllocator {
     private Resource minResource;
     private Resource incrementResource;
     private int containerTokenExpiryInterval;
+    private int maxAllocationsPerSchedulerKeyPerRound = 1;
 
     /**
      * Return Max Resource.
@@ -135,6 +143,24 @@ public class OpportunisticContainerAllocator {
         int containerTokenExpiryInterval) {
       this.containerTokenExpiryInterval = containerTokenExpiryInterval;
     }
+
+    /**
+     * Get the Max Allocations per Scheduler Key per allocation round.
+     * @return maxAllocationsPerSchedulerKeyPerRound.
+     */
+    public int getMaxAllocationsPerSchedulerKeyPerRound() {
+      return maxAllocationsPerSchedulerKeyPerRound;
+    }
+
+    /**
+     * Set the Max Allocations per Scheduler Key per allocation round.
+     * @param maxAllocationsPerSchedulerKeyPerRound val.
+     */
+    public void setMaxAllocationsPerSchedulerKeyPerRound(
+        int maxAllocationsPerSchedulerKeyPerRound) {
+      this.maxAllocationsPerSchedulerKeyPerRound =
+          maxAllocationsPerSchedulerKeyPerRound;
+    }
   }
 
   /**
@@ -180,14 +206,80 @@ public class OpportunisticContainerAllocator {
     }
   }
 
-  private static final Log LOG =
-      LogFactory.getLog(OpportunisticContainerAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OpportunisticContainerAllocator.class);
 
   private static final ResourceCalculator RESOURCE_CALCULATOR =
       new DominantResourceCalculator();
 
   private final BaseContainerTokenSecretManager tokenSecretManager;
 
+  static class Allocation {
+    private final Container container;
+    private final String resourceName;
+
+    Allocation(Container container, String resourceName) {
+      this.container = container;
+      this.resourceName = resourceName;
+    }
+
+    Container getContainer() {
+      return container;
+    }
+
+    String getResourceName() {
+      return resourceName;
+    }
+  }
+
+  static class EnrichedResourceRequest {
+    private final Map<String, AtomicInteger> nodeLocations = new HashMap<>();
+    private final Map<String, AtomicInteger> rackLocations = new HashMap<>();
+    private final ResourceRequest request;
+
+    EnrichedResourceRequest(ResourceRequest request) {
+      this.request = request;
+    }
+
+    ResourceRequest getRequest() {
+      return request;
+    }
+
+    void addLocation(String location, int count) {
+      Map<String, AtomicInteger> m = rackLocations;
+      if (!location.startsWith("/")) {
+        m = nodeLocations;
+      }
+      if (count == 0) {
+        m.remove(location);
+      } else {
+        m.put(location, new AtomicInteger(count));
+      }
+    }
+
+    void removeLocation(String location) {
+      Map<String, AtomicInteger> m = rackLocations;
+      AtomicInteger count = m.get(location);
+      if (count == null) {
+        m = nodeLocations;
+        count = m.get(location);
+      }
+
+      if (count != null) {
+        if (count.decrementAndGet() == 0) {
+          m.remove(location);
+        }
+      }
+    }
+
+    Set<String> getNodeLocations() {
+      return nodeLocations.keySet();
+    }
+
+    Set<String> getRackLocations() {
+      return rackLocations.keySet();
+    }
+  }
   /**
    * Create a new Opportunistic Container Allocator.
    * @param tokenSecretManager TokenSecretManager
@@ -223,44 +315,61 @@ public class OpportunisticContainerAllocator {
     // Add OPPORTUNISTIC requests to the outstanding ones.
     opportContext.addToOutstandingReqs(oppResourceReqs);
 
-    // Satisfy the outstanding OPPORTUNISTIC requests.
+    Set<String> nodeBlackList = new HashSet<>(opportContext.getBlacklist());
     List<Container> allocatedContainers = new ArrayList<>();
-    for (SchedulerRequestKey schedulerKey :
-        opportContext.getOutstandingOpReqs().descendingKeySet()) {
-      // Allocated containers :
-      //  Key = Requested Capability,
-      //  Value = List of Containers of given cap (the actual container size
-      //          might be different than what is requested, which is why
-      //          we need the requested capability (key) to match against
-      //          the outstanding reqs)
-      Map<Resource, List<Container>> allocated = allocate(rmIdentifier,
-          opportContext, schedulerKey, applicationAttemptId, appSubmitter);
-      for (Map.Entry<Resource, List<Container>> e : allocated.entrySet()) {
-        opportContext.matchAllocationToOutstandingRequest(
-            e.getKey(), e.getValue());
-        allocatedContainers.addAll(e.getValue());
+
+    // Satisfy the outstanding OPPORTUNISTIC requests.
+    boolean continueLoop = true;
+    while (continueLoop) {
+      continueLoop = false;
+      List<Map<Resource, List<Allocation>>> allocations = new ArrayList<>();
+      for (SchedulerRequestKey schedulerKey :
+          opportContext.getOutstandingOpReqs().descendingKeySet()) {
+        // Allocated containers :
+        //  Key = Requested Capability,
+        //  Value = List of Containers of given cap (the actual container size
+        //          might be different than what is requested, which is why
+        //          we need the requested capability (key) to match against
+        //          the outstanding reqs)
+        Map<Resource, List<Allocation>> allocation = allocate(
+            rmIdentifier, opportContext, schedulerKey, applicationAttemptId,
+            appSubmitter, nodeBlackList);
+        if (allocation.size() > 0) {
+          allocations.add(allocation);
+          continueLoop = true;
+        }
+      }
+      for (Map<Resource, List<Allocation>> allocation : allocations) {
+        for (Map.Entry<Resource, List<Allocation>> e : allocation.entrySet()) {
+          opportContext.matchAllocationToOutstandingRequest(
+              e.getKey(), e.getValue());
+          for (Allocation alloc : e.getValue()) {
+            allocatedContainers.add(alloc.getContainer());
+          }
+        }
       }
     }
 
     return allocatedContainers;
   }
 
-  private Map<Resource, List<Container>> allocate(long rmIdentifier,
+  private Map<Resource, List<Allocation>> allocate(long rmIdentifier,
       OpportunisticContainerContext appContext, SchedulerRequestKey schedKey,
-      ApplicationAttemptId appAttId, String userName) throws YarnException {
-    Map<Resource, List<Container>> containers = new HashMap<>();
-    for (ResourceRequest anyAsk :
+      ApplicationAttemptId appAttId, String userName, Set<String> blackList)
+      throws YarnException {
+    Map<Resource, List<Allocation>> containers = new HashMap<>();
+    for (EnrichedResourceRequest enrichedAsk :
         appContext.getOutstandingOpReqs().get(schedKey).values()) {
       allocateContainersInternal(rmIdentifier, appContext.getAppParams(),
-          appContext.getContainerIdGenerator(), appContext.getBlacklist(),
-          appAttId, appContext.getNodeMap(), userName, containers, anyAsk);
+          appContext.getContainerIdGenerator(), blackList, appAttId,
+          appContext.getNodeMap(), userName, containers, enrichedAsk);
+      ResourceRequest anyAsk = enrichedAsk.getRequest();
       if (!containers.isEmpty()) {
-        LOG.info("Opportunistic allocation requested for ["
-            + "priority=" + anyAsk.getPriority()
-            + ", allocationRequestId=" + anyAsk.getAllocationRequestId()
-            + ", num_containers=" + anyAsk.getNumContainers()
-            + ", capability=" + anyAsk.getCapability() + "]"
-            + " allocated = " + containers.keySet());
+        LOG.info("Opportunistic allocation requested for [priority={}, "
+            + "allocationRequestId={}, num_containers={}, capability={}] "
+            + "allocated = {}", anyAsk.getPriority(),
+            anyAsk.getAllocationRequestId(), anyAsk.getNumContainers(),
+            anyAsk.getCapability(), containers.keySet());
       }
     }
     return containers;
@@ -270,44 +379,162 @@ public class OpportunisticContainerAllocator {
       AllocationParams appParams, ContainerIdGenerator idCounter,
       Set<String> blacklist, ApplicationAttemptId id,
       Map<String, RemoteNode> allNodes, String userName,
-      Map<Resource, List<Container>> containers, ResourceRequest anyAsk)
+      Map<Resource, List<Allocation>> allocations,
+      EnrichedResourceRequest enrichedAsk)
       throws YarnException {
-    int toAllocate = anyAsk.getNumContainers()
-        - (containers.isEmpty() ? 0 :
-            containers.get(anyAsk.getCapability()).size());
-
-    List<RemoteNode> nodesForScheduling = new ArrayList<>();
-    for (Entry<String, RemoteNode> nodeEntry : allNodes.entrySet()) {
-      // Do not use blacklisted nodes for scheduling.
-      if (blacklist.contains(nodeEntry.getKey())) {
-        continue;
-      }
-      nodesForScheduling.add(nodeEntry.getValue());
-    }
-    if (nodesForScheduling.isEmpty()) {
-      LOG.warn("No nodes available for allocating opportunistic containers. [" +
-          "allNodes=" + allNodes + ", " +
-          "blacklist=" + blacklist + "]");
+    if (allNodes.size() == 0) {
+      LOG.info("No nodes currently available to " +
+          "allocate OPPORTUNISTIC containers.");
       return;
     }
+    ResourceRequest anyAsk = enrichedAsk.getRequest();
+    int toAllocate = anyAsk.getNumContainers()
+        - (allocations.isEmpty() ? 0 :
+            allocations.get(anyAsk.getCapability()).size());
+    toAllocate = Math.min(toAllocate,
+        appParams.getMaxAllocationsPerSchedulerKeyPerRound());
     int numAllocated = 0;
-    int nextNodeToSchedule = 0;
-    for (int numCont = 0; numCont < toAllocate; numCont++) {
-      nextNodeToSchedule++;
-      nextNodeToSchedule %= nodesForScheduling.size();
-      RemoteNode node = nodesForScheduling.get(nextNodeToSchedule);
-      Container container = buildContainer(rmIdentifier, appParams, idCounter,
-          anyAsk, id, userName, node);
-      List<Container> cList = containers.get(anyAsk.getCapability());
-      if (cList == null) {
-        cList = new ArrayList<>();
-        containers.put(anyAsk.getCapability(), cList);
-      }
-      cList.add(container);
-      numAllocated++;
-      LOG.info("Allocated [" + container.getId() + "] as opportunistic.");
+    // Node Candidates are selected as follows:
+    // * Node local candidates selected in loop == 0
+    // * Rack local candidates selected in loop == 1
+    // * From loop == 2 onwards, we revert to off switch allocations.
+    int loopIndex = OFF_SWITCH_LOOP;
+    if (enrichedAsk.getNodeLocations().size() > 0) {
+      loopIndex = NODE_LOCAL_LOOP;
     }
-    LOG.info("Allocated " + numAllocated + " opportunistic containers.");
+    while (numAllocated < toAllocate) {
+      Collection<RemoteNode> nodeCandidates =
+          findNodeCandidates(loopIndex, allNodes, blacklist, enrichedAsk);
+      for (RemoteNode rNode : nodeCandidates) {
+        String rNodeHost = rNode.getNodeId().getHost();
+        // Ignore black list
+        if (blacklist.contains(rNodeHost)) {
+          LOG.info("Nodes for scheduling has a blacklisted node" +
+              " [" + rNodeHost + "]..");
+          continue;
+        }
+        String location = ResourceRequest.ANY;
+        if (loopIndex == NODE_LOCAL_LOOP) {
+          if (enrichedAsk.getNodeLocations().contains(rNodeHost)) {
+            location = rNodeHost;
+          } else {
+            continue;
+          }
+        }
+        if (loopIndex == RACK_LOCAL_LOOP) {
+          if (enrichedAsk.getRackLocations().contains(rNode.getRackName())) {
+            location = rNode.getRackName();
+          } else {
+            continue;
+          }
+        }
+        Container container = createContainer(rmIdentifier, appParams,
+            idCounter, id, userName, allocations, location,
+            anyAsk, rNode);
+        numAllocated++;
+        // Try to spread the allocations across the nodes.
+        // But don't add if it is a node local request.
+        if (loopIndex != NODE_LOCAL_LOOP) {
+          blacklist.add(rNode.getNodeId().getHost());
+        }
+        LOG.info("Allocated [" + container.getId() + "] as opportunistic at " +
+            "location [" + location + "]");
+        if (numAllocated >= toAllocate) {
+          break;
+        }
+      }
+      if (loopIndex == NODE_LOCAL_LOOP &&
+          enrichedAsk.getRackLocations().size() > 0) {
+        loopIndex = RACK_LOCAL_LOOP;
+      } else {
+        loopIndex++;
+      }
+      // Handle case where there are no nodes remaining after blacklist is
+      // considered.
+      if (loopIndex > OFF_SWITCH_LOOP && numAllocated == 0) {
+        LOG.warn("Unable to allocate any opportunistic containers.");
+        break;
+      }
+    }
+  }
+
+  private Collection<RemoteNode> findNodeCandidates(int loopIndex,
+      Map<String, RemoteNode> allNodes, Set<String> blackList,
+      EnrichedResourceRequest enrichedRR) {
+    if (loopIndex > 1) {
+      return allNodes.values();
+    } else {
+      LinkedList<RemoteNode> retList = new LinkedList<>();
+      int numContainers = enrichedRR.getRequest().getNumContainers();
+      while (numContainers > 0) {
+        if (loopIndex == 0) {
+          // Node local candidates
+          numContainers = collectNodeLocalCandidates(
+              allNodes, enrichedRR, retList, numContainers);
+        } else {
+          // Rack local candidates
+          numContainers = collectRackLocalCandidates(
+              allNodes, enrichedRR, retList, blackList, numContainers);
+        }
+        if (numContainers == enrichedRR.getRequest().getNumContainers()) {
+          // If there is no change in numContainers, then there is no point
+          // in looping again.
+          break;
+        }
+      }
+      return retList;
+    }
+  }
+
+  private int collectRackLocalCandidates(Map<String, RemoteNode> allNodes,
+      EnrichedResourceRequest enrichedRR, LinkedList<RemoteNode> retList,
+      Set<String> blackList, int numContainers) {
+    for (RemoteNode rNode : allNodes.values()) {
+      if (enrichedRR.getRackLocations().contains(rNode.getRackName())) {
+        if (blackList.contains(rNode.getNodeId().getHost())) {
+          retList.addLast(rNode);
+        } else {
+          retList.addFirst(rNode);
+          numContainers--;
+        }
+      }
+      if (numContainers == 0) {
+        break;
+      }
+    }
+    return numContainers;
+  }
+
+  private int collectNodeLocalCandidates(Map<String, RemoteNode> allNodes,
+      EnrichedResourceRequest enrichedRR, List<RemoteNode> retList,
+      int numContainers) {
+    for (String nodeName : enrichedRR.getNodeLocations()) {
+      RemoteNode remoteNode = allNodes.get(nodeName);
+      if (remoteNode != null) {
+        retList.add(remoteNode);
+        numContainers--;
+      }
+      if (numContainers == 0) {
+        break;
+      }
+    }
+    return numContainers;
+  }
+
+  private Container createContainer(long rmIdentifier,
+      AllocationParams appParams, ContainerIdGenerator idCounter,
+      ApplicationAttemptId id, String userName,
+      Map<Resource, List<Allocation>> allocations, String location,
+      ResourceRequest anyAsk, RemoteNode rNode) throws YarnException {
+    Container container = buildContainer(rmIdentifier, appParams,
+        idCounter, anyAsk, id, userName, rNode);
+    List<Allocation> allocList = allocations.get(anyAsk.getCapability());
+    if (allocList == null) {
+      allocList = new ArrayList<>();
+      allocations.put(anyAsk.getCapability(), allocList);
+    }
+    allocList.add(new Allocation(container, location));
+    return container;
   }
 
   private Container buildContainer(long rmIdentifier,

@@ -350,10 +350,10 @@ public class LogCLIHelpers implements Configurable {
   }
 
   @Private
-  public Set<String> listContainerLogs(ContainerLogsRequest options)
-      throws IOException {
+  public Set<ContainerLogFileInfo> listContainerLogs(
+      ContainerLogsRequest options) throws IOException {
     List<ContainerLogMeta> containersLogMeta;
-    Set<String> logTypes = new HashSet<String>();
+    Set<ContainerLogFileInfo> logTypes = new HashSet<ContainerLogFileInfo>();
     try {
       containersLogMeta = getFileController(options.getAppId(),
           options.getAppOwner()).readAggregatedLogsMeta(
@@ -364,7 +364,7 @@ public class LogCLIHelpers implements Configurable {
     }
     for (ContainerLogMeta logMeta: containersLogMeta) {
       for (ContainerLogFileInfo fileInfo : logMeta.getContainerLogMeta()) {
-        logTypes.add(fileInfo.getFileName());
+        logTypes.add(fileInfo);
       }
     }
     return logTypes;

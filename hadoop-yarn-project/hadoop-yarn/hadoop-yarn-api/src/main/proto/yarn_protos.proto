@@ -109,8 +109,37 @@ enum ContainerStateProto {
   C_NEW = 1;
   C_RUNNING = 2;
   C_COMPLETE = 3;
-  C_SCHEDULED = 4;
-  C_PAUSED = 5;
+}
+
+enum ContainerSubStateProto {
+ /**
+  * NEW, LOCALIZING, SCHEDULED,
+  * REINITIALIZING_AWAITING_KILL, RELAUNCHING,
+  */
+  CSS_SCHEDULED = 1;
+
+ /**
+  * RUNNING, REINITIALIZING, PAUSING, KILLING
+  */
+  CSS_RUNNING = 2;
+
+ /**
+  * PAUSED, RESUMING
+  */
+  CSS_PAUSED = 3;
+
+ /**
+  * LOCALIZATION_FAILED, EXITED_WITH_SUCCESS,
+  * EXITED_WITH_FAILURE,
+  * CONTAINER_CLEANEDUP_AFTER_KILL,
+  * CONTAINER_RESOURCES_CLEANINGUP
+  */
+  CSS_COMPLETING = 4;
+
+ /**
+  * DONE
+  */
+  CSS_DONE = 5;
 }
 
 message ContainerProto {
@@ -616,6 +645,7 @@ message ContainerStatusProto {
   optional ResourceProto capability = 5;
   optional ExecutionTypeProto executionType = 6 [default = GUARANTEED];
   repeated StringStringMapProto container_attributes = 7;
+  optional ContainerSubStateProto container_sub_state = 8;
 }
 
 enum ContainerExitStatusProto {

@@ -17,6 +17,7 @@
  */
 
 import DS from 'ember-data';
+import Converter from 'yarn-ui/utils/converter';
 
 export default DS.Model.extend({
   name: DS.attr('string'),
@@ -48,18 +49,19 @@ export default DS.Model.extend({
   }.property("children"),
 
   capacitiesBarChartData: function() {
+    var floatToFixed = Converter.floatToFixed;
     return [
       {
         label: "Steady Fair Memory",
-        value: this.get("steadyFairResources.memory")
+        value: floatToFixed(this.get("steadyFairResources.memory"))
       },
       {
         label: "Used Memory",
-        value: this.get("usedResources.memory")
+        value: floatToFixed(this.get("usedResources.memory"))
       },
       {
         label: "Maximum Memory",
-        value: this.get("maxResources.memory")
+        value: floatToFixed(this.get("maxResources.memory"))
       }
     ];
   }.property("maxResources.memory", "usedResources.memory", "maxResources.memory"),

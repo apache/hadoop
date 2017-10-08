@@ -1861,9 +1861,15 @@
 <property>
   <name>hadoop.http.cross-origin.allowed-origins</name>
   <value>*</value>
-  <description>Comma separated list of origins that are allowed for web
-    services needing cross-origin (CORS) support. Wildcards (*) and patterns
-    allowed</description>
+  <description>Comma separated list of origins that are allowed for web services
+    needing cross-origin (CORS) support. If a value in the list contains an
+    asterix (*), a regex pattern, escaping any dots ('.' -> '\.') and replacing
+    the asterix such that it captures any characters ('*' -> '.*'), is generated.
+    Values prefixed with 'regex:' are interpreted directly as regular expressions,
+    e.g. use the expression 'regex:https?:\/\/foo\.bar:([0-9]+)?' to allow any
+    origin using the 'http' or 'https' protocol in the domain 'foo.bar' on any
+    port. The use of simple wildcards ('*') is discouraged, and only available for
+    backward compatibility.</description>
 </property>
 
 <property>
@@ -2326,6 +2332,34 @@
   <description>
     Cache expiry time for a Key, after which the cache Queue for this
     key will be dropped. Default = 12hrs
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.failover.sleep.base.millis</name>
+  <value>100</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the base value used in the failover calculation. The
+    first failover will retry immediately. The 2nd failover attempt
+    will delay at least hadoop.security.client.failover.sleep.base.millis
+    milliseconds. And so on.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.failover.sleep.max.millis</name>
+  <value>2000</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the maximum value to wait between failovers.
+    Specifically, the time between two failover attempts will not
+    exceed +/- 50% of hadoop.security.client.failover.sleep.max.millis
+    milliseconds.
   </description>
 </property>
 

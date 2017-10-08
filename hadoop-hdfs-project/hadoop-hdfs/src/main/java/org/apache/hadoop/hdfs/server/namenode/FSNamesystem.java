@@ -310,6 +310,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.LoggerFactory;
 
 /**
  * FSNamesystem is a container of both transient
@@ -342,7 +343,9 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Metrics(context="dfs")
 public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     NameNodeMXBean, ReplicatedBlocksMBean, ECBlockGroupsMBean {
-  public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
+
+  public static final org.slf4j.Logger LOG = LoggerFactory
+      .getLogger(FSNamesystem.class.getName());
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
@@ -1671,8 +1674,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         stopStandbyServices();
       } catch (IOException ie) {
       } finally {
-        IOUtils.cleanup(LOG, dir);
-        IOUtils.cleanup(LOG, fsImage);
+        IOUtils.cleanupWithLogger(LOG, dir);
+        IOUtils.cleanupWithLogger(LOG, fsImage);
       }
     }
   }

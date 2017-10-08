@@ -38,8 +38,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -139,6 +137,8 @@ import org.apache.hadoop.yarn.util.RackResolver;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of TaskAttempt interface.
@@ -149,7 +149,8 @@ public abstract class TaskAttemptImpl implements
       EventHandler<TaskAttemptEvent> {
 
   static final Counters EMPTY_COUNTERS = new Counters();
-  private static final Log LOG = LogFactory.getLog(TaskAttemptImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TaskAttemptImpl.class);
   private static final long MEMORY_SPLITS_RESOLUTION = 1024; //TODO Make configurable?
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 

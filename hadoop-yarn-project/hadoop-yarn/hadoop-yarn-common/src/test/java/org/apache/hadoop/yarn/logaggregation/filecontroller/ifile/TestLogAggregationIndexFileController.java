@@ -21,13 +21,13 @@ package org.apache.hadoop.yarn.logaggregation.filecontroller.ifile;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +37,8 @@ import java.util.Set;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -54,6 +56,8 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -143,8 +147,27 @@ public class TestLogAggregationIndexFileController {
     LogValue value = mock(LogValue.class);
     when(value.getPendingLogFilesToUploadForThisContainer()).thenReturn(files);
 
+    final ControlledClock clock = new ControlledClock();
+    clock.setTime(System.currentTimeMillis());
     LogAggregationIndexedFileController fileFormat
-        = new LogAggregationIndexedFileController();
+        = new LogAggregationIndexedFileController() {
+          private int rollOverCheck = 0;
+          @Override
+          public Clock getSystemClock() {
+            return clock;
+          }
+
+          @Override
+          public boolean isRollover(final FileContext fc,
+              final Path candidate) throws IOException {
+            rollOverCheck++;
+            if (rollOverCheck >= 3) {
+              return true;
+            }
+            return false;
+          }
+        };
+
     fileFormat.initialize(conf, "Indexed");
 
     Map<ApplicationAccessType, String> appAcls = new HashMap<>();
@@ -203,7 +226,11 @@ public class TestLogAggregationIndexFileController {
         + LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
     FSDataOutputStream fInput = null;
     try {
+      String nodeName = logPath.getName() + "_" + clock.getTime();
       fInput = FileSystem.create(fs, checksumFile, LOG_FILE_UMASK);
+      fInput.writeInt(nodeName.length());
+      fInput.write(nodeName.getBytes(
+          Charset.forName("UTF-8")));
       fInput.writeLong(0);
     } finally {
       IOUtils.closeQuietly(fInput);
@@ -236,9 +263,9 @@ public class TestLogAggregationIndexFileController {
 
     // We did not call postWriter which we would keep the checksum file.
     // We can only get the logs/logmeta from the first write.
-    fileFormat.readAggregatedLogsMeta(
+    meta = fileFormat.readAggregatedLogsMeta(
         logRequest);
-    Assert.assertEquals(meta.size(), meta.size(), 1);
+    Assert.assertEquals(meta.size(), 1);
     for (ContainerLogMeta log : meta) {
       Assert.assertTrue(log.getContainerId().equals(containerId.toString()));
       Assert.assertTrue(log.getNodeId().equals(nodeId.toString()));
@@ -267,9 +294,37 @@ public class TestLogAggregationIndexFileController {
     fileFormat.write(key1, value2);
     fileFormat.postWrite(context);
     fileFormat.closeWriter();
-    fileFormat.readAggregatedLogsMeta(
+    meta = fileFormat.readAggregatedLogsMeta(
             logRequest);
-    Assert.assertEquals(meta.size(), meta.size(), 2);
+    Assert.assertEquals(meta.size(), 2);
+    for (ContainerLogMeta log : meta) {
+      Assert.assertTrue(log.getContainerId().equals(containerId.toString()));
+      Assert.assertTrue(log.getNodeId().equals(nodeId.toString()));
+      for (ContainerLogFileInfo file : log.getContainerLogMeta()) {
+        fileNames.add(file.getFileName());
+      }
+    }
+    fileNames.removeAll(newLogTypes);
+    Assert.assertTrue(fileNames.isEmpty());
+    foundLogs = fileFormat.readAggregatedLogs(logRequest, System.out);
+    Assert.assertTrue(foundLogs);
+    for (String logType : newLogTypes) {
+      Assert.assertTrue(sysOutStream.toString().contains(logMessage(
+          containerId, logType)));
+    }
+    sysOutStream.reset();
+
+    // start to roll over old logs
+    clock.setTime(System.currentTimeMillis());
+    fileFormat.initializeWriter(context);
+    fileFormat.write(key1, value2);
+    fileFormat.postWrite(context);
+    fileFormat.closeWriter();
+    FileStatus[] status = fs.listStatus(logPath.getParent());
+    Assert.assertTrue(status.length == 2);
+    meta = fileFormat.readAggregatedLogsMeta(
+        logRequest);
+    Assert.assertEquals(meta.size(), 3);
     for (ContainerLogMeta log : meta) {
       Assert.assertTrue(log.getContainerId().equals(containerId.toString()));
       Assert.assertTrue(log.getNodeId().equals(nodeId.toString()));

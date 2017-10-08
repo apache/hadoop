@@ -101,10 +101,9 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
       return;
     }
 
-    Map<String, FileStatus> checkSumFiles;
+    Map<String, Long> checkSumFiles;
     try {
-      checkSumFiles = fileController.filterFiles(nodeFiles,
-          LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
+      checkSumFiles = fileController.parseCheckSumFiles(nodeFiles);
     } catch (IOException ex) {
       LOG.error("Error getting logs for " + logEntity, ex);
       html.h1("Error getting logs for " + logEntity);
@@ -125,12 +124,11 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
     String desiredLogType = $(CONTAINER_LOG_TYPE);
     try {
       for (FileStatus thisNodeFile : fileToRead) {
-        FileStatus checkSum = fileController.getAllChecksumFiles(
-            checkSumFiles, thisNodeFile.getPath().getName());
+        Long checkSumIndex = checkSumFiles.get(
+            thisNodeFile.getPath().getName());
         long endIndex = -1;
-        if (checkSum != null) {
-          endIndex = fileController.loadIndexedLogsCheckSum(
-             checkSum.getPath());
+        if (checkSumIndex != null) {
+          endIndex = checkSumIndex.longValue();
         }
         IndexedLogsMeta indexedLogsMeta = null;
         try {

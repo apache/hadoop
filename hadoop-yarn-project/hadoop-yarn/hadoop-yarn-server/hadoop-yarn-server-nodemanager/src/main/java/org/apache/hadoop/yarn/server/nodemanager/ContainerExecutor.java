@@ -26,10 +26,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -64,6 +62,9 @@ import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT;
+
 /**
  * This class is abstraction of the mechanism used to launch a container on the
  * underlying OS.  All executor implementations must extend ContainerExecutor.
@@ -92,10 +93,15 @@ public abstract class ContainerExecutor implements Configurable {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final ReadLock readLock = lock.readLock();
   private final WriteLock writeLock = lock.writeLock();
+  private String[] whitelistVars;
 
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    if (conf != null) {
+      whitelistVars = conf.get(YarnConfiguration.NM_ENV_WHITELIST,
+          YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
+    }
   }
 
   @Override
@@ -328,30 +334,28 @@ public abstract class ContainerExecutor implements Configurable {
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
       Map<Path, List<String>> resources, List<String> command, Path logDir,
       String user, String outFilename) throws IOException {
+    updateEnvForWhitelistVars(environment);
+
     ContainerLaunch.ShellScriptBuilder sb =
         ContainerLaunch.ShellScriptBuilder.create();
-    Set<String> whitelist = new HashSet<>();
-
-    String[] nmWhiteList = conf.get(YarnConfiguration.NM_ENV_WHITELIST,
-        YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
-    for (String param : nmWhiteList) {
-      whitelist.add(param);
-    }
 
     // Add "set -o pipefail -e" to validate launch_container script.
     sb.setExitOnFailure();
 
+    //Redirect stdout and stderr for launch_container script
+    sb.stdout(logDir, CONTAINER_PRE_LAUNCH_STDOUT);
+    sb.stderr(logDir, CONTAINER_PRE_LAUNCH_STDERR);
+
+
     if (environment != null) {
+      sb.echo("Setting up env variables");
       for (Map.Entry<String, String> env : environment.entrySet()) {
-        if (!whitelist.contains(env.getKey())) {
-          sb.env(env.getKey(), env.getValue());
-        } else {
-          sb.whitelistedEnv(env.getKey(), env.getValue());
-        }
+        sb.env(env.getKey(), env.getValue());
       }
     }
 
     if (resources != null) {
+      sb.echo("Setting up job resources");
       for (Map.Entry<Path, List<String>> resourceEntry :
           resources.entrySet()) {
         for (String linkName : resourceEntry.getValue()) {
@@ -373,15 +377,15 @@ public abstract class ContainerExecutor implements Configurable {
     if (getConf() != null &&
         getConf().getBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
         YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO)) {
+      sb.echo("Copying debugging information");
       sb.copyDebugInformation(new Path(outFilename),
           new Path(logDir, outFilename));
       sb.listDebugInformation(new Path(logDir, DIRECTORY_CONTENTS));
     }
-
+    sb.echo("Launching container");
     sb.command(command);
 
     PrintStream pout = null;
-
     try {
       pout = new PrintStream(out, false, "UTF-8");
       sb.write(pout);
@@ -645,6 +649,28 @@ public abstract class ContainerExecutor implements Configurable {
     } finally {
       readLock.unlock();
     }
+  }
+
+  /**
+   * Propagate variables from the nodemanager's environment into the
+   * container's environment if unspecified by the container.
+   * @param env the environment to update
+   * @see org.apache.hadoop.yarn.conf.YarnConfiguration#NM_ENV_WHITELIST
+   */
+  protected void updateEnvForWhitelistVars(Map<String, String> env) {
+    for(String var : whitelistVars) {
+      if (!env.containsKey(var)) {
+        String val = getNMEnvVar(var);
+        if (val != null) {
+          env.put(var, val);
+        }
+      }
+    }
+  }
+
+  @VisibleForTesting
+  protected String getNMEnvVar(String varname) {
+    return System.getenv(varname);
   }
 
   /**

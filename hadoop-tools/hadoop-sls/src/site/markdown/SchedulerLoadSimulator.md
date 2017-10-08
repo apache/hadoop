@@ -12,10 +12,10 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-Yarn Scheduler Load Simulator (SLS)
+YARN Scheduler Load Simulator (SLS)
 ===================================
 
-* [Yarn Scheduler Load Simulator (SLS)](#Yarn_Scheduler_Load_Simulator_SLS)
+* [YARN Scheduler Load Simulator (SLS)](#Yarn_Scheduler_Load_Simulator_SLS)
     * [Overview](#Overview)
         * [Overview](#Overview)
         * [Goals](#Goals)
@@ -39,11 +39,11 @@ Overview
 
 ### Overview
 
-The Yarn scheduler is a fertile area of interest with different implementations, e.g., Fifo, Capacity and Fair schedulers. Meanwhile, several optimizations are also made to improve scheduler performance for different scenarios and workload. Each scheduler algorithm has its own set of features, and drives scheduling decisions by many factors, such as fairness, capacity guarantee, resource availability, etc. It is very important to evaluate a scheduler algorithm very well before we deploy in a production cluster. Unfortunately, currently it is non-trivial to evaluate a scheduler algorithm. Evaluating in a real cluster is always time and cost consuming, and it is also very hard to find a large-enough cluster. Hence, a simulator which can predict how well a scheduler algorithm for some specific workload would be quite useful.
+The YARN scheduler is a fertile area of interest with different implementations, e.g., Fifo, Capacity and Fair schedulers. Meanwhile, several optimizations are also made to improve scheduler performance for different scenarios and workload. Each scheduler algorithm has its own set of features, and drives scheduling decisions by many factors, such as fairness, capacity guarantee, resource availability, etc. It is very important to evaluate a scheduler algorithm very well before we deploy in a production cluster. Unfortunately, currently it is non-trivial to evaluate a scheduler algorithm. Evaluating in a real cluster is always time and cost consuming, and it is also very hard to find a large-enough cluster. Hence, a simulator which can predict how well a scheduler algorithm for some specific workload would be quite useful.
 
-The Yarn Scheduler Load Simulator (SLS) is such a tool, which can simulate large-scale Yarn clusters and application loads in a single machine.This simulator would be invaluable in furthering Yarn by providing a tool for researchers and developers to prototype new scheduler features and predict their behavior and performance with reasonable amount of confidence, thereby aiding rapid innovation.
+The YARN Scheduler Load Simulator (SLS) is such a tool, which can simulate large-scale YARN clusters and application loads in a single machine.This simulator would be invaluable in furthering YARN by providing a tool for researchers and developers to prototype new scheduler features and predict their behavior and performance with reasonable amount of confidence, thereby aiding rapid innovation.
 o
-The simulator will exercise the real Yarn `ResourceManager` removing the network factor by simulating `NodeManagers` and `ApplicationMasters` via handling and dispatching `NM`/`AMs` heartbeat events from within the same JVM. To keep tracking of scheduler behavior and performance, a scheduler wrapper will wrap the real scheduler.
+The simulator will exercise the real YARN `ResourceManager` removing the network factor by simulating `NodeManagers` and `ApplicationMasters` via handling and dispatching `NM`/`AMs` heartbeat events from within the same JVM. To keep tracking of scheduler behavior and performance, a scheduler wrapper will wrap the real scheduler.
 
 The size of the cluster and the application load can be loaded from configuration files, which are generated from job history files directly by adopting [Apache Rumen](../hadoop-rumen/Rumen.html).
 
@@ -74,7 +74,7 @@ The following figure illustrates the implementation architecture of the simulato
 
 ![The architecture of the simulator](images/sls_arch.png)
 
-The simulator takes input of workload traces, or synthetic load distributions and generaters the cluster and applications information. For each NM and AM, the simulator builds a simulator to simulate their running. All NM/AM simulators run in a thread pool. The simulator reuses Yarn Resource Manager, and builds a wrapper out of the scheduler. The Scheduler Wrapper can track the scheduler behaviors and generates several logs, which are the outputs of the simulator and can be further analyzed.
+The simulator takes input of workload traces, or synthetic load distributions and generaters the cluster and applications information. For each NM and AM, the simulator builds a simulator to simulate their running. All NM/AM simulators run in a thread pool. The simulator reuses YARN Resource Manager, and builds a wrapper out of the scheduler. The Scheduler Wrapper can track the scheduler behaviors and generates several logs, which are the outputs of the simulator and can be further analyzed.
 
 ### Usecases
 
@@ -110,9 +110,9 @@ The following sections will describe how to use the simulator step by step. Befo
 
 ### Step 1: Configure Hadoop and the simulator
 
-Before we start, make sure Hadoop and the simulator are configured well. All configuration files for Hadoop and the simulator should be placed in directory `$HADOOP_ROOT/etc/hadoop`, where the `ResourceManager` and Yarn scheduler load their configurations. Directory `$HADOOP_ROOT/share/hadoop/tools/sls/sample-conf/` provides several example configurations, that can be used to start a demo.
+Before we start, make sure Hadoop and the simulator are configured well. All configuration files for Hadoop and the simulator should be placed in directory `$HADOOP_ROOT/etc/hadoop`, where the `ResourceManager` and YARN scheduler load their configurations. Directory `$HADOOP_ROOT/share/hadoop/tools/sls/sample-conf/` provides several example configurations, that can be used to start a demo.
 
-For configuration of Hadoop and Yarn scheduler, users can refer to Yarn’s website (<http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/>).
+For configuration of Hadoop and YARN scheduler, users can refer to Yarn’s website (<http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/>).
 
 For the simulator, it loads configuration information from file `$HADOOP_ROOT/etc/hadoop/sls-runner.xml`.
 
@@ -244,7 +244,7 @@ The simulator supports two types of input files: the rumen traces and its own in
 Metrics
 -------
 
-The Yarn Scheduler Load Simulator has integrated [Metrics](http://metrics.codahale.com/) to measure the behaviors of critical components and operations, including running applications and containers, cluster available resources, scheduler operation timecost, et al. If the switch `yarn.sls.runner.metrics.switch` is set `ON`, `Metrics` will run and output it logs in `--output-dir` directory specified by users. Users can track these information during simulator running, and can also analyze these logs after running to evaluate the scheduler performance.
+The YARN Scheduler Load Simulator has integrated [Metrics](http://metrics.codahale.com/) to measure the behaviors of critical components and operations, including running applications and containers, cluster available resources, scheduler operation timecost, et al. If the switch `yarn.sls.runner.metrics.switch` is set `ON`, `Metrics` will run and output it logs in `--output-dir` directory specified by users. Users can track these information during simulator running, and can also analyze these logs after running to evaluate the scheduler performance.
 
 ### Real-time Tracking
 
@@ -320,7 +320,7 @@ Appendix
 
 ### Resources
 
-[YARN-1021](https://issues.apache.org/jira/browse/YARN-1021) is the main JIRA that introduces Yarn Scheduler Load Simulator to Hadoop Yarn project.
+[YARN-1021](https://issues.apache.org/jira/browse/YARN-1021) is the main JIRA that introduces YARN Scheduler Load Simulator to Hadoop YARN project.
 [YARN-6363](https://issues.apache.org/jira/browse/YARN-6363) is the main JIRA that introduces the Synthetic Load Generator to SLS.
 
 ### SLS JSON input file format

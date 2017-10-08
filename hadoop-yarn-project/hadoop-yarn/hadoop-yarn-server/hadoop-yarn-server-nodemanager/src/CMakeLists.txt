@@ -132,6 +132,7 @@ add_library(container
     main/native/container-executor/impl/modules/cgroups/cgroups-operations.c
     main/native/container-executor/impl/modules/common/module-configs.c
     main/native/container-executor/impl/modules/gpu/gpu-module.c
+    main/native/container-executor/impl/utils/docker-util.c
 )
 
 add_executable(container-executor
@@ -156,6 +157,7 @@ output_directory(test-container-executor target/usr/local/bin)
 
 # unit tests for container executor
 add_executable(cetest
+        main/native/container-executor/impl/get_executable.c
         main/native/container-executor/impl/util.c
         main/native/container-executor/test/test_configuration.cc
         main/native/container-executor/test/test_main.cc
@@ -163,6 +165,7 @@ add_executable(cetest
         main/native/container-executor/test/utils/test-path-utils.cc
         main/native/container-executor/test/modules/cgroups/test-cgroups-module.cc
         main/native/container-executor/test/modules/gpu/test-gpu-module.cc
-        main/native/container-executor/test/test_util.cc)
+        main/native/container-executor/test/test_util.cc
+        main/native/container-executor/test/utils/test_docker_util.cc)
 target_link_libraries(cetest gtest container)
 output_directory(cetest test)

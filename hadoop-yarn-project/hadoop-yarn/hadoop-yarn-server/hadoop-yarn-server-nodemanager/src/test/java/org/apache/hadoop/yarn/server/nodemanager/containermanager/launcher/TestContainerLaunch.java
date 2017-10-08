@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -90,6 +91,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
@@ -98,6 +100,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch.ShellScriptBuilder;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
@@ -192,7 +196,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
       shexc.execute();
       assertEquals(shexc.getExitCode(), 0);
-      assert(shexc.getOutput().contains("hello"));
+      //Capture output from prelaunch.out
+
+      List<String> output = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT),
+          Charset.forName("UTF-8"));
+      assert(output.contains("hello"));
 
       symLinkFile = new File(tmpDir, badSymlink);
     }
@@ -299,8 +307,18 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
     FileOutputStream fos = new FileOutputStream(shellFile);
     List<String> commands = new ArrayList<String>();
+    final Map<String, String> nmEnv = new HashMap<>();
+    nmEnv.put("HADOOP_COMMON_HOME", "nodemanager_common_home");
+    nmEnv.put("HADOOP_HDFS_HOME", "nodemanager_hdfs_home");
+    nmEnv.put("HADOOP_YARN_HOME", "nodemanager_yarn_home");
+    nmEnv.put("HADOOP_MAPRED_HOME", "nodemanager_mapred_home");
     DefaultContainerExecutor defaultContainerExecutor =
-        new DefaultContainerExecutor();
+        new DefaultContainerExecutor() {
+          @Override
+          protected String getNMEnvVar(String varname) {
+            return nmEnv.get(varname);
+          }
+        };
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_ENV_WHITELIST,
         "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
@@ -312,10 +330,60 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
             StandardCharsets.UTF_8);
     Assert.assertTrue(shellContent
         .contains("export HADOOP_COMMON_HOME=\"/opt/hadoopcommon\""));
-    // Not available in env and whitelist
-    Assert.assertTrue(shellContent.contains("export HADOOP_MAPRED_HOME="
-        + "${HADOOP_MAPRED_HOME:-\"/opt/hadoopbuild\"}"));
-    // Not available in env but in whitelist
+    // Whitelisted variable overridden by container
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_MAPRED_HOME=\"/opt/hadoopbuild\""));
+    // Available in env but not in whitelist
+    Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
+    // Available in env and in whitelist
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_YARN_HOME=\"nodemanager_yarn_home\""));
+    fos.flush();
+    fos.close();
+  }
+
+  @Test(timeout = 20000)
+  public void testWriteEnvExportDocker() throws Exception {
+    // Valid only for unix
+    assumeNotWindows();
+    File shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("HADOOP_COMMON_HOME", "/opt/hadoopcommon");
+    env.put("HADOOP_MAPRED_HOME", "/opt/hadoopbuild");
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    FileOutputStream fos = new FileOutputStream(shellFile);
+    List<String> commands = new ArrayList<String>();
+    final Map<String, String> nmEnv = new HashMap<>();
+    nmEnv.put("HADOOP_COMMON_HOME", "nodemanager_common_home");
+    nmEnv.put("HADOOP_HDFS_HOME", "nodemanager_hdfs_home");
+    nmEnv.put("HADOOP_YARN_HOME", "nodemanager_yarn_home");
+    nmEnv.put("HADOOP_MAPRED_HOME", "nodemanager_mapred_home");
+    DockerLinuxContainerRuntime dockerRuntime =
+        new DockerLinuxContainerRuntime(
+            mock(PrivilegedOperationExecutor.class));
+    LinuxContainerExecutor lce =
+        new LinuxContainerExecutor(dockerRuntime) {
+          @Override
+          protected String getNMEnvVar(String varname) {
+            return nmEnv.get(varname);
+          }
+        };
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST,
+        "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
+    lce.setConf(conf);
+    lce.writeLaunchEnv(fos, env, resources, commands,
+        new Path(localLogDir.getAbsolutePath()), "user");
+    String shellContent =
+        new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
+            StandardCharsets.UTF_8);
+    Assert.assertTrue(shellContent
+        .contains("export HADOOP_COMMON_HOME=\"/opt/hadoopcommon\""));
+    // Whitelisted variable overridden by container
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_MAPRED_HOME=\"/opt/hadoopbuild\""));
+    // Verify no whitelisted variables inherited from NM env
+    Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
     Assert.assertFalse(shellContent.contains("HADOOP_YARN_HOME"));
     fos.flush();
     fos.close();
@@ -358,7 +426,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         shexc.execute();
         Assert.fail("Should catch exception");
       } catch(ExitCodeException e){
-        diagnostics = e.getMessage();
+        //Capture diagnostics from prelaunch.stderr
+        List<String> error = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR),
+            Charset.forName("UTF-8"));
+        diagnostics = StringUtils.join("\n", error);
       }
       Assert.assertTrue(diagnostics.contains(Shell.WINDOWS ?
           "is not recognized as an internal or external command" :
@@ -1545,6 +1616,109 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
   }
 
+  /**
+   * Test that script exists with non-zero exit code when command fails.
+   * @throws IOException
+   */
+  @Test
+  public void testShellScriptBuilderStdOutandErrRedirection() throws IOException {
+    ShellScriptBuilder builder = ShellScriptBuilder.create();
+
+    Path logDir = new Path(localLogDir.getAbsolutePath());
+    File stdout = new File(logDir.toString(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT);
+    File stderr = new File(logDir.toString(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR);
+
+    builder.stdout(logDir, ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT);
+    builder.stderr(logDir, ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR);
+
+    //should redirect to specified stdout path
+    String TEST_STDOUT_ECHO = "Test stdout redirection";
+    builder.echo(TEST_STDOUT_ECHO);
+    //should fail and redirect to stderr
+    builder.mkdir(new Path("/invalidSrcDir"));
+
+    builder.command(Arrays.asList(new String[] {"unknownCommand"}));
+
+    File shellFile = Shell.appendScriptExtension(tmpDir, "testShellScriptBuilderStdOutandErrRedirection");
+    PrintStream writer = new PrintStream(new FileOutputStream(shellFile));
+    builder.write(writer);
+    writer.close();
+    try {
+      FileUtil.setExecutable(shellFile, true);
+
+      Shell.ShellCommandExecutor shexc = new Shell.ShellCommandExecutor(
+          new String[]{shellFile.getAbsolutePath()}, tmpDir);
+      try {
+        shexc.execute();
+        fail("builder shell command was expected to throw");
+      }
+      catch(IOException e) {
+        // expected
+        System.out.println("Received an expected exception: " + e.getMessage());
+
+        Assert.assertEquals(true, stdout.exists());
+        BufferedReader stdoutReader = new BufferedReader(new FileReader(stdout));
+        // Get the pid of the process
+        String line = stdoutReader.readLine().trim();
+        Assert.assertEquals(TEST_STDOUT_ECHO, line);
+        // No more lines
+        Assert.assertEquals(null, stdoutReader.readLine());
+        stdoutReader.close();
+
+        Assert.assertEquals(true, stderr.exists());
+        Assert.assertTrue(stderr.length() > 0);
+      }
+    }
+    finally {
+      FileUtil.fullyDelete(shellFile);
+      FileUtil.fullyDelete(stdout);
+      FileUtil.fullyDelete(stderr);
+    }
+  }
+
+  /**
+   * Test that script exists with non-zero exit code when command fails.
+   * @throws IOException
+   */
+  @Test
+  public void testShellScriptBuilderWithNoRedirection() throws IOException {
+    ShellScriptBuilder builder = ShellScriptBuilder.create();
+
+    Path logDir = new Path(localLogDir.getAbsolutePath());
+    File stdout = new File(logDir.toString(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT);
+    File stderr = new File(logDir.toString(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR);
+
+    //should redirect to specified stdout path
+    String TEST_STDOUT_ECHO = "Test stdout redirection";
+    builder.echo(TEST_STDOUT_ECHO);
+    //should fail and redirect to stderr
+    builder.mkdir(new Path("/invalidSrcDir"));
+
+    builder.command(Arrays.asList(new String[]{"unknownCommand"}));
+
+    File shellFile = Shell.appendScriptExtension(tmpDir, "testShellScriptBuilderStdOutandErrRedirection");
+    PrintStream writer = new PrintStream(new FileOutputStream(shellFile));
+    builder.write(writer);
+    writer.close();
+    try {
+      FileUtil.setExecutable(shellFile, true);
+
+      Shell.ShellCommandExecutor shexc = new Shell.ShellCommandExecutor(
+          new String[]{shellFile.getAbsolutePath()}, tmpDir);
+      try {
+        shexc.execute();
+        fail("builder shell command was expected to throw");
+      } catch (IOException e) {
+        // expected
+        System.out.println("Received an expected exception: " + e.getMessage());
+
+        Assert.assertEquals(false, stdout.exists());
+        Assert.assertEquals(false, stderr.exists());
+      }
+    } finally {
+      FileUtil.fullyDelete(shellFile);
+    }
+  }
   /*
    * ${foo.version} is substituted to suffix a specific version number
    */

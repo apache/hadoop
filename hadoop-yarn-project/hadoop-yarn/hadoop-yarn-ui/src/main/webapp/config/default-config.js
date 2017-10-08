@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-module.exports = { // Yarn UI App configurations
+module.exports = { // YARN UI App configurations
     hosts: {
       localBaseAddress: "",
       timelineWebAddress: "localhost:8188",

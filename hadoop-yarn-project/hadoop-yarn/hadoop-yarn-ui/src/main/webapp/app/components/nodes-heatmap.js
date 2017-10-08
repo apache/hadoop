@@ -258,7 +258,6 @@ export default BaseChartComponent.extend({
   },
 
   didInsertElement: function () {
-    var parentId = this.get("parentId");
     var self = this;
     var optionsData = [this.memoryLabel, this.cpuLabel, this.containersLabel];
     d3.select("#heatmap-select")

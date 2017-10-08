@@ -48,7 +48,7 @@ function hadoop_usage
   hadoop_add_subcommand "rmadmin" admin "admin tools"
   hadoop_add_subcommand "router" daemon "run the Router daemon"
   hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
-  hadoop_add_subcommand "sharedcachemanager" admin "run the SharedCacheManager daemon"
+  hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
   hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
   hadoop_add_subcommand "timelineserver" daemon "run the timeline server"
   hadoop_add_subcommand "top" client "view cluster information"

@@ -1747,7 +1747,7 @@
   <property>
     <description>Max time to wait for a process to come up when trying to cleanup a container</description>
     <name>yarn.nodemanager.process-kill-wait.ms</name>
-    <value>2000</value>
+    <value>5000</value>
   </property>
 
   <property>
@@ -1869,10 +1869,10 @@
   <property>
     <description>
     Adjustment to the container OS scheduling priority.  In Linux, passed
-    directly to the nice command.
+    directly to the nice command. If unspecified then containers are launched
+    without any explicit OS priority.
     </description>
     <name>yarn.nodemanager.container-executor.os.sched.priority.adjustment</name>
-    <value>0</value>
   </property>
 
   <property>

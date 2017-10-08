@@ -540,30 +540,33 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
     }
 
-    if (request.getResourceBlacklistRequest() != null && !isNullOrEmpty(
-        request.getResourceBlacklistRequest().getBlacklistAdditions())) {
-      for (String resourceName : request.getResourceBlacklistRequest()
-          .getBlacklistAdditions()) {
-        SubClusterId subClusterId = getSubClusterForNode(resourceName);
-        if (subClusterId != null) {
-          AllocateRequest newRequest = findOrCreateAllocateRequestForSubCluster(
-              subClusterId, request, requestMap);
-          newRequest.getResourceBlacklistRequest().getBlacklistAdditions()
-              .add(resourceName);
+    if (request.getResourceBlacklistRequest() != null) {
+      if (!isNullOrEmpty(
+          request.getResourceBlacklistRequest().getBlacklistAdditions())) {
+        for (String resourceName : request.getResourceBlacklistRequest()
+            .getBlacklistAdditions()) {
+          SubClusterId subClusterId = getSubClusterForNode(resourceName);
+          if (subClusterId != null) {
+            AllocateRequest newRequest =
+                findOrCreateAllocateRequestForSubCluster(subClusterId, request,
+                    requestMap);
+            newRequest.getResourceBlacklistRequest().getBlacklistAdditions()
+                .add(resourceName);
+          }
         }
       }
-    }
-
-    if (request.getResourceBlacklistRequest() != null && !isNullOrEmpty(
-        request.getResourceBlacklistRequest().getBlacklistRemovals())) {
-      for (String resourceName : request.getResourceBlacklistRequest()
-          .getBlacklistRemovals()) {
-        SubClusterId subClusterId = getSubClusterForNode(resourceName);
-        if (subClusterId != null) {
-          AllocateRequest newRequest = findOrCreateAllocateRequestForSubCluster(
-              subClusterId, request, requestMap);
-          newRequest.getResourceBlacklistRequest().getBlacklistRemovals()
-              .add(resourceName);
+      if (!isNullOrEmpty(
+          request.getResourceBlacklistRequest().getBlacklistRemovals())) {
+        for (String resourceName : request.getResourceBlacklistRequest()
+            .getBlacklistRemovals()) {
+          SubClusterId subClusterId = getSubClusterForNode(resourceName);
+          if (subClusterId != null) {
+            AllocateRequest newRequest =
+                findOrCreateAllocateRequestForSubCluster(subClusterId, request,
+                    requestMap);
+            newRequest.getResourceBlacklistRequest().getBlacklistRemovals()
+                .add(resourceName);
+          }
         }
       }
     }
@@ -896,13 +899,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
     }
 
-    if (!isNullOrEmpty(otherResponse.getNMTokens())) {
-      if (!isNullOrEmpty(homeResponse.getNMTokens())) {
-        homeResponse.getNMTokens().addAll(otherResponse.getNMTokens());
-      } else {
-        homeResponse.setNMTokens(otherResponse.getNMTokens());
-      }
-    }
+    homeResponse.setNumClusterNodes(
+        homeResponse.getNumClusterNodes() + otherResponse.getNumClusterNodes());
 
     PreemptionMessage homePreempMessage = homeResponse.getPreemptionMessage();
     PreemptionMessage otherPreempMessage = otherResponse.getPreemptionMessage();
@@ -933,6 +931,31 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
       if (spar1 != null && spar2 != null) {
         spar1.getContainers().addAll(spar2.getContainers());
+      }
+    }
+
+    if (!isNullOrEmpty(otherResponse.getNMTokens())) {
+      if (!isNullOrEmpty(homeResponse.getNMTokens())) {
+        homeResponse.getNMTokens().addAll(otherResponse.getNMTokens());
+      } else {
+        homeResponse.setNMTokens(otherResponse.getNMTokens());
+      }
+    }
+
+    if (!isNullOrEmpty(otherResponse.getUpdatedContainers())) {
+      if (!isNullOrEmpty(homeResponse.getUpdatedContainers())) {
+        homeResponse.getUpdatedContainers()
+            .addAll(otherResponse.getUpdatedContainers());
+      } else {
+        homeResponse.setUpdatedContainers(otherResponse.getUpdatedContainers());
+      }
+    }
+
+    if (!isNullOrEmpty(otherResponse.getUpdateErrors())) {
+      if (!isNullOrEmpty(homeResponse.getUpdateErrors())) {
+        homeResponse.getUpdateErrors().addAll(otherResponse.getUpdateErrors());
+      } else {
+        homeResponse.setUpdateErrors(otherResponse.getUpdateErrors());
       }
     }
   }
@@ -1050,6 +1073,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   @VisibleForTesting
   public int getUnmanagedAMPoolSize() {
     return this.uamPool.getAllUAMIds().size();
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterId, List<AllocateResponse>> getAsyncResponseSink() {
+    return this.asyncResponseSink;
   }
 
   /**

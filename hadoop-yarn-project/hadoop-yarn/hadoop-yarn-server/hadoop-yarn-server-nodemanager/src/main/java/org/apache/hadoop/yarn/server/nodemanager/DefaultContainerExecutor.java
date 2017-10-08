@@ -275,7 +275,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       sb.writeLocalWrapperScript(launchDst, pidFile);
     } else {
       LOG.info("Container " + containerIdStr
-          + " was marked as inactive. Returning terminated error");
+          + " pid file not set. Returning terminated error");
       return ExitCode.TERMINATED.getExitCode();
     }
     
@@ -320,8 +320,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           builder.append("Exception message: ");
           builder.append(e.getMessage()).append("\n");
         }
-        builder.append("Stack trace: ");
-        builder.append(StringUtils.stringifyException(e)).append("\n");
+
         if (!shExec.getOutput().isEmpty()) {
           builder.append("Shell output: ");
           builder.append(shExec.getOutput()).append("\n");

@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,7 +43,11 @@ public class TestDockerLoadCommand {
 
   @Test
   public void testGetCommandWithArguments() {
-    assertEquals("load --i=foo",
-        dockerLoadCommand.getCommandWithArguments());
+    assertEquals("load", StringUtils.join(",",
+        dockerLoadCommand.getDockerCommandWithArguments()
+            .get("docker-command")));
+    assertEquals("foo", StringUtils.join(",",
+        dockerLoadCommand.getDockerCommandWithArguments().get("image")));
+    assertEquals(2, dockerLoadCommand.getDockerCommandWithArguments().size());
   }
 }

@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -363,7 +361,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
        // Transitions from RUNNING State
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
-          RMAppAttemptEventType.LAUNCHED)
+          EnumSet.of(
+              RMAppAttemptEventType.LAUNCHED,
+              // Valid only for UAM restart
+              RMAppAttemptEventType.REGISTERED))
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.UNREGISTERED, new AMUnregisteredTransition())
       .addTransition(RMAppAttemptState.RUNNING, RMAppAttemptState.RUNNING,
@@ -518,7 +519,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
-    this.proxiedTrackingUrl = generateProxyUriWithScheme();
+    this.proxiedTrackingUrl = rmContext.getAppProxyUrl(conf,
+        appAttemptId.getApplicationId());
     this.stateMachine = stateMachineFactory.make(this);
 
     this.attemptMetrics =
@@ -651,24 +653,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }    
   }
   
-  private String generateProxyUriWithScheme() {
-    this.readLock.lock();
-    try {
-      final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-      String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(null, proxyUri,
-          applicationAttemptId.getApplicationId());
-      return result.toASCIIString();
-    } catch (URISyntaxException e) {
-      LOG.warn("Could not proxify the uri for "
-          + applicationAttemptId.getApplicationId(), e);
-      return null;
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
   private void setTrackingUrlToRMAppPage(RMAppAttemptState stateToBeStored) {
     originalTrackingUrl = pjoin(
         WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
@@ -1236,7 +1220,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
         if (appAttempt.submissionContext
             .getKeepContainersAcrossApplicationAttempts()
-            && !appAttempt.submissionContext.getUnmanagedAM()
             && rmApp.getCurrentAppAttempt() != appAttempt) {
           appAttempt.transferStateFromAttempt(rmApp.getCurrentAppAttempt());
         }

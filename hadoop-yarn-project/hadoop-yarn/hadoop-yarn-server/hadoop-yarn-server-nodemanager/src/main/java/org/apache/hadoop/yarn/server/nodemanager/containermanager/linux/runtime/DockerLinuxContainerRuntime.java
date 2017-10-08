@@ -282,6 +282,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    // Avoid propagating nodemanager environment variables into the container
+    // so those variables can be picked up from the Docker image instead.
+    return false;
+  }
+
+  @Override
   public void prepareContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
   }
@@ -559,8 +566,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     runCommand.setCapabilities(capabilities);
 
     if(cgroupsRootDirectory != null) {
-      runCommand.addMountLocation(cgroupsRootDirectory,
-          cgroupsRootDirectory + ":ro", false);
+      runCommand.addReadOnlyMountLocation(cgroupsRootDirectory,
+          cgroupsRootDirectory, false);
     }
 
     List<String> allDirs = new ArrayList<>(containerLocalDirs);
@@ -584,7 +591,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           }
           String src = validateMount(dir[0], localizedResources);
           String dst = dir[1];
-          runCommand.addMountLocation(src, dst + ":ro", true);
+          runCommand.addReadOnlyMountLocation(src, dst, true);
         }
       }
     }
@@ -626,7 +633,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           launchOp, null, null, false, false);
     } catch (PrivilegedOperationException e) {
       LOG.warn("Launch container failed. Exception: ", e);
-      LOG.info("Docker command used: " + runCommand.getCommandWithArguments());
+      LOG.info("Docker command used: " + runCommand);
 
       throw new ContainerExecutionException("Launch container failed", e
           .getExitCode(), e.getOutput(), e.getErrorOutput());
@@ -757,8 +764,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       launchOp.appendArgs(tcCommandFile);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Launching container with cmd: " + runCommand
-              .getCommandWithArguments());
+      LOG.debug("Launching container with cmd: " + runCommand);
     }
 
     return launchOp;

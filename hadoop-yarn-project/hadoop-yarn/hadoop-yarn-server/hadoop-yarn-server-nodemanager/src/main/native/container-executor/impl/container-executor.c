@@ -18,7 +18,7 @@
 
 #include "configuration.h"
 #include "container-executor.h"
-#include "utils/string-utils.h"
+#include "utils/docker-util.h"
 #include "util.h"
 #include "config.h"
 
@@ -43,7 +43,6 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <getopt.h>
-#include <regex.h>
 
 #ifndef HAVE_FCHMODAT
 #include "compat/fchmodat.h"
@@ -80,11 +79,6 @@ static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
 
 //struct to store the user details
 struct passwd *user_detail = NULL;
-
-//Docker container related constants.
-static const char* DOCKER_CONTAINER_NAME_PREFIX = "container_";
-static const char* DOCKER_CLIENT_CONFIG_ARG = "--config=";
-static const char* DOCKER_PULL_COMMAND = "pull";
 
 FILE* LOGFILE = NULL;
 FILE* ERRORFILE = NULL;
@@ -465,20 +459,14 @@ int is_feature_enabled(const char* feature_key, int default_value,
 }
 
 int is_docker_support_enabled() {
-    return is_feature_enabled(DOCKER_SUPPORT_ENABLED_KEY,
-    DEFAULT_DOCKER_SUPPORT_ENABLED, &executor_cfg);
+  return is_feature_enabled(DOCKER_SUPPORT_ENABLED_KEY,
+                         DEFAULT_DOCKER_SUPPORT_ENABLED, &executor_cfg)
+      || docker_module_enabled(&CFG);
 }
 
 int is_tc_support_enabled() {
     return is_feature_enabled(TC_SUPPORT_ENABLED_KEY,
     DEFAULT_TC_SUPPORT_ENABLED, &executor_cfg);
-}
-
-char* check_docker_binary(char *docker_binary) {
-  if (docker_binary == NULL) {
-    return "docker";
-  }
-  return docker_binary;
 }
 
 /**
@@ -1157,273 +1145,28 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-static char* escape_single_quote(const char *str) {
-  int p = 0;
-  int i = 0;
-  char replacement[] = "'\"'\"'";
-  size_t replacement_length = strlen(replacement);
-  size_t ret_size = strlen(str) * replacement_length + 1;
-  char *ret = (char *) calloc(ret_size, sizeof(char));
-  if(ret == NULL) {
-    exit(OUT_OF_MEMORY);
+char *construct_docker_command(const char *command_file) {
+  int ret = 0;
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
+  char *buffer = alloc_and_clear_memory(command_size, sizeof(char));
+  ret = get_docker_command(command_file, &CFG, buffer, command_size);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Error constructing docker command, docker error code=%d, error message='%s'\n", ret,
+            get_docker_error_message(ret));
+    fflush(ERRORFILE);
+    exit(DOCKER_RUN_FAILED);
   }
-  while(str[p] != '\0') {
-    if(str[p] == '\'') {
-      strncat(ret, replacement, ret_size - strlen(ret));
-      i += replacement_length;
-    }
-    else {
-      ret[i] = str[p];
-      ret[i + 1] = '\0';
-      i++;
-    }
-    p++;
-  }
-  return ret;
-}
-
-static void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg) {
-  char *tmp = escape_single_quote(arg);
-  strcat(*str, param);
-  strcat(*str, "'");
-  if(strlen(*str) + strlen(tmp) > *size) {
-    *str = (char *) realloc(*str, strlen(*str) + strlen(tmp) + 1024);
-    if(*str == NULL) {
-      exit(OUT_OF_MEMORY);
-    }
-    *size = strlen(*str) + strlen(tmp) + 1024;
-  }
-  strcat(*str, tmp);
-  strcat(*str, "' ");
-  free(tmp);
-}
-
-char** tokenize_docker_command(const char *input, int *split_counter) {
-  char *line = (char *)calloc(strlen(input) + 1, sizeof(char));
-  char **linesplit = (char **) malloc(sizeof(char *));
-  char *p = NULL;
-  *split_counter = 0;
-  strncpy(line, input, strlen(input));
-
-  p = strtok(line, " ");
-  while(p != NULL) {
-    linesplit[*split_counter] = p;
-    (*split_counter)++;
-    linesplit = realloc(linesplit, (sizeof(char *) * (*split_counter + 1)));
-    if(linesplit == NULL) {
-      fprintf(ERRORFILE, "Cannot allocate memory to parse docker command %s",
-                 strerror(errno));
-      fflush(ERRORFILE);
-      exit(OUT_OF_MEMORY);
-    }
-    p = strtok(NULL, " ");
-  }
-  linesplit[*split_counter] = NULL;
-  return linesplit;
-}
-
-int execute_regex_match(const char *regex_str, const char *input) {
-  regex_t regex;
-  int regex_match;
-  if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
-    fprintf(LOGFILE, "Unable to compile regex.");
-    fflush(LOGFILE);
-    exit(ERROR_COMPILING_REGEX);
-  }
-  regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);
-  regfree(&regex);
-  if(0 == regex_match) {
-    return 0;
-  }
-  return 1;
-}
-
-int validate_docker_image_name(const char *image_name) {
-  char *regex_str = "^(([a-zA-Z0-9.-]+)(:[0-9]+)?/)?([a-z0-9_./-]+)(:[a-zA-Z0-9_.-]+)?$";
-  return execute_regex_match(regex_str, image_name);
-}
-
-char* sanitize_docker_command(const char *line) {
-  static struct option long_options[] = {
-    {"name", required_argument, 0, 'n' },
-    {"user", required_argument, 0, 'u' },
-    {"rm", no_argument, 0, 'r' },
-    {"workdir", required_argument, 0, 'w' },
-    {"net", required_argument, 0, 'e' },
-    {"hostname", required_argument, 0, 'h' },
-    {"cgroup-parent", required_argument, 0, 'g' },
-    {"privileged", no_argument, 0, 'p' },
-    {"cap-add", required_argument, 0, 'a' },
-    {"cap-drop", required_argument, 0, 'o' },
-    {"device", required_argument, 0, 'i' },
-    {"detach", required_argument, 0, 't' },
-    {"format", required_argument, 0, 'f' },
-    {"group-add", required_argument, 0, 'x' },
-    {0, 0, 0, 0}
-  };
-
-  int c = 0;
-  int option_index = 0;
-  char *output = NULL;
-  size_t output_size = 0;
-  char **linesplit;
-  int split_counter = 0;
-  int len = strlen(line);
-
-  linesplit = tokenize_docker_command(line, &split_counter);
-
-  output_size = len * 2;
-  output = (char *) calloc(output_size, sizeof(char));
-  if(output == NULL) {
-    exit(OUT_OF_MEMORY);
-  }
-
-  // Handle docker client config option.
-  if(0 == strncmp(linesplit[0], DOCKER_CLIENT_CONFIG_ARG, strlen(DOCKER_CLIENT_CONFIG_ARG))) {
-    strcat(output, linesplit[0]);
-    strcat(output, " ");
-    long index = 0;
-    while(index < split_counter) {
-      linesplit[index] = linesplit[index + 1];
-      if (linesplit[index] == NULL) {
-        split_counter--;
-        break;
-      }
-      index++;
-    }
-  }
-
-  // Handle docker pull and image name validation.
-  if (0 == strncmp(linesplit[0], DOCKER_PULL_COMMAND, strlen(DOCKER_PULL_COMMAND))) {
-    if (0 != validate_docker_image_name(linesplit[1])) {
-      fprintf(ERRORFILE, "Invalid Docker image name, exiting.");
-      fflush(ERRORFILE);
-      exit(DOCKER_IMAGE_INVALID);
-    }
-    strcat(output, linesplit[0]);
-    strcat(output, " ");
-    strcat(output, linesplit[1]);
-    return output;
-  }
-
-  strcat(output, linesplit[0]);
-  strcat(output, " ");
-  optind = 1;
-  while((c=getopt_long(split_counter, linesplit, "dv:", long_options, &option_index)) != -1) {
-    switch(c) {
-      case 'n':
-        quote_and_append_arg(&output, &output_size, "--name=", optarg);
-        break;
-      case 'w':
-        quote_and_append_arg(&output, &output_size, "--workdir=", optarg);
-        break;
-      case 'u':
-        quote_and_append_arg(&output, &output_size, "--user=", optarg);
-        break;
-      case 'e':
-        quote_and_append_arg(&output, &output_size, "--net=", optarg);
-        break;
-      case 'h':
-        quote_and_append_arg(&output, &output_size, "--hostname=", optarg);
-        break;
-      case 'v':
-        quote_and_append_arg(&output, &output_size, "-v ", optarg);
-        break;
-      case 'a':
-        quote_and_append_arg(&output, &output_size, "--cap-add=", optarg);
-        break;
-      case 'o':
-        quote_and_append_arg(&output, &output_size, "--cap-drop=", optarg);
-        break;
-      case 'd':
-        strcat(output, "-d ");
-        break;
-      case 'r':
-        strcat(output, "--rm ");
-        break;
-      case 'g':
-        quote_and_append_arg(&output, &output_size, "--cgroup-parent=", optarg);
-        break;
-      case 'p':
-        strcat(output, "--privileged ");
-        break;
-      case 'i':
-        quote_and_append_arg(&output, &output_size, "--device=", optarg);
-        break;
-      case 't':
-        quote_and_append_arg(&output, &output_size, "--detach=", optarg);
-        break;
-      case 'f':
-        strcat(output, "--format=");
-        strcat(output, optarg);
-        strcat(output, " ");
-        break;
-      case 'x':
-        quote_and_append_arg(&output, &output_size, "--group-add ", optarg);
-        break;
-      default:
-        fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);
-        fflush(LOGFILE);
-        return NULL;
-        break;
-    }
-  }
-
-  if(optind < split_counter) {
-    while(optind < split_counter) {
-      if (0 == strncmp(linesplit[optind], DOCKER_CONTAINER_NAME_PREFIX, strlen(DOCKER_CONTAINER_NAME_PREFIX))) {
-        if (1 != validate_container_id(linesplit[optind])) {
-          fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", linesplit[optind]);
-          fflush(ERRORFILE);
-          exit(DOCKER_CONTAINER_NAME_INVALID);
-        }
-        strcat(output, linesplit[optind++]);
-      } else {
-        quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
-      }
-    }
-  }
-
-  return output;
-}
-
-char* parse_docker_command_file(const char* command_file) {
-  size_t len = 0;
-  char *line = NULL;
-  ssize_t read;
-  FILE *stream;
-  stream = fopen(command_file, "r");
-  if (stream == NULL) {
-   fprintf(ERRORFILE, "Cannot open file %s - %s",
-                 command_file, strerror(errno));
-   fflush(ERRORFILE);
-   exit(ERROR_OPENING_DOCKER_FILE);
-  }
-  if ((read = getline(&line, &len, stream)) == -1) {
-     fprintf(ERRORFILE, "Error reading command_file %s\n", command_file);
-     fflush(ERRORFILE);
-     exit(ERROR_READING_DOCKER_FILE);
-  }
-  fclose(stream);
-
-  char* ret = sanitize_docker_command(line);
-  if(ret == NULL) {
-    exit(ERROR_SANITIZING_DOCKER_COMMAND);
-  }
-  fprintf(ERRORFILE, "Using command %s\n", ret);
-  fflush(ERRORFILE);
-
-  return ret;
+  return buffer;
 }
 
 int run_docker(const char *command_file) {
-  char* docker_command = parse_docker_command_file(command_file);
-  char* docker_binary = get_section_value(DOCKER_BINARY_KEY, &executor_cfg);
-  docker_binary = check_docker_binary(docker_binary);
+  char* docker_command = construct_docker_command(command_file);
+  char* docker_binary = get_docker_binary(&CFG);
   size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
-  char* docker_command_with_binary = calloc(sizeof(char), command_size);
+  char* docker_command_with_binary = alloc_and_clear_memory(command_size, sizeof(char));
   snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
+  fprintf(LOGFILE, "Invoking '%s'\n", docker_command_with_binary);
   char **args = split_delimiter(docker_command_with_binary, " ");
 
   int exit_code = -1;
@@ -1437,8 +1180,9 @@ int run_docker(const char *command_file) {
       free(docker_command_with_binary);
       free(docker_command);
       exit_code = DOCKER_RUN_FAILED;
+  } else {
+    exit_code = 0;
   }
-  exit_code = 0;
   return exit_code;
 }
 
@@ -1583,18 +1327,17 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
 
   size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
-  docker_command_with_binary = calloc(sizeof(char), command_size);
-  docker_wait_command = calloc(sizeof(char), command_size);
-  docker_logs_command = calloc(sizeof(char), command_size);
-  docker_inspect_command = calloc(sizeof(char), command_size);
-  docker_rm_command = calloc(sizeof(char), command_size);
+  docker_command_with_binary = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_wait_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_logs_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_inspect_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_rm_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
 
   gid_t user_gid = getegid();
   uid_t prev_uid = geteuid();
 
-  char *docker_command = parse_docker_command_file(command_file);
-  char *docker_binary = get_section_value(DOCKER_BINARY_KEY, &executor_cfg);
-  docker_binary = check_docker_binary(docker_binary);
+  char *docker_command = NULL;
+  char *docker_binary = NULL;
 
   fprintf(LOGFILE, "Creating script paths...\n");
   exit_code = create_script_paths(
@@ -1616,6 +1359,9 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     fflush(ERRORFILE);
     goto cleanup;
   }
+
+  docker_command = construct_docker_command(command_file);
+  docker_binary = get_docker_binary(&CFG);
 
   fprintf(LOGFILE, "Getting exit code file...\n");
   exit_code_file = get_exit_code_file(pid_file);

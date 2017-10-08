@@ -522,19 +522,21 @@ JNIEnv* getJNIEnv(void)
     /* Create a ThreadLocalState for this thread */
     state = threadLocalStorageCreate();
     if (!state) {
+      mutexUnlock(&jvmMutex);
       fprintf(stderr, "getJNIEnv: Unable to create ThreadLocalState\n");
       return NULL;
     }
+    if (threadLocalStorageSet(state)) {
+      mutexUnlock(&jvmMutex);
+      goto fail;
+    }
+    THREAD_LOCAL_STORAGE_SET_QUICK(state);
+
     state->env = getGlobalJNIEnv();
     mutexUnlock(&jvmMutex);
     if (!state->env) {
       goto fail;
     }
-    if (threadLocalStorageSet(state)) {
-      goto fail;
-    }
-    THREAD_LOCAL_STORAGE_SET_QUICK(state);
-
     return state->env;
 
 fail:

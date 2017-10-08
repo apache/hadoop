@@ -1907,7 +1907,7 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_PROCESS_KILL_WAIT_MS =
       NM_PREFIX + "process-kill-wait.ms";
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
-      2000;
+      5000;
 
   /** Max time to wait to establish a connection to RM */
   public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =

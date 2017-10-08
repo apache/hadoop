@@ -2085,7 +2085,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     ContainerId c2 = ContainerId.newContainerId(appAttemptId, 2);
     ContainerId c3 = ContainerId.newContainerId(appAttemptId, 3);
     NMContainerStatus queuedOpp =
-        NMContainerStatus.newInstance(c1, 1, ContainerState.SCHEDULED,
+        NMContainerStatus.newInstance(c1, 1, ContainerState.RUNNING,
             Resource.newInstance(1024, 1), "Dummy Queued OC",
             ContainerExitStatus.INVALID, Priority.newInstance(5), 1234, "",
             ExecutionType.OPPORTUNISTIC);

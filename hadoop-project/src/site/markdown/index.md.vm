@@ -18,9 +18,8 @@ Apache Hadoop ${project.version}
 Apache Hadoop ${project.version} incorporates a number of significant
 enhancements over the previous major release line (hadoop-2.x).
 
-This is an alpha release to facilitate testing and the collection of
-feedback from downstream application developers and users. There are
-no guarantees regarding API stability or quality.
+This release is generally available (GA), meaning that it represents a point of
+API stability and quality that we consider production-ready.
 
 Overview
 ========
@@ -34,7 +33,7 @@ Minimum required Java version increased from Java 7 to Java 8
 All Hadoop JARs are now compiled targeting a runtime version of Java 8.
 Users still using Java 7 or below must upgrade to Java 8.
 
-Support for erasure encoding in HDFS
+Support for erasure coding in HDFS
 ------------------
 
 Erasure coding is a method for durably storing data with significant space

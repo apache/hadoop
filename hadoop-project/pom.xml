@@ -102,6 +102,7 @@
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>2.4.12</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
+    <okhttp.version>2.7.5</okhttp.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
@@ -147,7 +148,7 @@
       <dependency>
         <groupId>com.squareup.okhttp</groupId>
         <artifactId>okhttp</artifactId>
-        <version>2.4.0</version>
+        <version>${okhttp.version}</version>
       </dependency>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>

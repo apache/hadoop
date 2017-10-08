@@ -268,6 +268,12 @@ public class LogAggregationTFileController
     }
     while (nodeFiles.hasNext()) {
       FileStatus thisNodeFile = nodeFiles.next();
+      if (thisNodeFile.getPath().getName().equals(appId + ".har")) {
+        Path p = new Path("har:///"
+            + thisNodeFile.getPath().toUri().getRawPath());
+        nodeFiles = HarFs.get(p.toUri(), conf).listStatusIterator(p);
+        continue;
+      }
       if (nodeIdStr != null) {
         if (!thisNodeFile.getPath().getName().contains(nodeIdStr)) {
           continue;

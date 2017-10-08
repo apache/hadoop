@@ -26,8 +26,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -57,6 +55,8 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for talking to the task umblical.
@@ -72,7 +72,8 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   private static final JvmTask TASK_FOR_INVALID_JVM = new JvmTask(null, true);
 
-  private static final Log LOG = LogFactory.getLog(TaskAttemptListenerImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TaskAttemptListenerImpl.class);
 
   private AppContext context;
   private Server server;
@@ -274,7 +275,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   public void fatalError(TaskAttemptID taskAttemptID, String msg)
       throws IOException {
     // This happens only in Child and in the Task.
-    LOG.fatal("Task: " + taskAttemptID + " - exited : " + msg);
+    LOG.error("Task: " + taskAttemptID + " - exited : " + msg);
     reportDiagnosticInfo(taskAttemptID, "Error: " + msg);
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
@@ -291,7 +292,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   public void fsError(TaskAttemptID taskAttemptID, String message)
       throws IOException {
     // This happens only in Child.
-    LOG.fatal("Task: " + taskAttemptID + " - failed due to FSError: "
+    LOG.error("Task: " + taskAttemptID + " - failed due to FSError: "
         + message);
     reportDiagnosticInfo(taskAttemptID, "FSError: " + message);
 

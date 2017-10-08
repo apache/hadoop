@@ -25,42 +25,30 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
 import org.junit.Test;
 
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestSchedulingMonitor {
 
   @Test(timeout = 10000)
-  public void testRMStarts() {
+  public void testRMStarts() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
     conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
         ProportionalCapacityPreemptionPolicy.class.getCanonicalName());
 
     ResourceManager rm = new MockRM();
-    try {
-      rm.init(conf);
-    } catch (Exception e) {
-      fail("ResourceManager does not start when " +
-          YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS + " is set to true");
-    }
-
+    rm.init(conf);
     SchedulingEditPolicy mPolicy = mock(SchedulingEditPolicy.class);
     when(mPolicy.getMonitoringInterval()).thenReturn(1000L);
     SchedulingMonitor monitor = new SchedulingMonitor(rm.getRMContext(),
         mPolicy);
-    try {
-      monitor.serviceInit(conf);
-      monitor.serviceStart();
-    } catch (Exception e) {
-      fail("SchedulingMonitor failes to start.");
-    }
-    verify(mPolicy, times(1)).editSchedule();
-    try {
-      monitor.close();
-      rm.close();
-    } catch (Exception e) {
-      fail("Failed to close.");
-    }
+    monitor.serviceInit(conf);
+    monitor.serviceStart();
+    verify(mPolicy, timeout(10000)).editSchedule();
+    monitor.close();
+    rm.close();
   }
 }
