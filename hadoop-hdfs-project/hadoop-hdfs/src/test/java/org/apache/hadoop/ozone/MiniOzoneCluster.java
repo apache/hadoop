@@ -155,6 +155,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
    * Restart a particular datanode, wait for it to become active
    */
   public boolean restartDataNode(int i, boolean keepPort) throws IOException {
+    LOG.info("restarting datanode:{} keepPort:{}", i, keepPort);
     if (keepPort) {
       DataNodeProperties dnProp = dataNodes.get(i);
       OzoneContainer container =

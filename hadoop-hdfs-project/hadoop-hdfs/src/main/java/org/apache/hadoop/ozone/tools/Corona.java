@@ -132,7 +132,8 @@ public final class Corona extends Configured implements Tool {
   private String numOfKeys;
   private String jsonDir;
   private boolean useRatis;
-  private int replicationFactor = 0;
+  private OzoneProtos.ReplicationType type;
+  private OzoneProtos.ReplicationFactor factor;
 
   private int keySize;
   private byte[] keyValue = null;
@@ -357,9 +358,24 @@ public final class Corona extends Configured implements Tool {
 
     useRatis = cmdLine.hasOption(RATIS);
 
-    //To-do if replication factor is not mentioned throw an exception
-    replicationFactor =
-        useRatis ? Integer.parseInt(cmdLine.getOptionValue(RATIS)) : 0;
+    type = OzoneProtos.ReplicationType.STAND_ALONE;
+    factor = OzoneProtos.ReplicationFactor.ONE;
+
+    if (useRatis) {
+      type = OzoneProtos.ReplicationType.RATIS;
+      int replicationFactor = Integer.parseInt(cmdLine.getOptionValue(RATIS));
+      switch (replicationFactor) {
+      case 1:
+        factor = OzoneProtos.ReplicationFactor.ONE;
+        break;
+      case 3:
+        factor = OzoneProtos.ReplicationFactor.THREE;
+        break;
+      default:
+        throw new IllegalArgumentException("Illegal replication factor:"
+            + replicationFactor);
+      }
+    }
   }
 
   private void usage() {
@@ -464,10 +480,13 @@ public final class Corona extends Configured implements Tool {
 
     out.println();
     out.println("***************************************************");
+    out.println("Status: " + (exception ? "Failed" : "Success"));
     out.println("Git Base Revision: " + VersionInfo.getRevision());
     out.println("Number of Volumes created: " + numberOfVolumesCreated);
     out.println("Number of Buckets created: " + numberOfBucketsCreated);
     out.println("Number of Keys added: " + numberOfKeysAdded);
+    out.println("Ratis replication factor: " + factor.name());
+    out.println("Ratis replication type: " + type.name());
     out.println("Time spent in volume creation: " + prettyTotalVolumeTime);
     out.println("Time spent in bucket creation: " + prettyTotalBucketTime);
     out.println("Time spent in key creation: " + prettyTotalKeyCreationTime);
@@ -658,17 +677,6 @@ public final class Corona extends Configured implements Tool {
 
     @Override
     public void run() {
-      OzoneProtos.ReplicationType type = OzoneProtos.ReplicationType
-          .STAND_ALONE;
-      OzoneProtos.ReplicationFactor factor = OzoneProtos.ReplicationFactor.ONE;
-
-      if (useRatis) {
-        type = OzoneProtos.ReplicationType.RATIS;
-        factor = replicationFactor != 0 ?
-            OzoneProtos.ReplicationFactor.valueOf(replicationFactor) :
-            OzoneProtos.ReplicationFactor.THREE;
-      }
-
       Long threadKeyWriteTime = 0L;
       for (int j = 0; j < totalBuckets; j++) {
         String bucketName = "bucket-" + j + "-" +
@@ -735,6 +743,7 @@ public final class Corona extends Configured implements Tool {
 
   private final class CoronaJobInfo {
 
+    private String status;
     private String gitBaseRevision;
     private String jobStartTime;
     private String numOfVolumes;
@@ -752,6 +761,8 @@ public final class Corona extends Configured implements Tool {
     private String averageKeyWriteTime;
     private String dataWritten;
     private String execTime;
+    private String replicationFactor;
+    private String replicationType;
 
     private int keySize;
 
@@ -761,6 +772,7 @@ public final class Corona extends Configured implements Tool {
     private String totalThroughputPerSecond;
 
     private CoronaJobInfo() {
+      this.status = exception ? "Failed" : "Success";
       this.numOfVolumes = Corona.this.numOfVolumes;
       this.numOfBuckets = Corona.this.numOfBuckets;
       this.numOfKeys = Corona.this.numOfKeys;
@@ -768,6 +780,8 @@ public final class Corona extends Configured implements Tool {
       this.keySize = Corona.this.keySize;
       this.mode = Corona.this.mode;
       this.jobStartTime = Time.formatTime(Corona.this.jobStartTime);
+      this.replicationFactor = Corona.this.factor.name();
+      this.replicationType = Corona.this.type.name();
 
       long totalBytes =
           Long.parseLong(numOfVolumes) * Long.parseLong(numOfBuckets) * Long
@@ -926,6 +940,18 @@ public final class Corona extends Configured implements Tool {
 
     public String getExecTime() {
       return execTime;
+    }
+
+    public String getReplicationFactor() {
+      return replicationFactor;
+    }
+
+    public String getReplicationType() {
+      return replicationType;
+    }
+
+    public String getStatus() {
+      return status;
     }
 
     public int getKeySize() {

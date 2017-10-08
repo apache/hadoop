@@ -77,6 +77,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       throws IOException {
     final RaftPeer[] newPeers = datanodes.stream().map(RatisHelper::toRaftPeer)
         .toArray(RaftPeer[]::new);
+    LOG.debug("initializing pipeline:{} with nodes:{}", clusterId, newPeers);
     reinitialize(datanodes, newPeers);
   }
 

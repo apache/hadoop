@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import org.apache.hadoop.ozone.container.common.transport.server
@@ -31,7 +32,7 @@ import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.netty.NettyConfigKeys;
-import org.apache.ratis.protocol.RaftPeerId;
+import org.apache.ratis.RatisHelper;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
@@ -56,14 +57,13 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private final int port;
   private final RaftServer server;
 
-  private XceiverServerRatis(
-      String id, int port, String storageDir,
+  private XceiverServerRatis(DatanodeID id, int port, String storageDir,
       ContainerDispatcher dispatcher, RpcType rpcType) throws IOException {
     Objects.requireNonNull(id, "id == null");
     this.port = port;
 
     this.server = RaftServer.newBuilder()
-        .setServerId(RaftPeerId.valueOf(id))
+        .setServerId(RatisHelper.toRaftPeerId(id))
         .setPeers(Collections.emptyList())
         .setProperties(newRaftProperties(rpcType, port, storageDir))
         .setStateMachine(new ContainerStateMachine(dispatcher))
@@ -85,7 +85,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     return properties;
   }
 
-  public static XceiverServerRatis newXceiverServerRatis(String datanodeID,
+  public static XceiverServerRatis newXceiverServerRatis(DatanodeID datanodeID,
       Configuration ozoneConf, ContainerDispatcher dispatcher)
       throws IOException {
     final String ratisDir = File.separator + "ratis";
@@ -125,12 +125,14 @@ public final class XceiverServerRatis implements XceiverServerSpi {
         // probably running under MiniOzoneCluster. Ratis locks the storage
         // directories, so we need to pass different local directory for each
         // local instance. So we map ratis directories under datanode ID.
-        storageDir = storageDir.concat(File.separator + datanodeID);
+        storageDir =
+            storageDir.concat(File.separator + datanodeID.getDatanodeUuid());
       } catch (IOException e) {
         LOG.error("Unable find a random free port for the server, "
             + "fallback to use default port {}", localPort, e);
       }
     }
+    datanodeID.setRatisPort(localPort);
     return new XceiverServerRatis(datanodeID, localPort, storageDir,
         dispatcher, rpc);
   }

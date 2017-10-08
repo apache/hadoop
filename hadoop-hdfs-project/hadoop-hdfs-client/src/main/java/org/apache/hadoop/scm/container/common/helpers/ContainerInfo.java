@@ -48,6 +48,7 @@ public class ContainerInfo {
   public ContainerInfo(ContainerInfo container) {
     this.pipeline = container.getPipeline();
     this.state = container.getState();
+    this.containerName = container.getContainerName();
     this.stateEnterTime = container.getStateEnterTime();
     this.owner = container.getOwner();
   }
