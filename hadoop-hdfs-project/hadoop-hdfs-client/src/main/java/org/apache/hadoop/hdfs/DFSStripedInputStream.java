@@ -68,7 +68,7 @@ public class DFSStripedInputStream extends DFSInputStream {
   private ByteBuffer curStripeBuf;
   private ByteBuffer parityBuf;
   private final ErasureCodingPolicy ecPolicy;
-  private final RawErasureDecoder decoder;
+  private RawErasureDecoder decoder;
 
   /**
    * Indicate the start/end offset of the current buffered stripe in the
@@ -188,7 +188,10 @@ public class DFSStripedInputStream extends DFSInputStream {
         BUFFER_POOL.putBuffer(parityBuf);
         parityBuf = null;
       }
-      decoder.release();
+      if (decoder != null) {
+        decoder.release();
+        decoder = null;
+      }
     }
   }
 
