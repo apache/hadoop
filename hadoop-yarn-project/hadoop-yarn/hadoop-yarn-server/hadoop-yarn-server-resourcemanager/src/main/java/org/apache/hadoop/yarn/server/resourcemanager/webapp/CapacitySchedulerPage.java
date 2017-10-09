@@ -221,8 +221,7 @@ class CapacitySchedulerPage extends RmView {
       ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
       for (UserInfo userInfo : users) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
-        PartitionResourcesInfo resourceUsages = lqinfo
-            .getResources()
+        PartitionResourcesInfo resourceUsages = userInfo.getResourceUsageInfo()
             .getPartitionResourceUsageInfo((nodeLabel == null) ? "" : nodeLabel);
         if (nodeLabel != null) {
           resourcesUsed = userInfo.getResourceUsageInfo()
