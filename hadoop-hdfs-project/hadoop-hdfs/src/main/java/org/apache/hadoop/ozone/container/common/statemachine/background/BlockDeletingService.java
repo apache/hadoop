@@ -175,7 +175,7 @@ public class BlockDeletingService extends BackgroundService{
       KeyPrefixFilter filter = new KeyPrefixFilter(
           OzoneConsts.DELETING_KEY_PREFIX);
       List<Map.Entry<byte[], byte[]>> toDeleteBlocks =
-          meta.getRangeKVs(null, blockLimitPerTask, filter);
+          meta.getSequentialRangeKVs(null, blockLimitPerTask, filter);
       if (toDeleteBlocks.isEmpty()) {
         LOG.debug("No under deletion block found in container : {}",
             containerData.getContainerName());

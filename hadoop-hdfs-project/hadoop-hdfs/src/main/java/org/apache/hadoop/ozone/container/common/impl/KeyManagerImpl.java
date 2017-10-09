@@ -180,7 +180,7 @@ public class KeyManagerImpl implements KeyManager {
         DFSUtil.string2Bytes(startKey);
     MetadataKeyFilter prefixFilter = new KeyPrefixFilter(prefix);
     List<Map.Entry<byte[], byte[]>> range =
-        db.getRangeKVs(startKeyInBytes, count, prefixFilter);
+        db.getSequentialRangeKVs(startKeyInBytes, count, prefixFilter);
     for (Map.Entry<byte[], byte[]> entry : range) {
       String keyName = KeyUtils.getKeyName(entry.getKey());
       KeyData value = KeyUtils.getKeyData(entry.getValue());
