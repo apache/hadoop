@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,27 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
-
-import org.apache.hadoop.yarn.exceptions.YarnException;
-
 /**
- * This exception is thrown by ResourceManager if it's loading an incompatible
- * version of storage on recovery.
+ * Data structures for scheduler configuration mutation info.
  */
-public class RMStateVersionIncompatibleException extends YarnException {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.yarn.webapp.dao;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-  private static final long serialVersionUID = 1364408L;
-
-  public RMStateVersionIncompatibleException(Throwable cause) {
-    super(cause);
-  }
-
-  public RMStateVersionIncompatibleException(String message) {
-    super(message);
-  }
-
-  public RMStateVersionIncompatibleException(String message, Throwable cause) {
-    super(message, cause);
-  }
-}
