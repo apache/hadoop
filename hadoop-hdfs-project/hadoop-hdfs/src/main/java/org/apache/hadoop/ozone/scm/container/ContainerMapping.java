@@ -183,7 +183,7 @@ public class ContainerMapping implements Mapping {
     Preconditions.checkNotNull(containerName);
     Preconditions.checkState(!containerName.isEmpty());
     ContainerInfo containerInfo = null;
-    if (!nodeManager.isOutOfNodeChillMode()) {
+    if (!nodeManager.isOutOfChillMode()) {
       throw new SCMException(
           "Unable to create container while in chill mode",
           SCMException.ResultCodes.CHILL_MODE_EXCEPTION);

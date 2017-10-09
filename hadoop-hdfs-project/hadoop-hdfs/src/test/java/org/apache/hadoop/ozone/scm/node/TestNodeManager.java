@@ -121,7 +121,7 @@ public class TestNodeManager {
     SCMNodeManager nodeManager = new SCMNodeManager(config,
         UUID.randomUUID().toString());
     assertFalse("Node manager should be in chill mode",
-        nodeManager.isOutOfNodeChillMode());
+        nodeManager.isOutOfChillMode());
     return nodeManager;
   }
 
@@ -150,7 +150,7 @@ public class TestNodeManager {
 
       assertTrue("Heartbeat thread should have picked up the" +
               "scheduled heartbeats and transitioned out of chill mode.",
-          nodeManager.isOutOfNodeChillMode());
+          nodeManager.isOutOfChillMode());
     }
   }
 
@@ -169,7 +169,7 @@ public class TestNodeManager {
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
           100, 4 * 1000);
       assertFalse("No heartbeats, Node manager should have been in" +
-          " chill mode.", nodeManager.isOutOfNodeChillMode());
+          " chill mode.", nodeManager.isOutOfChillMode());
     }
   }
 
@@ -191,7 +191,7 @@ public class TestNodeManager {
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
           100, 4 * 1000);
       assertFalse("Not enough heartbeat, Node manager should have" +
-          "been in chillmode.", nodeManager.isOutOfNodeChillMode());
+          "been in chillmode.", nodeManager.isOutOfChillMode());
     }
   }
 
@@ -219,7 +219,7 @@ public class TestNodeManager {
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
           100, 4 * 1000);
       assertFalse("Not enough nodes have send heartbeat to node" +
-          "manager.", nodeManager.isOutOfNodeChillMode());
+          "manager.", nodeManager.isOutOfChillMode());
     }
   }
 
@@ -899,27 +899,23 @@ public class TestNodeManager {
           "mode, waiting on nodes to report in."));
 
       // Should not exit chill mode since 10 nodes have not heartbeat yet.
-      assertFalse(nodeManager.isOutOfNodeChillMode());
-      assertFalse((nodeManager.isInManualChillMode()));
+      assertFalse(nodeManager.isOutOfChillMode());
 
       // Force exit chill mode.
       nodeManager.forceExitChillMode();
-      assertTrue(nodeManager.isOutOfNodeChillMode());
+      assertTrue(nodeManager.isOutOfChillMode());
       status = nodeManager.getChillModeStatus();
       Assert.assertThat(status,
           CoreMatchers.containsString("Out of chill mode."));
-      assertFalse((nodeManager.isInManualChillMode()));
 
 
       // Enter back to into chill mode.
-      nodeManager.forceEnterChillMode();
-      assertFalse(nodeManager.isOutOfNodeChillMode());
+      nodeManager.enterChillMode();
+      assertFalse(nodeManager.isOutOfChillMode());
       status = nodeManager.getChillModeStatus();
       Assert.assertThat(status,
           CoreMatchers.containsString("Out of startup chill mode," +
               " but in manual chill mode."));
-      assertTrue((nodeManager.isInManualChillMode()));
-
 
       // Assert that node manager force enter cannot be overridden by nodes HBs.
       for (int x = 0; x < 20; x++) {
@@ -928,16 +924,15 @@ public class TestNodeManager {
       }
 
       Thread.sleep(500);
-      assertFalse(nodeManager.isOutOfNodeChillMode());
+      assertFalse(nodeManager.isOutOfChillMode());
 
-      // Make sure that once we clear the manual chill mode flag, we fall back
+      // Make sure that once we exit out of manual chill mode, we fall back
       // to the number of nodes to get out chill mode.
-      nodeManager.clearChillModeFlag();
-      assertTrue(nodeManager.isOutOfNodeChillMode());
+      nodeManager.exitChillMode();
+      assertTrue(nodeManager.isOutOfChillMode());
       status = nodeManager.getChillModeStatus();
       Assert.assertThat(status,
           CoreMatchers.containsString("Out of chill mode."));
-      assertFalse(nodeManager.isInManualChillMode());
     }
   }
 

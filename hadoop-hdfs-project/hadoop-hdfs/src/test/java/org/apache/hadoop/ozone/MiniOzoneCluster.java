@@ -291,7 +291,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
   public void waitTobeOutOfChillMode() throws TimeoutException,
       InterruptedException {
     GenericTestUtils.waitFor(() -> {
-      if (scm.getScmNodeManager().isOutOfNodeChillMode()) {
+      if (scm.getScmNodeManager().isOutOfChillMode()) {
         return true;
       }
       LOG.info("Waiting for cluster to be ready. No datanodes found");
