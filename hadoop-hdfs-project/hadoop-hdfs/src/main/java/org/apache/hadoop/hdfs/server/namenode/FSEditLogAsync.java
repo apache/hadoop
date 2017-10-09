@@ -319,4 +319,9 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
       return "["+getClass().getSimpleName()+" op:"+op+" call:"+call+"]";
     }
   }
+
+  @Override
+  public String toString() {
+    return super.toString();
+  }
 }
