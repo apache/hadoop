@@ -100,6 +100,9 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
   /** The job context. For a task, this can be cast to a TaskContext. */
   private final JobContext jobContext;
 
+  /** Should a job marker be created? */
+  private final boolean createJobMarker;
+
   /**
    * Create a committer.
    * This constructor binds the destination directory and configuration, but
@@ -123,6 +126,9 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
         role, jobName(context), jobIdString(context), outputPath);
     S3AFileSystem fs = getDestS3AFS();
+    createJobMarker = context.getConfiguration().getBoolean(
+        CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
+        DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
     commitOperations = new CommitOperations(fs);
   }
 
@@ -358,9 +364,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
   protected void maybeCreateSuccessMarker(JobContext context,
       List<String> filenames)
       throws IOException {
-    if (context.getConfiguration().getBoolean(
-        CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
-        DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER)) {
+    if (createJobMarker) {
       // create a success data structure and then save it
       SuccessData successData = new SuccessData();
       successData.setCommitter(getName());
@@ -373,6 +377,24 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
       commitOperations.createSuccessMarker(getOutputPath(), successData, true);
     }
   }
+
+  /**
+   * Base job setup deletes the success marker.
+   * TODO: Do we need this?
+   * @param context context
+   * @throws IOException IO failure
+   */
+/*
+
+  @Override
+  public void setupJob(JobContext context) throws IOException {
+    if (createJobMarker) {
+      try (DurationInfo d = new DurationInfo("Deleting _SUCCESS marker")) {
+        commitOperations.deleteSuccessMarker(getOutputPath());
+      }
+    }
+  }
+*/
 
   @Override
   public void setupTask(TaskAttemptContext context) throws IOException {

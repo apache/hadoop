@@ -127,11 +127,7 @@ public final class CommitUtils {
    * @throws IllegalArgumentException if there is no magic element
    */
   public static int magicElementIndex(List<String> elements) {
-    return getElementIndex(MAGIC, elements);
-  }
-
-  protected static int getElementIndex(String name, List<String> elements) {
-    int index = elements.indexOf(name);
+    int index = elements.indexOf(MAGIC);
     checkArgument(index >= 0, E_NO_MAGIC_PATH_ELEMENT);
     return index;
   }

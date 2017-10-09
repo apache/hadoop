@@ -340,6 +340,16 @@ public class CommitOperations {
     return createWriter(destKey).abortMultipartUploadsUnderPath(destKey);
   }
 
+
+  /**
+   * Delete any existing {@code _SUCCESS} file.
+   * @param outputPath output directory
+   * @throws IOException IO problem
+   */
+  public void deleteSuccessMarker(Path outputPath) throws IOException {
+    fs.delete(new Path(outputPath, _SUCCESS), false);
+  }
+
   /**
    * Save the success data to the {@code _SUCCESS} file.
    * @param outputPath output directory
