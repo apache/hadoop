@@ -29,6 +29,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.scm.cli.container.ContainerCommandHandler;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.scm.XceiverClientManager;
@@ -49,10 +50,6 @@ import static org.apache.hadoop.ozone.scm.cli.ResultCode.EXECUTION_ERROR;
 import static org.apache.hadoop.ozone.scm.cli.ResultCode.SUCCESS;
 import static org.apache.hadoop.ozone.scm.cli.ResultCode.UNRECOGNIZED_CMD;
 import static org.apache.hadoop.ozone.scm.cli.container.ContainerCommandHandler.CONTAINER_CMD;
-import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT;
-import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_KEY;
-import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_PORT_DEFAULT;
-import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_PORT_KEY;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB;
 
@@ -106,21 +103,18 @@ public class SCMCLI extends OzoneBaseCLI {
       throws IOException {
     long version = RPC.getProtocolVersion(
         StorageContainerLocationProtocolPB.class);
-    String scmAddress = ozoneConf.get(OZONE_SCM_CLIENT_BIND_HOST_KEY,
-        OZONE_SCM_CLIENT_BIND_HOST_DEFAULT);
-    int scmPort = ozoneConf.getInt(OZONE_SCM_CLIENT_PORT_KEY,
-        OZONE_SCM_CLIENT_PORT_DEFAULT);
+    InetSocketAddress scmAddress =
+        OzoneClientUtils.getScmAddressForClients(ozoneConf);
     int containerSizeGB = ozoneConf.getInt(OZONE_SCM_CONTAINER_SIZE_GB,
         OZONE_SCM_CONTAINER_SIZE_DEFAULT);
     ContainerOperationClient.setContainerSizeB(containerSizeGB*OzoneConsts.GB);
-    InetSocketAddress address = new InetSocketAddress(scmAddress, scmPort);
 
     RPC.setProtocolEngine(ozoneConf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
     StorageContainerLocationProtocolClientSideTranslatorPB client =
         new StorageContainerLocationProtocolClientSideTranslatorPB(
             RPC.getProxy(StorageContainerLocationProtocolPB.class, version,
-                address, UserGroupInformation.getCurrentUser(), ozoneConf,
+                scmAddress, UserGroupInformation.getCurrentUser(), ozoneConf,
                 NetUtils.getDefaultSocketFactory(ozoneConf),
                 Client.getRpcTimeout(ozoneConf)));
     ScmClient storageClient = new ContainerOperationClient(
