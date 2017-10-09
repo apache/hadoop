@@ -347,13 +347,13 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     if (!Strings.isNullOrEmpty(startKey)) {
       //Since we are excluding start key from the result,
       // the maxNumOfBuckets is incremented.
-      rangeResult = store.getRangeKVs(
+      rangeResult = store.getSequentialRangeKVs(
           getDBKeyBytes(volumeName, bucketName, startKey),
           maxKeys + 1, filter);
       //Remove start key from result.
       rangeResult.remove(0);
     } else {
-      rangeResult = store.getRangeKVs(null, maxKeys, filter);
+      rangeResult = store.getSequentialRangeKVs(null, maxKeys, filter);
     }
 
     for (Map.Entry<byte[], byte[]> entry : rangeResult) {
@@ -440,7 +440,7 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     // it should be fine to scan all users in db and return us a
     // list of volume names in string per user.
     List<Map.Entry<byte[], byte[]>> rangeKVs = store
-        .getRangeKVs(null, Integer.MAX_VALUE, filter);
+        .getSequentialRangeKVs(null, Integer.MAX_VALUE, filter);
 
     VolumeList.Builder builder = VolumeList.newBuilder();
     for (Map.Entry<byte[], byte[]> entry : rangeKVs) {
@@ -458,7 +458,7 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     final MetadataKeyFilter deletingKeyFilter =
         new KeyPrefixFilter(DELETING_KEY_PREFIX);
     List<Map.Entry<byte[], byte[]>> rangeResult =
-        store.getRangeKVs(null, count, deletingKeyFilter);
+        store.getSequentialRangeKVs(null, count, deletingKeyFilter);
     for (Map.Entry<byte[], byte[]> entry : rangeResult) {
       KsmKeyInfo info =
           KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(entry.getValue()));

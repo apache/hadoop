@@ -145,7 +145,7 @@ public class ContainerMapping implements Mapping {
       byte[] startKey = startName == null ? null : DFSUtil.string2Bytes(
           startName);
       List<Map.Entry<byte[], byte[]>> range =
-          containerStore.getRangeKVs(startKey, count, prefixFilter);
+          containerStore.getSequentialRangeKVs(startKey, count, prefixFilter);
 
       // Transform the values into the pipelines.
       // TODO: return list of ContainerInfo instead of pipelines.

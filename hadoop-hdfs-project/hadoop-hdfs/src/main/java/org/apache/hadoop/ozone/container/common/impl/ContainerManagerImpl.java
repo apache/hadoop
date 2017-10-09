@@ -250,7 +250,7 @@ public class ContainerManagerImpl implements ContainerManager {
       // container status.
       MetadataStore metadata = KeyUtils.getDB(containerData, conf);
       List<Map.Entry<byte[], byte[]>> underDeletionBlocks = metadata
-          .getRangeKVs(null, Integer.MAX_VALUE,
+          .getSequentialRangeKVs(null, Integer.MAX_VALUE,
               new MetadataKeyFilters.KeyPrefixFilter(
                   OzoneConsts.DELETING_KEY_PREFIX));
       containerStatus.incrPendingDeletionBlocks(underDeletionBlocks.size());
