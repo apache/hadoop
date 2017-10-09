@@ -60,16 +60,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
   }
 
   /**
-   * Reports if we have exited out of chill mode by discovering enough nodes.
-   *
-   * @return True if we are out of Node layer chill mode, false otherwise.
-   */
-  @Override
-  public boolean isOutOfNodeChillMode() {
-    return !nodeStateMap.isEmpty();
-  }
-
-  /**
    * Returns a chill mode status string.
    *
    * @return String
@@ -77,17 +67,6 @@ public class ReplicationNodeManagerMock implements NodeManager {
   @Override
   public String getChillModeStatus() {
     return null;
-  }
-
-  /**
-   * Returns the status of manual chill mode flag.
-   *
-   * @return true if forceEnterChillMode has been called, false if
-   * forceExitChillMode or status is not set. eg. clearChillModeFlag.
-   */
-  @Override
-  public boolean isInManualChillMode() {
-    return false;
   }
 
   /**
@@ -158,19 +137,28 @@ public class ReplicationNodeManagerMock implements NodeManager {
   }
 
   /**
-   * Forcefully enters chill mode, even if all minimum node conditions are met.
+   * Puts the node manager into manual chill mode.
    */
   @Override
-  public void forceEnterChillMode() {
+  public void enterChillMode() {
 
   }
 
   /**
-   * Clears the manual chill mode flag.
+   * Brings node manager out of manual chill mode.
    */
   @Override
-  public void clearChillModeFlag() {
+  public void exitChillMode() {
 
+  }
+
+  /**
+   * Returns true if node manager is out of chill mode, else false.
+   * @return true if out of chill mode, else false
+   */
+  @Override
+  public boolean isOutOfChillMode() {
+    return !nodeStateMap.isEmpty();
   }
 
   /**

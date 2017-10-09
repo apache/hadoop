@@ -293,61 +293,22 @@ public class SCMNodeManager
   }
 
   /**
-   * Reports if we have exited out of chill mode.
-   *
-   * @return true if we are out of chill mode.
-   */
-  @Override
-  public boolean isOutOfNodeChillMode() {
-    return !inStartupChillMode.get() && !inManualChillMode.get();
-  }
-
-  /**
-   * Clears the manual chill mode.
-   */
-  @Override
-  public void clearChillModeFlag() {
-    LOG.info("Clearing manual chill mode flag.");
-    this.inManualChillMode.getAndSet(false);
-  }
-
-  /**
    * Returns chill mode Status string.
    * @return String
    */
   @Override
   public String getChillModeStatus() {
     if (inStartupChillMode.get()) {
-      return "Still in chill mode, waiting on nodes to report in."
-          + getNodeStatus();
+      return "Still in chill mode, waiting on nodes to report in." +
+          String.format(" %d nodes reported, minimal %d nodes required.",
+              totalNodes.get(), getMinimumChillModeNodes());
     }
     if (inManualChillMode.get()) {
       return "Out of startup chill mode, but in manual chill mode." +
-          getNodeStatus();
+          String.format(" %d nodes have reported in.", totalNodes.get());
     }
-    return "Out of chill mode." + getNodeStatus();
-  }
-
-  /**
-   * Returns a node status string.
-   * @return - String
-   */
-  private String getNodeStatus() {
-    return isOutOfNodeChillMode() ?
-        String.format(" %d nodes have reported in.", totalNodes.get()) :
-        String.format(" %d nodes reported, minimal %d nodes required.",
-            totalNodes.get(), getMinimumChillModeNodes());
-  }
-
-  /**
-   * Returns the status of Manual chill Mode flag.
-   *
-   * @return true if forceEnterChillMode has been called, false if
-   * forceExitChillMode or status is not set. eg. clearChillModeFlag.
-   */
-  @Override
-  public boolean isInManualChillMode() {
-    return inManualChillMode.get();
+    return "Out of chill mode." +
+        String.format(" %d nodes have reported in.", totalNodes.get());
   }
 
   /**
@@ -359,21 +320,39 @@ public class SCMNodeManager
   public void forceExitChillMode() {
     if(inStartupChillMode.get()) {
       LOG.info("Leaving startup chill mode.");
-      inStartupChillMode.getAndSet(false);
+      inStartupChillMode.set(false);
     }
     if(inManualChillMode.get()) {
       LOG.info("Leaving manual chill mode.");
-      inManualChillMode.getAndSet(false);
+      inManualChillMode.set(false);
     }
   }
 
   /**
-   * Forcefully enters chill mode, even if all chill mode conditions are met.
+   * Puts the node manager into manual chill mode.
    */
   @Override
-  public void forceEnterChillMode() {
+  public void enterChillMode() {
     LOG.info("Entering manual chill mode.");
-    inManualChillMode.getAndSet(true);
+    inManualChillMode.set(true);
+  }
+
+  /**
+   * Brings node manager out of manual chill mode.
+   */
+  @Override
+  public void exitChillMode() {
+    LOG.info("Leaving manual chill mode.");
+    inManualChillMode.set(false);
+  }
+
+  /**
+   * Returns true if node manager is out of chill mode, else false.
+   * @return true if out of chill mode, else false
+   */
+  @Override
+  public boolean isOutOfChillMode() {
+    return !(inStartupChillMode.get() || inManualChillMode.get());
   }
 
   /**

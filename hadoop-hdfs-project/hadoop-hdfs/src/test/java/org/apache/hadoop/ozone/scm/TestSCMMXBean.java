@@ -108,16 +108,12 @@ public class TestSCMMXBean {
         minChillNodes.intValue());
 
     boolean isOutOfChillMode = (boolean)mbs.getAttribute(bean,
-        "OutOfNodeChillMode");
-    assertEquals(scmNm.isOutOfNodeChillMode(), isOutOfChillMode);
+        "OutOfChillMode");
+    assertEquals(scmNm.isOutOfChillMode(), isOutOfChillMode);
 
     String chillStatus = (String)mbs.getAttribute(bean,
         "ChillModeStatus");
     assertEquals(scmNm.getChillModeStatus(), chillStatus);
-
-    boolean inManualChillMode = (boolean)mbs.getAttribute(bean,
-        "InManualChillMode");
-    assertEquals(scmNm.isInManualChillMode(), inManualChillMode);
 
     TabularData nodeCountObj = (TabularData)mbs.getAttribute(bean,
         "NodeCount");

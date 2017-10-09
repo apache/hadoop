@@ -94,14 +94,14 @@ public interface NodeManager extends StorageContainerNodeProtocol,
   void forceExitChillMode();
 
   /**
-   * Forcefully enters chill mode, even if all minimum node conditions are met.
+   * Puts the node manager into manual chill mode.
    */
-  void forceEnterChillMode();
+  void enterChillMode();
 
   /**
-   * Clears the manual chill mode flag.
+   * Brings node manager out of manual chill mode.
    */
-  void clearChillModeFlag();
+  void exitChillMode();
 
   /**
    * Returns the aggregated node stats.

@@ -36,13 +36,6 @@ public interface NodeManagerMXBean {
   int getMinimumChillModeNodes();
 
   /**
-   * Reports if we have exited out of chill mode by discovering enough nodes.
-   *
-   * @return True if we are out of Node layer chill mode, false otherwise.
-   */
-  boolean isOutOfNodeChillMode();
-
-  /**
    * Returns a chill mode status string.
    * @return String
    */
@@ -50,11 +43,10 @@ public interface NodeManagerMXBean {
 
 
   /**
-   * Returns the status of manual chill mode flag.
-   * @return true if forceEnterChillMode has been called,
-   * false if forceExitChillMode or status is not set. eg. clearChillModeFlag.
+   * Returns true if node manager is out of chill mode, else false.
+   * @return true if out of chill mode, else false
    */
-  boolean isInManualChillMode();
+  boolean isOutOfChillMode();
 
   /**
    * Get the number of data nodes that in all states.

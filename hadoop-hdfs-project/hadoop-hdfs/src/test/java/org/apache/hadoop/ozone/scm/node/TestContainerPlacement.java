@@ -86,7 +86,7 @@ public class TestContainerPlacement {
     SCMNodeManager nodeManager = new SCMNodeManager(config,
         UUID.randomUUID().toString());
     assertFalse("Node manager should be in chill mode",
-        nodeManager.isOutOfNodeChillMode());
+        nodeManager.isOutOfChillMode());
     return nodeManager;
   }
 
@@ -150,7 +150,7 @@ public class TestContainerPlacement {
       assertEquals(remaining * nodeCount,
           (long) nodeManager.getStats().getRemaining().get());
 
-      assertTrue(nodeManager.isOutOfNodeChillMode());
+      assertTrue(nodeManager.isOutOfChillMode());
 
       String container1 = UUID.randomUUID().toString();
       Pipeline pipeline1 = containerManager.allocateContainer(

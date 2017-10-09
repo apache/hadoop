@@ -226,7 +226,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           INVALID_BLOCK_SIZE);
     }
 
-    if (!nodeManager.isOutOfNodeChillMode()) {
+    if (!nodeManager.isOutOfChillMode()) {
       LOG.warn("Not out of Chill mode.");
       throw new SCMException("Unable to create block while in chill mode",
           CHILL_MODE_EXCEPTION);
@@ -403,7 +403,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    */
   @Override
   public void deleteBlocks(List<String> blockIDs) throws IOException {
-    if (!nodeManager.isOutOfNodeChillMode()) {
+    if (!nodeManager.isOutOfChillMode()) {
       throw new SCMException("Unable to delete block while in chill mode",
           CHILL_MODE_EXCEPTION);
     }
