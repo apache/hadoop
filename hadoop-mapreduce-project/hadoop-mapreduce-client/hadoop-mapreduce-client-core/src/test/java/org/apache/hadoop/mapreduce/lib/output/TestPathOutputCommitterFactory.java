@@ -26,11 +26,9 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.*;
@@ -49,7 +47,6 @@ public class TestPathOutputCommitterFactory extends Assert {
   private static final Path HTTP_PATH = new Path("http://hadoop.apache.org/");
   private static final Path HDFS_PATH = new Path("hdfs://localhost:8081/");
 
-  private JobID jobID = new JobID("local", 0);
   private TaskAttemptID taskAttemptID =
       new TaskAttemptID("local", 0, TaskType.MAP, 1, 2);
 
@@ -112,13 +109,10 @@ public class TestPathOutputCommitterFactory extends Assert {
     // then ask for factories and committers for a null path
     PathOutputCommitterFactory factory = createCommitterFactory(
         FileOutputCommitterFactory.class, null, conf);
-    createCommitter(FileOutputCommitterFactory.class,
-        FileOutputCommitter.class,
-        null, conf, false);
     FileOutputCommitter committer = createCommitter(
         FileOutputCommitterFactory.class,
         FileOutputCommitter.class,
-        null, conf, true);
+        null, conf);
     assertNull(committer.getOutputPath());
     assertNull(committer.getWorkPath());
   }
@@ -135,7 +129,7 @@ public class TestPathOutputCommitterFactory extends Assert {
     conf.set(NAMED_COMMITTER_CLASS, SimpleCommitter.class.getName());
     SimpleCommitter sc = createCommitter(
         NamedCommitterFactory.class,
-        SimpleCommitter.class, HDFS_PATH, conf, false);
+        SimpleCommitter.class, HDFS_PATH, conf);
     assertEquals("Wrong output path from " + sc,
         HDFS_PATH,
         sc.getOutputPath());
@@ -154,30 +148,28 @@ public class TestPathOutputCommitterFactory extends Assert {
     SimpleCommitter sc = createCommitter(
         NamedCommitterFactory.class,
         SimpleCommitter.class,
-        null, conf, true);
+        null, conf);
     assertNull(sc.getOutputPath());
   }
 
   /**
    * Create a factory then a committer, validating the type of both.
+   * @param <T> type of factory
+   * @param <U> type of committer
    * @param factoryClass expected factory class
    * @param committerClass expected committer class
    * @param path output path (may be null)
    * @param conf configuration
-   * @param isTaskAttempt is this to be a task attempt or a job attempt)
-   * @param <T> type of factory
-   * @param <U> type of committer
    * @return the committer
-   * @throws IOException
+   * @throws IOException failure to create
    */
   private <T extends PathOutputCommitterFactory, U extends PathOutputCommitter>
     U createCommitter(Class<T> factoryClass, Class<U> committerClass,
       Path path,
-      Configuration conf,
-      boolean isTaskAttempt) throws IOException {
+      Configuration conf) throws IOException {
     T f = createCommitterFactory(factoryClass, path, conf);
     PathOutputCommitter committer = f.createOutputCommitter(
-        path, isTaskAttempt ? taskAttempt(conf) : jobAttempt(conf));
+        path, taskAttempt(conf));
     assertEquals(" Wrong committer for path " + path + " from factory " + f,
         committerClass, committer.getClass());
     return (U) committer;
@@ -201,11 +193,12 @@ public class TestPathOutputCommitterFactory extends Assert {
     return (T)factory;
   }
 
-  private JobContextImpl jobAttempt(Configuration conf) {
-    return new JobContextImpl(conf, jobID);
-  }
-
-  private TaskAttemptContextImpl taskAttempt(Configuration conf) {
+  /**
+   * Create a new task attempt context
+   * @param conf config
+   * @return a new context
+   */
+  private TaskAttemptContext taskAttempt(Configuration conf) {
     return new TaskAttemptContextImpl(conf, taskAttemptID);
   }
 
@@ -219,14 +212,10 @@ public class TestPathOutputCommitterFactory extends Assert {
     // set up for the schema factory
     conf.set(COMMITTER_FACTORY_CLASS, FILE_COMMITTER_FACTORY);
     conf.set(NAMED_COMMITTER_CLASS, SimpleCommitter.class.getName());
-    PathOutputCommitterFactory factory = getCommitterFactory(HDFS_PATH, conf);
-
+    getCommitterFactory(HDFS_PATH, conf);
     createCommitter(
         FileOutputCommitterFactory.class,
-        FileOutputCommitter.class, null, conf, true);
-    createCommitter(
-        FileOutputCommitterFactory.class,
-        FileOutputCommitter.class, null, conf, false);
+        FileOutputCommitter.class, null, conf);
   }
 
   /**
@@ -329,12 +318,6 @@ public class TestPathOutputCommitterFactory extends Assert {
       this.outputPath = outputPath;
     }
 
-    public SimpleCommitter(Path outputPath,
-        JobContext context) throws IOException {
-      super(outputPath, context);
-      this.outputPath = outputPath;
-    }
-
     @Override
     public Path getWorkPath() throws IOException {
       return null;
@@ -384,11 +367,6 @@ public class TestPathOutputCommitterFactory extends Assert {
       return new SimpleCommitter(outputPath, context);
     }
 
-    @Override
-    public PathOutputCommitter createOutputCommitter(Path outputPath,
-        JobContext context) throws IOException {
-      return new SimpleCommitter(outputPath, context);
-    }
   }
 
   /**
@@ -402,11 +380,6 @@ public class TestPathOutputCommitterFactory extends Assert {
       return new SimpleCommitter(outputPath, context);
     }
 
-    @Override
-    public PathOutputCommitter createOutputCommitter(Path outputPath,
-        JobContext context) throws IOException {
-      return new SimpleCommitter(outputPath, context);
-    }
   }
 
 }

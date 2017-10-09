@@ -29,7 +29,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -116,39 +115,6 @@ public class PathOutputCommitterFactory extends Configured {
       Path outputPath,
       TaskAttemptContext context) throws IOException {
     return createFileOutputCommitter(outputPath, context);
-  }
-
-  /**
-   * Create a path output committer for a job.
-   * This operation is not used by the FileOutputFormat workflow, as committers
-   * are initialized only with a job context
-   * @param outputPath the job's output path, or null if no output path
-   * has been defined.
-   * @param context the task's context
-   * @return the committer to use
-   * @throws IOException problems instantiating the committer
-   */
-  @InterfaceAudience.Private
-  public PathOutputCommitter createOutputCommitter(
-      Path outputPath,
-      JobContext context) throws IOException {
-    return createFileOutputCommitter(outputPath, context);
-  }
-
-  /**
-   * Create a {@link FileOutputCommitter} for a job.
-   * @param outputPath the job's output path, or null if no output path
-   * has been defined.
-   * @param context the job context
-   * @return the committer to use
-   * @throws IOException problems instantiating the committer
-   */
-  protected final PathOutputCommitter createFileOutputCommitter(
-      Path outputPath,
-      JobContext context) throws IOException {
-    LOG.debug("Creating FileOutputCommitter for path {} and context {}",
-        outputPath, context);
-    return new FileOutputCommitter(outputPath, context);
   }
 
   /**

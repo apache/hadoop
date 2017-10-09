@@ -44,31 +44,16 @@ public final class NamedCommitterFactory extends
   @Override
   public PathOutputCommitter createOutputCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
-    Class<? extends PathOutputCommitter> clazz = loadClass(context);
-    LOG.debug("Using OutputCommitter factory class {}", clazz);
+    Class<? extends PathOutputCommitter> clazz = loadCommitterClass(context);
+    LOG.debug("Using PathOutputCommitter implementation {}", clazz);
     try {
       Constructor<? extends PathOutputCommitter> ctor
           = clazz.getConstructor(Path.class, TaskAttemptContext.class);
       return ctor.newInstance(outputPath, context);
-    } catch (NoSuchMethodException | InstantiationException |
-        IllegalAccessException | InvocationTargetException e) {
-      throw new IOException("Failed to create " + clazz
-          + ":" + e, e);
-    }
-  }
-
-  @SuppressWarnings("JavaReflectionMemberAccess")
-  @Override
-  public PathOutputCommitter createOutputCommitter(Path outputPath,
-      JobContext context) throws IOException {
-    Class<? extends PathOutputCommitter> clazz = loadClass(context);
-    LOG.debug("Using OutputCommitter factory class {}", clazz);
-    try {
-      Constructor<? extends PathOutputCommitter> ctor
-          = clazz.getConstructor(Path.class, JobContext.class);
-      return ctor.newInstance(outputPath, context);
-    } catch (NoSuchMethodException | InstantiationException |
-        IllegalAccessException | InvocationTargetException e) {
+    } catch (NoSuchMethodException
+        | InstantiationException
+        | IllegalAccessException
+        | InvocationTargetException e) {
       throw new IOException("Failed to create " + clazz
           + ":" + e, e);
     }
@@ -77,11 +62,11 @@ public final class NamedCommitterFactory extends
   /**
    * Load the class named in {@link #NAMED_COMMITTER_CLASS}.
    * @param context job or task context
-   * @return the class
+   * @return the committer class
    * @throws IOException if no committer was defined.
    */
-  private Class<? extends PathOutputCommitter> loadClass(JobContext context)
-      throws IOException {
+  private Class<? extends PathOutputCommitter> loadCommitterClass(
+      JobContext context) throws IOException {
     Preconditions.checkNotNull(context, "null context");
     Configuration conf = context.getConfiguration();
     String value = conf.get(NAMED_COMMITTER_CLASS, "");
