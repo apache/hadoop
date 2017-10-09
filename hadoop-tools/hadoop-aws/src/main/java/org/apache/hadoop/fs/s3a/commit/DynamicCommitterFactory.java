@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
@@ -65,27 +64,6 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
       = "org.apache.hadoop.fs.s3a.commit.DynamicCommitterFactory";
 
   /**
-   * Dynamically create a job committer.
-   * @param fileSystem destination FS.
-   * @param outputPath final output path for work
-   * @param context job context
-   * @return a committer
-   * @throws IOException instantiation failure
-   */
-  @Override
-  public PathOutputCommitter createJobCommitter(S3AFileSystem fileSystem,
-      Path outputPath,
-      JobContext context) throws IOException {
-    AbstractS3GuardCommitterFactory factory = chooseCommitter(fileSystem,
-        outputPath);
-    if (factory != null) {
-      return factory.createJobCommitter(fileSystem, outputPath, context);
-    } else {
-      return createFileOutputCommitter(outputPath, context);
-    }
-  }
-
-  /**
    * Dynamically create a task committer.
    * @param fileSystem destination FS.
    * @param outputPath final output path for work
@@ -97,7 +75,7 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
   public PathOutputCommitter createTaskCommitter(S3AFileSystem fileSystem,
       Path outputPath,
       TaskAttemptContext context) throws IOException {
-    AbstractS3GuardCommitterFactory factory = chooseCommitter(fileSystem,
+    AbstractS3GuardCommitterFactory factory = chooseCommitterFactory(fileSystem,
         outputPath);
     return factory != null ?
       factory.createTaskCommitter(fileSystem, outputPath, context)
@@ -111,7 +89,7 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
    * @return A s3guard committer if chosen, or "null" for the classic value
    * @throws PathCommitException on a failure to identify the committer
    */
-  private AbstractS3GuardCommitterFactory chooseCommitter(
+  private AbstractS3GuardCommitterFactory chooseCommitterFactory(
       S3AFileSystem fileSystem,
       Path outputPath) throws PathCommitException {
     AbstractS3GuardCommitterFactory factory;

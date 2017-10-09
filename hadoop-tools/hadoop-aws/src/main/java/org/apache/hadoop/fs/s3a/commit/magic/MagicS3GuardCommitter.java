@@ -65,17 +65,6 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
   public static final String NAME = "MagicS3GuardCommitter";
 
   /**
-   * Create a job committer.
-   * @param outputPath output path
-   * @param context job context
-   * @throws IOException on a failure
-   */
-  public MagicS3GuardCommitter(Path outputPath,
-      JobContext context) throws IOException {
-    super(outputPath, context);
-  }
-
-  /**
    * Create a task committer.
    * @param outputPath the job's output path
    * @param context the task's context

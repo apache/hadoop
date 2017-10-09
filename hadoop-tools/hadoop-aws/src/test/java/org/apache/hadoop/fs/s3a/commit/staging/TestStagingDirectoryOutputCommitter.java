@@ -35,7 +35,8 @@ public class TestStagingDirectoryOutputCommitter
 
   @Override
   DirectoryStagingCommitter newJobCommitter() throws Exception {
-    return new DirectoryStagingCommitter(OUTPUT_PATH, getJob());
+    return new DirectoryStagingCommitter(OUTPUT_PATH,
+        createTaskAttemptForJob());
   }
 
   @Test

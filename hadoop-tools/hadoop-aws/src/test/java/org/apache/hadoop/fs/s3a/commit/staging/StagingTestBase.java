@@ -57,7 +57,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.commit.AbstractCommitITest;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.MiniDFSTestCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -69,16 +71,12 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Test base for mock tests of staging committers:
@@ -302,6 +300,15 @@ public class StagingTestBase {
       return job;
     }
 
+    /**
+     * Create a task attempt for a job by creating a stub task ID.
+     * @return a task attempt
+     */
+    public TaskAttemptContext createTaskAttemptForJob() {
+      return AbstractCommitITest.taskAttemptForJob(
+          MRBuilderUtils.newJobId(1, JOB_ID.getId(), 1), job);
+    }
+
     protected StagingTestBase.ClientResults getMockResults() {
       return results;
     }
@@ -364,6 +371,7 @@ public class StagingTestBase {
    * This data is serialized in MR Tests and read back in in the test runner
    */
   public static class ClientResults implements Serializable {
+    private static final long serialVersionUID = -3137637327090709905L;
     // For inspection of what the committer did
     private final Map<String, InitiateMultipartUploadRequest> requests =
         Maps.newHashMap();
@@ -681,7 +689,7 @@ public class StagingTestBase {
    * create files in the attempt path that should be found by
    * {@code getTaskOutput}.
    * @param relativeFiles list of files relative to address path
-   * @param attemptPath
+   * @param attemptPath attempt path
    * @param conf config for FS
    * @throws IOException on any failure
    */

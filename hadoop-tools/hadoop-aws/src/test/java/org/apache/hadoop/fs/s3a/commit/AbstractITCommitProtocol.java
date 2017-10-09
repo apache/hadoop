@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
@@ -52,14 +51,11 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -226,28 +222,6 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   protected abstract AbstractS3GuardCommitter createCommitter(
       Path outputPath,
       TaskAttemptContext context) throws IOException;
-
-  /**
-   * Create a committer for a job.
-   * @param context job context
-   * @return new committer
-   * @throws IOException failure
-   */
-  protected AbstractS3GuardCommitter createCommitter(JobContext context)
-      throws IOException {
-    return createCommitter(getOutDir(), context);
-  }
-
-  /**
-   * Create a committer for a job and a given output path.
-   * @param outputPath path
-   * @param context job context
-   * @return new committer
-   * @throws IOException failure
-   */
-  protected abstract AbstractS3GuardCommitter createCommitter(
-      Path outputPath,
-      JobContext context) throws IOException;
 
   protected abstract String getCommitterFactoryName();
 
@@ -1011,8 +985,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
           // step 1: write the text
           writeTextOutput(tContext);
           // step 2: commit the job
-          AbstractS3GuardCommitter jobCommitter = createCommitter(jContext);
-          jobCommitter.commitJob(jContext);
+          AbstractS3GuardCommitter jobCommitter = createCommitter(tContext);
+          jobCommitter.commitJob(tContext);
           assertPart0000DoesNotExist(outDir);
           assertNoMultipartUploadsPending(outDir);
         }
@@ -1166,9 +1140,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     FileSystem.closeAll();
 */
 
-    final JobContext jContext = new JobContextImpl(conf,
-        taskAttempt0.getJobID());
-    AbstractS3GuardCommitter amCommitter = createCommitter(jContext);
+    final JobContext jContext = new JobContextImpl(conf, taskAttempt0.getJobID());
+    AbstractS3GuardCommitter amCommitter = createCommitter(
+        new TaskAttemptContextImpl(conf, taskAttempt0));
     amCommitter.setupJob(jContext);
 
     final TaskAttemptContext[] taCtx = new TaskAttemptContextImpl[2];
@@ -1302,15 +1276,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     AbstractS3GuardCommitter committer = jobData.committer;
 
 
-    JobId newJobId = MRBuilderUtils.newJobId(1, 1, 1);
-    org.apache.hadoop.mapreduce.v2.api.records.TaskId taskID =
-        MRBuilderUtils.newTaskId(newJobId, 0, TaskType.MAP);
-    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
-        MRBuilderUtils.newTaskAttemptId(taskID, 0);
+    TaskAttemptContext newAttempt = taskAttemptForJob(
+        MRBuilderUtils.newJobId(1, 1, 1), jContext);
     Configuration conf = jContext.getConfiguration();
-    TaskAttemptContext newAttempt = new TaskAttemptContextImpl(
-        conf,
-        TypeConverter.fromYarn(attemptID));
 
     // bind
     LoggingTextOutputFormat.bind(conf);

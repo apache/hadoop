@@ -44,11 +44,6 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       PartitionedStagingCommitter.class);
   public static final String NAME = "PartitionedStagingCommitter";
 
-  public PartitionedStagingCommitter(Path outputPath, JobContext context)
-      throws IOException {
-    super(outputPath, context);
-  }
-
   public PartitionedStagingCommitter(Path outputPath,
       TaskAttemptContext context)
       throws IOException {

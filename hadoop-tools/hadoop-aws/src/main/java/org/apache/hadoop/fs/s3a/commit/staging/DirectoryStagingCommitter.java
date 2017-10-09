@@ -45,11 +45,6 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       DirectoryStagingCommitter.class);
   public static final String NAME = "DirectoryStagingCommitter";
 
-  public DirectoryStagingCommitter(Path outputPath, JobContext context)
-      throws IOException {
-    super(outputPath, context);
-  }
-
   public DirectoryStagingCommitter(Path outputPath, TaskAttemptContext context)
       throws IOException {
     super(outputPath, context);

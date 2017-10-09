@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
@@ -34,11 +33,6 @@ class PartitionedCommitterForTesting extends
 
   PartitionedCommitterForTesting(Path outputPath,
       TaskAttemptContext context) throws IOException {
-    super(outputPath, context);
-  }
-
-  PartitionedCommitterForTesting(Path outputPath,
-      JobContext context) throws IOException {
     super(outputPath, context);
   }
 

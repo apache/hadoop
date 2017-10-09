@@ -51,14 +51,6 @@ public class ITestPartitionedCommitProtocol extends ITestStagingCommitProtocol {
   }
 
   @Override
-  public AbstractS3GuardCommitter createCommitter(
-      Path outputPath,
-      JobContext context)
-      throws IOException {
-    return new PartitionedStagingCommitter(outputPath, context);
-  }
-
-  @Override
   public AbstractS3GuardCommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
@@ -83,7 +75,7 @@ public class ITestPartitionedCommitProtocol extends ITestStagingCommitProtocol {
     private final CommitterFaultInjectionImpl injection;
 
     CommitterWithFailedThenSucceed(Path outputPath,
-        JobContext context) throws IOException {
+        TaskAttemptContext context) throws IOException {
       super(outputPath, context);
       injection = new CommitterFaultInjectionImpl(outputPath, context, true);
     }

@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.*;
@@ -51,7 +52,7 @@ public class TestStagingPartitionedJobCommit
 
   @Override
   PartitionedStagingCommitter newJobCommitter() throws IOException {
-    return new PartitionedStagingCommitterForTesting(getJob());
+    return new PartitionedStagingCommitterForTesting(createTaskAttemptForJob());
   }
 
   /**
@@ -62,7 +63,7 @@ public class TestStagingPartitionedJobCommit
 
     private boolean aborted = false;
 
-    private PartitionedStagingCommitterForTesting(JobContext context)
+    private PartitionedStagingCommitterForTesting(TaskAttemptContext context)
         throws IOException {
       super(OUTPUT_PATH, context);
     }

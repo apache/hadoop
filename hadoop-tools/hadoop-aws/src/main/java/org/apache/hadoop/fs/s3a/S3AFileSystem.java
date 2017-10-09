@@ -3132,16 +3132,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Override
   public boolean hasCapability(String capability) {
 
-    boolean b;
     switch (capability.toLowerCase(Locale.ENGLISH)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
-      b = isMagicCommitEnabled();
-      break;
+      // capability depends on FS configuration
+      return isMagicCommitEnabled();
 
     default:
-      b = false;
+      return false;
     }
-    return b;
   }
 }

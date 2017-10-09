@@ -76,41 +76,6 @@ public abstract class AbstractS3GuardCommitterFactory
           : null;
   }
 
-  @Override
-  public PathOutputCommitter createOutputCommitter(Path outputPath,
-      JobContext context) throws IOException {
-    FileSystem fs = getDestinationFileSystem(outputPath, context);
-    LOG.debug("Destination FS is {}", fs);
-    PathOutputCommitter outputCommitter;
-    if (fs instanceof S3AFileSystem) {
-      outputCommitter = createJobCommitter((S3AFileSystem)fs, outputPath,
-          context);
-    } else {
-      // this is the null path as well as the patch taken if the
-      // FS is not an S3A FS.
-      LOG.debug("Dest FS is not S3A, so using standard committer");
-      outputCommitter = createFileOutputCommitter(outputPath, context);
-    }
-    LOG.info("Using Commmitter {} for {}",
-        outputCommitter,
-        outputPath);
-    return outputCommitter;
-  }
-
-  /**
-   * Implementation point: create a job committer for a specific filesystem.
-   * @param fileSystem destination FS.
-   * @param outputPath final output path for work
-   * @param context job context
-   * @return a committer
-   * @throws IOException any problem, including the FS not supporting
-   * the desired committer
-   */
-  public abstract PathOutputCommitter createJobCommitter(
-      S3AFileSystem fileSystem,
-      Path outputPath,
-      JobContext context) throws IOException;
-
   /**
    * Implementation point: create a task committer for a specific filesystem.
    * @param fileSystem destination FS.

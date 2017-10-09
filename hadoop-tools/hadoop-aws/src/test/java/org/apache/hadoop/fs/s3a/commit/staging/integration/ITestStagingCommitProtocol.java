@@ -89,12 +89,6 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
     return new StagingCommitter(outputPath, context);
   }
 
-  @Override
-  protected AbstractS3GuardCommitter createCommitter(Path outputPath,
-      JobContext context) throws IOException {
-    return new StagingCommitter(outputPath, context);
-  }
-
   public AbstractS3GuardCommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
@@ -137,7 +131,7 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
     private final CommitterFaultInjectionImpl injection;
 
     CommitterWithFailedThenSucceed(Path outputPath,
-        JobContext context) throws IOException {
+        TaskAttemptContext context) throws IOException {
       super(outputPath, context);
       injection = new CommitterFaultInjectionImpl(outputPath, context, true);
     }

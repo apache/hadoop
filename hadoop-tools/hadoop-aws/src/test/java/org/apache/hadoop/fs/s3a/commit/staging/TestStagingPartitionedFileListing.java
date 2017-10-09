@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import org.junit.After;
@@ -51,7 +52,8 @@ public class TestStagingPartitionedFileListing
 
   @Override
   PartitionedStagingCommitter newJobCommitter() throws IOException {
-    return new PartitionedStagingCommitter(OUTPUT_PATH, getJob());
+    return new PartitionedStagingCommitter(OUTPUT_PATH,
+        createTaskAttemptForJob());
   }
 
   @Override
@@ -132,11 +134,9 @@ public class TestStagingPartitionedFileListing
       }
 
       List<FileStatus> attemptFiles = committer.getTaskOutput(getTAC());
-      List<String> actualFiles = Lists.newArrayList();
-      for (FileStatus stat : attemptFiles) {
-        String relative = Paths.getRelativePath(attemptPath, stat.getPath());
-        actualFiles.add(relative);
-      }
+      List<String> actualFiles = attemptFiles.stream()
+          .map(stat -> Paths.getRelativePath(attemptPath, stat.getPath()))
+          .collect(Collectors.toList());
       Collections.sort(attemptFiles);
       Collections.sort(actualFiles);
       assertEquals("File sets should match", expectedFiles, actualFiles);

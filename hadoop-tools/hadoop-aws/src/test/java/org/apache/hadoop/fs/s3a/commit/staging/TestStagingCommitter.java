@@ -151,12 +151,13 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     // and bind the FS
     wrapperFS.setAmazonS3Client(mockClient);
 
-    this.job = new JobContextImpl(jobConf, JOB_ID);
-    this.jobCommitter = new MockedStagingCommitter(OUTPUT_PATH, job);
-    jobCommitter.setupJob(job);
 
+    this.job = new JobContextImpl(jobConf, JOB_ID);
     this.tac = new TaskAttemptContextImpl(
         new Configuration(job.getConfiguration()), AID);
+
+    this.jobCommitter = new MockedStagingCommitter(OUTPUT_PATH, tac);
+    jobCommitter.setupJob(job);
 
     // get the task's configuration copy so modifications take effect
     this.conf = tac.getConfiguration();
@@ -177,7 +178,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   @After
   public void cleanup() {
     try {
-      FileUtils.deleteDirectory(tmpDir);
+      if (tmpDir != null) {
+        FileUtils.deleteDirectory(tmpDir);
+      }
     } catch (IOException ignored) {
 
     }

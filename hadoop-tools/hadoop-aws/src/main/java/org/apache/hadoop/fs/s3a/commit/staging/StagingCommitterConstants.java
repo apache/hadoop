@@ -55,11 +55,5 @@ public final class StagingCommitterConstants {
 
   public static final String SPARK_APP_ID = "spark.app.id";
 
-
-  /**
-   * Filename of the commit data for a task: {@value}.
-   * Bin suffix to make clear this is not any form of text file.
-   */
-  public static final String COMMIT_FILENAME = "task-commit-data.bin";
   public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
 }

@@ -72,7 +72,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
   private ExecutorService threadPool;
 
   /** Underlying commit operations. */
-  private CommitOperations commitOperations;
+  private final CommitOperations commitOperations;
 
   /**
    * Final destination of work.
@@ -102,40 +102,6 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
 
   /**
    * Create a committer.
-   * @param outputPath the job's output path: MUST NOT be null.
-   * @param context the job context
-   * @throws IOException on a failure
-   */
-  private AbstractS3GuardCommitter(
-      String role,
-      Path outputPath,
-      JobContext context) throws IOException {
-    super(outputPath, context);
-    Preconditions.checkArgument(outputPath != null, "null output path");
-    Preconditions.checkArgument(context != null, "null job context");
-    this.jobContext = context;
-    this.role = role;
-    setConf(context.getConfiguration());
-    initOutput(outputPath);
-    LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
-        role, jobName(context), jobIdString(context), outputPath);
-    S3AFileSystem fs = getDestS3AFS();
-    commitOperations = new CommitOperations(fs);
-  }
-
- /**
-   * Create a committer.
-   * @param outputPath the job's output path: MUST NOT be null.
-   * @param context the job context
-   * @throws IOException on a failure
-   */
-  protected AbstractS3GuardCommitter(Path outputPath,
-      JobContext context) throws IOException {
-    this("Job committer " + jobIdString(context), outputPath, context);
-  }
-
-  /**
-   * Create a committer.
    * This constructor binds the destination directory and configuration, but
    * does not update the work path: That must be calculated by the
    * implementation;
@@ -144,12 +110,20 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @param context the task's context
    * @throws IOException on a failure
    */
-  protected AbstractS3GuardCommitter(Path outputPath,
+  protected AbstractS3GuardCommitter(
+      Path outputPath,
       TaskAttemptContext context) throws IOException {
-    this("Task committer "+ context.getTaskAttemptID(),
-        outputPath, context);
-    LOG.debug("{}} instantiated for {} ID {}",
-        role, jobName(context), jobIdString(context));
+    super(outputPath, context);
+    Preconditions.checkArgument(outputPath != null, "null output path");
+    Preconditions.checkArgument(context != null, "null job context");
+    this.jobContext = context;
+    this.role = "Task committer " + context.getTaskAttemptID();
+    setConf(context.getConfiguration());
+    initOutput(outputPath);
+    LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
+        role, jobName(context), jobIdString(context), outputPath);
+    S3AFileSystem fs = getDestS3AFS();
+    commitOperations = new CommitOperations(fs);
   }
 
   /**
@@ -581,14 +555,6 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    */
   protected CommitOperations getCommitOperations() {
     return commitOperations;
-  }
-
-  /**
-   * For testing: set a new commit action.
-   * @param commitOperations commit actions instance
-   */
-  protected void setCommitOperations(CommitOperations commitOperations) {
-    this.commitOperations = commitOperations;
   }
 
   /**

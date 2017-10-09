@@ -220,14 +220,14 @@ public final class CommitConstants {
   /** Conflict mode: {@value}. */
   public static final String CONFLICT_MODE_FAIL = "fail";
 
-  /** Default conflict mode: {@value}. */
-  public static final String DEFAULT_CONFLICT_MODE = CONFLICT_MODE_FAIL;
-
   /** Conflict mode: {@value}. */
   public static final String CONFLICT_MODE_APPEND = "append";
 
   /** Conflict mode: {@value}. */
   public static final String CONFLICT_MODE_REPLACE = "replace";
+
+  /** Default conflict mode: {@value}. */
+  public static final String DEFAULT_CONFLICT_MODE = CONFLICT_MODE_FAIL;
 
   /**
    * Number of threads in staging committers for parallel operations

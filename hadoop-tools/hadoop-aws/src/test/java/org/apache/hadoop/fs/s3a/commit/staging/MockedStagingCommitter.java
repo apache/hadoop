@@ -37,12 +37,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 class MockedStagingCommitter extends StagingCommitter {
 
   MockedStagingCommitter(Path outputPath,
-      JobContext context)
-      throws IOException {
-    super(outputPath, context);
-  }
-
-  MockedStagingCommitter(Path outputPath,
       TaskAttemptContext context)
       throws IOException {
     super(outputPath, context);

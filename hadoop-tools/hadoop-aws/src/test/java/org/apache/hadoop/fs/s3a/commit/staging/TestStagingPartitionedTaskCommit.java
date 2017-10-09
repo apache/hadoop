@@ -46,7 +46,8 @@ public class TestStagingPartitionedTaskCommit
 
   @Override
   PartitionedStagingCommitter newJobCommitter() throws IOException {
-    return new PartitionedStagingCommitter(OUTPUT_PATH, getJob());
+    return new PartitionedStagingCommitter(OUTPUT_PATH,
+        createTaskAttemptForJob());
   }
 
   @Override

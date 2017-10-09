@@ -45,9 +45,4 @@ public class MagicS3GuardCommitterFactory
     return new MagicS3GuardCommitter(outputPath, context);
   }
 
-  public PathOutputCommitter createJobCommitter(S3AFileSystem fileSystem,
-      Path outputPath,
-      JobContext context) throws IOException {
-    return new MagicS3GuardCommitter(outputPath, context);
-  }
 }

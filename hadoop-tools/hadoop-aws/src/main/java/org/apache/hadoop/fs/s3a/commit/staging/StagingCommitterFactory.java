@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitterFactory;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
@@ -47,9 +46,4 @@ public class StagingCommitterFactory
     return new StagingCommitter(outputPath, context);
   }
 
-  public PathOutputCommitter createJobCommitter(S3AFileSystem fileSystem,
-      Path outputPath,
-      JobContext context) throws IOException {
-    return new StagingCommitter(outputPath, context);
-  }
 }

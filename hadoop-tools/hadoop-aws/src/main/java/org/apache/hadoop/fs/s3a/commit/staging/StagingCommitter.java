@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 
+import static com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
@@ -89,38 +90,12 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   private final boolean uniqueFilenames;
   private final FileOutputCommitter wrappedCommitter;
 
-  private ConflictResolution conflictResolution = null;
-  private Path finalOutputPath = null;
+  private ConflictResolution conflictResolution;
+  private final Path finalOutputPath;
   private String s3KeyPrefix = null;
 
   /** The directory in the cluster FS for commits to go to. */
   private Path commitsDirectory;
-
-  /**
-   * Committer for a job attempt.
-   * @param outputPath final output path
-   * @param context job context
-   * @throws IOException on a failure
-   */
-  public StagingCommitter(Path outputPath,
-      JobContext context)
-      throws IOException {
-    super(outputPath, context);
-    constructorOutputPath = getOutputPath();
-    Preconditions.checkNotNull(constructorOutputPath, "output path");
-    Configuration conf = getConf();
-    this.uploadPartSize = conf.getLongBytes(
-        MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-    // Spark will use a fake app ID based on the current minute and job ID 0.
-    // To avoid collisions, use the YARN application ID for Spark.
-    this.uuid = getUploadUUID(conf, context.getJobID());
-    this.uniqueFilenames = conf.getBoolean(
-        FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
-        DEFAULT_COMMITTER_UNIQUE_FILENAMES);
-    setWorkPath(buildWorkPath(context, uuid));
-    this.wrappedCommitter = createWrappedCommitter(context, conf);
-    postCreationActions();
-  }
 
   /**
    * Committer for a single task attempt.
@@ -131,8 +106,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   public StagingCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
     super(outputPath, context);
-    constructorOutputPath = getOutputPath();
-    Preconditions.checkNotNull(constructorOutputPath, "output path");
+    this.constructorOutputPath = checkNotNull(getOutputPath(), "output path");
     Configuration conf = getConf();
     this.uploadPartSize = conf.getLongBytes(
         MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
@@ -145,22 +119,10 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
         DEFAULT_COMMITTER_UNIQUE_FILENAMES);
     setWorkPath(buildWorkPath(context, uuid));
     this.wrappedCommitter = createWrappedCommitter(context, conf);
-    postCreationActions();
-  }
-
-  /**
-   * Actions called by all constructors after creation.
-   * Private/non-subclassable as subclasses will not have been instantiated
-   * at the time this method is invoked.
-   * <i>Important: do not call non-final methods.</i>
-   * @throws IOException on a failure
-   */
-  private void postCreationActions() throws IOException {
     // forces evaluation and caching of the resolution mode.
     ConflictResolution mode = getConflictResolutionMode(getJobContext());
     LOG.debug("Conflict resolution mode: {}", mode);
-    JobContext context = getJobContext();
-    finalOutputPath = constructorOutputPath;
+    this.finalOutputPath = constructorOutputPath;
     Preconditions.checkNotNull(finalOutputPath, "Output path cannot be null");
     S3AFileSystem fs = getS3AFileSystem(finalOutputPath,
         context.getConfiguration(), false);

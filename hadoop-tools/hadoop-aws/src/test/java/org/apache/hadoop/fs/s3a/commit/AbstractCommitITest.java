@@ -40,8 +40,13 @@ import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableInconsistentS3Client;
@@ -384,6 +389,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     }
   }
 
+
   /**
    * Closeable which can be used to safely close writers in
    * a try-with-resources block..
@@ -409,5 +415,27 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
       }
     }
+  }
+
+
+  /**
+   * Create a task attempt for a Job. This is based on the code
+   * run in the MR AM, creating a task (0) for the job, then a task
+   * attempt (0).
+   * @param jobId job ID
+   * @param jContext job context
+   * @return the task attempt.
+   */
+  public static TaskAttemptContext taskAttemptForJob(JobId jobId,
+      JobContext jContext) {
+    org.apache.hadoop.mapreduce.v2.api.records.TaskId taskID =
+        MRBuilderUtils.newTaskId(jobId, 0,
+            org.apache.hadoop.mapreduce.v2.api.records.TaskType.MAP);
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+        MRBuilderUtils.newTaskAttemptId(taskID, 0);
+    Configuration conf = jContext.getConfiguration();
+    return new TaskAttemptContextImpl(
+        conf,
+        TypeConverter.fromYarn(attemptID));
   }
 }

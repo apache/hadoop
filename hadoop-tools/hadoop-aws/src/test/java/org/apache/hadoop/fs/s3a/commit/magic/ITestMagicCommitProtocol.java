@@ -86,14 +86,6 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     return new MagicS3GuardCommitter(outputPath, context);
   }
 
-  @Override
-  public AbstractS3GuardCommitter createCommitter(
-      Path outputPath,
-      JobContext context)
-      throws IOException {
-    return new MagicS3GuardCommitter(outputPath, context);
-  }
-
   public AbstractS3GuardCommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
@@ -123,7 +115,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     private final CommitterFaultInjectionImpl injection;
 
     CommitterWithFailedThenSucceed(Path outputPath,
-        JobContext context) throws IOException {
+        TaskAttemptContext context) throws IOException {
       super(outputPath, context);
       injection = new CommitterFaultInjectionImpl(outputPath, context, true);
     }
