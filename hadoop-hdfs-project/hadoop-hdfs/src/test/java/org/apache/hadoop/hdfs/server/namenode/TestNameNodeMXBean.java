@@ -726,7 +726,8 @@ public class TestNameNodeMXBean {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+      int dataBlocks = StripedFileTestUtil.getDefaultECPolicy()
+          .getNumDataUnits();
       int parityBlocks =
           StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
       int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
@@ -854,5 +855,109 @@ public class TestNameNodeMXBean {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testTotalBlocksMetrics() throws Exception {
+    MiniDFSCluster cluster = null;
+    FSNamesystem namesystem = null;
+    DistributedFileSystem fs = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+      int dataBlocks = StripedFileTestUtil.getDefaultECPolicy()
+          .getNumDataUnits();
+      int parityBlocks =
+          StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
+      int totalSize = dataBlocks + parityBlocks;
+      int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
+      int stripesPerBlock = 2;
+      int blockSize = stripesPerBlock * cellSize;
+      conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(totalSize).build();
+      namesystem = cluster.getNamesystem();
+      fs = cluster.getFileSystem();
+      fs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
+      verifyTotalBlocksMetrics(0L, 0L, namesystem.getTotalBlocks());
+
+      // create small file
+      Path replDirPath = new Path("/replicated");
+      Path replFileSmall = new Path(replDirPath, "replfile_small");
+      final short factor = 3;
+      DFSTestUtil.createFile(fs, replFileSmall, blockSize, factor, 0);
+      DFSTestUtil.waitReplication(fs, replFileSmall, factor);
+
+      Path ecDirPath = new Path("/striped");
+      fs.mkdir(ecDirPath, FsPermission.getDirDefault());
+      fs.getClient().setErasureCodingPolicy(ecDirPath.toString(),
+          StripedFileTestUtil.getDefaultECPolicy().getName());
+      Path ecFileSmall = new Path(ecDirPath, "ecfile_small");
+      final int smallLength = cellSize * dataBlocks;
+      final byte[] smallBytes = StripedFileTestUtil.generateBytes(smallLength);
+      DFSTestUtil.writeFile(fs, ecFileSmall, smallBytes);
+      verifyTotalBlocksMetrics(1L, 1L, namesystem.getTotalBlocks());
+
+      // create learge file
+      Path replFileLarge = new Path(replDirPath, "replfile_large");
+      DFSTestUtil.createFile(fs, replFileLarge, 2 * blockSize, factor, 0);
+      DFSTestUtil.waitReplication(fs, replFileLarge, factor);
+
+      Path ecFileLarge = new Path(ecDirPath, "ecfile_large");
+      final int largeLength = blockSize * totalSize + smallLength;
+      final byte[] largeBytes = StripedFileTestUtil.generateBytes(largeLength);
+      DFSTestUtil.writeFile(fs, ecFileLarge, largeBytes);
+      verifyTotalBlocksMetrics(3L, 3L, namesystem.getTotalBlocks());
+
+      // delete replicated files
+      fs.delete(replDirPath, true);
+      verifyTotalBlocksMetrics(0L, 3L, namesystem.getTotalBlocks());
+
+      // delete ec files
+      fs.delete(ecDirPath, true);
+      verifyTotalBlocksMetrics(0L, 0L, namesystem.getTotalBlocks());
+    } finally {
+      if (fs != null) {
+        try {
+          fs.close();
+        } catch (Exception e) {
+          throw e;
+        }
+      }
+      if (namesystem != null) {
+        try {
+          namesystem.close();
+        } catch (Exception e) {
+          throw e;
+        }
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  void verifyTotalBlocksMetrics(long expectedTotalReplicatedBlocks,
+      long expectedTotalECBlockGroups, long actualTotalBlocks)
+      throws Exception {
+    long expectedTotalBlocks = expectedTotalReplicatedBlocks
+        + expectedTotalECBlockGroups;
+    assertEquals("Unexpected total blocks!", expectedTotalBlocks,
+        actualTotalBlocks);
+
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName replStateMBeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=ReplicatedBlocksState");
+    ObjectName ecBlkGrpStateMBeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=ECBlockGroupsState");
+    Long totalReplicaBlocks = (Long) mbs.getAttribute(replStateMBeanName,
+        "TotalReplicatedBlocks");
+    Long totalECBlockGroups = (Long) mbs.getAttribute(ecBlkGrpStateMBeanName,
+        "TotalECBlockGroups");
+    assertEquals("Unexpected total replicated blocks!",
+        expectedTotalReplicatedBlocks, totalReplicaBlocks.longValue());
+    assertEquals("Unexpected total ec block groups!",
+        expectedTotalECBlockGroups, totalECBlockGroups.longValue());
   }
 }
