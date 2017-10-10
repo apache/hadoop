@@ -58,7 +58,7 @@ public class TestPathOutputCommitterFactory extends Assert {
   public void testCommitterFactoryForSchema() throws Throwable {
     createCommitterFactory(SimpleCommitterFactory.class,
         HTTP_PATH,
-        httpToSimpleFactory(new Configuration()));
+        newBondedConfiguration());
   }
 
   /**
@@ -69,7 +69,7 @@ public class TestPathOutputCommitterFactory extends Assert {
   public void testCommitterFactoryFallbackDefault() throws Throwable {
     createCommitterFactory(FileOutputCommitterFactory.class,
         HDFS_PATH,
-        httpToSimpleFactory(new Configuration()));
+        newBondedConfiguration());
   }
 
   /**
@@ -77,7 +77,7 @@ public class TestPathOutputCommitterFactory extends Assert {
    */
   @Test
   public void testCommitterFactoryOverride() throws Throwable {
-    Configuration conf = httpToSimpleFactory(new Configuration());
+    Configuration conf = newBondedConfiguration();
     // set up for the schema factory
     // and then set a global one which overrides the others.
     conf.set(COMMITTER_FACTORY_CLASS, OtherFactory.class.getName());
@@ -105,7 +105,7 @@ public class TestPathOutputCommitterFactory extends Assert {
   @Test
   public void testCommitterNullOutputPath() throws Throwable {
     // bind http to schema
-    Configuration conf = httpToSimpleFactory(new Configuration());
+    Configuration conf = newBondedConfiguration();
     // then ask for factories and committers for a null path
     PathOutputCommitterFactory factory = createCommitterFactory(
         FileOutputCommitterFactory.class, null, conf);
@@ -168,8 +168,7 @@ public class TestPathOutputCommitterFactory extends Assert {
       Path path,
       Configuration conf) throws IOException {
     T f = createCommitterFactory(factoryClass, path, conf);
-    PathOutputCommitter committer = f.createOutputCommitter(
-        path, taskAttempt(conf));
+    PathOutputCommitter committer = f.createOutputCommitter(path, taskAttempt(conf));
     assertEquals(" Wrong committer for path " + path + " from factory " + f,
         committerClass, committer.getClass());
     return (U) committer;
@@ -225,7 +224,7 @@ public class TestPathOutputCommitterFactory extends Assert {
    */
   @Test
   public void testFileOutputFormatBinding() throws Throwable {
-    Configuration conf = httpToSimpleFactory(new Configuration());
+    Configuration conf = newBondedConfiguration();
     conf.set(FileOutputFormat.OUTDIR, HTTP_PATH.toUri().toString());
     TextOutputFormat<String, String> off = new TextOutputFormat<>();
     SimpleCommitter committer = (SimpleCommitter)
@@ -259,9 +258,18 @@ public class TestPathOutputCommitterFactory extends Assert {
    * Bind the http schema CommitterFactory to {@link SimpleCommitterFactory}.
    * @param conf config to patch
    */
-  protected Configuration httpToSimpleFactory(Configuration conf) {
+  private Configuration httpToSimpleFactory(Configuration conf) {
     conf.set(HTTP_COMMITTER_FACTORY, SimpleCommitterFactory.class.getName());
     return conf;
+  }
+
+
+  /**
+   * Create a configuration with the http schema bonded to the simple factory.
+   * @return a new, patched configuration
+   */
+  private Configuration newBondedConfiguration() {
+    return httpToSimpleFactory(new Configuration());
   }
 
   /**
@@ -286,6 +294,30 @@ public class TestPathOutputCommitterFactory extends Assert {
   @Test
   public void testBadCommitterFactory() throws Throwable {
     expectFactoryConstructionFailure(HTTP_COMMITTER_FACTORY);
+  }
+
+  @Test
+  public void testBoundCommitterWithSchema() throws Throwable {
+    // this verifies that a bound committer relays to the underlying committer
+    Configuration conf = newBondedConfiguration();
+    TestPathOutputCommitter.TaskContext tac
+        = new TestPathOutputCommitter.TaskContext(conf);
+    BindingPathOutputCommitter committer
+        = new BindingPathOutputCommitter(HTTP_PATH, tac);
+    intercept(IOException.class, "setupJob",
+        () -> committer.setupJob(tac));
+  }
+
+  @Test
+  public void testBoundCommitterWithDefault() throws Throwable {
+    // this verifies that a bound committer relays to the underlying committer
+    Configuration conf = newBondedConfiguration();
+    TestPathOutputCommitter.TaskContext tac
+        = new TestPathOutputCommitter.TaskContext(conf);
+    BindingPathOutputCommitter committer
+        = new BindingPathOutputCommitter(HDFS_PATH, tac);
+    assertEquals(FileOutputCommitter.class,
+        committer.getCommitter().getClass());
   }
 
   /**
@@ -323,9 +355,14 @@ public class TestPathOutputCommitterFactory extends Assert {
       return null;
     }
 
+    /**
+     * Job setup throws an exception
+     * @param jobContext Context of the job
+     * @throws IOException always
+     */
     @Override
     public void setupJob(JobContext jobContext) throws IOException {
-
+      throw new IOException("setupJob");
     }
 
     @Override
@@ -374,6 +411,13 @@ public class TestPathOutputCommitterFactory extends Assert {
    */
   private static class OtherFactory extends PathOutputCommitterFactory {
 
+    /**
+     * {@inheritDoc}
+     * @param outputPath output path. This may be null.
+     * @param context context
+     * @return
+     * @throws IOException
+     */
     @Override
     public PathOutputCommitter createOutputCommitter(Path outputPath,
         TaskAttemptContext context) throws IOException {
