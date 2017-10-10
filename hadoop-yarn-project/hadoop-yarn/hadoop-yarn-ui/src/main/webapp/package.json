@@ -23,7 +23,7 @@
     "bower-shrinkwrap-resolver-ext": "0.1.0",
     "broccoli-asset-rev": "2.4.2",
     "broccoli-funnel": "1.0.1",
-    "em-table": "0.7.0",
+    "broccoli-merge-trees": "1.1.1",
     "ember-array-contains-helper": "1.0.2",
     "ember-bootstrap": "0.5.1",
     "ember-cli": "1.13.14",
@@ -55,7 +55,7 @@
   "dependencies": {
     "em-helpers": "^0.8.0",
     "em-table": "^0.7.0",
-    "ember-cli-moment-shim": "^3.0.1",
+    "ember-cli-moment-shim": "0.7.3",
     "ember-cli-numeral": "^0.2.0"
   }
 }

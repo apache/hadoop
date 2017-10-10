@@ -129,9 +129,6 @@
             </executions>
           </plugin>
 
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
           <!-- Install Node, Yarn, Bower & dependencies -->
           <plugin>
             <groupId>com.github.eirslett</groupId>
@@ -171,16 +168,8 @@
                   <arguments>install</arguments>
                 </configuration>
                 <goals>
-                  <goal>exec</goal>
+                  <goal>bower</goal>
                 </goals>
-                <configuration>
-                  <workingDirectory>${webappTgtDir}</workingDirectory>
-                  <executable>bower</executable>
-                  <arguments>
-                    <argument>--allow-root</argument>
-                    <argument>install</argument>
-                  </arguments>
-                </configuration>
               </execution>
             </executions>
           </plugin>
