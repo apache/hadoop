@@ -60,4 +60,9 @@ public interface ReplicatedBlocksMBean {
    * Return count of blocks that are pending deletion.
    */
   long getPendingDeletionReplicatedBlocks();
+
+  /**
+   * Return total number of replicated blocks.
+   */
+  long getTotalReplicatedBlocks();
 }
