@@ -723,6 +723,12 @@ public class InMemoryPlan implements Plan {
               + periodicRle.getTimePeriod() + ")");
         }
 
+        if (period < (end - start)) {
+          throw new PlanningException(
+              "Invalid input: (end - start) = (" + end + " - " + start + ") = "
+                  + (end - start) + " > period = " + period);
+        }
+
         // find the minimum resources available among all the instances that fit
         // in the LCM
         long numInstInLCM = periodicRle.getTimePeriod() / period;

@@ -228,7 +228,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * Yarn Router forwards every getNewApplication requests to any RM. During
+   * YARN Router forwards every getNewApplication requests to any RM. During
    * this operation there will be no communication with the State Store. The
    * Router will forward the requests to any SubCluster. The Router will retry
    * to submit the request on #numSubmitRetries different SubClusters. The
@@ -497,7 +497,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    * <p>
    * Possible failure:
@@ -552,7 +552,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    * <p>
    * Possible failures and behaviors:
@@ -606,7 +606,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * The Yarn Router will forward the request to all the Yarn RMs in parallel,
+   * The YARN Router will forward the request to all the YARN RMs in parallel,
    * after that it will group all the ApplicationReports by the ApplicationId.
    * <p>
    * Possible failure:
@@ -615,8 +615,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * Router: the Client will timeout and resubmit the request.
    * <p>
-   * ResourceManager: the Router calls each Yarn RM in parallel by using one
-   * thread for each Yarn RM. In case a Yarn RM fails, a single call will
+   * ResourceManager: the Router calls each YARN RM in parallel by using one
+   * thread for each YARN RM. In case a YARN RM fails, a single call will
    * timeout. However the Router will merge the ApplicationReports it got, and
    * provides a partial list to the client.
    * <p>
@@ -692,14 +692,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return null;
     }
 
-    // Merge all the application reports got from all the available Yarn RMs
+    // Merge all the application reports got from all the available YARN RMs
 
     return RouterWebServiceUtil.mergeAppsInfo(apps.getApps(),
         returnPartialReport);
   }
 
   /**
-   * The Yarn Router will forward to the request to all the SubClusters to find
+   * The YARN Router will forward to the request to all the SubClusters to find
    * where the node is running.
    * <p>
    * Possible failure:
@@ -779,7 +779,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
-   * The Yarn Router will forward the request to all the Yarn RMs in parallel,
+   * The YARN Router will forward the request to all the YARN RMs in parallel,
    * after that it will remove all the duplicated NodeInfo by using the NodeId.
    * <p>
    * Possible failure:
@@ -788,8 +788,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * Router: the Client will timeout and resubmit the request.
    * <p>
-   * ResourceManager: the Router calls each Yarn RM in parallel by using one
-   * thread for each Yarn RM. In case a Yarn RM fails, a single call will
+   * ResourceManager: the Router calls each YARN RM in parallel by using one
+   * thread for each YARN RM. In case a YARN RM fails, a single call will
    * timeout. However the Router will use the NodesInfo it got, and provides a
    * partial list to the client.
    * <p>
@@ -850,7 +850,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     // Delete duplicate from all the node reports got from all the available
-    // Yarn RMs. Nodes can be moved from one subclusters to another. In this
+    // YARN RMs. Nodes can be moved from one subclusters to another. In this
     // operation they result LOST/RUNNING in the previous SubCluster and
     // NEW/RUNNING in the new one.
 

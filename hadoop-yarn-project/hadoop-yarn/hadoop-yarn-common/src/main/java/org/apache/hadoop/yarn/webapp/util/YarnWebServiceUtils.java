@@ -23,8 +23,13 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import javax.ws.rs.core.MediaType;
+
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONMarshaller;
 import org.apache.hadoop.conf.Configuration;
 import org.codehaus.jettison.json.JSONObject;
+
+import java.io.StringWriter;
 
 /**
  * This class contains several utility function which could be used to generate
@@ -58,5 +63,14 @@ public final class YarnWebServiceUtils {
         .path(nodeId).accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     return response.getEntity(JSONObject.class);
+  }
+
+  @SuppressWarnings("rawtypes")
+  public static String toJson(Object nsli, Class klass) throws Exception {
+    StringWriter sw = new StringWriter();
+    JSONJAXBContext ctx = new JSONJAXBContext(klass);
+    JSONMarshaller jm = ctx.createJSONMarshaller();
+    jm.marshallToJSON(nsli, sw);
+    return sw.toString();
   }
 }

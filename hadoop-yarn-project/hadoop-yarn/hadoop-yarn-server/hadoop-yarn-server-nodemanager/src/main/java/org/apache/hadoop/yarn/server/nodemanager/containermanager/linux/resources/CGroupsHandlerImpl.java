@@ -370,7 +370,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     }
 
     // We are working with a pre-mounted contoller
-    // Make sure that Yarn cgroup hierarchy path exists
+    // Make sure that YARN cgroup hierarchy path exists
     initializePreMountedCGroupController(controller);
   }
 
@@ -378,9 +378,9 @@ class CGroupsHandlerImpl implements CGroupsHandler {
    * This function is called when the administrator opted
    * to use a pre-mounted cgroup controller.
    * There are two options.
-   * 1. Yarn hierarchy already exists. We verify, whether we have write access
+   * 1. YARN hierarchy already exists. We verify, whether we have write access
    * in this case.
-   * 2. Yarn hierarchy does not exist, yet. We create it in this case.
+   * 2. YARN hierarchy does not exist, yet. We create it in this case.
    * @param controller the controller being initialized
    * @throws ResourceHandlerException yarn hierarchy cannot be created or
    *   accessed for any reason

@@ -225,6 +225,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>sqlite-jdbc</artifactId>
       <version>3.8.7</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-test</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -275,6 +280,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                       filtering="true"/>
                 <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/nfs3/WEB-INF/web.xml"
+                      filtering="true"/>
+                <copy file="${basedir}/src/main/webapps/proto-web.xml"
+                      tofile="${project.build.directory}/webapps/router/WEB-INF/web.xml"
                       filtering="true"/>
                 <copy toDir="${project.build.directory}/webapps">
                   <fileset dir="${basedir}/src/main/webapps">
@@ -357,6 +365,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>StorageContainerDatanodeProtocol.proto</include>
                   <include>CBlockServiceProtocol.proto</include>
                   <include>CBlockClientServerProtocol.proto</include>
+                  <include>FederationProtocol.proto</include>
+                  <include>RouterProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

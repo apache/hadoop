@@ -76,7 +76,7 @@ import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
@@ -758,7 +758,7 @@ public class TestMover {
       for (int i = 0; i < cluster.getDataNodes().size(); i++) {
         DataNode dn = cluster.getDataNodes().get(i);
         LOG.info("Simulate block pinning in datanode {}", dn);
-        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
       }
 
       // move file blocks to ONE_SSD policy
@@ -896,7 +896,7 @@ public class TestMover {
       if (dn.getDatanodeId().getDatanodeUuid()
           .equals(datanodeInfo.getDatanodeUuid())) {
         LOG.info("Simulate block pinning in datanode {}", datanodeInfo);
-        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
         break;
       }
     }

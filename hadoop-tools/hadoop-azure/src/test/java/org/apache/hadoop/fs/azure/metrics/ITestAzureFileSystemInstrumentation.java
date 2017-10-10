@@ -343,9 +343,9 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
     assertFalse(getFileSystem().exists(filePath));
     // At the time of writing this code it takes 2 requests/responses to
     // check existence, which seems excessive, plus initial request for
-    // container check.
+    // container check, plus 2 ancestor checks only in the secure case.
     logOpResponseCount("Checking file existence for non-existent file", base);
-    base = assertWebResponsesInRange(base, 1, 3);
+    base = assertWebResponsesInRange(base, 1, 5);
 
     // Create an empty file
     assertTrue(getFileSystem().createNewFile(filePath));
@@ -354,7 +354,7 @@ public class ITestAzureFileSystemInstrumentation extends AbstractWasbTestBase {
     // Check existence again
     assertTrue(getFileSystem().exists(filePath));
     logOpResponseCount("Checking file existence for existent file", base);
-    base = assertWebResponsesInRange(base, 1, 2);
+    base = assertWebResponsesInRange(base, 1, 4);
 
     // Delete the file
     assertEquals(0, AzureMetricsTestUtil.getLongCounterValue(getInstrumentation(), WASB_FILES_DELETED));

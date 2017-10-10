@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -675,39 +674,5 @@ public class TestApplicationMasterService {
     } else {
       Assert.fail("Cannot find RMContainer");
     }
-  }
-
-  @Test(timeout = 3000000)
-  public void testResourceProfiles() throws Exception {
-
-    MockRM rm = new MockRM(conf);
-    rm.start();
-    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
-    RMApp app1 = rm.submitApp(2048);
-    nm1.nodeHeartbeat(true);
-    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
-    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
-    RegisterApplicationMasterResponse resp = am1.registerAppAttempt();
-    Assert.assertEquals(0, resp.getResourceProfiles().size());
-    rm.stop();
-    conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
-    conf.set(YarnConfiguration.RM_RESOURCE_PROFILES_SOURCE_FILE,
-        "profiles/sample-profiles-1.json");
-    rm = new MockRM(conf);
-    rm.start();
-    nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
-    app1 = rm.submitApp(2048);
-    nm1.nodeHeartbeat(true);
-    attempt1 = app1.getCurrentAppAttempt();
-    am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
-    resp = am1.registerAppAttempt();
-    Assert.assertEquals(3, resp.getResourceProfiles().size());
-    Assert.assertEquals(Resource.newInstance(1024, 1),
-        resp.getResourceProfiles().get("minimum"));
-    Assert.assertEquals(Resource.newInstance(2048, 2),
-        resp.getResourceProfiles().get("default"));
-    Assert.assertEquals(Resource.newInstance(4096, 4),
-        resp.getResourceProfiles().get("maximum"));
-    rm.stop();
   }
 }

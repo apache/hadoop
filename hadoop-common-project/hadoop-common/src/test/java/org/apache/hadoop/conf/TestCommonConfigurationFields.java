@@ -101,6 +101,10 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
 
     // O3 properties are in a different subtree.
     xmlPrefixToSkipCompare.add("fs.o3.");
+    
+    //ftp properties are in a different subtree.
+    // - org.apache.hadoop.fs.ftp.FTPFileSystem.
+    xmlPrefixToSkipCompare.add("fs.ftp.impl");
 
     // WASB properties are in a different subtree.
     // - org.apache.hadoop.fs.azure.NativeAzureFileSystem

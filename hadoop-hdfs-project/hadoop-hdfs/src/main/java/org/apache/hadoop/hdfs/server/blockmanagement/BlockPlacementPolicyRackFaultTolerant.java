@@ -46,9 +46,12 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
     if (numOfRacks == 1 || totalNumOfReplicas <= 1) {
       return new int[] {numOfReplicas, totalNumOfReplicas};
     }
-    if(totalNumOfReplicas<numOfRacks){
+    // If more racks than replicas, put one replica per rack.
+    if (totalNumOfReplicas < numOfRacks) {
       return new int[] {numOfReplicas, 1};
     }
+    // If more replicas than racks, evenly spread the replicas.
+    // This calculation rounds up.
     int maxNodesPerRack = (totalNumOfReplicas - 1) / numOfRacks + 1;
     return new int[] {numOfReplicas, maxNodesPerRack};
   }
@@ -109,18 +112,42 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
     numOfReplicas = Math.min(totalReplicaExpected - results.size(),
         (maxNodesPerRack -1) * numOfRacks - (results.size() - excess));
 
-    // Fill each rack exactly (maxNodesPerRack-1) replicas.
-    writer = chooseOnce(numOfReplicas, writer, new HashSet<>(excludedNodes),
-        blocksize, maxNodesPerRack -1, results, avoidStaleNodes, storageTypes);
+    try {
+      // Try to spread the replicas as evenly as possible across racks.
+      // This is done by first placing with (maxNodesPerRack-1), then spreading
+      // the remainder by calling again with maxNodesPerRack.
+      writer = chooseOnce(numOfReplicas, writer, new HashSet<>(excludedNodes),
+          blocksize, maxNodesPerRack - 1, results, avoidStaleNodes,
+          storageTypes);
 
-    for (DatanodeStorageInfo resultStorage : results) {
-      addToExcludedNodes(resultStorage.getDatanodeDescriptor(), excludedNodes);
+      // Exclude the chosen nodes
+      for (DatanodeStorageInfo resultStorage : results) {
+        addToExcludedNodes(resultStorage.getDatanodeDescriptor(),
+            excludedNodes);
+      }
+      LOG.trace("Chosen nodes: {}", results);
+      LOG.trace("Excluded nodes: {}", excludedNodes);
+
+      numOfReplicas = totalReplicaExpected - results.size();
+      chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
+          maxNodesPerRack, results, avoidStaleNodes, storageTypes);
+    } catch (NotEnoughReplicasException e) {
+      LOG.debug("Only able to place {} of {} (maxNodesPerRack={}) nodes " +
+              "evenly across racks, falling back to uneven placement.",
+          results.size(), numOfReplicas, maxNodesPerRack);
+      LOG.debug("Caught exception was:", e);
+      // Exclude the chosen nodes
+      for (DatanodeStorageInfo resultStorage : results) {
+        addToExcludedNodes(resultStorage.getDatanodeDescriptor(),
+            excludedNodes);
+      }
+
+      LOG.trace("Chosen nodes: {}", results);
+      LOG.trace("Excluded nodes: {}", excludedNodes);
+      numOfReplicas = totalReplicaExpected - results.size();
+      chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
+          totalReplicaExpected, results, avoidStaleNodes, storageTypes);
     }
-
-    // For some racks, place one more replica to each one of them.
-    numOfReplicas = totalReplicaExpected - results.size();
-    chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
-        maxNodesPerRack, results, avoidStaleNodes, storageTypes);
 
     return writer;
   }

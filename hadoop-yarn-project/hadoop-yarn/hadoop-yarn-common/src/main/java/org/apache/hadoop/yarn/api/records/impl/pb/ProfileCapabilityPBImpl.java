@@ -23,8 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos;
-import org.apache.hadoop.yarn.proto.YarnProtos.ProfileCapabilityProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ProfileCapabilityProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ProfileCapabilityProtoOrBuilder;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -121,9 +121,6 @@ public class ProfileCapabilityPBImpl extends ProfileCapability {
   }
 
   private YarnProtos.ResourceProto convertToProtoFormat(Resource res) {
-    ResourcePBImpl r = new ResourcePBImpl();
-    r.setMemorySize(res.getMemorySize());
-    r.setVirtualCores(res.getVirtualCores());
-    return r.getProto();
+    return ProtoUtils.convertToProtoFormat(res);
   }
 }

@@ -31,7 +31,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
  * This class is intended to be installed by calling 
  * {@link Thread#setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler)}
  * In the main entry point.  It is intended to try and cleanly shut down
- * programs using the Yarn Event framework.
+ * programs using the YARN Event framework.
  * 
  * Note: Right now it only will shut down the program if a Error is caught, but
  * not any other exception.  Anything else is just logged.

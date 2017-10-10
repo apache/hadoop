@@ -272,8 +272,11 @@ public abstract class DelegationTokenAuthenticationHandler
               }
               String renewer = ServletUtils.getParameter(request,
                   KerberosDelegationTokenAuthenticator.RENEWER_PARAM);
+              String service = ServletUtils.getParameter(request,
+                  KerberosDelegationTokenAuthenticator.SERVICE_PARAM);
               try {
-                Token<?> dToken = tokenManager.createToken(requestUgi, renewer);
+                Token<?> dToken = tokenManager.createToken(requestUgi, renewer,
+                    service);
                 map = delegationTokenToJSON(dToken);
               } catch (IOException ex) {
                 throw new AuthenticationException(ex.toString(), ex);

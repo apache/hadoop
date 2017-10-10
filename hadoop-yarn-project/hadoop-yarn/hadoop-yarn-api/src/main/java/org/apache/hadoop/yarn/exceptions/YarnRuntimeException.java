@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.exceptions;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
-/** Base Yarn Exception.
+/** Base YARN Exception.
  *
  * NOTE: All derivatives of this exception, which may be thrown by a remote
  * service, must include a String only constructor for the exception to be
