@@ -75,7 +75,6 @@ public class TestFailureToReadEdits {
   private static final Random RANDOM = new Random();
 
   private final TestType clusterType;
-  private final boolean useAsyncEditLogging;
   private Configuration conf;
   private MiniDFSCluster cluster;
   private MiniQJMHACluster miniQjmHaCluster; // for QJM case only
@@ -89,23 +88,18 @@ public class TestFailureToReadEdits {
   };
   
   /**
-   * Run this suite of tests for {QJM-based, file-based HA} x {async
-   * edit logging enabled, disabled}.
+   * Run this suite of tests both for QJM-based HA and for file-based
+   * HA.
    */
   @Parameters
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][]{
-        {TestType.SHARED_DIR_HA, Boolean.FALSE},
-        {TestType.SHARED_DIR_HA, Boolean.TRUE},
-        {TestType.QJM_HA, Boolean.FALSE},
-        {TestType.QJM_HA, Boolean.TRUE},
-    });
+    return Arrays.asList(new Object[][] {
+        { TestType.SHARED_DIR_HA },
+        { TestType.QJM_HA } });
   }
-
-  public TestFailureToReadEdits(TestType clusterType, Boolean
-      useAsyncEditLogging) {
+  
+  public TestFailureToReadEdits(TestType clusterType) {
     this.clusterType = clusterType;
-    this.useAsyncEditLogging = useAsyncEditLogging;
   }
 
   @Before
@@ -115,8 +109,6 @@ public class TestFailureToReadEdits {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY, 10);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
-        useAsyncEditLogging);
     HAUtil.setAllowStandbyReads(conf, true);
 
     if (clusterType == TestType.SHARED_DIR_HA) {
