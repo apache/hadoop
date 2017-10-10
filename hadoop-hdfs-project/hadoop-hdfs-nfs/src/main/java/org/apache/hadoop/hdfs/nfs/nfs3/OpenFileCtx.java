@@ -442,7 +442,7 @@ class OpenFileCtx {
     
     if (!activeState) {
       LOG.info("OpenFileCtx is inactive, fileId: "
-          + request.getHandle().getFileId());
+          + request.getHandle().dumpFileHandle());
       WccData fileWcc = new WccData(latestAttr.getWccAttr(), latestAttr);
       WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO,
           fileWcc, 0, request.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
@@ -981,7 +981,8 @@ class OpenFileCtx {
    * Check stream status to decide if it should be closed
    * @return true, remove stream; false, keep stream
    */
-  public synchronized boolean streamCleanup(long fileId, long streamTimeout) {
+  public synchronized boolean streamCleanup(FileHandle handle,
+                                            long streamTimeout) {
     Preconditions
         .checkState(streamTimeout >= NfsConfigKeys.DFS_NFS_STREAM_TIMEOUT_MIN_DEFAULT);
     if (!activeState) {
@@ -992,7 +993,8 @@ class OpenFileCtx {
     // Check the stream timeout
     if (checkStreamTimeout(streamTimeout)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("stream can be closed for fileId: " + fileId);
+        LOG.debug("stream can be closed for fileId: "
+            + handle.dumpFileHandle());
       }
       flag = true;
     }
@@ -1188,7 +1190,7 @@ class OpenFileCtx {
     
     FileHandle handle = writeCtx.getHandle();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("do write, fileId: " + handle.getFileId() + " offset: "
+      LOG.debug("do write, fileHandle " + handle.dumpFileHandle() + " offset: "
           + offset + " length: " + count + " stableHow: " + stableHow.name());
     }
 
@@ -1213,8 +1215,9 @@ class OpenFileCtx {
             writeCtx.setDataState(WriteCtx.DataState.NO_DUMP);
             updateNonSequentialWriteInMemory(-count);
             if (LOG.isDebugEnabled()) {
-              LOG.debug("After writing " + handle.getFileId() + " at offset "
-                  + offset + ", updated the memory count, new value: "
+              LOG.debug("After writing " + handle.dumpFileHandle()
+                  + " at offset " + offset
+                  + ", updated the memory count, new value: "
                   + nonSequentialWriteInMemory.get());
             }
           }
@@ -1257,8 +1260,8 @@ class OpenFileCtx {
       processCommits(writeCtx.getOffset() + writeCtx.getCount());
      
     } catch (IOException e) {
-      LOG.error("Error writing to fileId " + handle.getFileId() + " at offset "
-          + offset + " and length " + count, e);
+      LOG.error("Error writing to fileHandle " + handle.dumpFileHandle()
+          + " at offset " + offset + " and length " + count, e);
       if (!writeCtx.getReplied()) {
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO);
         Nfs3Utils.writeChannel(channel, response.serialize(
