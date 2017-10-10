@@ -161,7 +161,7 @@ public final class CommitConstants {
       MagicS3GuardCommitterFactory.CLASSNAME;
 
   /**
-   * Property to identify the S3a committer when the dynamic committer is used:
+   * Property to identify the S3A committer when the dynamic committer is used:
    * {@value}.
    */
   public static final String FS_S3A_COMMITTER_NAME =
@@ -192,10 +192,11 @@ public final class CommitConstants {
   public static final String COMMITTER_NAME_PARTITION = "partition";
 
   /**
-   * Option for final files to have uniqueness through uuid or attempt info:
+   * Option for final files to have a uniqueness name through job attempt info,
+   * falling back to a new UUID if there is no job attempt information to use.
    * {@value}.
-   * Can be used for conflict resolution, but it also means that the filenames
-   * of output may not always be predictable in advance.
+   * When writing data with the "append" conflict option, this guarantees
+   * that new data will not overwrite any existing data.
    */
   public static final String FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES =
       "fs.s3a.committer.staging.unique-filenames";
@@ -203,7 +204,7 @@ public final class CommitConstants {
    * Default value for {@link #FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES}:
    * {@value}.
    */
-  public static final boolean DEFAULT_COMMITTER_UNIQUE_FILENAMES = false;
+  public static final boolean DEFAULT_COMMITTER_UNIQUE_FILENAMES = true;
 
   /**
    * A unique identifier to use for this work: {@value}.
@@ -212,7 +213,8 @@ public final class CommitConstants {
       "fs.s3a.committer.staging.uuid";
 
   /**
-   * Conflict mode resolution policy: {@value}.
+   * Staging committer conflict resolution policy: {@value}.
+   * Supported: fail, append, replace.
    */
   public static final String FS_S3A_COMMITTER_STAGING_CONFLICT_MODE =
       "fs.s3a.committer.staging.conflict-mode";
@@ -230,8 +232,8 @@ public final class CommitConstants {
   public static final String DEFAULT_CONFLICT_MODE = CONFLICT_MODE_FAIL;
 
   /**
-   * Number of threads in staging committers for parallel operations
-   * (upload, commit, abort): {@value}.
+   * Number of threads in committers for parallel operations on files
+   * (upload, commit, abort, delete...): {@value}.
    */
   public static final String FS_S3A_COMMITTER_THREADS =
       "fs.s3a.committer.threads";
@@ -241,9 +243,12 @@ public final class CommitConstants {
   public static final int DEFAULT_COMMITTER_THREADS = 8;
 
   /**
-   * Path for writing data in the cluster FS: {@value}.
+   * Path  in the cluster filesystem for temporary data: {@value}.
+   * This is for HDFS, not the local filesystem.
+   * It is only for the summary data of each file, not the actual
+   * data being committed.
    */
-  public static final String FS_S3A_COMMITTER_TMP_PATH =
-      "fs.s3a.committer.tmp.path";
+  public static final String FS_S3A_COMMITTER_STAGING_TMP_PATH =
+      "fs.s3a.committer.staging.tmp.path";
 
 }

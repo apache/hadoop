@@ -122,7 +122,7 @@ public class PathOutputCommitterFactory extends Configured {
    * for a task.
    * @param outputPath the task's output path, or or null if no output path
    * has been defined.
-   * @param context the task's context
+   * @param context the task attempt context
    * @return the committer to use
    * @throws IOException problems instantiating the committer
    */
@@ -170,6 +170,22 @@ public class PathOutputCommitterFactory extends Configured {
     LOG.debug("Using OutputCommitter factory class {} from key {}",
         factory, key);
     return ReflectionUtils.newInstance(factory, conf);
+  }
+
+  /**
+   * Create the committer factory for a task attempt & destination, then
+   * create the committer from it.
+   * @param outputPath the task's output path, or or null if no output path
+   * has been defined.
+   * @param context the task attempt context
+   * @return the committer to use
+   * @throws IOException problems instantiating the committer
+   */
+  public static PathOutputCommitter createCommitter(Path outputPath, TaskAttemptContext context)
+      throws IOException {
+    return getCommitterFactory(outputPath,
+        context.getConfiguration())
+        .createOutputCommitter(outputPath, context);
   }
 
 }

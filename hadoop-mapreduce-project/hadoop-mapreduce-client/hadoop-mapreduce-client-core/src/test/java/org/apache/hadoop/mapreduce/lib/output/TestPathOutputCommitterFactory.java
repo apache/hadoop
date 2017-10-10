@@ -73,6 +73,18 @@ public class TestPathOutputCommitterFactory extends Assert {
   }
 
   /**
+   * A schema factory only affects that filesystem; test through
+   * {@link PathOutputCommitterFactory#createCommitter(Path, TaskAttemptContext)}.
+   * @throws Throwable failure
+   */
+  @Test
+  public void testCommitterFallbackDefault() throws Throwable {
+    createCommitter(FileOutputCommitter.class,
+        HDFS_PATH,
+        taskAttempt(newBondedConfiguration()));
+  }
+
+  /**
    * Verify that you can override any schema with an explicit name.
    */
   @Test
@@ -106,9 +118,7 @@ public class TestPathOutputCommitterFactory extends Assert {
   public void testCommitterNullOutputPath() throws Throwable {
     // bind http to schema
     Configuration conf = newBondedConfiguration();
-    // then ask for factories and committers for a null path
-    PathOutputCommitterFactory factory = createCommitterFactory(
-        FileOutputCommitterFactory.class, null, conf);
+    // then ask committers for a null path
     FileOutputCommitter committer = createCommitter(
         FileOutputCommitterFactory.class,
         FileOutputCommitter.class,
@@ -153,6 +163,23 @@ public class TestPathOutputCommitterFactory extends Assert {
   }
 
   /**
+   * Verify that if you explicitly name a committer and there's no
+   * path, the committer is picked up.
+   */
+  @Test
+  public void testNamedCommitterNullPath() throws Throwable {
+    Configuration conf = new Configuration();
+    // set up for the schema factory
+    conf.set(COMMITTER_FACTORY_CLASS, NAMED_COMMITTER_FACTORY);
+    conf.set(NAMED_COMMITTER_CLASS, SimpleCommitter.class.getName());
+
+    SimpleCommitter sc = createCommitter(
+        SimpleCommitter.class,
+        null, taskAttempt(conf));
+    assertNull(sc.getOutputPath());
+  }
+
+  /**
    * Create a factory then a committer, validating the type of both.
    * @param <T> type of factory
    * @param <U> type of committer
@@ -170,6 +197,26 @@ public class TestPathOutputCommitterFactory extends Assert {
     T f = createCommitterFactory(factoryClass, path, conf);
     PathOutputCommitter committer = f.createOutputCommitter(path, taskAttempt(conf));
     assertEquals(" Wrong committer for path " + path + " from factory " + f,
+        committerClass, committer.getClass());
+    return (U) committer;
+  }
+
+  /**
+   * Create a committer from a task context, via
+   * {@link PathOutputCommitterFactory#createCommitter(Path, TaskAttemptContext)}.
+   * @param <U> type of committer
+   * @param committerClass expected committer class
+   * @param path output path (may be null)
+   * @param context task attempt context
+   * @return the committer
+   * @throws IOException failure to create
+   */
+  private <U extends PathOutputCommitter>
+    U createCommitter(Class<U> committerClass, Path path,
+      TaskAttemptContext context) throws IOException {
+    PathOutputCommitter committer = PathOutputCommitterFactory
+        .createCommitter(path, context);
+    assertEquals(" Wrong committer for path " + path,
         committerClass, committer.getClass());
     return (U) committer;
   }

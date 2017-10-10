@@ -208,14 +208,24 @@ pending writes from the HDFS job attempt directory, and aborting those
 uploads. For extra safety, all outstanding multipart writes to the destination directory
 are aborted.
 
-The staging committer comes in two slightly different forms, depending
-on what kind of output is to be generated
+The staging committer comes in two slightly different forms, with slightly
+diffrent conflict resolution policies
 
 
-* **Directory**: the data is written directly into the directory. 
+* **Directory**: the entire directory tree of data is written or overwritten. 
+
 * **Partitioned**: special handling of partitioned directory trees of the form
-`YEAR=2017/MONTH=09/DAY=19`, where the directory tree may already exist.
+`YEAR=2017/MONTH=09/DAY=19`: conflict resolution is limited to the partitions
+being updated.
 
+
+The Partitioned Committer is intended to allow jobs updating a partitioned
+directory tree to restrict the conflict resolution to only those partition
+directories containing new data.
+
+It's intended for use in Apache Spark Dataset operations, rather
+not compatible with Hadoop's original MapReduce engine, and only in jobs
+where adding new data to an existing dataset is the desired goal.
 
 
 ### The Magic Committer
@@ -255,21 +265,38 @@ committed, VMs using the committer do not need to so much storage
 But the committer needs a "consistent" S3 store (via S3Guard when working with
 Amazon S3).
 
-The Staging Committer, in contrast, can write data to a S3 store without
+The Staging Committers, in contrast, can write data to a S3 store without
 any consistency layer. It does, however, need local storage large enough
 to store the output of all active tasks running on the machine. The more
 CPUs and worker processes, the more data generated: the more storage is needed.
 Furthermore, because this data is uploaded in task commit, tasks take longer
 to commit.
 
-Finally, note that even though the staging committers don't need a consistent
+Of the two Staging committers, the directory committer is the general
+purpose committer to use in all operations except for jobs whose output is
+expected to update an existing directory tree of partitioned data.
+
+The Partitioned committer is only for use in Spark jobs generating data where
+`partitionBy` has been used to declare partitions used, the Spark-level
+committer has been told to append the data, and so all conflict resolution
+offloaded to the committer itself
+
+```scala
+sourceData
+  .write
+  .partitionBy("year", "month")
+  .mode(SaveMode.Append)
+  .format("orc").save("s3a://examples/statistics")
+```
+
+Even though the staging committers don't need a consistent
 AWS S3 endpoint to commit their work into, chaining a sequence of queries together
 does meanthat the subsequent readers of work *will* need a consistent listing
 of the output. Which comes from either a consistent store *or* adding a "sufficient"
 delay between queries for the listing to stabilize.
 
 
-## Enabling a Committer
+## Switching to an S3 Committer
 
 The choice of which committer a job will use for writing data in `FileOutputFormat`
 classes is set in the configuration option `mapreduce.pathoutputcommitter.factory.class`.
@@ -328,20 +355,15 @@ resulting in a path `/tmp/${user}/${application-attempt-id}/` under which
 summary data of each task's pending commits are managed using the standard
 `FileOutputFormat` committer.
 
+When a task is committed the data is uploaded under the destination directory.
+The policy of how to react if the destination exists is defined by
+the `fs.s3a.committer.staging.conflict-mode` setting.
 
-The initial option set:
-
-| Option | Meaning |
-|--------|---------|
-| `fs.s3a.buffer.dir` | Directories in local filesystem under which data is saved before being uploaded. Example: `/tmp/hadoop/s3a/` |
-| `fs.s3a.multipart.size` | Size in bytes of each part of a multipart upload. Default: `100M` |
-| `fs.s3a.committer.tmp.path` | Path in the cluster filesystem used for storing information on the uncommitted files. |
-| `fs.s3a.committer.staging.conflict-mode` | how to resolve directory conflicts during commit: `fail`, `append`, or `replace`; defaults to `fail`. |
-| `fs.s3a.committer.staging.unique-filenames` | Should the committer generate unique filenames by including a unique ID in the name of each created file?  Default: false|
-| `fs.s3a.committer.staging.uuid` | a UUID that identifies a write; `spark.sql.sources.writeJobUUID` is used if not set |
-| `fs.s3a.committer.staging.upload.size` | size, in bytes, to use for parts of the upload to S3; defaults: `10M` |
-| `fs.s3a.committer.threads` | number of threads to use to complete S3 uploads during job commit; default: `8` |
-| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | flag to control creation of `_SUCCESS` marker file on job completion. Default: `true` |
+| `fs.s3a.committer.staging.conflict-mode` | Meaning |
+| -----------------------------------------|---------|
+| `fail` | Fail if the destination directory exists |
+| `replace` | Delete all existing files before committing the new data |
+| `append` | Add the new files to the existing directory tree |
 
 
 ## The "Partitioned" Staging Committer
@@ -413,9 +435,46 @@ to ensure that a UUID is included in every filename to avoid this.
 
 ## Using the Magic committer
 
-This is less mature than the Staging Committer
+This is less mature than the Staging Committer, but promises higher
+performance. 
+
+### FileSystem client setup
+
+1. Use a *consistent* S3 object store. For Amazon S3, this means enabling
+[S3Guard](./s3guard.html). For S3-compatible filesystems, consult the filesystem
+documentation to see if it is consistent, hence compatible "out of the box".
+1. Turn the magic on by `fs.s3a.committer.magic.enabled"`
+
+```xml
+<property>
+  <name>fs.s3a.committer.magic.enabled</name>
+  <description>
+  Enable support in the filesystem for the S3 "Magic" committter.
+  </description>
+  <value>true</value>
+</property>
+``` 
+
+*Do not use the Magic Committer on an inconsistent S3 object store. For
+Amazon S3, that means S3Guard must *always* be enabled.
 
 
+### Enabling the committer
+
+
+## Committer Configuration Options
+
+
+| Option | Magic | Directory | Partitioned | Meaning |
+|--------|-------|-----------|-------------|---------|
+| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | X | X | X | Write a `_SUCCESS` file  at the end of each job |
+| `fs.s3a.buffer.dir` | X | X | X | Local filesystem directory for data being written and/or staged. |
+| `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. |
+| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `abort` or `overwrite`|
+| `fs.s3a.committer.staging.tmp.path` |  | X | X | Path in the cluster filesystem for temporary data |
+| `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames |
+| `fs.s3a.committer.staging.uuid` |  | X | X | Unique ID string for unique filenames |
+| `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem |
 
 
 ## Troubleshooting
@@ -427,7 +486,7 @@ org.apache.hadoop.fs.s3a.commit.PathCommitException: `s3a://landsat-pds': Filesy
 in configuration option fs.s3a.committer.magic.enabled
 ```
 
-The Job is configured to use the magic committer, but the S3A bucket has not been explicitly
+The Jjb is configured to use the magic committer, but the S3A bucket has not been explicitly
 called out as supporting it,
 
 The destination bucket **must** be declared as supporting the magic committer.
@@ -477,3 +536,31 @@ The Staging committer uses Hadoop's original committer to manage the commit/abor
 protocol for the files listing the pending write operations. Tt uses
 the cluster filesystem for this. This must be HDFS or a similar distributed
 filesystem with consistent data and renames as O(1) atomic renames.
+
+### `FileOutputCommitter` appears to be still used (from logs or delays in commits)
+
+The Staging committers use the original `FileOutputCommitter` to manage
+the propagation of commit informat
+
+One way to find out what is happening (i.e. get a stack trace of where the committer
+is being created is to set the option `mapreduce.fileoutputcommitter.algorithm.version`
+to a value such as "10". Because the only supported algorithms are "1" and "2",
+the newly created `FileOutputCommitter` will raise an exception in its constructor
+when instantiated:
+
+```
+java.io.IOException: Only 1 or 2 algorithm version is supported
+at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.<init>(FileOutputCommitter.java:130)
+at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.<init>(FileOutputCommitter.java:104)
+at org.apache.parquet.hadoop.ParquetOutputCommitter.<init>(ParquetOutputCommitter.java:42)
+at org.apache.parquet.hadoop.ParquetOutputFormat.getOutputCommitter(ParquetOutputFormat.java:395)
+at org.apache.spark.internal.io.HadoopMapReduceCommitProtocol.setupCommitter(HadoopMapReduceCommitProtocol.scala:67)
+at com.hortonworks.spark.cloud.commit.PathOutputCommitProtocol.setupCommitter(PathOutputCommitProtocol.scala:62)
+at org.apache.spark.internal.io.HadoopMapReduceCommitProtocol.setupJob(HadoopMapReduceCommitProtocol.scala:124)
+at com.hortonworks.spark.cloud.commit.PathOutputCommitProtocol.setupJob(PathOutputCommitProtocol.scala:152)
+at org.apache.spark.sql.execution.datasources.FileFormatWriter$.write(FileFormatWriter.scala:175)
+at org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand.run(InsertIntoHadoopFsRelationCommand.scala:145)
+```
+
+While that will not make the problem go away, it will at least make
+the failure happen at the start of a job.

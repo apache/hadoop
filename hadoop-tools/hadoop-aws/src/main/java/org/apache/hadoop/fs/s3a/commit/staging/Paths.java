@@ -185,7 +185,7 @@ public final class Paths {
     case "hdfs":
     default:
       String pathname = conf.getTrimmed(
-          FS_S3A_COMMITTER_TMP_PATH, FILESYSTEM_TEMP_PATH);
+          FS_S3A_COMMITTER_STAGING_TMP_PATH, FILESYSTEM_TEMP_PATH);
       temp = fs.makeQualified(new Path(pathname));
     }
     return temp;

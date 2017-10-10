@@ -59,7 +59,6 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractCommitITest;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.MiniDFSTestCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -347,7 +346,7 @@ public class StagingTestBase {
           StagingCommitterConstants.JAVA_IO_TMPDIR);
       tempDir = new File(tmp);
       tac.getConfiguration().set(Constants.BUFFER_DIR, tmp + "/buffer");
-      tac.getConfiguration().set(CommitConstants.FS_S3A_COMMITTER_TMP_PATH,
+      tac.getConfiguration().set(CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH,
           tmp + "/cluster");
     }
 
