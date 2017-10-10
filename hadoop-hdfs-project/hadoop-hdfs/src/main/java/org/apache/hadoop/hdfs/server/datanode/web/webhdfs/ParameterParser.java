@@ -59,8 +59,7 @@ class ParameterParser {
   private final Map<String, List<String>> params;
 
   ParameterParser(QueryStringDecoder decoder, Configuration conf) {
-    this.path = decodeComponent(decoder.path().substring(WEBHDFS_PREFIX_LENGTH),
-        StandardCharsets.UTF_8);
+    this.path = decoder.path().substring(WEBHDFS_PREFIX_LENGTH);
     this.params = decoder.parameters();
     this.conf = conf;
   }
