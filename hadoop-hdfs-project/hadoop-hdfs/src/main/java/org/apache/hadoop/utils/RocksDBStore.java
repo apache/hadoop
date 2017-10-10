@@ -160,7 +160,8 @@ public class RocksDBStore implements MetadataStore {
         it.seekToFirst();
       } else {
         if(get(startKey) == null) {
-          throw new IOException("Invalid start key, not found in current db");
+          // Key not found, return empty list
+          return result;
         }
         it.seek(startKey);
       }

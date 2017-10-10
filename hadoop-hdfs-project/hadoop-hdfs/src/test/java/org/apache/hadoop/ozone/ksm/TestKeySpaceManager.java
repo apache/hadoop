@@ -699,13 +699,8 @@ public class TestKeySpaceManager {
 
     // Provide an invalid bucket name as start key.
     listBucketArgs = new ListArgs(volArgs, null, 100, "unknown_bucket_name");
-    try {
-      storageHandler.listBuckets(listBucketArgs);
-      Assert.fail("Expecting an error when the given bucket name is invalid.");
-    } catch (Exception e) {
-      Assert.assertTrue(e instanceof IOException);
-      Assert.assertTrue(e.getMessage().contains(Status.INTERNAL_ERROR.name()));
-    }
+    ListBuckets buckets = storageHandler.listBuckets(listBucketArgs);
+    Assert.assertEquals(buckets.getBuckets().size(), 0);
 
     // Use all arguments.
     listBucketArgs = new ListArgs(volArgs, "b", 5, "bBucket_7");
@@ -824,14 +819,8 @@ public class TestKeySpaceManager {
 
     // Provide an invalid key name as start key.
     listKeyArgs = new ListArgs(bucketArgs, null, 100, "invalid_start_key");
-    try {
-      storageHandler.listKeys(listKeyArgs);
-      Assert.fail("Expecting an error when the given start"
-          + " key name is invalid.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          Status.INTERNAL_ERROR.name(), e);
-    }
+    ListKeys keys = storageHandler.listKeys(listKeyArgs);
+    Assert.assertEquals(keys.getKeyList().size(), 0);
 
     // Provide an invalid maxKeys argument.
     try {

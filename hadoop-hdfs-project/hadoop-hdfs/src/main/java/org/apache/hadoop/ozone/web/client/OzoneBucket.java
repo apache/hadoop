@@ -39,6 +39,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.LinkedList;
@@ -501,6 +503,35 @@ public class OzoneBucket {
 
     } catch (IOException | URISyntaxException e) {
       throw new OzoneRestClientException(e.getMessage(), e);
+    } finally {
+      OzoneClientUtils.releaseConnection(getRequest);
+    }
+  }
+
+  /**
+   * List keys in a bucket with the provided prefix, with paging results.
+   *
+   * @param prefix The prefix of the object keys
+   * @param maxResult max size per response
+   * @param prevKey the previous key for paging
+   */
+  public List<OzoneKey> listKeys(String prefix, int maxResult, String prevKey)
+      throws OzoneException {
+    HttpGet getRequest = null;
+    try {
+      final URI uri =  new URIBuilder(volume.getClient().getEndPointURI())
+          .setPath(OzoneConsts.KSM_KEY_PREFIX + getVolume().getVolumeName() +
+              OzoneConsts.KSM_KEY_PREFIX + getBucketName())
+          .setParameter(Header.OZONE_LIST_QUERY_PREFIX, prefix)
+          .setParameter(Header.OZONE_LIST_QUERY_MAXKEYS,
+              String.valueOf(maxResult))
+          .setParameter(Header.OZONE_LIST_QUERY_PREVKEY, prevKey)
+          .build();
+      final OzoneRestClient client = getVolume().getClient();
+      getRequest = client.getHttpGet(uri.toString());
+      return executeListKeys(getRequest, HttpClientBuilder.create().build());
+    } catch (IOException | URISyntaxException e) {
+      throw new OzoneRestClientException(e.getMessage());
     } finally {
       OzoneClientUtils.releaseConnection(getRequest);
     }

@@ -298,8 +298,9 @@ public class LevelDBStore implements MetadataStore {
    * @param startKey a start key.
    * @param count max number of entries to return.
    * @param filters customized one or more {@link MetadataKeyFilter}.
-   * @return a list of entries found in the database.
-   * @throws IOException if an invalid startKey is given or other I/O errors.
+   * @return a list of entries found in the database or an empty list if the
+   * startKey is invalid.
+   * @throws IOException if there are I/O errors.
    * @throws IllegalArgumentException if count is less than 0.
    */
   private List<Entry<byte[], byte[]>> getRangeKVs(byte[] startKey,
@@ -321,7 +322,8 @@ public class LevelDBStore implements MetadataStore {
         dbIter.seekToFirst();
       } else {
         if (db.get(startKey) == null) {
-          throw new IOException("Invalid start key, not found in current db.");
+          // Key not found, return empty list
+          return result;
         }
         dbIter.seek(startKey);
       }

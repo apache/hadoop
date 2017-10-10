@@ -123,4 +123,19 @@ public class TestOzoneFileInterfaces {
       Assert.assertEquals(out, data);
     }
   }
+
+  @Test
+  public void testDirectory() throws IOException {
+    String dirPath = RandomStringUtils.randomAlphanumeric(5);
+    Path path = new Path("/" + dirPath);
+    Assert.assertTrue(fs.mkdirs(path));
+
+    FileStatus status = fs.getFileStatus(path);
+    Assert.assertTrue(status.isDirectory());
+    Assert.assertEquals(status.getLen(), 0);
+
+    FileStatus[] statusList = fs.listStatus(new Path("/"));
+    Assert.assertEquals(statusList.length, 1);
+    Assert.assertEquals(statusList[0], status);
+  }
 }
