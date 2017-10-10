@@ -1461,13 +1461,13 @@
 
 <!-- Ozone file system properties -->
 <property>
-  <name>fs.ozfs.impl</name>
+  <name>fs.o3.impl</name>
   <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
   <description>The implementation class of the Ozone FileSystem.</description>
 </property>
 
 <property>
-  <name>fs.AbstractFileSystem.ozfs.impl</name>
+  <name>fs.AbstractFileSystem.o3.impl</name>
   <value>org.apache.hadoop.fs.ozone.OzFs</value>
   <description>The implementation class of the OzFs AbstractFileSystem.</description>
 </property>

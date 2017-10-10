@@ -306,8 +306,10 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
       rangeResult = store.getSequentialRangeKVs(
           getBucketKey(volumeName, startBucket),
           maxNumOfBuckets + 1, filter);
-      //Remove start key from result.
-      rangeResult.remove(0);
+      if (!rangeResult.isEmpty()) {
+        //Remove start key from result.
+        rangeResult.remove(0);
+      }
     } else {
       rangeResult = store.getSequentialRangeKVs(null, maxNumOfBuckets, filter);
     }
@@ -350,8 +352,10 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
       rangeResult = store.getSequentialRangeKVs(
           getDBKeyBytes(volumeName, bucketName, startKey),
           maxKeys + 1, filter);
-      //Remove start key from result.
-      rangeResult.remove(0);
+      if (!rangeResult.isEmpty()) {
+        //Remove start key from result.
+        rangeResult.remove(0);
+      }
     } else {
       rangeResult = store.getSequentialRangeKVs(null, maxKeys, filter);
     }

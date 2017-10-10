@@ -89,7 +89,7 @@ public abstract class KeyProcessTemplate {
       KeyArgs args = new KeyArgs(volume, bucket, key, userArgs);
       MDC.put(OZONE_RESOURCE, args.getResourceName());
       Response response =  doProcess(args, is, request, headers, info);
-      LOG.info("Success");
+      LOG.debug("Success");
       MDC.clear();
       return response;
 

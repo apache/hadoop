@@ -334,10 +334,10 @@ public class TestMetadataStore {
 
   @Test
   public void testInvalidStartKey() throws IOException {
-    // If startKey is invalid, throws an invalid key exception.
-    expectedException.expect(IOException.class);
-    expectedException.expectMessage("Invalid start key");
-    store.getRangeKVs(getBytes("unknownKey"), MAX_GETRANGE_LENGTH);
+    // If startKey is invalid, the returned list should be empty.
+    List<Map.Entry<byte[], byte[]>> kvs =
+        store.getRangeKVs(getBytes("unknownKey"), MAX_GETRANGE_LENGTH);
+    Assert.assertEquals(kvs.size(), 0);
   }
 
   @Test

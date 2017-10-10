@@ -36,7 +36,7 @@ public class OzoneExceptionMapper implements ExceptionMapper<OzoneException> {
 
   @Override
   public Response toResponse(OzoneException exception) {
-    LOG.info("Returning exception. ex: {}", exception.toJsonString());
+    LOG.debug("Returning exception. ex: {}", exception.toJsonString());
     MDC.clear();
     return Response.status((int)exception.getHttpCode())
       .entity(exception.toJsonString()).build();
