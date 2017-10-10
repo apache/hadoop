@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProfilesProto;
@@ -129,9 +130,6 @@ public class GetAllResourceProfilesResponsePBImpl
   }
 
   private ResourceProto convertToProtoFormat(Resource res) {
-    ResourcePBImpl r = new ResourcePBImpl();
-    r.setMemorySize(res.getMemorySize());
-    r.setVirtualCores(res.getVirtualCores());
-    return r.getProto();
+    return ProtoUtils.convertToProtoFormat(res);
   }
 }
