@@ -227,6 +227,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return rmDispatcher;
   }
 
+  @VisibleForTesting
+  protected ResourceProfilesManager createResourceProfileManager() {
+    ResourceProfilesManager resourceProfilesManager =
+        new ResourceProfilesManagerImpl();
+    return resourceProfilesManager;
+  }
+
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
@@ -236,7 +243,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     // add resource profiles here because it's used by AbstractYarnScheduler
     ResourceProfilesManager resourceProfilesManager =
-        new ResourceProfilesManagerImpl();
+        createResourceProfileManager();
     resourceProfilesManager.init(conf);
     rmContext.setResourceProfilesManager(resourceProfilesManager);
 

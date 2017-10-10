@@ -848,6 +848,15 @@ public class MockRM extends ResourceManager {
     return nm;
   }
 
+  public MockNM registerNode(String nodeIdStr, Resource nodeCapatibility)
+      throws Exception {
+    MockNM nm = new MockNM(nodeIdStr, nodeCapatibility,
+        getResourceTrackerService());
+    nm.registerNode();
+    drainEventsImplicitly();
+    return nm;
+  }
+
   public void sendNodeStarted(MockNM nm) throws Exception {
     RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(
         nm.getNodeId());
