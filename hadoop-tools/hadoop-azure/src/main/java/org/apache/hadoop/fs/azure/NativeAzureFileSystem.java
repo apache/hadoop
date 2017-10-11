@@ -3154,8 +3154,6 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     }
 
-    performAuthCheck(srcParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteSrcPath);
-
     String srcKey = pathToKey(absoluteSrcPath);
 
     if (srcKey.length() == 0) {
@@ -3163,11 +3161,29 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     }
 
+    performAuthCheck(srcParentFolder, WasbAuthorizationOperations.WRITE, "rename",
+        absoluteSrcPath);
+
+    if (this.azureAuthorization) {
+      try {
+        performStickyBitCheckForRenameOperation(absoluteSrcPath, srcParentFolder);
+      } catch (FileNotFoundException ex) {
+        return false;
+      } catch (IOException ex) {
+        Throwable innerException = checkForAzureStorageException(ex);
+        if (innerException instanceof StorageException
+          && isFileNotFoundException((StorageException) innerException)) {
+          LOG.debug("Encountered FileNotFound Exception when performing sticky bit check "
+            + "on {}. Failing rename", srcKey);
+          return false;
+        }
+        throw ex;
+      }
+    }
+
     // Figure out the final destination
     Path absoluteDstPath = makeAbsolute(dst);
     Path dstParentFolder = absoluteDstPath.getParent();
-
-    performAuthCheck(dstParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteDstPath);
 
     String dstKey = pathToKey(absoluteDstPath);
     FileMetadata dstMetadata = null;
@@ -3193,6 +3209,9 @@ public class NativeAzureFileSystem extends FileSystem {
 
     if (dstMetadata != null && dstMetadata.isDir()) {
       // It's an existing directory.
+      performAuthCheck(absoluteDstPath, WasbAuthorizationOperations.WRITE, "rename",
+          absoluteDstPath);
+
       dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
       LOG.debug("Destination {} "
           + " is a directory, adjusted the destination to be {}", dst, dstKey);
@@ -3228,6 +3247,9 @@ public class NativeAzureFileSystem extends FileSystem {
         LOG.debug("Parent of the destination {}"
             + " is a file, failing the rename.", dst);
         return false;
+      } else {
+        performAuthCheck(dstParentFolder, WasbAuthorizationOperations.WRITE,
+          "rename", absoluteDstPath);
       }
     }
     FileMetadata srcMetadata = null;
@@ -3403,6 +3425,43 @@ public class NativeAzureFileSystem extends FileSystem {
   private SelfRenewingLease leaseSourceFolder(String srcKey)
       throws AzureException {
     return store.acquireLease(srcKey);
+  }
+
+  /**
+   * Performs sticky bit check on source folder for rename operation.
+   *
+   * @param srcPath - path which is to be renamed.
+   * @param srcParentPath - parent to srcPath to check for stickybit check.
+   * @throws FileNotFoundException if srcPath or srcParentPath do not exist.
+   * @throws WasbAuthorizationException if stickybit check is violated.
+   * @throws IOException when retrieving metadata operation fails.
+   */
+  private void performStickyBitCheckForRenameOperation(Path srcPath,
+      Path srcParentPath)
+    throws FileNotFoundException, WasbAuthorizationException, IOException {
+
+    String srcKey = pathToKey(srcPath);
+    FileMetadata srcMetadata = null;
+    srcMetadata = store.retrieveMetadata(srcKey);
+    if (srcMetadata == null) {
+      LOG.debug("Source {} doesn't exist. Failing rename.", srcPath);
+      throw new FileNotFoundException(
+        String.format("%s does not exist.", srcPath));
+    }
+
+    String parentkey = pathToKey(srcParentPath);
+    FileMetadata parentMetadata = store.retrieveMetadata(parentkey);
+    if (parentMetadata == null) {
+      LOG.debug("Path {} doesn't exist, failing rename.", srcParentPath);
+      throw new FileNotFoundException(
+        String.format("%s does not exist.", parentkey));
+    }
+
+    if (isStickyBitCheckViolated(srcMetadata, parentMetadata)) {
+      throw new WasbAuthorizationException(
+        String.format("Rename operation for %s is not permitted."
+        + " Details : Stickybit check failed.", srcPath));
+    }
   }
 
   /**
