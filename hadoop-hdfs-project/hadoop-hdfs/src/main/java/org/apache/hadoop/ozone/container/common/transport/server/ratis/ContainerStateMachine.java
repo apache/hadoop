@@ -80,7 +80,7 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   @Override
   public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
-    final SMLogEntryProto logEntry = trx.getSMLogEntry().get();
+    final SMLogEntryProto logEntry = trx.getSMLogEntry();
     return dispatch(ShadedProtoUtil.asByteString(logEntry.getData()),
         response ->
             () -> ShadedProtoUtil.asShadedByteString(response.toByteArray())

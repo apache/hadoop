@@ -134,9 +134,8 @@ public class TestContainerServer {
   static void initXceiverServerRatis(
       RpcType rpc, DatanodeID id, Pipeline pipeline) throws IOException {
     final RaftPeer p = RatisHelper.toRaftPeer(id);
-    final RaftPeer[] peers = RatisHelper.toRaftPeerArray(pipeline);
     final RaftClient client = RatisHelper.newRaftClient(rpc, p);
-    client.reinitialize(peers, p.getId());
+    client.reinitialize(RatisHelper.newRaftGroup(pipeline), p.getId());
   }
 
 
