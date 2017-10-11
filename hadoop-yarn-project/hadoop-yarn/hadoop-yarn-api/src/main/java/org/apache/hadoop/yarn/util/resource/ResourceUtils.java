@@ -120,19 +120,21 @@ public class ResourceUtils {
       Map<String, ResourceInformation> res) {
     ResourceInformation ri;
     if (!res.containsKey(MEMORY)) {
-      LOG.info("Adding resource type - name = " + MEMORY + ", units = "
-          + ResourceInformation.MEMORY_MB.getUnits() + ", type = "
-          + ResourceTypes.COUNTABLE);
-      ri = ResourceInformation
-          .newInstance(MEMORY,
-              ResourceInformation.MEMORY_MB.getUnits());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding resource type - name = " + MEMORY + ", units = "
+            + ResourceInformation.MEMORY_MB.getUnits() + ", type = "
+            + ResourceTypes.COUNTABLE);
+      }
+      ri = ResourceInformation.newInstance(MEMORY,
+          ResourceInformation.MEMORY_MB.getUnits());
       res.put(MEMORY, ri);
     }
     if (!res.containsKey(VCORES)) {
-      LOG.info("Adding resource type - name = " + VCORES + ", units = , type = "
-          + ResourceTypes.COUNTABLE);
-      ri =
-          ResourceInformation.newInstance(VCORES);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding resource type - name = " + VCORES
+            + ", units = , type = " + ResourceTypes.COUNTABLE);
+      }
+      ri = ResourceInformation.newInstance(VCORES);
       res.put(VCORES, ri);
     }
   }
@@ -346,11 +348,11 @@ public class ResourceUtils {
           }
           try {
             addResourcesFileToConf(resourceFile, conf);
-            LOG.debug("Found " + resourceFile + ", adding to configuration");
           } catch (FileNotFoundException fe) {
-            LOG.debug("Unable to find '" + resourceFile + "'.");
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Unable to find '" + resourceFile + "'.");
+            }
           }
-
           initializeResourcesMap(conf);
         }
       }
@@ -391,7 +393,9 @@ public class ResourceUtils {
       Configuration conf) throws FileNotFoundException {
     try {
       InputStream ris = getConfInputStream(resourceFile, conf);
-      LOG.debug("Found " + resourceFile + ", adding to configuration");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Found " + resourceFile + ", adding to configuration");
+      }
       conf.addResource(ris);
     } catch (FileNotFoundException fe) {
       throw fe;
@@ -475,7 +479,10 @@ public class ResourceUtils {
         }
       }
     } catch (FileNotFoundException fe) {
-      LOG.info("Couldn't find node resources file");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Couldn't find node resources file: "
+            + YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE);
+      }
     }
     return nodeResources;
   }
@@ -495,8 +502,10 @@ public class ResourceUtils {
           Long.valueOf(value.substring(0, value.length() - units.length()));
       nodeResources.get(resourceType).setValue(resourceValue);
       nodeResources.get(resourceType).setUnits(units);
-      LOG.debug("Setting value for resource type " + resourceType + " to "
-              + resourceValue + " with units " + units);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting value for resource type " + resourceType + " to "
+            + resourceValue + " with units " + units);
+      }
     }
   }
 
