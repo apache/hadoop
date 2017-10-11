@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -37,6 +38,7 @@ import java.io.OutputStreamWriter;
 import java.io.FileOutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 import static org.apache.hadoop.util.RunJar.SHUTDOWN_HOOK_PRIORITY;
@@ -62,7 +64,17 @@ public class ContainerStorageLocation {
       throws IOException {
     this.dataLocation = dataLoc;
     this.storageUuId = DatanodeStorage.generateUuid();
-    File dataDir = new File(dataLoc.getNormalizedUri().getPath());
+    File dataDir = Paths.get(dataLoc.getNormalizedUri()).resolve(
+        OzoneConsts.CONTAINER_PREFIX).toFile();
+    // Initialize container data root if it does not exist as required by DF/DU
+    if (!dataDir.exists()) {
+      if (!dataDir.mkdirs()) {
+        LOG.error("Unable to create the container storage location at : {}",
+            dataDir);
+        throw new IllegalArgumentException("Unable to create the container" +
+            " storage location at : " + dataDir);
+      }
+    }
     scmUsedFile = new File(dataDir, DU_CACHE_FILE);
     // get overall disk usage
     this.usage = new DF(dataDir, conf);
