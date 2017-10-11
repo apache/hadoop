@@ -156,7 +156,8 @@ public class XceiverClientManager implements Closeable {
           }
         });
     } catch (Exception e) {
-      throw new IOException("Exception getting XceiverClient.", e);
+      throw new IOException(
+          "Exception getting XceiverClient: " + e.toString(), e);
     }
   }
 

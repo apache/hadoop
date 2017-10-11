@@ -180,7 +180,7 @@ public class ChunkInputStream extends InputStream {
       readChunkResponse = ContainerProtocolCalls.readChunk(xceiverClient,
           chunks.get(readChunkOffset), key, traceID);
     } catch (IOException e) {
-      throw new IOException("Unexpected OzoneException", e);
+      throw new IOException("Unexpected OzoneException: " + e.toString(), e);
     }
     chunkOffset = readChunkOffset;
     ByteString byteString = readChunkResponse.getData();

@@ -97,7 +97,7 @@ public abstract class VolumeProcessTemplate {
       return response;
 
     } catch (IllegalArgumentException ex) {
-      LOG.debug("illegal argument. {}", ex);
+      LOG.error("illegal argument. {}", ex);
       throw ErrorTable.newError(ErrorTable.INVALID_VOLUME_NAME, userArgs, ex);
     } catch (IOException ex) {
       handleIOException(volume, reqID, hostName, ex);
@@ -130,6 +130,7 @@ public abstract class VolumeProcessTemplate {
    */
   private void handleIOException(String volume, String reqID, String hostName,
                                  IOException fsExp) throws OzoneException {
+    LOG.error("IOException: {}", fsExp);
     OzoneException exp = null;
 
     if ((fsExp != null && fsExp.getMessage().endsWith(
@@ -161,7 +162,6 @@ public abstract class VolumeProcessTemplate {
         exp.setMessage(fsExp.getMessage());
       }
     }
-    LOG.debug("IOException: {}", exp);
     throw exp;
   }
 

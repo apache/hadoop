@@ -151,7 +151,8 @@ public class ChunkOutputStream extends OutputStream {
         }
         putKey(xceiverClient, containerKeyData.build(), traceID);
       } catch (IOException e) {
-        throw new IOException("Unexpected Storage Container Exception", e);
+        throw new IOException(
+            "Unexpected Storage Container Exception: " + e.toString(), e);
       } finally {
         xceiverClientManager.releaseClient(xceiverClient);
         xceiverClientManager = null;
@@ -218,7 +219,8 @@ public class ChunkOutputStream extends OutputStream {
     try {
       writeChunk(xceiverClient, chunk, key, data, traceID);
     } catch (IOException e) {
-      throw new IOException("Unexpected Storage Container Exception", e);
+      throw new IOException(
+          "Unexpected Storage Container Exception: " + e.toString(), e);
     }
     containerKeyData.addChunks(chunk);
   }
