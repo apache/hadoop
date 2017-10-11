@@ -132,6 +132,7 @@
       <!-- Disable the sign plugin, since there isn't anything to sign -->
       <plugin>
         <artifactId>maven-gpg-plugin</artifactId>
+        <version>${maven-gpg-plugin.version}</version>
         <executions>
           <execution>
             <id>sign-artifacts</id>
