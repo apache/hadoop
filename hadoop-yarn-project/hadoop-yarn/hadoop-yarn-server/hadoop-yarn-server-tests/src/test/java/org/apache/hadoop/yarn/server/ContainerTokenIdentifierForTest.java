@@ -24,6 +24,7 @@ import java.io.IOException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -119,6 +120,12 @@ public class ContainerTokenIdentifierForTest extends ContainerTokenIdentifier {
 
   public ContainerId getContainerID() {
     return new ContainerIdPBImpl(proto.getContainerId());
+  }
+
+  @Override
+  public UserGroupInformation getUser() {
+    final ContainerId containerId = getContainerID();
+    return UserGroupInformation.createRemoteUser(containerId.toString());
   }
 
   public String getApplicationSubmitter() {
