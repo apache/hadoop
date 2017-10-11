@@ -1180,6 +1180,22 @@ public class YarnConfiguration extends Configuration {
   /** Prefix for runtime configuration constants. */
   public static final String LINUX_CONTAINER_RUNTIME_PREFIX = NM_PREFIX +
       "runtime.linux.";
+
+  /**
+   * Comma separated list of runtimes that are allowed when using
+   * LinuxContainerExecutor. The allowed values are:
+   * <ul>
+   *   <li>default</li>
+   *   <li>docker</li>
+   * </ul>
+   */
+  public static final String LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES =
+      LINUX_CONTAINER_RUNTIME_PREFIX + "allowed-runtimes";
+
+  /** The default list of allowed runtimes when using LinuxContainerExecutor. */
+  public static final String[] DEFAULT_LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES
+      = {"default"};
+
   public static final String DOCKER_CONTAINER_RUNTIME_PREFIX =
       LINUX_CONTAINER_RUNTIME_PREFIX + "docker.";
 
