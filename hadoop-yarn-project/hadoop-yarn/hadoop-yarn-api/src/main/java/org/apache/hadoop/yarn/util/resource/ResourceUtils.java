@@ -46,6 +46,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
+
 /**
  * Helper class to read the resource-types to be supported by the system.
  */
@@ -82,33 +84,32 @@ public class ResourceUtils {
      */
     String key = "memory";
     if (resourceInformationMap.containsKey(key)) {
-      LOG.warn("Attempt to define resource '" + key +
-          "', but it is not allowed.");
-      throw new YarnRuntimeException("Attempt to re-define mandatory resource '"
-          + key + "'.");
+      LOG.warn(
+          "Attempt to define resource '" + key + "', but it is not allowed.");
+      throw new YarnRuntimeException(
+          "Attempt to re-define mandatory resource '" + key + "'.");
     }
 
-    if (resourceInformationMap.containsKey(MEMORY)) {
-      ResourceInformation memInfo = resourceInformationMap.get(MEMORY);
-      String memUnits = ResourceInformation.MEMORY_MB.getUnits();
-      ResourceTypes memType = ResourceInformation.MEMORY_MB.getResourceType();
-      if (!memInfo.getUnits().equals(memUnits) || !memInfo.getResourceType()
-          .equals(memType)) {
-        throw new YarnRuntimeException(
-            "Attempt to re-define mandatory resource 'memory-mb'. It can only"
-                + " be of type 'COUNTABLE' and have units 'Mi'.");
-      }
-    }
+    for (Map.Entry<String, ResourceInformation> mandatoryResourceEntry :
+        ResourceInformation.MANDATORY_RESOURCES.entrySet()) {
+      key = mandatoryResourceEntry.getKey();
+      ResourceInformation mandatoryRI = mandatoryResourceEntry.getValue();
 
-    if (resourceInformationMap.containsKey(VCORES)) {
-      ResourceInformation vcoreInfo = resourceInformationMap.get(VCORES);
-      String vcoreUnits = ResourceInformation.VCORES.getUnits();
-      ResourceTypes vcoreType = ResourceInformation.VCORES.getResourceType();
-      if (!vcoreInfo.getUnits().equals(vcoreUnits) || !vcoreInfo
-          .getResourceType().equals(vcoreType)) {
-        throw new YarnRuntimeException(
-            "Attempt to re-define mandatory resource 'vcores'. It can only be"
-                + " of type 'COUNTABLE' and have units ''(no units).");
+      ResourceInformation newDefinedRI = resourceInformationMap.get(key);
+      if (newDefinedRI != null) {
+        String expectedUnit = mandatoryRI.getUnits();
+        ResourceTypes expectedType = mandatoryRI.getResourceType();
+        String actualUnit = newDefinedRI.getUnits();
+        ResourceTypes actualType = newDefinedRI.getResourceType();
+
+        if (!expectedUnit.equals(actualUnit) || !expectedType.equals(
+            actualType)) {
+          throw new YarnRuntimeException("Defined mandatory resource type="
+              + key + " inside resource-types.xml, however its type or "
+              + "unit is conflict to mandatory resource types, expected type="
+              + expectedType + ", unit=" + expectedUnit + "; actual type="
+              + actualType + " actual unit=" + actualUnit);
+        }
       }
     }
   }

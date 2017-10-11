@@ -37,7 +37,7 @@ public class TestNodeManager {
   public static final class InvalidContainerExecutor extends
       DefaultContainerExecutor {
     @Override
-    public void init() throws IOException {
+    public void init(Context nmContext) throws IOException {
       throw new IOException("dummy executor init called");
     }
   }

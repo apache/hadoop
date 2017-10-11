@@ -3347,7 +3347,6 @@
     <value>false</value>
   </property>
 
-
   <!-- resource types configuration -->
   <property>
     <name>yarn.resource-types</name>
@@ -3431,4 +3430,45 @@
     <name>yarn.scheduler.configuration.zk-store.parent-path</name>
     <value>/confstore</value>
   </property>
+
+  <property>
+    <description>
+      When yarn.nodemanager.resource.gpu.allowed-gpu-devices=auto specified,
+      YARN NodeManager needs to run GPU discovery binary (now only support
+      nvidia-smi) to get GPU-related information.
+      When value is empty (default), YARN NodeManager will try to locate
+      discovery executable itself.
+      An example of the config value is: /usr/local/bin/nvidia-smi
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Enable additional discovery/isolation of resources on the NodeManager,
+      split by comma. By default, this is empty. Acceptable values: { "yarn-io/gpu" }.
+    </description>
+    <name>yarn.nodemanager.resource-plugins</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Specify GPU devices which can be managed by YARN NodeManager, split by comma
+      Number of GPU devices will be reported to RM to make scheduling decisions.
+      Set to auto (default) let YARN automatically discover GPU resource from
+      system.
+      Manually specify GPU devices if auto detect GPU device failed or admin
+      only want subset of GPU devices managed by YARN. GPU device is identified
+      by their minor device number. A common approach to get minor device number
+      of GPUs is using "nvidia-smi -q" and search "Minor Number" output. An
+      example of manual specification is "0,1,2,4" to allow YARN NodeManager
+      to manage GPU devices with minor number 0/1/2/4.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices</name>
+    <value>auto</value>
+  </property>
+
+
 </configuration>
