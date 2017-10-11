@@ -53,6 +53,23 @@ public class TestResourceUtils {
     }
   }
 
+  public static void addNewTypesToResources(String... resourceTypes) {
+    // Initialize resource map
+    Map<String, ResourceInformation> riMap = new HashMap<>();
+
+    // Initialize mandatory resources
+    riMap.put(ResourceInformation.MEMORY_URI, ResourceInformation.MEMORY_MB);
+    riMap.put(ResourceInformation.VCORES_URI, ResourceInformation.VCORES);
+
+    for (String newResource : resourceTypes) {
+      riMap.put(newResource, ResourceInformation
+          .newInstance(newResource, "", 0, ResourceTypes.COUNTABLE, 0,
+              Integer.MAX_VALUE));
+    }
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+  }
+
   @Before
   public void setup() {
     ResourceUtils.resetResourceTypes();

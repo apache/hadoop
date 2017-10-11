@@ -73,7 +73,7 @@ public class TestContainersMonitorResourceChange {
 
   private static class MockExecutor extends ContainerExecutor {
     @Override
-    public void init() throws IOException {
+    public void init(Context nmContext) throws IOException {
     }
     @Override
     public void startLocalizer(LocalizerStartContext ctx)

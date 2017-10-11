@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -135,7 +136,8 @@ public class ResourceHandlerChain implements ResourceHandler {
     return allOperations;
   }
 
-  List<ResourceHandler> getResourceHandlerList() {
+  @VisibleForTesting
+  public List<ResourceHandler> getResourceHandlerList() {
     return Collections.unmodifiableList(resourceHandlers);
   }
 

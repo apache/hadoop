@@ -427,7 +427,7 @@ public class TestLinuxContainerExecutorWithMocks {
   @Test
   public void testInit() throws Exception {
 
-    mockExec.init();
+    mockExec.init(mock(Context.class));
     assertEquals(Arrays.asList("--checksetup"), readMockParams());
     
   }

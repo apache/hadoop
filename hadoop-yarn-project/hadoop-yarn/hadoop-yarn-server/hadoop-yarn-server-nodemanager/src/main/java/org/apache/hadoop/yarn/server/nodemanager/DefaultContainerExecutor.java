@@ -133,7 +133,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public void init() throws IOException {
+  public void init(Context nmContext) throws IOException {
     // nothing to do or verify here
   }
 
