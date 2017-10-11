@@ -2680,11 +2680,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return mapping of configuration properties with prefix stripped
    */
   public Map<String, String> getPropsWithPrefix(String confPrefix) {
+    Properties props = getProps();
+    Enumeration e = props.propertyNames();
     Map<String, String> configMap = new HashMap<>();
-    for (Map.Entry<String, String> entry : this) {
-      String name = entry.getKey();
+    String name = null;
+    while (e.hasMoreElements()) {
+      name = (String) e.nextElement();
       if (name.startsWith(confPrefix)) {
-        String value = this.get(name);
+        String value = props.getProperty(name);
         name = name.substring(confPrefix.length());
         configMap.put(name, value);
       }

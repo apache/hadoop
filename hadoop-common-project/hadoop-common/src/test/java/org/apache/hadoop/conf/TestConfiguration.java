@@ -2210,6 +2210,21 @@ public class TestConfiguration {
     FileUtil.fullyDelete(tmpDir);
   }
 
+  public void testGettingPropertiesWithPrefix() throws Exception {
+    Configuration conf = new Configuration();
+    for (int i = 0; i < 10; i++) {
+      conf.set("prefix" + ".name" + i, "value");
+    }
+    conf.set("different.prefix" + ".name", "value");
+    Map<String, String> props = conf.getPropsWithPrefix("prefix");
+    assertEquals(props.size(), 10);
+
+    // test call with no properties for a given prefix
+    props = conf.getPropsWithPrefix("none");
+    assertNotNull(props.isEmpty());
+    assertTrue(props.isEmpty());
+  }
+
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
