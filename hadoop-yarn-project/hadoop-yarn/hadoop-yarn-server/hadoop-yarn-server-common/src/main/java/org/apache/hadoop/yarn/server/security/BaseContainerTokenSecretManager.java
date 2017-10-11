@@ -112,9 +112,11 @@ public class BaseContainerTokenSecretManager extends
   protected byte[] retrievePasswordInternal(ContainerTokenIdentifier identifier,
       MasterKeyData masterKey)
       throws org.apache.hadoop.security.token.SecretManager.InvalidToken {
-    LOG.debug("Retrieving password for {} for user {} to be run on NM {}",
-        identifier.getContainerID(), identifier.getUser(),
-        identifier.getNmHostAddress());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Retrieving password for {} for user {} to be run on NM {}",
+          identifier.getContainerID(), identifier.getUser(),
+          identifier.getNmHostAddress());
+    }
     return createPassword(identifier.getBytes(), masterKey.getSecretKey());
   }
 
