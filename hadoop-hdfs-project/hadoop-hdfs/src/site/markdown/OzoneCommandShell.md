@@ -24,6 +24,10 @@ The Ozone commands take the following format.
 * `hdfs oz --command_ http://hostname:port/volume/bucket/key -user
 <name> -root`
 
+The *port* specified in command should match the port mentioned in the config
+property `dfs.datanode.http.address`. This property can be set in `hdfs-site.xml`.
+The default value for the port is `9864` and is used in below commands.
+
 The *--root* option is a command line short cut that allows *hdfs oz*
 commands to be run as the user that started the cluster. This is useful to
 indicate that you want the commands to be run as some admin user. The only
