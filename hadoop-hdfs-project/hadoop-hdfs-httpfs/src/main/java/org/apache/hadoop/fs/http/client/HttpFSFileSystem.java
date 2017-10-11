@@ -705,14 +705,13 @@ public class HttpFSFileSystem extends FileSystem
   }
 
   /**
-   * List the statuses of the files/directories in the given path if the path is
-   * a directory.
+   * Get {@link FileStatus} of files/directories in the given path. If path
+   * corresponds to a file then {@link FileStatus} of that file is returned.
+   * Else if path represents a directory then {@link FileStatus} of all
+   * files/directories inside given path is returned.
    *
    * @param f given path
-   *
-   * @return the statuses of the files/directories in the given patch
-   *
-   * @throws IOException
+   * @return the statuses of the files/directories in the given path
    */
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
@@ -725,6 +724,13 @@ public class HttpFSFileSystem extends FileSystem
     return toFileStatuses(json, f);
   }
 
+  /**
+   * Get {@link DirectoryEntries} of the given path. {@link DirectoryEntries}
+   * contains an array of {@link FileStatus}, as well as iteration information.
+   *
+   * @param f given path
+   * @return {@link DirectoryEntries} for given path
+   */
   @Override
   public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
       FileNotFoundException, IOException {
