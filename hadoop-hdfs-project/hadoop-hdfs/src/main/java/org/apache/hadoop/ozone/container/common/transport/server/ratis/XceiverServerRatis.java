@@ -45,7 +45,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
-import java.util.Collections;
 import java.util.Objects;
 
 /**
@@ -64,7 +63,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
 
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(id))
-        .setPeers(Collections.emptyList())
+        .setGroup(RatisHelper.emptyRaftGroup())
         .setProperties(newRaftProperties(rpcType, port, storageDir))
         .setStateMachine(new ContainerStateMachine(dispatcher))
         .build();
@@ -73,7 +72,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   static RaftProperties newRaftProperties(
       RpcType rpc, int port, String storageDir) {
     final RaftProperties properties = new RaftProperties();
-    RaftServerConfigKeys.setStorageDir(properties, storageDir);
+    RaftServerConfigKeys.setStorageDir(properties, new File(storageDir));
     RaftConfigKeys.Rpc.setType(properties, rpc);
     if (rpc == SupportedRpcType.GRPC) {
       GrpcConfigKeys.Server.setPort(properties, port);
