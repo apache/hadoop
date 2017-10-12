@@ -649,6 +649,17 @@
 </property>
 
 <property>
+  <name>mapreduce.job.sharedcache.mode</name>
+  <value>disabled</value>
+  <description>
+    A comma delimited list of resource categories to submit to the shared cache.
+    The valid categories are: jobjar, libjars, files, archives.
+    If "disabled" is specified then the job submission code will not use
+    the shared cache.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.input.fileinputformat.split.minsize</name>
   <value>0</value>
   <description>The minimum size chunk that map input should be split

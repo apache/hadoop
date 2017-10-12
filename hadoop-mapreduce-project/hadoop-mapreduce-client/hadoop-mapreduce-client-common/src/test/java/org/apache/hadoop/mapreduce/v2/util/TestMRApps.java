@@ -260,7 +260,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
         "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
@@ -280,7 +280,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+        Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in"
       + " the classpath!", env_str.contains(expectedClasspath));
@@ -302,7 +302,7 @@ public class TestMRApps {
     assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!",
       cp.contains("PWD"));
     String expectedAppClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
         "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
@@ -331,7 +331,7 @@ public class TestMRApps {
     conf.set(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH, FRAMEWORK_CLASSPATH);
     MRApps.setClasspath(env, conf);
     final String stdClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+        Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
             ApplicationConstants.Environment.PWD.$$() + "/*"));
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
         Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
