@@ -34,7 +34,9 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.NoActiveSubclustersException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
@@ -45,6 +47,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -314,25 +317,33 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    */
   private void splitIndividualAny(ResourceRequest originalResourceRequest,
       Set<SubClusterId> targetSubclusters,
-      AllocationBookkeeper allocationBookkeeper) {
+      AllocationBookkeeper allocationBookkeeper) throws YarnException {
 
     long allocationId = originalResourceRequest.getAllocationRequestId();
+    int numContainer = originalResourceRequest.getNumContainers();
 
-    for (SubClusterId targetId : targetSubclusters) {
-      float numContainer = originalResourceRequest.getNumContainers();
-
-      // If the ANY request has 0 containers to begin with we must forward it to
-      // any RM we have previously contacted (this might be the user way
-      // to cancel a previous request).
-      if (numContainer == 0 && headroom.containsKey(targetId)) {
-        allocationBookkeeper.addAnyRR(targetId, originalResourceRequest);
+    // If the ANY request has 0 containers to begin with we must forward it to
+    // any RM we have previously contacted (this might be the user way
+    // to cancel a previous request).
+    if (numContainer == 0) {
+      for (SubClusterId targetId : targetSubclusters) {
+        if (headroom.containsKey(targetId)) {
+          allocationBookkeeper.addAnyRR(targetId, originalResourceRequest);
+        }
       }
+      return;
+    }
 
+    // List preserves iteration order
+    List<SubClusterId> targetSCs = new ArrayList<>(targetSubclusters);
+
+    // Compute the distribution weights
+    ArrayList<Float> weightsList = new ArrayList<>();
+    for (SubClusterId targetId : targetSCs) {
       // If ANY is associated with localized asks, split based on their ratio
       if (allocationBookkeeper.getSubClustersForId(allocationId) != null) {
-        float localityBasedWeight = getLocalityBasedWeighting(allocationId,
-            targetId, allocationBookkeeper);
-        numContainer = numContainer * localityBasedWeight;
+        weightsList.add(getLocalityBasedWeighting(allocationId, targetId,
+            allocationBookkeeper));
       } else {
         // split ANY based on load and policy configuration
         float headroomWeighting =
@@ -340,12 +351,18 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         float policyWeighting =
             getPolicyConfigWeighting(targetId, allocationBookkeeper);
         // hrAlpha controls how much headroom influencing decision
-        numContainer = numContainer
-            * (hrAlpha * headroomWeighting + (1 - hrAlpha) * policyWeighting);
+        weightsList
+            .add(hrAlpha * headroomWeighting + (1 - hrAlpha) * policyWeighting);
       }
+    }
 
+    // Compute the integer container counts for each sub-cluster
+    ArrayList<Integer> containerNums =
+        computeIntegerAssignment(numContainer, weightsList);
+    int i = 0;
+    for (SubClusterId targetId : targetSCs) {
       // if the calculated request is non-empty add it to the answer
-      if (numContainer > 0) {
+      if (containerNums.get(i) > 0) {
         ResourceRequest out =
             ResourceRequest.newInstance(originalResourceRequest.getPriority(),
                 originalResourceRequest.getResourceName(),
@@ -355,14 +372,66 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
                 originalResourceRequest.getNodeLabelExpression(),
                 originalResourceRequest.getExecutionTypeRequest());
         out.setAllocationRequestId(allocationId);
-        out.setNumContainers((int) Math.ceil(numContainer));
+        out.setNumContainers(containerNums.get(i));
         if (ResourceRequest.isAnyLocation(out.getResourceName())) {
           allocationBookkeeper.addAnyRR(targetId, out);
         } else {
           allocationBookkeeper.addRackRR(targetId, out);
         }
       }
+      i++;
     }
+  }
+
+  /**
+   * Split the integer into bins according to the weights.
+   *
+   * @param totalNum total number of containers to split
+   * @param weightsList the weights for each subcluster
+   * @return the container allocation after split
+   * @throws YarnException if fails
+   */
+  @VisibleForTesting
+  protected ArrayList<Integer> computeIntegerAssignment(int totalNum,
+      ArrayList<Float> weightsList) throws YarnException {
+    int i, residue;
+    ArrayList<Integer> ret = new ArrayList<>();
+    float totalWeight = 0, totalNumFloat = totalNum;
+
+    if (weightsList.size() == 0) {
+      return ret;
+    }
+    for (i = 0; i < weightsList.size(); i++) {
+      ret.add(0);
+      if (weightsList.get(i) > 0) {
+        totalWeight += weightsList.get(i);
+      }
+    }
+    if (totalWeight == 0) {
+      StringBuilder sb = new StringBuilder();
+      for (Float weight : weightsList) {
+        sb.append(weight + ", ");
+      }
+      throw new FederationPolicyException(
+          "No positive value found in weight array " + sb.toString());
+    }
+
+    // First pass, do flooring for all bins
+    residue = totalNum;
+    for (i = 0; i < weightsList.size(); i++) {
+      if (weightsList.get(i) > 0) {
+        int base = (int) (totalNumFloat * weightsList.get(i) / totalWeight);
+        ret.set(i, ret.get(i) + base);
+        residue -= base;
+      }
+    }
+
+    // By now residue < weights.length, assign one a time
+    for (i = 0; i < residue; i++) {
+      int index = FederationPolicyUtils.getWeightedRandom(weightsList);
+      ret.set(index, ret.get(index) + 1);
+    }
+    return ret;
   }
 
   /**
