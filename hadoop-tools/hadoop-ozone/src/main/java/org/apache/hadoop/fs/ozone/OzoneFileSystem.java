@@ -114,7 +114,7 @@ public class OzoneFileSystem extends FileSystem {
       uri = new URIBuilder().setScheme(OZONE_URI_SCHEME).setHost(hostStr)
           .setPath(OZONE_URI_DELIMITER + volumeStr + OZONE_URI_DELIMITER
               + bucketStr + OZONE_URI_DELIMITER).build();
-      LOG.info("Ozone URI for ozfs initialization is " + uri);
+      LOG.trace("Ozone URI for ozfs initialization is " + uri);
       this.ozone = new OzoneRestClient(OZONE_HTTP_SCHEME + hostStr);
       try {
         this.userName =
