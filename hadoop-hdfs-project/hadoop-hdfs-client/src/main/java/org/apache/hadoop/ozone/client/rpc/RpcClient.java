@@ -226,6 +226,7 @@ public class RpcClient implements ClientProtocol {
         volume.getAdminName(),
         volume.getOwnerName(),
         volume.getQuotaInBytes(),
+        volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
             map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
   }
@@ -256,6 +257,7 @@ public class RpcClient implements ClientProtocol {
         volume.getAdminName(),
         volume.getOwnerName(),
         volume.getQuotaInBytes(),
+        volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
             map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
         .collect(Collectors.toList());
@@ -275,6 +277,7 @@ public class RpcClient implements ClientProtocol {
         volume.getAdminName(),
         volume.getOwnerName(),
         volume.getQuotaInBytes(),
+        volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
             map(KSMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
         .collect(Collectors.toList());
@@ -409,7 +412,8 @@ public class RpcClient implements ClientProtocol {
         bucketArgs.getBucketName(),
         bucketArgs.getAcls(),
         bucketArgs.getStorageType(),
-        bucketArgs.getIsVersionEnabled());
+        bucketArgs.getIsVersionEnabled(),
+        bucketArgs.getCreationTime());
   }
 
   @Override
@@ -426,7 +430,8 @@ public class RpcClient implements ClientProtocol {
         bucket.getBucketName(),
         bucket.getAcls(),
         bucket.getStorageType(),
-        bucket.getIsVersionEnabled()))
+        bucket.getIsVersionEnabled(),
+        bucket.getCreationTime()))
         .collect(Collectors.toList());
   }
 
@@ -507,7 +512,9 @@ public class RpcClient implements ClientProtocol {
         key.getVolumeName(),
         key.getBucketName(),
         key.getKeyName(),
-        key.getDataSize()))
+        key.getDataSize(),
+        key.getCreationTime(),
+        key.getModificationTime()))
         .collect(Collectors.toList());
   }
 
@@ -527,7 +534,9 @@ public class RpcClient implements ClientProtocol {
     return new OzoneKey(keyInfo.getVolumeName(),
                         keyInfo.getBucketName(),
                         keyInfo.getKeyName(),
-                        keyInfo.getDataSize());
+                        keyInfo.getDataSize(),
+                        keyInfo.getCreationTime(),
+                        keyInfo.getModificationTime());
   }
 
   @Override

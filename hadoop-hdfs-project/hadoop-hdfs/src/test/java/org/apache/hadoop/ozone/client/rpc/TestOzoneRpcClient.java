@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -177,6 +178,7 @@ public class TestOzoneRpcClient {
   @Test
   public void testCreateBucket()
       throws IOException, OzoneException {
+    long currentTime = Time.now();
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
@@ -184,6 +186,8 @@ public class TestOzoneRpcClient {
     volume.createBucket(bucketName);
     OzoneBucket bucket = volume.getBucket(bucketName);
     Assert.assertEquals(bucketName, bucket.getName());
+    Assert.assertTrue(bucket.getCreationTime() >= currentTime);
+    Assert.assertTrue(volume.getCreationTime() >= currentTime);
   }
 
   @Test
@@ -361,6 +365,7 @@ public class TestOzoneRpcClient {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
+    long currentTime = Time.now();
 
     String value = "sample value";
     store.createVolume(volumeName);
@@ -382,6 +387,8 @@ public class TestOzoneRpcClient {
       byte[] fileContent = new byte[value.getBytes().length];
       is.read(fileContent);
       Assert.assertEquals(value, new String(fileContent));
+      Assert.assertTrue(key.getCreationTime() >= currentTime);
+      Assert.assertTrue(key.getModificationTime() >= currentTime);
     }
   }
 

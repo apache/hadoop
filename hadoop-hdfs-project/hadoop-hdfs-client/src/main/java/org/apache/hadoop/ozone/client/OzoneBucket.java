@@ -73,6 +73,11 @@ public class OzoneBucket {
   private int listCacheSize;
 
   /**
+   * Creation time of the bucket.
+   */
+  private long creationTime;
+
+  /**
    * Constructs OzoneBucket instance.
    * @param conf Configuration object.
    * @param proxy ClientProtocol proxy.
@@ -81,11 +86,12 @@ public class OzoneBucket {
    * @param acls ACLs associated with the bucket.
    * @param storageType StorageType of the bucket.
    * @param versioning versioning status of the bucket.
+   * @param creationTime creation time of the bucket.
    */
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
                      String volumeName, String bucketName,
                      List<OzoneAcl> acls, StorageType storageType,
-                     Boolean versioning) {
+                     Boolean versioning, long creationTime) {
     this.proxy = proxy;
     this.volumeName = volumeName;
     this.name = bucketName;
@@ -93,6 +99,7 @@ public class OzoneBucket {
     this.storageType = storageType;
     this.versioning = versioning;
     this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
+    this.creationTime = creationTime;
   }
 
   /**
@@ -138,6 +145,15 @@ public class OzoneBucket {
    */
   public Boolean getVersioning() {
     return versioning;
+  }
+
+  /**
+   * Returns creation time of the Bucket.
+   *
+   * @return creation time of the bucket
+   */
+  public long getCreationTime() {
+    return creationTime;
   }
 
   /**

@@ -35,7 +35,7 @@ public final class KsmKeyInfo {
   private long dataSize;
   private List<KsmKeyLocationInfo> keyLocationList;
   private final long creationTime;
-  private final long modificationTime;
+  private long modificationTime;
 
   private KsmKeyInfo(String volumeName, String bucketName, String keyName,
       List<KsmKeyLocationInfo> locationInfos, long dataSize, long creationTime,
@@ -83,6 +83,10 @@ public final class KsmKeyInfo {
 
   public long getModificationTime() {
     return modificationTime;
+  }
+
+  public void setModificationTime(long modificationTime) {
+    this.modificationTime = modificationTime;
   }
 
   /**
