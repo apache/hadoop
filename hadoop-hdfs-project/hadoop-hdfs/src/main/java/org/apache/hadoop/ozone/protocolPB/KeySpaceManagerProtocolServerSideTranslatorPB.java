@@ -468,6 +468,7 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
           .setVolumeName(keyArgs.getVolumeName())
           .setBucketName(keyArgs.getBucketName())
           .setKeyName(keyArgs.getKeyName())
+          .setDataSize(keyArgs.getDataSize())
           .build();
       int id = request.getClientID();
       impl.commitKey(ksmKeyArgs, id);
