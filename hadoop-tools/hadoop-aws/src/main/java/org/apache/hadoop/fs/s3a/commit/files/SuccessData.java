@@ -49,7 +49,11 @@ import org.apache.hadoop.util.JsonSerialization;
  * </ol>
  *
  * This is an unstable structure intended for diagnostics and testing.
+ * Applications reading this data should use/check the {@link #name} field
+ * to differentiate from any other JSON-based manifest and to identify
+ * changes in the output format.
  */
+@SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SuccessData extends PersistentCommitData {
@@ -60,10 +64,19 @@ public class SuccessData extends PersistentCommitData {
    */
   private static final long serialVersionUID = 507133045258460084L;
 
+  /**
+   * Name to include in persisted data, so as to differentiate from
+   * any other manifests: {@value}.
+   */
+  public static final String NAME
+      = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/1";
+
+  private String name;
+
   /** Timestamp of creation. */
   private long timestamp;
 
-  /** Timestamp as date; no expectation of parseability. */
+  /** Timestamp as date string; no expectation of parseability. */
   private String date;
 
   /**
@@ -98,7 +111,10 @@ public class SuccessData extends PersistentCommitData {
 
   @Override
   public void validate() throws ValidationFailure {
-
+    ValidationFailure.verify(name != null,
+        "Incompatible file format: no 'name' field");
+    ValidationFailure.verify(NAME.equals(name),
+        "Incompatible file format: " + name);
   }
 
   @Override
@@ -109,6 +125,8 @@ public class SuccessData extends PersistentCommitData {
   @Override
   public void save(FileSystem fs, Path path, boolean overwrite)
       throws IOException {
+    // always set the name field before being saved.
+    name = NAME;
     serializer().save(fs, path, this, overwrite);
   }
 
@@ -201,6 +219,14 @@ public class SuccessData extends PersistentCommitData {
     return new JsonSerialization<>(SuccessData.class, false, true);
   }
 
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
   /** @return timestamp of creation. */
   public long getTimestamp() {
     return timestamp;
@@ -284,10 +310,10 @@ public class SuccessData extends PersistentCommitData {
 
   /**
    * Add a diagnostics entry.
-   * @param name name
+   * @param key name
    * @param value value
    */
-  public void addDiagnostic(String name, String value) {
-    diagnostics.put(name, value);
+  public void addDiagnostic(String key, String value) {
+    diagnostics.put(key, value);
   }
 }

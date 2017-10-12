@@ -20,8 +20,6 @@ package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -53,8 +51,6 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  * There are no checks to verify that the filesystem is compatible with
  * the committer.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
 public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
 
   /**

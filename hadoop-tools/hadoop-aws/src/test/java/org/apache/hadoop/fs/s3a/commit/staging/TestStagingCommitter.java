@@ -29,11 +29,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Before;
@@ -192,8 +192,6 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     String jobUUID = UUID.randomUUID().toString();
     config.set(FS_S3A_COMMITTER_STAGING_UUID, jobUUID);
 
-    final int taskId = StagingCommitter.getTaskId(tac);
-    final int attemptId = StagingCommitter.getAttemptId(tac);
     assertEquals("Upload UUID", jobUUID,
         StagingCommitter.getUploadUUID(config, JOB_ID));
 
@@ -523,15 +521,15 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should have deleted the files that succeeded",
         5, results.getDeletes().size());
 
-    Set<String> commits = Sets.newHashSet();
-    for (CompleteMultipartUploadRequest commit: results.getCommits()) {
-      commits.add(commit.getBucketName() + commit.getKey());
-    }
+    Set<String> commits = results.getCommits()
+        .stream()
+        .map((commit) -> commit.getBucketName() + commit.getKey())
+        .collect(Collectors.toSet());
 
-    Set<String> deletes = Sets.newHashSet();
-    for (DeleteObjectRequest delete: results.getDeletes()) {
-      deletes.add(delete.getBucketName() + delete.getKey());
-    }
+    Set<String> deletes = results.getDeletes()
+        .stream()
+        .map((delete) -> delete.getBucketName() + delete.getKey())
+        .collect(Collectors.toSet());
 
     assertEquals("Committed and deleted objects should match",
         commits, deletes);
@@ -611,11 +609,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private static Set<String> getCommittedIds(
       List<CompleteMultipartUploadRequest> commits) {
-    Set<String> committedUploads = Sets.newHashSet();
-    for (CompleteMultipartUploadRequest commit : commits) {
-      committedUploads.add(commit.getUploadId());
-    }
-    return committedUploads;
+    return commits.stream()
+        .map(CompleteMultipartUploadRequest::getUploadId)
+        .collect(Collectors.toSet());
   }
 
   private Set<String> commitTask(StagingCommitter staging,

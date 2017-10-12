@@ -27,9 +27,9 @@ import org.apache.hadoop.service.AbstractService;
 /**
  * MiniDFS Cluster, encapsulated for use in different test suites.
  */
-public class MiniDFSTestCluster extends AbstractService {
+public class MiniDFSClusterService extends AbstractService {
 
-  public MiniDFSTestCluster() {
+  public MiniDFSClusterService() {
     super("MiniDFSTestCluster");
   }
 

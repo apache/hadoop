@@ -55,6 +55,7 @@ import static org.apache.hadoop.util.StringUtils.join;
  * to persist to disk.
  *
  */
+@SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SinglePendingCommit extends PersistentCommitData

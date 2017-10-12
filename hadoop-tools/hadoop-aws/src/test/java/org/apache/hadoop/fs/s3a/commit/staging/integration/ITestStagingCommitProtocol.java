@@ -22,7 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory;
@@ -61,7 +60,7 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
 
     // disable unique filenames so that the protocol tests of FileOutputFormat
     // and this test generate consistent names.
-    //conf.setBoolean(COMMITTER_UNIQUE_FILENAMES, true);
+    conf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES, false);
     return conf;
   }
 
@@ -100,26 +99,25 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected IOException expectJobCommitToFail(JobContext jContext,
+  protected void expectJobCommitToFail(JobContext jContext,
       AbstractS3GuardCommitter committer) throws Exception {
-    return expectJobCommitFailure(jContext, committer,
+    expectJobCommitFailure(jContext, committer,
         IOException.class);
   }
 
   protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {
     // this is expected to be local FS
-    LocalFileSystem local = FileSystem.getLocal(getConfiguration());
-    ContractTestUtils.assertPathExists(local, "task attempt",
-        p);
+    ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
   }
 
   protected void validateTaskAttemptPathAfterWrite(Path p) throws IOException {
     // this is expected to be local FS
-    LocalFileSystem local = FileSystem.getLocal(getConfiguration());
-    ContractTestUtils.assertPathExists(local, "task attempt",
-        p);
+    ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
   }
 
+  protected FileSystem getLocalFS() throws IOException {
+    return FileSystem.getLocal(getConfiguration());
+  }
 
   /**
    * The class provides a overridden implementation of commitJobInternal which

@@ -168,7 +168,7 @@ class S3ABlockOutputStream extends OutputStream implements
     createBlockIfNeeded();
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
         " output to {}", writeOperationHelper, activeBlock);
-    if (putTracker.inited()) {
+    if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();
     }
@@ -324,7 +324,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private void initMultipartUpload() throws IOException {
     if (multiPartUpload == null) {
       LOG.debug("Initiating Multipart upload");
-      multiPartUpload = new MultiPartUpload();
+      multiPartUpload = new MultiPartUpload(key);
     }
   }
 
@@ -382,11 +382,11 @@ class S3ABlockOutputStream extends OutputStream implements
           LOG.info("upload completion delayed until job commit");
         }
       }
-      if (putTracker.isDelayedVisibility()) {
+      if (!putTracker.outputImmediatelyVisible()) {
         // track the number of bytes uploaded as commit operations.
         statistics.commitUploaded(bytes);
       }
-      LOG.debug("Upload complete for {}", writeOperationHelper);
+      LOG.debug("Upload complete to {} by {}", key, writeOperationHelper);
     } catch (IOException ioe) {
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
@@ -416,8 +416,9 @@ class S3ABlockOutputStream extends OutputStream implements
     int size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
-        writeOperationHelper.newPutRequest(uploadData.getFile()) :
-        writeOperationHelper.newPutRequest(uploadData.getUploadStream(), size);
+        writeOperationHelper.createPutObjectRequest(key, uploadData.getFile())
+        : writeOperationHelper.createPutObjectRequest(key,
+            uploadData.getUploadStream(), size);
     long transferQueueTime = now();
     BlockUploadProgress callback =
         new BlockUploadProgress(
@@ -497,7 +498,7 @@ class S3ABlockOutputStream extends OutputStream implements
 
       // does the output stream have delayed visibility
     case CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT:
-      return putTracker.isDelayedVisibility();
+      return !putTracker.outputImmediatelyVisible();
 
       // The flush/sync options are absolutely not supported
     case "hflush":
@@ -519,8 +520,8 @@ class S3ABlockOutputStream extends OutputStream implements
     private int partsUploaded;
     private long bytesSubmitted;
 
-    MultiPartUpload() throws IOException {
-      this.uploadId = writeOperationHelper.initiateMultiPartUpload();
+    MultiPartUpload(String key) throws IOException {
+      this.uploadId = writeOperationHelper.initiateMultiPartUpload(key);
       this.partETagsFutures = new ArrayList<>(2);
       LOG.debug("Initiated multi-part upload for {} with " +
           "id '{}'", writeOperationHelper, uploadId);
@@ -576,6 +577,7 @@ class S3ABlockOutputStream extends OutputStream implements
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request =
           writeOperationHelper.newUploadPartRequest(
+              key,
               uploadId,
               currentPartNumber,
               size,
@@ -650,7 +652,7 @@ class S3ABlockOutputStream extends OutputStream implements
         throws IOException {
       AtomicInteger errorCount = new AtomicInteger(0);
       try {
-        writeOperationHelper.completeMPUwithRetries(
+        writeOperationHelper.completeMPUwithRetries(key,
             uploadId,
             partETags,
             bytesSubmitted,

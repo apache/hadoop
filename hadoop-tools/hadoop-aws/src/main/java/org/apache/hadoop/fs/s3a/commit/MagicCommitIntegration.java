@@ -92,7 +92,7 @@ public class MagicCommitIntegration {
           key,
           destKey,
           pendingObject,
-          owner.createWriteOperationHelper(pendingObject));
+          owner.createWriteOperationHelper());
       LOG.debug("Created {}", tracker);
     } else {
       // standard multipart tracking

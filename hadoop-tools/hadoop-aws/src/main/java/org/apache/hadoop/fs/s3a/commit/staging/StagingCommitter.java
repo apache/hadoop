@@ -116,7 +116,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     this.uuid = getUploadUUID(conf, context.getJobID());
     this.uniqueFilenames = conf.getBoolean(
         FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
-        DEFAULT_COMMITTER_UNIQUE_FILENAMES);
+        DEFAULT_STAGING_COMMITTER_UNIQUE_FILENAMES);
     setWorkPath(buildWorkPath(context, uuid));
     this.wrappedCommitter = createWrappedCommitter(context, conf);
     // forces evaluation and caching of the resolution mode.

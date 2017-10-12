@@ -68,7 +68,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
   private static final int TEST_FILE_COUNT = 2;
   private static final int SCALE_TEST_FILE_COUNT = 20;
 
-  private static MiniDFSTestCluster hdfs;
+  private static MiniDFSClusterService hdfs;
   private static MiniMRYarnCluster yarn = null;
   private static JobConf conf = null;
   private boolean uniqueFilenames = false;
@@ -83,7 +83,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     // the HDFS and YARN clusters share the same configuration, so
     // the HDFS cluster binding is implicitly propagated to YARN
     JobConf c = new JobConf();
-    hdfs = new MiniDFSTestCluster();
+    hdfs = new MiniDFSClusterService();
     hdfs.init(c);
     hdfs.start();
     conf = c;

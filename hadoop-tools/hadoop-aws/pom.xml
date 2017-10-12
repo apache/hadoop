@@ -198,7 +198,7 @@
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSEC*.java</exclude>
                     <exclude>**/ITestS3AHuge*.java</exclude>
-                    <exclude>**/ITestS3ACommit*.java</exclude>
+                    <exclude>**/ITestHuge*.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -230,8 +230,8 @@
                     <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>
+                    <include>**/ITestHuge*.java</include>
                     <include>**/ITestS3AEncryptionSSEC*.java</include>
-                    <include>**/ITestS3ACommit*.java</include>
                   </includes>
                 </configuration>
               </execution>

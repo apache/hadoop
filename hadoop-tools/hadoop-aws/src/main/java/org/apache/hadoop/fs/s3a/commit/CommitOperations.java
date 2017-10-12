@@ -69,6 +69,7 @@ public class CommitOperations {
   /** Statistics. */
   private final S3AInstrumentation.CommitterStatistics statistics;
 
+  private final WriteOperationHelper writeOperations;
   /**
    * Instantiate.
    * @param fs FS to bind to
@@ -77,20 +78,12 @@ public class CommitOperations {
     Preconditions.checkArgument(fs != null, "null fs");
     this.fs = fs;
     statistics = fs.newCommitterStatistics();
+    writeOperations = fs.createWriteOperationHelper();
   }
 
   @Override
   public String toString() {
     return "CommitOperations{" + fs.getUri() + '}';
-  }
-
-  /**
-   * Create a new {@link WriteOperationHelper} for working with the destination.
-   * @param destKey destination key
-   * @return a new instance
-   */
-  private WriteOperationHelper createWriter(String destKey) {
-    return fs.createWriteOperationHelper(destKey);
   }
 
   /** @return statistics. */
@@ -150,8 +143,8 @@ public class CommitOperations {
    */
   private void innerCommit(SinglePendingCommit commit) throws IOException {
     // finalize the commit
-    createWriter(commit.getDestinationKey())
-          .completeMPUwithRetries(
+    writeOperations.completeMPUwithRetries(
+        commit.getDestinationKey(),
               commit.getUploadId(),
               CommitUtils.toPartEtags(commit.getEtags()),
               commit.getLength(),
@@ -259,7 +252,7 @@ public class CommitOperations {
   public void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
     try {
-      createWriter(destKey).abortMultipartCommit(destKey, uploadId);
+      writeOperations.abortMultipartCommit(destKey, uploadId);
     } finally {
       statistics.commitAborted();
     }
@@ -336,8 +329,7 @@ public class CommitOperations {
    * @throws IOException IO failure
    */
   public int abortPendingUploadsUnderPath(Path dest) throws IOException {
-    String destKey = fs.pathToKey(dest);
-    return createWriter(destKey).abortMultipartUploadsUnderPath(destKey);
+    return writeOperations.abortMultipartUploadsUnderPath(fs.pathToKey(dest));
   }
 
 
@@ -390,8 +382,7 @@ public class CommitOperations {
   public void revertCommit(SinglePendingCommit commit) throws IOException {
     LOG.warn("Revert {}", commit);
     try {
-      createWriter(commit.getDestinationKey())
-          .revertCommit(commit.getDestinationKey());
+      writeOperations.revertCommit(commit.getDestinationKey());
     } finally {
       statistics.commitReverted();
     }
@@ -420,18 +411,17 @@ public class CommitOperations {
       throw new FileNotFoundException("Not a file: " + localFile);
     }
     String destURI = destPath.toString();
-    String key = fs.pathToKey(destPath);
-    WriteOperationHelper writer = createWriter(key);
+    String destKey = fs.pathToKey(destPath);
     String uploadId = null;
 
     boolean threw = true;
     try {
       statistics.commitCreated();
-      uploadId = writer.initiateMultiPartUpload();
+      uploadId = writeOperations.initiateMultiPartUpload(destKey);
       long length = localFile.length();
 
       SinglePendingCommit commitData = new SinglePendingCommit();
-      commitData.setDestinationKey(key);
+      commitData.setDestinationKey(destKey);
       commitData.setBucket(fs.getBucket());
       commitData.touch(System.currentTimeMillis());
       commitData.setUploadId(uploadId);
@@ -454,7 +444,8 @@ public class CommitOperations {
       for (int partNumber = 1; partNumber <= numParts; partNumber += 1) {
         long size = Math.min(length - offset, uploadPartSize);
         UploadPartRequest part;
-        part = writer.newUploadPartRequest(
+        part = writeOperations.newUploadPartRequest(
+            destKey,
             uploadId,
             partNumber,
             (int) size,
@@ -462,7 +453,7 @@ public class CommitOperations {
             localFile,
             offset);
         part.setLastPart(partNumber == numParts);
-        UploadPartResult partResult = writer.uploadPart(part);
+        UploadPartResult partResult = writeOperations.uploadPart(part);
         offset += uploadPartSize;
         parts.add(partResult.getPartETag());
       }
@@ -475,9 +466,9 @@ public class CommitOperations {
       if (threw && uploadId != null) {
         statistics.commitAborted();
         try {
-          abortMultipartCommit(key, uploadId);
+          abortMultipartCommit(destKey, uploadId);
         } catch (IOException e) {
-          LOG.error("Failed to abort upload {} to {}", uploadId, key, e);
+          LOG.error("Failed to abort upload {} to {}", uploadId, destKey, e);
         }
       }
     }

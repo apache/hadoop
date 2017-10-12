@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.commit;
+package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
@@ -44,10 +45,12 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  * commit it and verify that it is there. This is needed to
  * verify that the pending-upload mechanism works with multipart files
  * of more than one part.
+ *
+ * This is a scale test.
  */
-public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
+public class ITestHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   private static final Logger LOG = LoggerFactory.getLogger(
-      ITestS3AHugeMagicCommits.class);
+      ITestHugeMagicCommits.class);
 
   private Path magicDir;
   private Path jobDir;

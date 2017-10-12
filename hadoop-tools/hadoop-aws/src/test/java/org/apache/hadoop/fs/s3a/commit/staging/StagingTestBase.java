@@ -59,7 +59,7 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractCommitITest;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.MiniDFSTestCluster;
+import org.apache.hadoop.fs.s3a.commit.MiniDFSClusterService;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
@@ -210,7 +210,7 @@ public class StagingTestBase {
    */
   public static class MiniDFSTest extends HadoopTestBase {
 
-    private static MiniDFSTestCluster hdfs;
+    private static MiniDFSClusterService hdfs;
 
     private static JobConf conf = null;
 
@@ -231,7 +231,7 @@ public class StagingTestBase {
     public static void setupHDFS() throws IOException {
       if (hdfs == null) {
         JobConf c = new JobConf();
-        hdfs = new MiniDFSTestCluster();
+        hdfs = new MiniDFSClusterService();
         hdfs.init(c);
         hdfs.start();
         conf = c;

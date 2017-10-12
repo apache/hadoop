@@ -31,6 +31,11 @@
  *
  * There are no guarantees of stability between versions; these are internal
  * structures.
+ *
+ * The {@link org.apache.hadoop.fs.s3a.commit.files.SuccessData} file is
+ * the one visible to callers after a job completes; it is an unstable
+ * manifest intended for testing only.
+ *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

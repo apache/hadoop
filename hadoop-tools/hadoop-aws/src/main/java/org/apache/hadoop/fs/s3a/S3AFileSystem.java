@@ -753,26 +753,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             partSize,
             blockFactory,
             instrumentation.newOutputStreamStatistics(statistics),
-            createWriteOperationHelper(destKey),
+            createWriteOperationHelper(),
             putTracker),
         null);
   }
 
   /**
-   * Create a new {@code WriteOperationHelper} instance against a specific key.
+   * Create a new {@code WriteOperationHelper} instance.
    *
-   * This class contains methods for writing to the specific path, along with
-   * other low-level operations against the store. It is unstable and
+   * This class permits other low-level operations against the store.
+   * It is unstable and
    * only intended for code with intimate knowledge of the object store.
    * If using this, be prepared for changes even on minor point releases.
-   * @param key key to the path
    * @return a new helper.
    */
   @InterfaceAudience.Private
-  public WriteOperationHelper createWriteOperationHelper(String key) {
-    WriteOperationHelper helper = new WriteOperationHelper(this, key);
-    LOG.debug("Created {}", helper);
-    return helper;
+  public WriteOperationHelper createWriteOperationHelper() {
+    return new WriteOperationHelper(this);
   }
 
   /**

@@ -50,7 +50,7 @@ public class PutTracker {
    * @return true if the multipart should start immediately.
    * @throws IOException any IO problem.
    */
-  public boolean inited() throws IOException {
+  public boolean initialize() throws IOException {
     return false;
   }
 
@@ -59,8 +59,8 @@ public class PutTracker {
    * is closed. Default: false.
    * @return true if the output's visibility will be delayed.
    */
-  public boolean isDelayedVisibility() {
-    return false;
+  public boolean outputImmediatelyVisible() {
+    return true;
   }
 
   /**

@@ -30,6 +30,7 @@ import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.
 /**
  * Constants for working with committers.
  */
+@SuppressWarnings("unused")
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class CommitConstants {
@@ -204,7 +205,7 @@ public final class CommitConstants {
    * Default value for {@link #FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES}:
    * {@value}.
    */
-  public static final boolean DEFAULT_COMMITTER_UNIQUE_FILENAMES = true;
+  public static final boolean DEFAULT_STAGING_COMMITTER_UNIQUE_FILENAMES = true;
 
   /**
    * A unique identifier to use for this work: {@value}.

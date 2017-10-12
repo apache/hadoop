@@ -38,8 +38,6 @@ import org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -72,7 +70,6 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   protected static final int CONSISTENCY_DELAY = 500;
   protected static final int CONSISTENCY_PROBE_INTERVAL = 500;
   protected static final int CONSISTENCY_WAIT = CONSISTENCY_DELAY * 2;
-
 
   private InconsistentAmazonS3Client inconsistentClient;
 
@@ -108,7 +105,6 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
-    conf.setBoolean(FAST_UPLOAD, true);
     conf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_ARRAY);
     if (useInconsistentClient()) {
       enableInconsistentS3Client(conf, CONSISTENCY_DELAY);
@@ -236,8 +232,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs != null && path != null) {
       String key = fs.pathToKey(path);
-      WriteOperationHelper writeOps =
-          fs.createWriteOperationHelper(key);
+      WriteOperationHelper writeOps = fs.createWriteOperationHelper();
       int count = writeOps.abortMultipartUploadsUnderPath(key);
       if (count > 0) {
         log().info("Multipart uploads deleted: {}", count);
@@ -371,24 +366,14 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
-   * Write the output.
-   * @param writer record write
-   * @param context task context
-   * @param key key to write
-   * @param val val to write
-   * @throws IOException IO failure
-   * @throws InterruptedException write interrupted
+   * Assert that the given dir does not have the {@code _SUCCESS} marker.
+   * @param dir dir to scan
+   * @throws IOException IO Failure
    */
-  private void writeOutput(RecordWriter writer,
-      TaskAttemptContext context, Text key, Text val)
-      throws IOException, InterruptedException {
-    NullWritable nullWritable = NullWritable.get();
-    try(CloseWriter cw = new CloseWriter(writer, context)) {
-      writer.write(key, val);
-      writer.close(context);
-    }
+  protected void assertSuccessMarkerDoesNotExist(Path dir) throws IOException {
+    assertPathDoesNotExist("Success marker",
+        new Path(dir, _SUCCESS));
   }
-
 
   /**
    * Closeable which can be used to safely close writers in
@@ -416,7 +401,6 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
       }
     }
   }
-
 
   /**
    * Create a task attempt for a Job. This is based on the code

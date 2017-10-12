@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -70,25 +71,22 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
  * This API is for internal use only.
  */
 @InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class WriteOperationHelper {
   private static final Logger LOG =
       LoggerFactory.getLogger(WriteOperationHelper.class);
   private final S3AFileSystem owner;
-  private final String key;
   private final Invoker invoker;
 
   /**
    * Constructor.
    * @param owner owner FS creating the helper
-   * @param key the key the helper is initially bound to
+   *
    */
-  protected WriteOperationHelper(S3AFileSystem owner, String key) {
-    checkArgument(key != null, "No key");
+  protected WriteOperationHelper(S3AFileSystem owner) {
     this.owner = owner;
-    this.key = key;
     this.invoker = new Invoker(new S3ARetryPolicy(owner.getConf()),
-        this::operationRetried
-    );
+        this::operationRetried);
   }
 
   /**
@@ -123,19 +121,6 @@ public class WriteOperationHelper {
   }
 
   /**
-   * Create a {@link PutObjectRequest} request.
-   * If {@code length} is set, the metadata is configured with the size of
-   * the upload.
-   * @param inputStream source data.
-   * @param length size, if known. Use -1 for not known
-   * @return the request
-   */
-  public PutObjectRequest newPutRequest(InputStream inputStream,
-      long length) {
-    return createPutObjectRequest(key, inputStream, length);
-  }
-
-  /**
    * Create a {@link PutObjectRequest} request against the specific key.
    * @param destKey destination key
    * @param inputStream source data.
@@ -147,15 +132,6 @@ public class WriteOperationHelper {
     return owner.newPutObjectRequest(destKey,
         newObjectMetadata(length),
         inputStream);
-  }
-
-  /**
-   * Create a {@link PutObjectRequest} request to upload a file.
-   * @param sourceFile source file
-   * @return the request
-   */
-  public PutObjectRequest newPutRequest(File sourceFile) {
-    return createPutObjectRequest(key, sourceFile);
   }
 
   /**
@@ -178,7 +154,6 @@ public class WriteOperationHelper {
    * @param length length of the write
    */
   public void writeSuccessful(long length) {
-    LOG.debug("Successful write to {}, len {}", key, length);
   }
 
   /**
@@ -207,16 +182,16 @@ public class WriteOperationHelper {
    * @throws IOException IO problem
    */
   @Retries.RetryTranslated
-  public String initiateMultiPartUpload() throws IOException {
-    LOG.debug("Initiating Multipart upload to {}", key);
+  public String initiateMultiPartUpload(String destKey) throws IOException {
+    LOG.debug("Initiating Multipart upload to {}", destKey);
     final InitiateMultipartUploadRequest initiateMPURequest =
         new InitiateMultipartUploadRequest(owner.getBucket(),
-            key,
+            destKey,
             newObjectMetadata(-1));
     initiateMPURequest.setCannedACL(owner.getCannedACL());
     owner.setOptionalMultipartUploadRequestParameters(initiateMPURequest);
 
-    return retry("initiate MultiPartUpload", key, true,
+    return retry("initiate MultiPartUpload", destKey, true,
         () -> owner.initiateMultipartUpload(initiateMPURequest).getUploadId());
   }
 
@@ -225,7 +200,7 @@ public class WriteOperationHelper {
    * This completes the upload, and, if that works, calls
    * {@link S3AFileSystem#finishedWrite(String, long)} to update the filesystem.
    * Retry policy: retrying, translated.
-   * @param destination destination of the commit
+   * @param destKey destination of the commit
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
@@ -235,12 +210,12 @@ public class WriteOperationHelper {
    */
   @Retries.RetryTranslated
   private CompleteMultipartUploadResult finalizeMultipartUpload(
-      String destination,
+      String destKey,
       String uploadId,
       List<PartETag> partETags,
       long length,
       Retried retrying) throws IOException {
-    return invoker.retry("Completing multipart commit", destination,
+    return invoker.retry("Completing multipart commit", destKey,
         true,
         retrying,
         () -> {
@@ -249,10 +224,10 @@ public class WriteOperationHelper {
           CompleteMultipartUploadResult result =
               owner.getAmazonS3Client().completeMultipartUpload(
                   new CompleteMultipartUploadRequest(owner.getBucket(),
-                      key,
+                      destKey,
                       uploadId,
                       new ArrayList<>(partETags)));
-          owner.finishedWrite(destination, length);
+          owner.finishedWrite(destKey, length);
           return result;
         }
     );
@@ -263,6 +238,7 @@ public class WriteOperationHelper {
    * {@code finalizeMultipartUpload()}.
    * Retry policy: retrying, translated.
    * Retries increment the {@code errorCount} counter.
+   * @param destKey destination
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
@@ -274,6 +250,7 @@ public class WriteOperationHelper {
    */
   @Retries.RetryTranslated
   public CompleteMultipartUploadResult completeMPUwithRetries(
+      String destKey,
       String uploadId,
       List<PartETag> partETags,
       long length,
@@ -283,7 +260,7 @@ public class WriteOperationHelper {
     checkNotNull(partETags);
     LOG.debug("Completing multipart upload {} with {} parts",
         uploadId, partETags.size());
-    return finalizeMultipartUpload(key,
+    return finalizeMultipartUpload(destKey,
         uploadId,
         partETags,
         length,
@@ -335,14 +312,14 @@ public class WriteOperationHelper {
 
   /**
    * Abort a multipart commit operation.
-   * @param dest destination key of upload
+   * @param destKey destination key of ongoing operation
    * @param uploadId multipart operation Id
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
-  public void abortMultipartCommit(String dest, String uploadId)
+  public void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
-    abortMultipartUpload(dest, uploadId, invoker.getRetryCallback());
+    abortMultipartUpload(destKey, uploadId, invoker.getRetryCallback());
   }
 
   /**
@@ -352,6 +329,7 @@ public class WriteOperationHelper {
    * A subset of the file may be posted, by providing the starting point
    * in {@code offset} and a length of block in {@code size} equal to
    * or less than the remaining bytes.
+   * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
    * @param size amount of data
@@ -360,7 +338,9 @@ public class WriteOperationHelper {
    * @param offset offset in file to start reading.
    * @return the request.
    */
-  public UploadPartRequest newUploadPartRequest(String uploadId,
+  public UploadPartRequest newUploadPartRequest(
+      String destKey,
+      String uploadId,
       int partNumber,
       int size,
       InputStream uploadStream,
@@ -379,7 +359,7 @@ public class WriteOperationHelper {
         uploadId, partNumber, size);
     UploadPartRequest request = new UploadPartRequest()
         .withBucketName(owner.getBucket())
-        .withKey(key)
+        .withKey(destKey)
         .withUploadId(uploadId)
         .withPartNumber(partNumber)
         .withPartSize(size);
@@ -407,7 +387,6 @@ public class WriteOperationHelper {
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "WriteOperationHelper {bucket=").append(owner.getBucket());
-    sb.append(", key='").append(key).append('\'');
     sb.append('}');
     return sb.toString();
   }

@@ -45,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
  * Contains 0 or more {@link SinglePendingCommit} entries; validation logic
  * checks those values on load.
  */
+@SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class PendingSet extends PersistentCommitData {
@@ -137,10 +138,8 @@ public class PendingSet extends PersistentCommitData {
    */
   public void validate() throws ValidationFailure {
     verify(version == VERSION, "Wrong version: %s", version);
-    if (extraData != null) {
-      validateCollectionClass(extraData.keySet(), String.class);
-      validateCollectionClass(extraData.values(), String.class);
-    }
+    validateCollectionClass(extraData.keySet(), String.class);
+    validateCollectionClass(extraData.values(), String.class);
     Set<String> destinations = new HashSet<>(commits.size());
     validateCollectionClass(commits, SinglePendingCommit.class);
     for (SinglePendingCommit c : commits) {

@@ -54,14 +54,6 @@ public final class CommitterFaultInjectionImpl
     Collections.addAll(this.faults, faults);
   }
 
-  public boolean isResetOnFailure() {
-    return resetOnFailure;
-  }
-
-  public void setResetOnFailure(boolean resetOnFailure) {
-    this.resetOnFailure = resetOnFailure;
-  }
-
   /**
    * Fail if the condition is in the set of faults, may optionally reset
    * it before failing.

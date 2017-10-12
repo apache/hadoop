@@ -24,12 +24,14 @@ import java.io.IOException;
 import java.util.List;
 
 import com.amazonaws.services.s3.model.PartETag;
+import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,10 +58,10 @@ import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.
  * and handling of the commit operations.
  * This is done with an inconsistent client.
  */
-public class ITestS3ACommitOperations extends AbstractCommitITest {
+public class ITestCommitOperations extends AbstractCommitITest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestS3ACommitOperations.class);
+      LoggerFactory.getLogger(ITestCommitOperations.class);
   private static final byte[] DATASET = dataset(1000, 'a', 32);
   private static final String S3A_FACTORY_KEY = String.format(
       COMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
@@ -268,7 +270,18 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
       throws Exception {
     S3AFileSystem fs = getFileSystem();
     Path destFile = methodPath(filename);
-    createFile(fs, makeMagic(destFile), true, data);
+    Path magicDest = makeMagic(destFile);
+    try(FSDataOutputStream stream = fs.create(magicDest, true)) {
+      assertTrue(stream.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
+      if (data != null && data.length > 0) {
+        stream.write(data);
+      }
+      stream.close();
+    }
+    FileStatus status = getFileStatusEventually(fs, magicDest,
+        CONSISTENCY_WAIT);
+    assertEquals("Non empty marker file: " + status, 0, status.getLen());
+
     commit(filename, destFile, 0.5f, 0);
     verifyFileContents(fs, destFile, data);
   }
@@ -319,7 +332,7 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
    * Perform any validation of paths.
    * @param magicFilePath path to magic file
    * @param destFile ultimate destination file
-   * @throws IOException
+   * @throws IOException IO failure
    */
   private void validateIntermediateAndFinalPaths(Path magicFilePath,
       Path destFile)
@@ -494,4 +507,28 @@ public class ITestS3ACommitOperations extends AbstractCommitITest {
     LOG.info("Abort completed");
     resetFailures();
   }
+
+
+  /**
+   * Test a normal stream still works as expected in a magic filesystem,
+   * with a call of {@code hasCapability()} to check that it is normal
+   * @throws Throwable failure
+   */
+  @Test
+  public void testWriteNormalStream() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
+
+    Path destFile = path("normal");
+    try (FSDataOutputStream out = fs.create(destFile, true)) {
+      out.writeChars("data");
+      assertFalse("stream has magic output: " + out,
+          out.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
+      out.close();
+    }
+    FileStatus status = getFileStatusEventually(fs, destFile,
+        CONSISTENCY_WAIT);
+    assertTrue("Empty marker file: " + status, status.getLen() > 0);
+  }
+
 }

@@ -30,9 +30,11 @@ import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
 /**
  * Class for single/multiple commit data structures.
  */
+@SuppressWarnings("serial")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class PersistentCommitData implements Serializable {
+
   /**
    * Supported version value: {@value}.
    * If this is changed the value of {@code serialVersionUID} will change,

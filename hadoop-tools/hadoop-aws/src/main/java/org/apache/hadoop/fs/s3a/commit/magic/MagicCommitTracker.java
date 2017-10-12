@@ -79,10 +79,9 @@ public class MagicCommitTracker extends PutTracker {
    * @throws IOException any IO problem.
    */
   @Override
-  public boolean inited() throws IOException {
+  public boolean initialize() throws IOException {
     return true;
   }
-
 
   /**
    * Flag to indicate that output is not visible after the stream
@@ -90,7 +89,7 @@ public class MagicCommitTracker extends PutTracker {
    * @return true
    */
   @Override
-  public boolean isDelayedVisibility() {
+  public boolean outputImmediatelyVisible() {
     return false;
   }
 
@@ -128,8 +127,10 @@ public class MagicCommitTracker extends PutTracker {
             " completes", path.toUri(), bytesWritten);
     LOG.debug("{} — closing file and saving commit information to {}:\n{}",
         this, path, commitData);
-    PutObjectRequest put = writer.newPutRequest(
-        new ByteArrayInputStream(bytes), bytes.length);
+    PutObjectRequest put = writer.createPutObjectRequest(
+        pendingPartKey,
+        new ByteArrayInputStream(bytes),
+        bytes.length);
     writer.uploadObject(put);
 
     // now put a 0-byte file with the name of the original under-magic path

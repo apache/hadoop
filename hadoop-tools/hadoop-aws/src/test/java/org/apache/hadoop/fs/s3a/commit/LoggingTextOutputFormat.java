@@ -79,7 +79,7 @@ public class LoggingTextOutputFormat<K, V> extends TextOutputFormat<K, V> {
 
   /**
    * Write a line; counts the number of lines written and logs @ debug in the
-   * {@link #close()} call.
+   * {@code close()} call.
    * @param <K> key
    * @param <V> value
    */
