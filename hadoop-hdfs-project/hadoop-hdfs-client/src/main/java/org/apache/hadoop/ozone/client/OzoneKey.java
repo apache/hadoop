@@ -39,17 +39,28 @@ public class OzoneKey {
    * Size of the data.
    */
   private final long dataSize;
+  /**
+   * Creation time of the key.
+   */
+  private long creationTime;
+  /**
+   * Modification time of the key.
+   */
+  private long modificationTime;
 
   /**
    * Constructs OzoneKey from KsmKeyInfo.
    *
    */
   public OzoneKey(String volumeName, String bucketName,
-                  String keyName, long size) {
+                  String keyName, long size, long creationTime,
+                  long modificationTime) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.name = keyName;
     this.dataSize = size;
+    this.creationTime = creationTime;
+    this.modificationTime = modificationTime;
   }
 
   /**
@@ -88,4 +99,21 @@ public class OzoneKey {
     return dataSize;
   }
 
+  /**
+   * Returns the creation time of the key.
+   *
+   * @return creation time
+   */
+  public long getCreationTime() {
+    return creationTime;
+  }
+
+  /**
+   * Returns the modification time of the key.
+   *
+   * @return modification time
+   */
+  public long getModificationTime() {
+    return modificationTime;
+  }
 }

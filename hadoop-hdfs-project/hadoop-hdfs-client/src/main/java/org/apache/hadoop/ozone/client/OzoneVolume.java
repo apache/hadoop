@@ -57,6 +57,10 @@ public class OzoneVolume {
    */
   private long quotaInBytes;
   /**
+   * Creation time of the volume.
+   */
+  private long creationTime;
+  /**
    * Volume ACLs.
    */
   private List<OzoneAcl> acls;
@@ -71,16 +75,18 @@ public class OzoneVolume {
    * @param admin Volume admin.
    * @param owner Volume owner.
    * @param quotaInBytes Volume quota in bytes.
+   * @param creationTime creation time of the volume
    * @param acls ACLs associated with the volume.
    */
   public OzoneVolume(Configuration conf, ClientProtocol proxy, String name,
                      String admin, String owner, long quotaInBytes,
-                     List<OzoneAcl> acls) {
+                     long creationTime, List<OzoneAcl> acls) {
     this.proxy = proxy;
     this.name = name;
     this.admin = admin;
     this.owner = owner;
     this.quotaInBytes = quotaInBytes;
+    this.creationTime = creationTime;
     this.acls = acls;
     this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
   }
@@ -119,6 +125,15 @@ public class OzoneVolume {
    */
   public long getQuota() {
     return quotaInBytes;
+  }
+
+  /**
+   * Returns creation time of the volume.
+   *
+   * @return creation time.
+   */
+  public long getCreationTime() {
+    return creationTime;
   }
 
   /**

@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.util.Time;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +97,16 @@ public class BucketManagerImpl implements BucketManager {
         throw new KSMException("Bucket already exist",
             KSMException.ResultCodes.FAILED_BUCKET_ALREADY_EXISTS);
       }
-      metadataManager.put(bucketKey, bucketInfo.getProtobuf().toByteArray());
+
+      KsmBucketInfo ksmBucketInfo = KsmBucketInfo.newBuilder()
+          .setVolumeName(bucketInfo.getVolumeName())
+          .setBucketName(bucketInfo.getBucketName())
+          .setAcls(bucketInfo.getAcls())
+          .setStorageType(bucketInfo.getStorageType())
+          .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
+          .setCreationTime(Time.now())
+          .build();
+      metadataManager.put(bucketKey, ksmBucketInfo.getProtobuf().toByteArray());
 
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
     } catch (IOException | DBException ex) {

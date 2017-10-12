@@ -26,6 +26,8 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BatchOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +35,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_USER_MAX_VOLUME_DEFAULT;
-import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_USER_MAX_VOLUME;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
+    .OZONE_KSM_USER_MAX_VOLUME_DEFAULT;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
+    .OZONE_KSM_USER_MAX_VOLUME;
 import static org.apache.hadoop.ozone.ksm.exceptions
     .KSMException.ResultCodes;
 
@@ -132,7 +137,22 @@ public class VolumeManagerImpl implements VolumeManager {
 
       BatchOperation batch = new BatchOperation();
       // Write the vol info
-      VolumeInfo newVolumeInfo = args.getProtobuf();
+      List<OzoneProtos.KeyValue> metadataList = new LinkedList<>();
+      for (Map.Entry<String, String> entry : args.getKeyValueMap().entrySet()) {
+        metadataList.add(OzoneProtos.KeyValue.newBuilder()
+            .setKey(entry.getKey()).setValue(entry.getValue()).build());
+      }
+      List<OzoneAclInfo> aclList = args.getAclMap().ozoneAclGetProtobuf();
+
+      VolumeInfo newVolumeInfo = VolumeInfo.newBuilder()
+          .setAdminName(args.getAdminName())
+          .setOwnerName(args.getOwnerName())
+          .setVolume(args.getVolume())
+          .setQuotaInBytes(args.getQuotaInBytes())
+          .addAllMetadata(metadataList)
+          .addAllVolumeAcls(aclList)
+          .setCreationTime(Time.now())
+          .build();
       batch.put(dbVolumeKey, newVolumeInfo.toByteArray());
 
       // Add volume to user list
