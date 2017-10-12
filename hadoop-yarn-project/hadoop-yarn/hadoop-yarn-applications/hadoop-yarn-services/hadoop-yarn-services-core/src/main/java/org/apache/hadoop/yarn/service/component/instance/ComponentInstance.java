@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
-import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -35,6 +34,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.service.ServiceScheduler;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.component.Component;
@@ -143,10 +144,19 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
                   compInstance.getContainerId(), compInstance), 0, 1,
               TimeUnit.SECONDS);
 
+      long containerStartTime = System.currentTimeMillis();
+      try {
+        ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
+            .newContainerTokenIdentifier(compInstance.getContainer()
+                .getContainerToken());
+        containerStartTime = containerTokenIdentifier.getCreationTime();
+      } catch (Exception e) {
+        LOG.info("Could not get container creation time, using current time");
+      }
       org.apache.hadoop.yarn.service.api.records.Container container =
           new org.apache.hadoop.yarn.service.api.records.Container();
       container.setId(compInstance.getContainerId().toString());
-      container.setLaunchTime(new Date());
+      container.setLaunchTime(new Date(containerStartTime));
       container.setState(ContainerState.RUNNING_BUT_UNREADY);
       container.setBareHost(compInstance.container.getNodeId().getHost());
       container.setComponentName(compInstance.getCompInstanceName());
@@ -156,7 +166,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       }
       compInstance.containerSpec = container;
       compInstance.getCompSpec().addContainer(container);
-      compInstance.containerStartedTime = System.currentTimeMillis();
+      compInstance.containerStartedTime = containerStartTime;
 
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
@@ -243,6 +253,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         }
         ExitUtil.terminate(-1);
       }
+
+      compInstance.removeContainer();
     }
   }
 
@@ -274,6 +286,15 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     } finally {
       writeLock.unlock();
     }
+  }
+
+  public boolean hasContainer() {
+    return this.container != null;
+  }
+
+  public void removeContainer() {
+    this.container = null;
+    this.compInstanceId.setContainerId(null);
   }
 
   public void setContainer(Container container) {

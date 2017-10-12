@@ -48,7 +48,7 @@ public class YarnRegistryViewForProviders {
 
   private final RegistryOperations registryOperations;
   private final String user;
-  private final String sliderServiceClass;
+  private final String serviceClass;
   private final String instanceName;
   /**
    * Record used where the service registered itself.
@@ -57,20 +57,20 @@ public class YarnRegistryViewForProviders {
   private ServiceRecord selfRegistration;
 
   /**
-   * Path where record was registered
+   * Path where record was registered.
    * Null until the service is registered
    */
   private String selfRegistrationPath;
 
   public YarnRegistryViewForProviders(RegistryOperations registryOperations,
       String user,
-      String sliderServiceClass,
+      String serviceClass,
       String instanceName,
       ApplicationAttemptId applicationAttemptId) {
     Preconditions.checkArgument(registryOperations != null,
         "null registry operations");
     Preconditions.checkArgument(user != null, "null user");
-    Preconditions.checkArgument(SliderUtils.isSet(sliderServiceClass),
+    Preconditions.checkArgument(SliderUtils.isSet(serviceClass),
         "unset service class");
     Preconditions.checkArgument(SliderUtils.isSet(instanceName),
         "instanceName");
@@ -78,7 +78,7 @@ public class YarnRegistryViewForProviders {
         "null applicationAttemptId");
     this.registryOperations = registryOperations;
     this.user = user;
-    this.sliderServiceClass = sliderServiceClass;
+    this.serviceClass = serviceClass;
     this.instanceName = instanceName;
   }
 
@@ -117,7 +117,7 @@ public class YarnRegistryViewForProviders {
   }
 
   /**
-   * Add a component under the slider name/entry
+   * Add a component under the slider name/entry.
    * @param componentName component name
    * @param record record to put
    * @throws IOException
@@ -125,13 +125,13 @@ public class YarnRegistryViewForProviders {
   public void putComponent(String componentName,
       ServiceRecord record) throws
       IOException {
-    putComponent(sliderServiceClass, instanceName,
+    putComponent(serviceClass, instanceName,
         componentName,
         record);
   }
 
   /**
-   * Add a component 
+   * Add a component.
    * @param serviceClass service class to use under ~user
    * @param componentName component name
    * @param record record to put
@@ -146,9 +146,33 @@ public class YarnRegistryViewForProviders {
     registryOperations.mknode(RegistryPathUtils.parentOf(path), true);
     registryOperations.bind(path, record, BindFlags.OVERWRITE);
   }
-    
+
   /**
-   * Add a service under a path, optionally purging any history
+   * Get a component.
+   * @param componentName component name
+   * @return the service record
+   * @throws IOException
+   */
+  public ServiceRecord getComponent(String componentName) throws IOException {
+    String path = RegistryUtils.componentPath(
+        user, serviceClass, instanceName, componentName);
+    LOG.info("Resolving path {}", path);
+    return registryOperations.resolve(path);
+  }
+
+  /**
+   * List components.
+   * @return a list of components
+   * @throws IOException
+   */
+  public List<String> listComponents() throws IOException {
+    String path = RegistryUtils.componentListPath(
+        user, serviceClass, instanceName);
+    return registryOperations.list(path);
+  }
+
+  /**
+   * Add a service under a path, optionally purging any history.
    * @param username user
    * @param serviceClass service class to use under ~user
    * @param serviceName name of the service
@@ -173,7 +197,7 @@ public class YarnRegistryViewForProviders {
   }
 
   /**
-   * Add a service under a path for the current user
+   * Add a service under a path for the current user.
    * @param record service record
    * @param deleteTreeFirst perform recursive delete of the path first
    * @return the path the service was created at
@@ -183,20 +207,20 @@ public class YarnRegistryViewForProviders {
       ServiceRecord record,
       boolean deleteTreeFirst) throws IOException {
     selfRegistrationPath =
-        putService(user, sliderServiceClass, instanceName, record, deleteTreeFirst);
+        putService(user, serviceClass, instanceName, record, deleteTreeFirst);
     setSelfRegistration(record);
     return selfRegistrationPath;
   }
 
   /**
-   * Delete a component
+   * Delete a component.
    * @param containerId component name
    * @throws IOException
    */
   public void deleteComponent(ComponentInstanceId instanceId,
       String containerId) throws IOException {
     String path = RegistryUtils.componentPath(
-        user, sliderServiceClass, instanceName,
+        user, serviceClass, instanceName,
         containerId);
     LOG.info(instanceId + ": Deleting registry path " + path);
     registryOperations.delete(path, false);
