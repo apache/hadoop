@@ -209,21 +209,26 @@ public class ProviderUtils implements YarnServiceConstants {
     }
   }
 
+  public static Path initCompInstanceDir(SliderFileSystem fs,
+      ComponentInstance instance) {
+    Path compDir = new Path(new Path(fs.getAppDir(), "components"),
+        instance.getCompName());
+    Path compInstanceDir = new Path(compDir, instance.getCompInstanceName());
+    instance.setCompInstanceDir(compInstanceDir);
+    return compInstanceDir;
+  }
+
   // 1. Create all config files for a component on hdfs for localization
   // 2. Add the config file to localResource
   public static synchronized void createConfigFileAndAddLocalResource(
       AbstractLauncher launcher, SliderFileSystem fs, Component component,
       Map<String, String> tokensForSubstitution, ComponentInstance instance,
       ServiceContext context) throws IOException {
-    Path compDir =
-        new Path(new Path(fs.getAppDir(), "components"), component.getName());
-    Path compInstanceDir =
-        new Path(compDir, instance.getCompInstanceName());
+    Path compInstanceDir = initCompInstanceDir(fs, instance);
     if (!fs.getFileSystem().exists(compInstanceDir)) {
       log.info(instance.getCompInstanceId() + ": Creating dir on hdfs: " + compInstanceDir);
       fs.getFileSystem().mkdirs(compInstanceDir,
           new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
-      instance.setCompInstanceDir(compInstanceDir);
     } else {
       log.info("Component instance conf dir already exists: " + compInstanceDir);
     }

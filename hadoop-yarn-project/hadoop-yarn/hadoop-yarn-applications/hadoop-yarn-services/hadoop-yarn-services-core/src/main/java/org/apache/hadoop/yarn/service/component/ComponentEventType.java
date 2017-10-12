@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.service.component;
 public enum ComponentEventType {
   FLEX,
   CONTAINER_ALLOCATED,
+  CONTAINER_RECOVERED,
   CONTAINER_STARTED,
   CONTAINER_COMPLETED
 }

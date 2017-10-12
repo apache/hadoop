@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.api.RegistryOperationsFactory;
-import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
+import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
@@ -237,11 +237,6 @@ public class ServiceScheduler extends CompositeService {
       serviceTimelinePublisher
           .serviceAttemptUnregistered(context, diagnostics.toString());
     }
-    // Cleanup each component instance. no need to release containers as
-    // they will be automatically released by RM
-    for (ComponentInstance instance : liveInstances.values()) {
-      instance.cleanupRegistryAndCompHdfsDir();
-    }
     String msg = diagnostics.toString()
         + "Navigate to the failed component for more details.";
     amRMClient
@@ -266,11 +261,67 @@ public class ServiceScheduler extends CompositeService {
     }
     registerServiceInstance(context.attemptId, app);
 
-    //TODO handle containers recover
+    // recover components based on containers sent from RM
+    recoverComponents(response);
+
+    for (Component component : componentsById.values()) {
+      // Trigger initial evaluation of components
+      if (component.areDependenciesReady()) {
+        LOG.info("Triggering initial evaluation of component {}",
+            component.getName());
+        ComponentEvent event = new ComponentEvent(component.getName(), FLEX)
+            .setDesired(component.getComponentSpec().getNumberOfContainers());
+        component.handle(event);
+      }
+    }
   }
 
-  private void recover() {
-
+  private void recoverComponents(RegisterApplicationMasterResponse response) {
+    List<Container> recoveredContainers = response
+        .getContainersFromPreviousAttempts();
+    LOG.info("Received {} containers from previous attempt.",
+        recoveredContainers.size());
+    Map<String, ServiceRecord> existingRecords = new HashMap<>();
+    List<String> existingComps = null;
+    try {
+      existingComps = yarnRegistryOperations.listComponents();
+      LOG.info("Found {} containers from ZK registry: {}", existingComps.size(),
+          existingComps);
+    } catch (Exception e) {
+      LOG.info("Could not read component paths: {}", e.getMessage());
+    }
+    if (existingComps != null) {
+      for (String existingComp : existingComps) {
+        try {
+          ServiceRecord record =
+              yarnRegistryOperations.getComponent(existingComp);
+          existingRecords.put(existingComp, record);
+        } catch (Exception e) {
+          LOG.warn("Could not resolve record for component {}: {}",
+              existingComp, e);
+        }
+      }
+    }
+    for (Container container : recoveredContainers) {
+      LOG.info("Handling container {} from previous attempt",
+          container.getId());
+      ServiceRecord record = existingRecords.get(RegistryPathUtils
+          .encodeYarnID(container.getId().toString()));
+      if (record != null) {
+        Component comp = componentsById.get(container.getAllocationRequestId());
+        ComponentEvent event =
+            new ComponentEvent(comp.getName(), CONTAINER_RECOVERED)
+                .setContainer(container)
+                .setInstance(comp.getComponentInstance(record.description));
+        comp.handle(event);
+        // do not remove requests in this case because we do not know if they
+        // have already been removed
+      } else {
+        LOG.info("Record not found in registry for container {} from previous" +
+            " attempt, releasing", container.getId());
+        amRMClient.releaseAssignedContainer(container.getId());
+      }
+    }
   }
 
   private void initGlobalTokensForSubstitute(ServiceContext context) {
@@ -353,7 +404,7 @@ public class ServiceScheduler extends CompositeService {
     executorService.submit(new Runnable() {
       @Override public void run() {
         try {
-          yarnRegistryOperations.registerSelf(serviceRecord, true);
+          yarnRegistryOperations.registerSelf(serviceRecord, false);
           LOG.info("Registered service under {}; absolute path {}",
               yarnRegistryOperations.getSelfRegistrationPath(),
               yarnRegistryOperations.getAbsoluteSelfRegistrationPath());
@@ -398,13 +449,6 @@ public class ServiceScheduler extends CompositeService {
       componentsById.put(allocateId, component);
       componentsByName.put(component.getName(), component);
       allocateId++;
-
-      // Trigger the component without dependencies
-      if (component.areDependenciesReady()) {
-        ComponentEvent event = new ComponentEvent(compSpec.getName(), FLEX)
-            .setDesired(compSpec.getNumberOfContainers());
-        component.handle(event);
-      }
     }
   }
 
@@ -458,17 +502,17 @@ public class ServiceScheduler extends CompositeService {
             new ComponentEvent(comp.getName(), CONTAINER_ALLOCATED)
                 .setContainer(container);
         dispatcher.getEventHandler().handle(event);
-        LOG.info("[COMPONENT {}]: {} outstanding container requests.",
-            comp.getName(),
-            amRMClient.getMatchingRequests(container.getAllocationRequestId()).size());
-        // remove the corresponding request
-        Collection<AMRMClient.ContainerRequest> collection = amRMClient
+        Collection<AMRMClient.ContainerRequest> requests = amRMClient
             .getMatchingRequests(container.getAllocationRequestId());
-        if (collection.iterator().hasNext()) {
-          AMRMClient.ContainerRequest request = collection.iterator().next();
+        LOG.info("[COMPONENT {}]: {} outstanding container requests.",
+            comp.getName(), requests.size());
+        // remove the corresponding request
+        if (requests.iterator().hasNext()) {
+          LOG.info("[COMPONENT {}]: removing one container request.", comp
+              .getName());
+          AMRMClient.ContainerRequest request = requests.iterator().next();
           amRMClient.removeContainerRequest(request);
         }
-
       }
     }
 
@@ -478,7 +522,7 @@ public class ServiceScheduler extends CompositeService {
         ContainerId containerId = status.getContainerId();
         ComponentInstance instance = liveInstances.get(status.getContainerId());
         if (instance == null) {
-          LOG.error(
+          LOG.warn(
               "Container {} Completed. No component instance exists. exitStatus={}. diagnostics={} ",
               containerId, status.getExitStatus(), status.getDiagnostics());
           return;
