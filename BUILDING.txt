@@ -317,7 +317,7 @@ Requirements:
 
 * Windows System
 * JDK 1.8+
-* Maven 3.0 or later
+* Maven 3.3 or later
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer
