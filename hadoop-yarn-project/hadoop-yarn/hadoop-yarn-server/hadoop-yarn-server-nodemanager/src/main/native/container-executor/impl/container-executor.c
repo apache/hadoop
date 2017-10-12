@@ -19,6 +19,8 @@
 #include "configuration.h"
 #include "container-executor.h"
 #include "utils/string-utils.h"
+#include "util.h"
+#include "config.h"
 
 #include <inttypes.h>
 #include <libgen.h>
@@ -42,8 +44,6 @@
 #include <sys/wait.h>
 #include <getopt.h>
 #include <regex.h>
-
-#include "config.h"
 
 #ifndef HAVE_FCHMODAT
 #include "compat/fchmodat.h"
@@ -92,7 +92,8 @@ FILE* ERRORFILE = NULL;
 static uid_t nm_uid = -1;
 static gid_t nm_gid = -1;
 
-struct configuration executor_cfg = {.size=0, .confdetails=NULL};
+struct configuration CFG = {.size=0, .sections=NULL};
+struct section executor_cfg = {.size=0, .kv_pairs=NULL};
 
 char *concatenate(char *concat_pattern, char *return_path_name,
    int numArgs, ...);
@@ -103,18 +104,25 @@ void set_nm_uid(uid_t user, gid_t group) {
 }
 
 //function used to load the configurations present in the secure config
-void read_executor_config(const char* file_name) {
-    read_config(file_name, &executor_cfg);
+void read_executor_config(const char *file_name) {
+  const struct section *tmp = NULL;
+  int ret = read_config(file_name, &CFG);
+  if (ret == 0) {
+    tmp = get_configuration_section("", &CFG);
+    if (tmp != NULL) {
+      executor_cfg = *tmp;
+    }
+  }
 }
 
 //function used to free executor configuration data
 void free_executor_configurations() {
-    free_configurations(&executor_cfg);
+    free_configuration(&CFG);
 }
 
 //Lookup nodemanager group from container executor configuration.
 char *get_nodemanager_group() {
-    return get_value(NM_GROUP_KEY, &executor_cfg);
+    return get_section_value(NM_GROUP_KEY, &executor_cfg);
 }
 
 int check_executor_permissions(char *executable_file) {
@@ -431,8 +439,8 @@ int change_user(uid_t user, gid_t group) {
 }
 
 int is_feature_enabled(const char* feature_key, int default_value,
-                              struct configuration *cfg) {
-    char *enabled_str = get_value(feature_key, cfg);
+                              struct section *cfg) {
+    char *enabled_str = get_section_value(feature_key, cfg);
     int enabled = default_value;
 
     if (enabled_str != NULL) {
@@ -753,7 +761,7 @@ static struct passwd* get_user_info(const char* user) {
 }
 
 int is_whitelisted(const char *user) {
-  char **whitelist = get_values(ALLOWED_SYSTEM_USERS_KEY, &executor_cfg);
+  char **whitelist = get_section_values(ALLOWED_SYSTEM_USERS_KEY, &executor_cfg);
   char **users = whitelist;
   if (whitelist != NULL) {
     for(; *users; ++users) {
@@ -781,7 +789,7 @@ struct passwd* check_user(const char *user) {
     fflush(LOGFILE);
     return NULL;
   }
-  char *min_uid_str = get_value(MIN_USERID_KEY, &executor_cfg);
+  char *min_uid_str = get_section_value(MIN_USERID_KEY, &executor_cfg);
   int min_uid = DEFAULT_MIN_USERID;
   if (min_uid_str != NULL) {
     char *end_ptr = NULL;
@@ -808,7 +816,7 @@ struct passwd* check_user(const char *user) {
     free(user_info);
     return NULL;
   }
-  char **banned_users = get_values(BANNED_USERS_KEY, &executor_cfg);
+  char **banned_users = get_section_values(BANNED_USERS_KEY, &executor_cfg);
   banned_users = banned_users == NULL ?
     (char**) DEFAULT_BANNED_USERS : banned_users;
   char **banned_user = banned_users;
@@ -1194,7 +1202,6 @@ char** tokenize_docker_command(const char *input, int *split_counter) {
   char *line = (char *)calloc(strlen(input) + 1, sizeof(char));
   char **linesplit = (char **) malloc(sizeof(char *));
   char *p = NULL;
-  int c = 0;
   *split_counter = 0;
   strncpy(line, input, strlen(input));
 
@@ -1412,13 +1419,13 @@ char* parse_docker_command_file(const char* command_file) {
 
 int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
-  char* docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  char* docker_binary = get_section_value(DOCKER_BINARY_KEY, &executor_cfg);
   docker_binary = check_docker_binary(docker_binary);
   size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
   char* docker_command_with_binary = calloc(sizeof(char), command_size);
   snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
-  char **args = extract_values_delim(docker_command_with_binary, " ");
+  char **args = split_delimiter(docker_command_with_binary, " ");
 
   int exit_code = -1;
   if (execvp(docker_binary, args) != 0) {
@@ -1587,7 +1594,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   uid_t prev_uid = geteuid();
 
   char *docker_command = parse_docker_command_file(command_file);
-  char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  char *docker_binary = get_section_value(DOCKER_BINARY_KEY, &executor_cfg);
   docker_binary = check_docker_binary(docker_binary);
 
   fprintf(LOGFILE, "Creating script paths...\n");

@@ -19,6 +19,9 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
 
+# Set gtest path
+set(GTEST_SRC_DIR ${CMAKE_SOURCE_DIR}/../../../../../hadoop-common-project/hadoop-common/src/main/native/gtest)
+
 # determine if container-executor.conf.dir is an absolute
 # path in case the OS we're compiling on doesn't have
 # a hook in get_executable. We'll use this define
@@ -80,12 +83,20 @@ endfunction()
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
+    ${GTEST_SRC_DIR}/include
     main/native/container-executor
     main/native/container-executor/impl
 )
+# add gtest as system library to suppress gcc warnings
+include_directories(SYSTEM ${GTEST_SRC_DIR}/include)
+
 configure_file(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
+add_library(gtest ${GTEST_SRC_DIR}/gtest-all.cc)
+set_target_properties(gtest PROPERTIES COMPILE_FLAGS "-w")
+
 add_library(container
+    main/native/container-executor/impl/util.c
     main/native/container-executor/impl/configuration.c
     main/native/container-executor/impl/container-executor.c
     main/native/container-executor/impl/get_executable.c
@@ -95,9 +106,11 @@ add_library(container
 add_executable(container-executor
     main/native/container-executor/impl/main.c
 )
+
 target_link_libraries(container-executor
     container
 )
+
 output_directory(container-executor target/usr/local/bin)
 
 add_executable(test-container-executor
@@ -107,3 +120,12 @@ target_link_libraries(test-container-executor
     container ${EXTRA_LIBS}
 )
 output_directory(test-container-executor target/usr/local/bin)
+
+# unit tests for container executor
+add_executable(cetest
+        main/native/container-executor/impl/util.c
+        main/native/container-executor/test/test_configuration.cc
+        main/native/container-executor/test/test_main.cc
+        main/native/container-executor/test/test_util.cc)
+target_link_libraries(cetest gtest)
+output_directory(cetest test)

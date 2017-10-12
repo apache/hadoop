@@ -35,51 +35,6 @@ enum command {
   LIST_AS_USER = 5
 };
 
-enum errorcodes {
-  INVALID_ARGUMENT_NUMBER = 1,
-  //INVALID_USER_NAME 2
-  INVALID_COMMAND_PROVIDED = 3,
-  // SUPER_USER_NOT_ALLOWED_TO_RUN_TASKS (NOT USED) 4
-  INVALID_NM_ROOT_DIRS = 5,
-  SETUID_OPER_FAILED, //6
-  UNABLE_TO_EXECUTE_CONTAINER_SCRIPT, //7
-  UNABLE_TO_SIGNAL_CONTAINER, //8
-  INVALID_CONTAINER_PID, //9
-  // ERROR_RESOLVING_FILE_PATH (NOT_USED) 10
-  // RELATIVE_PATH_COMPONENTS_IN_FILE_PATH (NOT USED) 11
-  // UNABLE_TO_STAT_FILE (NOT USED) 12
-  // FILE_NOT_OWNED_BY_ROOT (NOT USED) 13
-  // PREPARE_CONTAINER_DIRECTORIES_FAILED (NOT USED) 14
-  // INITIALIZE_CONTAINER_FAILED (NOT USED) 15
-  // PREPARE_CONTAINER_LOGS_FAILED (NOT USED) 16
-  // INVALID_LOG_DIR (NOT USED) 17
-  OUT_OF_MEMORY = 18,
-  // INITIALIZE_DISTCACHEFILE_FAILED (NOT USED) 19
-  INITIALIZE_USER_FAILED = 20,
-  PATH_TO_DELETE_IS_NULL, //21
-  INVALID_CONTAINER_EXEC_PERMISSIONS, //22
-  // PREPARE_JOB_LOGS_FAILED (NOT USED) 23
-  INVALID_CONFIG_FILE = 24,
-  SETSID_OPER_FAILED = 25,
-  WRITE_PIDFILE_FAILED = 26,
-  WRITE_CGROUP_FAILED = 27,
-  TRAFFIC_CONTROL_EXECUTION_FAILED = 28,
-  DOCKER_RUN_FAILED = 29,
-  ERROR_OPENING_DOCKER_FILE = 30,
-  ERROR_READING_DOCKER_FILE = 31,
-  FEATURE_DISABLED = 32,
-  COULD_NOT_CREATE_SCRIPT_COPY = 33,
-  COULD_NOT_CREATE_CREDENTIALS_FILE = 34,
-  COULD_NOT_CREATE_WORK_DIRECTORIES = 35,
-  COULD_NOT_CREATE_APP_LOG_DIRECTORIES = 36,
-  COULD_NOT_CREATE_TMP_DIRECTORIES = 37,
-  ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS = 38,
-  ERROR_SANITIZING_DOCKER_COMMAND = 39,
-  DOCKER_IMAGE_INVALID = 40,
-  DOCKER_CONTAINER_NAME_INVALID = 41,
-  ERROR_COMPILING_REGEX = 42
-};
-
 enum operations {
   CHECK_SETUP = 1,
   MOUNT_CGROUPS = 2,
@@ -118,11 +73,6 @@ enum operations {
 #endif  /* MAX */
 
 extern struct passwd *user_detail;
-
-// the log file for messages
-extern FILE *LOGFILE;
-// the log file for error messages
-extern FILE *ERRORFILE;
 
 // get the executable's filename
 char* get_executable(char *argv0);
@@ -284,7 +234,7 @@ int create_validate_dir(const char* npath, mode_t perm, const char* path,
 
 /** Check if a feature is enabled in the specified configuration. */
 int is_feature_enabled(const char* feature_key, int default_value,
-                              struct configuration *cfg);
+                              struct section *cfg);
 
 /** Check if tc (traffic control) support is enabled in configuration. */
 int is_tc_support_enabled();

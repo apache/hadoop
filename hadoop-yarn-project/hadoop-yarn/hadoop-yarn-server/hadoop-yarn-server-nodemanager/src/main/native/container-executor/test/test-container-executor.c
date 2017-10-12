@@ -18,6 +18,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 #include "utils/string-utils.h"
+#include "util.h"
 
 #include <inttypes.h>
 #include <errno.h>
@@ -404,7 +405,7 @@ void test_delete_app() {
 }
 
 void validate_feature_enabled_value(int expected_value, const char* key,
-    int default_value, struct configuration *cfg) {
+    int default_value, struct section *cfg) {
   int value = is_feature_enabled(key, default_value, cfg);
 
   if (value != expected_value) {
@@ -419,7 +420,8 @@ void test_is_feature_enabled() {
   FILE *file = fopen(filename, "w");
   int disabled = 0;
   int enabled = 1;
-  struct configuration cfg = {.size=0, .confdetails=NULL};
+  struct configuration exec_cfg = {.size=0, .sections=NULL};
+  struct section cfg = {.size=0, .kv_pairs=NULL};
 
   if (file == NULL) {
     printf("FAIL: Could not open configuration file: %s\n", filename);
@@ -433,7 +435,8 @@ void test_is_feature_enabled() {
   fprintf(file, "feature.name5.enabled=-1\n");
   fprintf(file, "feature.name6.enabled=2\n");
   fclose(file);
-  read_config(filename, &cfg);
+  read_config(filename, &exec_cfg);
+  cfg = *(get_configuration_section("", &exec_cfg));
 
   validate_feature_enabled_value(disabled, "feature.name1.enabled",
       disabled, &cfg);
@@ -449,7 +452,7 @@ void test_is_feature_enabled() {
           disabled, &cfg);
 
 
-  free_configurations(&cfg);
+  free_configuration(&exec_cfg);
 }
 
 void test_delete_user() {
@@ -1273,8 +1276,8 @@ int main(int argc, char **argv) {
 
   read_executor_config(TEST_ROOT "/test.cfg");
 
-  local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
-  log_dirs = extract_values(strdup(NM_LOG_DIRS));
+  local_dirs = split(strdup(NM_LOCAL_DIRS));
+  log_dirs = split(strdup(NM_LOG_DIRS));
 
   create_nm_roots(local_dirs);
 

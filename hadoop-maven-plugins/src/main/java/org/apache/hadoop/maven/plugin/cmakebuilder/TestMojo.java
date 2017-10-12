@@ -79,6 +79,12 @@ public class TestMojo extends AbstractMojo {
   private int timeout;
 
   /**
+   * The working directory to use.
+   */
+  @Parameter
+  private File workingDirectory;
+
+  /**
    * Path to results directory.
    */
   @Parameter(defaultValue="native-results")
@@ -309,6 +315,9 @@ public class TestMojo extends AbstractMojo {
     getLog().info(bld.toString());
     ProcessBuilder pb = new ProcessBuilder(cmd);
     Exec.addEnvironment(pb, env);
+    if (workingDirectory != null) {
+      pb.directory(workingDirectory);
+    }
     pb.redirectError(new File(results, testName + ".stderr"));
     pb.redirectOutput(new File(results, testName + ".stdout"));
     getLog().info("with extra environment variables " + Exec.envToString(env));

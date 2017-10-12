@@ -19,6 +19,7 @@
 #include "config.h"
 #include "configuration.h"
 #include "container-executor.h"
+#include "util.h"
 
 #include <errno.h>
 #include <grp.h>
@@ -419,7 +420,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
       cmd_input.resources_key = resources_key;
       cmd_input.resources_value = resources_value;
-      cmd_input.resources_values = extract_values(resources_value);
+      cmd_input.resources_values = split(resources_value);
       *operation = RUN_AS_USER_LAUNCH_DOCKER_CONTAINER;
       return 0;
    } else {
@@ -470,7 +471,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
     cmd_input.resources_key = resources_key;
     cmd_input.resources_value = resources_value;
-    cmd_input.resources_values = extract_values(resources_value);
+    cmd_input.resources_values = split(resources_value);
     *operation = RUN_AS_USER_LAUNCH_CONTAINER;
     return 0;
 
@@ -564,8 +565,8 @@ int main(int argc, char **argv) {
     exit_code = initialize_app(cmd_input.yarn_user_name,
                             cmd_input.app_id,
                             cmd_input.cred_file,
-                            extract_values(cmd_input.local_dirs),
-                            extract_values(cmd_input.log_dirs),
+                            split(cmd_input.local_dirs),
+                            split(cmd_input.log_dirs),
                             argv + optind);
     break;
   case RUN_AS_USER_LAUNCH_DOCKER_CONTAINER:
@@ -590,8 +591,8 @@ int main(int argc, char **argv) {
                       cmd_input.script_file,
                       cmd_input.cred_file,
                       cmd_input.pid_file,
-                      extract_values(cmd_input.local_dirs),
-                      extract_values(cmd_input.log_dirs),
+                      split(cmd_input.local_dirs),
+                      split(cmd_input.log_dirs),
                       cmd_input.docker_command_file,
                       cmd_input.resources_key,
                       cmd_input.resources_values);
@@ -618,8 +619,8 @@ int main(int argc, char **argv) {
                     cmd_input.script_file,
                     cmd_input.cred_file,
                     cmd_input.pid_file,
-                    extract_values(cmd_input.local_dirs),
-                    extract_values(cmd_input.log_dirs),
+                    split(cmd_input.local_dirs),
+                    split(cmd_input.log_dirs),
                     cmd_input.resources_key,
                     cmd_input.resources_values);
     free(cmd_input.resources_key);
