@@ -18,31 +18,20 @@
 
 package org.apache.hadoop.yarn.service;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.curator.test.TestingCluster;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
-import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
-import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,12 +41,7 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,27 +50,17 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.FINISHED;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.*;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.AM_RESOURCE_MEM;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 
 /**
  * End to end tests to test deploying services with MiniYarnCluster and a in-JVM
  * ZK testing cluster.
  */
-public class TestYarnNativeServices extends ServiceTestUtils{
+public class TestYarnNativeServices extends ServiceTestUtils {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestYarnNativeServices.class);
-
-  private MiniYARNCluster yarnCluster = null;
-  private MiniDFSCluster hdfsCluster = null;
-  private FileSystem fs = null;
-  protected Configuration conf = null;
-  private static final int NUM_NMS = 1;
-  private File basedir;
 
   @Rule
   public TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -96,134 +70,10 @@ public class TestYarnNativeServices extends ServiceTestUtils{
     setupInternal(NUM_NMS);
   }
 
-  private void setupInternal(int numNodeManager)
-      throws Exception {
-    LOG.info("Starting up YARN cluster");
-//    Logger rootLogger = LogManager.getRootLogger();
-//    rootLogger.setLevel(Level.DEBUG);
-    conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
-    // reduce the teardown waiting time
-    conf.setLong(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT, 1000);
-    conf.set("yarn.log.dir", "target");
-    // mark if we need to launch the v1 timeline server
-    // disable aux-service based timeline aggregators
-    conf.set(YarnConfiguration.NM_AUX_SERVICES, "");
-    conf.set(YarnConfiguration.NM_VMEM_PMEM_RATIO, "8");
-    // Enable ContainersMonitorImpl
-    conf.set(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
-        LinuxResourceCalculatorPlugin.class.getName());
-    conf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE,
-        ProcfsBasedProcessTree.class.getName());
-    conf.setBoolean(
-        YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING, true);
-    conf.setBoolean(TIMELINE_SERVICE_ENABLED, false);
-    conf.setInt(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE, 100);
-    conf.setLong(DEBUG_NM_DELETE_DELAY_SEC, 60000);
-    conf.setLong(AM_RESOURCE_MEM, 526);
-    conf.setLong(YarnServiceConf.READINESS_CHECK_INTERVAL, 5);
-    // Disable vmem check to disallow NM killing the container
-    conf.setBoolean(NM_VMEM_CHECK_ENABLED, false);
-    conf.setBoolean(NM_PMEM_CHECK_ENABLED, false);
-    // setup zk cluster
-    TestingCluster zkCluster;
-    zkCluster = new TestingCluster(1);
-    zkCluster.start();
-    conf.set(YarnConfiguration.RM_ZK_ADDRESS, zkCluster.getConnectString());
-    conf.set(KEY_REGISTRY_ZK_QUORUM, zkCluster.getConnectString());
-    LOG.info("ZK cluster: " +  zkCluster.getConnectString());
-
-    fs = FileSystem.get(conf);
-    basedir = new File("target", "apps");
-    if (basedir.exists()) {
-      FileUtils.deleteDirectory(basedir);
-    } else {
-      basedir.mkdirs();
-    }
-
-    conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
-
-    if (yarnCluster == null) {
-      yarnCluster =
-          new MiniYARNCluster(TestYarnNativeServices.class.getSimpleName(), 1,
-              numNodeManager, 1, 1);
-      yarnCluster.init(conf);
-      yarnCluster.start();
-
-      waitForNMsToRegister();
-
-      URL url = Thread.currentThread().getContextClassLoader()
-          .getResource("yarn-site.xml");
-      if (url == null) {
-        throw new RuntimeException(
-            "Could not find 'yarn-site.xml' dummy file in classpath");
-      }
-      Configuration yarnClusterConfig = yarnCluster.getConfig();
-      yarnClusterConfig.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-          new File(url.getPath()).getParent());
-      //write the document to a buffer (not directly to the file, as that
-      //can cause the file being written to get read -which will then fail.
-      ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-      yarnClusterConfig.writeXml(bytesOut);
-      bytesOut.close();
-      //write the bytes to the file in the classpath
-      OutputStream os = new FileOutputStream(new File(url.getPath()));
-      os.write(bytesOut.toByteArray());
-      os.close();
-      LOG.info("Write yarn-site.xml configs to: " + url);
-    }
-    if (hdfsCluster == null) {
-      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
-      hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
-          .numDataNodes(1).build();
-    }
-
-    try {
-      Thread.sleep(2000);
-    } catch (InterruptedException e) {
-      LOG.info("setup thread sleep interrupted. message=" + e.getMessage());
-    }
-
-
-  }
-
-  private void waitForNMsToRegister() throws Exception {
-    int sec = 60;
-    while (sec >= 0) {
-      if (yarnCluster.getResourceManager().getRMContext().getRMNodes().size()
-          >= NUM_NMS) {
-        break;
-      }
-      Thread.sleep(1000);
-      sec--;
-    }
-  }
-
   @After
   public void tearDown() throws IOException {
-    if (yarnCluster != null) {
-      try {
-        yarnCluster.stop();
-      } finally {
-        yarnCluster = null;
-      }
-    }
-    if (hdfsCluster != null) {
-      try {
-        hdfsCluster.shutdown();
-      } finally {
-        hdfsCluster = null;
-      }
-    }
-    if (basedir != null) {
-      FileUtils.deleteDirectory(basedir);
-    }
-    SliderFileSystem sfs = new SliderFileSystem(conf);
-    Path appDir = sfs.getBaseApplicationPath();
-    sfs.getFileSystem().delete(appDir, true);
+    shutdown();
   }
-
-
 
   // End-to-end test to use ServiceClient to deploy a service.
   // 1. Create a service with 2 components, each of which has 2 containers
@@ -237,11 +87,11 @@ public class TestYarnNativeServices extends ServiceTestUtils{
     ServiceClient client = createClient();
     Service exampleApp = createExampleApplication();
     client.actionCreate(exampleApp);
-    SliderFileSystem fileSystem = new SliderFileSystem(conf);
+    SliderFileSystem fileSystem = new SliderFileSystem(getConf());
     Path appDir = fileSystem.buildClusterDirPath(exampleApp.getName());
     // check app.json is persisted.
     Assert.assertTrue(
-        fs.exists(new Path(appDir, exampleApp.getName() + ".json")));
+        getFS().exists(new Path(appDir, exampleApp.getName() + ".json")));
     waitForAllCompToBeReady(client, exampleApp);
 
     // Flex two components, each from 2 container to 3 containers.
@@ -277,7 +127,7 @@ public class TestYarnNativeServices extends ServiceTestUtils{
     //destroy the service and check the app dir is deleted from fs.
     client.actionDestroy(exampleApp.getName());
     // check the service dir on hdfs (in this case, local fs) are deleted.
-    Assert.assertFalse(fs.exists(appDir));
+    Assert.assertFalse(getFS().exists(appDir));
   }
 
   // Create compa with 2 containers
@@ -456,7 +306,7 @@ public class TestYarnNativeServices extends ServiceTestUtils{
         return null;
       }
     };
-    client.init(conf);
+    client.init(getConf());
     client.start();
     return client;
   }
