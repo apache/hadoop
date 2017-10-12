@@ -74,7 +74,7 @@ public class ApiServerWebApp extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     bindAddress = getConfig().getSocketAddr(API_SERVER_ADDRESS,
-        DEFAULT_API_SERVER_ADDRESS , DEFAULT_API_SERVER_PORT);
+        DEFAULT_API_SERVER_ADDRESS, DEFAULT_API_SERVER_PORT);
     logger.info("YARN API server running on " + bindAddress);
     if (UserGroupInformation.isSecurityEnabled()) {
       doSecureLogin(getConfig());

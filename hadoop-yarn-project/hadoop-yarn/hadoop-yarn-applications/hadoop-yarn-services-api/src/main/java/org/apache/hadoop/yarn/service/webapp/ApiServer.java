@@ -165,12 +165,12 @@ public class ApiServer {
       } else {
         LOG.info("Successfully stopped service {}", appName);
       }
-      return Response.status(Status.NO_CONTENT).build();
+      return Response.status(Status.OK).build();
     } catch (ApplicationNotFoundException e) {
       ServiceStatus serviceStatus = new ServiceStatus();
       serviceStatus.setDiagnostics(
-          "Service " + appName + " not found " + e.getMessage());
-      return Response.status(Status.NOT_FOUND).entity(serviceStatus)
+          "Service " + appName + " is not found in YARN: " + e.getMessage());
+      return Response.status(Status.BAD_REQUEST).entity(serviceStatus)
           .build();
     } catch (Exception e) {
       ServiceStatus serviceStatus = new ServiceStatus();
@@ -245,7 +245,8 @@ public class ApiServer {
     // flex a single component app
     if (updateServiceData.getNumberOfContainers() != null && !ServiceApiUtil
         .hasComponent(updateServiceData)) {
-      Component defaultComp = ServiceApiUtil.createDefaultComponent(updateServiceData);
+      Component defaultComp = ServiceApiUtil
+          .createDefaultComponent(updateServiceData);
       return updateComponent(updateServiceData.getName(), defaultComp.getName(),
           defaultComp);
     }
@@ -291,4 +292,16 @@ public class ApiServer {
           .entity(status).build();
     }
   }
+
+  /**
+   * Used by negative test case.
+   *
+   * @param mockServerClient - A mocked version of ServiceClient
+   */
+  public static void setServiceClient(ServiceClient mockServerClient) {
+    SERVICE_CLIENT = mockServerClient;
+    SERVICE_CLIENT.init(YARN_CONFIG);
+    SERVICE_CLIENT.start();
+  }
+
 }
