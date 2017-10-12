@@ -196,7 +196,7 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
     // parse uri scheme, if any
     int colon = pathString.indexOf(':');
     int slash = pathString.indexOf('/');
-    if ((colon != -1) && (colon == (slash-1))) {     // has a scheme
+    if ((colon > 0) && (colon == (slash-1))) {     // has a scheme
       scheme = pathString.substring(0, colon);
       start = colon+1;
     }

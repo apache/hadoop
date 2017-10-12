@@ -306,6 +306,7 @@ public class TestPath {
     String path6Str = "x:/";
     String path7Str = "/abc/bcd/dir:name/dir1:name1";
     String path8Str = "urn:example:animal:ferret:nose";
+    String path9Str = ":/abc:/:";
 
 
     Path path1 = new Path(path1Str);
@@ -316,6 +317,7 @@ public class TestPath {
     Path path6 = new Path(path6Str);
     Path path7 = new Path(path7Str);
     Path path8 = new Path("./" +path8Str);
+    Path path9 = new Path(path9Str);
 
     // String -> Path -> String
     assertEquals(path1Str, new Path(path1Str).toString());
@@ -326,6 +328,7 @@ public class TestPath {
     assertEquals(path6Str, new Path(path6Str).toString());
     assertEquals(path7Str, new Path(path7Str).toString());
     assertEquals("./"+path8Str, new Path(path8Str).toString());
+    assertEquals("./"+path9Str, new Path(path9Str).toString());
 
     // String -> Path -> String -> Path
     assertEquals(path1, new Path(new Path(path1Str).toString()));
@@ -368,12 +371,15 @@ public class TestPath {
     String path4Part2 = "log:file.gz";
     String path7Part1 = "/abc/bcd/dir:name/";
     String path7Part2 = "dir1:name1";
+    String path8Part1 = "x://abc/:";
+    String path8Part2 = "/:/:/:/:.bcd";
 
     assertEquals(path1Str, new Path(path1Part1, path1Part2).toString());
     assertEquals(path2Str, new Path(path2Part1, path2Part2).toString());
     assertEquals(path3Str, new Path(path3Part1, path3Part2).toString());
     assertEquals(path4Str, new Path(path4Part1, path4Part2).toString());
     assertEquals(path7Str, new Path(path7Part1, path7Part2).toString());
+    assertEquals("x://abc/:/:/:/:.bcd", new Path(path8Part1, path8Part2).toString());
   }
 
   @Test (timeout = 30000)
