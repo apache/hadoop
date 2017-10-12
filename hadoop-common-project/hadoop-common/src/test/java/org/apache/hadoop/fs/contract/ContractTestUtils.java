@@ -671,6 +671,27 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Execute a {@link FileSystem#rename(Path, Path)}, and verify that the
+   * outcome was as expected. There is no preflight checking of arguments;
+   * everything is left to the rename() command.
+   * @param fs filesystem
+   * @param source source path
+   * @param dest destination path
+   * @param expectedResult expected return code
+   * @throws IOException on any IO failure.
+   */
+  public static void assertRenameOutcome(FileSystem fs,
+      Path source,
+      Path dest,
+      boolean expectedResult) throws IOException {
+    boolean result = fs.rename(source, dest);
+    if (expectedResult != result) {
+      fail(String.format("Expected rename(%s, %s) to return %b,"
+              + " but result was %b", source, dest, expectedResult, result));
+    }
+  }
+
+  /**
    * Read in "length" bytes, convert to an ascii string.
    * @param fs filesystem
    * @param path path to read

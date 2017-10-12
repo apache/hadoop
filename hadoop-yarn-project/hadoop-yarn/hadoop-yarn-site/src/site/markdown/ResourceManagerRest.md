@@ -4430,3 +4430,191 @@ Response Body:
     <remainingTimeInSeconds>90</remainingTimeInSeconds>
 </timeout>
 ```
+
+Scheduler Configuration Mutation API
+--------------------------------
+
+The scheduler configuration mutation API provides a way to modify scheduler/queue configuration and queue hierarchy.
+
+Please note that this feature is currently in the alpha stage and is subject to change.
+
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+
+### HTTP Operations Supported
+
+      * PUT
+
+### Elements of the *sched-conf* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| update-queue | object | A queue whose configurations should be updated |
+| add-queue | object | A queue to add to the scheduler along with this queue's configurations |
+| remove-queue | string | Full path name of a queue to remove |
+| global-updates | map | Map of key value pairs to update scheduler's global configuration |
+
+### PUT Request Examples
+
+Put requests are used to modify the scheduler configuration. A successful mutation results in a 200 response. A malformed request or one which resulted in an invalid scheduler configuration results in a 400 response.
+
+**Updating queue configuration(s)**
+
+Request for updating queue configurations.
+
+*Elements of the* update-queue *object*
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| queue-name | string | Full path name of the queue to update |
+| params | map | A map of key value configuration pairs to update for this queue |
+
+Assuming we are using the capacity scheduler and the current queue configuration is a single queue *root.default*, this example sets *root.default*'s maximum applications to 100 and its minimum user limit percent to 10.
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <update-queue>
+          <queue-name>root.default</queue-name>
+          <params>
+            <entry>
+              <key>maximum-applications</key>
+              <value>100</value>
+            </entry>
+            <entry>
+              <key>minimum-user-limit-percent</key>
+              <value>10</value>
+            </entry>
+          </params>
+        </update-queue>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked
+
+
+**Adding a queue**
+
+Request for adding queues/updating queue configurations.
+
+*Elements of the* add-queue *object*
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| queue-name | string | Full path name of the queue to add |
+| params | map | A map of key value configuration pairs to set for this queue |
+
+Assuming we are using the capacity scheduler and the current queue configuration is a single queue *root.default*, this example adds a queue *root.a* with capacity/maximum-capacity 10, and adjusts *root.default*'s capacity/maximum-capacity to 90. (More complex examples include adding a queue whose parent is also being added in the same request, or adding multiple sibling queues.)
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <add-queue>
+          <queue-name>root.a</queue-name>
+          <params>
+            <entry>
+              <key>capacity</key>
+              <value>10</value>
+            </entry>
+            <entry>
+              <key>maximum-capacity</key>
+              <value>10</value>
+            </entry>
+          </params>
+        </add-queue>
+        <update-queue>
+          <queue-name>root.default</queue-name>
+          <params>
+            <entry>
+              <key>capacity</key>
+              <value>90</value>
+            </entry>
+            <entry>
+              <key>maximum-capacity</key>
+              <value>90</value>
+            </entry>
+          </params>
+        </update-queue>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked
+
+**Removing queues**
+
+Request for removing queues from the queue hierarchy.
+
+Assuming we are using the capacity scheduler and the current queue configuration is three queues *root.default*, *root.a*, and *root.b*, this example removes both *root.a* and *root.b*. (More complex examples include removing a parent queue and its children.)
+
+**Note:** Queues must be put into `STOPPED` state before they are deleted. Any updated queue configuration should be a valid one i.e. queue-capacity at each *level* should be equal to 100%.
+
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <remove-queue>root.a</remove-queue>
+        <remove-queue>root.b</remove-queue>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked
+
+**Updating global scheduler configurations**
+
+Request for updating global scheduler configurations. Assuming we are using the capacity scheduler, this example enables queue mappings. For global configuration updates, the full configuration key must be specified.
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <global-updates>
+          <entry>
+            <key>yarn.scheduler.capacity.queue-mappings-override.enable</key>
+            <value>true</value>
+          </entry>
+        </global-updates>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked

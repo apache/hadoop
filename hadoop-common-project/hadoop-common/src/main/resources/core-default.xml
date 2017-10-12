@@ -816,6 +816,12 @@
 </property>
 
 <property>
+  <name>fs.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The implementation class of the FTP FileSystem</description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.webhdfs.impl</name>
   <value>org.apache.hadoop.fs.WebHdfs</value>
   <description>The FileSystem for webhdfs: uris.</description>

@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -35,12 +34,9 @@ import org.codehaus.jackson.map.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -55,8 +51,6 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
       LogFactory.getLog(ResourceProfilesManagerImpl.class);
 
   private final Map<String, Resource> profiles = new ConcurrentHashMap<>();
-  private List<ResourceTypeInfo> resourceTypeInfo =
-      new ArrayList<ResourceTypeInfo>();
   private Configuration conf;
   private boolean profileEnabled = false;
 
@@ -87,26 +81,6 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
   public void init(Configuration config) throws IOException {
     conf = config;
     loadProfiles();
-
-    // Load resource types, this should be done even if resource profile is
-    // disabled, since we have mandatory resource types like vcores/memory.
-    loadResourceTypes();
-  }
-
-  private void loadResourceTypes() {
-    // Add all resource types
-    try {
-      writeLock.lock();
-      Collection<ResourceInformation> resourcesInfo = ResourceUtils
-          .getResourceTypes().values();
-      for (ResourceInformation resourceInfo : resourcesInfo) {
-        resourceTypeInfo
-            .add(ResourceTypeInfo.newInstance(resourceInfo.getName(),
-                resourceInfo.getUnits(), resourceInfo.getResourceType()));
-      }
-    } finally {
-      writeLock.unlock();
-    }
   }
 
   private void loadProfiles() throws IOException {
@@ -140,6 +114,14 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
         throw new IOException(
             "Name of resource profile cannot be an empty string");
       }
+
+      if (profileName.equals(MINIMUM_PROFILE) || profileName.equals(
+          MAXIMUM_PROFILE)) {
+        throw new IOException(String.format(
+            "profile={%s, %s} is should not be specified "
+                + "inside %s, they will be loaded from resource-types.xml",
+            MINIMUM_PROFILE, MAXIMUM_PROFILE, sourceFile));
+      }
       if (entry.getValue() instanceof Map) {
         Map profileInfo = (Map) entry.getValue();
         // ensure memory and vcores are specified
@@ -155,6 +137,13 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
             "Added profile '" + profileName + "' with resources: " + resource);
       }
     }
+
+    // add minimum/maximum profile
+    profiles.put(MINIMUM_PROFILE,
+        ResourceUtils.getResourceTypesMinimumAllocation());
+    profiles.put(MAXIMUM_PROFILE,
+        ResourceUtils.getResourceTypesMaximumAllocation());
+
     // check to make sure mandatory profiles are present
     for (String profile : MANDATORY_PROFILES) {
       if (!profiles.containsKey(profile)) {

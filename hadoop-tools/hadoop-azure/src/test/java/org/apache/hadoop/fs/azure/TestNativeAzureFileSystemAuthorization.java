@@ -45,6 +45,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
 import static org.apache.hadoop.fs.azure.CachingAuthorizer.KEY_AUTH_SERVICE_CACHING_ENABLE;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -69,6 +70,7 @@ public class TestNativeAzureFileSystemAuthorization
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     conf.set(NativeAzureFileSystem.KEY_AZURE_AUTHORIZATION, "true");
+    conf.set(KEY_USE_SECURE_MODE, "true");
     conf.set(RemoteWasbAuthorizerImpl.KEY_REMOTE_AUTH_SERVICE_URLS, "http://localhost/");
     conf.set(NativeAzureFileSystem.AZURE_CHOWN_USERLIST_PROPERTY_NAME, "user1 , user2");
     conf.set(KEY_AUTH_SERVICE_CACHING_ENABLE, "false");
@@ -333,15 +335,14 @@ public class TestNativeAzureFileSystemAuthorization
     fs.updateWasbAuthorizer(authorizer);
 
     try {
-      fs.create(srcPath);
-      ContractTestUtils.assertPathExists(fs, "sourcePath does not exist", srcPath);
-      fs.rename(srcPath, dstPath);
-      ContractTestUtils.assertPathExists(fs, "destPath does not exist", dstPath);
-      ContractTestUtils.assertPathDoesNotExist(fs, "sourcePath exists after rename!", srcPath);
+      touch(fs, srcPath);
+      assertPathExists(fs, "sourcePath does not exist", srcPath);
+      assertRenameOutcome(fs, srcPath, dstPath, true);
+      assertPathExists(fs, "destPath does not exist", dstPath);
+      assertPathDoesNotExist(fs, "sourcePath exists after rename!", srcPath);
     }
     finally {
-      allowRecursiveDelete(fs, parentDir.toString());
-      fs.delete(parentDir, true);
+      recursiveDelete(parentDir);
     }
   }
 
@@ -399,14 +400,14 @@ public class TestNativeAzureFileSystemAuthorization
     fs.updateWasbAuthorizer(authorizer);
 
     try {
-      fs.create(srcPath);
+      touch(fs, srcPath);
       ContractTestUtils.assertPathExists(fs, "sourcePath does not exist", srcPath);
+      fs.mkdirs(parentDstDir);
       fs.rename(srcPath, dstPath);
       ContractTestUtils.assertPathDoesNotExist(fs, "destPath does not exist", dstPath);
     } finally {
       ContractTestUtils.assertPathExists(fs, "sourcePath does not exist after rename !", srcPath);
-      allowRecursiveDelete(fs, parentSrcDir.toString());
-      fs.delete(parentSrcDir, true);
+      recursiveDelete(parentSrcDir);
     }
   }
 
@@ -430,18 +431,323 @@ public class TestNativeAzureFileSystemAuthorization
     fs.updateWasbAuthorizer(authorizer);
 
     try {
-      fs.create(srcPath);
+      touch(fs, srcPath);
       ContractTestUtils.assertPathExists(fs, "sourcePath does not exist", srcPath);
       fs.mkdirs(parentDstDir);
-      fs.rename(srcPath, dstPath);
+      assertRenameOutcome(fs, srcPath, dstPath, true);
       ContractTestUtils.assertPathDoesNotExist(fs, "sourcePath does not exist", srcPath);
       ContractTestUtils.assertPathExists(fs, "destPath does not exist", dstPath);
     } finally {
-      allowRecursiveDelete(fs, parentSrcDir.toString());
-      fs.delete(parentSrcDir, true);
+      recursiveDelete(parentSrcDir);
+      recursiveDelete(parentDstDir);
+   }
+  }
 
-      allowRecursiveDelete(fs, parentDstDir.toString());
-      fs.delete(parentDstDir, true);
+  /**
+   * Recursive delete for teardown/finally operations, setting the permissions
+   * to do the delete before invoking FileSystem.delete.
+   * Exceptions are caught and logged at ERROR.
+   * @param path path to delete
+   */
+  private void recursiveDelete(Path path) {
+    try {
+      allowRecursiveDelete(fs, path.toString());
+      fs.delete(path, true);
+    } catch (IOException e) {
+      LOG.error("Failed to delete {}", path, e);
+    }
+  }
+
+  /**
+   * Positive test to check rename succeeds for hierarchy of
+   * files and folders under a src directory when destination
+   * folder already exists.
+   */
+  @Test
+  public void testRenamePositiveWhenDestinationFolderExists() throws Throwable {
+
+    Path parentSrcDir = new Path("/testRenamePositiveForFolderSrc");
+    Path srcFilePath = new Path(parentSrcDir, "test1.dat");
+    Path srcFolderPath = new Path(parentSrcDir, "testFolder");
+    Path dstDir = new Path("/testRenamePositiveForFolderDst");
+    Path finalDstDir = new Path(dstDir, "testRenamePositiveForFolderSrc");
+    Path dstFilePath = new Path(finalDstDir, "test1.dat");
+    Path dstFolderPath = new Path(finalDstDir, "testFolder");
+
+    /* to create parent dirs */
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(dstDir.toString(), WRITE, true);
+    /* Required for assertPathExists calls */
+    authorizer.addAuthRuleForOwner("/", READ, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(finalDstDir.toString(), READ, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      touch(fs, srcFilePath);
+      assertPathExists(fs, "srcFilePath does not exist", srcFilePath);
+      fs.mkdirs(srcFolderPath);
+      assertIsDirectory(fs, srcFolderPath);
+      fs.mkdirs(dstDir);
+      assertIsDirectory(fs, dstDir);
+      assertRenameOutcome(fs, parentSrcDir, dstDir, true);
+      assertPathDoesNotExist(fs, "parentSrcDir exists", parentSrcDir);
+      assertPathDoesNotExist(fs, "srcFilePath exists", srcFilePath);
+      assertPathDoesNotExist(fs, "srcFolderPath exists", srcFolderPath);
+      assertPathExists(fs, "destPath does not exist", dstDir);
+      assertPathExists(fs, "dstFilePath does not exist", dstFilePath);
+      assertPathExists(fs, "dstFolderPath does not exist", dstFolderPath);
+    } finally {
+      recursiveDelete(parentSrcDir);
+      recursiveDelete(dstDir);
+    }
+  }
+
+  /**
+   * Positive test to check rename succeeds for hierarchy of
+   * files and folders under a src directory and when the destination
+   * folder does not exist.
+   */
+  @Test
+  public void testRenamePositiveWhenDestinationFolderDoesNotExist() throws Throwable {
+    Path srcParentDir = new Path("/testRenamePositiveWhenDestinationFolderDoesNotExist");
+    Path srcDir = new Path(srcParentDir, "srcDir");
+    Path srcFilePath = new Path(srcDir, "test1.dat");
+    Path srcSubDirPath = new Path(srcDir, "testFolder");
+    Path srcSubDirFilePath = new Path(srcSubDirPath, "test2.dat");
+    Path dstDir = new Path(srcParentDir, "dstDir");
+    Path dstFilePath = new Path(dstDir, "test1.dat");
+    Path dstSubDirPath = new Path(dstDir, "testFolder");
+    Path dstSubDirFilePath = new Path(dstSubDirPath, "test2.dat");
+
+    /* to create parent dirs */
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(srcParentDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(srcDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(srcSubDirPath.toString(), WRITE, true);
+    /* Required for asserPathExists calls */
+    authorizer.addAuthRuleForOwner("/", READ, true);
+    authorizer.addAuthRuleForOwner(srcParentDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(srcDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(srcSubDirPath.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(dstDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(dstSubDirPath.toString(), READ, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      touch(fs, srcFilePath);
+      assertPathExists(fs, "srcFilePath does not exist", srcFilePath);
+      fs.mkdirs(srcSubDirPath);
+      assertIsDirectory(fs, srcSubDirPath);
+      touch(fs, srcSubDirFilePath);
+      assertPathExists(fs, "srcSubDirFilePath does not exist", srcSubDirFilePath);
+      assertRenameOutcome(fs, srcDir, dstDir, true);
+      assertPathDoesNotExist(fs, "srcDir exists", srcDir);
+      assertPathDoesNotExist(fs, "srcFilePath exists", srcFilePath);
+      assertPathDoesNotExist(fs, "srcSubDirPath exists", srcSubDirPath);
+      assertPathDoesNotExist(fs, "srcSubDirFilePath exists", srcSubDirFilePath);
+      assertPathExists(fs, "destPath does not exist", dstDir);
+      assertPathExists(fs, "dstFilePath does not exist", dstFilePath);
+      assertPathExists(fs, "dstSubDirPath does not exist", dstSubDirPath);
+      assertPathExists(fs, "dstSubDirFilePath does not exist", dstSubDirFilePath);
+    } finally {
+      recursiveDelete(srcParentDir);
+    }
+  }
+
+  /**
+   * Test to verify rename fails and returns false when
+   * the source to be renamed does not exist.
+   */
+  @Test
+  public void testRenameOnNonExistentSource() throws Throwable {
+
+    Path parentSrcDir = new Path("/testRenameOnNonExistentSourceFolderSrc");
+    Path srcPath = new Path(parentSrcDir, "test1.dat");
+    Path parentDstDir = new Path("/testRenameOnNonExistentSourceFolderDst");
+    Path dstPath = new Path(parentDstDir, "test2.dat");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true); /* to create parent dirs */
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), WRITE, true);
+    // required for assertpathExists calls
+    authorizer.addAuthRuleForOwner("/", READ, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), READ, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.mkdirs(parentSrcDir);
+      assertIsDirectory(fs, parentSrcDir);
+      fs.mkdirs(parentDstDir);
+      // should return false
+      assertRenameOutcome(fs, srcPath, dstPath, false);
+      assertPathDoesNotExist(fs, "destPath exists!", dstPath);
+    } finally {
+      recursiveDelete(parentSrcDir);
+      recursiveDelete(parentDstDir);
+   }
+  }
+
+  /**
+   * Positive test to check rename succeeds when sticky bit is set on
+   * source parent directory and user owns the source directory.
+   */
+  @Test
+  public void testRenameWithStickyBitPositive() throws Throwable {
+
+    Path parentSrcDir = new Path("/testRenameWithStickyBitPositiveSrc");
+    Path srcPath = new Path(parentSrcDir, "test1.dat");
+    Path parentDstDir = new Path("/testRenameWithStickyBitPositiveDst");
+    Path dstPath = new Path(parentDstDir, "test2.dat");
+
+    authorizer.addAuthRuleForOwner("/", WRITE, true); /* to create parent dirs */
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), WRITE, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), WRITE, true);
+    /* Required for asserPathExists calls */
+    authorizer.addAuthRuleForOwner("/", READ, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), READ, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      touch(fs, srcPath);
+      assertPathExists(fs, "sourcePath does not exist", srcPath);
+      fs.mkdirs(parentDstDir);
+      assertIsDirectory(fs, parentDstDir);
+      // set stickybit on parent directory
+      fs.setPermission(parentSrcDir, new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+      assertRenameOutcome(fs, srcPath, dstPath, true);
+      assertPathDoesNotExist(fs, "sourcePath exists", srcPath);
+      assertPathExists(fs, "destPath does not exist", dstPath);
+    } finally {
+      recursiveDelete(parentSrcDir);
+      recursiveDelete(parentDstDir);
+    }
+  }
+
+  /**
+   * Test to check rename fails when sticky bit is set on
+   * parent of source directory and the user is not owner
+   * of parent or the source directory.
+   */
+  @Test
+  public void testRenameWithStickyBitNegative() throws Throwable {
+
+    final Path parentSrcDir = new Path("/testRenameWithStickyBitNegativeSrc");
+    final Path srcPath = new Path(parentSrcDir, "test1.dat");
+    final Path parentDstDir = new Path("/testRenameWithStickyBitNegativeDst");
+    final Path dstPath = new Path(parentDstDir, "test2.dat");
+
+    expectedEx.expect(WasbAuthorizationException.class);
+    expectedEx.expectMessage(String.format("Rename operation for %s is not permitted."
+      + " Details : Stickybit check failed.", srcPath.toString()));
+
+    /* to create parent dirs */
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(),
+        WRITE, true);
+    /* Required for asserPathExists calls */
+    authorizer.addAuthRuleForOwner("/", READ, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), READ, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      touch(fs, srcPath);
+      assertPathExists(fs, "sourcePath does not exist", srcPath);
+      fs.mkdirs(parentDstDir);
+      assertIsDirectory(fs, parentDstDir);
+      // set stickybit on parent of source folder
+      fs.setPermission(parentSrcDir, new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+
+      UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
+          "dummyUser", new String[] {"dummygroup"});
+
+      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          // Add auth rules for dummyuser
+          authorizer.addAuthRule(parentSrcDir.toString(),
+            WRITE, getCurrentUserShortName(), true);
+          authorizer.addAuthRule(parentDstDir.toString(),
+            WRITE, getCurrentUserShortName(), true);
+          authorizer.addAuthRule(parentSrcDir.toString(),
+            READ, getCurrentUserShortName(), true);
+          authorizer.addAuthRule(parentDstDir.toString(),
+            READ, getCurrentUserShortName(), true);
+
+          try {
+            fs.rename(srcPath, dstPath);
+          } catch (WasbAuthorizationException wae) {
+            assertPathExists(fs, "sourcePath does not exist", srcPath);
+            assertPathDoesNotExist(fs, "destPath exists", dstPath);
+            throw wae;
+          }
+
+          return null;
+        }
+      });
+    } finally {
+      recursiveDelete(parentSrcDir);
+      recursiveDelete(parentDstDir);
+    }
+  }
+
+  /**
+   * Test to check rename returns false when sticky bit is set on
+   * parent of source parent directory and the source does not exist
+   */
+  @Test
+  public void testRenameOnNonExistentSourceWithStickyBit() throws Throwable {
+
+    final Path parentSrcDir = new Path("/testRenameOnNonExistentSourceWithStickyBitSrc");
+    final Path srcPath = new Path(parentSrcDir, "test1.dat");
+    final Path parentDstDir = new Path("/testRenameOnNonExistentSourceWithStickyBitDest");
+    final Path dstPath = new Path(parentDstDir, "test2.dat");
+
+    /* to create parent dirs */
+    authorizer.addAuthRuleForOwner("/", WRITE, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(),
+        WRITE, true);
+    /* Required for asserPathExists calls */
+    authorizer.addAuthRuleForOwner("/", READ, true);
+    authorizer.addAuthRuleForOwner(parentSrcDir.toString(), READ, true);
+    authorizer.addAuthRuleForOwner(parentDstDir.toString(), READ, true);
+    fs.updateWasbAuthorizer(authorizer);
+
+    try {
+      fs.mkdirs(parentSrcDir);
+      assertIsDirectory(fs, parentSrcDir);
+      fs.mkdirs(parentDstDir);
+      assertIsDirectory(fs, parentDstDir);
+      // set stickybit on parent of source folder
+      fs.setPermission(parentSrcDir, new FsPermission(STICKYBIT_PERMISSION_CONSTANT));
+
+      UserGroupInformation dummyUser = UserGroupInformation.createUserForTesting(
+          "dummyUser", new String[] {"dummygroup"});
+
+      dummyUser.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          // Add auth rules for dummyuser
+          authorizer.addAuthRule(parentSrcDir.toString(),
+            WRITE, getCurrentUserShortName(), true);
+          authorizer.addAuthRule(parentDstDir.toString(),
+            WRITE, getCurrentUserShortName(), true);
+          authorizer.addAuthRule(parentSrcDir.toString(),
+            READ, getCurrentUserShortName(), true);
+          authorizer.addAuthRule(parentDstDir.toString(),
+            READ, getCurrentUserShortName(), true);
+          // should return false since srcPath does not exist.
+          assertRenameOutcome(fs, srcPath, dstPath, false);
+          assertPathDoesNotExist(fs, "destPath exists", dstPath);
+          return null;
+        }
+      });
+    } finally {
+      recursiveDelete(parentSrcDir);
+      recursiveDelete(parentDstDir);
     }
   }
 

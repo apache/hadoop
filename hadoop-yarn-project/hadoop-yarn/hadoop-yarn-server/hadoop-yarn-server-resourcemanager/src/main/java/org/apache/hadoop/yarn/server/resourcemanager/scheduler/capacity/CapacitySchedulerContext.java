@@ -88,4 +88,10 @@ public interface CapacitySchedulerContext {
    * @return Max Cluster level App priority.
    */
   Priority getMaxClusterLevelAppPriority();
+
+  /**
+   * Returns if configuration is mutable.
+   * @return if configuration is mutable
+   */
+  boolean isConfigurationMutable();
 }

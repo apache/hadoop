@@ -213,6 +213,21 @@ metadata.
 
 See [S3Guard](./hadoop-aws/tools/hadoop-aws/s3guard.html) for more details.
 
+HDFS Router-Based Federation
+---------------------
+HDFS Router-Based Federation adds a RPC routing layer that provides a federated
+view of multiple HDFS namespaces. This is similar to the existing
+[ViewFs](./hadoop-project-dist/hadoop-hdfs/ViewFs.html)) and
+[HDFS Federation](./hadoop-project-dist/hadoop-hdfs/Federation.html)
+functionality, except the mount table is managed on the server-side by the
+routing layer rather than on the client. This simplifies access to a federated
+cluster for existing HDFS clients.
+
+See [HDFS-10467](https://issues.apache.org/jira/browse/HADOOP-10467) and the
+HDFS Router-based Federation
+[documentation](./hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.md) for
+more details.
+
 Getting Started
 ===============
 

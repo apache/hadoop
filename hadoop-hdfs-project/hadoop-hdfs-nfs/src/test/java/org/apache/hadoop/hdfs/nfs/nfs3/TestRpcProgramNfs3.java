@@ -186,7 +186,8 @@ public class TestRpcProgramNfs3 {
   public void testGetattr() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     GETATTR3Request req = new GETATTR3Request(handle);
     req.serialize(xdr_req);
@@ -209,8 +210,9 @@ public class TestRpcProgramNfs3 {
   public void testSetattr() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     SetAttr3 symAttr = new SetAttr3(0, 1, 0, 0, null, null,
         EnumSet.of(SetAttrField.UID));
     SETATTR3Request req = new SETATTR3Request(handle, symAttr, false, null);
@@ -234,7 +236,8 @@ public class TestRpcProgramNfs3 {
   public void testLookup() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     LOOKUP3Request lookupReq = new LOOKUP3Request(handle, "bar");
     XDR xdr_req = new XDR();
     lookupReq.serialize(xdr_req);
@@ -257,7 +260,8 @@ public class TestRpcProgramNfs3 {
   public void testAccess() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     ACCESS3Request req = new ACCESS3Request(handle);
     req.serialize(xdr_req);
@@ -281,8 +285,9 @@ public class TestRpcProgramNfs3 {
     // Create a symlink first.
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     SYMLINK3Request req = new SYMLINK3Request(handle, "fubar", new SetAttr3(),
         "bar");
     req.serialize(xdr_req);
@@ -316,7 +321,8 @@ public class TestRpcProgramNfs3 {
   public void testRead() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
 
     READ3Request readReq = new READ3Request(handle, 0, 5);
     XDR xdr_req = new XDR();
@@ -373,7 +379,8 @@ public class TestRpcProgramNfs3 {
 
     final HdfsFileStatus status = nn.getRpcServer().getFileInfo(fileName);
     final long dirId = status.getFileId();
-    final FileHandle handle = new FileHandle(dirId);
+    final int namenodeId = Nfs3Utils.getNamenodeId(config);
+    final FileHandle handle = new FileHandle(dirId, namenodeId);
 
     final WRITE3Request writeReq = new WRITE3Request(handle, 0,
         buffer.length, WriteStableHow.DATA_SYNC, ByteBuffer.wrap(buffer));
@@ -390,7 +397,8 @@ public class TestRpcProgramNfs3 {
       throws Exception {
     final HdfsFileStatus status = nn.getRpcServer().getFileInfo(fileName);
     final long dirId = status.getFileId();
-    final FileHandle handle = new FileHandle(dirId);
+    final int namenodeId = Nfs3Utils.getNamenodeId(config);
+    final FileHandle handle = new FileHandle(dirId, namenodeId);
 
     final READ3Request readReq = new READ3Request(handle, 0, len);
     final XDR xdr_req = new XDR();
@@ -422,7 +430,8 @@ public class TestRpcProgramNfs3 {
   private void commit(String fileName, int len) throws Exception {
     final HdfsFileStatus status = nn.getRpcServer().getFileInfo(fileName);
     final long dirId = status.getFileId();
-    final FileHandle handle = new FileHandle(dirId);
+    final int namenodeId = Nfs3Utils.getNamenodeId(config);
+    final FileHandle handle = new FileHandle(dirId, namenodeId);
     final XDR xdr_req = new XDR();
     final COMMIT3Request req = new COMMIT3Request(handle, 0, len);
     req.serialize(xdr_req);
@@ -439,7 +448,8 @@ public class TestRpcProgramNfs3 {
   public void testWrite() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
 
     byte[] buffer = new byte[10];
     for (int i = 0; i < 10; i++) {
@@ -469,8 +479,9 @@ public class TestRpcProgramNfs3 {
   public void testCreate() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     CREATE3Request req = new CREATE3Request(handle, "fubar",
         Nfs3Constant.CREATE_UNCHECKED, new SetAttr3(), 0);
     req.serialize(xdr_req);
@@ -493,8 +504,9 @@ public class TestRpcProgramNfs3 {
   public void testMkdir() throws Exception {//FixME
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     MKDIR3Request req = new MKDIR3Request(handle, "fubar1", new SetAttr3());
     req.serialize(xdr_req);
     
@@ -520,8 +532,9 @@ public class TestRpcProgramNfs3 {
   public void testSymlink() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     SYMLINK3Request req = new SYMLINK3Request(handle, "fubar", new SetAttr3(),
         "bar");
     req.serialize(xdr_req);
@@ -544,8 +557,9 @@ public class TestRpcProgramNfs3 {
   public void testRemove() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     REMOVE3Request req = new REMOVE3Request(handle, "bar");
     req.serialize(xdr_req);
 
@@ -567,8 +581,9 @@ public class TestRpcProgramNfs3 {
   public void testRmdir() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     RMDIR3Request req = new RMDIR3Request(handle, "foo");
     req.serialize(xdr_req);
 
@@ -590,8 +605,9 @@ public class TestRpcProgramNfs3 {
   public void testRename() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     RENAME3Request req = new RENAME3Request(handle, "bar", handle, "fubar");
     req.serialize(xdr_req);
     
@@ -613,7 +629,8 @@ public class TestRpcProgramNfs3 {
   public void testReaddir() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     READDIR3Request req = new READDIR3Request(handle, 0, 0, 100);
     req.serialize(xdr_req);
@@ -636,7 +653,8 @@ public class TestRpcProgramNfs3 {
   public void testReaddirplus() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     READDIRPLUS3Request req = new READDIRPLUS3Request(handle, 0, 0, 3, 2);
     req.serialize(xdr_req);
@@ -659,7 +677,8 @@ public class TestRpcProgramNfs3 {
   public void testFsstat() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     FSSTAT3Request req = new FSSTAT3Request(handle);
     req.serialize(xdr_req);
@@ -682,7 +701,8 @@ public class TestRpcProgramNfs3 {
   public void testFsinfo() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     FSINFO3Request req = new FSINFO3Request(handle);
     req.serialize(xdr_req);
@@ -705,7 +725,8 @@ public class TestRpcProgramNfs3 {
   public void testPathconf() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     PATHCONF3Request req = new PATHCONF3Request(handle);
     req.serialize(xdr_req);
@@ -728,7 +749,8 @@ public class TestRpcProgramNfs3 {
   public void testCommit() throws Exception {
     HdfsFileStatus status = nn.getRpcServer().getFileInfo("/tmp/bar");
     long dirId = status.getFileId();
-    FileHandle handle = new FileHandle(dirId);
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     XDR xdr_req = new XDR();
     COMMIT3Request req = new COMMIT3Request(handle, 0, 5);
     req.serialize(xdr_req);

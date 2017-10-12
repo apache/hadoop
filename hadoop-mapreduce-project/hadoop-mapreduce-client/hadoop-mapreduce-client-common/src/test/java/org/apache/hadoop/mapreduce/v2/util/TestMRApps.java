@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -526,5 +527,13 @@ public class TestMRApps {
     }
     assertFalse("/fake/Klass must not be a system class",
         ApplicationClassLoader.isSystemClass("/fake/Klass", systemClasses));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidWebappAddress() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, "19888");
+    MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(
+         conf, ApplicationId.newInstance(0, 1));
   }
 }

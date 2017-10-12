@@ -22,7 +22,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
  * This exception is thrown by ResourceManager if it's loading an incompatible
- * version of state from state store on recovery.
+ * version of storage on recovery.
  */
 public class RMStateVersionIncompatibleException extends YarnException {
 

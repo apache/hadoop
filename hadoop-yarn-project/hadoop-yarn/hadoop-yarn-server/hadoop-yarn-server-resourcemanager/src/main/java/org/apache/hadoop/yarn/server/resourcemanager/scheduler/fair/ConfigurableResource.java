@@ -46,7 +46,7 @@ public class ConfigurableResource {
   /**
    * Get resource by multiplying the cluster resource and the percentage of
    * each resource respectively. Return the absolute resource if either
-   * {@code percentages} or {@code clusterResource) is null.
+   * {@code percentages} or {@code clusterResource} is null.
    *
    * @param clusterResource the cluster resource
    * @return resource

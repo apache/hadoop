@@ -15,7 +15,6 @@
 
 org.apache.hadoop.fs.LocalFileSystem
 org.apache.hadoop.fs.viewfs.ViewFileSystem
-org.apache.hadoop.fs.ftp.FTPFileSystem
 org.apache.hadoop.fs.HarFileSystem
 org.apache.hadoop.fs.http.HttpFileSystem
 org.apache.hadoop.fs.http.HttpsFileSystem

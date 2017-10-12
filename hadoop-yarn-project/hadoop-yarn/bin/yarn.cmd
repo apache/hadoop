@@ -295,6 +295,11 @@ goto :eof
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
+:schedulerconf
+  set CLASS=org.apache.hadoop.yarn.client.cli.SchedConfCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  goto :eof
+
 @rem This changes %1, %2 etc. Hence those cannot be used after calling this.
 :make_command_arguments
   if "%1" == "--config" (
@@ -340,6 +345,7 @@ goto :eof
   @echo   node                 prints node report(s)
   @echo   queue                prints queue information
   @echo   logs                 dump container logs
+  @echo   schedulerconf        updates scheduler configuration
   @echo   classpath            prints the class path needed to get the
   @echo                        Hadoop jar and the required libraries
   @echo   daemonlog            get/set the log level for each daemon

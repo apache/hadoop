@@ -3347,7 +3347,6 @@
     <value>false</value>
   </property>
 
-
   <!-- resource types configuration -->
   <property>
     <name>yarn.resource-types</name>
@@ -3366,5 +3365,110 @@
         configuration.
       </description>
   </property>
+
+  <property>
+    <description>
+      The type of configuration store to use for scheduler configurations.
+      Default is "file", which uses file based capacity-scheduler.xml to
+      retrieve and change scheduler configuration. To enable API based
+      scheduler configuration, use either "memory" (in memory storage, no
+      persistence across restarts), "leveldb" (leveldb based storage), or
+      "zk" (zookeeper based storage). API based configuration is only useful
+      when using a scheduler which supports mutable configuration. Currently
+      only capacity scheduler supports this.
+    </description>
+    <name>yarn.scheduler.configuration.store.class</name>
+    <value>file</value>
+  </property>
+
+  <property>
+    <description>
+      The class to use for configuration mutation ACL policy if using a mutable
+      configuration provider. Controls whether a mutation request is allowed.
+      The DefaultConfigurationMutationACLPolicy checks if the requestor is a
+      YARN admin.
+    </description>
+    <name>yarn.scheduler.configuration.mutation.acl-policy.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.DefaultConfigurationMutationACLPolicy</value>
+  </property>
+
+  <property>
+    <description>
+      The storage path for LevelDB implementation of configuration store,
+      when yarn.scheduler.configuration.store.class is configured to be
+      "leveldb".
+    </description>
+    <name>yarn.scheduler.configuration.leveldb-store.path</name>
+    <value>${hadoop.tmp.dir}/yarn/system/confstore</value>
+  </property>
+
+  <property>
+    <description>
+      The compaction interval for LevelDB configuration store in secs,
+      when yarn.scheduler.configuration.store.class is configured to be
+      "leveldb". Default is one day.
+    </description>
+    <name>yarn.scheduler.configuration.leveldb-store.compaction-interval-secs</name>
+    <value>86400</value>
+  </property>
+
+  <property>
+    <description>
+      The max number of configuration change log entries kept in config
+      store, when yarn.scheduler.configuration.store.class is configured to be
+      "leveldb" or "zk". Default is 1000 for either.
+    </description>
+    <name>yarn.scheduler.configuration.store.max-logs</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      ZK root node path for configuration store when using zookeeper-based
+      configuration store.
+    </description>
+    <name>yarn.scheduler.configuration.zk-store.parent-path</name>
+    <value>/confstore</value>
+  </property>
+
+  <property>
+    <description>
+      When yarn.nodemanager.resource.gpu.allowed-gpu-devices=auto specified,
+      YARN NodeManager needs to run GPU discovery binary (now only support
+      nvidia-smi) to get GPU-related information.
+      When value is empty (default), YARN NodeManager will try to locate
+      discovery executable itself.
+      An example of the config value is: /usr/local/bin/nvidia-smi
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.path-to-discovery-executables</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Enable additional discovery/isolation of resources on the NodeManager,
+      split by comma. By default, this is empty. Acceptable values: { "yarn-io/gpu" }.
+    </description>
+    <name>yarn.nodemanager.resource-plugins</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Specify GPU devices which can be managed by YARN NodeManager, split by comma
+      Number of GPU devices will be reported to RM to make scheduling decisions.
+      Set to auto (default) let YARN automatically discover GPU resource from
+      system.
+      Manually specify GPU devices if auto detect GPU device failed or admin
+      only want subset of GPU devices managed by YARN. GPU device is identified
+      by their minor device number. A common approach to get minor device number
+      of GPUs is using "nvidia-smi -q" and search "Minor Number" output. An
+      example of manual specification is "0,1,2,4" to allow YARN NodeManager
+      to manage GPU devices with minor number 0/1/2/4.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices</name>
+    <value>auto</value>
+  </property>
+
 
 </configuration>

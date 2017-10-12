@@ -237,6 +237,19 @@ Usage:
 
 Runs ResourceManager admin client
 
+### schedulerconf
+
+Usage: `yarn schedulerconf [options]`
+
+| COMMAND\_OPTIONS | Description |
+|:---- |:---- |
+| -add <"queuePath1:key1=val1,key2=val2;queuePath2:key3=val3"> | Semicolon separated values of queues to add and their queue configurations. This example adds queue "queuePath1" (a full path name), which has queue configurations key1=val1 and key2=val2. It also adds queue "queuePath2", which has queue configuration key3=val3. |
+| -remove <"queuePath1;queuePath2"> | Semicolon separated queues to remove. This example removes queuePath1 and queuePath2 queues (full path names). **Note:** Queues must be put into `STOPPED` state before they are deleted. |
+| -update <"queuePath1:key1=val1,key2=val2;queuePath2:key3=val3"> | Semicolon separated values of queues whose configurations should be updated. This example sets key1=val1 and key2=val2 for queue configuration of queuePath1 (full path name), and sets key3=val3 for queue configuration of queuePath2. |
+| -global <key1=val1,key2=val2> | Update scheduler global configurations. This example sets key1=val1 and key2=val2 for scheduler's global configuration. |
+
+Updates scheduler configuration. Note, this feature is in alpha phase and is subject to change.
+
 ### scmadmin
 
 Usage: `yarn scmadmin [options] `

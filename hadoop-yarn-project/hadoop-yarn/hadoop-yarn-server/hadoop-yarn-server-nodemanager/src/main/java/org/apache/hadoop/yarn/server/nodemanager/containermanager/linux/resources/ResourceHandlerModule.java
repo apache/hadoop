@@ -21,25 +21,28 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides mechanisms to get various resource handlers - cpu, memory, network,
@@ -206,22 +209,41 @@ public class ResourceHandlerModule {
   }
 
   private static void initializeConfiguredResourceHandlerChain(
-      Configuration conf) throws ResourceHandlerException {
+      Configuration conf, Context nmContext)
+      throws ResourceHandlerException {
     ArrayList<ResourceHandler> handlerList = new ArrayList<>();
 
     addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getCGroupsCpuResourceHandler(conf));
+    addHandlersFromConfiguredResourcePlugins(handlerList, conf, nmContext);
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 
+  private static void addHandlersFromConfiguredResourcePlugins(
+      List<ResourceHandler> handlerList, Configuration conf,
+      Context nmContext) throws ResourceHandlerException {
+    ResourcePluginManager pluginManager = nmContext.getResourcePluginManager();
+    if (pluginManager != null) {
+       Map<String, ResourcePlugin> pluginMap = pluginManager.getNameToPlugins();
+       if (pluginMap != null) {
+        for (ResourcePlugin plugin : pluginMap.values()) {
+          addHandlerIfNotNull(handlerList, plugin
+              .createResourceHandler(nmContext,
+                  getInitializedCGroupsHandler(conf),
+                  PrivilegedOperationExecutor.getInstance(conf)));
+        }
+      }
+    }
+  }
+
   public static ResourceHandlerChain getConfiguredResourceHandlerChain(
-      Configuration conf) throws ResourceHandlerException {
+      Configuration conf, Context nmContext) throws ResourceHandlerException {
     if (resourceHandlerChain == null) {
       synchronized (ResourceHandlerModule.class) {
         if (resourceHandlerChain == null) {
-          initializeConfiguredResourceHandlerChain(conf);
+          initializeConfiguredResourceHandlerChain(conf, nmContext);
         }
       }
     }

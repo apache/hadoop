@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -281,7 +282,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public void init() throws IOException {
+  public void init(Context nmContext) throws IOException {
     Configuration conf = super.getConf();
 
     // Send command to executor which will just start up,
@@ -305,7 +306,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     try {
       resourceHandlerChain = ResourceHandlerModule
-          .getConfiguredResourceHandlerChain(conf);
+          .getConfiguredResourceHandlerChain(conf, nmContext);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
             != null));
@@ -843,5 +844,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           "; exit code = " + exitCode + " and output: " + e.getOutput(),
           e);
     }
+  }
+
+  @VisibleForTesting
+  public ResourceHandler getResourceHandler() {
+    return resourceHandlerChain;
   }
 }
