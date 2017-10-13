@@ -333,7 +333,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void signalContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
-    Container container = ctx.getContainer();
     PrivilegedOperation signalOp = new PrivilegedOperation(
         PrivilegedOperation.OperationType.SIGNAL_CONTAINER);
 
