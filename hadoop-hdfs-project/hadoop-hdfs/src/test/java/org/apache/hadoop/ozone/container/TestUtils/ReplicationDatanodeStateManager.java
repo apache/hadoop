@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.container.TestUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerInfo;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
 
@@ -58,9 +58,9 @@ public class ReplicationDatanodeStateManager {
    * @param dataNodeCount - Datanode Count.
    * @return List of Container Reports.
    */
-  public List<ContainerReportsProto> getContainerReport(String containerName,
-      String poolName, int dataNodeCount) {
-    List<ContainerReportsProto> containerList = new LinkedList<>();
+  public List<ContainerReportsRequestProto> getContainerReport(
+      String containerName, String poolName, int dataNodeCount) {
+    List<ContainerReportsRequestProto> containerList = new LinkedList<>();
     List<DatanodeID> nodesInPool = poolManager.getNodes(poolName);
 
     if (nodesInPool == null) {
@@ -81,10 +81,10 @@ public class ReplicationDatanodeStateManager {
             .setContainerName(containerName)
             .setFinalhash(DigestUtils.sha256Hex(containerName))
             .build();
-        ContainerReportsProto containerReport = ContainerReportsProto
-            .newBuilder().addReports(info)
+        ContainerReportsRequestProto containerReport =
+            ContainerReportsRequestProto.newBuilder().addReports(info)
             .setDatanodeID(id.getProtoBufMessage())
-            .setType(ContainerReportsProto.reportType.fullReport)
+            .setType(ContainerReportsRequestProto.reportType.fullReport)
             .build();
         containerList.add(containerReport);
       }

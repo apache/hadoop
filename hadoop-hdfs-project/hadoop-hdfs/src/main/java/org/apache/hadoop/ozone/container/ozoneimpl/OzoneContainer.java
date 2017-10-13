@@ -36,8 +36,9 @@ import org.apache.hadoop.ozone.container.common.transport.server.XceiverServer;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
-import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +97,7 @@ public class OzoneContainer {
     }
 
     manager = new ContainerManagerImpl();
-    manager.init(this.ozoneConfig, locations);
+    manager.init(this.ozoneConfig, locations, datanodeID);
     this.chunkManager = new ChunkManagerImpl(manager);
     manager.setChunkManager(this.chunkManager);
 
@@ -235,6 +236,16 @@ public class OzoneContainer {
   }
 
   /**
+   * Returns container report.
+   * @return - container report.
+   * @throws IOException
+   */
+  public ContainerReportsRequestProto getContainerReport() throws IOException {
+    return this.manager.getContainerReport();
+  }
+
+// TODO: remove getContainerReports
+  /**
    * Returns the list of closed containers.
    * @return - List of closed containers.
    * @throws IOException
@@ -246,5 +257,13 @@ public class OzoneContainer {
   @VisibleForTesting
   public ContainerManager getContainerManager() {
     return this.manager;
+  }
+
+  /**
+   * Get the container report state to send via HB to SCM.
+   * @return the container report state.
+   */
+  public ReportState getContainerReportState() {
+    return this.manager.getContainerReportState();
   }
 }

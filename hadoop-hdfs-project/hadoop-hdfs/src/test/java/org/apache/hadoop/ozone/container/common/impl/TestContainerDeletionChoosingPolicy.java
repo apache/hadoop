@@ -28,7 +28,9 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
@@ -87,12 +89,12 @@ public class TestContainerDeletionChoosingPolicy {
     List<StorageLocation> pathLists = new LinkedList<>();
     pathLists.add(StorageLocation.parse(containerDir.getAbsolutePath()));
     containerManager = new ContainerManagerImpl();
-    containerManager.init(conf, pathLists);
+    containerManager.init(conf, pathLists, DFSTestUtil.getLocalDatanodeID());
 
     int numContainers = 10;
     for (int i = 0; i < numContainers; i++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName);
+      ContainerData data = new ContainerData(containerName, conf);
       containerManager.createContainer(createSingleNodePipeline(containerName),
           data);
       Assert.assertTrue(
@@ -133,7 +135,8 @@ public class TestContainerDeletionChoosingPolicy {
     List<StorageLocation> pathLists = new LinkedList<>();
     pathLists.add(StorageLocation.parse(containerDir.getAbsolutePath()));
     containerManager = new ContainerManagerImpl();
-    containerManager.init(conf, pathLists);
+    DatanodeID datanodeID = DFSTestUtil.getLocalDatanodeID();
+    containerManager.init(conf, pathLists, datanodeID);
 
     int numContainers = 10;
     Random random = new Random();
@@ -141,7 +144,7 @@ public class TestContainerDeletionChoosingPolicy {
     // create [numContainers + 1] containers
     for (int i = 0; i <= numContainers; i++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName);
+      ContainerData data = new ContainerData(containerName, conf);
       containerManager.createContainer(createSingleNodePipeline(containerName),
           data);
       Assert.assertTrue(
@@ -169,7 +172,7 @@ public class TestContainerDeletionChoosingPolicy {
     containerManager.writeLock();
     containerManager.shutdown();
     containerManager.writeUnlock();
-    containerManager.init(conf, pathLists);
+    containerManager.init(conf, pathLists, datanodeID);
 
     List<ContainerData> result0 = containerManager
         .chooseContainerForBlockDeletion(5);

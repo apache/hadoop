@@ -21,8 +21,11 @@ package org.apache.hadoop.ozone.container.common.interfaces;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.util.RwLock;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
@@ -44,10 +47,11 @@ public interface ContainerManager extends RwLock {
    *
    * @param config        - Configuration.
    * @param containerDirs - List of Metadata Container locations.
+   * @param datanodeID - Datanode ID
    * @throws StorageContainerException
    */
-  void init(Configuration config, List<StorageLocation> containerDirs)
-      throws IOException;
+  void init(Configuration config, List<StorageLocation> containerDirs,
+      DatanodeID datanodeID) throws IOException;
 
   /**
    * Creates a container with the given name.
@@ -174,6 +178,13 @@ public interface ContainerManager extends RwLock {
   SCMNodeReport getNodeReport() throws IOException;
 
   /**
+   * Gets container report.
+   * @return container report.
+   * @throws IOException
+   */
+  ContainerReportsRequestProto getContainerReport() throws IOException;
+
+  /**
    * Gets container reports.
    * @return List of all closed containers.
    * @throws IOException
@@ -199,4 +210,67 @@ public interface ContainerManager extends RwLock {
    *          container id
    */
   void decrPendingDeletionBlocks(int numBlocks, String containerId);
+
+  /**
+   * Increase the read count of the container.
+   * @param containerName - Name of the container.
+   */
+  void incrReadCount(String containerName);
+
+  /**
+   * Increse the read counter for bytes read from the container.
+   * @param containerName - Name of the container.
+   * @param readBytes - bytes read from the container.
+   */
+  void incrReadBytes(String containerName, long readBytes);
+
+
+  /**
+   * Increase the write count of the container.
+   * @param containerName - Name of the container.
+   */
+  void incrWriteCount(String containerName);
+
+  /**
+   * Increase the write counter for bytes write into the container.
+   * @param containerName - Name of the container.
+   * @param writeBytes - bytes write into the container.
+   */
+  void incrWriteBytes(String containerName, long writeBytes);
+
+  /**
+   * Increase the bytes used by the container.
+   * @param containerName - Name of the container.
+   * @param used - additional bytes used by the container.
+   * @return the current bytes used.
+   */
+  long incrBytesUsed(String containerName, long used);
+
+  /**
+   * Decrease the bytes used by the container.
+   * @param containerName - Name of the container.
+   * @param used - additional bytes reclaimed by the container.
+   * @return the current bytes used.
+   */
+  long decrBytesUsed(String containerName, long used);
+
+  /**
+   * Get the bytes used by the container.
+   * @param containerName - Name of the container.
+   * @return the current bytes used by the container.
+   */
+  long getBytesUsed(String containerName);
+
+  /**
+   * Get the number of keys in the container.
+   * @param containerName - Name of the container.
+   * @return the current key count.
+   */
+  long getNumKeys(String containerName);
+
+  /**
+   * Get the container report state to send via HB to SCM.
+   * @return container report state.
+   */
+  ReportState getContainerReportState();
 }

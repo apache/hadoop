@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.common;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -112,7 +113,7 @@ public class TestBlockDeletingService {
     ContainerManager containerManager = new ContainerManagerImpl();
     List<StorageLocation> pathLists = new LinkedList<>();
     pathLists.add(StorageLocation.parse(containersDir.getAbsolutePath()));
-    containerManager.init(conf, pathLists);
+    containerManager.init(conf, pathLists, DFSTestUtil.getLocalDatanodeID());
     return containerManager;
   }
 
@@ -126,7 +127,7 @@ public class TestBlockDeletingService {
       int numOfChunksPerBlock, File chunkDir) throws IOException {
     for (int x = 0; x < numOfContainers; x++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName);
+      ContainerData data = new ContainerData(containerName, conf);
       mgr.createContainer(createSingleNodePipeline(containerName), data);
       data = mgr.readContainer(containerName);
       MetadataStore metadata = KeyUtils.getDB(data, conf);

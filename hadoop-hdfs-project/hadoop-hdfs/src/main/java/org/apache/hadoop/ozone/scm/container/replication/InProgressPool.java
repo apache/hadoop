@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerInfo;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.node.CommandQueue;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.NodePoolManager;
@@ -234,11 +234,13 @@ public final class InProgressPool {
    *
    * @param containerReport - ContainerReport
    */
-  public void handleContainerReport(ContainerReportsProto containerReport) {
+  public void handleContainerReport(
+      ContainerReportsRequestProto containerReport) {
     executorService.submit(processContainerReport(containerReport));
   }
 
-  private Runnable processContainerReport(ContainerReportsProto reports) {
+  private Runnable processContainerReport(
+      ContainerReportsRequestProto reports) {
     return () -> {
       DatanodeID datanodeID =
           DatanodeID.getFromProtoBuf(reports.getDatanodeID());

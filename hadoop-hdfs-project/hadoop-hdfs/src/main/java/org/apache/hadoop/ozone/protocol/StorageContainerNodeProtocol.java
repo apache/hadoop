@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 
@@ -56,9 +57,10 @@ public interface StorageContainerNodeProtocol {
    * Send heartbeat to indicate the datanode is alive and doing well.
    * @param datanodeID - Datanode ID.
    * @param nodeReport - node report.
+   * @param reportState - container report.
    * @return SCMheartbeat response list
    */
   List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport);
+      SCMNodeReport nodeReport, ReportState reportState);
 
 }

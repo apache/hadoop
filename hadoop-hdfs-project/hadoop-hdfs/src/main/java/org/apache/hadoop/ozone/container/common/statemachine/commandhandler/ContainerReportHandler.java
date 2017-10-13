@@ -16,21 +16,18 @@
  */
 package org.apache.hadoop.ozone.container.common.statemachine.commandhandler;
 
-import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
 import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.SCMConnectionManager;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Container Report handler.
@@ -62,22 +59,13 @@ public class ContainerReportHandler implements CommandHandler {
     invocationCount++;
     long startTime = Time.monotonicNow();
     try {
-      ContainerReportsProto.Builder contianerReportsBuilder =
-          ContainerReportsProto.newBuilder();
-      List<ContainerData> closedContainerList = container.getContainerReports();
-      for (ContainerData cd : closedContainerList) {
-        ContainerReport report =
-            new ContainerReport(cd.getContainerName(), cd.getHash());
-        contianerReportsBuilder.addReports(report.getProtoBufMessage());
-      }
-      contianerReportsBuilder.setType(ContainerReportsProto.reportType
-          .fullReport);
+      ContainerReportsRequestProto contianerReport =
+          container.getContainerReport();
 
       // TODO : We send this report to all SCMs.Check if it is enough only to
       // send to the leader once we have RAFT enabled SCMs.
       for (EndpointStateMachine endPoint : connectionManager.getValues()) {
-        endPoint.getEndPoint().sendContainerReport(
-            contianerReportsBuilder.build());
+        endPoint.getEndPoint().sendContainerReport(contianerReport);
       }
     } catch (IOException ex) {
       LOG.error("Unable to process the Container Report command.", ex);

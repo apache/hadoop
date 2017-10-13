@@ -158,4 +158,13 @@ public class KeyData {
   public void setChunks(List<ContainerProtos.ChunkInfo> chunks) {
     this.chunks = chunks;
   }
+
+  /**
+   * Get the total size of chunks allocated for the key.
+   * @return total size of the key.
+   */
+  public long getSize() {
+    return chunks.parallelStream().mapToLong(e->e.getLen()).sum();
+  }
+
 }

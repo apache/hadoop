@@ -43,7 +43,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -716,7 +717,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   public SCMHeartbeatResponseProto sendHeartbeat(DatanodeID datanodeID,
       SCMNodeReport nodeReport, ReportState reportState) throws IOException {
     List<SCMCommand> commands =
-        getScmNodeManager().sendHeartbeat(datanodeID, nodeReport);
+        getScmNodeManager().sendHeartbeat(datanodeID, nodeReport, reportState);
     List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
       cmdResponses.add(getCommandResponse(cmd));
@@ -749,13 +750,12 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @throws IOException
    */
   @Override
-  public SCMHeartbeatResponseProto
-      sendContainerReport(ContainerReportsProto reports) throws IOException {
-    // TODO : fix this in the server side code changes for handling this request
-    // correctly.
-    List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
-    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
-        .build();
+  public ContainerReportsResponseProto sendContainerReport(
+      ContainerReportsRequestProto reports) throws IOException {
+
+    // TODO: handle the container reports either here or add container report
+    // handler.
+    return ContainerReportsResponseProto.newBuilder().build();
   }
 
   /**

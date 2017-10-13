@@ -22,6 +22,8 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
@@ -276,11 +278,12 @@ public class ReplicationNodeManagerMock implements NodeManager {
    *
    * @param datanodeID - Datanode ID.
    * @param nodeReport - node report.
+   * @param containerReportState - container report state.
    * @return SCMheartbeat response list
    */
   @Override
   public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport) {
+      SCMNodeReport nodeReport, ReportState containerReportState) {
     return null;
   }
 

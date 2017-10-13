@@ -32,6 +32,8 @@ import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredCmdResponseProto
     .ErrorCode;
 import org.apache.hadoop.ozone.protocol.proto
@@ -769,12 +771,13 @@ public class SCMNodeManager
    *
    * @param datanodeID - Datanode ID.
    * @param nodeReport - node report.
+   * @param containerReportState - container report state.
    * @return SCMheartbeat response.
    * @throws IOException
    */
   @Override
   public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport) {
+      SCMNodeReport nodeReport, ReportState containerReportState) {
 
     // Checking for NULL to make sure that we don't get
     // an exception from ConcurrentList.
@@ -785,6 +788,7 @@ public class SCMNodeManager
           new HeartbeatQueueItem.Builder()
               .setDatanodeID(datanodeID)
               .setNodeReport(nodeReport)
+              .setContainerReportState(containerReportState)
               .build());
     } else {
       LOG.error("Datanode ID in heartbeat is null");

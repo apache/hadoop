@@ -23,7 +23,8 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto
@@ -168,9 +169,9 @@ public class StorageContainerDatanodeProtocolClientSideTranslatorPB
    * @throws IOException
    */
   @Override
-  public SCMHeartbeatResponseProto sendContainerReport(
-      ContainerReportsProto reports) throws IOException {
-    final SCMHeartbeatResponseProto resp;
+  public ContainerReportsResponseProto sendContainerReport(
+      ContainerReportsRequestProto reports) throws IOException {
+    final ContainerReportsResponseProto resp;
     try {
       resp = rpcProxy.sendContainerReport(NULL_RPC_CONTROLLER, reports);
     } catch (ServiceException e) {
