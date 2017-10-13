@@ -144,8 +144,10 @@ public class PathOutputCommitterFactory extends Configured {
   public static PathOutputCommitterFactory getCommitterFactory(
       Path outputPath,
       Configuration conf) {
+    // determine which key to look up the overall one or a schema-specific
+    // key
     String key = COMMITTER_FACTORY_CLASS;
-    if (conf.getTrimmed(key) == null && outputPath != null) {
+    if (StringUtils.isEmpty(conf.getTrimmed(key)) && outputPath != null) {
       // there is no explicit factory and there's an output path
       // Get the scheme of the destination
       String scheme = outputPath.toUri().getScheme();
@@ -163,10 +165,20 @@ public class PathOutputCommitterFactory extends Configured {
       // there's no output path, so trying to do schema-specific lookup
       // cannot work.
     }
-    Class<? extends PathOutputCommitterFactory> factory =
-        conf.getClass(key,
-            FileOutputCommitterFactory.class,
-            PathOutputCommitterFactory.class);
+
+    // create the factory. Before using Configuration.getClass, check
+    // for an empty configuration value, as that raises ClassNotFoundException.
+    Class<? extends PathOutputCommitterFactory> factory;
+    String trimmedValue = conf.getTrimmed(key, "");
+    if (StringUtils.isEmpty(trimmedValue)) {
+      // empty/null value, use default
+      factory = FileOutputCommitterFactory.class;
+    } else {
+      // key is set, get the class
+      factory = conf.getClass(key,
+          FileOutputCommitterFactory.class,
+          PathOutputCommitterFactory.class);
+    }
     LOG.debug("Using OutputCommitter factory class {} from key {}",
         factory, key);
     return ReflectionUtils.newInstance(factory, conf);

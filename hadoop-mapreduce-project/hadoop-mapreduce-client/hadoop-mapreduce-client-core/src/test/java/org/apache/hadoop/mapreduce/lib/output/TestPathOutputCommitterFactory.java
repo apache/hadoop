@@ -98,6 +98,22 @@ public class TestPathOutputCommitterFactory extends Assert {
   }
 
   /**
+   * Verify that if the factory class option is "", schema factory
+   * resolution still works.
+   */
+  @Test
+  public void testCommitterFactoryEmptyOption() throws Throwable {
+    Configuration conf = newBondedConfiguration();
+    // set up for the schema factory
+    // and then set a global one which overrides the others.
+    conf.set(COMMITTER_FACTORY_CLASS, "");
+    createCommitterFactory(SimpleCommitterFactory.class, HTTP_PATH, conf);
+
+    // and HDFS, with no schema, falls back to the default
+    createCommitterFactory(FileOutputCommitterFactory.class, HDFS_PATH, conf);
+  }
+
+  /**
    * Verify that if the committer factory class is unknown, you cannot
    * create committers.
    */
