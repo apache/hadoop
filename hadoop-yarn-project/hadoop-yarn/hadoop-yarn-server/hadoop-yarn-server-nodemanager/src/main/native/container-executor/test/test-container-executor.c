@@ -52,6 +52,7 @@ static char* username = NULL;
 static char* yarn_username = NULL;
 static char** local_dirs = NULL;
 static char** log_dirs = NULL;
+static const char* DEFAULT_DOCKER_BINARY_PATH = "/usr/bin/docker";
 
 /**
  * Run the command using the effective user id.
@@ -102,7 +103,7 @@ void run(const char *cmd) {
   }
 }
 
-int write_config_file(char *file_name, int banned) {
+int write_config_file(char *file_name, int banned, char *docker_binary_path) {
   FILE *file;
   file = fopen(file_name, "w");
   if (file == NULL) {
@@ -114,6 +115,11 @@ int write_config_file(char *file_name, int banned) {
     fprintf(file, "min.user.id=500\n");
   } else {
     fprintf(file, "min.user.id=0\n");
+  }
+  if (docker_binary_path == NULL) {
+    fprintf(file, "#docker.binary=\n");
+  } else {
+    fprintf(file, "docker.binary=%s\n", docker_binary_path);
   }
   fprintf(file, "allowed.system.users=allowedUser,daemon\n");
   fclose(file);
@@ -224,7 +230,12 @@ void test_get_app_log_dir() {
   free(logdir);
 }
 
-void test_check_user(int expectedFailure) {
+void test_check_user(int expectedFailure, int enable_banned_user_conf) {
+  if (write_config_file(TEST_ROOT "/test.cfg", enable_banned_user_conf, NULL) != 0) {
+    exit(1);
+  }
+  read_executor_config(TEST_ROOT "/test.cfg");
+
   printf("\nTesting test_check_user\n");
   struct passwd *user = check_user(username);
   if (user == NULL && !expectedFailure) {
@@ -412,7 +423,7 @@ void test_delete_user() {
 
   char buffer[100000];
   sprintf(buffer, "%s/test.cfg", app_dir);
-  if (write_config_file(buffer, 1) != 0) {
+  if (write_config_file(buffer, 1, NULL) != 0) {
     exit(1);
   }
 
@@ -923,6 +934,35 @@ void test_sanitize_docker_command() {
   }
 }
 
+void test_get_docker_binary() {
+  if (write_config_file(TEST_ROOT "/docker.cfg", 0, NULL) != 0) {
+    exit(1);
+  }
+  read_executor_config(TEST_ROOT "/docker.cfg");
+
+  char* docker_binary_null = get_docker_binary();
+  printf("Docker binary path when not set: %s\n", docker_binary_null);
+  if(strcmp(DEFAULT_DOCKER_BINARY_PATH, docker_binary_null) != 0) {
+    printf("FAIL: expected output %s does not match actual output '%s'\n", DEFAULT_DOCKER_BINARY_PATH, docker_binary_null);
+    exit(1);
+  }
+  free(docker_binary_null);
+
+  char* docker_binary_user = strdup("/bin/docker");
+  if (write_config_file(TEST_ROOT "/docker.cfg", 0, docker_binary_user) != 0) {
+    exit(1);
+  }
+  read_executor_config(TEST_ROOT "/docker.cfg");
+  char* docker_binary_set = get_docker_binary();
+  printf("Docker binary path when set: %s\n", docker_binary_set);
+  if(strcmp(docker_binary_user, docker_binary_set) != 0) {
+    printf("FAIL: expected output %s does not match actual output '%s'\n", docker_binary_user, docker_binary_set);
+    exit(1);
+  }
+  free(docker_binary_set);
+  free(docker_binary_user);
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -951,13 +991,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (write_config_file(TEST_ROOT "/test.cfg", 1) != 0) {
-    exit(1);
-  }
-
   printf("\nOur executable is %s\n",get_executable(argv[0]));
-
-  read_executor_config(TEST_ROOT "/test.cfg");
 
   local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
   log_dirs = extract_values(strdup(NM_LOG_DIRS));
@@ -1017,7 +1051,10 @@ int main(int argc, char **argv) {
   printf("\nTesting sanitize docker commands()\n");
   test_sanitize_docker_command();
 
-  test_check_user(0);
+  printf("\nTesting get docker binary path()\n");
+  test_get_docker_binary();
+
+  test_check_user(0, 1);
 
 #ifdef __APPLE__
    printf("OS X: disabling CrashReporter\n");
@@ -1069,23 +1106,19 @@ int main(int argc, char **argv) {
   free_executor_configurations();
 
   printf("\nTrying banned default user()\n");
-  if (write_config_file(TEST_ROOT "/test.cfg", 0) != 0) {
-    exit(1);
-  }
 
-  read_executor_config(TEST_ROOT "/test.cfg");
 #ifdef __APPLE__
   username = "_uucp";
-  test_check_user(1);
+  test_check_user(1, 0);
 
   username = "_networkd";
-  test_check_user(1);
+  test_check_user(1, 0);
 #else
   username = "bin";
-  test_check_user(1);
+  test_check_user(1, 0);
 
   username = "sys";
-  test_check_user(1);
+  test_check_user(1, 0);
 #endif
 
   run("rm -fr " TEST_ROOT);
