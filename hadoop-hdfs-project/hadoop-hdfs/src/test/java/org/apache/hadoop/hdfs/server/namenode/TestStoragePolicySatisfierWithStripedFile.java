@@ -180,7 +180,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
       LOG.info("Sets storage policy to COLD and invoked satisfyStoragePolicy");
       cluster.triggerHeartbeats();
 
-      waitForBlocksMovementResult(cluster, 1, 60000);
+      waitForBlocksMovementAttemptReport(cluster, 9, 60000);
       // verify storage types and locations
       waitExpectedStorageType(cluster, fooFile, fileLen, StorageType.ARCHIVE, 9,
           9, 60000);
@@ -290,7 +290,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
       LOG.info("Sets storage policy to COLD and invoked satisfyStoragePolicy");
       cluster.triggerHeartbeats();
 
-      waitForBlocksMovementResult(cluster, 1, 60000);
+      waitForBlocksMovementAttemptReport(cluster, 5, 60000);
       waitForAttemptedItems(cluster, 1, 30000);
       // verify storage types and locations.
       waitExpectedStorageType(cluster, fooFile, fileLen, StorageType.ARCHIVE, 5,
@@ -556,10 +556,10 @@ public class TestStoragePolicySatisfierWithStripedFile {
     }, 100, timeout);
   }
 
-  // Check whether the block movement result has been arrived at the
+  // Check whether the block movement attempt report has been arrived at the
   // Namenode(SPS).
-  private void waitForBlocksMovementResult(MiniDFSCluster cluster,
-      long expectedBlkMovResultsCount, int timeout)
+  private void waitForBlocksMovementAttemptReport(MiniDFSCluster cluster,
+      long expectedMovementFinishedBlocksCount, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = cluster.getNamesystem().getBlockManager();
     final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
@@ -568,11 +568,11 @@ public class TestStoragePolicySatisfierWithStripedFile {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        LOG.info("expectedResultsCount={} actualResultsCount={}",
-            expectedBlkMovResultsCount,
-            sps.getAttemptedItemsMonitor().resultsCount());
-        return sps.getAttemptedItemsMonitor()
-            .resultsCount() == expectedBlkMovResultsCount;
+        LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
+            expectedMovementFinishedBlocksCount,
+            sps.getAttemptedItemsMonitor().getMovementFinishedBlocksCount());
+        return sps.getAttemptedItemsMonitor().getMovementFinishedBlocksCount()
+            >= expectedMovementFinishedBlocksCount;
       }
     }, 100, timeout);
   }

@@ -123,8 +123,8 @@ public class DatanodeProtocolServerSideTranslatorPB implements
           volumeFailureSummary, request.getRequestFullBlockReportLease(),
           PBHelper.convertSlowPeerInfo(request.getSlowPeersList()),
           PBHelper.convertSlowDiskInfo(request.getSlowDisksList()),
-          PBHelper.convertBlksMovResults(
-              request.getBlksMovementResultsList()));
+          PBHelper.convertBlksMovReport(
+              request.getStorageMoveAttemptFinishedBlks()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }

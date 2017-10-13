@@ -18,10 +18,17 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.StoragePolicySatisfier.AttemptedItemInfo;
 
 import org.apache.hadoop.hdfs.server.namenode.StoragePolicySatisfier.ItemInfo;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,9 +49,8 @@ public class TestBlockStorageMovementAttemptedItems {
     unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded(
         Mockito.mock(Namesystem.class),
         Mockito.mock(StoragePolicySatisfier.class), 100);
-    StoragePolicySatisfier sps = Mockito.mock(StoragePolicySatisfier.class);
     bsmAttemptedItems = new BlockStorageMovementAttemptedItems(100,
-        selfRetryTimeout, unsatisfiedStorageMovementFiles, sps);
+        selfRetryTimeout, unsatisfiedStorageMovementFiles);
   }
 
   @After
@@ -76,120 +82,115 @@ public class TestBlockStorageMovementAttemptedItems {
     return isItemFound;
   }
 
+  /**
+   * Verify that moved blocks reporting should queued up the block info.
+   */
   @Test(timeout = 30000)
-  public void testAddResultWithFailureResult() throws Exception {
+  public void testAddReportedMoveAttemptFinishedBlocks() throws Exception {
     bsmAttemptedItems.start(); // start block movement result monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(new ItemInfo(0L, item), true);
-    bsmAttemptedItems.addResults(
-        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
-            item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});
-    assertTrue(checkItemMovedForRetry(item, 200));
+    List<Block> blocks = new ArrayList<Block>();
+    blocks.add(new Block(item));
+    bsmAttemptedItems.add(new AttemptedItemInfo(0L, 0L, 0L, blocks));
+    Block[] blockArray = new Block[blocks.size()];
+    blocks.toArray(blockArray);
+    bsmAttemptedItems.addReportedMovedBlocks(blockArray);
+    assertEquals("Failed to receive result!", 1,
+        bsmAttemptedItems.getMovementFinishedBlocksCount());
   }
 
+  /**
+   * Verify empty moved blocks reporting queue.
+   */
   @Test(timeout = 30000)
-  public void testAddResultWithSucessResult() throws Exception {
-    bsmAttemptedItems.start(); // start block movement result monitor thread
+  public void testNoBlockMovementAttemptFinishedReportAdded() throws Exception {
+    bsmAttemptedItems.start(); // start block movement report monitor thread
     Long item = new Long(1234);
-    bsmAttemptedItems.add(new ItemInfo(0L, item), true);
-    bsmAttemptedItems.addResults(
-        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
-            item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
-    assertFalse(checkItemMovedForRetry(item, 200));
-  }
-
-  @Test(timeout = 30000)
-  public void testNoResultAdded() throws Exception {
-    bsmAttemptedItems.start(); // start block movement result monitor thread
-    Long item = new Long(1234);
-    bsmAttemptedItems.add(new ItemInfo(0L, item), true);
-    // After self retry timeout, it should be added back for retry
-    assertTrue("Failed to add to the retry list",
-        checkItemMovedForRetry(item, 600));
-    assertEquals("Failed to remove from the attempted list", 0,
+    List<Block> blocks = new ArrayList<>();
+    blocks.add(new Block(item));
+    bsmAttemptedItems.add(new AttemptedItemInfo(0L, 0L, 0L, blocks));
+    assertEquals("Shouldn't receive result", 0,
+        bsmAttemptedItems.getMovementFinishedBlocksCount());
+    assertEquals("Item doesn't exist in the attempted list", 1,
         bsmAttemptedItems.getAttemptedItemsCount());
   }
 
   /**
-   * Partial block movement with BlocksStorageMovementResult#SUCCESS. Here,
-   * first occurrence is #blockStorageMovementResultCheck() and then
+   * Partial block movement with
+   * BlockMovementStatus#DN_BLK_STORAGE_MOVEMENT_SUCCESS. Here, first occurrence
+   * is #blockStorageMovementReportedItemsCheck() and then
    * #blocksStorageMovementUnReportedItemsCheck().
    */
   @Test(timeout = 30000)
   public void testPartialBlockMovementShouldBeRetried1() throws Exception {
     Long item = new Long(1234);
-    bsmAttemptedItems.add(new ItemInfo(0L, item), false);
-    bsmAttemptedItems.addResults(
-        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
-            item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
+    List<Block> blocks = new ArrayList<>();
+    blocks.add(new Block(item));
+    blocks.add(new Block(5678L));
+    Long trackID = 0L;
+    bsmAttemptedItems
+        .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks));
+    Block[] blksMovementReport = new Block[1];
+    blksMovementReport[0] = new Block(item);
+    bsmAttemptedItems.addReportedMovedBlocks(blksMovementReport);
 
-    // start block movement result monitor thread
+    // start block movement report monitor thread
     bsmAttemptedItems.start();
     assertTrue("Failed to add to the retry list",
-        checkItemMovedForRetry(item, 5000));
+        checkItemMovedForRetry(trackID, 5000));
     assertEquals("Failed to remove from the attempted list", 0,
         bsmAttemptedItems.getAttemptedItemsCount());
   }
 
   /**
-   * Partial block movement with BlocksStorageMovementResult#SUCCESS. Here,
-   * first occurrence is #blocksStorageMovementUnReportedItemsCheck() and then
-   * #blockStorageMovementResultCheck().
+   * Partial block movement. Here, first occurrence is
+   * #blocksStorageMovementUnReportedItemsCheck() and then
+   * #blockStorageMovementReportedItemsCheck().
    */
   @Test(timeout = 30000)
   public void testPartialBlockMovementShouldBeRetried2() throws Exception {
     Long item = new Long(1234);
-    bsmAttemptedItems.add(new ItemInfo(0L, item), false);
-    bsmAttemptedItems.addResults(
-        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
-            item.longValue(), BlocksStorageMovementResult.Status.SUCCESS)});
+    Long trackID = 0L;
+    List<Block> blocks = new ArrayList<>();
+    blocks.add(new Block(item));
+    bsmAttemptedItems
+        .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks));
+    Block[] blksMovementReport = new Block[1];
+    blksMovementReport[0] = new Block(item);
+    bsmAttemptedItems.addReportedMovedBlocks(blksMovementReport);
 
     Thread.sleep(selfRetryTimeout * 2); // Waiting to get timed out
 
     bsmAttemptedItems.blocksStorageMovementUnReportedItemsCheck();
-    bsmAttemptedItems.blockStorageMovementResultCheck();
+    bsmAttemptedItems.blockStorageMovementReportedItemsCheck();
 
     assertTrue("Failed to add to the retry list",
-        checkItemMovedForRetry(item, 5000));
+        checkItemMovedForRetry(trackID, 5000));
     assertEquals("Failed to remove from the attempted list", 0,
         bsmAttemptedItems.getAttemptedItemsCount());
   }
 
   /**
-   * Partial block movement with only BlocksStorageMovementResult#FAILURE
-   * result and storageMovementAttemptedItems list is empty.
+   * Partial block movement with only BlocksStorageMoveAttemptFinished report
+   * and storageMovementAttemptedItems list is empty.
    */
   @Test(timeout = 30000)
   public void testPartialBlockMovementWithEmptyAttemptedQueue()
       throws Exception {
     Long item = new Long(1234);
-    bsmAttemptedItems.addResults(
-        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
-            item, BlocksStorageMovementResult.Status.FAILURE)});
-    bsmAttemptedItems.blockStorageMovementResultCheck();
+    Long trackID = 0L;
+    List<Block> blocks = new ArrayList<>();
+    blocks.add(new Block(item));
+    bsmAttemptedItems
+        .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks));
+    Block[] blksMovementReport = new Block[1];
+    blksMovementReport[0] = new Block(item);
+    bsmAttemptedItems.addReportedMovedBlocks(blksMovementReport);
     assertFalse(
         "Should not add in queue again if it is not there in"
             + " storageMovementAttemptedItems",
-        checkItemMovedForRetry(item, 5000));
-    assertEquals("Failed to remove from the attempted list", 0,
-        bsmAttemptedItems.getAttemptedItemsCount());
-  }
-
-  /**
-   * Partial block movement with BlocksStorageMovementResult#FAILURE result and
-   * storageMovementAttemptedItems.
-   */
-  @Test(timeout = 30000)
-  public void testPartialBlockMovementShouldBeRetried4() throws Exception {
-    Long item = new Long(1234);
-    bsmAttemptedItems.add(new ItemInfo(0L, item), false);
-    bsmAttemptedItems.addResults(
-        new BlocksStorageMovementResult[]{new BlocksStorageMovementResult(
-            item.longValue(), BlocksStorageMovementResult.Status.FAILURE)});
-    bsmAttemptedItems.blockStorageMovementResultCheck();
-    assertTrue("Failed to add to the retry list",
-        checkItemMovedForRetry(item, 5000));
-    assertEquals("Failed to remove from the attempted list", 0,
+        checkItemMovedForRetry(trackID, 5000));
+    assertEquals("Failed to remove from the attempted list", 1,
         bsmAttemptedItems.getAttemptedItemsCount());
   }
 }

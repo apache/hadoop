@@ -4534,24 +4534,35 @@
 
 <property>
   <name>dfs.storage.policy.satisfier.recheck.timeout.millis</name>
-  <value>300000</value>
+  <value>60000</value>
   <description>
     Blocks storage movements monitor re-check interval in milliseconds.
     This check will verify whether any blocks storage movement results arrived from DN
     and also verify if any of file blocks movements not at all reported to DN
     since dfs.storage.policy.satisfier.self.retry.timeout.
-    The default value is 5 * 60 * 1000 (5 mins)
+    The default value is 1 * 60 * 1000 (1 mins)
   </description>
 </property>
 
 <property>
   <name>dfs.storage.policy.satisfier.self.retry.timeout.millis</name>
-  <value>1800000</value>
+  <value>300000</value>
   <description>
-    If any of file related block movements not at all reported by coordinator datanode,
+    If any of file related block movements not at all reported by datanode,
     then after this timeout(in milliseconds), the item will be added back to movement needed list
     at namenode which will be retried for block movements.
-    The default value is 30 * 60 * 1000 (30 mins)
+    The default value is 5 * 60 * 1000 (5 mins)
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.low.max-streams.preference</name>
+  <value>false</value>
+  <description>
+    If true, blocks to move tasks will share equal ratio of number of highest-priority
+    replication streams (dfs.namenode.replication.max-streams) with pending replica and
+    erasure-coded reconstruction tasks. If false, blocks to move tasks will only use
+    the delta number of replication streams. The default value is false.
   </description>
 </property>
 

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.hadoop.fs.StorageType;
@@ -29,22 +28,15 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
  * given set of blocks to specified target DataNodes to fulfill the block
  * storage policy.
  *
- * Upon receiving this command, this DataNode coordinates all the block movement
- * by passing the details to
+ * Upon receiving this command, this DataNode pass the array of block movement
+ * details to
  * {@link org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker}
- * service. After the block movement this DataNode sends response back to the
- * NameNode about the movement status.
- *
- * The coordinator datanode will use 'trackId' identifier to coordinate the
- * block movement of the given set of blocks. TrackId is a unique identifier
- * that represents a group of blocks. Namenode will generate this unique value
- * and send it to the coordinator datanode along with the
- * BlockStorageMovementCommand. Datanode will monitor the completion of the
- * block movements that grouped under this trackId and notifies Namenode about
- * the completion status.
+ * service. Later, StoragePolicySatisfyWorker will schedule block movement tasks
+ * for these blocks and monitors the completion of each task. After the block
+ * movement attempt is finished(with success or failure) this DataNode will send
+ * response back to NameNode about the block movement attempt finished details.
  */
 public class BlockStorageMovementCommand extends DatanodeCommand {
-  private final long trackID;
   private final String blockPoolId;
   private final Collection<BlockMovingInfo> blockMovingTasks;
 
@@ -53,27 +45,14 @@ public class BlockStorageMovementCommand extends DatanodeCommand {
    *
    * @param action
    *          protocol specific action
-   * @param trackID
-   *          unique identifier to monitor the given set of block movements
-   * @param blockPoolId
-   *          block pool ID
    * @param blockMovingInfos
    *          block to storage info that will be used for movement
    */
-  public BlockStorageMovementCommand(int action, long trackID,
-      String blockPoolId, Collection<BlockMovingInfo> blockMovingInfos) {
+  public BlockStorageMovementCommand(int action, String blockPoolId,
+      Collection<BlockMovingInfo> blockMovingInfos) {
     super(action);
-    this.trackID = trackID;
     this.blockPoolId = blockPoolId;
     this.blockMovingTasks = blockMovingInfos;
-  }
-
-  /**
-   * Returns trackID, which will be used to monitor the block movement assigned
-   * to this coordinator datanode.
-   */
-  public long getTrackID() {
-    return trackID;
   }
 
   /**
@@ -95,33 +74,29 @@ public class BlockStorageMovementCommand extends DatanodeCommand {
    */
   public static class BlockMovingInfo {
     private Block blk;
-    private DatanodeInfo[] sourceNodes;
-    private DatanodeInfo[] targetNodes;
-    private StorageType[] sourceStorageTypes;
-    private StorageType[] targetStorageTypes;
+    private DatanodeInfo sourceNode;
+    private DatanodeInfo targetNode;
+    private StorageType sourceStorageType;
+    private StorageType targetStorageType;
 
     /**
      * Block to storage info constructor.
      *
      * @param block
-     *          block
-     * @param sourceDnInfos
-     *          node that can be the sources of a block move
-     * @param targetDnInfos
-     *          target datanode info
-     * @param srcStorageTypes
+     *          block info
+     * @param sourceDnInfo
+     *          node that can be the source of a block move
+     * @param srcStorageType
      *          type of source storage media
-     * @param targetStorageTypes
-     *          type of destin storage media
      */
-    public BlockMovingInfo(Block block,
-        DatanodeInfo[] sourceDnInfos, DatanodeInfo[] targetDnInfos,
-        StorageType[] srcStorageTypes, StorageType[] targetStorageTypes) {
+    public BlockMovingInfo(Block block, DatanodeInfo sourceDnInfo,
+        DatanodeInfo targetDnInfo, StorageType srcStorageType,
+        StorageType targetStorageType) {
       this.blk = block;
-      this.sourceNodes = sourceDnInfos;
-      this.targetNodes = targetDnInfos;
-      this.sourceStorageTypes = srcStorageTypes;
-      this.targetStorageTypes = targetStorageTypes;
+      this.sourceNode = sourceDnInfo;
+      this.targetNode = targetDnInfo;
+      this.sourceStorageType = srcStorageType;
+      this.targetStorageType = targetStorageType;
     }
 
     public void addBlock(Block block) {
@@ -129,35 +104,33 @@ public class BlockStorageMovementCommand extends DatanodeCommand {
     }
 
     public Block getBlock() {
-      return this.blk;
+      return blk;
     }
 
-    public DatanodeInfo[] getSources() {
-      return sourceNodes;
+    public DatanodeInfo getSource() {
+      return sourceNode;
     }
 
-    public DatanodeInfo[] getTargets() {
-      return targetNodes;
+    public DatanodeInfo getTarget() {
+      return targetNode;
     }
 
-    public StorageType[] getTargetStorageTypes() {
-      return targetStorageTypes;
+    public StorageType getTargetStorageType() {
+      return targetStorageType;
     }
 
-    public StorageType[] getSourceStorageTypes() {
-      return sourceStorageTypes;
+    public StorageType getSourceStorageType() {
+      return sourceStorageType;
     }
 
     @Override
     public String toString() {
       return new StringBuilder().append("BlockMovingInfo(\n  ")
           .append("Moving block: ").append(blk).append(" From: ")
-          .append(Arrays.asList(sourceNodes)).append(" To: [")
-          .append(Arrays.asList(targetNodes)).append("\n  ")
-          .append(" sourceStorageTypes: ")
-          .append(Arrays.toString(sourceStorageTypes))
-          .append(" targetStorageTypes: ")
-          .append(Arrays.toString(targetStorageTypes)).append(")").toString();
+          .append(sourceNode).append(" To: [").append(targetNode).append("\n  ")
+          .append(" sourceStorageType: ").append(sourceStorageType)
+          .append(" targetStorageType: ").append(targetStorageType).append(")")
+          .toString();
     }
   }
 }

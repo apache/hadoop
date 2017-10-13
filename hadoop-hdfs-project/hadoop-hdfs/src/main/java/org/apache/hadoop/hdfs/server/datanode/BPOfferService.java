@@ -799,8 +799,7 @@ class BPOfferService {
       LOG.info("DatanodeCommand action: DNA_BLOCK_STORAGE_MOVEMENT");
       BlockStorageMovementCommand blkSPSCmd = (BlockStorageMovementCommand) cmd;
       dn.getStoragePolicySatisfyWorker().processBlockMovingTasks(
-          blkSPSCmd.getTrackID(), blkSPSCmd.getBlockPoolId(),
-          blkSPSCmd.getBlockMovingTasks());
+          blkSPSCmd.getBlockPoolId(), blkSPSCmd.getBlockMovingTasks());
       break;
     case DatanodeProtocol.DNA_DROP_SPS_WORK_COMMAND:
       LOG.info("DatanodeCommand action: DNA_DROP_SPS_WORK_COMMAND");

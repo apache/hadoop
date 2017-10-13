@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBand
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockMovingInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
@@ -56,11 +57,11 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowPeerRepo
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockStorageMovementCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockStorageMovementProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlocksStorageMovementResultProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlocksStorageMoveAttemptFinishedProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedStorageLocationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
@@ -104,8 +105,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStr
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult.Status;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
@@ -971,59 +971,27 @@ public class PBHelper {
     return SlowDiskReports.create(slowDisksMap);
   }
 
-  public static BlocksStorageMovementResult[] convertBlksMovResults(
-      List<BlocksStorageMovementResultProto> protos) {
-    BlocksStorageMovementResult[] results =
-        new BlocksStorageMovementResult[protos.size()];
-    for (int i = 0; i < protos.size(); i++) {
-      BlocksStorageMovementResultProto resultProto = protos.get(i);
-      BlocksStorageMovementResult.Status status;
-      switch (resultProto.getStatus()) {
-      case SUCCESS:
-        status = Status.SUCCESS;
-        break;
-      case FAILURE:
-        status = Status.FAILURE;
-        break;
-      case IN_PROGRESS:
-        status = Status.IN_PROGRESS;
-        break;
-      default:
-        throw new AssertionError("Unknown status: " + resultProto.getStatus());
-      }
-      results[i] = new BlocksStorageMovementResult(resultProto.getTrackID(),
-          status);
+  public static BlocksStorageMoveAttemptFinished convertBlksMovReport(
+      BlocksStorageMoveAttemptFinishedProto proto) {
+
+    List<BlockProto> blocksList = proto.getBlocksList();
+    Block[] blocks = new Block[blocksList.size()];
+    for (int i = 0; i < blocksList.size(); i++) {
+      BlockProto blkProto = blocksList.get(i);
+      blocks[i] = PBHelperClient.convert(blkProto);
     }
-    return results;
+    return new BlocksStorageMoveAttemptFinished(blocks);
   }
 
-  public static List<BlocksStorageMovementResultProto> convertBlksMovResults(
-      BlocksStorageMovementResult[] blocksMovementResults) {
-    List<BlocksStorageMovementResultProto> blocksMovementResultsProto =
-        new ArrayList<>();
-    BlocksStorageMovementResultProto.Builder builder =
-        BlocksStorageMovementResultProto.newBuilder();
-    for (int i = 0; i < blocksMovementResults.length; i++) {
-      BlocksStorageMovementResult report = blocksMovementResults[i];
-      builder.setTrackID(report.getTrackId());
-      BlocksStorageMovementResultProto.Status status;
-      switch (report.getStatus()) {
-      case SUCCESS:
-        status = BlocksStorageMovementResultProto.Status.SUCCESS;
-        break;
-      case FAILURE:
-        status = BlocksStorageMovementResultProto.Status.FAILURE;
-        break;
-      case IN_PROGRESS:
-        status = BlocksStorageMovementResultProto.Status.IN_PROGRESS;
-        break;
-      default:
-        throw new AssertionError("Unknown status: " + report.getStatus());
-      }
-      builder.setStatus(status);
-      blocksMovementResultsProto.add(builder.build());
+  public static BlocksStorageMoveAttemptFinishedProto convertBlksMovReport(
+      BlocksStorageMoveAttemptFinished blocksMoveAttemptFinished) {
+    BlocksStorageMoveAttemptFinishedProto.Builder builder =
+        BlocksStorageMoveAttemptFinishedProto.newBuilder();
+    Block[] blocks = blocksMoveAttemptFinished.getBlocks();
+    for (Block block : blocks) {
+      builder.addBlocks(PBHelperClient.convert(block));
     }
-    return blocksMovementResultsProto;
+    return builder.build();
   }
 
   public static JournalInfo convert(JournalInfoProto info) {
@@ -1211,34 +1179,34 @@ public class PBHelper {
     BlockStorageMovementCommandProto.Builder builder =
         BlockStorageMovementCommandProto.newBuilder();
 
-    builder.setTrackID(blkStorageMovementCmd.getTrackID());
     builder.setBlockPoolId(blkStorageMovementCmd.getBlockPoolId());
     Collection<BlockMovingInfo> blockMovingInfos = blkStorageMovementCmd
         .getBlockMovingTasks();
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
-      builder.addBlockStorageMovement(
-          convertBlockMovingInfo(blkMovingInfo));
+      builder.addBlockMovingInfo(convertBlockMovingInfo(blkMovingInfo));
     }
     return builder.build();
   }
 
-  private static BlockStorageMovementProto convertBlockMovingInfo(
+  private static BlockMovingInfoProto convertBlockMovingInfo(
       BlockMovingInfo blkMovingInfo) {
-    BlockStorageMovementProto.Builder builder = BlockStorageMovementProto
+    BlockMovingInfoProto.Builder builder = BlockMovingInfoProto
         .newBuilder();
     builder.setBlock(PBHelperClient.convert(blkMovingInfo.getBlock()));
 
-    DatanodeInfo[] sourceDnInfos = blkMovingInfo.getSources();
-    builder.setSourceDnInfos(convertToDnInfosProto(sourceDnInfos));
+    DatanodeInfo sourceDnInfo = blkMovingInfo.getSource();
+    builder.setSourceDnInfo(PBHelperClient.convert(sourceDnInfo));
 
-    DatanodeInfo[] targetDnInfos = blkMovingInfo.getTargets();
-    builder.setTargetDnInfos(convertToDnInfosProto(targetDnInfos));
+    DatanodeInfo targetDnInfo = blkMovingInfo.getTarget();
+    builder.setTargetDnInfo(PBHelperClient.convert(targetDnInfo));
 
-    StorageType[] sourceStorageTypes = blkMovingInfo.getSourceStorageTypes();
-    builder.setSourceStorageTypes(convertStorageTypesProto(sourceStorageTypes));
+    StorageType sourceStorageType = blkMovingInfo.getSourceStorageType();
+    builder.setSourceStorageType(
+        PBHelperClient.convertStorageType(sourceStorageType));
 
-    StorageType[] targetStorageTypes = blkMovingInfo.getTargetStorageTypes();
-    builder.setTargetStorageTypes(convertStorageTypesProto(targetStorageTypes));
+    StorageType targetStorageType = blkMovingInfo.getTargetStorageType();
+    builder.setTargetStorageType(
+        PBHelperClient.convertStorageType(targetStorageType));
 
     return builder.build();
   }
@@ -1246,42 +1214,38 @@ public class PBHelper {
   private static DatanodeCommand convert(
       BlockStorageMovementCommandProto blkStorageMovementCmdProto) {
     Collection<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
-    List<BlockStorageMovementProto> blkSPSatisfyList =
-        blkStorageMovementCmdProto.getBlockStorageMovementList();
-    for (BlockStorageMovementProto blkSPSatisfy : blkSPSatisfyList) {
+    List<BlockMovingInfoProto> blkSPSatisfyList =
+        blkStorageMovementCmdProto.getBlockMovingInfoList();
+    for (BlockMovingInfoProto blkSPSatisfy : blkSPSatisfyList) {
       blockMovingInfos.add(convertBlockMovingInfo(blkSPSatisfy));
     }
     return new BlockStorageMovementCommand(
         DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT,
-        blkStorageMovementCmdProto.getTrackID(),
         blkStorageMovementCmdProto.getBlockPoolId(), blockMovingInfos);
   }
 
   private static BlockMovingInfo convertBlockMovingInfo(
-      BlockStorageMovementProto blockStoragePolicySatisfyProto) {
-    BlockProto blockProto = blockStoragePolicySatisfyProto.getBlock();
+      BlockMovingInfoProto blockStorageMovingInfoProto) {
+    BlockProto blockProto = blockStorageMovingInfoProto.getBlock();
     Block block = PBHelperClient.convert(blockProto);
 
-    DatanodeInfosProto sourceDnInfosProto = blockStoragePolicySatisfyProto
-        .getSourceDnInfos();
-    DatanodeInfo[] sourceDnInfos = PBHelperClient.convert(sourceDnInfosProto);
+    DatanodeInfoProto sourceDnInfoProto = blockStorageMovingInfoProto
+        .getSourceDnInfo();
+    DatanodeInfo sourceDnInfo = PBHelperClient.convert(sourceDnInfoProto);
 
-    DatanodeInfosProto targetDnInfosProto = blockStoragePolicySatisfyProto
-        .getTargetDnInfos();
-    DatanodeInfo[] targetDnInfos = PBHelperClient.convert(targetDnInfosProto);
+    DatanodeInfoProto targetDnInfoProto = blockStorageMovingInfoProto
+        .getTargetDnInfo();
+    DatanodeInfo targetDnInfo = PBHelperClient.convert(targetDnInfoProto);
+    StorageTypeProto srcStorageTypeProto = blockStorageMovingInfoProto
+        .getSourceStorageType();
+    StorageType srcStorageType = PBHelperClient
+        .convertStorageType(srcStorageTypeProto);
 
-    StorageTypesProto srcStorageTypesProto = blockStoragePolicySatisfyProto
-        .getSourceStorageTypes();
-    StorageType[] srcStorageTypes = PBHelperClient.convertStorageTypes(
-        srcStorageTypesProto.getStorageTypesList(),
-        srcStorageTypesProto.getStorageTypesList().size());
-
-    StorageTypesProto targetStorageTypesProto = blockStoragePolicySatisfyProto
-        .getTargetStorageTypes();
-    StorageType[] targetStorageTypes = PBHelperClient.convertStorageTypes(
-        targetStorageTypesProto.getStorageTypesList(),
-        targetStorageTypesProto.getStorageTypesList().size());
-    return new BlockMovingInfo(block, sourceDnInfos, targetDnInfos,
-        srcStorageTypes, targetStorageTypes);
+    StorageTypeProto targetStorageTypeProto = blockStorageMovingInfoProto
+        .getTargetStorageType();
+    StorageType targetStorageType = PBHelperClient
+        .convertStorageType(targetStorageTypeProto);
+    return new BlockMovingInfo(block, sourceDnInfo, targetDnInfo,
+        srcStorageType, targetStorageType);
   }
 }

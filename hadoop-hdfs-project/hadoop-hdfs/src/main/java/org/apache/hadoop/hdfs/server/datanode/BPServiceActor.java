@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -50,7 +51,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -513,8 +514,11 @@ class BPServiceActor implements Runnable {
             SlowDiskReports.create(dn.getDiskMetrics().getDiskOutliersStats()) :
             SlowDiskReports.EMPTY_REPORT;
 
-    BlocksStorageMovementResult[] blksMovementResults =
-        getBlocksMovementResults();
+    // Get the blocks storage move attempt finished blocks
+    List<Block> results = dn.getStoragePolicySatisfyWorker()
+        .getBlocksMovementsStatusHandler().getMoveAttemptFinishedBlocks();
+    BlocksStorageMoveAttemptFinished storageMoveAttemptFinishedBlks =
+        getStorageMoveAttemptFinishedBlocks(results);
 
     HeartbeatResponse response = bpNamenode.sendHeartbeat(bpRegistration,
         reports,
@@ -527,7 +531,7 @@ class BPServiceActor implements Runnable {
         requestBlockReportLease,
         slowPeers,
         slowDisks,
-        blksMovementResults);
+        storageMoveAttemptFinishedBlks);
 
     if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
@@ -537,20 +541,23 @@ class BPServiceActor implements Runnable {
     // Remove the blocks movement results after successfully transferring
     // to namenode.
     dn.getStoragePolicySatisfyWorker().getBlocksMovementsStatusHandler()
-        .remove(blksMovementResults);
+        .remove(results);
 
     return response;
   }
 
-  private BlocksStorageMovementResult[] getBlocksMovementResults() {
-    List<BlocksStorageMovementResult> trackIdVsMovementStatus = dn
-        .getStoragePolicySatisfyWorker().getBlocksMovementsStatusHandler()
-        .getBlksMovementResults();
-    BlocksStorageMovementResult[] blksMovementResult =
-        new BlocksStorageMovementResult[trackIdVsMovementStatus.size()];
-    trackIdVsMovementStatus.toArray(blksMovementResult);
+  private BlocksStorageMoveAttemptFinished getStorageMoveAttemptFinishedBlocks(
+      List<Block> finishedBlks) {
 
-    return blksMovementResult;
+    if (finishedBlks.isEmpty()) {
+      return null;
+    }
+
+    // Create BlocksStorageMoveAttemptFinished with currently finished
+    // blocks
+    Block[] blockList = new Block[finishedBlks.size()];
+    finishedBlks.toArray(blockList);
+    return new BlocksStorageMoveAttemptFinished(blockList);
   }
 
   @VisibleForTesting

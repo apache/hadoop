@@ -21,14 +21,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementResult;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementAttemptFinished;
 import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlocksMovementsStatusHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,12 +41,12 @@ import org.slf4j.LoggerFactory;
 public class BlockStorageMovementTracker implements Runnable {
   private static final Logger LOG = LoggerFactory
       .getLogger(BlockStorageMovementTracker.class);
-  private final CompletionService<BlockMovementResult> moverCompletionService;
+  private final CompletionService<BlockMovementAttemptFinished> moverCompletionService;
   private final BlocksMovementsStatusHandler blksMovementsStatusHandler;
 
-  // Keeps the information - trackID vs its list of blocks
-  private final Map<Long, List<Future<BlockMovementResult>>> moverTaskFutures;
-  private final Map<Long, List<BlockMovementResult>> movementResults;
+  // Keeps the information - block vs its list of future move tasks
+  private final Map<Block, List<Future<BlockMovementAttemptFinished>>> moverTaskFutures;
+  private final Map<Block, List<BlockMovementAttemptFinished>> movementResults;
 
   private volatile boolean running = true;
 
@@ -59,7 +59,7 @@ public class BlockStorageMovementTracker implements Runnable {
    *          blocks movements status handler
    */
   public BlockStorageMovementTracker(
-      CompletionService<BlockMovementResult> moverCompletionService,
+      CompletionService<BlockMovementAttemptFinished> moverCompletionService,
       BlocksMovementsStatusHandler handler) {
     this.moverCompletionService = moverCompletionService;
     this.moverTaskFutures = new HashMap<>();
@@ -82,32 +82,33 @@ public class BlockStorageMovementTracker implements Runnable {
         }
       }
       try {
-        Future<BlockMovementResult> future = moverCompletionService.take();
+        Future<BlockMovementAttemptFinished> future =
+            moverCompletionService.take();
         if (future != null) {
-          BlockMovementResult result = future.get();
+          BlockMovementAttemptFinished result = future.get();
           LOG.debug("Completed block movement. {}", result);
-          long trackId = result.getTrackId();
-          List<Future<BlockMovementResult>> blocksMoving = moverTaskFutures
-              .get(trackId);
+          Block block = result.getBlock();
+          List<Future<BlockMovementAttemptFinished>> blocksMoving =
+              moverTaskFutures.get(block);
           if (blocksMoving == null) {
-            LOG.warn("Future task doesn't exist for trackId " + trackId);
+            LOG.warn("Future task doesn't exist for block : {} ", block);
             continue;
           }
           blocksMoving.remove(future);
 
-          List<BlockMovementResult> resultPerTrackIdList =
-              addMovementResultToTrackIdList(result);
+          List<BlockMovementAttemptFinished> resultPerTrackIdList =
+              addMovementResultToBlockIdList(result);
 
           // Completed all the scheduled blocks movement under this 'trackId'.
-          if (blocksMoving.isEmpty() || moverTaskFutures.get(trackId) == null) {
+          if (blocksMoving.isEmpty() || moverTaskFutures.get(block) == null) {
             synchronized (moverTaskFutures) {
-              moverTaskFutures.remove(trackId);
+              moverTaskFutures.remove(block);
             }
             if (running) {
               // handle completed or inprogress blocks movements per trackId.
               blksMovementsStatusHandler.handle(resultPerTrackIdList);
             }
-            movementResults.remove(trackId);
+            movementResults.remove(block);
           }
         }
       } catch (InterruptedException e) {
@@ -123,38 +124,39 @@ public class BlockStorageMovementTracker implements Runnable {
     }
   }
 
-  private List<BlockMovementResult> addMovementResultToTrackIdList(
-      BlockMovementResult result) {
-    long trackId = result.getTrackId();
-    List<BlockMovementResult> perTrackIdList;
+  private List<BlockMovementAttemptFinished> addMovementResultToBlockIdList(
+      BlockMovementAttemptFinished result) {
+    Block block = result.getBlock();
+    List<BlockMovementAttemptFinished> perBlockIdList;
     synchronized (movementResults) {
-      perTrackIdList = movementResults.get(trackId);
-      if (perTrackIdList == null) {
-        perTrackIdList = new ArrayList<>();
-        movementResults.put(trackId, perTrackIdList);
+      perBlockIdList = movementResults.get(block);
+      if (perBlockIdList == null) {
+        perBlockIdList = new ArrayList<>();
+        movementResults.put(block, perBlockIdList);
       }
-      perTrackIdList.add(result);
+      perBlockIdList.add(result);
     }
-    return perTrackIdList;
+    return perBlockIdList;
   }
 
   /**
    * Add future task to the tracking list to check the completion status of the
    * block movement.
    *
-   * @param trackID
-   *          tracking Id
+   * @param blockID
+   *          block identifier
    * @param futureTask
    *          future task used for moving the respective block
    */
-  void addBlock(long trackID, Future<BlockMovementResult> futureTask) {
+  void addBlock(Block block,
+      Future<BlockMovementAttemptFinished> futureTask) {
     synchronized (moverTaskFutures) {
-      List<Future<BlockMovementResult>> futures = moverTaskFutures
-          .get(Long.valueOf(trackID));
+      List<Future<BlockMovementAttemptFinished>> futures =
+          moverTaskFutures.get(block);
       // null for the first task
       if (futures == null) {
         futures = new ArrayList<>();
-        moverTaskFutures.put(trackID, futures);
+        moverTaskFutures.put(block, futures);
       }
       futures.add(futureTask);
       // Notify waiting tracker thread about the newly added tasks.
@@ -171,16 +173,6 @@ public class BlockStorageMovementTracker implements Runnable {
     }
     synchronized (movementResults) {
       movementResults.clear();
-    }
-  }
-
-  /**
-   * @return the list of trackIds which are still waiting to complete all the
-   *         scheduled blocks movements.
-   */
-  Set<Long> getInProgressTrackIds() {
-    synchronized (moverTaskFutures) {
-      return moverTaskFutures.keySet();
     }
   }
 

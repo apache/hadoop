@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,8 +36,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -180,11 +178,10 @@ public class TestStoragePolicySatisfyWorker {
           lb.getBlock().getLocalBlock(), lb.getLocations()[0], targetDnInfo,
           lb.getStorageTypes()[0], StorageType.ARCHIVE);
       blockMovingInfos.add(blockMovingInfo);
-      INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
-      worker.processBlockMovingTasks(inode.getId(),
-          cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
+      worker.processBlockMovingTasks(cluster.getNamesystem().getBlockPoolId(),
+          blockMovingInfos);
 
-      waitForBlockMovementCompletion(worker, inode.getId(), 1, 30000);
+      waitForBlockMovementCompletion(worker, 1, 30000);
     } finally {
       worker.stop();
     }
@@ -226,50 +223,42 @@ public class TestStoragePolicySatisfyWorker {
                 locatedBlock.getStorageTypes()[0], StorageType.ARCHIVE);
         blockMovingInfos.add(blockMovingInfo);
       }
-      INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
-      worker.processBlockMovingTasks(inode.getId(),
-          cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
+      worker.processBlockMovingTasks(cluster.getNamesystem().getBlockPoolId(),
+          blockMovingInfos);
       // Wait till results queue build up
-      waitForBlockMovementResult(worker, inode.getId(), 30000);
+      waitForBlockMovementResult(worker, 30000);
       worker.dropSPSWork();
       assertTrue(worker.getBlocksMovementsStatusHandler()
-          .getBlksMovementResults().size() == 0);
+          .getMoveAttemptFinishedBlocks().size() == 0);
     } finally {
       worker.stop();
     }
   }
 
   private void waitForBlockMovementResult(
-      final StoragePolicySatisfyWorker worker, final long inodeId, int timeout)
-          throws Exception {
+      final StoragePolicySatisfyWorker worker, int timeout) throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        List<BlocksStorageMovementResult> completedBlocks = worker
-            .getBlocksMovementsStatusHandler().getBlksMovementResults();
+        List<Block> completedBlocks = worker.getBlocksMovementsStatusHandler()
+            .getMoveAttemptFinishedBlocks();
         return completedBlocks.size() > 0;
       }
     }, 100, timeout);
   }
 
   private void waitForBlockMovementCompletion(
-      final StoragePolicySatisfyWorker worker, final long inodeId,
-      int expectedFailedItemsCount, int timeout) throws Exception {
+      final StoragePolicySatisfyWorker worker,
+      int expectedFinishedItemsCount, int timeout) throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        List<BlocksStorageMovementResult> completedBlocks = worker
-            .getBlocksMovementsStatusHandler().getBlksMovementResults();
-        int failedCount = 0;
-        for (BlocksStorageMovementResult blkMovementResult : completedBlocks) {
-          if (blkMovementResult.getStatus() ==
-              BlocksStorageMovementResult.Status.FAILURE) {
-            failedCount++;
-          }
-        }
+        List<Block> completedBlocks = worker.getBlocksMovementsStatusHandler()
+            .getMoveAttemptFinishedBlocks();
+        int finishedCount = completedBlocks.size();
         LOG.info("Block movement completed count={}, expected={} and actual={}",
-            completedBlocks.size(), expectedFailedItemsCount, failedCount);
-        return expectedFailedItemsCount == failedCount;
+            completedBlocks.size(), expectedFinishedItemsCount, finishedCount);
+        return expectedFinishedItemsCount == finishedCount;
       }
     }, 100, timeout);
   }
@@ -304,8 +293,7 @@ public class TestStoragePolicySatisfyWorker {
   private BlockMovingInfo prepareBlockMovingInfo(Block block,
       DatanodeInfo src, DatanodeInfo destin, StorageType storageType,
       StorageType targetStorageType) {
-    return new BlockMovingInfo(block, new DatanodeInfo[] {src},
-        new DatanodeInfo[] {destin}, new StorageType[] {storageType},
-        new StorageType[] {targetStorageType});
+    return new BlockMovingInfo(block, src, destin, storageType,
+        targetStorageType);
   }
 }

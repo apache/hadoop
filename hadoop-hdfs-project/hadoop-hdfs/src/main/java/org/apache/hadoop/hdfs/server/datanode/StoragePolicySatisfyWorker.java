@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.protocolPB.PBHelperClient.vintPrefixed;
-import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -32,9 +31,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
@@ -62,7 +59,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -89,13 +85,10 @@ public class StoragePolicySatisfyWorker {
 
   private final int moverThreads;
   private final ExecutorService moveExecutor;
-  private final CompletionService<BlockMovementResult> moverCompletionService;
+  private final CompletionService<BlockMovementAttemptFinished> moverCompletionService;
   private final BlocksMovementsStatusHandler handler;
   private final BlockStorageMovementTracker movementTracker;
   private Daemon movementTrackerThread;
-
-  private long inprogressTrackIdsCheckInterval = 30 * 1000; // 30seconds.
-  private long nextInprogressRecheckTime;
 
   public StoragePolicySatisfyWorker(Configuration conf, DataNode datanode) {
     this.datanode = datanode;
@@ -110,16 +103,6 @@ public class StoragePolicySatisfyWorker {
         handler);
     movementTrackerThread = new Daemon(movementTracker);
     movementTrackerThread.setName("BlockStorageMovementTracker");
-
-    // Interval to check that the inprogress trackIds. The time interval is
-    // proportional o the heart beat interval time period.
-    final long heartbeatIntervalSeconds = conf.getTimeDuration(
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
-    inprogressTrackIdsCheckInterval = 5 * heartbeatIntervalSeconds;
-    // update first inprogress recheck time to a future time stamp.
-    nextInprogressRecheckTime = monotonicNow()
-        + inprogressTrackIdsCheckInterval;
 
     // TODO: Needs to manage the number of concurrent moves per DataNode.
   }
@@ -186,30 +169,26 @@ public class StoragePolicySatisfyWorker {
    * separate thread. Each task will move the block replica to the target node &
    * wait for the completion.
    *
-   * @param trackID
-   *          unique tracking identifier
-   * @param blockPoolID
-   *          block pool ID
+   * @param blockPoolID block pool identifier
+   *
    * @param blockMovingInfos
    *          list of blocks to be moved
    */
-  public void processBlockMovingTasks(long trackID, String blockPoolID,
-      Collection<BlockMovingInfo> blockMovingInfos) {
+  public void processBlockMovingTasks(final String blockPoolID,
+      final Collection<BlockMovingInfo> blockMovingInfos) {
     LOG.debug("Received BlockMovingTasks {}", blockMovingInfos);
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
-      assert blkMovingInfo.getSources().length == blkMovingInfo
-          .getTargets().length;
-      for (int i = 0; i < blkMovingInfo.getSources().length; i++) {
-        DatanodeInfo target = blkMovingInfo.getTargets()[i];
-        BlockMovingTask blockMovingTask = new BlockMovingTask(
-            trackID, blockPoolID, blkMovingInfo.getBlock(),
-            blkMovingInfo.getSources()[i], target,
-            blkMovingInfo.getSourceStorageTypes()[i],
-            blkMovingInfo.getTargetStorageTypes()[i]);
-        Future<BlockMovementResult> moveCallable = moverCompletionService
-            .submit(blockMovingTask);
-        movementTracker.addBlock(trackID, moveCallable);
-      }
+      StorageType sourceStorageType = blkMovingInfo.getSourceStorageType();
+      StorageType targetStorageType = blkMovingInfo.getTargetStorageType();
+      assert sourceStorageType != targetStorageType
+          : "Source and Target storage type shouldn't be same!";
+      BlockMovingTask blockMovingTask = new BlockMovingTask(blockPoolID,
+          blkMovingInfo.getBlock(), blkMovingInfo.getSource(),
+          blkMovingInfo.getTarget(), sourceStorageType, targetStorageType);
+      Future<BlockMovementAttemptFinished> moveCallable = moverCompletionService
+          .submit(blockMovingTask);
+      movementTracker.addBlock(blkMovingInfo.getBlock(),
+          moveCallable);
     }
   }
 
@@ -217,8 +196,7 @@ public class StoragePolicySatisfyWorker {
    * This class encapsulates the process of moving the block replica to the
    * given target and wait for the response.
    */
-  private class BlockMovingTask implements Callable<BlockMovementResult> {
-    private final long trackID;
+  private class BlockMovingTask implements Callable<BlockMovementAttemptFinished> {
     private final String blockPoolID;
     private final Block block;
     private final DatanodeInfo source;
@@ -226,10 +204,9 @@ public class StoragePolicySatisfyWorker {
     private final StorageType srcStorageType;
     private final StorageType targetStorageType;
 
-    BlockMovingTask(long trackID, String blockPoolID, Block block,
+    BlockMovingTask(String blockPoolID, Block block,
         DatanodeInfo source, DatanodeInfo target,
         StorageType srcStorageType, StorageType targetStorageType) {
-      this.trackID = trackID;
       this.blockPoolID = blockPoolID;
       this.block = block;
       this.source = source;
@@ -239,23 +216,26 @@ public class StoragePolicySatisfyWorker {
     }
 
     @Override
-    public BlockMovementResult call() {
+    public BlockMovementAttemptFinished call() {
       BlockMovementStatus status = moveBlock();
-      return new BlockMovementResult(trackID, block.getBlockId(), target,
-          status);
+      return new BlockMovementAttemptFinished(block, source, target, status);
     }
 
     private BlockMovementStatus moveBlock() {
       LOG.info("Start moving block:{} from src:{} to destin:{} to satisfy "
-              + "storageType, sourceStoragetype:{} and destinStoragetype:{}",
+          + "storageType, sourceStoragetype:{} and destinStoragetype:{}",
           block, source, target, srcStorageType, targetStorageType);
       Socket sock = null;
       DataOutputStream out = null;
       DataInputStream in = null;
       try {
+        datanode.incrementXmitsInProgress();
+
         ExtendedBlock extendedBlock = new ExtendedBlock(blockPoolID, block);
         DNConf dnConf = datanode.getDnConf();
-        String dnAddr = target.getXferAddr(dnConf.getConnectToDnViaHostname());
+
+        String dnAddr = datanode.getDatanodeId()
+            .getXferAddr(dnConf.getConnectToDnViaHostname());
         sock = datanode.newSocket();
         NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr),
             dnConf.getSocketTimeout());
@@ -297,9 +277,10 @@ public class StoragePolicySatisfyWorker {
         LOG.warn(
             "Failed to move block:{} from src:{} to destin:{} to satisfy "
                 + "storageType:{}",
-            block, source, target, targetStorageType, e);
+                block, source, target, targetStorageType, e);
         return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE;
       } finally {
+        datanode.decrementXmitsInProgress();
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
         IOUtils.closeSocket(sock);
@@ -357,29 +338,25 @@ public class StoragePolicySatisfyWorker {
   }
 
   /**
-   * This class represents result from a block movement task. This will have the
+   * This class represents status from a block movement task. This will have the
    * information of the task which was successful or failed due to errors.
    */
-  static class BlockMovementResult {
-    private final long trackId;
-    private final long blockId;
+  static class BlockMovementAttemptFinished {
+    private final Block block;
+    private final DatanodeInfo src;
     private final DatanodeInfo target;
     private final BlockMovementStatus status;
 
-    BlockMovementResult(long trackId, long blockId,
+    BlockMovementAttemptFinished(Block block, DatanodeInfo src,
         DatanodeInfo target, BlockMovementStatus status) {
-      this.trackId = trackId;
-      this.blockId = blockId;
+      this.block = block;
+      this.src = src;
       this.target = target;
       this.status = status;
     }
 
-    long getTrackId() {
-      return trackId;
-    }
-
-    long getBlockId() {
-      return blockId;
+    Block getBlock() {
+      return block;
     }
 
     BlockMovementStatus getStatus() {
@@ -388,99 +365,79 @@ public class StoragePolicySatisfyWorker {
 
     @Override
     public String toString() {
-      return new StringBuilder().append("Block movement result(\n  ")
-          .append("track id: ").append(trackId).append(" block id: ")
-          .append(blockId).append(" target node: ").append(target)
+      return new StringBuilder().append("Block movement attempt finished(\n  ")
+          .append(" block : ")
+          .append(block).append(" src node: ").append(src)
+          .append(" target node: ").append(target)
           .append(" movement status: ").append(status).append(")").toString();
     }
   }
 
   /**
    * Blocks movements status handler, which is used to collect details of the
-   * completed or inprogress list of block movements and this status(success or
-   * failure or inprogress) will be send to the namenode via heartbeat.
+   * completed block movements and it will send these attempted finished(with
+   * success or failure) blocks to the namenode via heartbeat.
    */
-  class BlocksMovementsStatusHandler {
-    private final List<BlocksStorageMovementResult> trackIdVsMovementStatus =
+  public static class BlocksMovementsStatusHandler {
+    private final List<Block> blockIdVsMovementStatus =
         new ArrayList<>();
 
     /**
-     * Collect all the block movement results. Later this will be send to
-     * namenode via heart beat.
+     * Collect all the storage movement attempt finished blocks. Later this will
+     * be send to namenode via heart beat.
      *
-     * @param results
-     *          result of all the block movements per trackId
+     * @param moveAttemptFinishedBlks
+     *          set of storage movement attempt finished blocks
      */
-    void handle(List<BlockMovementResult> resultsPerTrackId) {
-      BlocksStorageMovementResult.Status status =
-          BlocksStorageMovementResult.Status.SUCCESS;
-      long trackId = -1;
-      for (BlockMovementResult blockMovementResult : resultsPerTrackId) {
-        trackId = blockMovementResult.getTrackId();
-        if (blockMovementResult.status ==
-            BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE) {
-          status = BlocksStorageMovementResult.Status.FAILURE;
-          // If any of the block movement is failed, then mark as failure so
-          // that namenode can take a decision to retry the blocks associated to
-          // the given trackId.
-          break;
-        }
-      }
+    void handle(List<BlockMovementAttemptFinished> moveAttemptFinishedBlks) {
+      List<Block> blocks = new ArrayList<>();
 
-      // Adding to the tracking results list. Later this will be send to
+      for (BlockMovementAttemptFinished item : moveAttemptFinishedBlks) {
+        blocks.add(item.getBlock());
+      }
+      // Adding to the tracking report list. Later this will be send to
       // namenode via datanode heartbeat.
-      synchronized (trackIdVsMovementStatus) {
-        trackIdVsMovementStatus.add(
-            new BlocksStorageMovementResult(trackId, status));
+      synchronized (blockIdVsMovementStatus) {
+        blockIdVsMovementStatus.addAll(blocks);
       }
     }
 
     /**
-     * @return unmodifiable list of blocks storage movement results.
+     * @return unmodifiable list of storage movement attempt finished blocks.
      */
-    List<BlocksStorageMovementResult> getBlksMovementResults() {
-      List<BlocksStorageMovementResult> movementResults = new ArrayList<>();
-      // 1. Adding all the completed trackids.
-      synchronized (trackIdVsMovementStatus) {
-        if (trackIdVsMovementStatus.size() > 0) {
-          movementResults = Collections
-              .unmodifiableList(trackIdVsMovementStatus);
+    List<Block> getMoveAttemptFinishedBlocks() {
+      List<Block> moveAttemptFinishedBlks = new ArrayList<>();
+      // 1. Adding all the completed block ids.
+      synchronized (blockIdVsMovementStatus) {
+        if (blockIdVsMovementStatus.size() > 0) {
+          moveAttemptFinishedBlks = Collections
+              .unmodifiableList(blockIdVsMovementStatus);
         }
       }
-      // 2. Adding the in progress track ids after those which are completed.
-      Set<Long> inProgressTrackIds = getInProgressTrackIds();
-      for (Long trackId : inProgressTrackIds) {
-        movementResults.add(new BlocksStorageMovementResult(trackId,
-            BlocksStorageMovementResult.Status.IN_PROGRESS));
-      }
-      return movementResults;
+      return moveAttemptFinishedBlks;
     }
 
     /**
-     * Remove the blocks storage movement results.
+     * Remove the storage movement attempt finished blocks from the tracking
+     * list.
      *
-     * @param results
-     *          set of blocks storage movement results
+     * @param moveAttemptFinishedBlks
+     *          set of storage movement attempt finished blocks
      */
-    void remove(BlocksStorageMovementResult[] results) {
-      if (results != null) {
-        synchronized (trackIdVsMovementStatus) {
-          for (BlocksStorageMovementResult blocksMovementResult : results) {
-            trackIdVsMovementStatus.remove(blocksMovementResult);
-          }
-        }
+    void remove(List<Block> moveAttemptFinishedBlks) {
+      if (moveAttemptFinishedBlks != null) {
+        blockIdVsMovementStatus.removeAll(moveAttemptFinishedBlks);
       }
     }
 
     /**
-     * Clear the trackID vs movement status tracking map.
+     * Clear the blockID vs movement status tracking map.
      */
     void removeAll() {
-      synchronized (trackIdVsMovementStatus) {
-        trackIdVsMovementStatus.clear();
+      synchronized (blockIdVsMovementStatus) {
+        blockIdVsMovementStatus.clear();
       }
     }
-
   }
 
   @VisibleForTesting
@@ -497,24 +454,5 @@ public class StoragePolicySatisfyWorker {
         + " be scheduled.");
     movementTracker.removeAll();
     handler.removeAll();
-  }
-
-  /**
-   * Gets list of trackids which are inprogress. Will do collection periodically
-   * on 'dfs.datanode.storage.policy.satisfier.worker.inprogress.recheck.time.
-   * millis' interval.
-   *
-   * @return collection of trackids which are inprogress
-   */
-  private Set<Long> getInProgressTrackIds() {
-    Set<Long> trackIds = new HashSet<>();
-    long now = monotonicNow();
-    if (nextInprogressRecheckTime >= now) {
-      trackIds = movementTracker.getInProgressTrackIds();
-
-      // schedule next re-check interval
-      nextInprogressRecheckTime = now + inprogressTrackIdsCheckInterval;
-    }
-    return trackIds;
   }
 }

@@ -266,7 +266,7 @@ import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager;
-import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -3927,7 +3927,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
       @Nonnull SlowDiskReports slowDisks,
-      BlocksStorageMovementResult[] blksMovementResults) throws IOException {
+      BlocksStorageMoveAttemptFinished blksMovementsFinished)
+          throws IOException {
     readLock();
     try {
       //get datanode commands
@@ -3948,11 +3949,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (!sps.isRunning()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(
-                "Storage policy satisfier is not running. So, ignoring block "
-                    + "storage movement results sent by co-ordinator datanode");
+                "Storage policy satisfier is not running. So, ignoring storage"
+                    + "  movement attempt finished block info sent by DN");
           }
         } else {
-          sps.handleBlocksStorageMovementResults(blksMovementResults);
+          sps.handleStorageMovementAttemptFinishedBlks(blksMovementsFinished);
         }
       }
 

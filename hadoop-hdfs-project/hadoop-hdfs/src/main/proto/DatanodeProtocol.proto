@@ -162,9 +162,8 @@ message BlockECReconstructionCommandProto {
  * Block storage movement command
  */
 message BlockStorageMovementCommandProto {
-  required uint64 trackID = 1;
-  required string blockPoolId = 2;
-  repeated BlockStorageMovementProto blockStorageMovement = 3;
+  required string blockPoolId = 1;
+  repeated BlockMovingInfoProto blockMovingInfo = 2;
 }
 
 /**
@@ -177,25 +176,20 @@ message DropSPSWorkCommandProto {
 /**
  * Block storage movement information
  */
-message BlockStorageMovementProto {
+message BlockMovingInfoProto {
   required BlockProto block = 1;
-  required DatanodeInfosProto sourceDnInfos = 2;
-  required DatanodeInfosProto targetDnInfos = 3;
-  required StorageTypesProto sourceStorageTypes = 4;
-  required StorageTypesProto targetStorageTypes = 5;
+  required DatanodeInfoProto sourceDnInfo = 2;
+  required DatanodeInfoProto targetDnInfo = 3;
+  required StorageTypeProto sourceStorageType = 4;
+  required StorageTypeProto targetStorageType = 5;
 }
 
 /**
- * Movement status of the set of blocks associated to a trackId.
+ * Blocks for which storage movements has been attempted and finished
+ * with either success or failure.
  */
-message BlocksStorageMovementResultProto {
-  enum Status {
-    SUCCESS = 1; // block movement succeeded
-    FAILURE = 2; // block movement failed and needs to retry
-    IN_PROGRESS = 3; // block movement is still in progress
-  }
-  required uint64 trackID = 1;
-  required Status status = 2;
+message BlocksStorageMoveAttemptFinishedProto {
+  repeated BlockProto blocks = 1;
 }
 
 /**
@@ -255,7 +249,7 @@ message HeartbeatRequestProto {
   optional bool requestFullBlockReportLease = 9 [ default = false ];
   repeated SlowPeerReportProto slowPeers = 10;
   repeated SlowDiskReportProto slowDisks = 11;
-  repeated BlocksStorageMovementResultProto blksMovementResults = 12;
+  optional BlocksStorageMoveAttemptFinishedProto storageMoveAttemptFinishedBlks = 12;
 }
 
 /**

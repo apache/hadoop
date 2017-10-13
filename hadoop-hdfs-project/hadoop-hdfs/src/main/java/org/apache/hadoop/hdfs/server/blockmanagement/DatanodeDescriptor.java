@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.BlockStorageMovementInfosBatch;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
@@ -212,7 +211,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * A queue of blocks corresponding to trackID for moving its storage
    * placements by this datanode.
    */
-  private final Queue<BlockStorageMovementInfosBatch> storageMovementBlocks =
+  private final Queue<BlockMovingInfo> storageMovementBlocks =
       new LinkedList<>();
   private volatile boolean dropSPSWork = false;
 
@@ -1079,30 +1078,45 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Add the block infos which needs to move its storage locations.
    *
-   * @param trackID
-   *          - unique identifier which will be used for tracking the given set
-   *          of blocks movement completion.
-   * @param storageMismatchedBlocks
-   *          - storage mismatched block infos
+   * @param blkMovingInfo
+   *          - storage mismatched block info
    */
-  public void addBlocksToMoveStorage(long trackID,
-      List<BlockMovingInfo> storageMismatchedBlocks) {
+  public void addBlocksToMoveStorage(BlockMovingInfo blkMovingInfo) {
     synchronized (storageMovementBlocks) {
-      storageMovementBlocks.offer(
-          new BlockStorageMovementInfosBatch(trackID, storageMismatchedBlocks));
+      storageMovementBlocks.offer(blkMovingInfo);
     }
   }
 
   /**
-   * @return block infos which needs to move its storage locations. This returns
-   *         list of blocks under one trackId.
+   * Return the number of blocks queued up for movement.
    */
-  public BlockStorageMovementInfosBatch getBlocksToMoveStorages() {
+  public int getNumberOfBlocksToMoveStorages() {
+    return storageMovementBlocks.size();
+  }
+
+  /**
+   * Get the blocks to move to satisfy the storage media type.
+   *
+   * @param numBlocksToMoveTasks
+   *          total number of blocks which will be send to this datanode for
+   *          block movement.
+   *
+   * @return block infos which needs to move its storage locations.
+   */
+  public BlockMovingInfo[] getBlocksToMoveStorages(int numBlocksToMoveTasks) {
     synchronized (storageMovementBlocks) {
-      // TODO: Presently returning the list of blocks under one trackId.
-      // Need to limit the list of items into small batches with in trackId
-      // itself if blocks are many(For example: a file contains many blocks).
-      return storageMovementBlocks.poll();
+      List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
+      for (; !storageMovementBlocks.isEmpty()
+          && numBlocksToMoveTasks > 0; numBlocksToMoveTasks--) {
+        blockMovingInfos.add(storageMovementBlocks.poll());
+      }
+      BlockMovingInfo[] blkMoveArray = new BlockMovingInfo[blockMovingInfos
+          .size()];
+      blkMoveArray = blockMovingInfos.toArray(blkMoveArray);
+      if (blkMoveArray.length > 0) {
+        return blkMoveArray;
+      }
+      return null;
     }
   }
 
