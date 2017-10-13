@@ -21,6 +21,8 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -708,17 +710,38 @@ public abstract class TaskAttemptImpl implements
 
   /**
    * Create a {@link LocalResource} record with all the given parameters.
+   * The NM that hosts AM container will upload resources to shared cache.
+   * Thus there is no need to ask task container's NM to upload the
+   * resources to shared cache. Set the shared cache upload policy to
+   * false.
    */
   private static LocalResource createLocalResource(FileSystem fc, Path file,
-      LocalResourceType type, LocalResourceVisibility visibility)
-      throws IOException {
+      String fileSymlink, LocalResourceType type,
+      LocalResourceVisibility visibility) throws IOException {
     FileStatus fstat = fc.getFileStatus(file);
-    URL resourceURL = URL.fromPath(fc.resolvePath(fstat.getPath()));
+    // We need to be careful when converting from path to URL to add a fragment
+    // so that the symlink name when localized will be correct.
+    Path qualifiedPath = fc.resolvePath(fstat.getPath());
+    URI uriWithFragment = null;
+    boolean useFragment = fileSymlink != null && !fileSymlink.equals("");
+    try {
+      if (useFragment) {
+        uriWithFragment = new URI(qualifiedPath.toUri() + "#" + fileSymlink);
+      } else {
+        uriWithFragment = qualifiedPath.toUri();
+      }
+    } catch (URISyntaxException e) {
+      throw new IOException(
+          "Error parsing local resource path."
+              + " Path was not able to be converted to a URI: " + qualifiedPath,
+          e);
+    }
+    URL resourceURL = URL.fromURI(uriWithFragment);
     long resourceSize = fstat.getLen();
     long resourceModificationTime = fstat.getModificationTime();
 
     return LocalResource.newInstance(resourceURL, type, visibility,
-      resourceSize, resourceModificationTime);
+        resourceSize, resourceModificationTime, false);
   }
 
   /**
@@ -829,8 +852,18 @@ public abstract class TaskAttemptImpl implements
       final FileSystem jobJarFs = FileSystem.get(jobJarPath.toUri(), conf);
       Path remoteJobJar = jobJarPath.makeQualified(jobJarFs.getUri(),
           jobJarFs.getWorkingDirectory());
-      LocalResource rc = createLocalResource(jobJarFs, remoteJobJar,
-          LocalResourceType.PATTERN, LocalResourceVisibility.APPLICATION);
+      LocalResourceVisibility jobJarViz =
+          conf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+              MRJobConfig.JOBJAR_VISIBILITY_DEFAULT)
+                  ? LocalResourceVisibility.PUBLIC
+                  : LocalResourceVisibility.APPLICATION;
+      // We hard code the job.jar localized symlink in the container directory.
+      // This is because the mapreduce app expects the job.jar to be named
+      // accordingly. Additionally we set the shared cache upload policy to
+      // false. Resources are uploaded by the AM if necessary.
+      LocalResource rc =
+          createLocalResource(jobJarFs, remoteJobJar, MRJobConfig.JOB_JAR,
+              LocalResourceType.PATTERN, jobJarViz);
       String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN,
           JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
       rc.setPattern(pattern);
@@ -855,9 +888,12 @@ public abstract class TaskAttemptImpl implements
     Path remoteJobConfPath =
         new Path(remoteJobSubmitDir, MRJobConfig.JOB_CONF_FILE);
     FileSystem remoteFS = FileSystem.get(conf);
+    // There is no point to ask task container's NM to upload the resource
+    // to shared cache (job conf is not shared). Therefore, createLocalResource
+    // will set the shared cache upload policy to false
     localResources.put(MRJobConfig.JOB_CONF_FILE,
-        createLocalResource(remoteFS, remoteJobConfPath, LocalResourceType.FILE,
-            LocalResourceVisibility.APPLICATION));
+        createLocalResource(remoteFS, remoteJobConfPath, null,
+            LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
     LOG.info("The job-conf file on the remote FS is "
         + remoteJobConfPath.toUri().toASCIIString());
   }

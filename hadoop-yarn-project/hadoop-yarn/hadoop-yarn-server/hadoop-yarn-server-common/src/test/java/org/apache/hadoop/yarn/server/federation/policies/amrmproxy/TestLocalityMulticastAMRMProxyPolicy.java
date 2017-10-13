@@ -157,18 +157,20 @@ public class TestLocalityMulticastAMRMProxyPolicy
 
     validateSplit(response, resourceRequests);
 
-    // based on headroom, we expect 75 containers to got to subcluster0,
-    // as it advertise lots of headroom (100), no containers for sublcuster1
-    // as it advertise zero headroom, 1 to subcluster 2 (as it advertise little
-    // headroom (1), and 25 to subcluster5 which has unknown headroom, and so
-    // it gets 1/4th of the load
-    checkExpectedAllocation(response, "subcluster0", 1, 75);
+    /*
+     * based on headroom, we expect 75 containers to got to subcluster0 (60) and
+     * subcluster2 (15) according to the advertised headroom (40 and 10), no
+     * containers for sublcuster1 as it advertise zero headroom, and 25 to
+     * subcluster5 which has unknown headroom, and so it gets 1/4th of the load
+     */
+    checkExpectedAllocation(response, "subcluster0", 1, 60);
     checkExpectedAllocation(response, "subcluster1", 1, -1);
-    checkExpectedAllocation(response, "subcluster2", 1, 1);
+    checkExpectedAllocation(response, "subcluster2", 1, 15);
     checkExpectedAllocation(response, "subcluster5", 1, 25);
+    checkTotalContainerAllocation(response, 100);
 
     // notify a change in headroom and try again
-    AllocateResponse ar = getAllocateResponseWithTargetHeadroom(100);
+    AllocateResponse ar = getAllocateResponseWithTargetHeadroom(40);
     ((FederationAMRMProxyPolicy) getPolicy())
         .notifyOfResponse(SubClusterId.newInstance("subcluster2"), ar);
     response = ((FederationAMRMProxyPolicy) getPolicy())
@@ -178,14 +180,16 @@ public class TestLocalityMulticastAMRMProxyPolicy
     prettyPrintRequests(response);
     validateSplit(response, resourceRequests);
 
-    // we simulated a change in headroom for subcluster2, which will now
-    // have the same headroom of subcluster0 and so it splits the requests
-    // note that the total is still less or equal to (userAsk + numSubClusters)
-    checkExpectedAllocation(response, "subcluster0", 1, 38);
+    /*
+     * we simulated a change in headroom for subcluster2, which will now have
+     * the same headroom of subcluster0, so each 37.5, note that the odd one
+     * will be assigned to either one of the two subclusters
+     */
+    checkExpectedAllocation(response, "subcluster0", 1, 37);
     checkExpectedAllocation(response, "subcluster1", 1, -1);
-    checkExpectedAllocation(response, "subcluster2", 1, 38);
+    checkExpectedAllocation(response, "subcluster2", 1, 37);
     checkExpectedAllocation(response, "subcluster5", 1, 25);
-
+    checkTotalContainerAllocation(response, 100);
   }
 
   @Test(timeout = 5000)
@@ -250,6 +254,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     checkExpectedAllocation(response, "subcluster3", -1, -1);
     checkExpectedAllocation(response, "subcluster4", -1, -1);
     checkExpectedAllocation(response, "subcluster5", -1, -1);
+    checkTotalContainerAllocation(response, 0);
   }
 
   @Test
@@ -276,19 +281,19 @@ public class TestLocalityMulticastAMRMProxyPolicy
     validateSplit(response, resourceRequests);
 
     // in this case the headroom allocates 50 containers, while weights allocate
-    // the rest. due to weights we have 12.5 (round to 13) containers for each
+    // the rest. due to weights we have 12.5 containers for each
     // sublcuster, the rest is due to headroom.
-    checkExpectedAllocation(response, "subcluster0", 1, 50);
-    checkExpectedAllocation(response, "subcluster1", 1, 13);
-    checkExpectedAllocation(response, "subcluster2", 1, 13);
+    checkExpectedAllocation(response, "subcluster0", 1, 42);  // 30 + 12.5
+    checkExpectedAllocation(response, "subcluster1", 1, 12);  // 0 + 12.5
+    checkExpectedAllocation(response, "subcluster2", 1, 20);  // 7.5 + 12.5
     checkExpectedAllocation(response, "subcluster3", -1, -1);
     checkExpectedAllocation(response, "subcluster4", -1, -1);
-    checkExpectedAllocation(response, "subcluster5", 1, 25);
-
+    checkExpectedAllocation(response, "subcluster5", 1, 25);  // 12.5 + 12.5
+    checkTotalContainerAllocation(response, 100);
   }
 
   private void prepPolicyWithHeadroom() throws YarnException {
-    AllocateResponse ar = getAllocateResponseWithTargetHeadroom(100);
+    AllocateResponse ar = getAllocateResponseWithTargetHeadroom(40);
     ((FederationAMRMProxyPolicy) getPolicy())
         .notifyOfResponse(SubClusterId.newInstance("subcluster0"), ar);
 
@@ -296,7 +301,7 @@ public class TestLocalityMulticastAMRMProxyPolicy
     ((FederationAMRMProxyPolicy) getPolicy())
         .notifyOfResponse(SubClusterId.newInstance("subcluster1"), ar);
 
-    ar = getAllocateResponseWithTargetHeadroom(1);
+    ar = getAllocateResponseWithTargetHeadroom(10);
     ((FederationAMRMProxyPolicy) getPolicy())
         .notifyOfResponse(SubClusterId.newInstance("subcluster2"), ar);
   }
@@ -363,6 +368,9 @@ public class TestLocalityMulticastAMRMProxyPolicy
     // subcluster5 should get only part of the request-id 2 broadcast
     checkExpectedAllocation(response, "subcluster5", 1, 20);
 
+    // Check the total number of container asks in all RR
+    checkTotalContainerAllocation(response, 130);
+
     // check that the allocations that show up are what expected
     for (ResourceRequest rr : response.get(getHomeSubCluster())) {
       Assert.assertTrue(
@@ -401,8 +409,8 @@ public class TestLocalityMulticastAMRMProxyPolicy
   // response should be null
   private void checkExpectedAllocation(
       Map<SubClusterId, List<ResourceRequest>> response, String subCluster,
-      long totResourceRequests, long totContainers) {
-    if (totContainers == -1) {
+      long totResourceRequests, long minimumTotalContainers) {
+    if (minimumTotalContainers == -1) {
       Assert.assertNull(response.get(SubClusterId.newInstance(subCluster)));
     } else {
       SubClusterId sc = SubClusterId.newInstance(subCluster);
@@ -412,8 +420,23 @@ public class TestLocalityMulticastAMRMProxyPolicy
       for (ResourceRequest rr : response.get(sc)) {
         actualContCount += rr.getNumContainers();
       }
-      Assert.assertEquals(totContainers, actualContCount);
+      Assert.assertTrue(
+          "Actual count " + actualContCount + " should be at least "
+              + minimumTotalContainers,
+          minimumTotalContainers <= actualContCount);
     }
+  }
+
+  private void checkTotalContainerAllocation(
+      Map<SubClusterId, List<ResourceRequest>> response, long totalContainers) {
+    long actualContCount = 0;
+    for (Map.Entry<SubClusterId, List<ResourceRequest>> entry : response
+        .entrySet()) {
+      for (ResourceRequest rr : entry.getValue()) {
+        actualContCount += rr.getNumContainers();
+      }
+    }
+    Assert.assertEquals(totalContainers, actualContCount);
   }
 
   private void validateSplit(Map<SubClusterId, List<ResourceRequest>> split,
@@ -598,5 +621,42 @@ public class TestLocalityMulticastAMRMProxyPolicy
         ResourceRequest.ANY, 1024, 1, 1, 4, null, false));
 
     return out;
+  }
+
+  public String printList(ArrayList<Integer> list) {
+    StringBuilder sb = new StringBuilder();
+    for (Integer entry : list) {
+      sb.append(entry + ", ");
+    }
+    return sb.toString();
+  }
+
+  @Test
+  public void testIntegerAssignment() throws YarnException {
+    float[] weights =
+        new float[] {0, 0.1f, 0.2f, 0.2f, -0.1f, 0.1f, 0.2f, 0.1f, 0.1f};
+    int[] expectedMin = new int[] {0, 1, 3, 3, 0, 1, 3, 1, 1};
+    ArrayList<Float> weightsList = new ArrayList<>();
+    for (float weight : weights) {
+      weightsList.add(weight);
+    }
+
+    LocalityMulticastAMRMProxyPolicy policy =
+        (LocalityMulticastAMRMProxyPolicy) getPolicy();
+    for (int i = 0; i < 500000; i++) {
+      ArrayList<Integer> allocations =
+          policy.computeIntegerAssignment(19, weightsList);
+      int sum = 0;
+      for (int j = 0; j < weights.length; j++) {
+        sum += allocations.get(j);
+        if (allocations.get(j) < expectedMin[j]) {
+          Assert.fail(allocations.get(j) + " at index " + j
+              + " should be at least " + expectedMin[j] + ". Allocation array: "
+              + printList(allocations));
+        }
+      }
+      Assert.assertEquals(
+          "Expect sum to be 19 in array: " + printList(allocations), 19, sum);
+    }
   }
 }
