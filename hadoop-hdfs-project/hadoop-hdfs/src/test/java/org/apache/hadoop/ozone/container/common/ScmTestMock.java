@@ -21,6 +21,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerInfo;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMCommandResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
@@ -30,8 +31,11 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.scm.VersionInfo;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,8 +48,10 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   private AtomicInteger rpcCount = new AtomicInteger(0);
   private ReportState reportState;
   private AtomicInteger containerReportsCount = new AtomicInteger(0);
-  private AtomicInteger closedContainerCount = new AtomicInteger(0);
 
+  // Map of datanode to containers
+  private Map<DatanodeID, Map<String, ContainerInfo>> nodeContainers =
+      new HashMap();
   /**
    * Returns the number of heartbeats made to this class.
    *
@@ -91,11 +97,37 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   }
 
   /**
-   * Returns the number of closed containers that have been reported so far.
-   * @return - count of closed containers.
+   * Returns the number of containers that have been reported so far.
+   * @return - count of reported containers.
    */
-  public int getClosedContainerCount() {
-    return closedContainerCount.get();
+  public long getContainerCount() {
+    return nodeContainers.values().parallelStream().mapToLong((containerMap)->{
+      return containerMap.size();
+    }).sum();
+  }
+
+  /**
+   * Get the number keys reported from container reports.
+   * @return - number of keys reported.
+   */
+  public long getKeyCount() {
+    return nodeContainers.values().parallelStream().mapToLong((containerMap)->{
+      return containerMap.values().parallelStream().mapToLong((container) -> {
+        return container.getKeyCount();
+      }).sum();
+    }).sum();
+  }
+
+  /**
+   * Get the number of bytes used from container reports.
+   * @return - number of bytes used.
+   */
+  public long getBytesUsed() {
+    return nodeContainers.values().parallelStream().mapToLong((containerMap)->{
+      return containerMap.values().parallelStream().mapToLong((container) -> {
+        return container.getUsed();
+      }).sum();
+    }).sum();
   }
 
   /**
@@ -178,16 +210,28 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
    * @throws IOException
    */
   @Override
-  public SCMHeartbeatResponseProto
+  public StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto
       sendContainerReport(StorageContainerDatanodeProtocolProtos
-      .ContainerReportsProto reports) throws IOException {
+      .ContainerReportsRequestProto reports) throws IOException {
     Preconditions.checkNotNull(reports);
     containerReportsCount.incrementAndGet();
-    closedContainerCount.addAndGet(reports.getReportsCount());
-    List<SCMCommandResponseProto>
-        cmdResponses = new LinkedList<>();
-    return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
-        .build();
+
+    DatanodeID datanode = DatanodeID.getFromProtoBuf(reports.getDatanodeID());
+    if (reports.getReportsCount() > 0) {
+      Map containers = nodeContainers.get(datanode);
+      if (containers == null) {
+        containers = new LinkedHashMap();
+        nodeContainers.put(datanode, containers);
+      }
+
+      for (StorageContainerDatanodeProtocolProtos.ContainerInfo report:
+          reports.getReportsList()) {
+        containers.put(report.getContainerName(), report);
+      }
+    }
+
+    return StorageContainerDatanodeProtocolProtos
+        .ContainerReportsResponseProto.newBuilder().build();
   }
 
   @Override
@@ -199,5 +243,19 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
 
   public ReportState getReportState() {
     return this.reportState;
+  }
+
+  /**
+   * Reset the mock Scm for test to get a fresh start without rebuild MockScm.
+   */
+  public void reset() {
+    heartbeatCount.set(0);
+    rpcCount.set(0);
+    reportState = ReportState.newBuilder()
+        .setState(ReportState.states.noContainerReports)
+        .setCount(0).build();
+    containerReportsCount.set(0);
+    nodeContainers.clear();
+
   }
 }

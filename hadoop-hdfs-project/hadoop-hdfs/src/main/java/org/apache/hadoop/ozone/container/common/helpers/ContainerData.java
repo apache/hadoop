@@ -19,14 +19,18 @@
 package org.apache.hadoop.ozone.container.common.helpers;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class maintains the information about a container in the ozone world.
@@ -43,16 +47,22 @@ public class ContainerData {
   private String containerFilePath;
   private boolean open;
   private String hash;
+  private AtomicLong bytesUsed;
+  private long maxSize;
 
   /**
    * Constructs a  ContainerData Object.
    *
    * @param containerName - Name
    */
-  public ContainerData(String containerName) {
+  public ContainerData(String containerName, Configuration conf) {
     this.metadata = new TreeMap<>();
     this.containerName = containerName;
     this.open = true;
+    this.maxSize = conf.getLong(ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_KEY,
+        ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_SIZE_DEFAULT) * OzoneConsts.GB;
+    this.bytesUsed =  new AtomicLong(0L);
+
   }
 
   /**
@@ -62,8 +72,9 @@ public class ContainerData {
    * @throws IOException
    */
   public static ContainerData getFromProtBuf(
-      ContainerProtos.ContainerData protoData) throws IOException {
-    ContainerData data = new ContainerData(protoData.getName());
+      ContainerProtos.ContainerData protoData, Configuration conf)
+      throws IOException {
+    ContainerData data = new ContainerData(protoData.getName(), conf);
     for (int x = 0; x < protoData.getMetadataCount(); x++) {
       data.addMetadata(protoData.getMetadata(x).getKey(),
           protoData.getMetadata(x).getValue());
@@ -85,6 +96,14 @@ public class ContainerData {
 
     if(protoData.hasHash()) {
       data.setHash(protoData.getHash());
+    }
+
+    if (protoData.hasBytesUsed()) {
+      data.setBytesUsed(protoData.getBytesUsed());
+    }
+
+    if (protoData.hasSize()) {
+      data.setMaxSize(protoData.getSize());
     }
     return data;
   }
@@ -120,6 +139,13 @@ public class ContainerData {
           .setValue(entry.getValue()).build());
     }
 
+    if (this.getBytesUsed() >= 0) {
+      builder.setBytesUsed(this.getBytesUsed());
+    }
+
+    if (this.getMaxSize() >= 0) {
+      builder.setSize(this.getMaxSize());
+    }
 
     return builder.build();
   }
@@ -251,8 +277,6 @@ public class ContainerData {
     this.hash = hash;
   }
 
-
-
   /**
    * Sets the open or closed values.
    * @param open
@@ -261,4 +285,27 @@ public class ContainerData {
     this.open = open;
   }
 
+  public void setMaxSize(long maxSize) {
+    this.maxSize = maxSize;
+  }
+
+  public long getMaxSize() {
+    return maxSize;
+  }
+
+  public long getKeyCount() {
+    return metadata.size();
+  }
+
+  public void setBytesUsed(long used) {
+    this.bytesUsed.set(used);
+  }
+
+  public long addBytesUsed(long delta) {
+    return this.bytesUsed.addAndGet(delta);
+  }
+
+  public long getBytesUsed() {
+    return bytesUsed.get();
+  }
 }

@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
@@ -39,6 +40,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
@@ -97,8 +102,9 @@ public class TestEndPoint {
     scmServer = SCMTestUtils.startScmRpcServer(SCMTestUtils.getConf(),
         scmServerImpl, serverAddress, 10);
     testDir = PathUtils.getTestDir(TestEndPoint.class);
-    defaultReportState = StorageContainerDatanodeProtocolProtos.ReportState.
-        newBuilder().setState(noContainerReports).setCount(0).build();
+    defaultReportState = StorageContainerDatanodeProtocolProtos.
+        ReportState.newBuilder().setState(noContainerReports).
+        setCount(0).build();
   }
 
   @Test
@@ -368,11 +374,11 @@ public class TestEndPoint {
    * @param count - The number of closed containers to create.
    * @return ContainerReportsProto
    */
-  StorageContainerDatanodeProtocolProtos.ContainerReportsProto
+  StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto
       createDummyContainerReports(int count) {
-    StorageContainerDatanodeProtocolProtos.ContainerReportsProto.Builder
+    StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto.Builder
         reportsBuilder = StorageContainerDatanodeProtocolProtos
-        .ContainerReportsProto.newBuilder();
+        .ContainerReportsRequestProto.newBuilder();
     for (int x = 0; x < count; x++) {
       reportsBuilder.addReports(getRandomContainerReport()
           .getProtoBufMessage());
@@ -380,7 +386,7 @@ public class TestEndPoint {
     reportsBuilder.setDatanodeID(SCMTestUtils.getDatanodeID()
         .getProtoBufMessage());
     reportsBuilder.setType(StorageContainerDatanodeProtocolProtos
-        .ContainerReportsProto.reportType.fullReport);
+        .ContainerReportsRequestProto.reportType.fullReport);
     return reportsBuilder.build();
   }
 
@@ -391,15 +397,63 @@ public class TestEndPoint {
   @Test
   public void testContainerReportSend() throws Exception {
     final int count = 1000;
+    scmServerImpl.reset();
     try (EndpointStateMachine rpcEndPoint =
              SCMTestUtils.createEndpoint(SCMTestUtils.getConf(),
                  serverAddress, 1000)) {
-      SCMHeartbeatResponseProto responseProto = rpcEndPoint
+      ContainerReportsResponseProto responseProto = rpcEndPoint
           .getEndPoint().sendContainerReport(createDummyContainerReports(
               count));
       Assert.assertNotNull(responseProto);
     }
     Assert.assertEquals(1, scmServerImpl.getContainerReportsCount());
-    Assert.assertEquals(count, scmServerImpl.getClosedContainerCount());
+    Assert.assertEquals(count, scmServerImpl.getContainerCount());
+  }
+
+
+  /**
+   * Tests that rpcEndpoint sendContainerReport works as expected.
+   * @throws Exception
+   */
+  @Test
+  public void testContainerReport() throws Exception {
+    final int count = 1000;
+    scmServerImpl.reset();
+    try (EndpointStateMachine rpcEndPoint =
+             SCMTestUtils.createEndpoint(SCMTestUtils.getConf(),
+                 serverAddress, 1000)) {
+      ContainerReportsResponseProto responseProto = rpcEndPoint
+          .getEndPoint().sendContainerReport(createContainerReport(count));
+      Assert.assertNotNull(responseProto);
+    }
+    Assert.assertEquals(1, scmServerImpl.getContainerReportsCount());
+    Assert.assertEquals(count, scmServerImpl.getContainerCount());
+    final long expectedKeyCount = count * 1000;
+    Assert.assertEquals(expectedKeyCount, scmServerImpl.getKeyCount());
+    final long expectedBytesUsed = count * OzoneConsts.GB * 2;
+    Assert.assertEquals(expectedBytesUsed, scmServerImpl.getBytesUsed());
+  }
+
+  private ContainerReportsRequestProto createContainerReport(int count) {
+    StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto.Builder
+        reportsBuilder = StorageContainerDatanodeProtocolProtos
+        .ContainerReportsRequestProto.newBuilder();
+    for (int x = 0; x < count; x++) {
+      ContainerReport report = new ContainerReport(UUID.randomUUID().toString(),
+            DigestUtils.sha256Hex("Simulated"));
+      report.setKeyCount(1000);
+      report.setSize(OzoneConsts.GB * 5);
+      report.setBytesUsed(OzoneConsts.GB * 2);
+      report.setReadCount(100);
+      report.setReadBytes(OzoneConsts.GB * 1);
+      report.setWriteCount(50);
+      report.setWriteBytes(OzoneConsts.GB * 2);
+      reportsBuilder.addReports(report.getProtoBufMessage());
+    }
+    reportsBuilder.setDatanodeID(SCMTestUtils.getDatanodeID()
+        .getProtoBufMessage());
+    reportsBuilder.setType(StorageContainerDatanodeProtocolProtos
+        .ContainerReportsRequestProto.reportType.fullReport);
+    return reportsBuilder.build();
   }
 }

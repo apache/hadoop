@@ -320,7 +320,7 @@ public class Dispatcher implements ContainerDispatcher {
         .getContainerData().getName();
 
     ContainerData data = ContainerData.getFromProtBuf(
-        msg.getUpdateContainer().getContainerData());
+        msg.getUpdateContainer().getContainerData(), conf);
     boolean forceUpdate = msg.getUpdateContainer().getForceUpdate();
     this.containerManager.updateContainer(
         pipeline, containerName, data, forceUpdate);
@@ -389,7 +389,7 @@ public class Dispatcher implements ContainerDispatcher {
       return ContainerUtils.malformedRequest(msg);
     }
     ContainerData cData = ContainerData.getFromProtBuf(
-        msg.getCreateContainer().getContainerData());
+        msg.getCreateContainer().getContainerData(), conf);
     Preconditions.checkNotNull(cData, "Container data is null");
 
     Pipeline pipeline = Pipeline.getFromProtoBuf(

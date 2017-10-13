@@ -23,14 +23,6 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 /**
  * Container Report iterates the closed containers and sends a container report
  * to SCM.
- * <p>
- * The protobuf counter part of this class looks like this.
- * message ContainerInfo {
- * required string containerName = 1;
- * required string finalhash = 2;
- * optional int64 size = 3;
- * optional int64 keycount = 4;
- * }
  */
 public class ContainerReport {
   private static final int UNKNOWN = -1;
@@ -38,6 +30,12 @@ public class ContainerReport {
   private final String finalhash;
   private long size;
   private long keyCount;
+  private long bytesUsed;
+  private long readCount;
+  private long writeCount;
+  private long readBytes;
+  private long writeBytes;
+
 
   /**
    * Constructs the ContainerReport.
@@ -50,6 +48,11 @@ public class ContainerReport {
     this.finalhash = finalhash;
     this.size = UNKNOWN;
     this.keyCount = UNKNOWN;
+    this.bytesUsed = 0L;
+    this.readCount = 0L;
+    this.readBytes = 0L;
+    this.writeCount = 0L;
+    this.writeBytes = 0L;
   }
 
   /**
@@ -65,9 +68,25 @@ public class ContainerReport {
     if (info.hasSize()) {
       report.setSize(info.getSize());
     }
-    if (info.hasKeycount()) {
-      report.setKeyCount(info.getKeycount());
+    if (info.hasKeyCount()) {
+      report.setKeyCount(info.getKeyCount());
     }
+    if (info.hasUsed()) {
+      report.setBytesUsed(info.getUsed());
+    }
+    if (info.hasReadCount()) {
+      report.setReadCount(info.getReadCount());
+    }
+    if (info.hasReadBytes()) {
+      report.setReadBytes(info.getReadBytes());
+    }
+    if (info.hasWriteCount()) {
+      report.setWriteCount(info.getWriteCount());
+    }
+    if (info.hasWriteBytes()) {
+      report.setWriteBytes(info.getWriteBytes());
+    }
+
     return report;
   }
 
@@ -125,6 +144,46 @@ public class ContainerReport {
     this.keyCount = keyCount;
   }
 
+  public long getReadCount() {
+    return readCount;
+  }
+
+  public void setReadCount(long readCount) {
+    this.readCount = readCount;
+  }
+
+  public long getWriteCount() {
+    return writeCount;
+  }
+
+  public void setWriteCount(long writeCount) {
+    this.writeCount = writeCount;
+  }
+
+  public long getReadBytes() {
+    return readBytes;
+  }
+
+  public void setReadBytes(long readBytes) {
+    this.readBytes = readBytes;
+  }
+
+  public long getWriteBytes() {
+    return writeBytes;
+  }
+
+  public void setWriteBytes(long writeBytes) {
+    this.writeBytes = writeBytes;
+  }
+
+  public long getBytesUsed() {
+    return bytesUsed;
+  }
+
+  public void setBytesUsed(long bytesUsed) {
+    this.bytesUsed = bytesUsed;
+  }
+
   /**
    * Gets a containerInfo protobuf message from ContainerReports.
    *
@@ -133,8 +192,13 @@ public class ContainerReport {
   public ContainerInfo getProtoBufMessage() {
     return ContainerInfo.newBuilder()
         .setContainerName(this.getContainerName())
-        .setKeycount(this.getKeyCount())
+        .setKeyCount(this.getKeyCount())
         .setSize(this.getSize())
+        .setUsed(this.getBytesUsed())
+        .setReadCount(this.getReadCount())
+        .setReadBytes(this.getReadBytes())
+        .setWriteCount(this.getWriteCount())
+        .setWriteBytes(this.getWriteBytes())
         .setFinalhash(this.getFinalhash())
         .build();
   }

@@ -19,12 +19,30 @@ package org.apache.hadoop.utils;
 
 import com.google.common.base.Strings;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ozone.OzoneConsts;
 
 /**
  * An utility class to filter levelDB keys.
  */
-public class MetadataKeyFilters {
+public final class MetadataKeyFilters {
 
+  private static KeyPrefixFilter deletingKeyFilter =
+      new MetadataKeyFilters.KeyPrefixFilter(OzoneConsts.DELETING_KEY_PREFIX);
+
+  private static KeyPrefixFilter normalKeyFilter =
+      new MetadataKeyFilters.KeyPrefixFilter(OzoneConsts.DELETING_KEY_PREFIX,
+          true);
+
+  private MetadataKeyFilters() {
+  }
+
+  public static KeyPrefixFilter getDeletingKeyFilter() {
+    return deletingKeyFilter;
+  }
+
+  public static KeyPrefixFilter getNormalKeyFilter() {
+    return normalKeyFilter;
+  }
   /**
    * Interface for levelDB key filters.
    */
@@ -57,25 +75,34 @@ public class MetadataKeyFilters {
     private String keyPrefix = null;
     private int keysScanned = 0;
     private int keysHinted = 0;
+    private Boolean negative;
 
     public KeyPrefixFilter(String keyPrefix) {
+      this(keyPrefix, false);
+    }
+
+    public KeyPrefixFilter(String keyPrefix, boolean negative) {
       this.keyPrefix = keyPrefix;
+      this.negative = negative;
     }
 
     @Override
     public boolean filterKey(byte[] preKey, byte[] currentKey,
         byte[] nextKey) {
       keysScanned++;
+      boolean accept = false;
       if (Strings.isNullOrEmpty(keyPrefix)) {
-        return true;
+        accept = true;
       } else {
         if (currentKey != null &&
             DFSUtil.bytes2String(currentKey).startsWith(keyPrefix)) {
           keysHinted++;
-          return true;
+          accept = true;
+        } else {
+          accept = false;
         }
-        return false;
       }
+      return (negative) ? !accept : accept;
     }
 
     @Override

@@ -18,7 +18,8 @@ package org.apache.hadoop.ozone.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto;
@@ -65,12 +66,12 @@ public interface StorageContainerDatanodeProtocol {
 
   /**
    * Send a container report.
-   * @param reports -- Container report
-   * @return HeartbeatRespose.nullcommand.
+   * @param reports -- Container report.
+   * @return container reports response.
    * @throws IOException
    */
-  SCMHeartbeatResponseProto sendContainerReport(ContainerReportsProto reports)
-      throws IOException;
+  ContainerReportsResponseProto sendContainerReport(
+      ContainerReportsRequestProto reports) throws IOException;
 
   /**
    * Used by datanode to send block deletion ACK to SCM.

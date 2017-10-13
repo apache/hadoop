@@ -96,7 +96,13 @@ message ContainerInfo {
   required string containerName = 1;
   required string finalhash = 2;
   optional int64 size = 3;
-  optional int64 keycount = 4;
+  optional int64 used = 4;
+  optional int64 keyCount = 5;
+  // TODO: move the io count to separate message
+  optional int64 readCount = 6;
+  optional int64 writeCount = 7;
+  optional int64 readBytes = 8;
+  optional int64 writeBytes = 9;
 }
 
 // The deleted blocks which are stored in deletedBlock.db of scm.
@@ -112,7 +118,7 @@ message DeletedBlocksTransaction {
 A set of container reports, max count is generally set to
 8192 since that keeps the size of the reports under 1 MB.
 */
-message ContainerReportsProto {
+message ContainerReportsRequestProto {
   enum reportType {
     fullReport = 0;
     deltaReport = 1;
@@ -120,6 +126,9 @@ message ContainerReportsProto {
   required DatanodeIDProto datanodeID = 1;
   repeated ContainerInfo reports = 2;
   required reportType type = 3;
+}
+
+message ContainerReportsResponseProto {
 }
 
 /**
@@ -337,7 +346,7 @@ service StorageContainerDatanodeProtocolService {
     send container reports sends the container report to SCM. This will
     return a null command as response.
   */
-  rpc sendContainerReport(ContainerReportsProto) returns (SCMHeartbeatResponseProto);
+  rpc sendContainerReport(ContainerReportsRequestProto) returns (ContainerReportsResponseProto);
 
   /**
    * Sends the block deletion ACK to SCM.

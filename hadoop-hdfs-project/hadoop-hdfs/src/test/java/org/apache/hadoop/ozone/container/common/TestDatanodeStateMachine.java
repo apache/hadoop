@@ -98,10 +98,14 @@ public class TestDatanodeStateMachine {
         .getTempPath(TestDatanodeStateMachine.class.getSimpleName());
     testRoot = new File(path);
     if (!testRoot.mkdirs()) {
-      LOG.info("Required directories already exist.");
+      LOG.info("Required directories {} already exist.", testRoot);
     }
-    conf.set(DFS_DATANODE_DATA_DIR_KEY,
-        new File(testRoot, "data").getAbsolutePath());
+
+    File dataDir = new File(testRoot, "data");
+    conf.set(DFS_DATANODE_DATA_DIR_KEY, dataDir.getAbsolutePath());
+    if (!dataDir.mkdirs()) {
+      LOG.info("Data dir create failed.");
+    }
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
         new File(testRoot, "scm").getAbsolutePath());
     path = Paths.get(path.toString(),
@@ -334,6 +338,7 @@ public class TestDatanodeStateMachine {
     confList.forEach((entry) -> {
       Configuration perTestConf = new Configuration(conf);
       perTestConf.setStrings(entry.getKey(), entry.getValue());
+      LOG.info("Test with {} = {}", entry.getKey(), entry.getValue());
       try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
           DFSTestUtil.getLocalDatanodeID(), perTestConf)) {
         DatanodeStateMachine.DatanodeStates currentState =

@@ -21,6 +21,7 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -143,11 +144,25 @@ public class TestContainerPersistence {
           loc.getNormalizedUri());
     }
     pathLists.add(loc);
-    containerManager.init(conf, pathLists);
+
+    for (String dir : conf.getStrings(DFS_DATANODE_DATA_DIR_KEY)) {
+      StorageLocation location = StorageLocation.parse(dir);
+      FileUtils.forceMkdir(new File(location.getNormalizedUri()));
+    }
+
+    containerManager.init(conf, pathLists, DFSTestUtil.getLocalDatanodeID());
   }
 
   @After
   public void cleanupDir() throws IOException {
+    // Shutdown containerManager
+    containerManager.writeLock();
+    try {
+      containerManager.shutdown();
+    } finally {
+      containerManager.writeUnlock();
+    }
+
     // Clean up SCM metadata
     log.info("Deletting {}", path);
     FileUtils.deleteDirectory(new File(path));
@@ -163,7 +178,7 @@ public class TestContainerPersistence {
   public void testCreateContainer() throws Exception {
 
     String containerName = OzoneUtils.getRequestID();
-    ContainerData data = new ContainerData(containerName);
+    ContainerData data = new ContainerData(containerName, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName),
@@ -199,7 +214,7 @@ public class TestContainerPersistence {
   public void testCreateDuplicateContainer() throws Exception {
     String containerName = OzoneUtils.getRequestID();
 
-    ContainerData data = new ContainerData(containerName);
+    ContainerData data = new ContainerData(containerName, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName),
@@ -219,14 +234,14 @@ public class TestContainerPersistence {
     String containerName2 = OzoneUtils.getRequestID();
 
 
-    ContainerData data = new ContainerData(containerName1);
+    ContainerData data = new ContainerData(containerName1, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName1),
         data);
     containerManager.closeContainer(containerName1);
 
-    data = new ContainerData(containerName2);
+    data = new ContainerData(containerName2, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName2),
@@ -246,7 +261,7 @@ public class TestContainerPersistence {
     // Let us make sure that we are able to re-use a container name after
     // delete.
 
-    data = new ContainerData(containerName1);
+    data = new ContainerData(containerName1, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner)", "bilbo");
     containerManager.createContainer(createSingleNodePipeline(containerName1),
@@ -284,7 +299,7 @@ public class TestContainerPersistence {
 
     for (int i = 0; i < count; i++) {
       String containerName = OzoneUtils.getRequestID();
-      ContainerData data = new ContainerData(containerName);
+      ContainerData data = new ContainerData(containerName, conf);
       containerManager.createContainer(createSingleNodePipeline(containerName),
           data);
 
@@ -321,7 +336,7 @@ public class TestContainerPersistence {
     for (int x = 0; x < count; x++) {
       String containerName = OzoneUtils.getRequestID();
 
-      ContainerData data = new ContainerData(containerName);
+      ContainerData data = new ContainerData(containerName, conf);
       data.addMetadata("VOLUME", "shire");
       data.addMetadata("owner)", "bilbo");
       containerManager.createContainer(createSingleNodePipeline(containerName),
@@ -355,7 +370,7 @@ public class TestContainerPersistence {
       NoSuchAlgorithmException {
     final int datalen = 1024;
     pipeline.setContainerName(containerName);
-    ContainerData cData = new ContainerData(containerName);
+    ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner", "bilbo");
     if(!containerManager.getContainerMap()
@@ -404,7 +419,7 @@ public class TestContainerPersistence {
     Map<String, ChunkInfo> fileHashMap = new HashMap<>();
 
     pipeline.setContainerName(containerName);
-    ContainerData cData = new ContainerData(containerName);
+    ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
     containerManager.createContainer(pipeline, cData);
@@ -468,7 +483,7 @@ public class TestContainerPersistence {
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
     pipeline.setContainerName(containerName);
-    ContainerData cData = new ContainerData(containerName);
+    ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
     containerManager.createContainer(pipeline, cData);
@@ -503,7 +518,7 @@ public class TestContainerPersistence {
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
     pipeline.setContainerName(containerName);
-    ContainerData cData = new ContainerData(containerName);
+    ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
     containerManager.createContainer(pipeline, cData);
@@ -521,6 +536,11 @@ public class TestContainerPersistence {
     // With the overwrite flag it should work now.
     info.addMetadata(OzoneConsts.CHUNK_OVERWRITE, "true");
     chunkManager.writeChunk(pipeline, keyName, info, data);
+    long bytesUsed = containerManager.getBytesUsed(containerName);
+    Assert.assertEquals(datalen, bytesUsed);
+
+    long bytesWrite = containerManager.getWriteBytes(containerName);
+    Assert.assertEquals(datalen * 2, bytesWrite);
   }
 
   /**
@@ -541,7 +561,7 @@ public class TestContainerPersistence {
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
     pipeline.setContainerName(containerName);
-    ContainerData cData = new ContainerData(containerName);
+    ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
     containerManager.createContainer(pipeline, cData);
@@ -580,7 +600,7 @@ public class TestContainerPersistence {
     Pipeline pipeline = createSingleNodePipeline(containerName);
 
     pipeline.setContainerName(containerName);
-    ContainerData cData = new ContainerData(containerName);
+    ContainerData cData = new ContainerData(containerName, conf);
     cData.addMetadata("VOLUME", "shire");
     cData.addMetadata("owner)", "bilbo");
     containerManager.createContainer(pipeline, cData);
@@ -626,21 +646,34 @@ public class TestContainerPersistence {
   @Test
   public void testPutKeyWithLotsOfChunks() throws IOException,
       NoSuchAlgorithmException {
-    final int chunkCount = 1024;
+    final int chunkCount = 2;
     final int datalen = 1024;
+    long totalSize = 0L;
     String containerName = OzoneUtils.getRequestID();
     String keyName = OzoneUtils.getRequestID();
     Pipeline pipeline = createSingleNodePipeline(containerName);
     List<ChunkInfo> chunkList = new LinkedList<>();
     ChunkInfo info = writeChunkHelper(containerName, keyName, pipeline);
+    totalSize += datalen;
     chunkList.add(info);
     for (int x = 1; x < chunkCount; x++) {
+      // with holes in the front (before x * datalen)
       info = getChunk(keyName, x, x * datalen, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
       chunkManager.writeChunk(pipeline, keyName, info, data);
+      totalSize += datalen * (x + 1);
       chunkList.add(info);
     }
+
+    long bytesUsed = containerManager.getBytesUsed(containerName);
+    Assert.assertEquals(totalSize, bytesUsed);
+    long writeBytes = containerManager.getWriteBytes(containerName);
+    Assert.assertEquals(chunkCount * datalen, writeBytes);
+    long readCount = containerManager.getReadCount(containerName);
+    Assert.assertEquals(0, readCount);
+    long writeCount = containerManager.getWriteCount(containerName);
+    Assert.assertEquals(chunkCount, writeCount);
 
     KeyData keyData = new KeyData(containerName, keyName);
     List<ContainerProtos.ChunkInfo> chunkProtoList = new LinkedList<>();
@@ -713,7 +746,7 @@ public class TestContainerPersistence {
   @Test
   public void testUpdateContainer() throws IOException {
     String containerName = OzoneUtils.getRequestID();
-    ContainerData data = new ContainerData(containerName);
+    ContainerData data = new ContainerData(containerName, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner", "bilbo");
 
@@ -724,7 +757,7 @@ public class TestContainerPersistence {
     File orgContainerFile = containerManager.getContainerFile(data);
     Assert.assertTrue(orgContainerFile.exists());
 
-    ContainerData newData = new ContainerData(containerName);
+    ContainerData newData = new ContainerData(containerName, conf);
     newData.addMetadata("VOLUME", "shire_new");
     newData.addMetadata("owner", "bilbo_new");
 
@@ -757,7 +790,7 @@ public class TestContainerPersistence {
       ContainerProtos.ContainerData actualContainerDataProto =
           ContainerProtos.ContainerData.parseDelimitedFrom(newIn);
       ContainerData actualContainerData = ContainerData
-          .getFromProtBuf(actualContainerDataProto);
+          .getFromProtBuf(actualContainerDataProto, conf);
       Assert.assertEquals(actualContainerData.getAllMetadata().get("VOLUME"),
           "shire_new");
       Assert.assertEquals(actualContainerData.getAllMetadata().get("owner"),
@@ -776,7 +809,7 @@ public class TestContainerPersistence {
     }
 
     // Update with force flag, it should be success.
-    newData = new ContainerData(containerName);
+    newData = new ContainerData(containerName, conf);
     newData.addMetadata("VOLUME", "shire_new_1");
     newData.addMetadata("owner", "bilbo_new_1");
     containerManager.updateContainer(createSingleNodePipeline(containerName),

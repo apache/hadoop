@@ -345,6 +345,14 @@
       etc. This picks one of those for this cluster.
     </description>
   </property>
+  <property>
+    <name>ozone.container.report.interval.ms</name>
+    <value>60000</value>
+    <tag>OZONE, CONTAINER, MANAGEMENT</tag>
+    <description>Time interval in milliseconds of the datanode to send container
+      report. Each datanode periodically send container report upon receive
+      sendContainerReport from SCM.</description>
+  </property>
   <!--Ozone Settings-->
   <property>
     <name>ozone.administrators</name>

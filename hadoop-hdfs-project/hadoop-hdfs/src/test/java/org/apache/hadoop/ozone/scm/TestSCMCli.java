@@ -166,7 +166,7 @@ public class TestSCMCli {
     pipeline = scm.allocateContainer(xceiverClientManager.getType(),
         OzoneProtos.ReplicationFactor.ONE,
         containerName);
-    containerData = new ContainerData(containerName);
+    containerData = new ContainerData(containerName, conf);
     containerManager.createContainer(pipeline, containerData);
     ContainerData cdata = containerManager.readContainer(containerName);
     KeyUtils.getDB(cdata, conf).put(containerName.getBytes(),
@@ -207,7 +207,7 @@ public class TestSCMCli {
     containerName = "empty-container";
     pipeline = scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), containerName);
-    containerData = new ContainerData(containerName);
+    containerData = new ContainerData(containerName, conf);
     containerManager.createContainer(pipeline, containerData);
     containerManager.closeContainer(containerName);
     Assert.assertTrue(containerExist(containerName));
@@ -271,7 +271,7 @@ public class TestSCMCli {
     cname = "ContainerTestInfo1";
     Pipeline pipeline = scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), cname);
-    ContainerData data = new ContainerData(cname);
+    ContainerData data = new ContainerData(cname, conf);
     containerManager.createContainer(pipeline, data);
 
     info = new String[]{"-container", "-info", "-c", cname};
@@ -292,7 +292,7 @@ public class TestSCMCli {
     cname = "ContainerTestInfo2";
     pipeline = scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), cname);
-    data = new ContainerData(cname);
+    data = new ContainerData(cname, conf);
     containerManager.createContainer(pipeline, data);
     KeyUtils.getDB(data, conf).put(cname.getBytes(),
         "someKey".getBytes());
@@ -313,7 +313,7 @@ public class TestSCMCli {
     cname = "ContainerTestInfo3";
     pipeline = scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), cname);
-    data = new ContainerData(cname);
+    data = new ContainerData(cname, conf);
     data.addMetadata("VOLUME", "shire");
     data.addMetadata("owner", "bilbo");
     containerManager.createContainer(pipeline, data);
@@ -378,7 +378,7 @@ public class TestSCMCli {
       String containerName = String.format("%s%02d", prefix, index);
       Pipeline pipeline = scm.allocateContainer(xceiverClientManager.getType(),
           xceiverClientManager.getFactor(), containerName);
-      ContainerData data = new ContainerData(containerName);
+      ContainerData data = new ContainerData(containerName, conf);
       containerManager.createContainer(pipeline, data);
     }
 

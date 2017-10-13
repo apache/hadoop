@@ -78,10 +78,10 @@ public class KeyManagerImpl implements KeyManager {
       // We are not locking the key manager since LevelDb serializes all actions
       // against a single DB. We rely on DB level locking to avoid conflicts.
       Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
-      Preconditions.checkNotNull(pipeline.getContainerName(),
+      String containerName = pipeline.getContainerName();
+      Preconditions.checkNotNull(containerName,
           "Container name cannot be null");
-      ContainerData cData = containerManager.readContainer(
-          pipeline.getContainerName());
+      ContainerData cData = containerManager.readContainer(containerName);
       MetadataStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.
@@ -92,7 +92,6 @@ public class KeyManagerImpl implements KeyManager {
     } finally {
       containerManager.readUnlock();
     }
-
   }
 
   /**
@@ -135,10 +134,10 @@ public class KeyManagerImpl implements KeyManager {
     containerManager.readLock();
     try {
       Preconditions.checkNotNull(pipeline, "Pipeline cannot be null");
-      Preconditions.checkNotNull(pipeline.getContainerName(),
+      String containerName = pipeline.getContainerName();
+      Preconditions.checkNotNull(containerName,
           "Container name cannot be null");
-      ContainerData cData = containerManager.readContainer(pipeline
-          .getContainerName());
+      ContainerData cData = containerManager.readContainer(containerName);
       MetadataStore db = KeyUtils.getDB(cData, conf);
 
       // This is a post condition that acts as a hint to the user.

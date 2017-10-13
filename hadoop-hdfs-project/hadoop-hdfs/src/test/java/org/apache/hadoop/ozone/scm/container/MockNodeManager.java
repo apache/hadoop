@@ -24,7 +24,12 @@ import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
+    .StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
@@ -324,8 +329,7 @@ public class MockNodeManager implements NodeManager {
    * datanode.
    */
   @Override
-  public VersionResponse getVersion(StorageContainerDatanodeProtocolProtos
-      .SCMVersionRequestProto versionRequest) {
+  public VersionResponse getVersion(SCMVersionRequestProto versionRequest) {
     return null;
   }
 
@@ -347,11 +351,12 @@ public class MockNodeManager implements NodeManager {
    *
    * @param datanodeID - Datanode ID.
    * @param nodeReport - node report.
+   * @param containerReportState - container report state.
    * @return SCMheartbeat response list
    */
   @Override
   public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID,
-      SCMNodeReport nodeReport) {
+      SCMNodeReport nodeReport, ReportState containerReportState) {
     if ((datanodeID != null) && (nodeReport != null) && (nodeReport
         .getStorageReportCount() > 0)) {
       SCMNodeStat stat = this.nodeMetricMap.get(datanodeID.toString());
@@ -359,10 +364,8 @@ public class MockNodeManager implements NodeManager {
       long totalCapacity = 0L;
       long totalRemaining = 0L;
       long totalScmUsed = 0L;
-      List<StorageContainerDatanodeProtocolProtos.SCMStorageReport>
-          storageReports = nodeReport.getStorageReportList();
-      for (StorageContainerDatanodeProtocolProtos.SCMStorageReport report :
-          storageReports) {
+      List<SCMStorageReport> storageReports = nodeReport.getStorageReportList();
+      for (SCMStorageReport report : storageReports) {
         totalCapacity += report.getCapacity();
         totalRemaining += report.getRemaining();
         totalScmUsed += report.getScmUsed();

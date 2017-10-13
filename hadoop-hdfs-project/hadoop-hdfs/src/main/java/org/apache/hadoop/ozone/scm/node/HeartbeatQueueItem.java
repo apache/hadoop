@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 
@@ -32,18 +33,21 @@ public class HeartbeatQueueItem {
   private DatanodeID datanodeID;
   private long recvTimestamp;
   private SCMNodeReport nodeReport;
+  private ReportState containerReportState;
 
   /**
    *
    * @param datanodeID - datanode ID of the heartbeat.
    * @param recvTimestamp - heartbeat receive timestamp.
    * @param nodeReport - node report associated with the heartbeat if any.
+   * @param containerReportState - container report state.
    */
   HeartbeatQueueItem(DatanodeID datanodeID, long recvTimestamp,
-                     SCMNodeReport nodeReport) {
+      SCMNodeReport nodeReport, ReportState containerReportState) {
     this.datanodeID = datanodeID;
     this.recvTimestamp = recvTimestamp;
     this.nodeReport = nodeReport;
+    this.containerReportState = containerReportState;
   }
 
   /**
@@ -61,6 +65,13 @@ public class HeartbeatQueueItem {
   }
 
   /**
+   * @return container report state.
+   */
+  public ReportState getContainerReportState() {
+    return containerReportState;
+  }
+
+  /**
    * @return heartbeat receive timestamp.
    */
   public long getRecvTimestamp() {
@@ -73,6 +84,7 @@ public class HeartbeatQueueItem {
   public static class Builder {
     private DatanodeID datanodeID;
     private SCMNodeReport nodeReport;
+    private ReportState containerReportState;
     private long recvTimestamp = monotonicNow();
 
     public Builder setDatanodeID(DatanodeID datanodeId) {
@@ -85,6 +97,11 @@ public class HeartbeatQueueItem {
       return this;
     }
 
+    public Builder setContainerReportState(ReportState crs) {
+      this.containerReportState = crs;
+      return this;
+    }
+
     @VisibleForTesting
     public Builder setRecvTimestamp(long recvTime) {
       this.recvTimestamp = recvTime;
@@ -92,7 +109,8 @@ public class HeartbeatQueueItem {
     }
 
     public HeartbeatQueueItem build() {
-      return new HeartbeatQueueItem(datanodeID, recvTimestamp, nodeReport);
+      return new HeartbeatQueueItem(datanodeID, recvTimestamp, nodeReport,
+          containerReportState);
     }
   }
 }

@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.CommandQueue;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -260,7 +260,8 @@ public class ContainerReplicationManager implements Closeable {
    * @param containerReport  -- Container report for a specific container from
    * a datanode.
    */
-  public void handleContainerReport(ContainerReportsProto containerReport) {
+  public void handleContainerReport(
+      ContainerReportsRequestProto containerReport) {
     String poolName = null;
     DatanodeID datanodeID = DatanodeID
         .getFromProtoBuf(containerReport.getDatanodeID());

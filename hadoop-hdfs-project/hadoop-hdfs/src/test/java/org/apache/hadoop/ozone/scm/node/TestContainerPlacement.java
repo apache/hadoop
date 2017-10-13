@@ -28,7 +28,11 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos;
+    .StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMStorageReport;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.ozone.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
@@ -64,6 +68,11 @@ public class TestContainerPlacement {
   public ExpectedException thrown = ExpectedException.none();
   private static XceiverClientManager xceiverClientManager =
       new XceiverClientManager(new OzoneConfiguration());
+
+  private ReportState reportState = ReportState.newBuilder()
+      .setState(ReportState.states.noContainerReports)
+      .setCount(0).build();
+
   /**
    * Returns a new copy of Configuration.
    *
@@ -128,16 +137,13 @@ public class TestContainerPlacement {
         SCMTestUtils.getRegisteredDatanodeIDs(nodeManager, nodeCount);
     try {
       for (DatanodeID datanodeID : datanodes) {
-        StorageContainerDatanodeProtocolProtos.SCMNodeReport.Builder nrb =
-            StorageContainerDatanodeProtocolProtos.SCMNodeReport.newBuilder();
-        StorageContainerDatanodeProtocolProtos.SCMStorageReport.Builder srb =
-            StorageContainerDatanodeProtocolProtos.SCMStorageReport
-                .newBuilder();
+        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
+        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
         srb.setStorageUuid(UUID.randomUUID().toString());
         srb.setCapacity(capacity).setScmUsed(used).
             setRemaining(remaining).build();
         nodeManager.sendHeartbeat(datanodeID,
-            nrb.addStorageReport(srb).build());
+            nrb.addStorageReport(srb).build(), reportState);
       }
 
       GenericTestUtils.waitFor(() -> nodeManager.waitForHeartbeatProcessed(),
@@ -164,16 +170,13 @@ public class TestContainerPlacement {
       final long newRemaining = capacity - newUsed;
 
       for (DatanodeID datanodeID : datanodes) {
-        StorageContainerDatanodeProtocolProtos.SCMNodeReport.Builder nrb =
-            StorageContainerDatanodeProtocolProtos.SCMNodeReport.newBuilder();
-        StorageContainerDatanodeProtocolProtos.SCMStorageReport.Builder srb =
-            StorageContainerDatanodeProtocolProtos.SCMStorageReport
-                .newBuilder();
+        SCMNodeReport.Builder nrb = SCMNodeReport.newBuilder();
+        SCMStorageReport.Builder srb = SCMStorageReport.newBuilder();
         srb.setStorageUuid(UUID.randomUUID().toString());
         srb.setCapacity(capacity).setScmUsed(newUsed).
             setRemaining(newRemaining).build();
         nodeManager.sendHeartbeat(datanodeID,
-            nrb.addStorageReport(srb).build());
+            nrb.addStorageReport(srb).build(), reportState);
       }
 
       GenericTestUtils.waitFor(() -> nodeManager.getStats().getRemaining()

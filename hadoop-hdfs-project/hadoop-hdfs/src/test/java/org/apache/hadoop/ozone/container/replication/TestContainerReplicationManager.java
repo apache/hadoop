@@ -27,7 +27,7 @@ import org.apache.hadoop.ozone.container.TestUtils
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.container.replication
     .ContainerReplicationManager;
 import org.apache.hadoop.ozone.scm.container.replication.InProgressPool;
@@ -145,7 +145,7 @@ public class TestContainerReplicationManager {
     String threeNodeContainer = "ThreeNodeContainer";
     InProgressPool ppool = replicationManager.getInProcessPoolList().get(0);
     // Only single datanode reporting that "SingleNodeContainer" exists.
-    List<ContainerReportsProto> clist =
+    List<ContainerReportsRequestProto> clist =
         datanodeStateManager.getContainerReport(singleNodeContainer,
             ppool.getPool().getPoolName(), 1);
     ppool.handleContainerReport(clist.get(0));
@@ -154,7 +154,7 @@ public class TestContainerReplicationManager {
     clist = datanodeStateManager.getContainerReport(threeNodeContainer,
         ppool.getPool().getPoolName(), 3);
 
-    for (ContainerReportsProto reportsProto : clist) {
+    for (ContainerReportsRequestProto reportsProto : clist) {
       ppool.handleContainerReport(reportsProto);
     }
     GenericTestUtils.waitFor(() -> ppool.getContainerProcessedCount() == 4,
@@ -181,7 +181,7 @@ public class TestContainerReplicationManager {
     String wayOverReplicated = "WayOverReplicated";
     InProgressPool ppool = replicationManager.getInProcessPoolList().get(0);
 
-    List<ContainerReportsProto> clist =
+    List<ContainerReportsRequestProto> clist =
         datanodeStateManager.getContainerReport(normalContainer,
             ppool.getPool().getPoolName(), 3);
     ppool.handleContainerReport(clist.get(0));
@@ -189,14 +189,14 @@ public class TestContainerReplicationManager {
     clist = datanodeStateManager.getContainerReport(overReplicated,
         ppool.getPool().getPoolName(), 4);
 
-    for (ContainerReportsProto reportsProto : clist) {
+    for (ContainerReportsRequestProto reportsProto : clist) {
       ppool.handleContainerReport(reportsProto);
     }
 
     clist = datanodeStateManager.getContainerReport(wayOverReplicated,
         ppool.getPool().getPoolName(), 7);
 
-    for (ContainerReportsProto reportsProto : clist) {
+    for (ContainerReportsRequestProto reportsProto : clist) {
       ppool.handleContainerReport(reportsProto);
     }
 
@@ -249,7 +249,7 @@ public class TestContainerReplicationManager {
 
       // Assert that we are able to send a container report to this new
       // pool and datanode.
-      List<ContainerReportsProto> clist =
+      List<ContainerReportsRequestProto> clist =
           datanodeStateManager.getContainerReport("NewContainer1",
               "PoolNew", 1);
       replicationManager.handleContainerReport(clist.get(0));

@@ -36,6 +36,7 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.Volu
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.BatchOperation;
+import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.apache.hadoop.utils.MetadataStore;
@@ -459,10 +460,9 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
   public List<BlockGroup> getPendingDeletionKeys(final int count)
       throws IOException {
     List<BlockGroup> keyBlocksList = Lists.newArrayList();
-    final MetadataKeyFilter deletingKeyFilter =
-        new KeyPrefixFilter(DELETING_KEY_PREFIX);
     List<Map.Entry<byte[], byte[]>> rangeResult =
-        store.getSequentialRangeKVs(null, count, deletingKeyFilter);
+        store.getRangeKVs(null, count,
+            MetadataKeyFilters.getDeletingKeyFilter());
     for (Map.Entry<byte[], byte[]> entry : rangeResult) {
       KsmKeyInfo info =
           KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(entry.getValue()));

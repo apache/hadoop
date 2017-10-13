@@ -130,6 +130,7 @@ public class DatanodeStateMachine implements Closeable {
         LOG.debug("Executing cycle Number : {}", context.getExecutionCount());
         nextHB.set(Time.monotonicNow() + heartbeatFrequency);
         context.setReportState(container.getNodeReport());
+        context.setContainerReportState(container.getContainerReportState());
         context.execute(executorService, heartbeatFrequency,
             TimeUnit.MILLISECONDS);
         now = Time.monotonicNow();

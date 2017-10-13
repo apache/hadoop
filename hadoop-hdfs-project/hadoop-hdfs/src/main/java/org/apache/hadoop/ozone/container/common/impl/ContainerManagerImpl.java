@@ -24,9 +24,15 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.container.common.helpers.KeyData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
+import org.apache.hadoop.ozone.container.common.interfaces.*;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol.proto
@@ -36,12 +42,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.interfaces.ChunkManager;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerDeletionChoosingPolicy;
-import org.apache.hadoop.ozone.container.common.interfaces
-    .ContainerLocationManager;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
-import org.apache.hadoop.ozone.container.common.interfaces.KeyManager;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.utils.MetadataKeyFilters;
@@ -104,34 +104,42 @@ public class ContainerManagerImpl implements ContainerManager {
   private final ConcurrentSkipListMap<String, ContainerStatus>
       containerMap = new ConcurrentSkipListMap<>();
 
-  // This lock follows fair locking policy of first-come first-serve
-  // for waiting threads.
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
+  // Use a non-fair RW lock for better throughput, we may revisit this decision
+  // if this causes fairness issues.
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private ContainerLocationManager locationManager;
   private ChunkManager chunkManager;
   private KeyManager keyManager;
   private Configuration conf;
+  private DatanodeID datanodeID;
 
   private ContainerDeletionChoosingPolicy containerDeletionChooser;
+  private ContainerReportManager containerReportManager;
 
   /**
    * Init call that sets up a container Manager.
    *
    * @param config - Configuration.
    * @param containerDirs - List of Metadata Container locations.
+   * @param datanode - Datanode ID.
    * @throws IOException
    */
   @Override
   public void init(
-      Configuration config, List<StorageLocation> containerDirs)
-      throws IOException {
+      Configuration config, List<StorageLocation> containerDirs,
+      DatanodeID datanode) throws IOException {
     Preconditions.checkNotNull(config, "Config must not be null");
     Preconditions.checkNotNull(containerDirs, "Container directories cannot " +
         "be null");
+    Preconditions.checkNotNull(datanode, "Datanode ID cannot " +
+        "be null");
+
     Preconditions.checkState(containerDirs.size() > 0, "Number of container" +
         " directories must be greater than zero.");
 
     this.conf = config;
+    this.datanodeID = datanode;
+
     readLock();
     try {
       containerDeletionChooser = ReflectionUtils.newInstance(conf.getClass(
@@ -180,6 +188,8 @@ public class ContainerManagerImpl implements ContainerManager {
       this.locationManager =
           new ContainerLocationManagerImpl(containerDirs, dataDirs, config);
 
+      this.containerReportManager =
+          new ContainerReportManagerImpl(config);
     } finally {
       readUnlock();
     }
@@ -230,7 +240,7 @@ public class ContainerManagerImpl implements ContainerManager {
         containerMap.put(keyName, new ContainerStatus(null));
         return;
       }
-      containerData = ContainerData.getFromProtBuf(containerDataProto);
+      containerData = ContainerData.getFromProtBuf(containerDataProto, conf);
       ContainerProtos.ContainerMeta meta =
           ContainerProtos.ContainerMeta.parseDelimitedFrom(metaStream);
       if (meta != null && !DigestUtils.sha256Hex(sha.digest())
@@ -251,9 +261,28 @@ public class ContainerManagerImpl implements ContainerManager {
       MetadataStore metadata = KeyUtils.getDB(containerData, conf);
       List<Map.Entry<byte[], byte[]>> underDeletionBlocks = metadata
           .getSequentialRangeKVs(null, Integer.MAX_VALUE,
-              new MetadataKeyFilters.KeyPrefixFilter(
-                  OzoneConsts.DELETING_KEY_PREFIX));
+              MetadataKeyFilters.getDeletingKeyFilter());
       containerStatus.incrPendingDeletionBlocks(underDeletionBlocks.size());
+
+      List<Map.Entry<byte[], byte[]>> liveKeys = metadata
+          .getRangeKVs(null, Integer.MAX_VALUE,
+              MetadataKeyFilters.getNormalKeyFilter());
+
+      // Get container bytesUsed upon loading container
+      // The in-memory state is updated upon key write or delete
+      // TODO: update containerDataProto and persist it into container MetaFile
+      long bytesUsed = 0;
+      bytesUsed = liveKeys.parallelStream().mapToLong(e-> {
+        KeyData keyData;
+        try {
+          keyData = KeyUtils.getKeyData(e.getValue());
+          return keyData.getSize();
+        } catch (IOException ex) {
+          return 0L;
+        }
+      }).sum();
+      containerStatus.setBytesUsed(bytesUsed);
+
       containerMap.put(keyName, containerStatus);
     } catch (IOException | NoSuchAlgorithmException ex) {
       LOG.error("read failed for file: {} ex: {}", containerName,
@@ -320,6 +349,8 @@ public class ContainerManagerImpl implements ContainerManager {
    * repeated KeyValue metadata = 2;
    * optional string dbPath = 3;
    * optional string containerPath = 4;
+   * optional int64 bytesUsed = 5;
+   * optional int64 size = 6;
    * }
    *
    * message ContainerMeta {
@@ -806,6 +837,7 @@ public class ContainerManagerImpl implements ContainerManager {
     return nrb.build();
   }
 
+
   /**
    * Gets container reports.
    *
@@ -823,6 +855,47 @@ public class ContainerManagerImpl implements ContainerManager {
             !containerStatus.getValue().getContainer().isOpen())
         .map(containerStatus -> containerStatus.getValue().getContainer())
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Get container report.
+   *
+   * @return The container report.
+   * @throws IOException
+   */
+  @Override
+  public ContainerReportsRequestProto getContainerReport() throws IOException {
+    LOG.debug("Starting container report iteration.");
+    // No need for locking since containerMap is a ConcurrentSkipListMap
+    // And we can never get the exact state since close might happen
+    // after we iterate a point.
+    List<ContainerStatus> containers = containerMap.values().stream()
+        .collect(Collectors.toList());
+
+    ContainerReportsRequestProto.Builder crBuilder =
+        ContainerReportsRequestProto.newBuilder();
+
+    // TODO: support delta based container report
+    crBuilder.setDatanodeID(datanodeID.getProtoBufMessage())
+        .setType(ContainerReportsRequestProto.reportType.fullReport);
+
+    for (ContainerStatus container: containers) {
+      StorageContainerDatanodeProtocolProtos.ContainerInfo.Builder ciBuilder =
+          StorageContainerDatanodeProtocolProtos.ContainerInfo.newBuilder();
+      ciBuilder.setContainerName(container.getContainer().getContainerName())
+          .setFinalhash(container.getContainer().getHash())
+          .setSize(container.getContainer().getMaxSize())
+          .setUsed(container.getContainer().getBytesUsed())
+          .setKeyCount(container.getContainer().getKeyCount())
+          .setReadCount(container.getReadCount())
+          .setWriteCount(container.getWriteCount())
+          .setReadBytes(container.getReadBytes())
+          .setWriteBytes(container.getWriteBytes());
+
+      crBuilder.addReports(ciBuilder.build());
+    }
+
+    return crBuilder.build();
   }
 
   /**
@@ -891,4 +964,128 @@ public class ContainerManagerImpl implements ContainerManager {
       writeUnlock();
     }
   }
+
+  /**
+   * Increase the read count of the container.
+   *
+   * @param containerName - Name of the container.
+   */
+  @Override
+  public void incrReadCount(String containerName) {
+    ContainerStatus status = containerMap.get(containerName);
+    status.incrReadCount();
+  }
+
+  public long getReadCount(String containerName) {
+    ContainerStatus status = containerMap.get(containerName);
+    return status.getReadCount();
+  }
+
+  /**
+   * Increse the read counter for bytes read from the container.
+   *
+   * @param containerName - Name of the container.
+   * @param readBytes     - bytes read from the container.
+   */
+  @Override
+  public void incrReadBytes(String containerName, long readBytes) {
+    ContainerStatus status = containerMap.get(containerName);
+    status.incrReadBytes(readBytes);
+  }
+
+  public long getReadBytes(String containerName) {
+    readLock();
+    try {
+      ContainerStatus status = containerMap.get(containerName);
+      return status.getReadBytes();
+    } finally {
+      readUnlock();
+    }
+  }
+
+  /**
+   * Increase the write count of the container.
+   *
+   * @param containerName - Name of the container.
+   */
+  @Override
+  public void incrWriteCount(String containerName) {
+    ContainerStatus status = containerMap.get(containerName);
+    status.incrWriteCount();
+  }
+
+  public long getWriteCount(String containerName) {
+    ContainerStatus status = containerMap.get(containerName);
+    return status.getWriteCount();
+  }
+
+  /**
+   * Increse the write counter for bytes write into the container.
+   *
+   * @param containerName - Name of the container.
+   * @param writeBytes    - bytes write into the container.
+   */
+  @Override
+  public void incrWriteBytes(String containerName, long writeBytes) {
+    ContainerStatus status = containerMap.get(containerName);
+    status.incrWriteBytes(writeBytes);
+  }
+
+  public long getWriteBytes(String containerName) {
+    ContainerStatus status = containerMap.get(containerName);
+    return status.getWriteBytes();
+  }
+
+  /**
+   * Increase the bytes used by the container.
+   *
+   * @param containerName - Name of the container.
+   * @param used          - additional bytes used by the container.
+   * @return the current bytes used.
+   */
+  @Override
+  public long incrBytesUsed(String containerName, long used) {
+    ContainerStatus status = containerMap.get(containerName);
+    return status.incrBytesUsed(used);
+  }
+
+  /**
+   * Decrease the bytes used by the container.
+   *
+   * @param containerName - Name of the container.
+   * @param used          - additional bytes reclaimed by the container.
+   * @return the current bytes used.
+   */
+  @Override
+  public long decrBytesUsed(String containerName, long used) {
+    ContainerStatus status = containerMap.get(containerName);
+    return status.decrBytesUsed(used);
+  }
+
+  public long getBytesUsed(String containerName) {
+    ContainerStatus status = containerMap.get(containerName);
+    return status.getBytesUsed();
+  }
+
+  /**
+   * Get the number of keys in the container.
+   *
+   * @param containerName - Name of the container.
+   * @return the current key count.
+   */
+  @Override
+  public long getNumKeys(String containerName) {
+    ContainerStatus status = containerMap.get(containerName);
+    return status.getNumKeys();  }
+
+  /**
+   * Get the container report state to send via HB to SCM.
+   *
+   * @return container report state.
+   */
+  @Override
+  public ReportState getContainerReportState() {
+    return containerReportManager.getContainerReportState();
+  }
+
 }
