@@ -70,7 +70,7 @@ public class ResourcePBImpl extends Resource {
   @Override
   @SuppressWarnings("deprecation")
   public int getMemory() {
-    return (int) getMemorySize();
+    return castToIntSafely(this.getMemorySize());
   }
 
   @Override

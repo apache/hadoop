@@ -61,7 +61,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
     @Override
     public int getMemory() {
-      return (int)memory;
+      return castToIntSafely(memory);
     }
     @Override
     public void setMemory(int memory) {
@@ -77,7 +77,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
     @Override
     public int getVirtualCores() {
-      return (int)vcores;
+      return castToIntSafely(vcores);
     }
     @Override
     public void setVirtualCores(int vcores) {
@@ -205,5 +205,19 @@ public abstract class Resource implements Comparable<Resource> {
   @Override
   public String toString() {
     return "<memory:" + getMemorySize() + ", vCores:" + getVirtualCores() + ">";
+  }
+
+  /**
+   * Convert long to int for a resource value safely. This method assumes
+   * resource value is positive.
+   *
+   * @param value long resource value
+   * @return int resource value
+   */
+  protected static int castToIntSafely(long value) {
+    if (value > Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    }
+    return Long.valueOf(value).intValue();
   }
 }
