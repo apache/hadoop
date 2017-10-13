@@ -233,7 +233,9 @@ public class BlockManagerTestUtil {
    * @param bm the BlockManager to manipulate
    */
   public static void checkHeartbeat(BlockManager bm) {
-    bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
+    HeartbeatManager hbm = bm.getDatanodeManager().getHeartbeatManager();
+    hbm.restartHeartbeatStopWatch();
+    hbm.heartbeatCheck();
   }
 
   /**
