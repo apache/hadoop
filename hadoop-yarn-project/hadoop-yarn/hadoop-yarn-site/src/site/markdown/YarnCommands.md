@@ -329,8 +329,16 @@ Usage: `yarn timelineserver`
 Start the TimeLineServer
 
 ### apiserver
+
 Usage: `yarn apiserver`
+
 Start the API-server for deploying/managing services on YARN
+
+### registrydns
+
+Usage: `yarn registrydns`
+
+Start the RegistryDNS server
 
 Files
 -----

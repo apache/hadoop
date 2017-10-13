@@ -45,6 +45,7 @@ function hadoop_usage
   hadoop_add_subcommand "nodemanager" daemon "run a nodemanager on each worker"
   hadoop_add_subcommand "proxyserver" daemon "run the web app proxy server"
   hadoop_add_subcommand "queue" client "prints queue information"
+  hadoop_add_subcommand "registrydns" daemon "run the registry DNS server"
   hadoop_add_subcommand "resourcemanager" daemon "run the ResourceManager"
   hadoop_add_subcommand "rmadmin" admin "admin tools"
   hadoop_add_subcommand "router" daemon "run the Router daemon"
@@ -142,6 +143,11 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     ;;
     queue)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.QueueCLI
+    ;;
+    registrydns)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_SECURE_CLASSNAME='org.apache.hadoop.registry.server.dns.PrivilegedRegistryDNSStarter'
+      HADOOP_CLASSNAME='org.apache.hadoop.registry.server.dns.RegistryDNSServer'
     ;;
     resourcemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"

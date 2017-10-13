@@ -17,11 +17,6 @@
 package org.apache.hadoop.registry.server.dns;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.api.DNSOperationsFactory;
@@ -65,9 +60,11 @@ public class RegistryDNSServer extends CompositeService {
   /**
    * Creates the DNS server.
    * @param name the server name.
+   * @param registryDNS the registry DNS instance.
    */
-  public RegistryDNSServer(String name) {
+  public RegistryDNSServer(String name, final RegistryDNS registryDNS) {
     super(name);
+    this.registryDNS = registryDNS;
   }
 
   /**
@@ -83,8 +80,9 @@ public class RegistryDNSServer extends CompositeService {
     registryOperations = new RegistryOperationsService("RegistryDNSOperations");
     addService(registryOperations);
 
-    // probably need to populate with existing apps?
-    registryDNS = (RegistryDNS) DNSOperationsFactory.createInstance(conf);
+    if (registryDNS == null) {
+      registryDNS = (RegistryDNS) DNSOperationsFactory.createInstance(conf);
+    }
     addService(registryDNS);
 
     super.serviceInit(conf);
@@ -231,24 +229,21 @@ public class RegistryDNSServer extends CompositeService {
 
   /**
    * Launch the server.
-   * @param args command line args.
+   * @param conf configuration
+   * @param rdns registry dns instance
    * @return
    */
-  static RegistryDNSServer launchDNSServer(String[] args) {
+  static RegistryDNSServer launchDNSServer(Configuration conf,
+      RegistryDNS rdns) {
     RegistryDNSServer dnsServer = null;
 
     Thread
         .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
-    StringUtils.startupShutdownMessage(RegistryDNSServer.class, args,
-                                       LOG);
     try {
-      dnsServer = new RegistryDNSServer("RegistryDNSServer");
+      dnsServer = new RegistryDNSServer("RegistryDNSServer", rdns);
       ShutdownHookManager.get().addShutdownHook(
           new CompositeService.CompositeServiceShutdownHook(dnsServer),
           SHUTDOWN_HOOK_PRIORITY);
-      YarnConfiguration conf = new YarnConfiguration();
-      processCommandLine(args, conf);
-      new GenericOptionsParser(conf, args);
       dnsServer.init(conf);
       dnsServer.start();
     } catch (Throwable t) {
@@ -259,32 +254,14 @@ public class RegistryDNSServer extends CompositeService {
   }
 
   /**
-   * Process input command line arguments.
-   * @param args the command line argument array.
-   * @param conf  the configuration.
-   */
-  private static void processCommandLine(String[] args,
-                                         YarnConfiguration conf) {
-    Options options = new Options();
-    options.addOption("p", "port", true,
-                      "the server listening port (override)");
-
-    CommandLineParser parser = new BasicParser();
-    try {
-      CommandLine cmd = parser.parse(options, args);
-      if (cmd.hasOption("p")) {
-        conf.set(RegistryConstants.KEY_DNS_PORT, cmd.getOptionValue("p"));
-      }
-    } catch (ParseException e) {
-      LOG.error("Error parsing the command line options", e);
-    }
-  }
-
-  /**
    * Lanches the server instance.
    * @param args the command line args.
+   * @throws IOException if command line options can't be parsed
    */
-  public static void main(String[] args) {
-    launchDNSServer(args);
+  public static void main(String[] args) throws IOException {
+    StringUtils.startupShutdownMessage(RegistryDNSServer.class, args, LOG);
+    YarnConfiguration conf = new YarnConfiguration();
+    new GenericOptionsParser(conf, args);
+    launchDNSServer(conf, null);
   }
 }
