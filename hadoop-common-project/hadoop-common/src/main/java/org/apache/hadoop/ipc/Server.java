@@ -1982,7 +1982,7 @@ public abstract class Server {
     private void doSaslReply(Exception ioe) throws IOException {
       setupResponse(authFailedCall,
           RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_UNAUTHORIZED,
-          null, ioe.getClass().getName(), ioe.getLocalizedMessage());
+          null, ioe.getClass().getName(), ioe.toString());
       sendResponse(authFailedCall);
     }
 
@@ -2371,7 +2371,8 @@ public abstract class Server {
         final RpcCall call = new RpcCall(this, callId, retry);
         setupResponse(call,
             rse.getRpcStatusProto(), rse.getRpcErrorCodeProto(), null,
-            t.getClass().getName(), t.getMessage());
+            t.getClass().getName(),
+            t.getMessage() != null ? t.getMessage() : t.toString());
         sendResponse(call);
       }
     }
