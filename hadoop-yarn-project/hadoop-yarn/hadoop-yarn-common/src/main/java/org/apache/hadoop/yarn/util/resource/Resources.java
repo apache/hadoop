@@ -60,17 +60,10 @@ public class Resources {
       initResourceMap();
     }
 
-    private int resourceValueToInt() {
-      if(this.resourceValue > Integer.MAX_VALUE) {
-        return Integer.MAX_VALUE;
-      }
-      return Long.valueOf(this.resourceValue).intValue();
-    }
-
     @Override
     @SuppressWarnings("deprecation")
     public int getMemory() {
-      return resourceValueToInt();
+      return castToIntSafely(resourceValue);
     }
 
     @Override
@@ -91,7 +84,7 @@ public class Resources {
 
     @Override
     public int getVirtualCores() {
-      return resourceValueToInt();
+      return castToIntSafely(resourceValue);
     }
 
     @Override
