@@ -82,6 +82,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -130,6 +131,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   private ConcurrentMap<Name, Zone> zones = new ConcurrentHashMap<>();
   private Name bindHost;
 
+  private boolean channelsInitialized = false;
+
   /**
    * Construct the service.
    *
@@ -150,6 +153,24 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         });
   }
 
+  public void initializeChannels(Configuration conf) throws Exception {
+    if (channelsInitialized) {
+      return;
+    }
+    channelsInitialized = true;
+    int port = conf.getInt(KEY_DNS_PORT, DEFAULT_DNS_PORT);
+    InetAddress addr = InetAddress.getLocalHost();
+
+    String bindAddress = conf.get(KEY_DNS_BIND_ADDRESS);
+    if (bindAddress != null) {
+      addr = InetAddress.getByName(bindAddress);
+    }
+
+    LOG.info("Opening TCP and UDP channels on {} port {}", addr, port);
+    addNIOUDP(addr, port);
+    addNIOTCP(addr, port);
+  }
+
   /**
    * Initializes the registry.
    *
@@ -164,17 +185,9 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     try {
       setDomainName(conf);
 
-      int port = initializeZones(conf);
+      initializeZones(conf);
 
-      InetAddress addr = InetAddress.getLocalHost();
-
-      String bindAddress = conf.get(KEY_DNS_BIND_ADDRESS);
-      if (bindAddress != null) {
-        addr = InetAddress.getByName(bindAddress);
-      }
-      addNIOUDP(addr, port);
-      addNIOTCP(addr, port);
-
+      initializeChannels(conf);
     } catch (IOException e) {
       LOG.error("Error initializing Registry DNS Server", e);
       throw e;
@@ -189,8 +202,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    * @return the listener port
    * @throws IOException
    */
-  int initializeZones(Configuration conf) throws IOException {
-    int port = conf.getInt(KEY_DNS_PORT, DEFAULT_DNS_PORT);
+  void initializeZones(Configuration conf) throws IOException {
     ttl = conf.getTimeDuration(KEY_DNS_TTL, 1L, TimeUnit.SECONDS);
     RecordCreatorFactory.setTtl(ttl);
 
@@ -203,7 +215,12 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
     initializeReverseLookupZone(conf);
 
-    return port;
+    StringBuilder builder = new StringBuilder();
+    builder.append("DNS zones: ").append(System.lineSeparator());
+    for (Map.Entry<Name, Zone> entry : zones.entrySet()) {
+      builder.append(System.lineSeparator()).append(entry.getValue());
+    }
+    LOG.info(builder.toString());
   }
 
   /**
@@ -1412,7 +1429,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         }
         processor.manageDNSRecords(command);
       } else {
-        LOG.warn("Yarn Resgistry record {} does not contain {} attribute ",
+        LOG.warn("Yarn Registry record {} does not contain {} attribute ",
                   record.toString(), YarnRegistryAttributes.YARN_PERSISTENCE);
       }
     } catch (Exception e) {

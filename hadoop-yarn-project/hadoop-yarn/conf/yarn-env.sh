@@ -160,3 +160,15 @@
 # See ResourceManager for some examples
 #
 #export YARN_APISERVER_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-apiserver.log-$(date +'%Y%m%d%H%M')"
+
+###
+# Registry DNS specific parameters
+###
+# For privileged registry DNS, user to run as after dropping privileges
+# This will replace the hadoop.id.str Java property in secure mode.
+# export YARN_REGISTRYDNS_SECURE_USER=yarn
+
+# Supplemental options for privileged registry DNS
+# By default, Hadoop uses jsvc which needs to know to launch a
+# server jvm.
+# export YARN_REGISTRYDNS_SECURE_EXTRA_OPTS="-jvm server"

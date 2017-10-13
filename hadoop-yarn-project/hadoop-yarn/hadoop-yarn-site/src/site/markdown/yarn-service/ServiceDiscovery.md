@@ -73,6 +73,7 @@ assigned `0` since it is the first and only instance for the `hbasemaster` compo
 Below is the set of configurations in `yarn-site.xml` required for enabling Registry DNS. A full list of properties can be found in the Configuration
 section of [Registry DNS](RegistryDNS.md).
 
+
 ```
   <property>
     <description>The domain name for Hadoop cluster associated records.</description>
@@ -84,7 +85,7 @@ section of [Registry DNS](RegistryDNS.md).
     <description>The port number for the DNS listener. The default port is 5353.
     If the standard privileged port 53 is used, make sure start the DNS with jsvc support.</description>
     <name>hadoop.registry.dns.bind-port</name>
-    <value>53</value>
+    <value>5353</value>
   </property>
 
   <property>
@@ -93,6 +94,20 @@ section of [Registry DNS](RegistryDNS.md).
     <value>true</value>
   </property>
 
+  <property>
+    <description>Address associated with the network interface to which the DNS listener should bind.</description>
+    <name>hadoop.registry.dns.bind-address</name>
+    <value>localhost</value>
+  </property>
+
+  <property>
+    <description> A comma separated list of hostname:port pairs defining the zookeeper quorum for the YARN registry</description>
+    <name>hadoop.registry.zk.quorum</name>
+    <value>localhost:2181</value>
+  </property>
+```
+To configure Registry DNS to serve reverse lookup for `172.17.0.0/24`
+```
   <property>
     <description>The network mask associated with the zone IP range. If specified, it is utilized to ascertain the
     IP range possible and come up with an appropriate reverse zone name.</description>
@@ -104,11 +119,9 @@ section of [Registry DNS](RegistryDNS.md).
     <description>An indicator of the IP range associated with the cluster containers. The setting is utilized for the
      generation of the reverse zone name.</description>
     <name>hadoop.registry.dns.zone-subnet</name>
-    <value>172.17.0</value>
+    <value>172.17.0.0</value>
   </property>
-
 ```
-
 ## Start the DNS Server
 By default, the DNS server runs on non-privileged port `5353`. Start the server
 with:

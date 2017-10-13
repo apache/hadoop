@@ -15,7 +15,7 @@
 # Registry DNS Server
 
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->
-
+The document describes the internals of Registry DNS server. It is based on the [YARN service registry](../registry/index.md) which is backed by a zookeeper cluster.
 ## Introduction
 
 The Registry DNS Server provides a standard DNS interface to the information posted into the YARN Registry by deployed applications. The DNS service serves the following functions:
@@ -102,7 +102,7 @@ maps to the application user and so on. Wherever it is not easily distinguishabl
 “container” or suffix such as “api”. For example, an endpoint published as a
 management endpoint will be referenced with the name *management-api.griduser.yarncluster.com*.
 * Unique application name (per user) is not currently supported/guaranteed by YARN, but
-it is supported by frameworks such as Apache Slider. The registry DNS service currently
+it is supported by the YARN service framework. The registry DNS service currently
 leverages the last element of the ZK path entry for the application as an
 application name. These application names have to be unique for a given user.
 
@@ -153,6 +153,7 @@ The Registry DNS server reads its configuration properties from the yarn-site.xm
 
 | Name | Description |
 | ------------ | ------------- |
+|hadoop.registry.zk.quorum| A comma separated list of hostname:port pairs defining the zookeeper quorum for the [YARN registry](../registry/registry-configuration.md). |
 | hadoop.registry.dns.enabled | The DNS functionality is enabled for the cluster. Default is false. |
 | hadoop.registry.dns.domain-name  | The domain name for Hadoop cluster associated records.  |
 | hadoop.registry.dns.bind-address | Address associated with the network interface to which the DNS listener should bind.  |
@@ -164,3 +165,36 @@ The Registry DNS server reads its configuration properties from the yarn-site.xm
 | hadoop.registry.dns.zone-subnet  | An indicator of the IP range associated with the cluster containers. The setting is utilized for the generation of the reverse zone name.  |
 | hadoop.registry.dns.zone-mask | The network mask associated with the zone IP range.  If specified, it is utilized to ascertain the IP range possible and come up with an appropriate reverse zone name. |
 | hadoop.registry.dns.zones-dir | A directory containing zone configuration files to read during zone initialization.  This directory can contain zone master files named *zone-name.zone*.  See [here](http://www.zytrax.com/books/dns/ch6/mydomain.html) for zone master file documentation.|
+### Sample configurations
+```
+ <property>
+    <description>The domain name for Hadoop cluster associated records.</description>
+    <name>hadoop.registry.dns.domain-name</name>
+    <value>ycluster</value>
+  </property>
+
+  <property>
+    <description>The port number for the DNS listener. The default port is 5353.
+    If the standard privileged port 53 is used, make sure start the DNS with jsvc support.</description>
+    <name>hadoop.registry.dns.bind-port</name>
+    <value>5353</value>
+  </property>
+
+  <property>
+    <description>The DNS functionality is enabled for the cluster. Default is false.</description>
+    <name>hadoop.registry.dns.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>Address associated with the network interface to which the DNS listener should bind.</description>
+    <name>hadoop.registry.dns.bind-address</name>
+    <value>localhost</value>
+  </property>
+
+  <property>
+    <description>A comma separated list of hostname:port pairs defining the zookeeper quorum for the YARN registry</description>
+    <name>hadoop.registry.zk.quorum</name>
+    <value>localhost:2181</value>
+  </property>
+  ```
