@@ -75,6 +75,7 @@ static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
 
 static const int DEFAULT_DOCKER_SUPPORT_ENABLED = 0;
 static const int DEFAULT_TC_SUPPORT_ENABLED = 0;
+static const char* DEFAULT_DOCKER_BINARY_PATH = "/usr/bin/docker";
 
 //struct to store the user details
 struct passwd *user_detail = NULL;
@@ -1305,9 +1306,17 @@ char* parse_docker_command_file(const char* command_file) {
   return ret;
 }
 
+char *get_docker_binary() {
+  char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  if (docker_binary == NULL) {
+    docker_binary = strdup(DEFAULT_DOCKER_BINARY_PATH);
+  }
+  return docker_binary;
+}
+
 int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
-  char* docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  char* docker_binary = get_docker_binary();
   size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
   char* docker_command_with_binary = calloc(sizeof(char), command_size);
@@ -1476,10 +1485,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   docker_rm_command = calloc(sizeof(char), command_size);
 
   char *docker_command = parse_docker_command_file(command_file);
-  char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
-  if (docker_binary == NULL) {
-    docker_binary = "docker";
-  }
+  char *docker_binary = get_docker_binary();
 
   fprintf(LOGFILE, "Creating script paths...\n");
   exit_code = create_script_paths(
@@ -1653,6 +1659,7 @@ cleanup:
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
+  free(docker_binary);
   free(docker_command_with_binary);
   free(docker_wait_command);
   free(docker_logs_command);

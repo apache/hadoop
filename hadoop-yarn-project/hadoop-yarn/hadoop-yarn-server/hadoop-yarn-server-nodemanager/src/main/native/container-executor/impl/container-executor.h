@@ -292,6 +292,10 @@ int traffic_control_read_state(char *command_file);
  */
 int traffic_control_read_stats(char *command_file);
 
+/**
+ * Get the docker binary path.
+ */
+char *get_docker_binary();
 
 /**
  * Run a docker command passing the command file as an argument
