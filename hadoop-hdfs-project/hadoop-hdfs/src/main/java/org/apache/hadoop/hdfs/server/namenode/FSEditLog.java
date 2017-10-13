@@ -1805,8 +1805,20 @@ public class FSEditLog implements LogsPurgeable {
     try {
       Constructor<? extends JournalManager> cons
         = clazz.getConstructor(Configuration.class, URI.class,
+            NamespaceInfo.class, String.class);
+      String nameServiceId = conf.get(DFSConfigKeys.DFS_NAMESERVICE_ID);
+      return cons.newInstance(conf, uri, storage.getNamespaceInfo(),
+          nameServiceId);
+    } catch (NoSuchMethodException ne) {
+      try {
+        Constructor<? extends JournalManager> cons
+            = clazz.getConstructor(Configuration.class, URI.class,
             NamespaceInfo.class);
-      return cons.newInstance(conf, uri, storage.getNamespaceInfo());
+        return cons.newInstance(conf, uri, storage.getNamespaceInfo());
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Unable to construct journal, "
+            + uri, e);
+      }
     } catch (Exception e) {
       throw new IllegalArgumentException("Unable to construct journal, "
                                          + uri, e);

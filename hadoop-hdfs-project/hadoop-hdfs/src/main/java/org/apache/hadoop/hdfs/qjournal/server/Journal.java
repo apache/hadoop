@@ -137,6 +137,11 @@ public class Journal implements Closeable {
 
   private long lastJournalTimestamp = 0;
 
+  // This variable tracks, have we tried to start journalsyncer
+  // with nameServiceId. This will help not to start the journalsyncer
+  // on each rpc call, if it has failed to start
+  private boolean triedJournalSyncerStartedwithnsId = false;
+
   /**
    * Time threshold for sync calls, beyond which a warning should be logged to the console.
    */
@@ -158,6 +163,14 @@ public class Journal implements Closeable {
     if (latest != null) {
       updateHighestWrittenTxId(latest.getLastTxId());
     }
+  }
+
+  public void setTriedJournalSyncerStartedwithnsId(boolean started) {
+    this.triedJournalSyncerStartedwithnsId = started;
+  }
+
+  public boolean getTriedJournalSyncerStartedwithnsId() {
+    return triedJournalSyncerStartedwithnsId;
   }
 
   /**
@@ -660,7 +673,7 @@ public class Journal implements Closeable {
   }
 
   /**
-   * @see QJournalProtocol#getEditLogManifest(String, long, boolean)
+   * @see QJournalProtocol#getEditLogManifest(String, String, long, boolean)
    */
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId,
       boolean inProgressOk) throws IOException {

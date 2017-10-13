@@ -46,6 +46,7 @@ message RequestInfoProto {
   // request itself, eg in the case that the node has
   // fallen behind.
   optional uint64 committedTxId = 4;
+  optional string nameServiceId = 5;
 }
 
 message SegmentStateProto {
@@ -73,6 +74,7 @@ message JournalRequestProto {
   required uint32 numTxns = 3;
   required bytes records = 4;
   required uint64 segmentTxnId = 5;
+  optional string nameServiceId = 6;
 }
 
 message JournalResponseProto { 
@@ -129,6 +131,7 @@ message PurgeLogsResponseProto {
  */
 message IsFormattedRequestProto {
   required JournalIdProto jid = 1;
+  optional string nameServiceId = 2;
 }
 
 message IsFormattedResponseProto {
@@ -140,6 +143,7 @@ message IsFormattedResponseProto {
  */
 message GetJournalCTimeRequestProto {
   required JournalIdProto jid = 1;
+  optional string nameServiceId = 2;
 }
 
 message GetJournalCTimeResponseProto {
@@ -172,6 +176,7 @@ message DoUpgradeResponseProto {
  */
 message DoFinalizeRequestProto {
   required JournalIdProto jid = 1;
+  optional string nameServiceId = 2;
 }
 
 message DoFinalizeResponseProto {
@@ -185,6 +190,7 @@ message CanRollBackRequestProto {
   required StorageInfoProto storage = 2;
   required StorageInfoProto prevStorage = 3;
   required int32 targetLayoutVersion = 4;
+  optional string nameServiceId = 5;
 }
 
 message CanRollBackResponseProto {
@@ -196,6 +202,7 @@ message CanRollBackResponseProto {
  */
 message DoRollbackRequestProto {
   required JournalIdProto jid = 1;
+  optional string nameserviceId = 2;
 }
 
 message DoRollbackResponseProto {
@@ -207,6 +214,7 @@ message DoRollbackResponseProto {
 message DiscardSegmentsRequestProto {
   required JournalIdProto jid = 1;
   required uint64 startTxId = 2;
+  optional string nameServiceId = 3;
 }
 
 message DiscardSegmentsResponseProto {
@@ -217,6 +225,7 @@ message DiscardSegmentsResponseProto {
  */
 message GetJournalStateRequestProto {
   required JournalIdProto jid = 1;
+  optional string nameServiceId = 2;
 }
 
 message GetJournalStateResponseProto {
@@ -232,6 +241,7 @@ message GetJournalStateResponseProto {
 message FormatRequestProto {
   required JournalIdProto jid = 1;
   required NamespaceInfoProto nsInfo = 2;
+  optional string nameServiceId = 3;
 }
 
 message FormatResponseProto {
@@ -244,6 +254,7 @@ message NewEpochRequestProto {
   required JournalIdProto jid = 1;
   required NamespaceInfoProto nsInfo = 2;
   required uint64 epoch = 3;
+  optional string nameServiceId = 4;
 }
 
 message NewEpochResponseProto {
@@ -259,6 +270,7 @@ message GetEditLogManifestRequestProto {
   // Whether or not the client will be reading from the returned streams.
   // optional bool forReading = 3 [default = true]; <obsolete, do not reuse>
   optional bool inProgressOk = 4 [default = false];
+  optional string nameServiceId = 5;
 }
 
 message GetEditLogManifestResponseProto {
