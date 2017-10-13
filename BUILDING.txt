@@ -331,10 +331,10 @@ If the build process fails with an out of memory error, you should be able to fi
 it by increasing the memory used by maven which can be done via the environment
 variable MAVEN_OPTS.
 
-Here is an example setting to allocate between 256 MB and 1 GB of heap space to
+Here is an example setting to allocate between 256 and 512 MB of heap space to
 Maven
 
-export MAVEN_OPTS="-Xms256m -Xmx1g"
+export MAVEN_OPTS="-Xms256m -Xmx512m"
 
 ----------------------------------------------------------------------------------
 
