@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.scm.node;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -105,13 +104,13 @@ public class SCMNodeManager
   /**
    * Key = NodeID, value = timestamp.
    */
-  private final Map<String, Long> healthyNodes;
-  private final Map<String, Long> staleNodes;
-  private final Map<String, Long> deadNodes;
+  private final ConcurrentHashMap<String, Long> healthyNodes;
+  private final ConcurrentHashMap<String, Long> staleNodes;
+  private final ConcurrentHashMap<String, Long> deadNodes;
   private final Queue<HeartbeatQueueItem> heartbeatQueue;
-  private final Map<String, DatanodeID> nodes;
+  private final ConcurrentHashMap<String, DatanodeID> nodes;
   // Individual live node stats
-  private final Map<String, SCMNodeStat> nodeStats;
+  private final ConcurrentHashMap<String, SCMNodeStat> nodeStats;
   // Aggregated node stats
   private SCMNodeStat scmStat;
   // TODO: expose nodeStats and scmStat as metrics
@@ -158,8 +157,8 @@ public class SCMNodeManager
     healthyNodes = new ConcurrentHashMap<>();
     deadNodes = new ConcurrentHashMap<>();
     staleNodes = new ConcurrentHashMap<>();
-    nodes = new HashMap<>();
-    nodeStats = new HashedMap();
+    nodes = new ConcurrentHashMap<>();
+    nodeStats = new ConcurrentHashMap();
     scmStat = new SCMNodeStat();
 
     healthyNodeCount = new AtomicInteger(0);
