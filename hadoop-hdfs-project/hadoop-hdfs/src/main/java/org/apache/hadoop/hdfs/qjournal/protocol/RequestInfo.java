@@ -26,13 +26,20 @@ public class RequestInfo {
   private long epoch;
   private long ipcSerialNumber;
   private final long committedTxId;
+  private final String nameServiceId;
   
-  public RequestInfo(String jid, long epoch, long ipcSerialNumber,
-      long committedTxId) {
+  public RequestInfo(String jid, String nameServiceId,
+                     long epoch, long ipcSerialNumber,
+                     long committedTxId) {
     this.jid = jid;
+    this.nameServiceId = nameServiceId;
     this.epoch = epoch;
     this.ipcSerialNumber = ipcSerialNumber;
     this.committedTxId = committedTxId;
+  }
+
+  public String getNameServiceId() {
+    return nameServiceId;
   }
 
   public long getEpoch() {
