@@ -51,12 +51,17 @@ public interface Constants {
   /**
    * Config variable for specifying a simple link
    */
-  public static final String CONFIG_VIEWFS_LINK = "link";
-  
+  String CONFIG_VIEWFS_LINK = "link";
+
+  /**
+   * Config variable for specifying a fallback for link mount points.
+   */
+  String CONFIG_VIEWFS_LINK_FALLBACK = "linkFallback";
+
   /**
    * Config variable for specifying a merge link
    */
-  public static final String CONFIG_VIEWFS_LINK_MERGE = "linkMerge";
+  String CONFIG_VIEWFS_LINK_MERGE = "linkMerge";
 
   /**
    * Config variable for specifying an nfly link. Nfly writes to multiple
@@ -68,10 +73,9 @@ public interface Constants {
    * Config variable for specifying a merge of the root of the mount-table
    *  with the root of another file system. 
    */
-  public static final String CONFIG_VIEWFS_LINK_MERGE_SLASH = "linkMergeSlash";
+  String CONFIG_VIEWFS_LINK_MERGE_SLASH = "linkMergeSlash";
 
-  static public final FsPermission PERMISSION_555 =
-      new FsPermission((short) 0555);
+  FsPermission PERMISSION_555 = new FsPermission((short) 0555);
 
   String CONFIG_VIEWFS_RENAME_STRATEGY = "fs.viewfs.rename.strategy";
 }

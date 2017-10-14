@@ -899,13 +899,13 @@ public class ViewFs extends AbstractFileSystem {
         throws IOException {
       // look up i internalDirs children - ignore first Slash
       INode<AbstractFileSystem> inode =
-        theInternalDir.children.get(f.toUri().toString().substring(1)); 
+          theInternalDir.getChildren().get(f.toUri().toString().substring(1));
       if (inode == null) {
         throw new FileNotFoundException(
             "viewFs internal mount table - missing entry:" + f);
       }
       FileStatus result;
-      if (inode instanceof INodeLink) {
+      if (inode.isLink()) {
         INodeLink<AbstractFileSystem> inodelink = 
           (INodeLink<AbstractFileSystem>) inode;
         result = new FileStatus(0, false, 0, 0, creationTime, creationTime,
@@ -947,14 +947,14 @@ public class ViewFs extends AbstractFileSystem {
     public FileStatus[] listStatus(final Path f) throws AccessControlException,
         IOException {
       checkPathIsSlash(f);
-      FileStatus[] result = new FileStatus[theInternalDir.children.size()];
+      FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
       int i = 0;
-      for (Entry<String, INode<AbstractFileSystem>> iEntry : 
-                                          theInternalDir.children.entrySet()) {
+      for (Entry<String, INode<AbstractFileSystem>> iEntry :
+          theInternalDir.getChildren().entrySet()) {
         INode<AbstractFileSystem> inode = iEntry.getValue();
 
         
-        if (inode instanceof INodeLink ) {
+        if (inode.isLink()) {
           INodeLink<AbstractFileSystem> link = 
             (INodeLink<AbstractFileSystem>) inode;
 
@@ -979,7 +979,7 @@ public class ViewFs extends AbstractFileSystem {
     public void mkdir(final Path dir, final FsPermission permission,
         final boolean createParent) throws AccessControlException,
         FileAlreadyExistsException {
-      if (theInternalDir.isRoot && dir == null) {
+      if (theInternalDir.isRoot() && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
       throw readOnlyMountTable("mkdir", dir);
