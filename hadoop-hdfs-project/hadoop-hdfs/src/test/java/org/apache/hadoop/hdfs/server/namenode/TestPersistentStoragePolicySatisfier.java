@@ -72,7 +72,7 @@ public class TestPersistentStoragePolicySatisfier {
       {StorageType.DISK, StorageType.ARCHIVE, StorageType.SSD}
   };
 
-  private final int timeout = 300000;
+  private final int timeout = 90000;
 
   /**
    * Setup environment for every test case.

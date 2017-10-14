@@ -242,12 +242,25 @@ public class StoragePolicySatisfier implements Runnable {
           ItemInfo itemInfo = storageMovementNeeded.get();
           if (itemInfo != null) {
             long trackId = itemInfo.getTrackId();
-            BlockCollection blockCollection =
-                namesystem.getBlockCollection(trackId);
-            // Check blockCollectionId existence.
+            BlockCollection blockCollection;
+            BlocksMovingAnalysis status = null;
+            try {
+              namesystem.readLock();
+              blockCollection = namesystem.getBlockCollection(trackId);
+              // Check blockCollectionId existence.
+              if (blockCollection == null) {
+                // File doesn't exists (maybe got deleted), remove trackId from
+                // the queue
+                storageMovementNeeded.removeItemTrackInfo(itemInfo);
+              } else {
+                status =
+                    analyseBlocksStorageMovementsAndAssignToDN(
+                        blockCollection);
+              }
+            } finally {
+              namesystem.readUnlock();
+            }
             if (blockCollection != null) {
-              BlocksMovingAnalysis status =
-                  analyseBlocksStorageMovementsAndAssignToDN(blockCollection);
               switch (status.status) {
               // Just add to monitor, so it will be retried after timeout
               case ANALYSIS_SKIPPED_FOR_RETRY:
@@ -283,10 +296,6 @@ public class StoragePolicySatisfier implements Runnable {
                 storageMovementNeeded.removeItemTrackInfo(itemInfo);
                 break;
               }
-            } else {
-              // File doesn't exists (maybe got deleted), remove trackId from
-              // the queue
-              storageMovementNeeded.removeItemTrackInfo(itemInfo);
             }
           }
         }
