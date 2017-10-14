@@ -230,6 +230,16 @@
         });
 
     angular.module('ozone').component('commonTools', {
-        templateUrl: '/static/templates/tools.html'
+        templateUrl: '/static/templates/tools.html',
+        controller: function ($http) {
+            var ctrl = this;
+            ctrl.docs = false;
+            $http.head("/docs/index.html")
+                .then(function (result) {
+                    ctrl.docs = true;
+                },function(){
+                    ctrl.docs = false;
+                });
+        }
     });
 })();
