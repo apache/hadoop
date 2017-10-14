@@ -246,16 +246,15 @@ goto :eof
   )
   goto :eof
 
-<<<<<<< HEAD
 :router
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\router-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.router.Router
   set YARN_OPTS=%YARN_OPTS% %HADOOP_ROUTER_OPTS%
-=======
+  goto :eof
+
 :timelinereader
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\timelineserver-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer
->>>>>>> YARN-5355. Backported YARN-2928 into our branch-2 feature branch.
   goto :eof
 
 :nodemanager
