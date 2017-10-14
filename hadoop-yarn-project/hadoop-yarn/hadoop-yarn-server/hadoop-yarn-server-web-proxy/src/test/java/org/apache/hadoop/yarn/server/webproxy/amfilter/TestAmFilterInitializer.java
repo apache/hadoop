@@ -53,11 +53,11 @@ public class TestAmFilterInitializer extends TestCase {
     AmFilterInitializer afi = new MockAmFilterInitializer();
     assertNull(con.givenParameters);
     afi.initFilter(con, conf);
-    assertEquals(3, con.givenParameters.size());
+    assertEquals(2, con.givenParameters.size());
     assertEquals("host1", con.givenParameters.get(AmIpFilter.PROXY_HOSTS));
     assertEquals("http://host1:1000/foo",
         con.givenParameters.get(AmIpFilter.PROXY_URI_BASES));
-    assertEquals("", con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
+    assertEquals(null, con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
 
     // Check a single RM_WEBAPP_ADDRESS
     con = new MockFilterContainer();
@@ -66,11 +66,11 @@ public class TestAmFilterInitializer extends TestCase {
     afi = new MockAmFilterInitializer();
     assertNull(con.givenParameters);
     afi.initFilter(con, conf);
-    assertEquals(3, con.givenParameters.size());
+    assertEquals(2, con.givenParameters.size());
     assertEquals("host2", con.givenParameters.get(AmIpFilter.PROXY_HOSTS));
     assertEquals("http://host2:2000/foo",
         con.givenParameters.get(AmIpFilter.PROXY_URI_BASES));
-    assertEquals("", con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
+    assertEquals(null, con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
 
     // Check multiple RM_WEBAPP_ADDRESSes (RM HA)
     con = new MockFilterContainer();
