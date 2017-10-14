@@ -521,7 +521,7 @@ int main(int argc, char **argv) {
   open_log_files();
   assert_valid_setup(argv[0]);
 
-  int operation;
+  int operation = -1;
   int ret = validate_arguments(argc, argv, &operation);
 
   if (ret != 0) {

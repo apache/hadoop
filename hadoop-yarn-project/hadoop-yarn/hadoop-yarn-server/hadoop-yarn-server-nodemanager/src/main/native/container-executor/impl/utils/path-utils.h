@@ -16,17 +16,20 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <main/native/container-executor/impl/util.h>
-#include <cstdio>
+#ifdef __FreeBSD__
+#define _WITH_GETLINE
+#endif
 
-extern "C" {
-#include "util.h"
-}
+#ifndef _UTILS_PATH_UTILS_H_
+#define _UTILS_PATH_UTILS_H_
 
-int main(int argc, char **argv) {
-  ERRORFILE = stderr;
-  LOGFILE = stdout;
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+/*
+ * Verify if a given path is safe or not. For example, we don't want a path
+ * include ".." which can do things like:
+ * - "/cgroups/cpu,cpuacct/container/../../../etc/passwd"
+ *
+ * return false/true
+ */
+int verify_path_safety(const char* path);
+
+#endif

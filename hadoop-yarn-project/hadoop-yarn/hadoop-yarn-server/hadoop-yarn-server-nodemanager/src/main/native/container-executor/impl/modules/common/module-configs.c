@@ -16,17 +16,26 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <main/native/container-executor/impl/util.h>
-#include <cstdio>
-
-extern "C" {
 #include "util.h"
-}
+#include "configuration.h"
+#include "container-executor.h"
+#include "modules/common/constants.h"
 
-int main(int argc, char **argv) {
-  ERRORFILE = stderr;
-  LOGFILE = stdout;
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define ENABLED_CONFIG_KEY "module.enabled"
+
+int module_enabled(const struct section* section_cfg, const char* module_name) {
+  char* enabled_str = get_section_value(ENABLED_CONFIG_KEY, section_cfg);
+  int enabled = 0;
+  if (enabled_str && 0 == strcmp(enabled_str, "true")) {
+    enabled = 1;
+  } else {
+    fprintf(LOGFILE, "Module %s is disabled\n", module_name);
+  }
+
+  free(enabled_str);
+  return enabled;
 }

@@ -16,17 +16,37 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <main/native/container-executor/impl/util.h>
-#include <cstdio>
-
-extern "C" {
 #include "util.h"
-}
 
-int main(int argc, char **argv) {
-  ERRORFILE = stderr;
-  LOGFILE = stdout;
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+#include <strings.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int verify_path_safety(const char* path) {
+  if (!path || path[0] == 0) {
+    return 1;
+  }
+
+  char* dup = strdup(path);
+  if (!dup) {
+    fprintf(ERRORFILE, "%s: Failed to allocate memory for path.\n", __func__);
+    return 0;
+  }
+
+  char* p = strtok(dup, "/");
+  int succeeded = 1;
+
+  while (p != NULL) {
+    if (0 == strcmp(p, "..")) {
+      fprintf(ERRORFILE, "%s: Path included \"..\", path=%s.\n", __func__, path);
+      succeeded = 0;
+      break;
+    }
+
+    p = strtok(NULL, "/");
+  }
+  free(dup);
+
+  return succeeded;
 }

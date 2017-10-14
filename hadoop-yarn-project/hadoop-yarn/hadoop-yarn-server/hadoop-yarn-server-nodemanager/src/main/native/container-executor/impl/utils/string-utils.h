@@ -29,4 +29,9 @@
  */
 int validate_container_id(const char* input);
 
+/*
+ * return 0 if succeeded
+ */
+int get_numbers_split_by_comma(const char* input, int** numbers, size_t* n_numbers);
+
 #endif

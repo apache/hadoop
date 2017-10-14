@@ -16,17 +16,21 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <main/native/container-executor/impl/util.h>
-#include <cstdio>
+ #ifdef __APPLE__
+ #include <CoreFoundation/CFString.h>
+ #include <CoreFoundation/CFPreferences.h>
 
-extern "C" {
-#include "util.h"
-}
+ #define TMPDIR "/private/tmp"
+ #define RELTMPDIR "../.."
+ #else
+ #define RELTMPDIR ".."
+ #define TMPDIR "/tmp"
+ #endif
 
-int main(int argc, char **argv) {
-  ERRORFILE = stderr;
-  LOGFILE = stdout;
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+ #define TEST_ROOT TMPDIR "/test-container-executor"
+
+ #define DONT_TOUCH_FILE "dont-touch-me"
+ #define NM_LOCAL_DIRS       TEST_ROOT "/local-1%" TEST_ROOT "/local-2%" \
+                TEST_ROOT "/local-3%" TEST_ROOT "/local-4%" TEST_ROOT "/local-5"
+ #define NM_LOG_DIRS         TEST_ROOT "/logs/userlogs"
+ #define ARRAY_SIZE 1000

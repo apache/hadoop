@@ -101,6 +101,8 @@ add_library(container
     main/native/container-executor/impl/container-executor.c
     main/native/container-executor/impl/get_executable.c
     main/native/container-executor/impl/utils/string-utils.c
+    main/native/container-executor/impl/utils/path-utils.c
+    main/native/container-executor/impl/modules/common/module-configs.c
 )
 
 add_executable(container-executor
@@ -113,12 +115,14 @@ target_link_libraries(container-executor
 
 output_directory(container-executor target/usr/local/bin)
 
+# Test cases
 add_executable(test-container-executor
     main/native/container-executor/test/test-container-executor.c
 )
 target_link_libraries(test-container-executor
     container ${EXTRA_LIBS}
 )
+
 output_directory(test-container-executor target/usr/local/bin)
 
 # unit tests for container executor
@@ -126,6 +130,8 @@ add_executable(cetest
         main/native/container-executor/impl/util.c
         main/native/container-executor/test/test_configuration.cc
         main/native/container-executor/test/test_main.cc
+        main/native/container-executor/test/utils/test-string-utils.cc
+        main/native/container-executor/test/utils/test-path-utils.cc
         main/native/container-executor/test/test_util.cc)
-target_link_libraries(cetest gtest)
+target_link_libraries(cetest gtest container)
 output_directory(cetest test)
