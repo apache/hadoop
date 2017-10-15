@@ -72,27 +72,33 @@
     </table>
   </div>
   <div class="col-md-9">
-    <table class="table table-striped table-condensed table-hover">
+    <table class="table table-striped table-condensed table-hover wrap-table">
       <thead>
       <tr>
-        <th>
-          <a href="#" ng-click="sortBy('prop')">Property</a>
-          <span class="sortorder" ng-show="propertyName === 'prop'"
+        <th class="col-md-3">
+          <a href="#" ng-click="sortBy('name')">Property</a>
+          <span class="sortorder" ng-show="propertyName === 'name'"
                 ng-class="{reverse: reverse}">
 
               </span>
         </th>
-        <th>
+        <th class="col-md-2">
           <a ng-click="sortBy('value')">Value</a>
           <span class="sortorder" ng-show="propertyName === 'value'"
+                ng-class="{reverse: reverse}"></span>
+        </th>
+        <th class="col-md-7">
+          <a ng-click="sortBy('description')">Description</a>
+          <span class="sortorder" ng-show="propertyName === 'description'"
                 ng-class="{reverse: reverse}"></span>
         </th>
       </tr>
       </thead>
       <tbody>
       <tr ng-repeat="config in configArray | filter:search | orderBy:propertyName:reverse">
-        <td>{{config.prop}}</td>
+        <td>{{config.name}}</td>
         <td>{{config.value}}</td>
+        <td>{{config.description}}</td>
       </tr>
       </tbody>
     </table>

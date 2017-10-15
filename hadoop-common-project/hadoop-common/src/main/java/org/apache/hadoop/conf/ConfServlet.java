@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.io.Writer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -38,7 +40,6 @@ import org.apache.hadoop.http.HttpServer2;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.security.krb5.Config;
 
 /**
  * A servlet to print out the running configuration data.
@@ -52,7 +53,9 @@ public class ConfServlet extends HttpServlet {
   protected static final String FORMAT_XML = "xml";
   private static final String COMMAND = "cmd";
   private static final Logger LOG = LoggerFactory.getLogger(ConfServlet.class);
-  private static final Configuration OZONE_CONFIG = new OzoneConfiguration();
+  private transient static final Configuration OZONE_CONFIG = new
+      OzoneConfiguration();
+  private transient Map<String, OzoneConfiguration.Property> propertyMap = null;
 
 
   /**
@@ -129,19 +132,46 @@ public class ConfServlet extends HttpServlet {
           tagList.add(config.getPropertyTag(tag, tagGroup));
         }
       }
-      Properties properties = config.getAllPropertiesByTags(tagList);
 
-      properties.stringPropertyNames().forEach(key -> {
-        if(config.get(key) != null){
-          properties.put(key,config.get(key));
+      Properties properties = config.getAllPropertiesByTags(tagList);
+      if (propertyMap == null) {
+        loadDescriptions();
+      }
+
+      List<OzoneConfiguration.Property> filteredProperties = new ArrayList<>();
+
+      properties.stringPropertyNames().stream().forEach(key -> {
+        if (config.get(key) != null) {
+          propertyMap.get(key).setValue(config.get(key));
+          filteredProperties.add(propertyMap.get(key));
         }
       });
-      out.write(gson.toJsonTree(properties).toString());
+      out.write(gson.toJsonTree(filteredProperties).toString());
       break;
     default:
       throw new IllegalArgumentException(cmd + " is not a valid command.");
     }
 
+  }
+
+  private void loadDescriptions() {
+    OzoneConfiguration config = (OzoneConfiguration) getOzoneConfig();
+    List<OzoneConfiguration.Property> propList = null;
+    propertyMap = new HashMap<>();
+    try {
+      propList = config.readPropertyFromXml(config.getResource("ozone-site"
+          + ".xml"));
+      propList.stream().map(p -> propertyMap.put(p.getName(), p));
+      propList = config.readPropertyFromXml(config.getResource("ozone-default"
+          + ".xml"));
+      propList.stream().forEach(p -> {
+        if (!propertyMap.containsKey(p.getName())) {
+          propertyMap.put(p.getName(), p);
+        }
+      });
+    } catch (Exception e) {
+      LOG.error("Error while reading description from xml files", e);
+    }
   }
 
   @VisibleForTesting

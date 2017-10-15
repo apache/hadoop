@@ -18,6 +18,16 @@
 
 package org.apache.hadoop.conf;
 
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -38,5 +48,108 @@ public class OzoneConfiguration extends Configuration {
 
   public OzoneConfiguration(Configuration conf) {
     super(conf);
+  }
+
+  public List<Property> readPropertyFromXml(URL url) throws JAXBException {
+    JAXBContext context = JAXBContext.newInstance(XMLConfiguration.class);
+    Unmarshaller um = context.createUnmarshaller();
+
+    XMLConfiguration config = (XMLConfiguration) um.unmarshal(url);
+    return config.getProperties();
+  }
+
+  /**
+   * Class to marshall/un-marshall configuration from xml files.
+   */
+  @XmlAccessorType(XmlAccessType.FIELD)
+  @XmlRootElement(name = "configuration")
+  public static class XMLConfiguration {
+
+    @XmlElement(name = "property", type = Property.class)
+    private List<Property> properties = new ArrayList<>();
+
+    public XMLConfiguration() {
+    }
+
+    public XMLConfiguration(List<Property> properties) {
+      this.properties = properties;
+    }
+
+    public List<Property> getProperties() {
+      return properties;
+    }
+
+    public void setProperties(List<Property> properties) {
+      this.properties = properties;
+    }
+  }
+
+  /**
+   * Class to marshall/un-marshall configuration properties from xml files.
+   */
+  @XmlAccessorType(XmlAccessType.FIELD)
+  @XmlRootElement(name = "property")
+  public static class Property implements Comparable<Property> {
+
+    private String name;
+    private String value;
+    private String tag;
+    private String description;
+
+    public String getName() {
+      return name;
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
+
+    public String getValue() {
+      return value;
+    }
+
+    public void setValue(String value) {
+      this.value = value;
+    }
+
+    public String getTag() {
+      return tag;
+    }
+
+    public void setTag(String tag) {
+      this.tag = tag;
+    }
+
+    public String getDescription() {
+      return description;
+    }
+
+    public void setDescription(String description) {
+      this.description = description;
+    }
+
+    @Override
+    public int compareTo(Property o) {
+      if (this == o) {
+        return 0;
+      }
+      return this.getName().compareTo(o.getName());
+    }
+
+    @Override
+    public String toString() {
+      return this.getName() + " " + this.getValue() + this.getTag();
+    }
+
+    @Override
+    public int hashCode(){
+      return this.getName().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return (obj instanceof Property) && (((Property) obj).getName()).equals
+          (this.getName());
+    }
   }
 }
