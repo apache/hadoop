@@ -33,25 +33,16 @@ app.controller('tagController', function($scope, $http,$filter) {
       $scope.loadAll();
         });
 
-
     $scope.convertToArray = function(configAr) {
-        $scope.configArray = [];
-      console.log("Reloading "+configAr);
-        for (config in configAr) {
-            var newProp = {};
-            newProp['prop'] = config;
-            newProp['value'] = configAr[config];
-            $scope.configArray.push(newProp);
-        }
+        $scope.configArray = configAr;
     }
-
 
     $scope.loadAll = function() {
       console.log("Displaying all configs");
         $http.get("/conf?cmd=getPropertyByTag&tags=" + $scope.tags + "&group=ozone").then(function(response) {
             $scope.configs = response.data;
             $scope.convertToArray($scope.configs);
-            $scope.sortBy('prop');
+            $scope.sortBy('name');
         });
     };
 
@@ -89,18 +80,16 @@ app.controller('tagController', function($scope, $http,$filter) {
         $http.get("/conf?cmd=getPropertyByTag&tags=" + filter + "&group=ozone").then(function(response) {
           var tmpConfig = response.data;
           console.log('filtering config for tag:'+filter);
-          array3 = {};
+          array3 = [];
 
-          for(var prop1 in tmpConfig) {
+          for(var i1 in tmpConfig) {
 
-             for(var prop2 in  $scope.configs) {
-              if(prop1 == prop2){
-                array3[prop1] = tmpConfig[prop1];
-                console.log('match found for :'+prop1+'  '+prop2);
+             for(var i2 in  $scope.configs) {
+              if(tmpConfig[i1].name == $scope.configs[i2].name){
+                array3.push( tmpConfig[i1]);
               }
             }
           }
-        console.log('array3->'+array3);
         $scope.convertToArray(array3);
         });
     };

@@ -55,3 +55,8 @@
 .sortorder.reverse:after {
   content: '\25bc';   // BLACK DOWN-POINTING TRIANGLE
 }
+
+.wrap-table{
+  word-wrap: break-word;
+  table-layout: fixed;
+}
