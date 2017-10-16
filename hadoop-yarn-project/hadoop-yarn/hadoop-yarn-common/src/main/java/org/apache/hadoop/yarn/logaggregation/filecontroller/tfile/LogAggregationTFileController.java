@@ -96,8 +96,10 @@ public class LogAggregationTFileController
 
   @Override
   public void closeWriter() {
-    this.writer.close();
-    this.writer = null;
+    if (this.writer != null) {
+      this.writer.close();
+      this.writer = null;
+    }
   }
 
   @Override
@@ -116,6 +118,9 @@ public class LogAggregationTFileController
           record.getUserUgi());
       record.increcleanupOldLogTimes();
     }
+
+    // close the writer before the file is renamed or deleted
+    closeWriter();
 
     final Path renamedPath = record.getRollingMonitorInterval() <= 0
         ? record.getRemoteNodeLogFileForApp() : new Path(
