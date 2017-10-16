@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.security.AccessControlException;
@@ -51,6 +50,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <code>CSQueue</code> represents a node in the tree of 
@@ -380,7 +381,6 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return effective queue capacity
    */
   Resource getEffectiveCapacity(String label);
-  Resource getEffectiveCapacityUp(String label);
   Resource getEffectiveCapacityDown(String label, Resource factor);
 
   /**

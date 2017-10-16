@@ -914,9 +914,11 @@ public class ParentQueue extends AbstractCSQueue {
       queueResourceQuotas.setConfiguredMaxResource(label, resourceByLabel);
       queueResourceQuotas.setEffectiveMinResource(label, resourceByLabel);
       queueResourceQuotas.setEffectiveMaxResource(label, resourceByLabel);
+      queueCapacities.setAbsoluteCapacity(label, 1.0f);
     }
 
-    // Total configured min resources of direct children of queue
+    // Total configured min resources of direct children of this given parent
+    // queue.
     Resource configuredMinResources = Resource.newInstance(0L, 0);
     for (CSQueue childQueue : getChildQueues()) {
       Resources.addTo(configuredMinResources,
@@ -960,7 +962,7 @@ public class ParentQueue extends AbstractCSQueue {
         // present could also be taken from effective max resource of parent.
         Resource parentMaxRes = queueResourceQuotas
             .getConfiguredMaxResource(label);
-        if (parentMaxRes.equals(Resources.none())) {
+        if (parent != null && parentMaxRes.equals(Resources.none())) {
           parentMaxRes = parent.getQueueResourceQuotas()
               .getEffectiveMaxResource(label);
         }
@@ -976,6 +978,11 @@ public class ParentQueue extends AbstractCSQueue {
             parentMaxRes);
         childQueue.getQueueResourceQuotas().setEffectiveMaxResource(label,
             Resources.clone(effMaxResource));
+
+        // In cases where we still need to update some units based on
+        // percentage, we have to calculate percentage and update.
+        deriveCapacityFromAbsoluteConfigurations(label, clusterResource, rc,
+            childQueue);
       } else {
         childQueue.getQueueResourceQuotas().setEffectiveMinResource(label,
             Resources.multiply(resourceByLabel,
@@ -983,16 +990,6 @@ public class ParentQueue extends AbstractCSQueue {
         childQueue.getQueueResourceQuotas().setEffectiveMaxResource(label,
             Resources.multiply(resourceByLabel, childQueue.getQueueCapacities()
                 .getAbsoluteMaximumCapacity(label)));
-
-        childQueue.getQueueResourceQuotas().setEffectiveMinResourceUp(label,
-            Resources.multiplyAndNormalizeUp(rc, resourceByLabel,
-                childQueue.getQueueCapacities().getAbsoluteCapacity(label),
-                minimumAllocation));
-        childQueue.getQueueResourceQuotas().setEffectiveMaxResourceUp(label,
-            Resources.multiplyAndNormalizeUp(rc,
-                resourceByLabel, childQueue.getQueueCapacities()
-                    .getAbsoluteMaximumCapacity(label),
-                    minimumAllocation));
       }
 
       if (LOG.isDebugEnabled()) {
@@ -1004,6 +1001,41 @@ public class ParentQueue extends AbstractCSQueue {
                 .getEffectiveMaxResource(label));
       }
     }
+  }
+
+  private void deriveCapacityFromAbsoluteConfigurations(String label,
+      Resource clusterResource, ResourceCalculator rc, CSQueue childQueue) {
+
+    /*
+     * In case when queues are configured with absolute resources, it is better
+     * to update capacity/max-capacity etc w.r.t absolute resource as well. In
+     * case of computation, these values wont be used any more. However for
+     * metrics and UI, its better these values are pre-computed here itself.
+     */
+
+    // 1. Update capacity as a float based on parent's minResource
+    childQueue.getQueueCapacities().setCapacity(label,
+        rc.divide(clusterResource,
+            childQueue.getQueueResourceQuotas().getEffectiveMinResource(label),
+            getQueueResourceQuotas().getEffectiveMinResource(label)));
+
+    // 2. Update max-capacity as a float based on parent's maxResource
+    childQueue.getQueueCapacities().setMaximumCapacity(label,
+        rc.divide(clusterResource,
+            childQueue.getQueueResourceQuotas().getEffectiveMaxResource(label),
+            getQueueResourceQuotas().getEffectiveMaxResource(label)));
+
+    // 3. Update absolute capacity as a float based on parent's minResource and
+    // cluster resource.
+    childQueue.getQueueCapacities().setAbsoluteCapacity(label,
+        (float) childQueue.getQueueCapacities().getCapacity()
+            / getQueueCapacities().getAbsoluteCapacity(label));
+
+    // 4. Update absolute max-capacity as a float based on parent's maxResource
+    // and cluster resource.
+    childQueue.getQueueCapacities().setAbsoluteMaximumCapacity(label,
+        (float) childQueue.getQueueCapacities().getMaximumCapacity(label)
+            / getQueueCapacities().getAbsoluteMaximumCapacity(label));
   }
 
   @Override

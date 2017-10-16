@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
@@ -89,8 +90,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   }
 
   @Override
-  protected void populateQueueCapacities(QueueCapacities qCapacities) {
-    capacities = new QueueCapacitiesInfo(qCapacities);
+  protected void populateQueueCapacities(QueueCapacities qCapacities,
+      QueueResourceQuotas qResQuotas) {
+    capacities = new QueueCapacitiesInfo(qCapacities, qResQuotas);
   }
 
   public int getNumActiveApplications() {

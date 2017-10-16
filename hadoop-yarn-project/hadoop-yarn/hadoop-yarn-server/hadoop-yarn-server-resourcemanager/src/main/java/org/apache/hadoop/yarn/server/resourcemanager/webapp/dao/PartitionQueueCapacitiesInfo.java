@@ -21,6 +21,9 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.Resources;
+
 /**
  * This class represents queue capacities for a given partition
  */
@@ -36,13 +39,19 @@ public class PartitionQueueCapacitiesInfo {
   private float absoluteUsedCapacity;
   private float absoluteMaxCapacity  = 100;
   private float maxAMLimitPercentage;
+  private ResourceInfo configuredMinResource;
+  private ResourceInfo configuredMaxResource;
+  private ResourceInfo effectiveMinResource;
+  private ResourceInfo effectiveMaxResource;
 
   public PartitionQueueCapacitiesInfo() {
   }
 
   public PartitionQueueCapacitiesInfo(String partitionName, float capacity,
       float usedCapacity, float maxCapacity, float absCapacity,
-      float absUsedCapacity, float absMaxCapacity, float maxAMLimitPercentage) {
+      float absUsedCapacity, float absMaxCapacity, float maxAMLimitPercentage,
+      Resource confMinRes, Resource confMaxRes, Resource effMinRes,
+      Resource effMaxRes) {
     super();
     this.partitionName = partitionName;
     this.capacity = capacity;
@@ -52,6 +61,10 @@ public class PartitionQueueCapacitiesInfo {
     this.absoluteUsedCapacity = absUsedCapacity;
     this.absoluteMaxCapacity = absMaxCapacity;
     this.maxAMLimitPercentage = maxAMLimitPercentage;
+    this.configuredMinResource = new ResourceInfo(confMinRes);
+    this.configuredMaxResource = new ResourceInfo(confMaxRes);
+    this.effectiveMinResource = new ResourceInfo(effMinRes);
+    this.effectiveMaxResource = new ResourceInfo(effMaxRes);
   }
 
   public float getCapacity() {
@@ -116,5 +129,24 @@ public class PartitionQueueCapacitiesInfo {
 
   public void setMaxAMLimitPercentage(float maxAMLimitPercentage) {
     this.maxAMLimitPercentage = maxAMLimitPercentage;
+  }
+
+  public ResourceInfo getConfiguredMinResource() {
+    return configuredMinResource;
+  }
+
+  public ResourceInfo getConfiguredMaxResource() {
+    if (configuredMaxResource.getResource().equals(Resources.none())) {
+      return null;
+    }
+    return configuredMaxResource;
+  }
+
+  public ResourceInfo getEffectiveMinResource() {
+    return effectiveMinResource;
+  }
+
+  public ResourceInfo getEffectiveMaxResource() {
+    return effectiveMaxResource;
   }
 }
