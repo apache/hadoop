@@ -1731,18 +1731,19 @@ static int unlink_helper(int dirfd, const char *name, int flags) {
 }
 
 /**
- * Determine if an entry in a directory is a symlink.
+ * Determine if an entry in a directory is another directory without following
+ * symlinks.
  *
  * @param dirfd     The directory file descriptor, or -1 if there is none.
  * @param name      If dirfd is -1, this is the path to examine.
  *                  Otherwise, this is the file name in the directory to
  *                  examine.
  *
- * @return          0 if the entry is not a symlink
- *                  1 if the entry is a symlink
+ * @return          0 if the entry is a symlink or otherwise not a directory
+ *                  1 if the entry is a directory
  *                  A negative errno code if we couldn't access the entry.
  */
-static int is_symlink_helper(int dirfd, const char *name)
+static int is_dir_helper(int dirfd, const char *name)
 {
   struct stat stat;
 
@@ -1755,7 +1756,7 @@ static int is_symlink_helper(int dirfd, const char *name)
       return -errno;
     }
   }
-  return !!S_ISLNK(stat.st_mode);
+  return !!S_ISDIR(stat.st_mode);
 }
 
 static int recursive_unlink_helper(int dirfd, const char *name,
@@ -1765,30 +1766,29 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   DIR *dfd = NULL;
   struct stat stat;
 
-  // Check to see if the file is a symlink.  If so, delete the symlink rather
-  // than what it points to.
-  ret = is_symlink_helper(dirfd, name);
+  // Check to see if the file is a directory. If not then we can unlink it now.
+  ret = is_dir_helper(dirfd, name);
   if (ret < 0) {
-    // is_symlink_helper failed.
+    // is_dir_helper failed.
     if (ret == -ENOENT) {
       ret = 0;
       goto done;
     }
     ret = -ret;
-    fprintf(LOGFILE, "is_symlink_helper(%s) failed: %s\n",
+    fprintf(LOGFILE, "is_dir_helper(%s) failed: %s\n",
             fullpath, strerror(ret));
     goto done;
-  } else if (ret == 1) {
-    // is_symlink_helper determined that the path is a symlink.
+  } else if (ret == 0) {
+    // is_dir_helper determined that the path is not a directory.
     ret = unlink_helper(dirfd, name, 0);
     if (ret) {
-      fprintf(LOGFILE, "failed to unlink symlink %s: %s\n",
+      fprintf(LOGFILE, "failed to unlink %s: %s\n",
               fullpath, strerror(ret));
     }
     goto done;
   }
 
-  // Open the file.  We use O_NOFOLLOW here to ensure that we if a symlink was
+  // Open the directory. We use O_NOFOLLOW here to ensure that if a symlink was
   // swapped in by an attacker, we will fail to follow it rather than deleting
   // something we potentially should not.
   fd = open_helper(dirfd, name);
@@ -1829,6 +1829,19 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       goto done;
     }
   } else {
+    // make sure the directory has full user permissions
+    // so entries can be deleted
+    if ((stat.st_mode & S_IRWXU) != S_IRWXU) {
+      ret = chmod_helper(dirfd, name, 0700);
+      if (ret) {
+        if (ret == ENOENT) {
+          ret = 0;
+          goto done;
+        }
+        fprintf(LOGFILE, "chmod(%s) failed: %s\n", fullpath, strerror(ret));
+        goto done;
+      }
+    }
     dfd = fdopendir(fd);
     if (!dfd) {
       ret = errno;
