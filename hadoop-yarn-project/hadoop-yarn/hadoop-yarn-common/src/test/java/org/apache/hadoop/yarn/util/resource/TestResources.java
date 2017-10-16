@@ -24,7 +24,7 @@ public class TestResources {
         
         Assert.assertTrue(Resources.fitsIn(rhs, lhs));
              
-        int allcatedGPU = Resources.allocateGPUs(rhs, lhs);
+        long allcatedGPU = Resources.allocateGPUs(rhs, lhs);
         Assert.assertEquals(allcatedGPU, 3);
         
         ret = Resources.add(ret, rhs);
