@@ -347,6 +347,9 @@ public class ContainerImpl implements Container {
     // From SCHEDULED State
     .addTransition(ContainerState.SCHEDULED, ContainerState.RUNNING,
         ContainerEventType.CONTAINER_LAUNCHED, new LaunchTransition())
+    .addTransition(ContainerState.SCHEDULED, ContainerState.PAUSED,
+        ContainerEventType.RECOVER_PAUSED_CONTAINER,
+        new RecoveredContainerTransition())
     .addTransition(ContainerState.SCHEDULED, ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
         new ExitedWithFailureTransition(true))
@@ -929,7 +932,10 @@ public class ContainerImpl implements Container {
       if (recoveredStatus == RecoveredContainerStatus.LAUNCHED) {
         // try to recover a container that was previously launched
         launcherEvent = ContainersLauncherEventType.RECOVER_CONTAINER;
+      } else if (recoveredStatus == RecoveredContainerStatus.PAUSED) {
+        launcherEvent = ContainersLauncherEventType.RECOVER_PAUSED_CONTAINER;
       }
+
       containerLaunchStartTime = clock.getTime();
       dispatcher.getEventHandler().handle(
           new ContainersLauncherEvent(this, launcherEvent));
@@ -940,9 +946,6 @@ public class ContainerImpl implements Container {
   @SuppressWarnings("unchecked") // dispatcher not typed
   private void sendScheduleEvent() {
     if (recoveredStatus == RecoveredContainerStatus.PAUSED) {
-      // Recovery is not supported for paused container so we raise the
-      // launch event which will proceed to kill the paused container instead
-      // of raising the schedule event.
       ContainersLauncherEventType launcherEvent;
       launcherEvent = ContainersLauncherEventType.RECOVER_PAUSED_CONTAINER;
       dispatcher.getEventHandler()
@@ -1037,17 +1040,15 @@ public class ContainerImpl implements Container {
       UpdateContainerTokenEvent updateEvent = (UpdateContainerTokenEvent)event;
       // Update the container token
       container.setContainerTokenIdentifier(updateEvent.getUpdatedToken());
-      if (updateEvent.isResourceChange()) {
-        try {
-          // Persist change in the state store.
-          container.context.getNMStateStore().storeContainerResourceChanged(
-              container.containerId,
-              container.getContainerTokenIdentifier().getVersion(),
-              container.getResource());
-        } catch (IOException e) {
-          LOG.warn("Could not store container [" + container.containerId
-              + "] resource change..", e);
-        }
+
+      try {
+        // Persist change in the state store.
+        container.context.getNMStateStore()
+            .storeContainerUpdateToken(container.containerId,
+                container.getContainerTokenIdentifier());
+      } catch (IOException e) {
+        LOG.warn("Could not store container [" + container.containerId
+            + "] update..", e);
       }
     }
   }
@@ -1092,6 +1093,8 @@ public class ContainerImpl implements Container {
       if (container.recoveredStatus == RecoveredContainerStatus.COMPLETED) {
         container.sendFinishedEvents();
         return ContainerState.DONE;
+      } else if (container.recoveredStatus == RecoveredContainerStatus.QUEUED) {
+        return ContainerState.SCHEDULED;
       } else if (container.recoveredAsKilled &&
           container.recoveredStatus == RecoveredContainerStatus.REQUESTED) {
         // container was killed but never launched
@@ -1447,6 +1450,18 @@ public class ContainerImpl implements Container {
             new ContainersLauncherEvent(container,
                 ContainersLauncherEventType.CLEANUP_CONTAINER));
       }
+    }
+  }
+
+  /**
+   * Transition from SCHEDULED state to PAUSED state on recovery
+   */
+  static class RecoveredContainerTransition extends ContainerTransition {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(ContainerImpl container, ContainerEvent event) {
+      container.sendContainerMonitorStartEvent();
+      container.wasLaunched = true;
     }
   }
 
