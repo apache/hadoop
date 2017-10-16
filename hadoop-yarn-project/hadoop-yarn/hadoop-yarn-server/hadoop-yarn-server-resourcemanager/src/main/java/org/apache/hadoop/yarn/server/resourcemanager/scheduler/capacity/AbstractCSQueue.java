@@ -398,6 +398,10 @@ public abstract class AbstractCSQueue implements CSQueue {
       Resource maxResource = conf.getMaximumResourceRequirement(label,
           queuePath, resourceTypes);
 
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("capacityConfigType is '" + capacityConfigType
+            + "' for queue '" + getQueueName());
+      }
       if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {
         this.capacityConfigType = (!minResource.equals(Resources.none())
             && queueCapacities.getAbsoluteCapacity(label) == 0f)
@@ -478,12 +482,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Resource getEffectiveCapacity(String label) {
     return Resources
         .clone(getQueueResourceQuotas().getEffectiveMinResource(label));
-  }
-
-  @Override
-  public Resource getEffectiveCapacityUp(String label) {
-    return Resources
-        .clone(getQueueResourceQuotas().getEffectiveMinResourceUp(label));
   }
 
   @Override
@@ -621,6 +619,14 @@ public abstract class AbstractCSQueue implements CSQueue {
       queueConfiguration.setMaxCapacity(maxCapacity);
       queueConfiguration.setAbsoluteMaxCapacity(absMaxCapacity);
       queueConfiguration.setMaxAMPercentage(maxAMPercentage);
+      queueConfiguration.setConfiguredMinCapacity(
+          queueResourceQuotas.getConfiguredMinResource(nodeLabel));
+      queueConfiguration.setConfiguredMaxCapacity(
+          queueResourceQuotas.getConfiguredMaxResource(nodeLabel));
+      queueConfiguration.setEffectiveMinCapacity(
+          queueResourceQuotas.getEffectiveMinResource(nodeLabel));
+      queueConfiguration.setEffectiveMaxCapacity(
+          queueResourceQuotas.getEffectiveMaxResource(nodeLabel));
       queueConfigurations.put(nodeLabel, queueConfiguration);
     }
     return queueConfigurations;

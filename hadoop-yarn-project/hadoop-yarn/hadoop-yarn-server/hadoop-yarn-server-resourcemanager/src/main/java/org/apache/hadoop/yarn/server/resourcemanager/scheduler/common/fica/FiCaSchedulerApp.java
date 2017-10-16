@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
@@ -908,6 +909,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       StringBuilder diagnosticMessage) {
     LeafQueue queue = getCSLeafQueue();
     QueueCapacities queueCapacities = queue.getQueueCapacities();
+    QueueResourceQuotas queueResourceQuotas = queue.getQueueResourceQuotas();
     diagnosticMessage.append(" Details : AM Partition = ");
     diagnosticMessage.append(appAMNodePartitionName.isEmpty()
         ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : appAMNodePartitionName);
@@ -929,6 +931,18 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         queueCapacities.getAbsoluteMaximumCapacity(appAMNodePartitionName)
             * 100);
     diagnosticMessage.append(" % ; ");
+    diagnosticMessage.append("Queue's capacity (absolute resource) = ");
+    diagnosticMessage.append(
+        queueResourceQuotas.getEffectiveMinResource(appAMNodePartitionName));
+    diagnosticMessage.append(" ; ");
+    diagnosticMessage.append("Queue's used capacity (absolute resource) = ");
+    diagnosticMessage
+        .append(queue.getQueueResourceUsage().getUsed(appAMNodePartitionName));
+    diagnosticMessage.append(" ; ");
+    diagnosticMessage.append("Queue's max capacity (absolute resource) = ");
+    diagnosticMessage.append(
+        queueResourceQuotas.getEffectiveMaxResource(appAMNodePartitionName));
+    diagnosticMessage.append(" ; ");
   }
 
   /**
@@ -992,13 +1006,10 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();
       if (!calc.isInvalidDivisor(totalPartitionRes)) {
-        float queueAbsMaxCapPerPartition =
-            ((AbstractCSQueue) getQueue()).getQueueCapacities()
-                .getAbsoluteCapacity(getAppAMNodePartitionName());
+        Resource effCap = ((AbstractCSQueue) getQueue())
+            .getEffectiveCapacity(getAppAMNodePartitionName());
         float queueUsagePerc = calc.divide(totalPartitionRes,
-            report.getUsedResources(),
-            Resources.multiply(totalPartitionRes, queueAbsMaxCapPerPartition))
-            * 100;
+            report.getUsedResources(), effCap) * 100;
         report.setQueueUsagePercentage(queueUsagePerc);
       }
       return report;

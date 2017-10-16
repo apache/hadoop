@@ -671,7 +671,7 @@ public class LeafQueue extends AbstractCSQueue {
           1.0f / Math.max(getAbstractUsersManager().getNumActiveUsers(), 1));
       effectiveUserLimit = Math.min(effectiveUserLimit * userWeight, 1.0f);
 
-      Resource queuePartitionResource = getEffectiveCapacityUp(nodePartition);
+      Resource queuePartitionResource = getEffectiveCapacity(nodePartition);
 
       Resource userAMLimit = Resources.multiplyAndNormalizeUp(
           resourceCalculator, queuePartitionResource,
@@ -700,7 +700,7 @@ public class LeafQueue extends AbstractCSQueue {
        * non-labeled), * with per-partition am-resource-percent to get the max am
        * resource limit for this queue and partition.
        */
-      Resource queuePartitionResource = getEffectiveCapacityUp(nodePartition);
+      Resource queuePartitionResource = getEffectiveCapacity(nodePartition);
 
       Resource queueCurrentLimit = Resources.none();
       // For non-labeled partition, we need to consider the current queue

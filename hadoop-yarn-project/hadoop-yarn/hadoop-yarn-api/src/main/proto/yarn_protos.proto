@@ -551,6 +551,10 @@ message QueueConfigurationsProto {
     optional float maxCapacity = 3;
     optional float absoluteMaxCapacity = 4;
     optional float maxAMPercentage = 5;
+    optional ResourceProto effectiveMinCapacity = 6;
+    optional ResourceProto effectiveMaxCapacity = 7;
+    optional ResourceProto configuredMinCapacity = 8;
+    optional ResourceProto configuredMaxCapacity = 9;
 }
 
 message QueueConfigurationsMapProto {

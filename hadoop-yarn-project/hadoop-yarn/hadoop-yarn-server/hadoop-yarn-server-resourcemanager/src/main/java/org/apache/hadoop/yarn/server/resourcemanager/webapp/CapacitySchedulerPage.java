@@ -155,21 +155,36 @@ class CapacitySchedulerPage extends RmView {
           ? new ResourceInfo(Resources.none())
           : resourceUsages.getAmUsed();
       ri.
-          __("Used Capacity:", percent(capacities.getUsedCapacity() / 100)).
-          __("Configured Capacity:", percent(capacities.getCapacity() / 100)).
-          __("Configured Max Capacity:", percent(capacities.getMaxCapacity() / 100)).
-          __("Absolute Used Capacity:", percent(capacities.getAbsoluteUsedCapacity() / 100)).
-          __("Absolute Configured Capacity:", percent(capacities.getAbsoluteCapacity() / 100)).
-          __("Absolute Configured Max Capacity:", percent(capacities.getAbsoluteMaxCapacity() / 100)).
-          __("Used Resources:", resourceUsages.getUsed().toString()).
-          __("Configured Max Application Master Limit:", StringUtils.format("%.1f",
-          capacities.getMaxAMLimitPercentage())).
-          __("Max Application Master Resources:",
-          resourceUsages.getAMLimit().toString()).
-          __("Used Application Master Resources:",
-          amUsed.toString()).
-          __("Max Application Master Resources Per User:",
-          userAMResourceLimit.toString());
+          __("Used Capacity:",
+              appendPercent(resourceUsages.getUsed().toString(),
+                  capacities.getUsedCapacity() / 100))
+          .__("Configured Capacity:",
+              capacities.getConfiguredMinResource().toString())
+          .__("Configured Max Capacity:",
+              capacities.getConfiguredMaxResource().getResource()
+                  .equals(Resources.none())
+                      ? "unlimited"
+                      : capacities.getConfiguredMaxResource().toString())
+          .__("Effective Capacity:",
+              appendPercent(capacities.getEffectiveMinResource().toString(),
+                  capacities.getCapacity() / 100))
+          .__("Effective Max Capacity:",
+              appendPercent(capacities.getEffectiveMaxResource().toString(),
+                  capacities.getMaxCapacity() / 100))
+          .__("Absolute Used Capacity:",
+              percent(capacities.getAbsoluteUsedCapacity() / 100))
+          .__("Absolute Configured Capacity:",
+              percent(capacities.getAbsoluteCapacity() / 100))
+          .__("Absolute Configured Max Capacity:",
+              percent(capacities.getAbsoluteMaxCapacity() / 100))
+          .__("Used Resources:", resourceUsages.getUsed().toString())
+          .__("Configured Max Application Master Limit:",
+              StringUtils.format("%.1f", capacities.getMaxAMLimitPercentage()))
+          .__("Max Application Master Resources:",
+              resourceUsages.getAMLimit().toString())
+          .__("Used Application Master Resources:", amUsed.toString())
+          .__("Max Application Master Resources Per User:",
+              userAMResourceLimit.toString());
     }
 
     private void renderCommonLeafQueueInfo(ResponseInfo ri) {
@@ -613,6 +628,10 @@ class CapacitySchedulerPage extends RmView {
 
   @Override protected Class<? extends SubView> content() {
     return QueuesBlock.class;
+  }
+
+  static String appendPercent(String message, float f) {
+    return message + " (" + StringUtils.formatPercent(f, 1) + ")";
   }
 
   static String percent(float f) {
