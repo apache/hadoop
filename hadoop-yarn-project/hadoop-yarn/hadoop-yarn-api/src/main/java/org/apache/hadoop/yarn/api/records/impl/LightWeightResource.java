@@ -92,7 +92,7 @@ public class LightWeightResource extends Resource {
   @Override
   @SuppressWarnings("deprecation")
   public int getMemory() {
-    return (int) memoryResInfo.getValue();
+    return castToIntSafely(memoryResInfo.getValue());
   }
 
   @Override
@@ -113,7 +113,7 @@ public class LightWeightResource extends Resource {
 
   @Override
   public int getVirtualCores() {
-    return (int) vcoresResInfo.getValue();
+    return castToIntSafely(vcoresResInfo.getValue());
   }
 
   @Override
