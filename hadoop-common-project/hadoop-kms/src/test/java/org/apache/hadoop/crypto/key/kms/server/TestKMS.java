@@ -54,6 +54,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.slf4j.event.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1637,13 +1638,12 @@ public class TestKMS {
         //stop the reloader, to avoid running while we are writing the new file
         KMSWebApp.getACLs().stopReloader();
 
+        GenericTestUtils.setLogLevel(KMSConfiguration.LOG, Level.TRACE);
         // test ACL reloading
-        Thread.sleep(10); // to ensure the ACLs file modifiedTime is newer
         conf.set(KMSACLs.Type.CREATE.getAclConfigKey(), "foo");
         conf.set(KMSACLs.Type.GENERATE_EEK.getAclConfigKey(), "foo");
         writeConf(testDir, conf);
-        Thread.sleep(1000);
-
+        KMSWebApp.getACLs().forceNextReloadForTesting();
         KMSWebApp.getACLs().run(); // forcing a reload by hand.
 
         // should not be able to create a key now
