@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.*;
 
 import javax.annotation.Nullable;
 
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -557,6 +559,50 @@ public class TestMetricsSystemImpl {
     assertEquals(MetricsConfig.PERIOD_DEFAULT * 1000 + 1,
         sa.getJmxCacheTTL());
     ms.shutdown();
+  }
+
+  @Test
+  public void testInitShutdown() {
+    boolean oldMode = DefaultMetricsSystem.inMiniClusterMode();
+    try {
+      DefaultMetricsSystem.setMiniClusterMode(true);
+      runInitShutdownTests();
+
+      DefaultMetricsSystem.setMiniClusterMode(false);
+      runInitShutdownTests();
+    } finally {
+      DefaultMetricsSystem.setMiniClusterMode(oldMode);
+    }
+  }
+
+  private void runInitShutdownTests() {
+    MetricsSystemImpl ms = new MetricsSystemImpl();
+    Assert.assertThat(ms.isMonitoring(), CoreMatchers.is(false));
+    Assert.assertThat(ms.getRefCount(), CoreMatchers.is(0));
+
+    ms.init("TestMetricsSystem1");
+    Assert.assertThat(ms.isMonitoring(), CoreMatchers.is(true));
+    Assert.assertThat(ms.getRefCount(), CoreMatchers.is(1));
+
+    ms.shutdown();
+    Assert.assertThat(ms.isMonitoring(), CoreMatchers.is(false));
+    Assert.assertThat(ms.getRefCount(), CoreMatchers.is(0));
+
+    ms.init("TestMetricsSystem2");
+    Assert.assertThat(ms.isMonitoring(), CoreMatchers.is(true));
+    Assert.assertThat(ms.getRefCount(), CoreMatchers.is(1));
+
+    ms.init("TestMetricsSystem3");
+    Assert.assertThat(ms.isMonitoring(), CoreMatchers.is(true));
+    Assert.assertThat(ms.getRefCount(), CoreMatchers.is(2));
+
+    ms.shutdown();
+    Assert.assertThat(ms.isMonitoring(), CoreMatchers.is(true));
+    Assert.assertThat(ms.getRefCount(), CoreMatchers.is(1));
+
+    ms.shutdown();
+    Assert.assertThat(ms.isMonitoring(), CoreMatchers.is(false));
+    Assert.assertThat(ms.getRefCount(), CoreMatchers.is(0));
   }
 
   @Metrics(context="test")
