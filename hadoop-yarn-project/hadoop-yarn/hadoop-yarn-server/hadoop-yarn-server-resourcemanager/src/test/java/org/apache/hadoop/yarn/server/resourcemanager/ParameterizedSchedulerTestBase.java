@@ -89,7 +89,8 @@ public abstract class ParameterizedSchedulerTestBase {
     }
   }
 
-  private void configureFairScheduler(YarnConfiguration conf) throws IOException {
+  protected void configureFairScheduler(YarnConfiguration conf)
+      throws IOException {
     // Disable queueMaxAMShare limitation for fair scheduler
     PrintWriter out = new PrintWriter(new FileWriter(FS_ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
