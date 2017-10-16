@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Containe
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 @Private
@@ -418,14 +419,13 @@ public abstract class NMStateStoreService extends AbstractService {
       throws IOException;
 
   /**
-   * Record that a container resource has been changed
+   * Record that a container has been updated
    * @param containerId the container ID
-   * @param containerVersion the container version
-   * @param capability the container resource capability
+   * @param containerTokenIdentifier container token identifier
    * @throws IOException
    */
-  public abstract void storeContainerResourceChanged(ContainerId containerId,
-      int containerVersion, Resource capability) throws IOException;
+  public abstract void storeContainerUpdateToken(ContainerId containerId,
+      ContainerTokenIdentifier containerTokenIdentifier) throws IOException;
 
   /**
    * Record that a container has completed

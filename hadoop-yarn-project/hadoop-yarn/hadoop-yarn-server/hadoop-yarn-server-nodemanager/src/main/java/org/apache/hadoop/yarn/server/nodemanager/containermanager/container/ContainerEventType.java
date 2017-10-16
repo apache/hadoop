@@ -46,5 +46,7 @@ public enum ContainerEventType {
   CONTAINER_RESUMED,
 
   // Producer: ContainerScheduler
-  CONTAINER_TOKEN_UPDATED
+  CONTAINER_TOKEN_UPDATED,
+
+  RECOVER_PAUSED_CONTAINER
 }

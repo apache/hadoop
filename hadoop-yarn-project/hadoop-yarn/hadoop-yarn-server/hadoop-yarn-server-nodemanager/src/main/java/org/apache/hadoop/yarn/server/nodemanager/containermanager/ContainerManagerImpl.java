@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -367,6 +368,13 @@ public class ContainerManagerImpl extends CompositeService implements
         }
         recoverContainer(rcs);
       }
+
+      //Dispatching the RECOVERY_COMPLETED event through the dispatcher
+      //so that all the paused, scheduled and queued containers will
+      //be scheduled for execution on availability of resources.
+      dispatcher.getEventHandler().handle(
+          new ContainerSchedulerEvent(null,
+              ContainerSchedulerEventType.RECOVERY_COMPLETED));
     } else {
       LOG.info("Not a recoverable state store. Nothing to recover.");
     }
@@ -480,6 +488,7 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = new ContainerImpl(getConfig(), dispatcher,
         launchContext, credentials, metrics, token, context, rcs);
     context.getContainers().put(token.getContainerID(), container);
+    containerScheduler.recoverActiveContainer(container, rcs.getStatus());
     app.handle(new ApplicationContainerInitEvent(container));
   }
 

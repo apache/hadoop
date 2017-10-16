@@ -32,12 +32,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
@@ -172,12 +173,17 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public synchronized void storeContainerResourceChanged(
-      ContainerId containerId, int version, Resource capability)
-      throws IOException {
+  public void storeContainerUpdateToken(ContainerId containerId,
+      ContainerTokenIdentifier containerTokenIdentifier) throws IOException {
     RecoveredContainerState rcs = getRecoveredContainerState(containerId);
-    rcs.capability = capability;
-    rcs.version = version;
+    rcs.capability = containerTokenIdentifier.getResource();
+    rcs.version = containerTokenIdentifier.getVersion();
+    Token currentToken = rcs.getStartRequest().getContainerToken();
+    Token updatedToken = Token
+        .newInstance(containerTokenIdentifier.getBytes(),
+            ContainerTokenIdentifier.KIND.toString(),
+            currentToken.getPassword().array(), currentToken.getService());
+    rcs.startRequest.setContainerToken(updatedToken);
   }
 
   @Override

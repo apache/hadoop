@@ -306,13 +306,18 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(1, recoveredContainers.size());
 
     // increase the container size, and verify recovered
-    stateStore.storeContainerResourceChanged(containerId, 2,
-        Resource.newInstance(2468, 4));
+    ContainerTokenIdentifier updateTokenIdentifier =
+        new ContainerTokenIdentifier(containerId, "host", "user",
+            Resource.newInstance(2468, 4), 9876543210L, 42, 2468,
+            Priority.newInstance(7), 13579);
+
+    stateStore
+        .storeContainerUpdateToken(containerId, updateTokenIdentifier);
     restartStateStore();
     recoveredContainers = stateStore.loadContainersState();
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
-    assertEquals(2, rcs.getVersion());
+    assertEquals(0, rcs.getVersion());
     assertEquals(RecoveredContainerStatus.LAUNCHED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());
@@ -329,7 +334,9 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(RecoveredContainerStatus.LAUNCHED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertTrue(rcs.getKilled());
-    assertEquals(containerReq, rcs.getStartRequest());
+    ContainerTokenIdentifier tokenReadFromRequest = BuilderUtils
+        .newContainerTokenIdentifier(rcs.getStartRequest().getContainerToken());
+    assertEquals(updateTokenIdentifier, tokenReadFromRequest);
     assertEquals(diags.toString(), rcs.getDiagnostics());
 
     // add yet more diags, mark container completed, and verify recovered
@@ -343,7 +350,6 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(RecoveredContainerStatus.COMPLETED, rcs.getStatus());
     assertEquals(21, rcs.getExitCode());
     assertTrue(rcs.getKilled());
-    assertEquals(containerReq, rcs.getStartRequest());
     assertEquals(diags.toString(), rcs.getDiagnostics());
 
     // store remainingRetryAttempts, workDir and logDir

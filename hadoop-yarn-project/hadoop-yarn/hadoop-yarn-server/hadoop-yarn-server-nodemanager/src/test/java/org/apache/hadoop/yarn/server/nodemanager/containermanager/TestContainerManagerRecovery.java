@@ -402,7 +402,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     stateStore.start();
     Context context = createContext(conf, stateStore);
     ContainerManagerImpl cm = createContainerManager(context, delSrvc);
-    cm.dispatcher.disableExitOnDispatchException();
+    ((NMContext) context).setContainerManager(cm);
     cm.init(conf);
     cm.start();
     // add an application by starting a container
@@ -471,6 +471,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.stop();
     context = createContext(conf, stateStore);
     cm = createContainerManager(context);
+    ((NMContext) context).setContainerManager(cm);
     cm.init(conf);
     cm.start();
     assertEquals(1, context.getApplications().size());

@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 
 
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,6 +169,8 @@ public class ContainerScheduler extends AbstractService implements
     case SHED_QUEUED_CONTAINERS:
       shedQueuedOpportunisticContainers();
       break;
+    case RECOVERY_COMPLETED:
+      startPendingContainers(maxOppQueueLength <= 0);
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
           + event.toString());
@@ -215,6 +218,34 @@ public class ContainerScheduler extends AbstractService implements
         }
       }
       startPendingContainers(maxOppQueueLength <= 0);
+    }
+  }
+
+  /**
+   * Populates auxiliary data structures used by the ContainerScheduler on
+   * recovery.
+   * @param container container recovered
+   * @param rcs Recovered Container status
+   */
+  public void recoverActiveContainer(Container container,
+      RecoveredContainerStatus rcs) {
+    ExecutionType execType =
+        container.getContainerTokenIdentifier().getExecutionType();
+    if (rcs == RecoveredContainerStatus.QUEUED
+        || rcs == RecoveredContainerStatus.PAUSED) {
+      if (execType == ExecutionType.GUARANTEED) {
+        queuedGuaranteedContainers.put(container.getContainerId(), container);
+      } else if (execType == ExecutionType.OPPORTUNISTIC) {
+        queuedOpportunisticContainers
+            .put(container.getContainerId(), container);
+      } else {
+        LOG.error(
+            "UnKnown execution type received " + container.getContainerId()
+                + ", execType " + execType);
+      }
+    } else if (rcs == RecoveredContainerStatus.LAUNCHED) {
+      runningContainers.put(container.getContainerId(), container);
+      utilizationTracker.addContainerResources(container);
     }
   }
 
