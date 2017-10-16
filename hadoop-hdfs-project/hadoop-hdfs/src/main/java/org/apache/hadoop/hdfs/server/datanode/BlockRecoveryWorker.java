@@ -183,10 +183,9 @@ public class BlockRecoveryWorker {
       long blockId = (isTruncateRecovery) ?
           rBlock.getNewBlock().getBlockId() : block.getBlockId();
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
-            + "), syncList=" + syncList);
-      }
+      LOG.info("BlockRecoveryWorker: block={} (length={}),"
+              + " isTruncateRecovery={}, syncList={}", block,
+          block.getNumBytes(), isTruncateRecovery, syncList);
 
       // syncList.isEmpty() means that all data-nodes do not have the block
       // or their replicas have 0 length.
@@ -275,6 +274,11 @@ public class BlockRecoveryWorker {
         newBlock.setNumBytes(rBlock.getNewBlock().getNumBytes());
       }
 
+      LOG.info("BlockRecoveryWorker: block={} (length={}), bestState={},"
+              + " newBlock={} (length={}), participatingList={}",
+          block, block.getNumBytes(), bestState.name(), newBlock,
+          newBlock.getNumBytes(), participatingList);
+
       List<DatanodeID> failedList = new ArrayList<>();
       final List<BlockRecord> successList = new ArrayList<>();
       for (BlockRecord r : participatingList) {
@@ -326,7 +330,7 @@ public class BlockRecoveryWorker {
     ExtendedBlock block = rb.getBlock();
     DatanodeInfo[] targets = rb.getLocations();
 
-    LOG.info(who + " calls recoverBlock(" + block
+    LOG.info("BlockRecoveryWorker: " + who + " calls recoverBlock(" + block
         + ", targets=[" + Joiner.on(", ").join(targets) + "]"
         + ", newGenerationStamp=" + rb.getNewGenerationStamp()
         + ", newBlock=" + rb.getNewBlock()
