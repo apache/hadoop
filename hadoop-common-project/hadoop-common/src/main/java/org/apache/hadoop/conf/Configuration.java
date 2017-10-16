@@ -278,9 +278,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Stores the mapping of key to the resource which modifies or loads 
-   * the key most recently
+   * the key most recently. Created lazily to avoid wasting memory.
    */
-  private Map<String, String[]> updatingResource;
+  private volatile Map<String, String[]> updatingResource;
 
   /**
    * Specify exact input factory to avoid time finding correct one.
@@ -737,7 +737,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
-    updatingResource = new ConcurrentHashMap<String, String[]>();
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -750,23 +749,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-   this.resources = (ArrayList<Resource>) other.resources.clone();
-   synchronized(other) {
-     if (other.properties != null) {
-       this.properties = (Properties)other.properties.clone();
-     }
+    this.resources = (ArrayList<Resource>) other.resources.clone();
+    synchronized(other) {
+      if (other.properties != null) {
+        this.properties = (Properties)other.properties.clone();
+      }
 
-     if (other.overlay!=null) {
-       this.overlay = (Properties)other.overlay.clone();
-     }
+      if (other.overlay!=null) {
+        this.overlay = (Properties)other.overlay.clone();
+      }
 
-     this.updatingResource = new ConcurrentHashMap<String, String[]>(
-         other.updatingResource);
-     this.finalParameters = Collections.newSetFromMap(
-         new ConcurrentHashMap<String, Boolean>());
-     this.finalParameters.addAll(other.finalParameters);
-   }
-   
+      if (other.updatingResource != null) {
+        this.updatingResource = new ConcurrentHashMap<String, String[]>(
+            other.updatingResource);
+      }
+      this.finalParameters = Collections.newSetFromMap(
+          new ConcurrentHashMap<String, Boolean>());
+      this.finalParameters.addAll(other.finalParameters);
+    }
+
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -1257,14 +1258,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String newSource = (source == null ? "programmatically" : source);
 
     if (!isDeprecated(name)) {
-      updatingResource.put(name, new String[] {newSource});
+      putIntoUpdatingResource(name, new String[] {newSource});
       String[] altNames = getAlternativeNames(name);
       if(altNames != null) {
         for(String n: altNames) {
           if(!n.equals(name)) {
             getOverlay().setProperty(n, value);
             getProps().setProperty(n, value);
-            updatingResource.put(n, new String[] {newSource});
+            putIntoUpdatingResource(n, new String[] {newSource});
           }
         }
       }
@@ -1275,7 +1276,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       for(String n : names) {
         getOverlay().setProperty(n, value);
         getProps().setProperty(n, value);
-        updatingResource.put(n, new String[] {altSource});
+        putIntoUpdatingResource(n, new String[] {altSource});
       }
     }
   }
@@ -2614,17 +2615,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
-      Map<String, String[]> backup =
-          new ConcurrentHashMap<String, String[]>(updatingResource);
+      Map<String, String[]> backup = updatingResource != null ?
+          new ConcurrentHashMap<String, String[]>(updatingResource) : null;
       loadResources(properties, resources, quietmode);
 
       if (overlay != null) {
         properties.putAll(overlay);
-        for (Map.Entry<Object,Object> item: overlay.entrySet()) {
-          String key = (String)item.getKey();
-          String[] source = backup.get(key);
-          if(source != null) {
-            updatingResource.put(key, source);
+        if (backup != null) {
+          for (Map.Entry<Object, Object> item : overlay.entrySet()) {
+            String key = (String) item.getKey();
+            String[] source = backup.get(key);
+            if (source != null) {
+              updatingResource.put(key, source);
+            }
           }
         }
       }
@@ -2979,8 +2982,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
       if (!finalParameters.contains(attr)) {
         properties.setProperty(attr, value);
-        if(source != null) {
-          updatingResource.put(attr, source);
+        if (source != null) {
+          putIntoUpdatingResource(attr, source);
         }
       } else {
         // This is a final parameter so check for overrides.
@@ -3285,9 +3288,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           redactor.redact(name, config.get(name)));
       jsonGen.writeBooleanField("isFinal",
           config.finalParameters.contains(name));
-      String[] resources = config.updatingResource.get(name);
+      String[] resources = config.updatingResource != null ?
+          config.updatingResource.get(name) : null;
       String resource = UNKNOWN_RESOURCE;
-      if(resources != null && resources.length > 0) {
+      if (resources != null && resources.length > 0) {
         resource = resources[0];
       }
       jsonGen.writeStringField("resource", resource);
@@ -3367,8 +3371,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String value = org.apache.hadoop.io.Text.readString(in);
       set(key, value); 
       String sources[] = WritableUtils.readCompressedStringArray(in);
-      if(sources != null) {
-        updatingResource.put(key, sources);
+      if (sources != null) {
+        putIntoUpdatingResource(key, sources);
       }
     }
   }
@@ -3381,8 +3385,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     for(Map.Entry<Object, Object> item: props.entrySet()) {
       org.apache.hadoop.io.Text.writeString(out, (String) item.getKey());
       org.apache.hadoop.io.Text.writeString(out, (String) item.getValue());
-      WritableUtils.writeCompressedStringArray(out, 
-          updatingResource.get(item.getKey()));
+      WritableUtils.writeCompressedStringArray(out, updatingResource != null ?
+          updatingResource.get(item.getKey()) : null);
     }
   }
   
@@ -3440,5 +3444,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     return false;
+  }
+
+  private void putIntoUpdatingResource(String key, String[] value) {
+    Map<String, String[]> localUR = updatingResource;
+    if (localUR == null) {
+      synchronized (this) {
+        localUR = updatingResource;
+        if (localUR == null) {
+          updatingResource = localUR = new ConcurrentHashMap<>(8);
+        }
+      }
+    }
+    localUR.put(key, value);
   }
 }
