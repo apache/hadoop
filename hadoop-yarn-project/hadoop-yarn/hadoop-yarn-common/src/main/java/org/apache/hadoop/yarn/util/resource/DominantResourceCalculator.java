@@ -570,8 +570,26 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public Resource normalizeDown(Resource r, Resource stepFactor) {
-    return Resources.createResource(
-        roundDown(r.getMemorySize(), stepFactor.getMemorySize()),
-        roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()));
+    Resource ret = Resource.newInstance(r);
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation rResourceInformation = r.getResourceInformation(i);
+      ResourceInformation stepFactorResourceInformation = stepFactor
+          .getResourceInformation(i);
+      ResourceInformation tmp = ret.getResourceInformation(i);
+
+      long rValue = rResourceInformation.getValue();
+      long stepFactorValue = UnitsConversionUtil.convert(
+          stepFactorResourceInformation.getUnits(),
+          rResourceInformation.getUnits(),
+          stepFactorResourceInformation.getValue());
+
+      long value = rValue;
+      if (stepFactorValue != 0) {
+        value = roundDown(rValue, stepFactorValue);
+      }
+      tmp.setValue(value);
+    }
+    return ret;
   }
 }

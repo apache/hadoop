@@ -112,42 +112,4 @@ public class QueueResourceQuotas extends AbstractResourceUsage {
   public void setEffectiveMaxResource(String label, Resource res) {
     _set(label, ResourceType.EFF_MAX_RESOURCE, res);
   }
-
-  /*
-   * Effective Minimum Resource
-   */
-  public Resource getEffectiveMinResourceUp() {
-    return _get(NL, ResourceType.EFF_MIN_RESOURCE_UP);
-  }
-
-  public Resource getEffectiveMinResourceUp(String label) {
-    return _get(label, ResourceType.EFF_MIN_RESOURCE_UP);
-  }
-
-  public void setEffectiveMinResourceUp(String label, Resource res) {
-    _set(label, ResourceType.EFF_MIN_RESOURCE_UP, res);
-  }
-
-  public void setEffectiveMinResourceUp(Resource res) {
-    _set(NL, ResourceType.EFF_MIN_RESOURCE_UP, res);
-  }
-
-  /*
-   * Effective Maximum Resource
-   */
-  public Resource getEffectiveMaxResourceUp() {
-    return getEffectiveMaxResourceUp(NL);
-  }
-
-  public Resource getEffectiveMaxResourceUp(String label) {
-    return _get(label, ResourceType.EFF_MAX_RESOURCE_UP);
-  }
-
-  public void setEffectiveMaxResourceUp(Resource res) {
-    setEffectiveMaxResourceUp(NL, res);
-  }
-
-  public void setEffectiveMaxResourceUp(String label, Resource res) {
-    _set(label, ResourceType.EFF_MAX_RESOURCE_UP, res);
-  }
 }
