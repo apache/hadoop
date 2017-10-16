@@ -3061,6 +3061,16 @@
     retries or failovers for WebHDFS client.
   </description>
 </property>
+
+<property>
+    <name>dfs.namenode.edits.asynclogging</name>
+    <value>true</value>
+    <description>
+        If set to true, enables asynchronous edit logs in the Namenode.  If set
+        to false, the Namenode uses the traditional synchronous edit logs.
+    </description>
+</property>
+
   <property>
     <name>dfs.balancer.keytab.enabled</name>
     <value>false</value>
