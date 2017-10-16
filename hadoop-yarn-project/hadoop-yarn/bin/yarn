@@ -247,6 +247,8 @@ elif [ "$COMMAND" = "queue" ] ; then
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 elif [ "$COMMAND" = "resourcemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/rm-config/log4j.properties
+  CLASSPATH=${CLASSPATH}:"$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+  CLASSPATH=${CLASSPATH}:"$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
   CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
   YARN_OPTS="$YARN_OPTS $YARN_RESOURCEMANAGER_OPTS"
   if [ "$YARN_RESOURCEMANAGER_HEAPSIZE" != "" ]; then
@@ -262,6 +264,8 @@ elif [ "$COMMAND" = "historyserver" ] ; then
     JAVA_HEAP_MAX="-Xmx""$YARN_HISTORYSERVER_HEAPSIZE""m"
   fi
 elif [ "$COMMAND" = "timelinereader" ] ; then
+  CLASSPATH=${CLASSPATH}:"$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+  CLASSPATH=${CLASSPATH}:"$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
   CLASS='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
 elif [ "$COMMAND" = "timelineserver" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/timelineserver-config/log4j.properties
@@ -279,6 +283,8 @@ elif [ "$COMMAND" = "sharedcachemanager" ] ; then
   fi
 elif [ "$COMMAND" = "nodemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/nm-config/log4j.properties
+  CLASSPATH=${CLASSPATH}:"$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
+  CLASSPATH=${CLASSPATH}:"$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
   CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
   YARN_OPTS="$YARN_OPTS -server $YARN_NODEMANAGER_OPTS"
   if [ "$YARN_NODEMANAGER_HEAPSIZE" != "" ]; then
