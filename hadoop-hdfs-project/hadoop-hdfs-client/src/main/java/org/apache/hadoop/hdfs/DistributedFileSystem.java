@@ -2837,8 +2837,7 @@ public class DistributedFileSystem extends FileSystem {
             }
           }
         } else {
-          Path userTrash = new Path(ezTrashRoot, System.getProperty(
-              "user.name"));
+          Path userTrash = new Path(ezTrashRoot, dfs.ugi.getShortUserName());
           try {
             ret.add(getFileStatus(userTrash));
           } catch (FileNotFoundException ignored) {
