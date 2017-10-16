@@ -128,7 +128,7 @@ public class TestS3AExceptionTranslation {
     AmazonServiceException ase = new AmazonServiceException("unwind");
     ase.setStatusCode(500);
     AWSServiceIOException ex = verifyTranslated(
-        AWSServiceIOException.class,
+        AWSStatus500Exception.class,
         ase);
     assertStatusCode(500, ex);
   }

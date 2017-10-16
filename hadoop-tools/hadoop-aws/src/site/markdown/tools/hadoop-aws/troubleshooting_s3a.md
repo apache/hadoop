@@ -758,13 +758,13 @@ unrecoverable:
 * Missing resources, 404/FileNotFoundException
 * HTTP 416 response/EOFException. This can surface if the length of a file changes
   while another client is reading it.
-* Invalid S3 requests.
-* Failures during execution or result processing of non-idempotent operations.
+* Failures during execution or result processing of non-idempotent operations where
+it is considered likely that the operation has already taken place.
 
 In future, others may be added to this list.
 
 When one of these failures arises in the S3/S3A client, the retry mechanism
-is bypassed.
+is bypassed and the operation will fail.
 
 <b>Warning</b>: the s3a client considers DELETE, PUT and COPY operations to
 be idempotent, and will retry them on failure. These are only really idempotent

@@ -137,15 +137,15 @@ public class TestInvoker extends Assert {
   }
 
   @Test
-  public void testS3500isServiceException() throws Exception {
-    verifyTranslated(500, AWSS3IOException.class);
+  public void testS3500isStatus500Exception() throws Exception {
+    verifyTranslated(500, AWSStatus500Exception.class);
   }
 
   @Test
-  public void test500isServiceException() throws Exception {
+  public void test500isStatus500Exception() throws Exception {
     AmazonServiceException ex = new AmazonServiceException("");
     ex.setStatusCode(500);
-    verifyTranslated(AWSServiceIOException.class,
+    verifyTranslated(AWSStatus500Exception.class,
         ex);
   }
 

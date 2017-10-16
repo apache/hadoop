@@ -235,6 +235,9 @@ public final class S3AUtils {
 
       // internal error
       case 500:
+        ioe = new AWSStatus500Exception(message, ase);
+        break;
+
       default:
         // no specific exit code. Choose an IOE subclass based on the class
         // of the caught exception
