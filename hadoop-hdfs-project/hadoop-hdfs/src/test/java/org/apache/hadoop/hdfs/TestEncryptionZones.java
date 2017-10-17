@@ -777,12 +777,12 @@ public class TestEncryptionZones {
             1010, 0, new FileEncryptionInfo(suite,
             version, new byte[suite.getAlgorithmBlockSize()],
             new byte[suite.getAlgorithmBlockSize()],
-            "fakeKey", "fakeVersion"),
+            "fakeKey", "fakeVersion"), false,
             (byte) 0))
         .when(mcp)
         .create(anyString(), (FsPermission) anyObject(), anyString(),
             (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
-            anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject());
+            anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(), false);
   }
 
   // This test only uses mocks. Called from the end of an existing test to

@@ -786,10 +786,18 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public FSDataOutputStream create(Path f, boolean overwrite)
       throws IOException {
-    return create(f, overwrite, 
+    return create(f, overwrite,
                   getConf().getInt("io.file.buffer.size", 4096),
                   getDefaultReplication(f),
                   getDefaultBlockSize(f));
+  }
+
+  public FSDataOutputStream create(Path f, boolean overwrite, boolean compressed)
+          throws IOException {
+    return create(f, FsPermission.getDefault(), overwrite,
+            getConf().getInt("io.file.buffer.size", 4096),
+            getDefaultReplication(f),
+            getDefaultBlockSize(f), null, compressed);
   }
 
   /**
@@ -934,7 +942,13 @@ public abstract class FileSystem extends Configured implements Closeable {
       short replication,
       long blockSize,
       Progressable progress) throws IOException;
-  
+
+  public FSDataOutputStream create(Path f, FsPermission permission,
+                                   boolean overwrite, int bufferSize, short replication, long blockSize,
+                                   Progressable progress, boolean compressed) throws IOException {
+    return create(f, permission, overwrite, bufferSize, replication, blockSize, progress);
+  }
+
   /**
    * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.

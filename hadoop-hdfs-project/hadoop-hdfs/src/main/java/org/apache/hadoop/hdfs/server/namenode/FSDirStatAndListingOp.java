@@ -294,7 +294,7 @@ class FSDirStatAndListingOp {
     if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
       if (fsd.getINode4DotSnapshot(srcs) != null) {
         return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-            HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
+            HdfsFileStatus.EMPTY_NAME, -1L, 0, null, false,
             BlockStoragePolicySuite.ID_UNSPECIFIED);
       }
       return null;
@@ -321,7 +321,7 @@ class FSDirStatAndListingOp {
       throws UnresolvedLinkException {
     if (fsd.getINode4DotSnapshot(src) != null) {
       return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
+          HdfsFileStatus.EMPTY_NAME, -1L, 0, null, false,
           BlockStoragePolicySuite.ID_UNSPECIFIED);
     }
     return null;
@@ -399,6 +399,7 @@ class FSDirStatAndListingOp {
         node.getId(),
         childrenNum,
         feInfo,
+        fsd.getCompressionInfo(node, snapshot, iip),
         storagePolicy);
   }
 
@@ -430,7 +431,7 @@ class FSDirStatAndListingOp {
 
       loc = fsd.getFSNamesystem().getBlockManager().createLocatedBlocks(
           fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size, false,
-          inSnapshot, feInfo);
+          inSnapshot, feInfo, fsd.getCompressionInfo(node, snapshot, iip));
       if (loc == null) {
         loc = new LocatedBlocks();
       }
@@ -451,7 +452,7 @@ class FSDirStatAndListingOp {
           getPermissionForFileStatus(nodeAttrs, isEncrypted),
           nodeAttrs.getUserName(), nodeAttrs.getGroupName(),
           node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
-          node.getId(), loc, childrenNum, feInfo, storagePolicy);
+          node.getId(), loc, childrenNum, feInfo, fsd.getCompressionInfo(node, snapshot, iip), storagePolicy);
     // Set caching information for the located blocks.
     if (loc != null) {
       CacheManager cacheManager = fsd.getFSNamesystem().getCacheManager();

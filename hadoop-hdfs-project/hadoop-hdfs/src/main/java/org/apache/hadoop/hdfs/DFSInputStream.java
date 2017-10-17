@@ -116,6 +116,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private LocatedBlocks locatedBlocks = null;
   private long lastBlockBeingWrittenLength = 0;
   private FileEncryptionInfo fileEncryptionInfo = null;
+  private boolean compressionInfo = false;
   private CachingStrategy cachingStrategy;
   ////
 
@@ -340,6 +341,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
 
     fileEncryptionInfo = locatedBlocks.getFileEncryptionInfo();
+    compressionInfo = locatedBlocks.getCompressionInfo();
 
     return lastBlockBeingWrittenLength;
   }
@@ -1671,6 +1673,12 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   public FileEncryptionInfo getFileEncryptionInfo() {
     synchronized(infoLock) {
       return fileEncryptionInfo;
+    }
+  }
+
+  public boolean getCompressionInfo() {
+    synchronized(infoLock) {
+      return compressionInfo;
     }
   }
 

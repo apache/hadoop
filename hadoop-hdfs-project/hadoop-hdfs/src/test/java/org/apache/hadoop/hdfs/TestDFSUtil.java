@@ -108,7 +108,7 @@ public class TestDFSUtil {
     LocatedBlock l2 = new LocatedBlock(b2, ds, 0, true);
 
     List<LocatedBlock> ls = Arrays.asList(l1, l2);
-    LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null);
+    LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null, false);
 
     BlockLocation[] bs = DFSUtil.locatedBlocks2Locations(lbs);
 

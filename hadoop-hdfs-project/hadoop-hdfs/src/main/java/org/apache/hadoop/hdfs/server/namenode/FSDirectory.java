@@ -85,6 +85,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENAB
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.COMPRESSION_XATTR;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
@@ -1337,6 +1338,28 @@ public class FSDirectory implements Closeable {
   }
 
   /**
+   * Set the Compression for an INode.
+   */
+  void setCompression(String src, boolean compressed)
+          throws IOException {
+
+    final byte[] compressionInBytes = {(byte)(compressed ? 1 : 0)};
+
+    final XAttr compressionAttr =
+            XAttrHelper.buildXAttr(COMPRESSION_XATTR, compressionInBytes);
+    final List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
+    xAttrs.add(compressionAttr);
+
+    writeLock();
+    try {
+      FSDirXAttrOp.unprotectedSetXAttrs(this, src, xAttrs,
+              EnumSet.of(XAttrSetFlag.CREATE));
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  /**
    * This function combines the per-file encryption info (obtained
    * from the inode's XAttrs), and the encryption info from its zone, and
    * returns a consolidated FileEncryptionInfo instance. Null is returned
@@ -1392,6 +1415,42 @@ public class FSDirectory implements Closeable {
         throw new IOException("Could not parse file encryption info for " +
             "inode " + inode, e);
       }
+    } finally {
+      readUnlock();
+    }
+  }
+
+  boolean getCompressionInfo(INode inode, int snapshotId,
+                                           INodesInPath iip) throws IOException {
+    if (!inode.isFile()) {
+      return false;
+    }
+
+    readLock();
+    try {
+
+      XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByName(inode,
+              snapshotId,
+              COMPRESSION_XATTR);
+
+      if (fileXAttr == null) {
+        NameNode.LOG.warn("Could not find compression XAttr for file " +
+                iip.getPath());
+        return false;
+      }
+
+     byte[] compressionInfo = fileXAttr.getValue();
+
+     if (compressionInfo.length == 0) {
+       NameNode.LOG.warn("Empty compression XAttr bytes for file " +
+                  iip.getPath());
+       return false;
+     }
+
+     byte result = compressionInfo[0];
+
+     return (result == 1) ? true : false;
+
     } finally {
       readUnlock();
     }

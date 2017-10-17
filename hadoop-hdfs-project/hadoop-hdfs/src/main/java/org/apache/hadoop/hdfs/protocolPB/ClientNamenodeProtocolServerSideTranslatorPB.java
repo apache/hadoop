@@ -399,7 +399,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           PBHelper.convertCreateFlag(req.getCreateFlag()), req.getCreateParent(),
           (short) req.getReplication(), req.getBlockSize(),
           PBHelper.convertCryptoProtocolVersions(
-              req.getCryptoProtocolVersionList()));
+              req.getCryptoProtocolVersionList()), req.getCompressed());
 
       if (result != null) {
         return CreateResponseProto.newBuilder().setFs(PBHelper.convert(result))

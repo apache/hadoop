@@ -1286,8 +1286,8 @@ public class PBHelper {
         PBHelper.convertLocatedBlock(lb.getBlocksList()),
         lb.hasLastBlock() ? PBHelper.convert(lb.getLastBlock()) : null,
         lb.getIsLastBlockComplete(),
-        lb.hasFileEncryptionInfo() ? convert(lb.getFileEncryptionInfo()) :
-            null);
+        lb.hasFileEncryptionInfo() ? convert(lb.getFileEncryptionInfo()) : null,
+        lb.getCompressionInfo());
   }
   
   public static LocatedBlocksProto convert(LocatedBlocks lb) {
@@ -1305,7 +1305,8 @@ public class PBHelper {
     return builder.setFileLength(lb.getFileLength())
         .setUnderConstruction(lb.isUnderConstruction())
         .addAllBlocks(PBHelper.convertLocatedBlock2(lb.getLocatedBlocks()))
-        .setIsLastBlockComplete(lb.isLastBlockComplete()).build();
+        .setIsLastBlockComplete(lb.isLastBlockComplete())
+        .setCompressionInfo(lb.getCompressionInfo()).build();
   }
   
   // DataEncryptionKey
@@ -1443,6 +1444,7 @@ public class PBHelper {
         fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null,
         fs.hasChildrenNum() ? fs.getChildrenNum() : -1,
         fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) : null,
+        fs.getCompressionInfo(),
         fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
             : BlockStoragePolicySuite.ID_UNSPECIFIED);
   }
@@ -1505,6 +1507,8 @@ public class PBHelper {
         builder.setLocations(PBHelper.convert(locations));
       }
     }
+
+    builder.setCompressionInfo(fs.getCompressed());
     return builder.build();
   }
   

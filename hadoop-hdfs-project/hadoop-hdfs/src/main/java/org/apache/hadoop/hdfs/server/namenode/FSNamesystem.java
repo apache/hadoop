@@ -1846,9 +1846,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FSDirectory.isReservedRawName(srcArg) ? null
             : dir.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
 
+    final boolean compressed = dir.getCompressionInfo(inode, iip.getPathSnapshotId(), iip);
+
     final LocatedBlocks blocks = blockManager.createLocatedBlocks(
         inode.getBlocks(iip.getPathSnapshotId()), fileSize,
-        isUc, offset, length, needBlockToken, iip.isSnapshot(), feInfo);
+        isUc, offset, length, needBlockToken, iip.isSnapshot(), feInfo, compressed);
 
     // Set caching information for the located blocks.
     for (LocatedBlock lb : blocks.getLocatedBlocks()) {
@@ -2324,7 +2326,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   HdfsFileStatus startFile(String src, PermissionStatus permissions,
       String holder, String clientMachine, EnumSet<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, 
-      CryptoProtocolVersion[] supportedVersions, boolean logRetryCache)
+      CryptoProtocolVersion[] supportedVersions, boolean compressed, boolean logRetryCache)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
@@ -2332,7 +2334,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     HdfsFileStatus status = null;
     try {
       status = startFileInt(src, permissions, holder, clientMachine, flag,
-          createParent, replication, blockSize, supportedVersions,
+          createParent, replication, blockSize, supportedVersions, compressed,
           logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "create", src);
@@ -2344,7 +2346,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private HdfsFileStatus startFileInt(final String srcArg,
       PermissionStatus permissions, String holder, String clientMachine,
       EnumSet<CreateFlag> flag, boolean createParent, short replication,
-      long blockSize, CryptoProtocolVersion[] supportedVersions,
+      long blockSize, CryptoProtocolVersion[] supportedVersions, boolean compressed,
       boolean logRetryCache)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, UnresolvedLinkException,
@@ -2451,7 +2453,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             pc, iip, permissions, holder,
             clientMachine, create, overwrite,
             createParent, replication, blockSize,
-            isLazyPersist, suite, protocolVersion, edek,
+            isLazyPersist, suite, protocolVersion, edek, compressed,
             logRetryCache);
         stat = FSDirStatAndListingOp.getFileInfo(
             dir, src, false, FSDirectory.isReservedRawName(srcArg), true);
@@ -2492,7 +2494,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String clientMachine, boolean create, boolean overwrite, 
       boolean createParent, short replication, long blockSize, 
       boolean isLazyPersist, CipherSuite suite, CryptoProtocolVersion version,
-      EncryptedKeyVersion edek, boolean logRetryEntry)
+      EncryptedKeyVersion edek, boolean compressed, boolean logRetryEntry)
       throws IOException {
     assert hasWriteLock();
     // Verify that the destination does not exist as a directory already.
@@ -2587,6 +2589,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (feInfo != null) {
         dir.setFileEncryptionInfo(src, feInfo);
         newNode = dir.getInode(newNode.getId()).asFile();
+      }
+
+      // Set compression xattr if necessary
+      if (compressed) {
+        dir.setCompression(src, compressed);
       }
 
       setNewINodeStoragePolicy(newNode, iip, isLazyPersist);
