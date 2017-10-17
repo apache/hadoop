@@ -26,6 +26,9 @@ import java.util.TreeMap;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Tests utility methods in {@link TimelineServiceHelper}.
+ */
 public class TestTimelineServiceHelper {
 
   @Test

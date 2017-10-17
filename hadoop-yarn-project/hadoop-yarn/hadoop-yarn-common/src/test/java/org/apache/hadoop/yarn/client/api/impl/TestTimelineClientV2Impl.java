@@ -49,6 +49,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
+/**
+ * Tests {@link TimelineV2ClientImpl}.
+ */
 public class TestTimelineClientV2Impl {
   private static final Log LOG =
       LogFactory.getLog(TestTimelineClientV2Impl.class);

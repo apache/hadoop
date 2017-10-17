@@ -30,6 +30,10 @@ import org.junit.Test;
 
 import com.google.common.collect.Iterables;
 
+/**
+ * Tests the encoding and decoding of separators. Typically used to separate
+ * different segments in HBase row key.
+ */
 public class TestSeparator {
 
   private static String villain = "Dr. Heinz Doofenshmirtz";

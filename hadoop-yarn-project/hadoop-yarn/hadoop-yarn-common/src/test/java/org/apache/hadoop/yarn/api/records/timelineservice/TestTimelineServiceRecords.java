@@ -34,7 +34,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-
+/**
+ * Tests timeline service API records.
+ */
 public class TestTimelineServiceRecords {
   private static final Log LOG =
       LogFactory.getLog(TestTimelineServiceRecords.class);

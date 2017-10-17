@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.api;
-
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.yarn.proto.CollectorNodemanagerProtocol.CollectorNodemanagerProtocolService;
 
 /**
- * Collector nodemanager protocol service implementation.
+ * Contains protocol record implementations for YARN server protocols.
  */
-@Private
-@Unstable
-@ProtocolInfo(
-    protocolName =
-        "org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocolPB",
-    protocolVersion = 1)
-public interface CollectorNodemanagerProtocolPB extends
-    CollectorNodemanagerProtocolService.BlockingInterface {
-
-}
+package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;

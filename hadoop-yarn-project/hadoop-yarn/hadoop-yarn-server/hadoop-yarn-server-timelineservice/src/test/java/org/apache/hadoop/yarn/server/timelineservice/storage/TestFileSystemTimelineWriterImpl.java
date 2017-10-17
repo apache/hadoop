@@ -42,6 +42,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+/**
+ * Tests filesystem implemetation for timelineservice writer.
+ */
 public class TestFileSystemTimelineWriterImpl {
   @Rule
   public TemporaryFolder tmpFolder = new TemporaryFolder();

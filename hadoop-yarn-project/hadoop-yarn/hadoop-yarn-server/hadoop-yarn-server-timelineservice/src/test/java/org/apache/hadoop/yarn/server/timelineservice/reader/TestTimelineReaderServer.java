@@ -28,6 +28,9 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineR
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.junit.Test;
 
+/**
+ * Tests {@link TimelineReaderServer} start and stop.
+ */
 public class TestTimelineReaderServer {
 
   @Test(timeout = 60000)

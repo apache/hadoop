@@ -27,6 +27,9 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric.Type;
 
 import org.junit.Test;
 
+/**
+ * Tests {@link TimelineMetric} operations such as aggregation.
+ */
 public class TestTimelineMetric {
 
   @Test
@@ -86,15 +89,4 @@ public class TestTimelineMetric {
     m.setValues(metricValues);
     return m;
   }
-
-  private static TimelineMetric getTimeSeriesMetric(String id,
-      TimelineMetricOperation op, Map<Long, Number> metricValues) {
-    TimelineMetric m = new TimelineMetric();
-    m.setId(id);
-    m.setType(Type.TIME_SERIES);
-    m.setRealtimeAggregationOp(op);
-    m.setValues(metricValues);
-    return m;
-  }
-
 }

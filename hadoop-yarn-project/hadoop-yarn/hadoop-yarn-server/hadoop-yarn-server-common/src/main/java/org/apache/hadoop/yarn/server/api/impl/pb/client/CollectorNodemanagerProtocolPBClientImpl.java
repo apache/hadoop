@@ -45,6 +45,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewCollec
 
 import com.google.protobuf.ServiceException;
 
+/**
+ * Client implementation of {@link CollectorNodemanagerProtocol}.
+ */
 public class CollectorNodemanagerProtocolPBClientImpl implements
     CollectorNodemanagerProtocol, Closeable {
 

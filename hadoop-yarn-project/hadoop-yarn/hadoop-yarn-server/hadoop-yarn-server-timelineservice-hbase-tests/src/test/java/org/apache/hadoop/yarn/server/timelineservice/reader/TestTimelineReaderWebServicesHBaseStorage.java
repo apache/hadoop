@@ -64,7 +64,7 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.GenericType;
 
 /**
- * Test TimelineReder Web Service REST API's.
+ * Test TimelineReder Web Service REST API's using HBase storage.
  */
 public class TestTimelineReaderWebServicesHBaseStorage
     extends AbstractTimelineReaderHBaseTestBase {

@@ -40,8 +40,7 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
  * Adds simple entities with random string payload, events, metrics, and
  * configuration.
  */
-class SimpleEntityWriterV2 extends EntityWriterV2
-    implements SimpleEntityWriterConstants {
+class SimpleEntityWriterV2 extends EntityWriterV2 {
   private static final Log LOG = LogFactory.getLog(SimpleEntityWriterV2.class);
 
   protected void writeEntities(Configuration tlConf,
@@ -49,7 +48,8 @@ class SimpleEntityWriterV2 extends EntityWriterV2
     Configuration conf = context.getConfiguration();
     // simulate the app id with the task id
     int taskId = context.getTaskAttemptID().getTaskID().getId();
-    long timestamp = conf.getLong(TIMELINE_SERVICE_PERFORMANCE_RUN_ID, 0);
+    long timestamp = conf.getLong(
+        SimpleEntityWriterConstants.TIMELINE_SERVICE_PERFORMANCE_RUN_ID, 0);
     ApplicationId appId = ApplicationId.newInstance(timestamp, taskId);
 
     // create the app level timeline collector
@@ -66,10 +66,12 @@ class SimpleEntityWriterV2 extends EntityWriterV2
       tlContext.setFlowRunId(timestamp);
       tlContext.setUserId(context.getUser());
 
-      final int kbs = conf.getInt(KBS_SENT, KBS_SENT_DEFAULT);
+      final int kbs = conf.getInt(SimpleEntityWriterConstants.KBS_SENT,
+          SimpleEntityWriterConstants.KBS_SENT_DEFAULT);
 
       long totalTime = 0;
-      final int testtimes = conf.getInt(TEST_TIMES, TEST_TIMES_DEFAULT);
+      final int testtimes = conf.getInt(SimpleEntityWriterConstants.TEST_TIMES,
+          SimpleEntityWriterConstants.TEST_TIMES_DEFAULT);
       final Random rand = new Random();
       final TaskAttemptID taskAttemptId = context.getTaskAttemptID();
       final char[] payLoad = new char[kbs * 1024];
@@ -78,8 +80,8 @@ class SimpleEntityWriterV2 extends EntityWriterV2
         // Generate a fixed length random payload
         for (int xx = 0; xx < kbs * 1024; xx++) {
           int alphaNumIdx =
-              rand.nextInt(ALPHA_NUMS.length);
-          payLoad[xx] = ALPHA_NUMS[alphaNumIdx];
+              rand.nextInt(SimpleEntityWriterConstants.ALPHA_NUMS.length);
+          payLoad[xx] = SimpleEntityWriterConstants.ALPHA_NUMS[alphaNumIdx];
         }
         String entId = taskAttemptId + "_" + Integer.toString(i);
         final TimelineEntity entity = new TimelineEntity();

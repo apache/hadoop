@@ -59,6 +59,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+/**
+ * Tests filesystem implemetation for timelineservice reader.
+ */
 public class TestFileSystemTimelineReaderImpl {
 
   private static final String ROOT_DIR = new File("target",

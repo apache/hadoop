@@ -36,7 +36,7 @@ public class TimelineReaderAuthenticationFilterInitializer extends
    * <p>
    * Propagates to {@link AuthenticationWithProxyUserFilter} configuration all
    * YARN configuration properties prefixed with
-   * {@value TimelineAuthenticationFilterInitializer#PREFIX}.
+   * {@link TimelineAuthenticationFilterInitializer#PREFIX}.
    *
    * @param container
    *          The filter container

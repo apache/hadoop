@@ -49,6 +49,10 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.After;
 import org.junit.Test;
 
+/**
+ * Tests the NodeManager auxiliary service started for node level timeline
+ * collector.
+ */
 public class TestPerNodeTimelineCollectorsAuxService {
   private ApplicationAttemptId appAttemptId;
   private PerNodeTimelineCollectorsAuxService auxService;

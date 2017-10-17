@@ -131,8 +131,8 @@ public class TimelineConnector extends AbstractService {
     }
   }
 
-  private static final ConnectionConfigurator DEFAULT_TIMEOUT_CONN_CONFIGURATOR
-    = new ConnectionConfigurator() {
+  private static final ConnectionConfigurator
+      DEFAULT_TIMEOUT_CONN_CONFIGURATOR = new ConnectionConfigurator() {
         @Override
         public HttpURLConnection configure(HttpURLConnection conn)
             throws IOException {

@@ -35,6 +35,9 @@ import org.junit.Test;
 
 import com.google.common.collect.Sets;
 
+/**
+ * Tests helper methods in {@link TimelineReaderWebServicesUtils}.
+ */
 public class TestTimelineReaderWebServicesUtils {
   private static void verifyFilterList(String expr, TimelineFilterList list,
       TimelineFilterList expectedList) throws Exception {

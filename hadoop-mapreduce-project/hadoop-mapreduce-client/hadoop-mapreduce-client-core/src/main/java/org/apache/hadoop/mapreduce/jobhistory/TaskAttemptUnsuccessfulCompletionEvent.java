@@ -62,7 +62,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   private long startTime;
   private static final Counters EMPTY_COUNTERS = new Counters();
 
-  /** 
+  /**
    * Create an event to record the unsuccessful completion of attempts.
    * @param id Attempt ID
    * @param taskType Type of the task
@@ -232,7 +232,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   public String getRackName() {
     return rackName == null ? null : rackName.toString();
   }
-  
+
   /** Gets the error string. */
   public String getError() { return error.toString(); }
   /**

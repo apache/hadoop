@@ -21,6 +21,11 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * GetTimelineCollectorContextRequest invoked by collector to get the context
+ * information from Nodemanager. The context information includes user, flow and
+ * flow run ID and is associated with every incoming put-entity request.
+ */
 public abstract class GetTimelineCollectorContextRequest {
 
   public static GetTimelineCollectorContextRequest newInstance(

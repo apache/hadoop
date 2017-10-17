@@ -85,6 +85,9 @@ public class ContainersMonitorImpl extends AbstractService implements
   private static final long UNKNOWN_MEMORY_LIMIT = -1L;
   private int nodeCpuPercentageForYARN;
 
+  /**
+   * Identifies the type of container metric to be published.
+   */
   @Private
   public static enum ContainerMetric {
     CPU, MEMORY

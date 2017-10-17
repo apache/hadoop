@@ -3218,7 +3218,7 @@
     <name>yarn.app.attempt.diagnostics.limit.kc</name>
     <value>64</value>
   </property>
-  
+
   <property>
     <description>
       Flag to enable cross-origin (CORS) support for timeline service v1.x or

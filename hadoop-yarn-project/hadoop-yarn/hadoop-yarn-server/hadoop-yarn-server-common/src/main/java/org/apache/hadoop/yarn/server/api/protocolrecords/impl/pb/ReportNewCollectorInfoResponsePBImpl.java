@@ -24,6 +24,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoR
 
 import com.google.protobuf.TextFormat;
 
+/**
+ * Protocol buffer based implementation of
+ * {@link ReportNewCollectorInfoResponse}.
+ */
 @Private
 @Unstable
 public class ReportNewCollectorInfoResponsePBImpl extends

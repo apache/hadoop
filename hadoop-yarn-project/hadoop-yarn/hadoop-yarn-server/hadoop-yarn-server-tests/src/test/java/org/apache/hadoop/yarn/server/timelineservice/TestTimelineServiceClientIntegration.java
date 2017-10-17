@@ -58,6 +58,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+/**
+ * Tests timeline client integration with collector service.
+ */
 public class TestTimelineServiceClientIntegration {
   private static final String ROOT_DIR = new File("target",
       TestTimelineServiceClientIntegration.class.getSimpleName()).

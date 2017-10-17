@@ -67,13 +67,13 @@ public class TestRMNMSecretKeys {
   }
 
   private static void writeFile(String content, File file) throws IOException {
-      FileOutputStream outputStream = new FileOutputStream(file);
-      FileChannel fc = outputStream.getChannel();
+    FileOutputStream outputStream = new FileOutputStream(file);
+    FileChannel fc = outputStream.getChannel();
 
-      ByteBuffer buffer =
-          ByteBuffer.wrap(content.getBytes(StandardCharsets.UTF_8));
-      fc.write(buffer);
-      outputStream.close();
+    ByteBuffer buffer =
+        ByteBuffer.wrap(content.getBytes(StandardCharsets.UTF_8));
+    fc.write(buffer);
+    outputStream.close();
   }
 
   @AfterClass

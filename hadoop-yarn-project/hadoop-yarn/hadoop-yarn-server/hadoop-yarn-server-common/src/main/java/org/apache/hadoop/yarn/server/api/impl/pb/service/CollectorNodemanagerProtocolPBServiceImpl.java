@@ -36,6 +36,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewCollec
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
+/**
+ * Service implementation of CollectorNodemanagerProtocol.
+ */
 public class CollectorNodemanagerProtocolPBServiceImpl implements
     CollectorNodemanagerProtocolPB {
 

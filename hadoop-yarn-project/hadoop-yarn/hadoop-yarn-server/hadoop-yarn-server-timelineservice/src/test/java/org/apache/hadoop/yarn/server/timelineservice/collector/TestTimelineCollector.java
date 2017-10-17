@@ -46,6 +46,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Tests functionality of timeline collector.
+ */
 public class TestTimelineCollector {
 
   private TimelineEntities generateTestEntities(int groups, int entities) {

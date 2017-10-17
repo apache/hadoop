@@ -27,6 +27,10 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ReportNewColle
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ReportNewCollectorInfoRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 
+/**
+ * Protocol buffer based implementation of
+ * {@link ReportNewCollectorInfoRequest}.
+ */
 public class ReportNewCollectorInfoRequestPBImpl extends
     ReportNewCollectorInfoRequest {
 

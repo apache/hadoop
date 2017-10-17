@@ -26,6 +26,9 @@ import java.util.List;
 
 import org.junit.Test;
 
+/**
+ * Tests helper methods in {@link TimelineReaderUtils}.
+ */
 public class TestTimelineReaderUtils {
 
   @Test

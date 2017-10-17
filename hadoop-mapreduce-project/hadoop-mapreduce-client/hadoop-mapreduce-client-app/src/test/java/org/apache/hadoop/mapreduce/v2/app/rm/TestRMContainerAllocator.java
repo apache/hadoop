@@ -141,7 +141,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
-import org.apache.hadoop.yarn.server.timelineservice.security.TimelineV2DelegationTokenSecretManagerService.TimelineV2DelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
@@ -776,7 +775,7 @@ public class TestRMContainerAllocator {
         new Text("renewer"), null);
     ident.setSequenceNumber(1);
     Token<TimelineDelegationTokenIdentifier> collectorToken =
-        new Token<TimelineDelegationTokenIdentifier> (ident.getBytes(),
+        new Token<TimelineDelegationTokenIdentifier>(ident.getBytes(),
         new byte[0], TimelineDelegationTokenIdentifier.KIND_NAME,
         new Text(localAddr));
     org.apache.hadoop.yarn.api.records.Token token =
@@ -824,7 +823,7 @@ public class TestRMContainerAllocator {
     // new token.
     ident.setSequenceNumber(100);
     Token<TimelineDelegationTokenIdentifier> collectorToken1 =
-        new Token<TimelineDelegationTokenIdentifier> (ident.getBytes(),
+        new Token<TimelineDelegationTokenIdentifier>(ident.getBytes(),
         new byte[0], TimelineDelegationTokenIdentifier.KIND_NAME,
         new Text(localAddr));
     token = org.apache.hadoop.yarn.api.records.Token.newInstance(
@@ -3579,15 +3578,15 @@ public class TestRMContainerAllocator {
     }
   }
 
-  private static class MockSchedulerForTimelineCollector
+  private final static class MockSchedulerForTimelineCollector
       implements ApplicationMasterProtocol {
-    CollectorInfo collectorInfo;
+    private CollectorInfo collectorInfo;
 
-    public MockSchedulerForTimelineCollector(CollectorInfo info) {
+    private MockSchedulerForTimelineCollector(CollectorInfo info) {
       this.collectorInfo = info;
     }
 
-    void updateCollectorInfo(CollectorInfo info) {
+    private void updateCollectorInfo(CollectorInfo info) {
       collectorInfo = info;
     }
 

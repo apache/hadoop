@@ -51,6 +51,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * Tests node level timeline collector manager.
+ */
 public class TestNMTimelineCollectorManager {
   private NodeTimelineCollectorManager collectorManager;
 

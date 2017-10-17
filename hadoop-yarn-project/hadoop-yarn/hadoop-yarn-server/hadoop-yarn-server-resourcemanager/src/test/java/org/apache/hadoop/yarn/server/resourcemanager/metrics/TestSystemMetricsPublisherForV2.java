@@ -75,6 +75,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+/**
+ * Tests publishing of entities and metrics from RM to ATSv2.
+ */
 public class TestSystemMetricsPublisherForV2 {
 
   /**

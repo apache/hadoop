@@ -24,7 +24,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
 
-
+/**
+ * Collector data associated with an app collector. Includes app Id, collector
+ * address, RM identifier, version and collector token.
+ */
 @Private
 @InterfaceStability.Unstable
 public abstract class AppCollectorData {

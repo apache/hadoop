@@ -26,6 +26,10 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.GetTimelineCol
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.GetTimelineCollectorContextRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 
+/**
+ * Protocol buffer based implementation of
+ * {@link GetTimelineCollectorContextRequest}.
+ */
 public class GetTimelineCollectorContextRequestPBImpl extends
     GetTimelineCollectorContextRequest {
 

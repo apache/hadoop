@@ -26,6 +26,12 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * Request used to report new collector info from timeline collector manager
+ * whenever a collector is launched.
+ * The request contains a list of collector data, with each collector data
+ * object represented by {@link AppCollectorData}.
+ */
 @Private
 public abstract class ReportNewCollectorInfoRequest {
 

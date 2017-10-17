@@ -429,6 +429,7 @@ public class ContainerManagerImpl extends CompositeService implements
     app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
 
+  @SuppressWarnings("unchecked")
   private void recoverContainer(RecoveredContainerState rcs)
       throws IOException {
     StartContainerRequest req = rcs.getStartRequest();
@@ -1735,6 +1736,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * @param reInitLaunchContext Target Launch Context.
    * @throws YarnException Yarn Exception.
    */
+  @SuppressWarnings("unchecked")
   public void reInitializeContainer(ContainerId containerId,
       ContainerLaunchContext reInitLaunchContext, boolean autoCommit)
       throws YarnException {
@@ -1762,6 +1764,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * @return Rollback Response.
    * @throws YarnException Yarn Exception.
    */
+  @SuppressWarnings("unchecked")
   @Override
   public RollbackResponse rollbackLastReInitialization(ContainerId containerId)
       throws YarnException {

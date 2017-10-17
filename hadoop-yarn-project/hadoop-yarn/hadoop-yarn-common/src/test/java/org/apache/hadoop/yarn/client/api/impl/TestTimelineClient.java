@@ -426,15 +426,14 @@ public class TestTimelineClient {
             new TimelineConnector(true, authUgi, doAsUser, token) {
               @Override
               public TimelineClientRetryOp
-                createRetryOpForOperateDelegationToken(
+                  createRetryOpForOperateDelegationToken(
                   final PrivilegedExceptionAction<?> action)
                   throws IOException {
                 TimelineClientRetryOpForOperateDelegationToken op =
                     spy(new TimelineClientRetryOpForOperateDelegationToken(
                         UserGroupInformation.getCurrentUser(), action));
-                doThrow(
-                    new SocketTimeoutException("Test socketTimeoutException"))
-                        .when(op).run();
+                doThrow(new SocketTimeoutException(
+                    "Test socketTimeoutException")).when(op).run();
                 return op;
               }
             };

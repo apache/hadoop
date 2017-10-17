@@ -84,6 +84,9 @@ import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Tests RPC communication for different YARN server protocols.
+ */
 public class TestRPC {
 
   private static final String EXCEPTION_MSG = "test error";
@@ -320,7 +323,8 @@ public class TestRPC {
     Assert.assertEquals(ContainerState.RUNNING, statuses.get(0).getState());
   }
 
-  public class DummyContainerManager implements ContainerManagementProtocol {
+  private static class DummyContainerManager
+      implements ContainerManagementProtocol {
 
     private List<ContainerStatus> statuses = new ArrayList<ContainerStatus>();
 
@@ -448,7 +452,7 @@ public class TestRPC {
 
   // A dummy implementation for CollectorNodemanagerProtocol for test purpose,
   // it only can accept one appID, collectorAddr pair or throw exceptions
-  public class DummyNMCollectorService
+  private static class DummyNMCollectorService
       implements CollectorNodemanagerProtocol {
 
     @Override

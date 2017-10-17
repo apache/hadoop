@@ -30,6 +30,9 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDa
 
 import com.google.protobuf.TextFormat;
 
+/**
+ * Protocol Buffer based implementation of {@link AppCollectorData}.
+ */
 @Private
 @Unstable
 public class AppCollectorDataPBImpl extends AppCollectorData {

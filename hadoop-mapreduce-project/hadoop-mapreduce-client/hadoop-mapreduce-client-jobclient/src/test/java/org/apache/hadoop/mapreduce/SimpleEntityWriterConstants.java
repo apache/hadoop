@@ -21,20 +21,21 @@ package org.apache.hadoop.mapreduce;
 /**
  * Constants for simple entity writers.
  */
-interface SimpleEntityWriterConstants {
+final class SimpleEntityWriterConstants {
+  private SimpleEntityWriterConstants() {}
   // constants for mtype = 1
-  String KBS_SENT = "kbs sent";
-  int KBS_SENT_DEFAULT = 1;
-  String TEST_TIMES = "testtimes";
-  int TEST_TIMES_DEFAULT = 100;
-  String TIMELINE_SERVICE_PERFORMANCE_RUN_ID =
+  static final String KBS_SENT = "kbs sent";
+  static final int KBS_SENT_DEFAULT = 1;
+  static final String TEST_TIMES = "testtimes";
+  static final int TEST_TIMES_DEFAULT = 100;
+  static final String TIMELINE_SERVICE_PERFORMANCE_RUN_ID =
       "timeline.server.performance.run.id";
 
   /**
    *  To ensure that the compression really gets exercised, generate a
    *  random alphanumeric fixed length payload.
    */
-  char[] ALPHA_NUMS = new char[] {'a', 'b', 'c', 'd', 'e', 'f',
+  static final char[] ALPHA_NUMS = new char[] {'a', 'b', 'c', 'd', 'e', 'f',
       'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
       's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D',
       'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',

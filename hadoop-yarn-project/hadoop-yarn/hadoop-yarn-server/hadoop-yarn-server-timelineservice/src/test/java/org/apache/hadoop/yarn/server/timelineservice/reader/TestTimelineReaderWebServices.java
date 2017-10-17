@@ -59,6 +59,9 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
+/**
+ * Test TimelineReder Web Service REST API's using filesystem storage.
+ */
 public class TestTimelineReaderWebServices {
 
   private static final String ROOT_DIR = new File("target",

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.collector;
-
-
-public class TestAppLevelTimelineCollector {
-}
+/**
+ * Contains interfaces which define the protocols to communicate with different
+ * YARN server components.
+ */
+package org.apache.hadoop.yarn.server.api;

@@ -27,7 +27,9 @@ import static org.apache.hadoop.yarn.server.timeline.security.TimelineAuthentica
 import org.junit.Test;
 import org.mockito.Mockito;
 
-
+/**
+ * Tests {@link TimelineAuthenticationFilterInitializer}.
+ */
 public class TestTimelineAuthenticationFilterInitializer {
 
   @Test

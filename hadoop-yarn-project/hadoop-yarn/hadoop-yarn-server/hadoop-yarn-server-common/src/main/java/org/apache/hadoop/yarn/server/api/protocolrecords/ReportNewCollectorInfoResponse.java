@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * Response to {@link ReportNewCollectorInfoRequest}.
+ */
 public abstract class ReportNewCollectorInfoResponse {
 
   @Private

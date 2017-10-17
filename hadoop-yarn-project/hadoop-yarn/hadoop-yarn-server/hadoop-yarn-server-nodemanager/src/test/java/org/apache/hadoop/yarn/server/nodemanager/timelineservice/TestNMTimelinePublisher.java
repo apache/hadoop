@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.timelineservice;
 
+/**
+ * Tests publishing of entities from NM to ATSv2.
+ */
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
@@ -43,6 +46,9 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Tests {@link NMTimelinePublisher}.
+ */
 public class TestNMTimelinePublisher {
   private static final String MEMORY_ID = "MEMORY";
   private static final String CPU_ID = "CPU";

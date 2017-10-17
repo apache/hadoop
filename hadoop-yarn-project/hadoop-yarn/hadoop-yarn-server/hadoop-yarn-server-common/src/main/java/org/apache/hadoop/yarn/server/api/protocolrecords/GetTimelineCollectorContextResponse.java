@@ -20,6 +20,12 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.yarn.util.Records;
 
+/**
+ * GetTimelineCollectorContextResponse sent in response of
+ * GetTimelineCollectorContextRequest invoked by collector. The response
+ * includes user, flow name, flow version and flow run ID. This is then
+ * associated by collector with every incoming put-entity request.
+ */
 public abstract class GetTimelineCollectorContextResponse {
 
   public static GetTimelineCollectorContextResponse newInstance(
