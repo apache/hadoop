@@ -27,11 +27,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.ConfigurationWithLogging;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.crypto.key.kms.server.KMSConfiguration.METRICS_PROCESS_NAME_DEFAULT;
+import static org.apache.hadoop.crypto.key.kms.server.KMSConfiguration.METRICS_PROCESS_NAME_KEY;
+import static org.apache.hadoop.crypto.key.kms.server.KMSConfiguration.METRICS_SESSION_ID_KEY;
 
 /**
  * The KMS web server.
@@ -46,6 +53,9 @@ public class KMSWebServer {
 
   private final HttpServer2 httpServer;
   private final String scheme;
+  private final String processName;
+  private final String sessionId;
+  private final JvmPauseMonitor pauseMonitor;
 
   KMSWebServer(Configuration conf, Configuration sslConf) throws Exception {
     // Override configuration with deprecated environment variables.
@@ -73,6 +83,11 @@ public class KMSWebServer {
     boolean sslEnabled = conf.getBoolean(KMSConfiguration.SSL_ENABLED_KEY,
         KMSConfiguration.SSL_ENABLED_DEFAULT);
     scheme = sslEnabled ? HttpServer2.HTTPS_SCHEME : HttpServer2.HTTP_SCHEME;
+    processName =
+        conf.get(METRICS_PROCESS_NAME_KEY, METRICS_PROCESS_NAME_DEFAULT);
+    sessionId = conf.get(METRICS_SESSION_ID_KEY);
+    pauseMonitor = new JvmPauseMonitor();
+    pauseMonitor.init(conf);
 
     String host = conf.get(KMSConfiguration.HTTP_HOST_KEY,
         KMSConfiguration.HTTP_HOST_DEFAULT);
@@ -113,6 +128,11 @@ public class KMSWebServer {
 
   public void start() throws IOException {
     httpServer.start();
+
+    DefaultMetricsSystem.initialize(processName);
+    final JvmMetrics jm = JvmMetrics.initSingleton(processName, sessionId);
+    jm.setPauseMonitor(pauseMonitor);
+    pauseMonitor.start();
   }
 
   public boolean isRunning() {
@@ -125,6 +145,10 @@ public class KMSWebServer {
 
   public void stop() throws Exception {
     httpServer.stop();
+
+    pauseMonitor.stop();
+    JvmMetrics.shutdownSingleton();
+    DefaultMetricsSystem.shutdown();
   }
 
   public URL getKMSUrl() {

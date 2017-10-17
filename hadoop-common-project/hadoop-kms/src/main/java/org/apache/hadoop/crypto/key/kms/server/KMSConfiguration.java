@@ -76,6 +76,15 @@ public class KMSConfiguration {
   public static final String KMS_AUDIT_AGGREGATION_WINDOW = CONFIG_PREFIX +
       "audit.aggregation.window.ms";
 
+  // Process name shown in metrics
+  public static final String METRICS_PROCESS_NAME_KEY =
+      CONFIG_PREFIX + "metrics.process.name";
+  public static final String METRICS_PROCESS_NAME_DEFAULT = "KMS";
+
+  // Session id for metrics
+  public static final String METRICS_SESSION_ID_KEY =
+      CONFIG_PREFIX + "metrics.session.id";
+
   // KMS Audit logger classes to use
   public static final String KMS_AUDIT_LOGGER_KEY = CONFIG_PREFIX +
       "audit.logger";
