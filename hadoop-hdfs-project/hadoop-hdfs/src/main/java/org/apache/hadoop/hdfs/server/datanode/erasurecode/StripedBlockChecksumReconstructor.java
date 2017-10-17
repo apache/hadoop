@@ -155,7 +155,7 @@ public class StripedBlockChecksumReconstructor extends StripedReconstructor {
     return checksumBuf.length;
   }
 
-  private void reconstructTargets(int toReconstructLen) {
+  private void reconstructTargets(int toReconstructLen) throws IOException {
     ByteBuffer[] inputs = getStripedReader().getInputBuffers(toReconstructLen);
 
     ByteBuffer[] outputs = new ByteBuffer[1];

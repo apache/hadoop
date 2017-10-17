@@ -20,6 +20,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test NativeXOR encoding and decoding.
@@ -32,5 +33,11 @@ public class TestNativeXORRawCoder extends TestXORRawCoderBase {
     this.encoderFactoryClass = NativeXORRawErasureCoderFactory.class;
     this.decoderFactoryClass = NativeXORRawErasureCoderFactory.class;
     setAllowDump(true);
+  }
+
+  @Test
+  public void testAfterRelease63() throws Exception {
+    prepare(6, 3, null, null);
+    testAfterRelease();
   }
 }

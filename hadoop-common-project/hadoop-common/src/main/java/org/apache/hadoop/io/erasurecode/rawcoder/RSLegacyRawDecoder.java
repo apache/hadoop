@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -53,7 +54,7 @@ public class RSLegacyRawDecoder extends RawErasureDecoder {
 
   @Override
   public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
-                     ByteBuffer[] outputs) {
+                     ByteBuffer[] outputs) throws IOException {
     // Make copies avoiding affecting original ones;
     ByteBuffer[] newInputs = new ByteBuffer[inputs.length];
     int[] newErasedIndexes = new int[erasedIndexes.length];
@@ -67,7 +68,8 @@ public class RSLegacyRawDecoder extends RawErasureDecoder {
   }
 
   @Override
-  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs) {
+  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs)
+      throws IOException {
     // Make copies avoiding affecting original ones;
     byte[][] newInputs = new byte[inputs.length][];
     int[] newErasedIndexes = new int[erasedIndexes.length];
