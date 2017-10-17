@@ -285,38 +285,21 @@ class DataStreamer extends Daemon {
     packets.clear();
   }
 
-  class LastExceptionInStreamer {
-    private IOException thrown;
-
-    synchronized void set(Throwable t) {
-      assert t != null;
-      this.thrown = t instanceof IOException ?
-          (IOException) t : new IOException(t);
-    }
-
-    synchronized void clear() {
-      thrown = null;
-    }
-
-    /** Check if there already is an exception. */
+  class LastExceptionInStreamer extends ExceptionLastSeen {
+    /**
+     * Check if there already is an exception.
+     */
+    @Override
     synchronized void check(boolean resetToNull) throws IOException {
+      final IOException thrown = get();
       if (thrown != null) {
         if (LOG.isTraceEnabled()) {
           // wrap and print the exception to know when the check is called
           LOG.trace("Got Exception while checking, " + DataStreamer.this,
               new Throwable(thrown));
         }
-        final IOException e = thrown;
-        if (resetToNull) {
-          thrown = null;
-        }
-        throw e;
+        super.check(resetToNull);
       }
-    }
-
-    synchronized void throwException4Close() throws IOException {
-      check(false);
-      throw new ClosedChannelException();
     }
   }
 

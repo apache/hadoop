@@ -82,6 +82,12 @@ public class DFSStripedOutputStream extends DFSOutputStream
     implements StreamCapabilities {
   private static final ByteBufferPool BUFFER_POOL = new ElasticByteBufferPool();
 
+  /**
+   * OutputStream level last exception, will be used to indicate the fatal
+   * exception of this stream, i.e., being aborted.
+   */
+  private final ExceptionLastSeen exceptionLastSeen = new ExceptionLastSeen();
+
   static class MultipleBlockingQueue<T> {
     private final List<BlockingQueue<T>> queues;
 
@@ -971,12 +977,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
       if (isClosed()) {
         return;
       }
-      for (StripedDataStreamer streamer : streamers) {
-        streamer.getLastException().set(
-            new IOException("Lease timeout of "
-                + (dfsClient.getConf().getHdfsTimeout() / 1000)
-                + " seconds expired."));
-      }
+      exceptionLastSeen.set(new IOException("Lease timeout of "
+          + (dfsClient.getConf().getHdfsTimeout() / 1000)
+          + " seconds expired."));
 
       try {
         closeThreads(true);
@@ -1133,18 +1136,26 @@ public class DFSStripedOutputStream extends DFSOutputStream
   @Override
   protected synchronized void closeImpl() throws IOException {
     if (isClosed()) {
+      exceptionLastSeen.check(true);
+
+      // Writing to at least {dataUnits} replicas can be considered as success,
+      // and the rest of data can be recovered.
+      final int minReplication = ecPolicy.getNumDataUnits();
+      int goodStreamers = 0;
       final MultipleIOException.Builder b = new MultipleIOException.Builder();
-      for(int i = 0; i < streamers.size(); i++) {
-        final StripedDataStreamer si = getStripedDataStreamer(i);
+      for (final StripedDataStreamer si : streamers) {
         try {
           si.getLastException().check(true);
+          goodStreamers++;
         } catch (IOException e) {
           b.add(e);
         }
       }
-      final IOException ioe = b.build();
-      if (ioe != null) {
-        throw ioe;
+      if (goodStreamers < minReplication) {
+        final IOException ioe = b.build();
+        if (ioe != null) {
+          throw ioe;
+        }
       }
       return;
     }
@@ -1183,9 +1194,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
         }
       } finally {
         // Failures may happen when flushing data/parity data out. Exceptions
-        // may be thrown if more than 3 streamers fail, or updatePipeline RPC
-        // fails. Streamers may keep waiting for the new block/GS information.
-        // Thus need to force closing these threads.
+        // may be thrown if the number of failed streamers is more than the
+        // number of parity blocks, or updatePipeline RPC fails. Streamers may
+        // keep waiting for the new block/GS information. Thus need to force
+        // closing these threads.
         closeThreads(true);
       }
 
