@@ -731,6 +731,7 @@ public class SLSRunner extends Configured implements Tool {
     }
 
     queueAppNumMap.put(queueName, appNum);
+    wrapper.getSchedulerMetrics().trackQueue(queueName);
   }
 
   private void runNewAM(String jobType, String user,
