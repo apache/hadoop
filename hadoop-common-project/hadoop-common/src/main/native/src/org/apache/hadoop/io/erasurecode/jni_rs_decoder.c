@@ -48,6 +48,10 @@ JNIEnv *env, jobject thiz, jobjectArray inputs, jintArray inputOffsets,
 jint dataLen, jintArray erasedIndexes, jobjectArray outputs,
 jintArray outputOffsets) {
   RSDecoder* rsDecoder = (RSDecoder*)getCoder(env, thiz);
+  if (!rsDecoder) {
+    THROW(env, "java/io/IOException", "NativeRSRawDecoder closed");
+    return;
+  }
 
   int numDataUnits = rsDecoder->decoder.coder.numDataUnits;
   int numParityUnits = rsDecoder->decoder.coder.numParityUnits;
@@ -68,5 +72,8 @@ JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_erasurecode_rawcoder_NativeRSRawDecoder_destroyImpl(
 JNIEnv *env, jobject thiz) {
   RSDecoder* rsDecoder = (RSDecoder*)getCoder(env, thiz);
-  free(rsDecoder);
+  if (rsDecoder) {
+    free(rsDecoder);
+    setCoder(env, thiz, NULL);
+  }
 }

@@ -355,7 +355,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
    * @param buffers data buffers + parity buffers
    */
   private static void encode(RawErasureEncoder encoder, int numData,
-      ByteBuffer[] buffers) {
+      ByteBuffer[] buffers) throws IOException {
     final ByteBuffer[] dataBuffers = new ByteBuffer[numData];
     final ByteBuffer[] parityBuffers = new ByteBuffer[buffers.length - numData];
     System.arraycopy(buffers, 0, dataBuffers, 0, dataBuffers.length);
