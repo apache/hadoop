@@ -104,7 +104,7 @@ public class TestDefaultBlockPlacementPolicy {
       // Create the file with client machine
       HdfsFileStatus fileStatus = namesystem.startFile(src, perm,
           clientMachine, clientMachine, EnumSet.of(CreateFlag.CREATE), true,
-          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, false);
+          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, false, false);
       LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
           null, null, fileStatus.getFileId(), null);
 

@@ -82,7 +82,7 @@ public class TestAddBlockRetry {
     nn.create(src, FsPermission.getFileDefault(),
         "clientName",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
-        true, (short)3, 1024, null);
+        true, (short)3, 1024, null, false);
 
     // start first addBlock()
     LOG.info("Starting first addBlock for " + src);
@@ -139,7 +139,7 @@ public class TestAddBlockRetry {
     // create file
     nameNodeRpc.create(src, FsPermission.getFileDefault(), "clientName",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
-        (short) 3, 1024, null);
+        (short) 3, 1024, null, false);
     // start first addBlock()
     LOG.info("Starting first addBlock for " + src);
     LocatedBlock lb1 = nameNodeRpc.addBlock(src, "clientName", null, null,

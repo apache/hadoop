@@ -108,6 +108,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.apache.hadoop.hdfs.SnappyCompressionInputStream;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CacheFlag;
@@ -233,6 +234,8 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
+import org.xerial.snappy.SnappyInputStream;
+import org.xerial.snappy.SnappyOutputStream;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -1455,6 +1458,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return new HdfsDataInputStream(cryptoIn);
     } else {
       // No FileEncryptionInfo so no encryption.
+
+      if (dfsis.getCompressionInfo()) {
+        SnappyCompressionInputStream compressionInputStream = new SnappyCompressionInputStream(dfsis);
+        return new HdfsDataInputStream(compressionInputStream);
+      }
+
       return new HdfsDataInputStream(dfsis);
     }
   }
@@ -1484,9 +1493,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       final CryptoOutputStream cryptoOut =
           new CryptoOutputStream(dfsos, codec,
               decrypted.getMaterial(), feInfo.getIV(), startPos);
+
       return new HdfsDataOutputStream(cryptoOut, statistics, startPos);
     } else {
       // No FileEncryptionInfo present so no encryption.
+
       return new HdfsDataOutputStream(dfsos, statistics, startPos);
     }
   }
@@ -1558,7 +1569,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return create(src, overwrite, dfsClientConf.defaultReplication,
         dfsClientConf.defaultBlockSize, progress);
   }
-    
+
+  public OutputStream create(String src,
+                             boolean overwrite,
+                             boolean compressed) throws IOException {
+    return create(src, FsPermission.getFileDefault(),
+            overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
+                    : EnumSet.of(CreateFlag.CREATE), true, dfsClientConf.defaultReplication,
+            dfsClientConf.defaultBlockSize, null, dfsClientConf.ioBufferSize, null, compressed,
+            null);
+  }
+
   /**
    * Call {@link #create(String, boolean, short, long, Progressable)} with
    * null <code>progress</code>.
@@ -1659,6 +1680,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         progress, buffersize, checksumOpt, null);
   }
 
+  public DFSOutputStream create(String src,
+                                FsPermission permission,
+                                EnumSet<CreateFlag> flag,
+                                boolean createParent,
+                                short replication,
+                                long blockSize,
+                                Progressable progress,
+                                int buffersize,
+                                ChecksumOpt checksumOpt,
+                                InetSocketAddress[] favoredNodes) throws IOException {
+    return create(src, permission, flag, createParent, replication, blockSize, progress, buffersize, checksumOpt,
+            false, favoredNodes);
+  }
+
   /**
    * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
    * Progressable, int, ChecksumOpt)} with the addition of favoredNodes that is
@@ -1677,6 +1712,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                              Progressable progress,
                              int buffersize,
                              ChecksumOpt checksumOpt,
+                             boolean compressed,
                              InetSocketAddress[] favoredNodes) throws IOException {
     checkOpen();
     if (permission == null) {
@@ -1688,7 +1724,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
-        buffersize, dfsClientConf.createChecksum(checksumOpt),
+        buffersize, dfsClientConf.createChecksum(checksumOpt), compressed,
         getFavoredNodesStr(favoredNodes));
     beginFileLease(result.getFileId(), result);
     return result;
@@ -1749,7 +1785,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
-          checksum, null);
+          checksum, false, null);
     }
     beginFileLease(result.getFileId(), result);
     return result;

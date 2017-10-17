@@ -276,7 +276,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, 
-      CryptoProtocolVersion[] supportedVersions)
+      CryptoProtocolVersion[] supportedVersions, boolean compressed)
       throws AccessControlException, AlreadyBeingCreatedException,
       DSQuotaExceededException, FileAlreadyExistsException,
       FileNotFoundException, NSQuotaExceededException,
@@ -289,7 +289,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setCreateFlag(PBHelper.convertCreateFlag(flag))
         .setCreateParent(createParent)
         .setReplication(replication)
-        .setBlockSize(blockSize);
+        .setBlockSize(blockSize)
+        .setCompressed(compressed);
     builder.addAllCryptoProtocolVersion(PBHelper.convert(supportedVersions));
     CreateRequestProto req = builder.build();
     try {

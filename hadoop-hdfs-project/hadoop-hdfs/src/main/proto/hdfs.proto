@@ -300,6 +300,7 @@ message LocatedBlocksProto {
   optional LocatedBlockProto lastBlock = 4;
   required bool isLastBlockComplete = 5;
   optional FileEncryptionInfoProto fileEncryptionInfo = 6;
+  required bool compressionInfo = 7;
 }
 
 /**
@@ -334,8 +335,8 @@ message HdfsFileStatusProto {
   optional int32 childrenNum = 14 [default = -1];
   // Optional field for file encryption
   optional FileEncryptionInfoProto fileEncryptionInfo = 15;
-
   optional uint32 storagePolicy = 16 [default = 0]; // block storage policy id
+  required bool compressionInfo = 17;
 } 
 
 /**

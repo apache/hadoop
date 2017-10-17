@@ -390,6 +390,15 @@ public class DistributedFileSystem extends FileSystem {
         blockSize, progress, null);
   }
 
+  @Override
+  public FSDataOutputStream create(Path f, FsPermission permission,
+                                   boolean overwrite, int bufferSize, short replication, long blockSize,
+                                   Progressable progress, boolean compressed) throws IOException {
+    return this.create(f, permission,
+            overwrite, bufferSize, replication,
+            blockSize, progress, compressed, null);
+  }
+
   /**
    * Same as  
    * {@link #create(Path, FsPermission, boolean, int, short, long, 
@@ -402,9 +411,16 @@ public class DistributedFileSystem extends FileSystem {
    * of null means no favored nodes for this create
    */
   public HdfsDataOutputStream create(final Path f,
+                                     final FsPermission permission, final boolean overwrite,
+                                     final int bufferSize, final short replication, final long blockSize,
+                                     final Progressable progress, final InetSocketAddress[] favoredNodes) throws IOException {
+    return create(f, permission, overwrite, bufferSize, replication, blockSize, progress, false, favoredNodes);
+  }
+
+  public HdfsDataOutputStream create(final Path f,
       final FsPermission permission, final boolean overwrite,
       final int bufferSize, final short replication, final long blockSize,
-      final Progressable progress, final InetSocketAddress[] favoredNodes)
+      final Progressable progress, final boolean compressed, final InetSocketAddress[] favoredNodes)
           throws IOException {
     statistics.incrementWriteOps(1);
     Path absF = fixRelativePart(f);
@@ -415,7 +431,7 @@ public class DistributedFileSystem extends FileSystem {
         final DFSOutputStream out = dfs.create(getPathName(f), permission,
             overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
                 : EnumSet.of(CreateFlag.CREATE),
-            true, replication, blockSize, progress, bufferSize, null,
+            true, replication, blockSize, progress, bufferSize, null, compressed,
             favoredNodes);
         return dfs.createWrappedOutputStream(out, statistics);
       }
@@ -425,7 +441,7 @@ public class DistributedFileSystem extends FileSystem {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
           return myDfs.create(p, permission, overwrite, bufferSize, replication,
-              blockSize, progress, favoredNodes);
+              blockSize, progress, compressed, favoredNodes);
         }
         throw new UnsupportedOperationException("Cannot create with" +
             " favoredNodes through a symlink to a non-DistributedFileSystem: "

@@ -58,10 +58,10 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
       int block_replication, long blocksize, long modification_time,
       long access_time, FsPermission permission, String owner, String group,
       byte[] symlink, byte[] path, long fileId, LocatedBlocks locations,
-      int childrenNum, FileEncryptionInfo feInfo, byte storagePolicy) {
+      int childrenNum, FileEncryptionInfo feInfo, boolean compressed, byte storagePolicy) {
     super(length, isdir, block_replication, blocksize, modification_time,
         access_time, permission, owner, group, symlink, path, fileId,
-        childrenNum, feInfo, storagePolicy);
+        childrenNum, feInfo, compressed, storagePolicy);
     this.locations = locations;
   }
 

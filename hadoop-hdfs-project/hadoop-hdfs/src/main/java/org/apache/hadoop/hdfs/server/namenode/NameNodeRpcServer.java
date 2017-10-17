@@ -599,7 +599,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, 
-      CryptoProtocolVersion[] supportedVersions)
+      CryptoProtocolVersion[] supportedVersions, boolean compressed)
       throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
@@ -622,7 +622,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       PermissionStatus perm = new PermissionStatus(getRemoteUser()
           .getShortUserName(), null, masked);
       status = namesystem.startFile(src, perm, clientName, clientMachine,
-          flag.get(), createParent, replication, blockSize, supportedVersions,
+          flag.get(), createParent, replication, blockSize, supportedVersions, compressed,
           cacheEntry != null);
     } finally {
       RetryCache.setState(cacheEntry, status != null, status);

@@ -184,6 +184,7 @@ public class DFSOutputStream extends FSOutputSummer
   private final AtomicReference<CachingStrategy> cachingStrategy;
   private boolean failPacket = false;
   private FileEncryptionInfo fileEncryptionInfo;
+  private boolean compressed;
   private static final BlockStoragePolicySuite blockStoragePolicySuite =
       BlockStoragePolicySuite.createDefaultSuite();
 
@@ -1589,6 +1590,7 @@ public class DFSOutputStream extends FSOutputSummer
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
+    this.compressed = stat.getCompressed();
     this.progress = progress;
     this.cachingStrategy = new AtomicReference<CachingStrategy>(
         dfsClient.getDefaultWriteCachingStrategy());
@@ -1632,7 +1634,7 @@ public class DFSOutputStream extends FSOutputSummer
   static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
       FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize, Progressable progress, int buffersize,
-      DataChecksum checksum, String[] favoredNodes) throws IOException {
+      DataChecksum checksum, boolean compressed, String[] favoredNodes) throws IOException {
     TraceScope scope =
         dfsClient.getPathTraceScope("newStreamForCreate", src);
     try {
@@ -1647,7 +1649,7 @@ public class DFSOutputStream extends FSOutputSummer
         try {
           stat = dfsClient.namenode.create(src, masked, dfsClient.clientName,
               new EnumSetWritable<CreateFlag>(flag), createParent, replication,
-              blockSize, SUPPORTED_CRYPTO_VERSIONS);
+              blockSize, SUPPORTED_CRYPTO_VERSIONS, compressed);
           break;
         } catch (RemoteException re) {
           IOException e = re.unwrapRemoteException(
@@ -2346,6 +2348,10 @@ public class DFSOutputStream extends FSOutputSummer
    */
   public FileEncryptionInfo getFileEncryptionInfo() {
     return fileEncryptionInfo;
+  }
+
+  public boolean getCompressionInfo() {
+    return compressed;
   }
 
   /**

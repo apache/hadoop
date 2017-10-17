@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.SnappyCompressionInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -48,10 +49,19 @@ public class HdfsDataInputStream extends FSDataInputStream {
         "CryptoInputStream should wrap a DFSInputStream");
   }
 
+  public HdfsDataInputStream(SnappyCompressionInputStream in) throws IOException {
+    super(in);
+    Preconditions.checkArgument(in.getWrappedStream() instanceof DFSInputStream,
+            "SnappyCompressionInputStream should wrap a DFSInputStream");
+  }
+
   private DFSInputStream getDFSInputStream() {
     if (in instanceof CryptoInputStream) {
       return (DFSInputStream) ((CryptoInputStream) in).getWrappedStream();
+    } else if (in instanceof SnappyCompressionInputStream) {
+      return (DFSInputStream) ((SnappyCompressionInputStream) in).getWrappedStream();
     }
+
     return (DFSInputStream) in;
   }
 

@@ -883,14 +883,14 @@ public class BlockManager {
       final long fileSizeExcludeBlocksUnderConstruction,
       final boolean isFileUnderConstruction, final long offset,
       final long length, final boolean needBlockToken,
-      final boolean inSnapshot, FileEncryptionInfo feInfo)
+      final boolean inSnapshot, FileEncryptionInfo feInfo, boolean compressed)
       throws IOException {
     assert namesystem.hasReadLock();
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {
       return new LocatedBlocks(0, isFileUnderConstruction,
-          Collections.<LocatedBlock>emptyList(), null, false, feInfo);
+          Collections.<LocatedBlock>emptyList(), null, false, feInfo, compressed);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
@@ -915,7 +915,7 @@ public class BlockManager {
       }
       return new LocatedBlocks(
           fileSizeExcludeBlocksUnderConstruction, isFileUnderConstruction,
-          locatedblocks, lastlb, isComplete, feInfo);
+          locatedblocks, lastlb, isComplete, feInfo, compressed);
     }
   }
 

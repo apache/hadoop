@@ -37,6 +37,7 @@ public class LocatedBlocks {
   private final LocatedBlock lastLocatedBlock;
   private final boolean isLastBlockComplete;
   private final FileEncryptionInfo fileEncryptionInfo;
+  private final boolean compressed;
 
   public LocatedBlocks() {
     fileLength = 0;
@@ -45,17 +46,19 @@ public class LocatedBlocks {
     lastLocatedBlock = null;
     isLastBlockComplete = false;
     fileEncryptionInfo = null;
+    compressed = false;
   }
 
   public LocatedBlocks(long flength, boolean isUnderConstuction,
     List<LocatedBlock> blks, LocatedBlock lastBlock,
-    boolean isLastBlockCompleted, FileEncryptionInfo feInfo) {
+    boolean isLastBlockCompleted, FileEncryptionInfo feInfo, boolean compressed) {
     fileLength = flength;
     blocks = blks;
     underConstruction = isUnderConstuction;
     this.lastLocatedBlock = lastBlock;
     this.isLastBlockComplete = isLastBlockCompleted;
     this.fileEncryptionInfo = feInfo;
+    this.compressed = compressed;
   }
   
   /**
@@ -110,6 +113,8 @@ public class LocatedBlocks {
   public FileEncryptionInfo getFileEncryptionInfo() {
     return fileEncryptionInfo;
   }
+
+  public boolean getCompressionInfo() { return compressed; }
 
   /**
    * Find block containing specified offset.

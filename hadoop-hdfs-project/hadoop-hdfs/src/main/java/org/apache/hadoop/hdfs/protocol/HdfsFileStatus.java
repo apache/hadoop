@@ -47,6 +47,7 @@ public class HdfsFileStatus {
   private final long fileId;
 
   private final FileEncryptionInfo feInfo;
+  private final boolean compressed;
   
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
@@ -73,7 +74,7 @@ public class HdfsFileStatus {
       long blocksize, long modification_time, long access_time,
       FsPermission permission, String owner, String group, byte[] symlink,
       byte[] path, long fileId, int childrenNum, FileEncryptionInfo feInfo,
-      byte storagePolicy) {
+      boolean compressed, byte storagePolicy) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -92,6 +93,7 @@ public class HdfsFileStatus {
     this.fileId = fileId;
     this.childrenNum = childrenNum;
     this.feInfo = feInfo;
+    this.compressed = compressed;
     this.storagePolicy = storagePolicy;
   }
 
@@ -248,6 +250,10 @@ public class HdfsFileStatus {
   
   public final FileEncryptionInfo getFileEncryptionInfo() {
     return feInfo;
+  }
+
+  public final boolean getCompressed() {
+    return compressed;
   }
 
   public final int getChildrenNum() {
