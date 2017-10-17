@@ -21,15 +21,14 @@ package org.apache.hadoop.yarn.client.api;
 import java.io.Flushable;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
@@ -38,21 +37,24 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
 /**
  * A client library that can be used to post some information in terms of a
- * number of conceptual entities.
+ * number of conceptual entities. This client library needs to be used along
+ * with Timeline V.1.x server versions.
+ * Refer {@link TimelineV2Client} for ATS V2 interface.
  */
 @Public
 @Evolving
-public abstract class TimelineClient extends AbstractService implements
+public abstract class TimelineClient extends CompositeService implements
     Flushable {
 
   /**
-   * Create a timeline client. The current UGI when the user initialize the
-   * client will be used to do the put and the delegation token operations. The
-   * current user may use {@link UserGroupInformation#doAs} another user to
-   * construct and initialize a timeline client if the following operations are
-   * supposed to be conducted by that user.
+   * Creates an instance of the timeline v.1.x client.
+   * The current UGI when the user initialize the client will be used to do the
+   * put and the delegation token operations. The current user may use
+   * {@link UserGroupInformation#doAs} another user to construct and initialize
+   * a timeline client if the following operations are supposed to be conducted
+   * by that user.
    *
-   * @return a timeline client
+   * @return the created timeline client instance
    */
   @Public
   public static TimelineClient createTimelineClient() {
@@ -60,7 +62,6 @@ public abstract class TimelineClient extends AbstractService implements
     return client;
   }
 
-  @Private
   protected TimelineClient(String name) {
     super(name);
   }
@@ -75,8 +76,8 @@ public abstract class TimelineClient extends AbstractService implements
    * @param entities
    *          the collection of {@link TimelineEntity}
    * @return the error information if the sent entities are not correctly stored
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException if there are I/O errors
+   * @throws YarnException if entities are incomplete/invalid
    */
   @Public
   public abstract TimelinePutResponse putEntities(
@@ -96,8 +97,8 @@ public abstract class TimelineClient extends AbstractService implements
    * @param entities
    *          the collection of {@link TimelineEntity}
    * @return the error information if the sent entities are not correctly stored
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException if there are I/O errors
+   * @throws YarnException if entities are incomplete/invalid
    */
   @Public
   public abstract TimelinePutResponse putEntities(

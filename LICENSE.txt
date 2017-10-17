@@ -588,6 +588,8 @@ Mockito 1.8.5
 JUL to SLF4J bridge 1.7.25
 SLF4J API Module 1.7.25
 SLF4J LOG4J-12 Binding 1.7.25
+JCodings 1.0.8
+Joni 2.1.2
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -1874,6 +1876,9 @@ be bound by any additional provisions that may appear in any communication from
 You. This License may not be modified without the mutual written agreement of
 the Licensor and You.
 
+The binary distribution of this product bundles these dependencies under the
+following license:
+jamon-runtime 2.4.1
 --------------------------------------------------------------------------------
 
 For: hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs

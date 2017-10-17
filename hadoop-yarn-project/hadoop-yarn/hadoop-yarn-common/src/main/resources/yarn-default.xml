@@ -790,10 +790,28 @@
 
   <property>
     <description>The setting that controls whether yarn system metrics is
-    published on the timeline server or not by RM.</description>
+    published to the Timeline server (version one) or not, by RM.
+    This configuration is now deprecated in favor of
+    yarn.system-metrics-publisher.enabled.</description>
     <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
     <value>false</value>
   </property>
+
+  <property>
+    <description>The setting that controls whether yarn system metrics is
+    published on the Timeline service or not by RM And NM.</description>
+    <name>yarn.system-metrics-publisher.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The setting that controls whether yarn container events are
+    published to the timeline service or not by RM. This configuration setting
+    is for ATS V2.</description>
+    <name>yarn.rm.system-metrics-publisher.emit-container-events</name>
+    <value>false</value>
+  </property>
+
 
   <property>
     <description>Number of worker threads that send the yarn system metrics
@@ -978,6 +996,12 @@
     <value>20</value>
   </property>
 
+    <property>
+    <description>Number of threads collector service uses.</description>
+    <name>yarn.nodemanager.collector-service.thread-count</name>
+    <value>5</value>
+  </property>
+
   <property>
     <description>Number of threads used in cleanup.</description>
     <name>yarn.nodemanager.delete.thread-count</name>
@@ -1051,6 +1075,13 @@
     <description>Address where the localizer IPC is.</description>
     <name>yarn.nodemanager.localizer.address</name>
     <value>${yarn.nodemanager.hostname}:8040</value>
+  </property>
+
+
+  <property>
+    <description>Address where the collector service IPC is.</description>
+    <name>yarn.nodemanager.collector-service.address</name>
+    <value>${yarn.nodemanager.hostname}:8048</value>
   </property>
 
   <property>
@@ -1937,7 +1968,7 @@
     <description>Indicate what is the current version of the running
     timeline service. For example, if "yarn.timeline-service.version" is 1.5,
     and "yarn.timeline-service.enabled" is true, it means the cluster will and
-    should bring up the timeline service v.1.5.
+    should bring up the timeline service v.1.5 (and nothing else).
     On the client side, if the client uses the same version of timeline service,
     it should succeed. If the client chooses to use a smaller version in spite of this,
     then depending on how robust the compatibility story is between versions,
@@ -2122,6 +2153,15 @@
   </property>
 
   <property>
+    <description>
+    The time period for which timeline v2 client will wait for draining
+    leftover entities after stop.
+    </description>
+    <name>yarn.timeline-service.client.drain-entities.timeout.ms</name>
+    <value>2000</value>
+  </property>
+
+  <property>
     <description>Enable timeline server to recover state after starting. If
     true, then yarn.timeline-service.state-store-class must be specified.
     </description>
@@ -2261,6 +2301,23 @@
     <value>300</value>
   </property>
 
+  <!-- Timeline Service v2 Configuration -->
+  <property>
+    <name>yarn.timeline-service.writer.class</name>
+    <description>
+      Storage implementation ATS v2 will use for the TimelineWriter service.
+    </description>
+    <value>org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl</value>
+  </property>
+
+  <property>
+    <name>yarn.timeline-service.reader.class</name>
+    <description>
+      Storage implementation ATS v2 will use for the TimelineReader service.
+    </description>
+    <value>org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl</value>
+  </property>
+
   <property>
     <name>yarn.timeline-service.client.internal-timers-ttl-secs</name>
     <description>
@@ -2269,6 +2326,74 @@
       be close.
     </description>
     <value>420</value>
+  </property>
+
+  <property>
+    <description>The setting that controls how often the timeline collector
+    flushes the timeline writer.</description>
+    <name>yarn.timeline-service.writer.flush-interval-seconds</name>
+    <value>60</value>
+  </property>
+
+  <property>
+    <description>Time period till which the application collector will be alive
+     in NM, after the  application master container finishes.</description>
+    <name>yarn.timeline-service.app-collector.linger-period.ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>Time line V2 client tries to merge these many number of
+    async entities (if available) and then call the REST ATS V2 API to submit.
+    </description>
+    <name>yarn.timeline-service.timeline-client.number-of-async-entities-to-merge</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    The setting that controls how long the final value
+    of a metric of a completed app is retained before merging into
+    the flow sum. Up to this time after an application is completed
+    out-of-order values that arrive can be recognized and discarded at the
+    cost of increased storage.
+    </description>
+    <name>yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds
+    </name>
+    <value>259200000</value>
+  </property>
+
+  <property>
+    <description>
+    The default hdfs location for flowrun coprocessor jar.
+    </description>
+    <name>yarn.timeline-service.hbase.coprocessor.jar.hdfs.location
+    </name>
+    <value>/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar</value>
+  </property>
+
+  <property>
+    <description>
+    The value of this parameter sets the prefix for all tables that are part of
+    timeline service in the hbase storage schema. It can be set to "dev."
+    or "staging." if it is to be used for development or staging instances.
+    This way the data in production tables stays in a separate set of tables
+    prefixed by "prod.".
+    </description>
+    <name>yarn.timeline-service.hbase-schema.prefix</name>
+    <value>prod.</value>
+  </property>
+
+  <property>
+    <description> Optional URL to an hbase-site.xml configuration file to be
+    used to connect to the timeline-service hbase cluster. If empty or not
+    specified, then the HBase configuration will be loaded from the classpath.
+    When specified the values in the specified configuration file will override
+    those from the ones that are present on the classpath.
+    </description>
+    <name>yarn.timeline-service.hbase.configuration.file
+    </name>
+    <value></value>
   </property>
 
   <!--  Shared Cache Configuration -->
@@ -3092,6 +3217,17 @@
     </description>
     <name>yarn.app.attempt.diagnostics.limit.kc</name>
     <value>64</value>
+  </property>
+
+  <property>
+    <description>
+      Flag to enable cross-origin (CORS) support for timeline service v1.x or
+      Timeline Reader in timeline service v2. For timeline service v2, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+    <name>yarn.timeline-service.http-cross-origin.enabled</name>
+    <value>false</value>
   </property>
 
   <property>

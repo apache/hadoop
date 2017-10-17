@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -39,9 +40,12 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.FlowContextProto;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
@@ -55,6 +59,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -71,6 +76,8 @@ public class ApplicationImpl implements Application {
 
   final Dispatcher dispatcher;
   final String user;
+  // flow context is set only if the timeline service v.2 is enabled
+  private FlowContext flowContext;
   final ApplicationId appId;
   final Credentials credentials;
   Map<ApplicationAccessType, String> applicationACLs;
@@ -97,13 +104,28 @@ public class ApplicationImpl implements Application {
   private final NMStateStoreService appStateStore;
 
   public ApplicationImpl(Dispatcher dispatcher, String user,
-      ApplicationId appId, Credentials credentials,
+      ApplicationId appId, Credentials credentials, Context context) {
+    this(dispatcher, user, null, appId, credentials, context, -1L);
+  }
+
+  public ApplicationImpl(Dispatcher dispatcher, String user,
+      FlowContext flowContext, ApplicationId appId, Credentials credentials,
       Context context, long recoveredLogInitedTime) {
     this.dispatcher = dispatcher;
     this.user = user;
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = context.getApplicationACLsManager();
+    Configuration conf = context.getConf();
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      if (flowContext == null) {
+        throw new IllegalArgumentException("flow context cannot be null");
+      }
+      this.flowContext = flowContext;
+      if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+        context.getNMTimelinePublisher().createTimelineClient(appId);
+      }
+    }
     this.context = context;
     this.appStateStore = context.getNMStateStore();
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -114,8 +136,46 @@ public class ApplicationImpl implements Application {
   }
 
   public ApplicationImpl(Dispatcher dispatcher, String user,
-      ApplicationId appId, Credentials credentials, Context context) {
-    this(dispatcher, user, appId, credentials, context, -1);
+      FlowContext flowContext, ApplicationId appId,
+      Credentials credentials, Context context) {
+    this(dispatcher, user, flowContext, appId, credentials,
+      context, -1);
+  }
+
+  /**
+   * Data object that encapsulates the flow context for the application purpose.
+   */
+  public static class FlowContext {
+    private final String flowName;
+    private final String flowVersion;
+    private final long flowRunId;
+
+    public FlowContext(String flowName, String flowVersion, long flowRunId) {
+      this.flowName = flowName;
+      this.flowVersion = flowVersion;
+      this.flowRunId = flowRunId;
+    }
+
+    public String getFlowName() {
+      return flowName;
+    }
+
+    public String getFlowVersion() {
+      return flowVersion;
+    }
+
+    public long getFlowRunId() {
+      return flowRunId;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("{");
+      sb.append("Flow Name=").append(getFlowName());
+      sb.append(" Flow Versioin=").append(getFlowVersion());
+      sb.append(" Flow Run Id=").append(getFlowRunId()).append(" }");
+      return sb.toString();
+    }
   }
 
   @Override
@@ -335,6 +395,16 @@ public class ApplicationImpl implements Application {
 
     builder.setAppLogAggregationInitedTime(app.applicationLogInitedTimestamp);
 
+    builder.clearFlowContext();
+    if (app.flowContext != null && app.flowContext.getFlowName() != null
+        && app.flowContext.getFlowVersion() != null) {
+      FlowContextProto fcp = FlowContextProto.newBuilder()
+          .setFlowName(app.flowContext.getFlowName())
+          .setFlowVersion(app.flowContext.getFlowVersion())
+          .setFlowRunId(app.flowContext.getFlowRunId()).build();
+      builder.setFlowContext(fcp);
+    }
+
     return builder.build();
   }
 
@@ -489,6 +559,29 @@ public class ApplicationImpl implements Application {
   @SuppressWarnings("unchecked")
   static class AppCompletelyDoneTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
+
+    private void updateCollectorStatus(ApplicationImpl app) {
+      // Remove collectors info for finished apps.
+      // TODO check we remove related collectors info in failure cases
+      // (YARN-3038)
+      Map<ApplicationId, AppCollectorData> registeringCollectors
+          = app.context.getRegisteringCollectors();
+      if (registeringCollectors != null) {
+        registeringCollectors.remove(app.getAppId());
+      }
+      Map<ApplicationId, AppCollectorData> knownCollectors =
+          app.context.getKnownCollectors();
+      if (knownCollectors != null) {
+        knownCollectors.remove(app.getAppId());
+      }
+      // stop timelineClient when application get finished.
+      NMTimelinePublisher nmTimelinePublisher =
+          app.context.getNMTimelinePublisher();
+      if (nmTimelinePublisher != null) {
+        nmTimelinePublisher.stopTimelineClient(app.getAppId());
+      }
+    }
+
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
 
@@ -497,6 +590,7 @@ public class ApplicationImpl implements Application {
           new LogHandlerAppFinishedEvent(app.appId));
 
       app.context.getNMTokenSecretManager().appFinished(app.getAppId());
+      updateCollectorStatus(app);
     }
   }
 
@@ -556,5 +650,20 @@ public class ApplicationImpl implements Application {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  @Override
+  public String getFlowName() {
+    return flowContext == null ? null : flowContext.getFlowName();
+  }
+
+  @Override
+  public String getFlowVersion() {
+    return flowContext == null ? null : flowContext.getFlowVersion();
+  }
+
+  @Override
+  public long getFlowRunId() {
+    return flowContext == null ? 0L : flowContext.getFlowRunId();
   }
 }

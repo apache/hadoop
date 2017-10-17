@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -84,6 +85,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -91,7 +93,6 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -175,10 +176,10 @@ public class ContainerImpl implements Container {
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
+  private final long startTime;
 
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainerImpl.class);
-
 
   // whether container has been recovered after a restart
   private RecoveredContainerStatus recoveredStatus =
@@ -192,6 +193,16 @@ public class ContainerImpl implements Container {
       ContainerLaunchContext launchContext, Credentials creds,
       NodeManagerMetrics metrics,
       ContainerTokenIdentifier containerTokenIdentifier, Context context) {
+    this(conf, dispatcher, launchContext, creds, metrics,
+        containerTokenIdentifier, context, SystemClock.getInstance().getTime());
+  }
+
+  public ContainerImpl(Configuration conf, Dispatcher dispatcher,
+      ContainerLaunchContext launchContext, Credentials creds,
+      NodeManagerMetrics metrics,
+      ContainerTokenIdentifier containerTokenIdentifier, Context context,
+      long startTs) {
+    this.startTime = startTs;
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.stateStore = context.getNMStateStore();
@@ -265,7 +276,7 @@ public class ContainerImpl implements Container {
       ContainerTokenIdentifier containerTokenIdentifier, Context context,
       RecoveredContainerState rcs) {
     this(conf, dispatcher, launchContext, creds, metrics,
-        containerTokenIdentifier, context);
+        containerTokenIdentifier, context, rcs.getStartTime());
     this.recoveredStatus = rcs.getStatus();
     this.exitCode = rcs.getExitCode();
     this.recoveredAsKilled = rcs.getKilled();
@@ -750,6 +761,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  public NMTimelinePublisher getNMTimelinePublisher() {
+    return context.getNMTimelinePublisher();
+  }
+
   @Override
   public String getUser() {
     this.readLock.lock();
@@ -842,6 +857,11 @@ public class ContainerImpl implements Container {
   }
 
   @Override
+  public long getContainerStartTime() {
+    return this.startTime;
+  }
+
+  @Override
   public Resource getResource() {
     return Resources.clone(
         this.containerTokenIdentifier.getResource());
@@ -904,14 +924,13 @@ public class ContainerImpl implements Container {
     @SuppressWarnings("rawtypes")
     EventHandler eventHandler = dispatcher.getEventHandler();
 
-    ContainerStatus containerStatus = cloneAndGetContainerStatus();
-    eventHandler.handle(
-        new ApplicationContainerFinishedEvent(
-            containerStatus.getContainerId()));
-
     // Tell the scheduler the container is Done
     eventHandler.handle(new ContainerSchedulerEvent(this,
         ContainerSchedulerEventType.CONTAINER_COMPLETED));
+    ContainerStatus containerStatus = cloneAndGetContainerStatus();
+    eventHandler.handle(
+        new ApplicationContainerFinishedEvent(containerStatus, startTime));
+
     // Remove the container from the resource-monitor
     eventHandler.handle(new ContainerStopMonitoringEvent(containerId));
     // Tell the logService too
@@ -1841,7 +1860,8 @@ public class ContainerImpl implements Container {
         container.containerMetrics.finished();
       }
       container.sendFinishedEvents();
-      //if the current state is NEW it means the CONTAINER_INIT was never 
+
+      // if the current state is NEW it means the CONTAINER_INIT was never
       // sent for the event, thus no need to send the CONTAINER_STOP
       if (container.getCurrentState()
           != org.apache.hadoop.yarn.api.records.ContainerState.NEW) {
@@ -2136,5 +2156,9 @@ public class ContainerImpl implements Container {
         recoveredStatus != RecoveredContainerStatus.REQUESTED &&
         getContainerState() == ContainerState.NEW);
     return isRecovering;
+  }
+
+  public Priority getPriority() {
+    return containerTokenIdentifier.getPriority();
   }
 }

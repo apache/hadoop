@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -76,6 +77,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
@@ -660,6 +662,17 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData>
+        getRegisteringCollectors() {
+      return null;
+    }
+
+    @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors() {
+      return null;
+    }
+
+    @Override
     public ConcurrentMap<ContainerId, Container> getContainers() {
       return null;
     }
@@ -750,6 +763,14 @@ public abstract class BaseAMRMProxyTest {
     @Override
     public ContainerStateTransitionListener
         getContainerStateTransitionListener() {
+      return null;
+    }
+
+    public void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher) {
+    }
+
+    @Override
+    public NMTimelinePublisher getNMTimelinePublisher() {
       return null;
     }
   }

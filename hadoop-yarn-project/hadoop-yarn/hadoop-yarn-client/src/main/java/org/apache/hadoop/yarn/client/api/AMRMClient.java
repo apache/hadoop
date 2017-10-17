@@ -54,6 +54,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     AbstractService {
   private static final Log LOG = LogFactory.getLog(AMRMClient.class);
 
+  private TimelineV2Client timelineV2Client;
+
   /**
    * Create a new instance of AMRMClient.
    * For usage:
@@ -681,10 +683,28 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   }
 
   /**
+   * Register TimelineV2Client to AMRMClient. Writer's address for the timeline
+   * V2 client will be updated dynamically if registered.
+   *
+   * @param client the timeline v2 client to register
+   */
+  public void registerTimelineV2Client(TimelineV2Client client) {
+    timelineV2Client = client;
+  }
+
+  /**
+   * Get registered timeline v2 client.
+   * @return the registered timeline v2 client
+   */
+  public TimelineV2Client getRegisteredTimelineV2Client() {
+    return this.timelineV2Client;
+  }
+
+  /**
    * Wait for <code>check</code> to return true for each 1000 ms.
    * See also {@link #waitFor(com.google.common.base.Supplier, int)}
    * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
-   * @param check
+   * @param check the condition for which it should wait
    */
   public void waitFor(Supplier<Boolean> check) throws InterruptedException {
     waitFor(check, 1000);

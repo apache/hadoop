@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.isA;
+import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -105,7 +105,9 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreServic
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -135,6 +137,11 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogDir.getAbsolutePath());
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
+
+    // enable atsv2 by default in test
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+
     // Default delSrvc
     delSrvc = createDeletionService();
     delSrvc.init(conf);
@@ -143,6 +150,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     nodeHealthChecker = new NodeHealthCheckerService(
         NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
     nodeHealthChecker.init(conf);
+
   }
 
   @Test
@@ -160,6 +168,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.start();
 
     // add an application by starting a container
+    String appName = "app_name1";
     String appUser = "app_user1";
     String modUser = "modify_user1";
     String viewUser = "view_user1";
@@ -169,7 +178,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId cid = ContainerId.newContainerId(attemptId, 1);
     Map<String, LocalResource> localResources = Collections.emptyMap();
-    Map<String, String> containerEnv = Collections.emptyMap();
+    Map<String, String> containerEnv = new HashMap<>();
+    setFlowContext(containerEnv, appName, appId);
     List<String> containerCmds = Collections.emptyList();
     Map<String, ByteBuffer> serviceData = Collections.emptyMap();
     Credentials containerCreds = new Credentials();
@@ -317,7 +327,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId cid = ContainerId.newContainerId(attemptId, 1);
     Map<String, LocalResource> localResources = Collections.emptyMap();
-    Map<String, String> containerEnv = Collections.emptyMap();
+    Map<String, String> containerEnv = new HashMap<>();
+    setFlowContext(containerEnv, "app_name1", appId);
     List<String> containerCmds = Collections.emptyList();
     Map<String, ByteBuffer> serviceData = Collections.emptyMap();
 
@@ -399,7 +410,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId cid = ContainerId.newContainerId(attemptId, 1);
-    Map<String, String> containerEnv = Collections.emptyMap();
+    Map<String, String> containerEnv = new HashMap<>();
+    setFlowContext(containerEnv, "app_name1", appId);
     Map<String, ByteBuffer> serviceData = Collections.emptyMap();
     Credentials containerCreds = new Credentials();
     DataOutputBuffer dob = new DataOutputBuffer();
@@ -476,7 +488,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId cid = ContainerId.newContainerId(attemptId, 1);
     Map<String, LocalResource> localResources = Collections.emptyMap();
-    Map<String, String> containerEnv = Collections.emptyMap();
+    Map<String, String> containerEnv = new HashMap<>();
+    setFlowContext(containerEnv, "app_name1", appId);
     List<String> containerCmds = Collections.emptyList();
     Map<String, ByteBuffer> serviceData = Collections.emptyMap();
     Credentials containerCreds = new Credentials();
@@ -750,6 +763,32 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
               Context context, ContainerExecutor exec) {
             return launcher;
           }
+
+          @Override
+          public NMTimelinePublisher
+              createNMTimelinePublisher(Context context) {
+            return null;
+          }
     };
   }
+
+  private void setFlowContext(Map<String, String> containerEnv, String appName,
+      ApplicationId appId) {
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      setFlowTags(containerEnv, TimelineUtils.FLOW_NAME_TAG_PREFIX,
+          TimelineUtils.generateDefaultFlowName(appName, appId));
+      setFlowTags(containerEnv, TimelineUtils.FLOW_VERSION_TAG_PREFIX,
+          TimelineUtils.DEFAULT_FLOW_VERSION);
+      setFlowTags(containerEnv, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX,
+          String.valueOf(System.currentTimeMillis()));
+    }
+  }
+
+  private static void setFlowTags(Map<String, String> environment,
+      String tagPrefix, String value) {
+    if (!value.isEmpty()) {
+      environment.put(tagPrefix, value);
+    }
+  }
+
 }

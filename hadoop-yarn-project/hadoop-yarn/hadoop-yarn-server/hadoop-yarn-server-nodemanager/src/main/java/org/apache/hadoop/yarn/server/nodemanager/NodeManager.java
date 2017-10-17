@@ -63,10 +63,13 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
+import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
@@ -78,6 +81,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
@@ -121,6 +125,8 @@ public class NodeManager extends CompositeService
   private Context context;
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
+  // the NM collector service is set only if the timeline service v.2 is enabled
+  private NMCollectorService nmCollectorService;
   private NodeStatusUpdater nodeStatusUpdater;
   private NodeResourceMonitor nodeResourceMonitor;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook;
@@ -209,6 +215,10 @@ public class NodeManager extends CompositeService
       LocalDirsHandlerService dirsHandler) {
     return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
         metrics, dirsHandler);
+  }
+
+  protected NMCollectorService createNMCollectorService(Context ctxt) {
+    return new NMCollectorService(ctxt);
   }
 
   protected WebServer createWebServer(Context nmContext,
@@ -420,6 +430,11 @@ public class NodeManager extends CompositeService
 
     DefaultMetricsSystem.initialize("NodeManager");
 
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      this.nmCollectorService = createNMCollectorService(context);
+      addService(nmCollectorService);
+    }
+
     // StatusUpdater should be added last so that it get started last 
     // so that we make sure everything is up before registering with RM. 
     addService(nodeStatusUpdater);
@@ -485,8 +500,14 @@ public class NodeManager extends CompositeService
           if (!rmWorkPreservingRestartEnabled) {
             LOG.info("Cleaning up running containers on resync");
             containerManager.cleanupContainersOnNMResync();
+            // Clear all known collectors for resync.
+            if (context.getKnownCollectors() != null) {
+              context.getKnownCollectors().clear();
+            }
           } else {
             LOG.info("Preserving containers on resync");
+            // Re-register known timeline collectors.
+            reregisterCollectors();
           }
           ((NodeStatusUpdaterImpl) nodeStatusUpdater)
             .rebootNodeStatusUpdaterAndRegisterWithRM();
@@ -496,6 +517,38 @@ public class NodeManager extends CompositeService
         }
       }
     }.start();
+  }
+
+  /**
+   * Reregisters all collectors known by this node to the RM. This method is
+   * called when the RM needs to resync with the node.
+   */
+  protected void reregisterCollectors() {
+    Map<ApplicationId, AppCollectorData> knownCollectors
+        = context.getKnownCollectors();
+    if (knownCollectors == null) {
+      return;
+    }
+    ConcurrentMap<ApplicationId, AppCollectorData> registeringCollectors
+        = context.getRegisteringCollectors();
+    for (Map.Entry<ApplicationId, AppCollectorData> entry
+        : knownCollectors.entrySet()) {
+      Application app = context.getApplications().get(entry.getKey());
+      if ((app != null)
+          && !ApplicationState.FINISHED.equals(app.getApplicationState())) {
+        registeringCollectors.putIfAbsent(entry.getKey(), entry.getValue());
+        AppCollectorData data = entry.getValue();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(entry.getKey() + " : " + data.getCollectorAddr() + "@<"
+              + data.getRMIdentifier() + ", " + data.getVersion() + ">");
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Remove collector data for done app " + entry.getKey());
+        }
+      }
+    }
+    knownCollectors.clear();
   }
 
   public static class NMContext implements Context {
@@ -512,6 +565,11 @@ public class NodeManager extends CompositeService
 
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
+
+    private ConcurrentMap<ApplicationId, AppCollectorData>
+        registeringCollectors;
+
+    private ConcurrentMap<ApplicationId, AppCollectorData> knownCollectors;
 
     protected final ConcurrentMap<ContainerId,
         org.apache.hadoop.yarn.api.records.Container> increasedContainers =
@@ -539,11 +597,17 @@ public class NodeManager extends CompositeService
 
     private ContainerStateTransitionListener containerStateTransitionListener;
 
+    private NMTimelinePublisher nmTimelinePublisher;
+
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
         NMStateStoreService stateStore, boolean isDistSchedulingEnabled,
         Configuration conf) {
+      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+        this.registeringCollectors = new ConcurrentHashMap<>();
+        this.knownCollectors = new ConcurrentHashMap<>();
+      }
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
       this.dirsHandler = dirsHandler;
@@ -715,6 +779,26 @@ public class NodeManager extends CompositeService
         ContainerStateTransitionListener transitionListener) {
       this.containerStateTransitionListener = transitionListener;
     }
+
+    public ConcurrentMap<ApplicationId, AppCollectorData>
+        getRegisteringCollectors() {
+      return this.registeringCollectors;
+    }
+
+    @Override
+    public ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors() {
+      return this.knownCollectors;
+    }
+
+    @Override
+    public void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher) {
+      this.nmTimelinePublisher = nmMetricsPublisher;
+    }
+
+    @Override
+    public NMTimelinePublisher getNMTimelinePublisher() {
+      return nmTimelinePublisher;
+    }
   }
 
   /**
@@ -791,9 +875,22 @@ public class NodeManager extends CompositeService
     return this.context;
   }
 
+  /**
+   * Returns the NM collector service. It should be used only for testing
+   * purposes.
+   *
+   * @return the NM collector service, or null if the timeline service v.2 is
+   * not enabled
+   */
+  @VisibleForTesting
+  NMCollectorService getNMCollectorService() {
+    return this.nmCollectorService;
+  }
+
   public static void main(String[] args) throws IOException {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
+    @SuppressWarnings("resource")
     NodeManager nodeManager = new NodeManager();
     Configuration conf = new YarnConfiguration();
     new GenericOptionsParser(conf, args);

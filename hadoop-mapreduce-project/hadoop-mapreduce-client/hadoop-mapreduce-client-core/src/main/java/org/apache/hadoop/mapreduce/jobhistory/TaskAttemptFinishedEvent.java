@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -25,6 +27,11 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
  * Event to record successful task completion
@@ -44,10 +51,11 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
   private String hostname;
   private String state;
   private Counters counters;
+  private long startTime;
 
   /**
-   * Create an event to record successful finishes for setup and cleanup 
-   * attempts
+   * Create an event to record successful finishes for setup and cleanup
+   * attempts.
    * @param id Attempt ID
    * @param taskType Type of task
    * @param taskStatus Status of task
@@ -55,11 +63,12 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
    * @param hostname Host where the attempt executed
    * @param state State string
    * @param counters Counters for the attempt
+   * @param startTs Task start time to be used for writing entity to ATSv2.
    */
   public TaskAttemptFinishedEvent(TaskAttemptID id, 
       TaskType taskType, String taskStatus, 
       long finishTime, String rackName,
-      String hostname, String state, Counters counters) {
+      String hostname, String state, Counters counters, long startTs) {
     this.attemptId = id;
     this.taskType = taskType;
     this.taskStatus = taskStatus;
@@ -68,6 +77,14 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
     this.hostname = hostname;
     this.state = state;
     this.counters = counters;
+    this.startTime = startTs;
+  }
+
+  public TaskAttemptFinishedEvent(TaskAttemptID id, TaskType taskType,
+      String taskStatus, long finishTime, String rackName, String hostname,
+      String state, Counters counters) {
+    this(id, taskType, taskStatus, finishTime, rackName, hostname, state,
+        counters, SystemClock.getInstance().getTime());
   }
 
   TaskAttemptFinishedEvent() {}
@@ -101,33 +118,43 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
     this.counters = EventReader.fromAvro(datum.getCounters());
   }
 
-  /** Get the task ID */
+  /** Gets the task ID. */
   public TaskID getTaskId() { return attemptId.getTaskID(); }
-  /** Get the task attempt id */
+  /** Gets the task attempt id. */
   public TaskAttemptID getAttemptId() {
     return attemptId;
   }
-  /** Get the task type */
+  /** Gets the task type. */
   public TaskType getTaskType() {
     return taskType;
   }
-  /** Get the task status */
+  /** Gets the task status. */
   public String getTaskStatus() { return taskStatus.toString(); }
-  /** Get the attempt finish time */
+  /** Gets the attempt finish time. */
   public long getFinishTime() { return finishTime; }
-  /** Get the host where the attempt executed */
+  /**
+   * Gets the task attempt start time to be used while publishing to ATSv2.
+   * @return task attempt start time.
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+  /** Gets the host where the attempt executed. */
   public String getHostname() { return hostname.toString(); }
   
-  /** Get the rackname where the attempt executed */
+  /** Gets the rackname where the attempt executed. */
   public String getRackName() {
     return rackName == null ? null : rackName.toString();
   }
   
-  /** Get the state string */
+  /**
+   * Gets the state string.
+   * @return task attempt state.
+   */
   public String getState() { return state.toString(); }
-  /** Get the counters for the attempt */
+  /** Gets the counters for the attempt. */
   Counters getCounters() { return counters; }
-  /** Get the event type */
+  /** Gets the event type. */
   public EventType getEventType() {
     // Note that the task type can be setup/map/reduce/cleanup but the 
     // attempt-type can only be map/reduce.
@@ -136,4 +163,24 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
            : EventType.REDUCE_ATTEMPT_FINISHED;
   }
 
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("TASK_TYPE", getTaskType().toString());
+    tEvent.addInfo("ATTEMPT_ID", getAttemptId() == null ?
+        "" : getAttemptId().toString());
+    tEvent.addInfo("FINISH_TIME", getFinishTime());
+    tEvent.addInfo("STATUS", getTaskStatus());
+    tEvent.addInfo("STATE", getState());
+    tEvent.addInfo("HOSTNAME", getHostname());
+    return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    Set<TimelineMetric> metrics = JobHistoryEventUtils
+        .countersToTimelineMetric(getCounters(), finishTime);
+    return metrics;
+  }
 }

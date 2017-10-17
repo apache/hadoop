@@ -18,6 +18,19 @@
 
 package org.apache.hadoop.test;
 
+import org.apache.hadoop.fs.DFSCIOTest;
+import org.apache.hadoop.fs.DistributedFSCheck;
+import org.apache.hadoop.fs.JHLogAnalyzer;
+import org.apache.hadoop.fs.TestDFSIO;
+import org.apache.hadoop.fs.TestFileSystem;
+import org.apache.hadoop.fs.loadGenerator.DataGenerator;
+import org.apache.hadoop.fs.loadGenerator.LoadGenerator;
+import org.apache.hadoop.fs.loadGenerator.LoadGeneratorMR;
+import org.apache.hadoop.fs.loadGenerator.StructureGenerator;
+import org.apache.hadoop.fs.slive.SliveTest;
+import org.apache.hadoop.hdfs.NNBench;
+import org.apache.hadoop.hdfs.NNBenchWithoutMR;
+import org.apache.hadoop.io.FileBench;
 import org.apache.hadoop.io.TestSequenceFile;
 import org.apache.hadoop.mapred.BigMapOutput;
 import org.apache.hadoop.mapred.GenericMRLoadGenerator;
@@ -28,27 +41,13 @@ import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.ThreadedMapBenchmark;
-import org.apache.hadoop.mapreduce.TimelineServicePerformance;
 import org.apache.hadoop.mapreduce.FailJob;
 import org.apache.hadoop.mapreduce.GrowingSleepJob;
 import org.apache.hadoop.mapreduce.LargeSorter;
 import org.apache.hadoop.mapreduce.MiniHadoopClusterManager;
 import org.apache.hadoop.mapreduce.SleepJob;
+import org.apache.hadoop.mapreduce.TimelineServicePerformance;
 import org.apache.hadoop.util.ProgramDriver;
-
-import org.apache.hadoop.hdfs.NNBench;
-import org.apache.hadoop.hdfs.NNBenchWithoutMR;
-import org.apache.hadoop.fs.TestFileSystem;
-import org.apache.hadoop.fs.TestDFSIO;
-import org.apache.hadoop.fs.DFSCIOTest;
-import org.apache.hadoop.fs.DistributedFSCheck;
-import org.apache.hadoop.io.FileBench;
-import org.apache.hadoop.fs.JHLogAnalyzer;
-import org.apache.hadoop.fs.loadGenerator.DataGenerator;
-import org.apache.hadoop.fs.loadGenerator.LoadGenerator;
-import org.apache.hadoop.fs.loadGenerator.LoadGeneratorMR;
-import org.apache.hadoop.fs.loadGenerator.StructureGenerator;
-import org.apache.hadoop.fs.slive.SliveTest;
 
 /**
  * Driver for Map-reduce tests.
@@ -95,7 +94,8 @@ public class MapredTestDriver {
       pgd.addClass("gsleep", GrowingSleepJob.class,
           "A sleep job whose mappers create 1MB buffer for every record.");
       pgd.addClass("timelineperformance", TimelineServicePerformance.class,
-                   "A job that launches mappers to test timlineserver performance.");
+                   "A job that launches mappers to test timline service " +
+                   "performance.");
       pgd.addClass("nnbench", NNBench.class,
           "A benchmark that stresses the namenode w/ MR.");
       pgd.addClass("nnbenchWithoutMR", NNBenchWithoutMR.class,

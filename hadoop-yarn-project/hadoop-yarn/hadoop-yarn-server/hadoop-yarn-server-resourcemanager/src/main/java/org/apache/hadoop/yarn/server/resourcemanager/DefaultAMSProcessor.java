@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
@@ -294,6 +295,15 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
             .getApplicationAttempt(appAttemptId).pullUpdateContainerErrors());
 
     response.setNumClusterNodes(getScheduler().getNumClusterNodes());
+
+    // add collector address for this application
+    if (YarnConfiguration.timelineServiceV2Enabled(
+        getRmContext().getYarnConfiguration())) {
+      CollectorInfo collectorInfo = app.getCollectorInfo();
+      if (collectorInfo != null) {
+        response.setCollectorInfo(collectorInfo);
+      }
+    }
 
     // add preemption to the allocateResponse message (if any)
     response.setPreemptionMessage(generatePreemptionMessage(allocation));

@@ -22,6 +22,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.yarn;
 
+import "Security.proto";
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
 import "yarn_service_protos.proto";
@@ -91,6 +92,7 @@ message NodeHeartbeatRequestProto {
   optional MasterKeyProto last_known_nm_token_master_key = 3;
   optional NodeLabelsProto nodeLabels = 4;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 5;
+  repeated AppCollectorDataProto registering_collectors = 6;
 }
 
 message LogAggregationReportProto {
@@ -118,6 +120,7 @@ message NodeHeartbeatResponseProto {
   optional ContainerQueuingLimitProto container_queuing_limit = 15;
   // to be used in place of containers_to_decrease
   repeated ContainerProto containers_to_update = 17;
+  repeated AppCollectorDataProto app_collectors = 18;
 }
 
 message ContainerQueuingLimitProto {
@@ -128,6 +131,38 @@ message ContainerQueuingLimitProto {
 message SystemCredentialsForAppsProto {
   optional ApplicationIdProto appId = 1;
   optional bytes credentialsForApp = 2;
+}
+
+////////////////////////////////////////////////////////////////////////
+////// From collector_nodemanager_protocol ////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message AppCollectorDataProto {
+  optional ApplicationIdProto app_id = 1;
+  optional string app_collector_addr = 2;
+  optional int64 rm_identifier = 3 [default = -1];
+  optional int64 version = 4 [default = -1];
+  optional hadoop.common.TokenProto app_collector_token = 5;
+}
+
+//////////////////////////////////////////////////////
+/////// collector_nodemanager_protocol //////////////
+//////////////////////////////////////////////////////
+message ReportNewCollectorInfoRequestProto {
+  repeated AppCollectorDataProto app_collectors = 1;
+}
+
+message ReportNewCollectorInfoResponseProto {
+}
+
+message GetTimelineCollectorContextRequestProto {
+  optional ApplicationIdProto appId = 1;
+}
+
+message GetTimelineCollectorContextResponseProto {
+  optional string user_id = 1;
+  optional string flow_name = 2;
+  optional string flow_version = 3;
+  optional int64 flow_run_id = 4;
 }
 
 message NMContainerStatusProto {

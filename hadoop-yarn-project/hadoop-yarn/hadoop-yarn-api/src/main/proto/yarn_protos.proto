@@ -667,3 +667,8 @@ message ContainerResourceDecreaseProto {
   optional ContainerIdProto container_id = 1;
   optional ResourceProto capability = 2;
 }
+
+message CollectorInfoProto {
+  optional string collector_addr = 1;
+  optional hadoop.common.TokenProto collector_token = 2;
+}

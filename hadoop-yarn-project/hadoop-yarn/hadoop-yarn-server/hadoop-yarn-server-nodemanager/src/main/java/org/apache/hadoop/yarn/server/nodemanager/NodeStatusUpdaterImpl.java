@@ -71,7 +71,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
-
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -79,11 +79,13 @@ import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -778,7 +780,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                         .getContainerTokenSecretManager().getCurrentKey(),
                     NodeStatusUpdaterImpl.this.context
                         .getNMTokenSecretManager().getCurrentKey(),
-                    nodeLabelsForHeartbeat);
+                    nodeLabelsForHeartbeat,
+                    NodeStatusUpdaterImpl.this.context
+                        .getRegisteringCollectors());
 
             if (logAggregationEnabled) {
               // pull log aggregation status for application running in this NM
@@ -868,6 +872,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     newResource.toString());
               }
             }
+            if (YarnConfiguration.timelineServiceV2Enabled(context.getConf())) {
+              updateTimelineCollectorData(response);
+            }
+
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
             dispatcher.getEventHandler().handle(
@@ -892,6 +900,51 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               }
             }
           }
+        }
+      }
+
+      private void updateTimelineCollectorData(
+          NodeHeartbeatResponse response) {
+        Map<ApplicationId, AppCollectorData> incomingCollectorsMap =
+            response.getAppCollectors();
+        if (incomingCollectorsMap == null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("No collectors to update RM");
+          }
+          return;
+        }
+        Map<ApplicationId, AppCollectorData> knownCollectors
+            = context.getKnownCollectors();
+        for (Map.Entry<ApplicationId, AppCollectorData> entry
+            : incomingCollectorsMap.entrySet()) {
+          ApplicationId appId = entry.getKey();
+          AppCollectorData collectorData = entry.getValue();
+          // Only handle applications running on local node.
+          Application application = context.getApplications().get(appId);
+          if (application != null) {
+            // Update collector data if the newly received data happens after
+            // the known data (updates the known data).
+            AppCollectorData existingData = knownCollectors.get(appId);
+            if (AppCollectorData.happensBefore(existingData, collectorData)) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Sync a new collector address: "
+                    + collectorData.getCollectorAddr()
+                    + " for application: " + appId + " from RM.");
+              }
+
+              // Update information for clients.
+              NMTimelinePublisher nmTimelinePublisher
+                  = context.getNMTimelinePublisher();
+              if (nmTimelinePublisher != null) {
+                nmTimelinePublisher.setTimelineServiceAddress(
+                    application.getAppId(), collectorData.getCollectorAddr());
+              }
+              // Update information for the node manager itself.
+              knownCollectors.put(appId, collectorData);
+            }
+          }
+          // Remove the registering collector data
+          context.getRegisteringCollectors().remove(entry.getKey());
         }
       }
 

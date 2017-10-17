@@ -20,14 +20,14 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
-import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
@@ -47,10 +47,9 @@ import org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineDelegationTokenSecretManagerService;
+import org.apache.hadoop.yarn.server.timeline.security.TimelineV1DelegationTokenSecretManagerService;
 import org.apache.hadoop.yarn.server.timeline.webapp.CrossOriginFilterInitializer;
+import org.apache.hadoop.yarn.server.util.timeline.TimelineServerUtils;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -75,7 +74,7 @@ public class ApplicationHistoryServer extends CompositeService {
   private ApplicationACLsManager aclsManager;
   private ApplicationHistoryManager historyManager;
   private TimelineStore timelineStore;
-  private TimelineDelegationTokenSecretManagerService secretManagerService;
+  private TimelineV1DelegationTokenSecretManagerService secretManagerService;
   private TimelineDataManager timelineDataManager;
   private WebApp webApp;
   private JvmPauseMonitor pauseMonitor;
@@ -223,9 +222,9 @@ public class ApplicationHistoryServer extends CompositeService {
         TimelineStore.class), conf);
   }
 
-  private TimelineDelegationTokenSecretManagerService
+  private TimelineV1DelegationTokenSecretManagerService
       createTimelineDelegationTokenSecretManagerService(Configuration conf) {
-    return new TimelineDelegationTokenSecretManagerService();
+    return new TimelineV1DelegationTokenSecretManagerService();
   }
 
   private TimelineDataManager createTimelineDataManager(Configuration conf) {
@@ -237,63 +236,33 @@ public class ApplicationHistoryServer extends CompositeService {
   @SuppressWarnings("unchecked")
   private void startWebApp() {
     Configuration conf = getConfig();
-    TimelineAuthenticationFilter.setTimelineDelegationTokenSecretManager(
-        secretManagerService.getTimelineDelegationTokenSecretManager());
     // Always load pseudo authentication filter to parse "user.name" in an URL
     // to identify a HTTP request's user in insecure mode.
     // When Kerberos authentication type is set (i.e., secure mode is turned on),
     // the customized filter will be loaded by the timeline server to do Kerberos
     // + DT authentication.
-    String initializers = conf.get("hadoop.http.filter.initializers");
-    boolean modifiedInitializers = false;
-
-    initializers =
-        initializers == null || initializers.length() == 0 ? "" : initializers;
-
+    String initializers = conf.get("hadoop.http.filter.initializers", "");
+    Set<String> defaultInitializers = new LinkedHashSet<String>();
+    // Add CORS filter
     if (!initializers.contains(CrossOriginFilterInitializer.class.getName())) {
-      if(conf.getBoolean(YarnConfiguration
-          .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED, YarnConfiguration
-              .TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT)) {
-        if (initializers.contains(HttpCrossOriginFilterInitializer.class.getName())) {
-          initializers =
-            initializers.replaceAll(HttpCrossOriginFilterInitializer.class.getName(),
+      if(conf.getBoolean(YarnConfiguration.
+          TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED,
+          YarnConfiguration.
+          TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT)) {
+        if (initializers.contains(
+            HttpCrossOriginFilterInitializer.class.getName())) {
+          initializers = initializers.replaceAll(
+              HttpCrossOriginFilterInitializer.class.getName(),
               CrossOriginFilterInitializer.class.getName());
+        } else {
+          defaultInitializers.add(CrossOriginFilterInitializer.class.getName());
         }
-        else {
-          if (initializers.length() != 0) {
-            initializers += ",";
-          }
-          initializers += CrossOriginFilterInitializer.class.getName();
-        }
-        modifiedInitializers = true;
       }
     }
-
-    if (!initializers.contains(TimelineAuthenticationFilterInitializer.class
-      .getName())) {
-      if (initializers.length() != 0) {
-        initializers += ",";
-      }
-      initializers += TimelineAuthenticationFilterInitializer.class.getName();
-      modifiedInitializers = true;
-    }
-
-    String[] parts = initializers.split(",");
-    ArrayList<String> target = new ArrayList<String>();
-    for (String filterInitializer : parts) {
-      filterInitializer = filterInitializer.trim();
-      if (filterInitializer.equals(AuthenticationFilterInitializer.class
-        .getName())) {
-        modifiedInitializers = true;
-        continue;
-      }
-      target.add(filterInitializer);
-    }
-    String actualInitializers =
-        org.apache.commons.lang.StringUtils.join(target, ",");
-    if (modifiedInitializers) {
-      conf.set("hadoop.http.filter.initializers", actualInitializers);
-    }
+    TimelineServerUtils.addTimelineAuthFilter(
+        initializers, defaultInitializers, secretManagerService);
+    TimelineServerUtils.setTimelineFilters(
+        conf, initializers, defaultInitializers);
     String bindAddress = WebAppUtils.getWebAppBindURL(conf,
                           YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
                           WebAppUtils.getAHSWebAppURLWithoutScheme(conf));

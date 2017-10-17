@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -67,6 +68,8 @@ extends AMRMClientAsync<T> {
   
   private volatile boolean keepRunning;
   private volatile float progress;
+
+  private volatile Throwable savedException;
 
   /**
    *
@@ -318,6 +321,19 @@ extends AMRMClientAsync<T> {
           }
 
           AllocateResponse response = (AllocateResponse) object;
+
+          String collectorAddress = null;
+          if (response.getCollectorInfo() != null) {
+            collectorAddress = response.getCollectorInfo().getCollectorAddr();
+          }
+
+          TimelineV2Client timelineClient =
+              client.getRegisteredTimelineV2Client();
+          if (timelineClient != null && response.getCollectorInfo() != null) {
+            timelineClient.
+                setTimelineCollectorInfo(response.getCollectorInfo());
+          }
+
           List<NodeReport> updatedNodes = response.getUpdatedNodes();
           if (!updatedNodes.isEmpty()) {
             handler.onNodesUpdated(updatedNodes);

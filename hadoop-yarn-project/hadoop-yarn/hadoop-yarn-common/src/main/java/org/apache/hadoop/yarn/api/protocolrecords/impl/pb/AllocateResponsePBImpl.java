@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerResourceDecrease;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.api.records.impl.pb.CollectorInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
@@ -50,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.UpdatedContainerPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.CollectorInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
@@ -82,6 +85,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   private PreemptionMessage preempt;
   private Token amrmToken = null;
   private Priority appPriority = null;
+  private CollectorInfo collectorInfo = null;
 
   public AllocateResponsePBImpl() {
     builder = AllocateResponseProto.newBuilder();
@@ -163,6 +167,9 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     }
     if (this.amrmToken != null) {
       builder.setAmRmToken(convertToProtoFormat(this.amrmToken));
+    }
+    if (this.collectorInfo != null) {
+      builder.setCollectorInfo(convertToProtoFormat(this.collectorInfo));
     }
     if (this.appPriority != null) {
       builder.setApplicationPriority(convertToProtoFormat(this.appPriority));
@@ -406,6 +413,29 @@ public class AllocateResponsePBImpl extends AllocateResponse {
       builder.clearAmRmToken();
     }
     this.amrmToken = amRMToken;
+  }
+
+
+  @Override
+  public synchronized CollectorInfo getCollectorInfo() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.collectorInfo != null) {
+      return this.collectorInfo;
+    }
+    if (!p.hasCollectorInfo()) {
+      return null;
+    }
+    this.collectorInfo = convertFromProtoFormat(p.getCollectorInfo());
+    return this.collectorInfo;
+  }
+
+  @Override
+  public synchronized void setCollectorInfo(CollectorInfo info) {
+    maybeInitBuilder();
+    if (info == null) {
+      builder.clearCollectorInfo();
+    }
+    this.collectorInfo = info;
   }
 
   @Override
@@ -711,6 +741,16 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
   private synchronized NodeReportProto convertToProtoFormat(NodeReport t) {
     return ((NodeReportPBImpl)t).getProto();
+  }
+
+  private synchronized CollectorInfoPBImpl convertFromProtoFormat(
+      CollectorInfoProto p) {
+    return new CollectorInfoPBImpl(p);
+  }
+
+  private synchronized CollectorInfoProto convertToProtoFormat(
+      CollectorInfo t) {
+    return ((CollectorInfoPBImpl)t).getProto();
   }
 
   private synchronized ContainerPBImpl convertFromProtoFormat(
