@@ -99,6 +99,11 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
           ComponentInstanceEventType, ComponentInstanceEvent>(INIT)
       .addTransition(INIT, STARTED, START,
           new ContainerStartedTransition())
+      .addTransition(INIT, INIT, STOP,
+          // container failed before launching, nothing to cleanup from registry
+          // This could happen if NMClient#startContainerAsync failed, container
+          // will be completed, but COMP_INSTANCE is still at INIT.
+          new ContainerStoppedTransition(true))
 
       //From Running
       .addTransition(STARTED, INIT, STOP,
@@ -159,7 +164,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       container.setLaunchTime(new Date(containerStartTime));
       container.setState(ContainerState.RUNNING_BUT_UNREADY);
       container.setBareHost(compInstance.container.getNodeId().getHost());
-      container.setComponentName(compInstance.getCompInstanceName());
+      container.setComponentInstanceName(compInstance.getCompInstanceName());
       if (compInstance.containerSpec != null) {
         // remove the previous container.
         compInstance.getCompSpec().removeContainer(compInstance.containerSpec);
@@ -194,6 +199,16 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
   }
 
   private static class ContainerStoppedTransition extends  BaseTransition {
+    // whether the container failed before launched by AM or not.
+    boolean failedBeforeLaunching = false;
+    public ContainerStoppedTransition(boolean failedBeforeLaunching) {
+      this.failedBeforeLaunching = failedBeforeLaunching;
+    }
+
+    public ContainerStoppedTransition() {
+      this(false);
+    }
+
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
@@ -225,24 +240,27 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         shouldExit = true;
       }
 
-      // clean up registry
-      // hdfs dir content will be overwritten when a new container gets started,
-      // so no need remove.
-      compInstance.scheduler.executorService
-          .submit(compInstance::cleanupRegistry);
+      if (!failedBeforeLaunching) {
+        // clean up registry
+        // If the container failed before launching, no need to cleanup registry,
+        // because it was not registered before.
+        // hdfs dir content will be overwritten when a new container gets started,
+        // so no need remove.
+        compInstance.scheduler.executorService
+            .submit(compInstance::cleanupRegistry);
+        if (compInstance.timelineServiceEnabled) {
+          // record in ATS
+          compInstance.serviceTimelinePublisher
+              .componentInstanceFinished(compInstance,
+                  event.getStatus().getExitStatus(), event.getStatus().getState(),
+                  containerDiag);
+        }
+        compInstance.containerSpec.setState(ContainerState.STOPPED);
+      }
 
       // remove the failed ContainerId -> CompInstance mapping
       comp.getScheduler().removeLiveCompInstance(event.getContainerId());
 
-      if (compInstance.timelineServiceEnabled) {
-        // record in ATS
-        compInstance.serviceTimelinePublisher
-            .componentInstanceFinished(compInstance,
-                event.getStatus().getExitStatus(), event.getStatus().getState(),
-                containerDiag);
-      }
-
-      compInstance.containerSpec.setState(ContainerState.STOPPED);
       if (shouldExit) {
         // Sleep for 5 seconds in hope that the state can be recorded in ATS.
         // in case there's a client polling the comp state, it can be notified.

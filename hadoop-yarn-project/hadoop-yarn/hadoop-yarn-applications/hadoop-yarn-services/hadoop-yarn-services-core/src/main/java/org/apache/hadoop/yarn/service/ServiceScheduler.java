@@ -604,6 +604,7 @@ public class ServiceScheduler extends CompositeService {
         LOG.error("No component instance exists for " + containerId);
         return;
       }
+      LOG.error("Failed to start " + containerId, t);
       amRMClient.releaseAssignedContainer(containerId);
       // After container released, it'll get CONTAINER_COMPLETED event from RM
       // automatically which will trigger stopping COMPONENT INSTANCE

@@ -176,7 +176,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     for (String comp : compOrder) {
       long num = retrievedApp.getComponent(comp).getNumberOfContainers();
       for (int i = 0; i < num; i++) {
-        String compInstanceName = containerList.get(index).getComponentName();
+        String compInstanceName = containerList.get(index).getComponentInstanceName();
         String compName =
             compInstanceName.substring(0, compInstanceName.lastIndexOf('-'));
         Assert.assertEquals(comp, compName);
@@ -219,7 +219,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     Assert.assertEquals(expectedNumInstances, component.getContainers().size());
     TreeSet<String> instances = new TreeSet<>();
     for (Container container : component.getContainers()) {
-      instances.add(container.getComponentName());
+      instances.add(container.getComponentInstanceName());
     }
 
     int i = 0;

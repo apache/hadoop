@@ -49,7 +49,7 @@ public class Container extends BaseResource {
   private String hostname = null;
   private String bareHost = null;
   private ContainerState state = null;
-  private String componentName = null;
+  private String componentInstanceName = null;
   private Resource resource = null;
   private Artifact artifact = null;
   private Boolean privilegedContainer = null;
@@ -176,19 +176,19 @@ public class Container extends BaseResource {
    * Name of the component that this container instance belongs to.
    **/
   public Container componentName(String componentName) {
-    this.componentName = componentName;
+    this.componentInstanceName = componentName;
     return this;
   }
 
   @ApiModelProperty(example = "null", value = "Name of the component that this container instance belongs to.")
   @JsonProperty("component_name")
-  public String getComponentName() {
-    return componentName;
+  public String getComponentInstanceName() {
+    return componentInstanceName;
   }
 
   @XmlElement(name = "component_name")
-  public void setComponentName(String componentName) {
-    this.componentName = componentName;
+  public void setComponentInstanceName(String componentInstanceName) {
+    this.componentInstanceName = componentInstanceName;
   }
 
   /**
@@ -274,7 +274,8 @@ public class Container extends BaseResource {
     sb.append("    hostname: ").append(toIndentedString(hostname)).append("\n");
     sb.append("    bareHost: ").append(toIndentedString(bareHost)).append("\n");
     sb.append("    state: ").append(toIndentedString(state)).append("\n");
-    sb.append("    componentName: ").append(toIndentedString(componentName))
+    sb.append("    componentInstanceName: ").append(toIndentedString(
+        componentInstanceName))
         .append("\n");
     sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
     sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");

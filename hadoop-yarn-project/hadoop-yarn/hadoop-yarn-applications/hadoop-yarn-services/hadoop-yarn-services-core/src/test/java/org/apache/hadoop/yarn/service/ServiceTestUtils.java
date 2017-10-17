@@ -84,11 +84,11 @@ public class ServiceTestUtils {
     return exampleApp;
   }
 
-  protected Component createComponent(String name) {
+  public static Component createComponent(String name) {
     return createComponent(name, 2L, "sleep 1000");
   }
 
-  protected Component createComponent(String name, long numContainers,
+  protected static Component createComponent(String name, long numContainers,
       String command) {
     Component comp1 = new Component();
     comp1.setNumberOfContainers(numContainers);

@@ -62,8 +62,8 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetStatusResponseProto;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.StopRequestProto;
 import org.apache.hadoop.yarn.service.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.ServiceMaster;
-import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.client.params.AbstractClusterBuildingActionArgs;
 import org.apache.hadoop.yarn.service.client.params.ActionCreateArgs;
@@ -73,23 +73,23 @@ import org.apache.hadoop.yarn.service.client.params.Arguments;
 import org.apache.hadoop.yarn.service.client.params.ClientArgs;
 import org.apache.hadoop.yarn.service.client.params.CommonArgs;
 import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
-import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
+import org.apache.hadoop.yarn.service.containerlaunch.ClasspathConstructor;
+import org.apache.hadoop.yarn.service.containerlaunch.JavaCommandLineBuilder;
+import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
+import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
+import org.apache.hadoop.yarn.service.exceptions.UsageException;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ZookeeperUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
-import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
-import org.apache.hadoop.yarn.service.exceptions.SliderException;
-import org.apache.hadoop.yarn.service.exceptions.UsageException;
-import org.apache.hadoop.yarn.service.containerlaunch.ClasspathConstructor;
-import org.apache.hadoop.yarn.service.containerlaunch.JavaCommandLineBuilder;
-import org.apache.hadoop.yarn.service.utils.ZookeeperUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -196,17 +196,34 @@ public class ServiceClient extends CompositeService
       serviceDef = loadAppJsonFromLocalFS(args);
     } else if (!StringUtils.isEmpty(args.example)) {
       // create an example service
-      String yarnHome = System
-          .getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
-      args.file = new File(MessageFormat
-          .format("{0}/share/hadoop/yarn/yarn-service-examples/{1}/{2}.json",
-              yarnHome, args.example, args.example));
+      args.file = findExampleService(args);
       serviceDef = loadAppJsonFromLocalFS(args);
     } else {
       throw new YarnException("No service definition provided!");
     }
     actionCreate(serviceDef);
     return EXIT_SUCCESS;
+  }
+
+  private File findExampleService(ActionCreateArgs args) throws YarnException {
+    String yarnHome = System
+        .getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
+    // First look for the standard location.
+    File file = new File(MessageFormat
+        .format("{0}/share/hadoop/yarn/yarn-service-examples/{1}/{2}.json",
+            yarnHome, args.example, args.example));
+    if (file.exists()) {
+      return file;
+    }
+    // Then look for secondary location.
+    file = new File(MessageFormat
+        .format("{0}/yarn-service-examples/{1}/{2}.json", yarnHome,
+            args.example, args.example));
+    if (file.exists()) {
+      return file;
+    }
+    throw new YarnException(
+        "Example service " + args.example + " does not exist!");
   }
 
   public ApplicationId actionCreate(Service service)

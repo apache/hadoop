@@ -201,7 +201,6 @@ Set a component's desired number of instanes
 |404|Service does not exist|No Content|
 |default|Unexpected error|ServiceStatus|
 
-
 ## Definitions
 ### Artifact
 
@@ -221,6 +220,7 @@ One or more components of the service. If the service is HBase say, then the com
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
 |name|Name of the service component (mandatory). If Registry DNS is enabled, the max length is 63 characters. If unique component support is enabled, the max length is lowered to 44 characters.|true|string||
+|state|The state of the component|false|ComponentState||
 |dependencies|An array of service components which should be in READY state (as defined by readiness check), before this component can be started. The dependencies across all components of a service should be represented as a DAG.|false|string array||
 |readiness_check|Readiness check for this component.|false|ReadinessCheck||
 |artifact|Artifact of the component (optional). If not specified, the service level global artifact takes effect.|false|Artifact||
@@ -231,6 +231,15 @@ One or more components of the service. If the service is HBase say, then the com
 |placement_policy|Advanced scheduling and placement policies for all containers of this component (optional). If not specified, the service level placement_policy takes effect. Refer to the description at the global level for more details.|false|PlacementPolicy||
 |configuration|Config properties for this component.|false|Configuration||
 |quicklinks|A list of quicklink keys defined at the service level, and to be resolved by this component.|false|string array||
+
+
+### ComponentState
+
+The state of the component
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|state|enum of the state of the component|false|enum (FLEXING, STABLE)||
 
 
 ### ConfigFile
@@ -268,7 +277,7 @@ An instance of a running service container.
 |hostname|Fully qualified hostname of a running container, e.g. ctr-e3751-1458061340047-0008-01-000002.examplestg.site. The IP address and hostname attribute values are dependent on the cluster/docker network setup as per YARN-4007.|false|string||
 |bare_host|The bare node or host in which the container is running, e.g. cn008.example.com.|false|string||
 |state|State of the container of a service.|false|ContainerState||
-|component_name|Name of the component that this container instance belongs to.|false|string||
+|component_instance_name|Name of the component instance that this container instance belongs to. Component instance name is named as $COMPONENT_NAME-i, where i is a monotonically increasing integer. E.g. A componet called nginx can have multiple component instances named as nginx-0, nginx-1 etc. Each component instance is backed by a container instance.|false|string||
 |resource|Resource used for this container.|false|Resource||
 |artifact|Artifact used for this container.|false|Artifact||
 |privileged_container|Container running in privileged mode or not.|false|boolean||
@@ -322,18 +331,15 @@ a service resource has the following attributes.
 |----|----|----|----|----|
 |name|A unique service name. If Registry DNS is enabled, the max length is 63 characters.|true|string||
 |id|A unique service id.|false|string||
-|artifact|Artifact of single-component service.|false|Artifact||
-|resource|Resource of single-component service or the global default for multi-component services. Mandatory if it is a single-component service and if cpus and memory are not specified at the Service level.|false|Resource||
-|launch_command|The custom launch command of a service component (optional). If not specified for services with docker images say, it will default to the default start command of the image. If there is a single component in this service, you can specify this without the need to have a 'components' section.|false|string||
+|artifact|The default artifact for all components of the service except the components which has Artifact type set to SERVICE (optional).|false|Artifact||
+|resource|The default resource for all components of the service (optional).|false|Resource||
 |launch_time|The time when the service was created, e.g. 2016-03-16T01:01:49.000Z.|false|string (date)||
-|number_of_containers|Number of containers for each component in the service. Each component can further override this service-level global default.|false|integer (int64)||
 |number_of_running_containers|In get response this provides the total number of running containers for this service (across all components) at the time of request. Note, a subsequent request can return a different number as and when more containers get allocated until it reaches the total number of containers or if a flex request has been made between the two requests.|false|integer (int64)||
 |lifetime|Life time (in seconds) of the service from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.|false|integer (int64)||
 |placement_policy|(TBD) Advanced scheduling and placement policies. If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.|false|PlacementPolicy||
 |components|Components of a service.|false|Component array||
 |configuration|Config properties of a service. Configurations provided at the service/global level are available to all the components. Specific properties can be overridden at the component level.|false|Configuration||
-|containers|Containers of a started service. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.|false|Container array||
-|state|State of the service. Specifying a value for this attribute for the POST payload raises a validation error. This attribute is available only in the GET response of a started service.|false|ServiceState||
+|state|State of the service. Specifying a value for this attribute for the PUT payload means update the service to this desired state.|false|ServiceState||
 |quicklinks|A blob of key-value pairs of quicklinks to be exported for a service.|false|object||
 |queue|The YARN queue that this service should be submitted to.|false|string||
 

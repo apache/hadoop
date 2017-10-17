@@ -1,7 +1,6 @@
 {
   "name": "app-1",
   "lifetime": "3600",
-  "launch_command": "sleep 3600",
   "configuration": {
     "properties": {
       "g1": "a",
@@ -29,10 +28,11 @@
     "cpus": 1,
     "memory": "512"
   },
-  "number_of_containers": 2,
   "components": [
     {
       "name": "simple",
+      "launch_command": "sleep 3600",
+      "number_of_containers": 2,
       "configuration": {
         "files": [
           {
@@ -47,6 +47,8 @@
     },
     {
       "name": "master",
+      "launch_command": "sleep 3600",
+      "number_of_containers": 2,
       "configuration": {
         "properties": {
           "name": "m",
@@ -56,6 +58,8 @@
     },
     {
       "name": "worker",
+      "number_of_containers": 2,
+      "launch_command": "sleep 3600",
       "resource": {
         "cpus": 1,
         "memory": "1024"

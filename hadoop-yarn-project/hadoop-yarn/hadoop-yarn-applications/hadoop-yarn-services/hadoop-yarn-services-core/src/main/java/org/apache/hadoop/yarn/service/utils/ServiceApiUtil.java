@@ -80,38 +80,14 @@ public class ServiceApiUtil {
 
     validateNameFormat(service.getName(), conf);
 
-    // If the service has no components do top-level checks
+    // If the service has no components, throw error
     if (!hasComponent(service)) {
-      // If artifact is of type SERVICE, read other service components
-      if (service.getArtifact() != null && service.getArtifact()
-          .getType() == Artifact.TypeEnum.SERVICE) {
-        if (StringUtils.isEmpty(service.getArtifact().getId())) {
-          throw new IllegalArgumentException(
-              RestApiErrorMessages.ERROR_ARTIFACT_ID_INVALID);
-        }
-        Service otherService = loadService(fs,
-            service.getArtifact().getId());
-        service.setComponents(otherService.getComponents());
-        service.setArtifact(null);
-        SliderUtils.mergeMapsIgnoreDuplicateKeys(service.getQuicklinks(),
-            otherService.getQuicklinks());
-      } else {
-        // Since it is a simple service with no components, create a default
-        // component
-        Component comp = createDefaultComponent(service);
-        validateComponent(comp, fs.getFileSystem(), conf);
-        service.getComponents().add(comp);
-        if (service.getLifetime() == null) {
-          service.setLifetime(RestApiConstants.DEFAULT_UNLIMITED_LIFETIME);
-        }
-        return;
-      }
+      throw new IllegalArgumentException(
+          "No component specified for " + service.getName());
     }
 
     // Validate there are no component name collisions (collisions are not
     // currently supported) and add any components from external services
-    // TODO allow name collisions? see AppState#roles
-    // TODO or add prefix to external component names?
     Configuration globalConf = service.getConfiguration();
     Set<String> componentNames = new HashSet<>();
     List<Component> componentsToRemove = new ArrayList<>();
@@ -174,8 +150,6 @@ public class ServiceApiUtil {
     // values are not provided
     Artifact globalArtifact = service.getArtifact();
     Resource globalResource = service.getResource();
-    Long globalNumberOfContainers = service.getNumberOfContainers();
-    String globalLaunchCommand = service.getLaunchCommand();
     for (Component comp : service.getComponents()) {
       // fill in global artifact unless it is type SERVICE
       if (comp.getArtifact() == null && service.getArtifact() != null
@@ -186,14 +160,6 @@ public class ServiceApiUtil {
       // fill in global resource
       if (comp.getResource() == null) {
         comp.setResource(globalResource);
-      }
-      // fill in global container count
-      if (comp.getNumberOfContainers() == null) {
-        comp.setNumberOfContainers(globalNumberOfContainers);
-      }
-      // fill in global launch command
-      if (comp.getLaunchCommand() == null) {
-        comp.setLaunchCommand(globalLaunchCommand);
       }
       // validate dependency existence
       if (comp.getDependencies() != null) {
@@ -360,23 +326,12 @@ public class ServiceApiUtil {
     }
   }
 
-  public static boolean hasComponent(Service service) {
+  private static boolean hasComponent(Service service) {
     if (service.getComponents() == null || service.getComponents()
         .isEmpty()) {
       return false;
     }
     return true;
-  }
-
-  public static Component createDefaultComponent(Service service) {
-    Component comp = new Component();
-    comp.setName(RestApiConstants.DEFAULT_COMPONENT_NAME);
-    comp.setArtifact(service.getArtifact());
-    comp.setResource(service.getResource());
-    comp.setNumberOfContainers(service.getNumberOfContainers());
-    comp.setLaunchCommand(service.getLaunchCommand());
-    comp.setConfiguration(service.getConfiguration());
-    return comp;
   }
 
   public static Collection<Component> sortByDependencies(List<Component>

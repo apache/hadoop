@@ -202,6 +202,8 @@ public class Component implements EventHandler<ComponentEvent> {
                 + before + " to " + event.getDesired());
         component.requestContainers(delta);
         component.createNumCompInstances(delta);
+        component.componentSpec.setState(
+            org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
         return FLEXING;
       } else if (delta < 0){
         delta = 0 - delta;
@@ -224,10 +226,14 @@ public class Component implements EventHandler<ComponentEvent> {
           component.instanceIdCounter.decrementAndGet();
           instance.destroy();
         }
+        component.componentSpec.setState(
+            org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
         return STABLE;
       } else {
         LOG.info("[FLEX COMPONENT " + component.getName() + "]: already has " +
             event.getDesired() + " instances, ignoring");
+        component.componentSpec.setState(
+            org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
         return STABLE;
       }
     }
@@ -297,8 +303,12 @@ public class Component implements EventHandler<ComponentEvent> {
     // if desired == running
     if (component.componentMetrics.containersRunning.value() == component
         .getComponentSpec().getNumberOfContainers()) {
+      component.componentSpec.setState(
+          org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE);
       return STABLE;
     } else {
+      component.componentSpec.setState(
+          org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
       return FLEXING;
     }
   }
@@ -317,6 +327,8 @@ public class Component implements EventHandler<ComponentEvent> {
       component.compInstanceDispatcher.getEventHandler().handle(
           new ComponentInstanceEvent(event.getStatus().getContainerId(),
               STOP).setStatus(event.getStatus()));
+      component.componentSpec.setState(
+          org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
     }
   }
 
