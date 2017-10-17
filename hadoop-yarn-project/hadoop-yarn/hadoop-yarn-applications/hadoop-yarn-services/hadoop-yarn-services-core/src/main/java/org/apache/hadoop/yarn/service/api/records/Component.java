@@ -59,6 +59,7 @@ public class Component implements Serializable {
   private Long numberOfContainers = null;
   private Boolean runPrivilegedContainer = false;
   private PlacementPolicy placementPolicy = null;
+  private ComponentState state = ComponentState.FLEXING;
   private Configuration configuration = new Configuration();
   private List<String> quicklinks = new ArrayList<String>();
   private List<Container> containers =
@@ -305,6 +306,21 @@ public class Component implements Serializable {
     this.quicklinks = quicklinks;
   }
 
+  public Component state(ComponentState state) {
+    this.state = state;
+    return this;
+  }
+
+  @ApiModelProperty(example = "null", value = "State of the component.")
+  @JsonProperty("state")
+  public ComponentState getState() {
+    return state;
+  }
+
+  public void setState(ComponentState state) {
+    this.state = state;
+  }
+
   @Override
   public boolean equals(java.lang.Object o) {
     if (this == o) {
@@ -325,14 +341,15 @@ public class Component implements Serializable {
             component.runPrivilegedContainer)
         && Objects.equals(this.placementPolicy, component.placementPolicy)
         && Objects.equals(this.configuration, component.configuration)
-        && Objects.equals(this.quicklinks, component.quicklinks);
+        && Objects.equals(this.quicklinks, component.quicklinks)
+        && Objects.equals(this.state, component.state);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(name, dependencies, readinessCheck, artifact,
         launchCommand, resource, numberOfContainers,
-        runPrivilegedContainer, placementPolicy, configuration, quicklinks);
+        runPrivilegedContainer, placementPolicy, configuration, quicklinks, state);
   }
 
   @Override
@@ -341,6 +358,7 @@ public class Component implements Serializable {
     sb.append("class Component {\n");
 
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
+    sb.append("    state: ").append(toIndentedString(state)).append("\n");
     sb.append("    dependencies: ").append(toIndentedString(dependencies))
         .append("\n");
     sb.append("    readinessCheck: ").append(toIndentedString(readinessCheck))

@@ -53,15 +53,12 @@ public class Service extends BaseResource {
   private String id = null;
   private Artifact artifact = null;
   private Resource resource = null;
-  private String launchCommand = null;
   private Date launchTime = null;
-  private Long numberOfContainers = null;
   private Long numberOfRunningContainers = null;
   private Long lifetime = null;
   private PlacementPolicy placementPolicy = null;
   private List<Component> components = new ArrayList<>();
   private Configuration configuration = new Configuration();
-  private List<Container> containers = new ArrayList<>();
   private ServiceState state = null;
   private Map<String, String> quicklinks = new HashMap<>();
   private String queue = null;
@@ -143,29 +140,6 @@ public class Service extends BaseResource {
   }
 
   /**
-   * The custom launch command of an service component (optional). If not
-   * specified for services with docker images say, it will default to the
-   * default start command of the image. If there is a single component in this
-   * service, you can specify this without the need to have a 'components'
-   * section.
-   **/
-  public Service launchCommand(String launchCommand) {
-    this.launchCommand = launchCommand;
-    return this;
-  }
-
-  @ApiModelProperty(example = "null", value = "The custom launch command of an service component (optional). If not specified for services with docker images say, it will default to the default start command of the image. If there is a single component in this service, you can specify this without the need to have a 'components' section.")
-  @JsonProperty("launch_command")
-  public String getLaunchCommand() {
-    return launchCommand;
-  }
-
-  @XmlElement(name = "launch_command")
-  public void setLaunchCommand(String launchCommand) {
-    this.launchCommand = launchCommand;
-  }
-
-  /**
    * The time when the service was created, e.g. 2016-03-16T01:01:49.000Z.
    **/
   public Service launchTime(Date launchTime) {
@@ -182,26 +156,6 @@ public class Service extends BaseResource {
   @XmlElement(name = "launch_time")
   public void setLaunchTime(Date launchTime) {
     this.launchTime = launchTime == null ? null : (Date) launchTime.clone();
-  }
-
-  /**
-   * Number of containers for each component in the service. Each
-   * component can further override this service-level global default.
-   **/
-  public Service numberOfContainers(Long numberOfContainers) {
-    this.numberOfContainers = numberOfContainers;
-    return this;
-  }
-
-  @ApiModelProperty(example = "null", value = "Number of containers for each component in the service. Each component can further override this service-level global default.")
-  @JsonProperty("number_of_containers")
-  public Long getNumberOfContainers() {
-    return numberOfContainers;
-  }
-
-  @XmlElement(name = "number_of_containers")
-  public void setNumberOfContainers(Long numberOfContainers) {
-    this.numberOfContainers = numberOfContainers;
   }
 
   /**
@@ -323,30 +277,6 @@ public class Service extends BaseResource {
   }
 
   /**
-   * Containers of a started service. Specifying a value for this attribute
-   * for the POST payload raises a validation error. This blob is available only
-   * in the GET response of a started service.
-   **/
-  public Service containers(List<Container> containers) {
-    this.containers = containers;
-    return this;
-  }
-
-  @ApiModelProperty(example = "null", value = "Containers of a started service. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.")
-  @JsonProperty("containers")
-  public List<Container> getContainers() {
-    return containers;
-  }
-
-  public void setContainers(List<Container> containers) {
-    this.containers = containers;
-  }
-
-  public void addContainer(Container container) {
-    this.containers.add(container);
-  }
-
-  /**
    * State of the service. Specifying a value for this attribute for the
    * POST payload raises a validation error. This attribute is available only in
    * the GET response of a started service.
@@ -428,12 +358,8 @@ public class Service extends BaseResource {
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
     sb.append("    resource: ").append(toIndentedString(resource)).append("\n");
-    sb.append("    launchCommand: ").append(toIndentedString(launchCommand))
-        .append("\n");
     sb.append("    launchTime: ").append(toIndentedString(launchTime))
         .append("\n");
-    sb.append("    numberOfContainers: ")
-        .append(toIndentedString(numberOfContainers)).append("\n");
     sb.append("    numberOfRunningContainers: ")
         .append(toIndentedString(numberOfRunningContainers)).append("\n");
     sb.append("    lifetime: ").append(toIndentedString(lifetime)).append("\n");
@@ -442,8 +368,6 @@ public class Service extends BaseResource {
     sb.append("    components: ").append(toIndentedString(components))
         .append("\n");
     sb.append("    configuration: ").append(toIndentedString(configuration))
-        .append("\n");
-    sb.append("    containers: ").append(toIndentedString(containers))
         .append("\n");
     sb.append("    state: ").append(toIndentedString(state)).append("\n");
     sb.append("    quicklinks: ").append(toIndentedString(quicklinks))

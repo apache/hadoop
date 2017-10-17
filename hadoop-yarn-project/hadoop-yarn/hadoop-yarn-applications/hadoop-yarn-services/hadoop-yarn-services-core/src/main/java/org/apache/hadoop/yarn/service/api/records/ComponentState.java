@@ -15,25 +15,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.service.conf;
 
-public interface RestApiConstants {
+package org.apache.hadoop.yarn.service.api.records;
 
-  // Rest endpoints
-  String CONTEXT_ROOT = "/ws/v1";
-  String VERSION = "/services/version";
-  String SERVICE_ROOT_PATH = "/services";
-  String SERVICE_PATH = "/services/{service_name}";
-  String COMPONENT_PATH = "/services/{service_name}/components/{component_name}";
+import io.swagger.annotations.ApiModel;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-  // Query param
-  String SERVICE_NAME = "service_name";
-  String COMPONENT_NAME = "component_name";
-
-  Long DEFAULT_UNLIMITED_LIFETIME = -1l;
-
-  Integer ERROR_CODE_APP_DOES_NOT_EXIST = 404001;
-  Integer ERROR_CODE_APP_IS_NOT_RUNNING = 404002;
-  Integer ERROR_CODE_APP_SUBMITTED_BUT_NOT_RUNNING_YET = 404003;
-  Integer ERROR_CODE_APP_NAME_INVALID = 404004;
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+@ApiModel(description = "The current state of a component.")
+public enum ComponentState {
+  FLEXING, STABLE
 }

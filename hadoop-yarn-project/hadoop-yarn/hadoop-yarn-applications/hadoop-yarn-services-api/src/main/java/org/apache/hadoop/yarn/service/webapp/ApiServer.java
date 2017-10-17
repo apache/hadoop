@@ -242,15 +242,6 @@ public class ApiServer {
       return updateLifetime(appName, updateServiceData);
     }
 
-    // flex a single component app
-    if (updateServiceData.getNumberOfContainers() != null && !ServiceApiUtil
-        .hasComponent(updateServiceData)) {
-      Component defaultComp = ServiceApiUtil
-          .createDefaultComponent(updateServiceData);
-      return updateComponent(updateServiceData.getName(), defaultComp.getName(),
-          defaultComp);
-    }
-
     // If nothing happens consider it a no-op
     return Response.status(Status.NO_CONTENT).build();
   }

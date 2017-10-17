@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.service;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.Assert;
@@ -36,9 +36,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
-import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_COMPONENT_NAME;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
 import static org.junit.Assert.assertEquals;
@@ -99,6 +99,8 @@ public class TestServiceApiUtil {
 
     // launch command not specified
     app.setName(LEN_64_STR);
+    Component comp = new Component().name("comp1");
+    app.addComponent(comp);
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DEFAULT_DNS);
       Assert.fail(EXCEPTION_PREFIX + "service with no launch command");
@@ -118,18 +120,8 @@ public class TestServiceApiUtil {
           e.getMessage());
     }
 
-    // resource not specified
-    app.setLaunchCommand("sleep 3600");
-    try {
-      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "service with no resource");
-    } catch (IllegalArgumentException e) {
-      assertEquals(String.format(
-          RestApiErrorMessages.ERROR_RESOURCE_FOR_COMP_INVALID,
-          DEFAULT_COMPONENT_NAME), e.getMessage());
-    }
-
     // memory not specified
+    comp.setLaunchCommand("sleep 1");
     Resource res = new Resource();
     app.setResource(res);
     try {
@@ -138,7 +130,7 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_RESOURCE_MEMORY_FOR_COMP_INVALID,
-          DEFAULT_COMPONENT_NAME), e.getMessage());
+          comp.getName()), e.getMessage());
     }
 
     // invalid no of cpus
@@ -151,7 +143,7 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(
           RestApiErrorMessages.ERROR_RESOURCE_CPUS_FOR_COMP_INVALID_RANGE,
-          DEFAULT_COMPONENT_NAME), e.getMessage());
+          comp.getName()), e.getMessage());
     }
 
     // number of containers not specified
@@ -173,7 +165,7 @@ public class TestServiceApiUtil {
     } catch (IllegalArgumentException e) {
       assertEquals(String.format(RestApiErrorMessages
               .ERROR_RESOURCE_PROFILE_MULTIPLE_VALUES_FOR_COMP_NOT_SUPPORTED,
-          DEFAULT_COMPONENT_NAME),
+          comp.getName()),
           e.getMessage());
     }
 
@@ -202,25 +194,6 @@ public class TestServiceApiUtil {
       Assert.assertTrue(e.getMessage()
           .startsWith(ERROR_CONTAINERS_COUNT_INVALID));
     }
-
-    // negative number of containers
-    app.setNumberOfContainers(-1L);
-    try {
-      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-      Assert.fail(EXCEPTION_PREFIX + "negative number of containers");
-    } catch (IllegalArgumentException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith(ERROR_CONTAINERS_COUNT_INVALID));
-    }
-
-    // everything valid here
-    app.setNumberOfContainers(5L);
-    try {
-      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
-    } catch (IllegalArgumentException e) {
-      LOG.error("service attributes specified should be valid here", e);
-      Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
-    }
   }
 
   @Test
@@ -228,15 +201,17 @@ public class TestServiceApiUtil {
     SliderFileSystem sfs = ServiceTestUtils.initMockFs();
 
     Service app = new Service();
-    app.setName("name");
+    app.setName("service1");
     Resource res = new Resource();
     app.setResource(res);
     res.setMemory("512M");
-    app.setNumberOfContainers(3L);
 
     // no artifact id fails with default type
     Artifact artifact = new Artifact();
     app.setArtifact(artifact);
+    Component comp = ServiceTestUtils.createComponent("comp1");
+
+    app.setComponents(Collections.singletonList(comp));
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
       Assert.fail(EXCEPTION_PREFIX + "service with no artifact id");
@@ -272,9 +247,6 @@ public class TestServiceApiUtil {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
-    // defaults assigned
-    assertEquals(app.getComponents().get(0).getName(),
-        DEFAULT_COMPONENT_NAME);
     assertEquals(app.getLifetime(), DEFAULT_UNLIMITED_LIFETIME);
   }
 
@@ -289,15 +261,14 @@ public class TestServiceApiUtil {
     comp.setName(compName);
     comp.setResource(createValidResource());
     comp.setNumberOfContainers(1L);
+    comp.setLaunchCommand("sleep 1");
     return comp;
   }
 
   private static Service createValidApplication(String compName) {
     Service app = new Service();
-    app.setLaunchCommand("sleep 3600");
     app.setName("name");
     app.setResource(createValidResource());
-    app.setNumberOfContainers(1L);
     if (compName != null) {
       app.addComponent(createValidComponent(compName));
     }
@@ -315,7 +286,7 @@ public class TestServiceApiUtil {
     artifact.setType(Artifact.TypeEnum.SERVICE);
     artifact.setId("id");
     app.setArtifact(artifact);
-
+    app.addComponent(ServiceTestUtils.createComponent("comp2"));
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {
@@ -323,7 +294,7 @@ public class TestServiceApiUtil {
     }
 
     assertEquals(1, app.getComponents().size());
-    assertNotNull(app.getComponent("comp1"));
+    assertNotNull(app.getComponent("comp2"));
   }
 
   @Test
@@ -410,12 +381,13 @@ public class TestServiceApiUtil {
 
   @Test
   public void testDependencySorting() throws IOException {
-    Component a = new Component().name("a");
-    Component b = new Component().name("b");
-    Component c = new Component().name("c");
-    Component d = new Component().name("d").dependencies(Arrays.asList("c"));
-    Component e = new Component().name("e").dependencies(Arrays.asList("b",
-        "d"));
+    Component a = ServiceTestUtils.createComponent("a");
+    Component b = ServiceTestUtils.createComponent("b");
+    Component c = ServiceTestUtils.createComponent("c");
+    Component d =
+        ServiceTestUtils.createComponent("d").dependencies(Arrays.asList("c"));
+    Component e = ServiceTestUtils.createComponent("e")
+        .dependencies(Arrays.asList("b", "d"));
 
     verifyDependencySorting(Arrays.asList(a, b, c), a, b, c);
     verifyDependencySorting(Arrays.asList(c, a, b), c, a, b);

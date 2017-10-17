@@ -19,28 +19,17 @@ swagger: '2.0'
 info:
   title: "YARN Simplified API layer for services"
   description: |
-    Bringing a new service on YARN today is not a simple experience. The APIs of
-    existing frameworks are either too low level (native YARN), require writing
-    new code (for frameworks with programmatic APIs) or writing a complex spec
-    (for declarative frameworks). In addition to building critical building blocks
-    inside YARN (as part of other efforts at YARN-4692), there is a need for
-    simplifying the user facing story for building services. Experience of projects
-    like Apache Slider running real-life services like HBase, Storm, Accumulo,
-    Solr etc, gives us some very good insights on how simplified APIs for services
-    should look like.
+    Bringing a new service on YARN today is not a simple experience. The APIs of existing
+    frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs)
+    or writing a complex spec (for declarative frameworks).
 
-    To this end, we should look at a new simple-services API layer backed by REST
-    interfaces. This API can be used to create and manage the lifecycle of YARN
-    services. Services here can range from simple single-component service to
-    complex multi-component assemblies needing orchestration. YARN-4793 tracks
-    this effort.
+    This simplified REST API can be used to create and manage the lifecycle of YARN services.
+    In most cases, the application owner will not be forced to make any changes to their applications.
+    This is primarily true if the application is packaged with containerization technologies like Docker.
 
-    This document spotlights on this specification. In most of the cases, the
-    application owner will not be forced to make any changes to their applications.
-    This is primarily true if the application is packaged with containerization
-    technologies like docker. Irrespective of how complex the application is,
-    there will be hooks provided at appropriate layers to allow pluggable and
-    customizable application behavior.
+    This document describes the API specifications (aka. YarnFile) for deploying/managing
+    containerized services on YARN. The same JSON spec can be used for both REST API
+    and CLI to manage the services.
 
   version: "1.0.0"
   license:
@@ -216,22 +205,15 @@ definitions:
         type: string
         description: A unique service id.
       artifact:
-        description: Artifact of single-component service.
+        description: The default artifact for all components of the service except the components which has Artifact type set to SERVICE (optional).
         $ref: '#/definitions/Artifact'
       resource:
-        description: Resource of single-component service or the global default for multi-component services. Mandatory if it is a single-component service and if cpus and memory are not specified at the Service level.
+        description: The default resource for all components of the service (optional).
         $ref: '#/definitions/Resource'
-      launch_command:
-        type: string
-        description: The custom launch command of a service component (optional). If not specified for services with docker images say, it will default to the default start command of the image. If there is a single component in this service, you can specify this without the need to have a 'components' section.
       launch_time:
         type: string
         format: date
         description: The time when the service was created, e.g. 2016-03-16T01:01:49.000Z.
-      number_of_containers:
-        type: integer
-        format: int64
-        description: Number of containers for each component in the service. Each component can further override this service-level global default.
       number_of_running_containers:
         type: integer
         format: int64
@@ -251,13 +233,8 @@ definitions:
       configuration:
         description: Config properties of a service. Configurations provided at the service/global level are available to all the components. Specific properties can be overridden at the component level.
         $ref: '#/definitions/Configuration'
-      containers:
-        description: Containers of a started service. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started service.
-        type: array
-        items:
-          $ref: '#/definitions/Container'
       state:
-        description: State of the service. Specifying a value for this attribute for the POST payload raises a validation error. This attribute is available only in the GET response of a started service.
+        description: State of the service. Specifying a value for this attribute for the PUT payload means update the service to this desired state.
         $ref: '#/definitions/ServiceState'
       quicklinks:
         type: object
@@ -314,6 +291,9 @@ definitions:
       name:
         type: string
         description: Name of the service component (mandatory). If Registry DNS is enabled, the max length is 63 characters. If unique component support is enabled, the max length is lowered to 44 characters.
+      state:
+        description: The state of the component
+        $ref: "#/definitions/ComponentState"
       dependencies:
         type: array
         items:
@@ -431,9 +411,11 @@ definitions:
       state:
         description: State of the container of a service.
         $ref: '#/definitions/ContainerState'
-      component_name:
+      component_instance_name:
         type: string
-        description: Name of the component that this container instance belongs to.
+        description: Name of the component instance that this container instance belongs to. Component instance name is named as $COMPONENT_NAME-i, where i is a
+                     monotonically increasing integer. E.g. A componet called nginx can have multiple component instances named as nginx-0, nginx-1 etc.
+                     Each component instance is backed by a container instance.
       resource:
         description: Resource used for this container.
         $ref: '#/definitions/Resource'
@@ -452,7 +434,7 @@ definitions:
         enum:
           - ACCEPTED
           - STARTED
-          - READY
+          - STABLE
           - STOPPED
           - FAILED
   ContainerState:
@@ -465,6 +447,15 @@ definitions:
           - INIT
           - STARTED
           - READY
+  ComponentState:
+    description: The state of the component
+    properties:
+      state:
+        type: string
+        description: enum of the state of the component
+        enum:
+          - FLEXING
+          - STABLE
   ServiceStatus:
     description: The current status of a submitted service, returned as a response to the GET API.
     properties:
