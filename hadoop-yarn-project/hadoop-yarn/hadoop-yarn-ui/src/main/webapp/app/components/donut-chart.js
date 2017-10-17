@@ -25,7 +25,7 @@ export default BaseChartComponent.extend({
   /*
    * data = [{label="xx", value=},{...}]
    */
-  renderDonutChart: function(data, title, showLabels = false, 
+  renderDonutChart: function(data, title, showLabels = false,
     middleLabel = "Total", middleValue = undefined, suffix = "") {
     var g = this.chart.g;
     var layout = this.getLayout();
@@ -184,7 +184,7 @@ export default BaseChartComponent.extend({
       this.colors = ColorUtils.getColors(this.get("data").length, targets, colorTargetReverse);
     }
 
-    this.renderDonutChart(this.get("data"), this.get("title"), this.get("showLabels"), 
+    this.renderDonutChart(this.get("data"), this.get("title"), this.get("showLabels"),
                           this.get("middleLabel"), this.get("middleValue"));
   },
 

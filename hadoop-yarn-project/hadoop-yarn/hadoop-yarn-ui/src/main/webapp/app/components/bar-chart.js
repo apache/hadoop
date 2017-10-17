@@ -20,7 +20,7 @@ import Ember from 'ember';
 import BaseChartComponent from 'yarn-ui/components/base-chart-component';
 
 export default BaseChartComponent.extend({
-  // data: 
+  // data:
   //    [{label=label1, value=value1}, ...]
   //    ...
   renderBarChart: function(data, title, textWidth = 50) {
