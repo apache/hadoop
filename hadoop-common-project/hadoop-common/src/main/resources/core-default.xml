@@ -2472,18 +2472,5 @@
       in audit logs.
     </description>
   </property>
-  <property>
-    <name>hadoop.treat.subject.external</name>
-    <value>false</value>
-    <description>
-      When creating UGI with UserGroupInformation(Subject), treat the passed
-      subject external if set to true, and assume the owner of the subject
-      should do the credential renewal.
-
-      When true this property will introduce an incompatible change which
-      may require changes in client code. For more details, see the jiras:
-      HADOOP-13805,HADOOP-13558.
-    </description>
-  </property>
 
 </configuration>
