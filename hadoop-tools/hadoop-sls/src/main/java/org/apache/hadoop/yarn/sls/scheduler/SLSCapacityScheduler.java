@@ -323,25 +323,6 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
         queueName);
   }
 
-  private void initQueueMetrics(CSQueue queue) {
-    if (queue instanceof LeafQueue) {
-      schedulerMetrics.initQueueMetric(queue.getQueueName());
-      return;
-    }
-
-    for (CSQueue child : queue.getChildQueues()) {
-      initQueueMetrics(child);
-    }
-  }
-  @Override
-  public void serviceInit(Configuration configuration) throws Exception {
-    super.serviceInit(configuration);
-
-    if (metricsON) {
-      initQueueMetrics(getRootQueue());
-    }
-  }
-
   @Override
   public void serviceStop() throws Exception {
     try {
