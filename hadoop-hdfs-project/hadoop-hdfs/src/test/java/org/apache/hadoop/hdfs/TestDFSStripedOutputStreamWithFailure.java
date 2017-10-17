@@ -319,6 +319,82 @@ public class TestDFSStripedOutputStreamWithFailure {
     }
   }
 
+  private void testCloseWithExceptionsInStreamer(
+      int numFailures, boolean shouldFail) throws Exception {
+    assertTrue(numFailures <=
+        ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
+    final Path dirFile = new Path(dir, "ecfile-" + numFailures);
+    try (FSDataOutputStream out = dfs.create(dirFile, true)) {
+      out.write("idempotent close".getBytes());
+
+      // Expect to raise IOE on the first close call, but any following
+      // close() should be no-op.
+      LambdaTestUtils.intercept(IOException.class,
+          out::close);
+
+      assertTrue(out.getWrappedStream() instanceof DFSStripedOutputStream);
+      DFSStripedOutputStream stripedOut =
+          (DFSStripedOutputStream) out.getWrappedStream();
+      for (int i = 0; i < numFailures; i++) {
+        // Only inject 1 stream failure.
+        stripedOut.getStripedDataStreamer(i).getLastException().set(
+            new IOException("injected failure")
+        );
+      }
+      if (shouldFail) {
+        LambdaTestUtils.intercept(IOException.class, out::close);
+      }
+
+      // Close multiple times. All the following close() should have no
+      // side-effect.
+      out.close();
+    }
+  }
+
+  // HDFS-12612
+  @Test
+  public void testIdempotentCloseWithFailedStreams() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    try {
+      setup(conf);
+      // shutdown few datanodes to avoid getting sufficient data blocks number
+      // of datanodes.
+      while (cluster.getDataNodes().size() >= dataBlocks) {
+        cluster.stopDataNode(0);
+      }
+      cluster.restartNameNodes();
+      cluster.triggerHeartbeats();
+
+      testCloseWithExceptionsInStreamer(1, false);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits(), false);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits() + 1, true);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumDataUnits(), true);
+    } finally {
+      tearDown();
+    }
+  }
+
+  @Test
+  public void testCloseAfterAbort() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    try {
+      setup(conf);
+
+      final Path dirFile = new Path(dir, "ecfile");
+      FSDataOutputStream out = dfs.create(dirFile, true);
+      assertTrue(out.getWrappedStream() instanceof DFSStripedOutputStream);
+      DFSStripedOutputStream stripedOut =
+          (DFSStripedOutputStream) out.getWrappedStream();
+      stripedOut.abort();
+      LambdaTestUtils.intercept(IOException.class,
+          "Lease timeout", stripedOut::close);
+    } finally {
+      tearDown();
+    }
+  }
+
   @Test(timeout = 90000)
   public void testAddBlockWhenNoSufficientParityNumOfNodes()
       throws IOException {
