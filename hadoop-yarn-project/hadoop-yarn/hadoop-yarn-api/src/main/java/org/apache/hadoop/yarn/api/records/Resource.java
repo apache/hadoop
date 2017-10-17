@@ -466,4 +466,18 @@ public abstract class Resource implements Comparable<Resource> {
     }
     return (int) result;
   }
+
+  /**
+   * Convert long to int for a resource value safely. This method assumes
+   * resource value is positive.
+   *
+   * @param value long resource value
+   * @return int resource value
+   */
+  protected static int castToIntSafely(long value) {
+    if (value > Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    }
+    return Long.valueOf(value).intValue();
+  }
 }

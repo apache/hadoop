@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -67,6 +68,9 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
             YarnClient rmClient = YarnClient.createYarnClient()) {
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
+      // Make sure if using FairScheduler that we can assign multiple containers
+      // in a single heartbeat later
+      conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
       cluster.init(conf);
       cluster.start();
       final Configuration yarnConf = cluster.getConfig();

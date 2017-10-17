@@ -149,10 +149,11 @@ abstract class StripeReader {
    */
   abstract boolean prepareParityChunk(int index);
 
-  /*
+  /**
    * Decode to get the missing data.
+   * @throws IOException if the decoder is closed.
    */
-  abstract void decode();
+  abstract void decode() throws IOException;
 
   /*
    * Default close do nothing.
@@ -408,7 +409,7 @@ abstract class StripeReader {
   /**
    * Decode based on the given input buffers and erasure coding policy.
    */
-  void decodeAndFillBuffer(boolean fillBuffer) {
+  void decodeAndFillBuffer(boolean fillBuffer) throws IOException {
     // Step 1: prepare indices and output buffers for missing data units
     int[] decodeIndices = prepareErasedIndices();
 

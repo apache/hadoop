@@ -940,8 +940,9 @@ public class TestQuorumJournalManager {
     AsyncLogger.Factory spyFactory = new AsyncLogger.Factory() {
       @Override
       public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
-          String journalId, InetSocketAddress addr) {
-        AsyncLogger logger = new IPCLoggerChannel(conf, nsInfo, journalId, addr) {
+          String journalId, String nameServiceId, InetSocketAddress addr) {
+        AsyncLogger logger = new IPCLoggerChannel(conf, nsInfo, journalId,
+            nameServiceId, addr) {
           protected ExecutorService createSingleThreadExecutor() {
             // Don't parallelize calls to the quorum in the tests.
             // This makes the tests more deterministic.

@@ -15,18 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api.records;
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
- * Event types associated with {@link ContainerSchedulerEvent}.
+ * The class to test {@link Resource}.
  */
-public enum ContainerSchedulerEventType {
-  SCHEDULE_CONTAINER,
-  CONTAINER_COMPLETED,
-  UPDATE_CONTAINER,
-  // Producer: Node HB response - RM has asked to shed the queue
-  SHED_QUEUED_CONTAINERS,
-  CONTAINER_PAUSED,
-  RECOVERY_COMPLETED
+public class TestResource {
+
+  @Test
+  public void testCastToIntSafely() {
+    assertEquals(0, Resource.castToIntSafely(0));
+    assertEquals(1, Resource.castToIntSafely(1));
+    assertEquals(Integer.MAX_VALUE,
+        Resource.castToIntSafely(Integer.MAX_VALUE));
+
+    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
+            + "Integer.MAX_VALUE", Integer.MAX_VALUE,
+        Resource.castToIntSafely(Integer.MAX_VALUE + 1L));
+    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
+            + "Integer.MAX_VALUE", Integer.MAX_VALUE,
+        Resource.castToIntSafely(Long.MAX_VALUE));
+  }
 }

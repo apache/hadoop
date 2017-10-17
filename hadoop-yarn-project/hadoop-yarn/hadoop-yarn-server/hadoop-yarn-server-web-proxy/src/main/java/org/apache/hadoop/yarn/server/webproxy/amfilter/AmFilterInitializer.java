@@ -62,15 +62,19 @@ public class AmFilterInitializer extends FilterInitializer {
     container.addFilter(FILTER_NAME, FILTER_CLASS, params);
 
     // Handle RM HA urls
-    List<String> urls = new ArrayList<>();
-
     // Include yarn-site.xml in the classpath
     YarnConfiguration yarnConf = new YarnConfiguration(conf);
-    for (String rmId : getRmIds(yarnConf)) {
-      String url = getUrlByRmId(yarnConf, rmId);
-      urls.add(url);
+    Collection<String> rmIds = getRmIds(yarnConf);
+    if (rmIds != null) {
+      List<String> urls = new ArrayList<>();
+      for (String rmId : rmIds) {
+        String url = getUrlByRmId(yarnConf, rmId);
+        urls.add(url);
+      }
+      if (!urls.isEmpty()) {
+        params.put(RM_HA_URLS, StringUtils.join(",", urls));
+      }
     }
-    params.put(RM_HA_URLS, StringUtils.join(",", urls));
   }
 
   private Collection<String> getRmIds(Configuration conf) {

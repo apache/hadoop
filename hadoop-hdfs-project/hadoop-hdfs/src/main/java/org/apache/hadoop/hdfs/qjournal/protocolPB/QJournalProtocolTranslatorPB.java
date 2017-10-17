@@ -93,13 +93,17 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
 
 
   @Override
-  public boolean isFormatted(String journalId) throws IOException {
+  public boolean isFormatted(String journalId,
+                             String nameServiceId) throws IOException {
     try {
-      IsFormattedRequestProto req = IsFormattedRequestProto.newBuilder()
-          .setJid(convertJournalId(journalId))
-          .build();
+      IsFormattedRequestProto.Builder req = IsFormattedRequestProto.newBuilder()
+          .setJid(convertJournalId(journalId));
+      if (nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
+
       IsFormattedResponseProto resp = rpcProxy.isFormatted(
-          NULL_CONTROLLER, req);
+          NULL_CONTROLLER, req.build());
       return resp.getIsFormatted();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
@@ -107,13 +111,17 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
 
   @Override
-  public GetJournalStateResponseProto getJournalState(String jid)
+  public GetJournalStateResponseProto getJournalState(String jid,
+                                                      String nameServiceId)
       throws IOException {
     try {
-      GetJournalStateRequestProto req = GetJournalStateRequestProto.newBuilder()
-          .setJid(convertJournalId(jid))
-          .build();
-      return rpcProxy.getJournalState(NULL_CONTROLLER, req);
+      GetJournalStateRequestProto.Builder req = GetJournalStateRequestProto
+          .newBuilder()
+          .setJid(convertJournalId(jid));
+      if (nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
+      return rpcProxy.getJournalState(NULL_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -126,28 +134,39 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
   
   @Override
-  public void format(String jid, NamespaceInfo nsInfo) throws IOException {
+  public void format(String jid,
+                     String nameServiceId,
+                     NamespaceInfo nsInfo) throws IOException {
     try {
-      FormatRequestProto req = FormatRequestProto.newBuilder()
+      FormatRequestProto.Builder req = FormatRequestProto.newBuilder()
           .setJid(convertJournalId(jid))
-          .setNsInfo(PBHelper.convert(nsInfo))
-          .build();
-      rpcProxy.format(NULL_CONTROLLER, req);
+          .setNsInfo(PBHelper.convert(nsInfo));
+      if(nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
+
+      rpcProxy.format(NULL_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public NewEpochResponseProto newEpoch(String jid, NamespaceInfo nsInfo,
-      long epoch) throws IOException {
+  public NewEpochResponseProto newEpoch(String jid,
+                                        String nameServiceId,
+                                        NamespaceInfo nsInfo,
+                                        long epoch) throws IOException {
     try {
-      NewEpochRequestProto req = NewEpochRequestProto.newBuilder()
-        .setJid(convertJournalId(jid))
-        .setNsInfo(PBHelper.convert(nsInfo))
-        .setEpoch(epoch)
-        .build();
-      return rpcProxy.newEpoch(NULL_CONTROLLER, req);
+      NewEpochRequestProto.Builder req = NewEpochRequestProto.newBuilder()
+          .setJid(convertJournalId(jid))
+          .setNsInfo(PBHelper.convert(nsInfo))
+          .setEpoch(epoch);
+
+      if(nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
+
+      return rpcProxy.newEpoch(NULL_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -190,6 +209,9 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
         .setIpcSerialNumber(reqInfo.getIpcSerialNumber());
     if (reqInfo.hasCommittedTxId()) {
       builder.setCommittedTxId(reqInfo.getCommittedTxId());
+    }
+    if(reqInfo.getNameServiceId() != null) {
+      builder.setNameServiceId(reqInfo.getNameServiceId());
     }
     return builder.build();
   }
@@ -239,16 +261,21 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
 
   @Override
-  public GetEditLogManifestResponseProto getEditLogManifest(String jid,
-      long sinceTxId, boolean inProgressOk)
-      throws IOException {
+  public GetEditLogManifestResponseProto getEditLogManifest(
+      String jid, String nameServiceId,
+       long sinceTxId, boolean inProgressOk) throws IOException {
     try {
+      GetEditLogManifestRequestProto.Builder req;
+      req = GetEditLogManifestRequestProto.newBuilder()
+          .setJid(convertJournalId(jid))
+          .setSinceTxId(sinceTxId)
+          .setInProgressOk(inProgressOk);
+      if (nameServiceId !=null) {
+        req.setNameServiceId(nameServiceId);
+      }
       return rpcProxy.getEditLogManifest(NULL_CONTROLLER,
-          GetEditLogManifestRequestProto.newBuilder()
-            .setJid(convertJournalId(jid))
-            .setSinceTxId(sinceTxId)
-            .setInProgressOk(inProgressOk)
-            .build());
+          req.build()
+          );
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -292,10 +319,10 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   @Override
   public void doPreUpgrade(String jid) throws IOException {
     try {
-      rpcProxy.doPreUpgrade(NULL_CONTROLLER,
-          DoPreUpgradeRequestProto.newBuilder()
-            .setJid(convertJournalId(jid))
-            .build());
+      DoPreUpgradeRequestProto.Builder req;
+      req = DoPreUpgradeRequestProto.newBuilder()
+          .setJid(convertJournalId(jid));
+      rpcProxy.doPreUpgrade(NULL_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -315,29 +342,37 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
   
   @Override
-  public void doFinalize(String jid) throws IOException {
+  public void doFinalize(String jid, String nameServiceId) throws IOException {
     try {
-      rpcProxy.doFinalize(NULL_CONTROLLER,
-          DoFinalizeRequestProto.newBuilder()
-            .setJid(convertJournalId(jid))
-            .build());
+      DoFinalizeRequestProto.Builder req = DoFinalizeRequestProto
+          .newBuilder()
+          .setJid(convertJournalId(jid));
+      if (nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
+      rpcProxy.doFinalize(NULL_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public Boolean canRollBack(String journalId, StorageInfo storage,
-      StorageInfo prevStorage, int targetLayoutVersion) throws IOException {
+  public Boolean canRollBack(String journalId,
+                             String nameServiceId,
+                             StorageInfo storage,
+                             StorageInfo prevStorage,
+                             int targetLayoutVersion) throws IOException {
     try {
+      CanRollBackRequestProto.Builder req = CanRollBackRequestProto.newBuilder()
+          .setJid(convertJournalId(journalId))
+          .setStorage(PBHelper.convert(storage))
+          .setPrevStorage(PBHelper.convert(prevStorage))
+          .setTargetLayoutVersion(targetLayoutVersion);
+      if (nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
       CanRollBackResponseProto response = rpcProxy.canRollBack(
-          NULL_CONTROLLER,
-          CanRollBackRequestProto.newBuilder()
-            .setJid(convertJournalId(journalId))
-            .setStorage(PBHelper.convert(storage))
-            .setPrevStorage(PBHelper.convert(prevStorage))
-            .setTargetLayoutVersion(targetLayoutVersion)
-            .build());
+          NULL_CONTROLLER, req.build());
       return response.getCanRollBack();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
@@ -345,38 +380,53 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
 
   @Override
-  public void doRollback(String journalId) throws IOException {
+  public void doRollback(String journalId,
+                         String nameServiceId) throws IOException {
     try {
-      rpcProxy.doRollback(NULL_CONTROLLER,
-          DoRollbackRequestProto.newBuilder()
-            .setJid(convertJournalId(journalId))
-            .build());
+      DoRollbackRequestProto.Builder req = DoRollbackRequestProto.newBuilder()
+          .setJid(convertJournalId(journalId));
+
+      if (nameServiceId != null) {
+        req.setNameserviceId(nameServiceId);
+      }
+      rpcProxy.doRollback(NULL_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public void discardSegments(String journalId, long startTxId)
+  public void discardSegments(String journalId,
+                              String nameServiceId,
+                              long startTxId)
       throws IOException {
     try {
-      rpcProxy.discardSegments(NULL_CONTROLLER,
-          DiscardSegmentsRequestProto.newBuilder()
-            .setJid(convertJournalId(journalId)).setStartTxId(startTxId)
-            .build());
+      DiscardSegmentsRequestProto.Builder req = DiscardSegmentsRequestProto
+          .newBuilder()
+          .setJid(convertJournalId(journalId)).setStartTxId(startTxId);
+
+      if (nameServiceId != null) {
+        req.setNameServiceId(nameServiceId);
+      }
+      rpcProxy.discardSegments(NULL_CONTROLLER, req.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public Long getJournalCTime(String journalId) throws IOException {
+  public Long getJournalCTime(String journalId,
+                              String nameServiceId) throws IOException {
     try {
+
+      GetJournalCTimeRequestProto.Builder req = GetJournalCTimeRequestProto
+          .newBuilder()
+          .setJid(convertJournalId(journalId));
+      if(nameServiceId !=null) {
+        req.setNameServiceId(nameServiceId);
+      }
       GetJournalCTimeResponseProto response = rpcProxy.getJournalCTime(
-          NULL_CONTROLLER,
-          GetJournalCTimeRequestProto.newBuilder()
-            .setJid(convertJournalId(journalId))
-            .build());
+          NULL_CONTROLLER, req.build());
       return response.getResultCTime();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

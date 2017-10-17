@@ -71,9 +71,11 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
@@ -2650,22 +2652,6 @@ public class NativeAzureFileSystem extends FileSystem {
   public FileStatus getFileStatus(Path f) throws FileNotFoundException, IOException {
 
     LOG.debug("Getting the file status for {}", f.toString());
-
-    // Capture the absolute path and the path to key.
-    Path absolutePath = makeAbsolute(f);
-
-    if (!isRenamePendingFile(absolutePath)) {
-      Path ancestor = getAncestor(absolutePath);
-      if (ancestor.equals(absolutePath) && !ancestor.equals(new Path("/"))) {
-        performAuthCheck(ancestor.getParent(), WasbAuthorizationOperations.READ,
-            "getFileStatus", absolutePath);
-      }
-      else {
-        performAuthCheck(ancestor, WasbAuthorizationOperations.READ,
-            "getFileStatus", absolutePath);
-      }
-    }
-
     return getFileStatusInternal(f);
   }
 
@@ -2693,7 +2679,15 @@ public class NativeAzureFileSystem extends FileSystem {
     }
   }
 
-  protected FileStatus getFileStatusInternal(Path f) throws FileNotFoundException, IOException {
+  /**
+   * Inner implementation of {@link #getFileStatus(Path)}.
+   * Return a file status object that represents the path.
+   * @param f The path we want information from
+   * @return a FileStatus object
+   * @throws FileNotFoundException when the path does not exist
+   * @throws IOException Other failure
+   */
+  private FileStatus getFileStatusInternal(Path f) throws FileNotFoundException, IOException {
 
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
@@ -3704,6 +3698,41 @@ public class NativeAzureFileSystem extends FileSystem {
       return wasbDelegationTokenManager.getDelegationToken(renewer);
     } else {
       return super.getDelegationToken(renewer);
+    }
+  }
+
+  @Override
+  public void access(Path path, FsAction mode) throws IOException {
+    if (azureAuthorization && authorizer != null) {
+      try {
+        // Required to check the existence of the path.
+        getFileStatus(path);
+        switch (mode) {
+        case READ:
+        case READ_EXECUTE:
+          performAuthCheck(path, WasbAuthorizationOperations.READ, "access", path);
+          break;
+        case WRITE:
+        case WRITE_EXECUTE:
+          performAuthCheck(path, WasbAuthorizationOperations.WRITE, "access",
+              path);
+          break;
+        case READ_WRITE:
+        case ALL:
+          performAuthCheck(path, WasbAuthorizationOperations.READ, "access", path);
+          performAuthCheck(path, WasbAuthorizationOperations.WRITE, "access",
+              path);
+          break;
+        case EXECUTE:
+        case NONE:
+        default:
+          break;
+        }
+      } catch (WasbAuthorizationException wae){
+        throw new AccessControlException(wae);
+      }
+    } else {
+      super.access(path, mode);
     }
   }
 

@@ -4105,7 +4105,7 @@
 
 <property>
   <name>dfs.namenode.edits.asynclogging</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     If set to true, enables asynchronous edit logs in the Namenode.  If set
     to false, the Namenode uses the traditional synchronous edit logs.

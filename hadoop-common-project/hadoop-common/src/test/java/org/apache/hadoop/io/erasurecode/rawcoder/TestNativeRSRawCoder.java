@@ -118,4 +118,10 @@ public class TestNativeRSRawCoder extends TestRSRawCoderBase {
     prepare(null, 10, 4, new int[] {0}, new int[] {0});
     testCodingDoMixAndTwice();
   }
+
+  @Test
+  public void testAfterRelease63() throws Exception {
+    prepare(6, 3, null, null);
+    testAfterRelease();
+  }
 }

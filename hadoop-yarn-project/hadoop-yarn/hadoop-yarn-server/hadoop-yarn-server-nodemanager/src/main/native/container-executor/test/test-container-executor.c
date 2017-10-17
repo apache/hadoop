@@ -270,6 +270,8 @@ void test_delete_container() {
   char buffer[100000];
   sprintf(buffer, "mkdir -p %s/who/let/the/dogs/out/who/who", container_dir);
   run(buffer);
+  sprintf(buffer, "mknod %s/who/let/the/dogs/out/who/who/p p", container_dir);
+  run(buffer);
   sprintf(buffer, "touch %s", dont_touch);
   run(buffer);
 
@@ -287,8 +289,14 @@ void test_delete_container() {
   run(buffer);
   sprintf(buffer, "chmod 000 %s/who/let/protect", container_dir);
   run(buffer);
+  // create a no execute permission directory
+  sprintf(buffer, "chmod 600 %s/who/let/the", container_dir);
+  run(buffer);
   // create a no permission directory
   sprintf(buffer, "chmod 000 %s/who/let", container_dir);
+  run(buffer);
+  // create a no write permission directory
+  sprintf(buffer, "chmod 500 %s/who", container_dir);
   run(buffer);
 
   // delete container directory

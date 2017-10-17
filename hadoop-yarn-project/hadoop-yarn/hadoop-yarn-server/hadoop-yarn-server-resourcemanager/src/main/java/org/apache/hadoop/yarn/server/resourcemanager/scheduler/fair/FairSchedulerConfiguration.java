@@ -29,8 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -313,11 +313,13 @@ public class FairSchedulerConfiguration extends Configuration {
 
   private static double[] getResourcePercentage(
       String val) throws AllocationConfigurationException {
-    double[] resourcePercentage = new double[ResourceType.values().length];
+    int numberOfKnownResourceTypes = ResourceUtils
+        .getNumberOfKnownResourceTypes();
+    double[] resourcePercentage = new double[numberOfKnownResourceTypes];
     String[] strings = val.split(",");
     if (strings.length == 1) {
       double percentage = findPercentage(strings[0], "");
-      for (int i = 0; i < ResourceType.values().length; i++) {
+      for (int i = 0; i < numberOfKnownResourceTypes; i++) {
         resourcePercentage[i] = percentage/100;
       }
     } else {

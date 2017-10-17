@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.*;
-import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,6 +66,8 @@ public class RecoverPausedContainerLaunch extends ContainerLaunch {
         containerId.getApplicationAttemptId().getApplicationId().toString();
     String containerIdStr = containerId.toString();
 
+    dispatcher.getEventHandler().handle(new ContainerEvent(containerId,
+        ContainerEventType.RECOVER_PAUSED_CONTAINER));
     boolean notInterrupted = true;
     try {
       File pidFile = locatePidFile(appIdStr, containerIdStr);
@@ -73,16 +75,17 @@ public class RecoverPausedContainerLaunch extends ContainerLaunch {
         String pidPathStr = pidFile.getPath();
         pidFilePath = new Path(pidPathStr);
         exec.activateContainer(containerId, pidFilePath);
-        exec.signalContainer(new ContainerSignalContext.Builder()
-            .setContainer(container)
-            .setUser(container.getUser())
-            .setSignal(ContainerExecutor.Signal.KILL)
-            .build());
+        retCode = exec.reacquireContainer(
+            new ContainerReacquisitionContext.Builder()
+                .setContainer(container)
+                .setUser(container.getUser())
+                .setContainerId(containerId)
+                .build());
       } else {
         LOG.warn("Unable to locate pid file for container " + containerIdStr);
       }
 
-    } catch (InterruptedIOException e) {
+    } catch (InterruptedException | InterruptedIOException e) {
       LOG.warn("Interrupted while waiting for exit code from " + containerId);
       notInterrupted = false;
     } catch (IOException e) {
@@ -100,14 +103,21 @@ public class RecoverPausedContainerLaunch extends ContainerLaunch {
       }
     }
 
-    LOG.warn("Recovered container exited with a non-zero exit code "
-        + retCode);
-    this.dispatcher.getEventHandler().handle(new ContainerExitEvent(
-        containerId,
-        ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, retCode,
-        "Container exited with a non-zero exit code " + retCode));
+    if (retCode != 0) {
+      LOG.warn("Recovered container exited with a non-zero exit code "
+          + retCode);
+      this.dispatcher.getEventHandler().handle(new ContainerExitEvent(
+          containerId,
+          ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, retCode,
+          "Container exited with a non-zero exit code " + retCode));
+      return retCode;
+    }
 
-    return retCode;
+    LOG.info("Recovered container " + containerId + " succeeded");
+    dispatcher.getEventHandler().handle(
+        new ContainerEvent(containerId,
+            ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
+    return 0;
   }
 
   private File locatePidFile(String appIdStr, String containerIdStr) {
