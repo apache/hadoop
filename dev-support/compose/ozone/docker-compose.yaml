@@ -17,7 +17,7 @@
 version: "3"
 services:
    namenode:
-      image: flokkr/hadoop-runner:latest
+      image: elek/hadoop-runner:latest
       hostname: namenode
       volumes:
          - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
@@ -30,14 +30,14 @@ services:
          - ./docker-config
       command: ["/opt/hadoop/bin/hdfs","namenode"]
    datanode:
-      image: flokkr/hadoop-runner:latest
+      image: elek/hadoop-runner:latest
       volumes:
         - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
       ports:
         - 9864
       command: ["/opt/hadoop/bin/hdfs","datanode"]
    ksm:
-      image: flokkr/hadoop-runner:latest
+      image: elek/hadoop-runner:latest
       volumes:
          - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
       ports:
@@ -46,7 +46,7 @@ services:
           - ./docker-config
       command: ["/opt/hadoop/bin/hdfs","ksm"]
    scm:
-      image: flokkr/hadoop-runner:latest
+      image: elek/hadoop-runner:latest
       volumes:
          - ../../../hadoop-dist/target/hadoop-${VERSION}:/opt/hadoop
       ports:
