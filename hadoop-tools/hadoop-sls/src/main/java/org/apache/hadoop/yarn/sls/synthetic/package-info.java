@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.sls.scheduler;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-
-@Private
-@Unstable
-public interface SchedulerWrapper {
-  SchedulerMetrics getSchedulerMetrics();
-
-  Tracker getTracker();
-
-  String getRealQueueName(String queue) throws YarnException;
-}
+/**
+ * Classes comprising the synthetic load generator for SLS.
+ */
+package org.apache.hadoop.yarn.sls.synthetic;

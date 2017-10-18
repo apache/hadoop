@@ -25,11 +25,11 @@
   <!-- Nodes configuration -->
   <property>
     <name>yarn.sls.nm.memory.mb</name>
-    <value>10240</value>
+    <value>100240</value>
   </property>
   <property>
     <name>yarn.sls.nm.vcores</name>
-    <value>10</value>
+    <value>100</value>
   </property>
   <property>
     <name>yarn.sls.nm.heartbeat.interval.ms</name>
@@ -77,5 +77,5 @@
     <name>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</name>
     <value>org.apache.hadoop.yarn.sls.scheduler.CapacitySchedulerMetrics</value>
   </property>
-  
+
 </configuration>

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.sls.web;
 
 import org.junit.Assert;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.junit.Test;
 
 import java.io.File;
@@ -28,6 +27,7 @@ import java.text.MessageFormat;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
 
 public class TestSLSWebApp {
 
@@ -36,20 +36,21 @@ public class TestSLSWebApp {
     String simulateInfoTemplate = FileUtils.readFileToString(
             new File("src/main/html/simulate.info.html.template"));
 
-    SLSRunner.simulateInfoMap.put("Number of racks", 10);
-    SLSRunner.simulateInfoMap.put("Number of nodes", 100);
-    SLSRunner.simulateInfoMap.put("Node memory (MB)", 1024);
-    SLSRunner.simulateInfoMap.put("Node VCores", 1);
-    SLSRunner.simulateInfoMap.put("Number of applications", 100);
-    SLSRunner.simulateInfoMap.put("Number of tasks", 1000);
-    SLSRunner.simulateInfoMap.put("Average tasks per applicaion", 10);
-    SLSRunner.simulateInfoMap.put("Number of queues", 4);
-    SLSRunner.simulateInfoMap.put("Average applications per queue", 25);
-    SLSRunner.simulateInfoMap.put("Estimated simulate time (s)", 10000);
+    Map<String, Object> simulateInfoMap = new HashMap<>();
+    simulateInfoMap.put("Number of racks", 10);
+    simulateInfoMap.put("Number of nodes", 100);
+    simulateInfoMap.put("Node memory (MB)", 1024);
+    simulateInfoMap.put("Node VCores", 1);
+    simulateInfoMap.put("Number of applications", 100);
+    simulateInfoMap.put("Number of tasks", 1000);
+    simulateInfoMap.put("Average tasks per applicaion", 10);
+    simulateInfoMap.put("Number of queues", 4);
+    simulateInfoMap.put("Average applications per queue", 25);
+    simulateInfoMap.put("Estimated simulate time (s)", 10000);
 
     StringBuilder info = new StringBuilder();
     for (Map.Entry<String, Object> entry :
-            SLSRunner.simulateInfoMap.entrySet()) {
+        simulateInfoMap.entrySet()) {
       info.append("<tr>");
       info.append("<td class='td1'>" + entry.getKey() + "</td>");
       info.append("<td class='td2'>" + entry.getValue() + "</td>");
@@ -60,8 +61,7 @@ public class TestSLSWebApp {
             MessageFormat.format(simulateInfoTemplate, info.toString());
     Assert.assertTrue("The simulate info html page should not be empty",
             simulateInfo.length() > 0);
-    for (Map.Entry<String, Object> entry :
-            SLSRunner.simulateInfoMap.entrySet()) {
+    for (Map.Entry<String, Object> entry : simulateInfoMap.entrySet()) {
       Assert.assertTrue("The simulate info html page should have information "
               + "of " + entry.getKey(), simulateInfo.contains("<td class='td1'>"
               + entry.getKey() + "</td><td class='td2'>"

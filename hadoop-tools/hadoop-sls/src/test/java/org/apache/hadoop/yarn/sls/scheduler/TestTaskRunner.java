@@ -35,7 +35,7 @@ public class TestTaskRunner {
   }
 
   @After
-  public void cleanUp() {
+  public void cleanUp() throws InterruptedException {
     runner.stop();
   }
 

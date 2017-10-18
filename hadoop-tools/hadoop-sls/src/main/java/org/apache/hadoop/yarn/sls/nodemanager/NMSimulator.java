@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.sls.nodemanager;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

@@ -15,18 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.sls.scheduler;
+package org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 
-@Private
-@Unstable
-public interface SchedulerWrapper {
-  SchedulerMetrics getSchedulerMetrics();
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-  Tracker getTracker();
+/**
+ * This exception represents the violation of an internal invariant.
+ */
+public class InvariantViolationException extends YarnRuntimeException {
 
-  String getRealQueueName(String queue) throws YarnException;
+  public InvariantViolationException(String s) {
+    super(s);
+  }
+
+  public InvariantViolationException(String s, Exception e) {
+    super(s, e);
+  }
 }

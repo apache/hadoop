@@ -19,14 +19,28 @@ package org.apache.hadoop.yarn.sls.scheduler;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.exceptions.YarnException;
+
+import java.util.Set;
 
 @Private
 @Unstable
-public interface SchedulerWrapper {
-  SchedulerMetrics getSchedulerMetrics();
+public class Tracker {
+  private Set<String> queueSet;
+  private Set<String> trackedAppSet;
 
-  Tracker getTracker();
+  public void setQueueSet(Set<String> queues) {
+    queueSet = queues;
+  }
 
-  String getRealQueueName(String queue) throws YarnException;
+  public Set<String> getQueueSet() {
+    return queueSet;
+  }
+
+  public void setTrackedAppSet(Set<String> apps) {
+    trackedAppSet = apps;
+  }
+
+  public Set<String> getTrackedAppSet() {
+    return trackedAppSet;
+  }
 }
