@@ -212,7 +212,8 @@ public class Client implements AutoCloseable {
    * @param conf Configuration
    * @param pingInterval the ping interval
    */
-  static final void setPingInterval(Configuration conf, int pingInterval) {
+  public static final void setPingInterval(Configuration conf,
+      int pingInterval) {
     conf.setInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY, pingInterval);
   }
 
@@ -223,7 +224,7 @@ public class Client implements AutoCloseable {
    * @param conf Configuration
    * @return the ping interval
    */
-  static final int getPingInterval(Configuration conf) {
+  public static final int getPingInterval(Configuration conf) {
     return conf.getInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
         CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
   }
