@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.sls.conf;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.Resource;
 
 @Private
 @Unstable
@@ -62,6 +64,14 @@ public class SLSConfiguration {
   public static final int AM_HEARTBEAT_INTERVAL_MS_DEFAULT = 1000;
   public static final String AM_TYPE = AM_PREFIX + "type.";
 
+  public static final String AM_CONTAINER_MEMORY = AM_PREFIX +
+      "container.memory";
+  public static final int AM_CONTAINER_MEMORY_DEFAULT = 1024;
+
+  public static final String AM_CONTAINER_VCORES = AM_PREFIX +
+      "container.vcores";
+  public static final int AM_CONTAINER_VCORES_DEFAULT = 1;
+
   // container
   public static final String CONTAINER_PREFIX = PREFIX + "container.";
   public static final String CONTAINER_MEMORY_MB = CONTAINER_PREFIX
@@ -70,4 +80,9 @@ public class SLSConfiguration {
   public static final String CONTAINER_VCORES = CONTAINER_PREFIX + "vcores";
   public static final int CONTAINER_VCORES_DEFAULT = 1;
 
+  public static Resource getAMContainerResource(Configuration conf) {
+    return Resource.newInstance(
+        conf.getLong(AM_CONTAINER_MEMORY, AM_CONTAINER_MEMORY_DEFAULT),
+        conf.getInt(AM_CONTAINER_VCORES, AM_CONTAINER_VCORES_DEFAULT));
+  }
 }

@@ -340,6 +340,7 @@
             <exclude>src/test/resources/submit-reservation.json</exclude>
             <exclude>src/test/resources/delete-reservation.json</exclude>
             <exclude>src/test/resources/update-reservation.json</exclude>
+            <exclude>src/test/resources/invariants.txt</exclude>
           </excludes>
         </configuration>
       </plugin>

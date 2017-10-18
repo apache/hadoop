@@ -16,7 +16,9 @@
 ###############################################################################
 printUsage() {
   echo "Usage: slsrun.sh <OPTIONS>"
-  echo "                 --input-rumen|--input-sls=<FILE1,FILE2,...>"
+  echo "                 --tracetype=<SYNTH | SLS | RUMEN>"
+  echo "                 --tracelocation=<FILE1,FILE2,...>"
+  echo "                 (deprecated --input-rumen=<FILE1,FILE2,...>  | --input-sls=<FILE1,FILE2,...>)"
   echo "                 --output-dir=<SLS_SIMULATION_OUTPUT_DIRECTORY>"
   echo "                 [--nodes=<SLS_NODES_FILE>]"
   echo "                 [--track-jobs=<JOBID1,JOBID2,...>]"
@@ -28,6 +30,12 @@ parseArgs() {
   for i in $*
   do
     case $i in
+    --tracetype=*)
+      tracetype=${i#*=}
+      ;;
+    --tracelocation=*)
+      tracelocation=${i#*=}
+      ;;
     --input-rumen=*)
       inputrumen=${i#*=}
       ;;
@@ -55,8 +63,8 @@ parseArgs() {
     esac
   done
 
-  if [[ "${inputrumen}" == "" && "${inputsls}" == "" ]] ; then
-    echo "Either --input-rumen or --input-sls must be specified"
+  if [[ "${inputrumen}" == "" && "${inputsls}" == "" && "${tracetype}" == "" ]] ; then
+    echo "Either --input-rumen or --input-sls or --tracetype must be specified"
     echo
     printUsage
     exit 1
@@ -82,10 +90,21 @@ calculateClasspath() {
 }
 ###############################################################################
 runSimulation() {
-  if [[ "${inputsls}" == "" ]] ; then
-    args="-inputrumen ${inputrumen}"
-  else
+  if [[ "${tracetype}" != "" ]] ; then
+    args="${args} -tracetype ${tracetype}"
+    args="${args} -tracelocation ${tracelocation}"
+  fi
+
+  if [[ "${nodes}" != "" ]] ; then
+    args="${args} -nodes ${nodes}"
+  fi
+
+  if [[ "${inputsls}" != "" ]] ; then
     args="-inputsls ${inputsls}"
+  fi
+
+  if [[ "${inputrumen}" != "" ]] ; then
+    args="-inputrumen ${inputrumen}"
   fi
 
   args="${args} -output ${outputdir}"
