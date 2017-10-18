@@ -481,13 +481,13 @@ public class TestNameNodeProvidedImplementation {
       assertEquals(providedDatanode2.getDatanodeUuid(),
           dnInfos[0].getDatanodeUuid());
 
-      //stop the 2nd provided datanode
-      cluster.stopDataNode(1);
+      // stop the 2nd provided datanode
+      MiniDFSCluster.DataNodeProperties providedDNProperties2 =
+          cluster.stopDataNode(0);
       // make NameNode detect that datanode is down
       BlockManagerTestUtil.noticeDeadDatanode(
           cluster.getNameNode(),
           providedDatanode2.getDatanodeId().getXferAddr());
-
       getAndCheckBlockLocations(client, filename, 0);
 
       //restart the provided datanode
