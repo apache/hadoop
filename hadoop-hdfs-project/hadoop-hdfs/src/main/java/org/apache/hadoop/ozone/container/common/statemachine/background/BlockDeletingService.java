@@ -201,7 +201,7 @@ public class BlockDeletingService extends BackgroundService{
             File chunkFile = dataDir.toPath()
                 .resolve(chunkInfo.getChunkName()).toFile();
             if (FileUtils.deleteQuietly(chunkFile)) {
-              LOG.info("block {} chunk {} deleted", blockName,
+              LOG.debug("block {} chunk {} deleted", blockName,
                   chunkFile.getAbsolutePath());
             }
           }
