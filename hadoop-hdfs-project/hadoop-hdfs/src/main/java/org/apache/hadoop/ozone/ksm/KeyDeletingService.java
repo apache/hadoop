@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.BackgroundTask;
 import org.apache.hadoop.utils.BackgroundTaskQueue;
@@ -91,6 +92,7 @@ public class KeyDeletingService extends BackgroundService {
     @Override
     public BackgroundTaskResult call() throws Exception {
       try {
+        long startTime = Time.monotonicNow();
         List<BlockGroup> keyBlocksList = manager
             .getPendingDeletionKeys(keyLimitPerTask);
         if (keyBlocksList.size() > 0) {
@@ -102,7 +104,7 @@ public class KeyDeletingService extends BackgroundService {
               try {
                 // Purge key from KSM DB.
                 manager.deletePendingDeletionKey(result.getObjectKey());
-                LOG.info("Key {} deleted from KSM DB", result.getObjectKey());
+                LOG.debug("Key {} deleted from KSM DB", result.getObjectKey());
               } catch (IOException e) {
                 // if a pending deletion key is failed to delete,
                 // print a warning here and retain it in this state,
@@ -118,6 +120,13 @@ public class KeyDeletingService extends BackgroundService {
                   String.join(",", result.getFailedBlocks()));
             }
           }
+
+          if (!results.isEmpty()) {
+            LOG.info("Number of key deleted from KSM DB: {},"
+                + " task elapsed time: {}ms",
+                results.size(), Time.monotonicNow() - startTime);
+          }
+
           return results::size;
         } else {
           LOG.debug("No pending deletion key found in KSM");
