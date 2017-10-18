@@ -296,11 +296,12 @@ of the output. Which comes from either a consistent store *or* adding a "suffici
 delay between queries for the listing to stabilize.
 
 
-## Switching to an S3 Committer
+## Switching to a S3Guard Committer
 
-The choice of which committer a job will use for writing data in `FileOutputFormat`
-classes is set in the configuration option `mapreduce.pathoutputcommitter.factory.class`.
-This declares a the classname of a class which creates committers for jobs and tasks.
+A choice of which committer a job will use for writing data to S3A
+is set in the property `mapreduce.outputcommitter.factory.scheme.s3a`
+This declares a the classname of a factory class which creates committers for jobs and tasks.
+
 
 
 | factory | description |
@@ -374,6 +375,7 @@ using Hive's partitioning strategy: different levels of the tree represent diffe
 
 For example, log data could be partitioned by `YEAR` and then by `MONTH`, with different
 entries underneath.
+
 ```
 logs/YEAR=2017/MONTH=01/
   log-20170101.avro
@@ -389,7 +391,6 @@ logs/YEAR=2017/MONTH=02/
 
 logs/YEAR=2017/MONTH=03/
 logs/YEAR=2017/MONTH=04/
-...
 ```
 
 A partitioned structure like this allows for queries using Hive or Spark to filter out
@@ -414,8 +415,6 @@ the job would fail. With a policy of `replace`, then entire directory
 `logs/YEAR=2017/MONTH=02/` would be deleted before the new file `log-20170228.avro`
 was written. With the policy of `append`, the new file would be added to 
 the existing set of files.
-
-
 
 
 ### Notes

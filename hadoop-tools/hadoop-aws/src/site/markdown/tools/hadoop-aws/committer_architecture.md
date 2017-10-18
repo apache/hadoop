@@ -549,7 +549,6 @@ are defined for different filesystems: the new committer can be defined for
 the final destination FS, while `file://` can retain the default
 `FileOutputCommitter`.
 
-  
 ### Task Setup
 
 `Task.initialize()`: read in the configuration, instantate the `JobContextImpl`
@@ -583,7 +582,7 @@ if (committer.needsTaskCommit(taskContext)) {
     try {
       committer.abortTask(taskContext);
     } catch (IOException ioe)  {
-      LOG.warn("Failure cleaning up: " + 
+      LOG.warn("Failure cleaning up: " +
                StringUtils.stringifyException(ioe));
     }
     throw iee;
@@ -593,11 +592,11 @@ if (committer.needsTaskCommit(taskContext)) {
 
 That is: if and only if there is data to write, the Task requests clearance
 to do so from the AM. This ensures that speculative work is not committed if
-another task has written it, *and that even non-speculative work is not committed 
+another task has written it, *and that even non-speculative work is not committed
 if the task has lost contact with the AM*.
 
 That is: task output is not committed if the Job's AM has failed or
-is in a separate network partition from the Task. 
+is in a separate network partition from the Task.
 
 If permission is granted, the commit call is invoked.
 If this doesn't work, `abortTask()` is called; all
@@ -776,7 +775,7 @@ The AM may call the `OutputCommitter.taskAbort()` with a task attempt context,
 when handling the failure/loss of a container. That is: on container failure,
 the task abort operation is executed in the AM, using the AM's committer.
 This avoids the need to create a new container, and means that the "best-effort"
-task abort does cope with container failures. 
+task abort does cope with container failures.
 
 A partition between the AM and the task container means that this AM-executed
 task abort may take place while a task in the partitioned container is still
@@ -1150,16 +1149,9 @@ a path, e.g. `--has-pending <path>`, `--list-pending <path>`, `--abort-pending <
 
 
 
-
-
-
 ## The "Magic" Committer
 
-Development on this committer was developed before Netflix donated their committer.
-
-Work has since focused on the staging committer, certainly for an initial release.
-Ignoring the changes to the output stream and "magic" path handling, the
-actual committer code is now refactored to have a lot of code in common.
+Development on this committer began before Netflix donated their committer.
 
 By making changes to the `S3AFileSystem` and the `S3ABlockOutputStream`, this committer
 manages to postpone the completion of writes of all files written to special
@@ -1167,9 +1159,17 @@ manages to postpone the completion of writes of all files written to special
 that of the final job destination. When the job is committed, the pending
 writes are instantiated.
 
+With the addition of the Netflix Staging committer, the actual committer
+code now shares common formats for the persistent metadadata and shared routines
+for parallel committing of work, including all the error handling based on
+the Netflix experience.
+
+It differs in that it directly streams data to S3 (there is no staging),
+and it also stores the lists of pending commits in S3 too. That mandates
+consistent metadata on S3, which S3Guard provides.
 
 
-# Core feature: A new/modified output stream for delayed PUT commits
+### Core concept: A new/modified output stream for delayed PUT commits
 
 
 This algorithm uses a modified `S3ABlockOutputStream`  Output stream, which, rather
@@ -1185,7 +1185,7 @@ to complete (including any final block submitted), and then builds and PUTs
 the final multipart commit operation. The list of parts (and their ordering)
 has been built up during the opt
 
-In contrast, when writing to a delayed-commit file
+In contrast, when writing to a delayed-commit file:
 
 1. A multipart write MUST always be initiated, even for small writes. This write
 MAY be initiated during the creation of the stream.
@@ -1716,7 +1716,7 @@ directory on the job commit, so is *very* expensive, and not something which
 we recommend when working with S3.
 
 
-To use a s3guard committer, it must also be identified as the parquet committer.
+To use a S3Guard committer, it must also be identified as the Parquet committer.
 The fact that instances are dynamically instantiated somewhat complicates the process.
 
 In early tests; we can switch committers for ORC output without making any changes
@@ -1725,12 +1725,42 @@ for Path output committers.  For Parquet support, it may be sufficient to also d
 the classname of the specific committer (i.e not the factory).
 
 This is unfortunate as it complicates dynamically selecting a committer protocol
-based on the destination filesystem type or any per-bucket configuration. Some
-possible solutions are
-
-* Have a dynamic output committer which relays to another `PathOutputCommitter`;
-it chooses the actual committer by way of the new factory mechanism.
-* Add a new spark output committer.
+based on the destination filesystem type or any per-bucket configuration. 
 
 
-The short term solution of a dynamic wrapper committer could postpone the need for this.
+
+The solution as implemented in the [initial prototype](https://github.com/hortonworks-spark/cloud-integration)
+consists of two things
+
+1. A class `PathOutputCommitProtocol extends HadoopMapReduceCommitProtocol`
+which always creates the committer using the `PathOutputCommitterFactory` 
+mechanism. This ensures that output format's own committers are replaced
+with an output factory mechanism.
+
+1. A class `org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter`
+which is a directly instantiable output committer that then creates a 
+committer through the factory mechanism and delegates all operations to
+that committer. This allows a committer to be declared in any configuration
+option which takes a committer class, but still use the factory mechanism
+underneath.
+
+1. Add a patch to Spark 2.3 [SPARK-21762], which allows any output committer
+to be used for ParquetFileOutput. 
+
+Overall, its a bit convoluted to implement, document and use. Users must
+declare two spark SQL options as well as three spark.hadoop ones
+
+```
+spark.sql.sources.commitProtocolClass=com.hortonworks.spark.cloud.commit.PathOutputCommitProtocol
+spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.DynamicCommitterFactory
+spark.hadoop.fs.s3a.committer.committer.name=magic
+spark.hadoop.fs.s3a.committer.magic.enabled=true
+```
+
+We could actually simplify this by adding a new algorithm "3" to the existing
+FileOutputFormat, telling FileOutputFormat itself to use the factory
+to create committers. This would then automatically pick up the factory 
+Avoiding loops in this situation would be "challenging": If instantiated
+via a factory, the file committer must not attempt to use the factory
+itself.

@@ -222,6 +222,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     setUri(name);
     // get the host; this is guaranteed to be non-null, non-empty
     bucket = name.getHost();
+    LOG.debug("Initializing S3AFileSystem for {}", bucket);
     // clone the configuration into one with propagated bucket options
     Configuration conf = propagateBucketOptions(originalConf, bucket);
     patchSecurityCredentialProviders(conf);
@@ -241,8 +242,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
           S3ClientFactory.class);
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
           .createS3Client(name);
-      invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry
-      );
+      invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
@@ -297,10 +297,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       serverSideEncryptionAlgorithm = getEncryptionAlgorithm(conf);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
+      LOG.debug("Input fadvise policy = {}", inputPolicy);
       boolean magicCommitterEnabled = conf.getBoolean(
           CommitConstants.MAGIC_COMMITTER_ENABLED,
           CommitConstants.DEFAULT_MAGIC_COMMITTER_ENABLED);
-      LOG.debug("Magic committer {} enabled",
+      LOG.debug("Filesystem support for magic committers {} enabled",
           magicCommitterEnabled ? "is" : "is not");
       committerIntegration = new MagicCommitIntegration(
           this, magicCommitterEnabled);
@@ -676,7 +677,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
 
-    LOG.debug("Opening '{}' for reading.", f);
+    LOG.debug("Opening '{}' for reading; input policy = {}", f, inputPolicy);
     final FileStatus fileStatus = getFileStatus(f);
     if (fileStatus.isDirectory()) {
       throw new FileNotFoundException("Can't open " + f

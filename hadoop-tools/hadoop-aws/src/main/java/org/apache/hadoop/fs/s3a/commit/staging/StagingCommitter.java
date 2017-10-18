@@ -653,7 +653,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
       // This could be made more efficient with a probe "hasChildren(Path)"
       // which returns true if there is >1 entry under a given path.
       FileStatus[] stats = fs.listStatus(attemptPath);
-      LOG.debug("{} files to commit", stats.length);
+      LOG.debug("{} files to commit under {}", stats.length, attemptPath);
       return stats.length > 0;
     } catch (FileNotFoundException e) {
       // list didn't find a directory, so nothing to commit
@@ -727,7 +727,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
               Path path = stat.getPath();
               File localFile = new File(path.toUri().getPath());
               String relative = Paths.getRelativePath(attemptPath, path);
-              // TODO: Why isn't this being used?
               String partition = Paths.getPartition(relative);
               String key = getFinalKey(relative, context);
               Path destPath = getDestS3AFS().keyToQualifiedPath(key);
