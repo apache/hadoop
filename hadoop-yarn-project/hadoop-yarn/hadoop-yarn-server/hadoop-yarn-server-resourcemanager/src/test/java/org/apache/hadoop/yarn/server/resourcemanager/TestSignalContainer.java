@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -50,6 +51,10 @@ public class TestSignalContainer {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM();
+    FairScheduler fs = null;
+    if (rm.getResourceScheduler().getClass() == FairScheduler.class) {
+      fs = (FairScheduler)rm.getResourceScheduler();
+    }
     rm.start();
 
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
@@ -78,6 +83,9 @@ public class TestSignalContainer {
       List<Container> allocation = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers();
       conts.addAll(allocation);
+      if (fs != null) {
+        nm1.nodeHeartbeat(true);
+      }
     }
     Assert.assertEquals(request, conts.size());
 
