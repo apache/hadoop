@@ -301,8 +301,6 @@ public class TestAppManager{
   @Test
   public void testQueueSubmitWithNoPermission() throws IOException {
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_SCHEDULER,
-        CapacityScheduler.class.getCanonicalName());
     conf.set(PREFIX + "root.acl_submit_applications", " ");
     conf.set(PREFIX + "root.acl_administer_queue", " ");
 
