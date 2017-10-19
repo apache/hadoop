@@ -2328,6 +2328,14 @@
     key will be dropped. Default = 12hrs
   </description>
 </property>
+<property>
+  <name>hadoop.security.kms.client.timeout</name>
+  <value>60</value>
+  <description>
+    Sets value for KMS client connection timeout, and the read timeout
+    to KMS servers.
+  </description>
+</property>
 
 <property>
   <name>hadoop.security.kms.client.failover.sleep.base.millis</name>

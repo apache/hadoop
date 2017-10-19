@@ -120,10 +120,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
   private static final String CONFIG_PREFIX = "hadoop.security.kms.client.";
 
-  /* It's possible to specify a timeout, in seconds, in the config file */
-  public static final String TIMEOUT_ATTR = CONFIG_PREFIX + "timeout";
-  public static final int DEFAULT_TIMEOUT = 60;
-
   /* Number of times to retry authentication in the event of auth failure
    * (normally happens due to stale authToken) 
    */
@@ -358,7 +354,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         throw new IOException(ex);
       }
     }
-    int timeout = conf.getInt(TIMEOUT_ATTR, DEFAULT_TIMEOUT);
+    int timeout = conf.getInt(
+            CommonConfigurationKeysPublic.KMS_CLIENT_TIMEOUT_SECONDS,
+            CommonConfigurationKeysPublic.KMS_CLIENT_TIMEOUT_DEFAULT);
     authRetry = conf.getInt(AUTH_RETRY, DEFAULT_AUTH_RETRY);
     configurator = new TimeoutConnConfigurator(timeout, sslFactory);
     encKeyVersionQueue =
