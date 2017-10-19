@@ -17,7 +17,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <sstream>
+#include <vector>
 
 extern "C" {
 #include "util.h"
@@ -134,5 +134,40 @@ namespace ContainerExecutor {
     trimmed = trim("foo");
     ASSERT_STREQ("foo", trimmed);
     free(trimmed);
+  }
+
+  TEST_F(TestUtil, test_escape_single_quote) {
+    std::vector<std::pair<std::string, std::string> > input_output_vec;
+    input_output_vec.push_back(std::make_pair<std::string, std::string>("'abcd'", "'\"'\"'abcd'\"'\"'"));
+    input_output_vec.push_back(std::make_pair<std::string, std::string>("'", "'\"'\"'"));
+
+    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
+    for (itr = input_output_vec.begin(); itr != input_output_vec.end(); ++itr) {
+      char *ret = escape_single_quote(itr->first.c_str());
+      ASSERT_STREQ(itr->second.c_str(), ret);
+      free(ret);
+    }
+  }
+
+  TEST_F(TestUtil, test_quote_and_append_arg) {
+
+    char *tmp = static_cast<char *>(malloc(4096));
+    size_t tmp_size = 4096;
+
+    memset(tmp, 0, tmp_size);
+    quote_and_append_arg(&tmp, &tmp_size, "param=", "argument1");
+    ASSERT_STREQ("param='argument1' ", tmp);
+
+    memset(tmp, 0, tmp_size);
+    quote_and_append_arg(&tmp, &tmp_size, "param=", "ab'cd");
+    ASSERT_STREQ("param='ab'\"'\"'cd' ", tmp);
+    free(tmp);
+
+    tmp = static_cast<char *>(malloc(4));
+    tmp_size = 4;
+    memset(tmp, 0, tmp_size);
+    quote_and_append_arg(&tmp, &tmp_size, "param=", "argument1");
+    ASSERT_STREQ("param='argument1' ", tmp);
+    ASSERT_EQ(1040, tmp_size);
   }
 }

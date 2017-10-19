@@ -118,8 +118,10 @@ public class TestDockerCommandExecutor {
     assertEquals(1, ops.size());
     assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
         ops.get(0).getOperationType().name());
-    assertEquals(1, dockerCommands.size());
-    assertEquals("rm " + MOCK_CONTAINER_ID, dockerCommands.get(0));
+    assertEquals(3, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=rm", dockerCommands.get(1));
+    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(2));
   }
 
   @Test
@@ -134,8 +136,10 @@ public class TestDockerCommandExecutor {
     assertEquals(1, ops.size());
     assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
         ops.get(0).getOperationType().name());
-    assertEquals(1, dockerCommands.size());
-    assertEquals("stop " + MOCK_CONTAINER_ID, dockerCommands.get(0));
+    assertEquals(3, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=stop", dockerCommands.get(1));
+    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(2));
   }
 
   @Test
@@ -151,9 +155,12 @@ public class TestDockerCommandExecutor {
     assertEquals(1, ops.size());
     assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
         ops.get(0).getOperationType().name());
-    assertEquals(1, dockerCommands.size());
-    assertEquals("inspect --format='{{.State.Status}}' " + MOCK_CONTAINER_ID,
-        dockerCommands.get(0));
+    assertEquals(4, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=inspect", dockerCommands.get(1));
+    assertEquals("  format={{.State.Status}}", dockerCommands.get(2));
+    assertEquals("  name=" + MOCK_CONTAINER_ID, dockerCommands.get(3));
+
   }
 
   @Test
@@ -169,8 +176,10 @@ public class TestDockerCommandExecutor {
     assertEquals(1, ops.size());
     assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
         ops.get(0).getOperationType().name());
-    assertEquals(1, dockerCommands.size());
-    assertEquals("pull " + MOCK_IMAGE_NAME, dockerCommands.get(0));
+    assertEquals(3, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=pull", dockerCommands.get(1));
+    assertEquals("  image=" + MOCK_IMAGE_NAME, dockerCommands.get(2));
   }
 
   @Test
@@ -186,8 +195,12 @@ public class TestDockerCommandExecutor {
     assertEquals(1, ops.size());
     assertEquals(PrivilegedOperation.OperationType.RUN_DOCKER_CMD.name(),
         ops.get(0).getOperationType().name());
-    assertEquals(1, dockerCommands.size());
-    assertEquals("load --i=" + MOCK_LOCAL_IMAGE_NAME, dockerCommands.get(0));
+    assertEquals(3, dockerCommands.size());
+    assertEquals("[docker-command-execution]", dockerCommands.get(0));
+    assertEquals("  docker-command=load", dockerCommands.get(1));
+    assertEquals("  image=" + MOCK_LOCAL_IMAGE_NAME, dockerCommands.get(2));
+
+
   }
 
   @Test
