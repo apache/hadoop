@@ -138,7 +138,7 @@ public class TestLeaseManager {
     Lease<DummyResource> leaseThree = manager.acquire(resourceThree);
     Assert.assertEquals(leaseThree, manager.get(resourceThree));
     Assert.assertFalse(leaseThree.hasExpired());
-    long sleepTime = leaseThree.getRemainingTime() + 5;
+    long sleepTime = leaseThree.getRemainingTime() + 1000;
     try {
       Thread.sleep(sleepTime);
     } catch (InterruptedException ex) {
@@ -189,7 +189,7 @@ public class TestLeaseManager {
       return null;
     });
     // wait for lease to expire
-    long sleepTime = leaseOne.getRemainingTime() + 5;
+    long sleepTime = leaseOne.getRemainingTime() + 1000;
     try {
       Thread.sleep(sleepTime);
     } catch (InterruptedException ex) {
@@ -278,7 +278,7 @@ public class TestLeaseManager {
     manager.release(resourceThree);
 
     // wait for other leases to expire
-    long sleepTime = leaseFive.getRemainingTime() + 10;
+    long sleepTime = leaseFive.getRemainingTime() + 1000;
 
     try {
       Thread.sleep(sleepTime);
@@ -332,7 +332,7 @@ public class TestLeaseManager {
     Assert.assertFalse(leaseOne.hasExpired());
 
     // wait for lease to expire
-    long sleepTime = leaseOne.getRemainingTime() + 5;
+    long sleepTime = leaseOne.getRemainingTime() + 1000;
     try {
       Thread.sleep(sleepTime);
     } catch (InterruptedException ex) {
