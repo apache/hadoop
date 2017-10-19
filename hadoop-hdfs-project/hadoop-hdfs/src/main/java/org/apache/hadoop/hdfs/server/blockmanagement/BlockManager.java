@@ -3883,11 +3883,15 @@ public class BlockManager implements BlockStatsMXBean {
       throw new IOException(
           "Got incremental block report from unregistered or dead node");
     }
+
+    boolean successful = false;
     try {
       processIncrementalBlockReport(node, srdb);
-    } catch (Exception ex) {
-      node.setForceRegistration(true);
-      throw ex;
+      successful = true;
+    } finally {
+      if (!successful) {
+        node.setForceRegistration(true);
+      }
     }
   }
 
