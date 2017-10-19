@@ -166,7 +166,24 @@ The following properties are required to enable Docker support:
 |Configuration Name | Description |
 |:---- |:---- |
 | `yarn.nodemanager.linux-container-executor.group` | The Unix group of the NodeManager. It should match the yarn.nodemanager.linux-container-executor.group in the yarn-site.xml file. |
-| `feature.docker.enabled` | Must be 0 or 1. 0 means launching Docker containers is disabled. 1 means launching Docker containers is allowed. |
+
+The container-executor.cfg must contain a section to determine the capabilities that containers
+are allowed. It contains the following properties:
+
+|Configuration Name | Description |
+|:---- |:---- |
+| `module.enabled` | Must be "true" or "false" to enable or disable launching Docker containers respectively. Default value is 0. |
+| `docker.binary` | The binary used to launch Docker containers. /usr/bin/docker by default. |
+| `docker.allowed.capabilities` | Comma separated capabilities that containers are allowed to add. By default no capabilities are allowed to be added. |
+| `docker.allowed.devices` | Comma separated devices that containers are allowed to mount. By default no devices are allowed to be added. |
+| `docker.allowed.networks` | Comma separated networks that containers are allowed to use. If no network is specified when launching the container, the default Docker network will be used. |
+| `docker.allowed.ro-mounts` | Comma separated directories that containers are allowed to mount in read-only mode. By default, no directories are allowed to mounted. |
+| `docker.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
+| `docker.privileged-containers.enabled` | Set to 1 or 0 to enable or disable launching privileged containers. Default value is 0. |
+
+Please note that if you wish to run Docker containers that require access to the YARN local directories, you must add them to the docker.allowed.rw-mounts list.
+
+In addition, containers are not permitted to mount any parent of the container-executor.cfg directory in read-write mode.
 
 The following properties are optional:
 
@@ -175,8 +192,20 @@ The following properties are optional:
 | `min.user.id` | The minimum UID that is allowed to launch applications. The default is no minimum |
 | `banned.users` | A comma-separated list of usernames who should not be allowed to launch applications. The default setting is: yarn, mapred, hdfs, and bin. |
 | `allowed.system.users` | A comma-separated list of usernames who should be allowed to launch applications even if their UIDs are below the configured minimum. If a user appears in allowed.system.users and banned.users, the user will be considered banned. |
-| `docker.binary` | The path to the Docker binary. The default is "docker". |
 | `feature.tc.enabled` | Must be 0 or 1. 0 means traffic control commands are disabled. 1 means traffic control commands are allowed. |
+
+Part of a container-executor.cfg which allows Docker containers to be launched is below:
+
+```
+yarn.nodemanager.linux-container-executor.group=yarn
+[docker]
+  module.enabled=true
+  docker.allowed.capabilities=SYS_CHROOT,MKNOD,SETFCAP,SETPCAP,FSETID,CHOWN,AUDIT_WRITE,SETGID,NET_RAW,FOWNER,SETUID,DAC_OVERRIDE,KILL,NET_BIND_SERVICE
+  docker.allowed.networks=bridge,host,none
+  docker.allowed.ro-mounts=/sys/fs/cgroup
+  docker.allowed.rw-mounts=/var/hadoop/yarn/local-dir,/var/hadoop/yarn/log-dir
+
+```
 
 Docker Image Requirements
 -------------------------
