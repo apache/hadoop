@@ -33,6 +33,7 @@ import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.ValueQueue;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
@@ -1883,7 +1884,7 @@ public class TestKMS {
   public void testKMSTimeout() throws Exception {
     File confDir = getTestDir();
     Configuration conf = createBaseKMSConf(confDir);
-    conf.setInt(KMSClientProvider.TIMEOUT_ATTR, 1);
+    conf.setInt(CommonConfigurationKeysPublic.KMS_CLIENT_TIMEOUT_SECONDS, 1);
     writeConf(confDir, conf);
 
     ServerSocket sock;
