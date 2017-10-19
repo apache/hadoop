@@ -3673,6 +3673,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       readUnlock(operationName);
     }
     logAuditEvent(true, operationName, src);
+    if (topConf.isEnabled && isAuditEnabled() && isExternalInvocation()
+        && dl != null && Server.getRemoteUser() != null) {
+      topMetrics.reportFilesInGetListing(Server.getRemoteUser().toString(),
+          dl.getPartialListing().length);
+    }
     return dl;
   }
 
