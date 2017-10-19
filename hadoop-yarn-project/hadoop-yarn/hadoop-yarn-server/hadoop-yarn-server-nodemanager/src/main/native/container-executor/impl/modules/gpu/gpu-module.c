@@ -108,7 +108,7 @@ static int internal_handle_gpu_request(
     char param_value[128];
     memset(param_value, 0, sizeof(param_value));
     snprintf(param_value, sizeof(param_value), "c %d:%d rwm",
-             major_device_number, i);
+             major_device_number, minor_devices[i]);
 
     int rc = update_cgroups_parameters_func_p("devices", "deny",
       container_id, param_value);

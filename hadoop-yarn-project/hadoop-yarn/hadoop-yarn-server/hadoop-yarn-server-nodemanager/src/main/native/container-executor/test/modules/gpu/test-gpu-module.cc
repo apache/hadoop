@@ -165,6 +165,19 @@ TEST_F(TestGpuModule, test_verify_gpu_module_calls_cgroup_parameter) {
 
   // Verify cgroups parameters
   verify_param_updated_to_cgroups(0, NULL);
+
+  /* Test case 3: block 2 non-sequential devices */
+  cgroups_parameters_invoked.clear();
+  char* argv_2[] = { (char*) "--module-gpu", (char*) "--excluded_gpus", (char*) "1,3",
+                   (char*) "--container_id", container_id };
+  rc = handle_gpu_request(&mock_update_cgroups_parameters,
+     "gpu", 5, argv_2);
+  ASSERT_EQ(0, rc) << "Should success.\n";
+
+  // Verify cgroups parameters
+  const char* expected_cgroups_argv_2[] = { "devices", "deny", container_id, "c 195:1 rwm",
+    "devices", "deny", container_id, "c 195:3 rwm"};
+  verify_param_updated_to_cgroups(8, expected_cgroups_argv_2);
 }
 
 TEST_F(TestGpuModule, test_illegal_cli_parameters) {
