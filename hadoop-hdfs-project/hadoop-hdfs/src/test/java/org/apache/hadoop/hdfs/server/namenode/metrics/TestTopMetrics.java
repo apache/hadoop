@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.lib.Interns;
 import org.junit.Test;
 
 import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.TOPMETRICS_METRICS_SOURCE_NAME;
+import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.FILES_IN_GETLISTING;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,9 +42,10 @@ public class TestTopMetrics {
     TopMetrics topMetrics = new TopMetrics(conf,
         topConf.nntopReportingPeriodsMs);
     // Dummy command
-    topMetrics.report("test", "listStatus");
-    topMetrics.report("test", "listStatus");
-    topMetrics.report("test", "listStatus");
+    topMetrics.report("test", "listStatus", 1);
+    topMetrics.report("test", "listStatus", 1);
+    topMetrics.report("test", "listStatus", 1);
+    topMetrics.report("test", FILES_IN_GETLISTING, 1000);
 
     MetricsRecordBuilder rb = getMetrics(topMetrics);
     MetricsCollector mc = rb.parent();
@@ -59,5 +61,8 @@ public class TestTopMetrics {
 
     verify(rb, times(3)).addCounter(Interns.info("op=listStatus." +
         "user=test.count", "Total operations performed by user"), 3L);
+
+    verify(rb, times(3)).addCounter(Interns.info("op=" + FILES_IN_GETLISTING +
+        ".user=test.count", "Total operations performed by user"), 1000L);
   }
 }
