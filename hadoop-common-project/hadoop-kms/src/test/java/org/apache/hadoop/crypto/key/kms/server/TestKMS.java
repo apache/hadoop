@@ -53,7 +53,6 @@ import org.junit.rules.Timeout;
 import org.slf4j.event.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import javax.security.auth.login.AppConfigurationEntry;
 
@@ -62,6 +61,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Writer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -81,6 +81,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+
+import static org.junit.Assert.assertTrue;
 
 public class TestKMS {
   private static final Logger LOG = LoggerFactory.getLogger(TestKMS.class);
@@ -2380,4 +2382,38 @@ public class TestKMS {
     });
   }
 
+  /*
+   * Test the jmx page can return, and contains the basic JvmMetrics. Only
+   * testing in simple mode since the page content is the same, kerberized
+   * or not.
+   */
+  @Test
+  public void testKMSJMX() throws Exception {
+    Configuration conf = new Configuration();
+    final File confDir = getTestDir();
+    conf = createBaseKMSConf(confDir, conf);
+    final String processName = "testkmsjmx";
+    conf.set(KMSConfiguration.METRICS_PROCESS_NAME_KEY, processName);
+    writeConf(confDir, conf);
+
+    runServer(null, null, confDir, new KMSCallable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        final URL jmxUrl = new URL(
+            getKMSUrl() + "/jmx?user.name=whatever&qry=Hadoop:service="
+                + processName + ",name=JvmMetrics");
+        LOG.info("Requesting jmx from " + jmxUrl);
+        final StringBuilder sb = new StringBuilder();
+        final InputStream in = jmxUrl.openConnection().getInputStream();
+        final byte[] buffer = new byte[64 * 1024];
+        int len;
+        while ((len = in.read(buffer)) > 0) {
+          sb.append(new String(buffer, 0, len));
+        }
+        LOG.info("jmx returned: " + sb.toString());
+        assertTrue(sb.toString().contains("JvmMetrics"));
+        return null;
+      }
+    });
+  }
 }
