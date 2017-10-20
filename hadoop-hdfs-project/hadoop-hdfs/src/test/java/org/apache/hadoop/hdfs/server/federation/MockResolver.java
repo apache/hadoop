@@ -264,7 +264,10 @@ public class MockResolver
   @Override
   public PathLocation getDestinationForPath(String path) throws IOException {
     List<RemoteLocation> remoteLocations = new LinkedList<>();
-    for (String key : this.locations.keySet()) {
+    // We go from the leaves to the root
+    List<String> keys = new ArrayList<>(this.locations.keySet());
+    Collections.sort(keys, Collections.reverseOrder());
+    for (String key : keys) {
       if (path.startsWith(key)) {
         for (RemoteLocation location : this.locations.get(key)) {
           String finalPath = location.getDest() + path.substring(key.length());
