@@ -119,20 +119,6 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public Resource getResourceUsage() {
-    Resource usage = Resources.createResource(0);
-    readLock.lock();
-    try {
-      for (FSQueue child : childQueues) {
-        Resources.addTo(usage, child.getResourceUsage());
-      }
-    } finally {
-      readLock.unlock();
-    }
-    return usage;
-  }
-
-  @Override
   public void updateDemand() {
     // Compute demand by iterating through apps in the queue
     // Limit demand to maxResources

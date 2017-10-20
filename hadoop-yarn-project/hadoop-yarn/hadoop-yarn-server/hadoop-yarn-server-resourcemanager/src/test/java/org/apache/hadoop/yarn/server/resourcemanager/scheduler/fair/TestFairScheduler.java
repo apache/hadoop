@@ -4582,6 +4582,43 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
       scheduler.getSchedulerApplications(), scheduler, "default");
   }
+
+  @Test
+  public void testResourceUsageByMoveApp() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node1 = MockNodes.newNodeInfo(
+        1, Resources.createResource(1 * GB, 4), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    ApplicationAttemptId appAttId =
+        createSchedulingRequest(1 * GB, 2, "parent1.queue1", "user1", 2);
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(updateEvent);
+
+    QueueManager queueMgr = scheduler.getQueueManager();
+    FSQueue parent1 = queueMgr.getParentQueue("parent1", true);
+    FSQueue parent2 = queueMgr.getParentQueue("parent2", true);
+    FSQueue queue2 = queueMgr.getLeafQueue("parent2.queue2", true);
+    FSQueue queue1 = queueMgr.getLeafQueue("parent1.queue1", true);
+
+    Assert.assertEquals(parent2.getResourceUsage().getMemorySize(), 0);
+    Assert.assertEquals(queue2.getResourceUsage().getMemorySize(), 0);
+    Assert.assertEquals(parent1.getResourceUsage().getMemorySize(), 1 * GB);
+    Assert.assertEquals(queue1.getResourceUsage().getMemorySize(), 1 * GB);
+
+    scheduler.moveApplication(appAttId.getApplicationId(), "parent2.queue2");
+
+    Assert.assertEquals(parent2.getResourceUsage().getMemorySize(), 1 * GB);
+    Assert.assertEquals(queue2.getResourceUsage().getMemorySize(), 1 * GB);
+    Assert.assertEquals(parent1.getResourceUsage().getMemorySize(), 0);
+    Assert.assertEquals(queue1.getResourceUsage().getMemorySize(), 0);
+  }
     
   @Test (expected = YarnException.class)
   public void testMoveWouldViolateMaxAppsConstraints() throws Exception {
@@ -4595,7 +4632,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     ApplicationAttemptId appAttId =
         createSchedulingRequest(1024, 1, "queue1", "user1", 3);
-    
+
     scheduler.moveApplication(appAttId.getApplicationId(), "queue2");
   }
   
