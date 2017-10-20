@@ -323,20 +323,22 @@ public class MountTableResolver
     verifyMountTable();
     readLock.lock();
     try {
-      return this.locationCache.computeIfAbsent(
-          path, this::lookupLocation);
+      PathLocation ret = this.locationCache.get(path);
+      if (ret == null) {
+        ret = buildPathLocation(path);
+        this.locationCache.put(path, ret);
+      }
+      return ret;
     } finally {
       readLock.unlock();
     }
   }
 
   /**
-   * Build the path location to insert into the cache atomically. It must hold
-   * the read lock.
-   * @param path Path to check/insert.
-   * @return New remote location.
+   * Builder to insert the path location into the cache atomically. It must
+   * hold the read lock.
    */
-  public PathLocation lookupLocation(final String path) {
+  private PathLocation buildPathLocation(String path) {
     PathLocation ret = null;
     MountTable entry = findDeepest(path);
     if (entry != null) {

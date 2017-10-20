@@ -64,7 +64,6 @@ import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
-import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -75,12 +74,9 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -88,11 +84,9 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
-import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB;
@@ -457,18 +451,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
-      throws IOException {
+      CryptoProtocolVersion[] supportedVersions) throws IOException {
     checkOperation(OperationCategory.WRITE);
 
     RemoteLocation createLocation = getCreateLocation(src);
     RemoteMethod method = new RemoteMethod("create",
         new Class<?>[] {String.class, FsPermission.class, String.class,
                         EnumSetWritable.class, boolean.class, short.class,
-                        long.class, CryptoProtocolVersion[].class,
-                        String.class},
+                        long.class, CryptoProtocolVersion[].class},
         createLocation.getDest(), masked, clientName, flag, createParent,
-        replication, blockSize, supportedVersions, ecPolicyName);
+        replication, blockSize, supportedVersions);
     return (HdfsFileStatus) rpcClient.invokeSingle(createLocation, method);
   }
 
@@ -1216,27 +1208,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   }
 
   @Override // ClientProtocol
-  public boolean saveNamespace(long timeWindow, long txGap) throws IOException {
+  public void saveNamespace() throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
 
-    RemoteMethod method = new RemoteMethod("saveNamespace",
-        new Class<?>[] {Long.class, Long.class}, timeWindow, txGap);
+    RemoteMethod method = new RemoteMethod("saveNamespace", new Class<?>[] {});
     final Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    Map<FederationNamespaceInfo, Object> ret =
-        rpcClient.invokeConcurrent(nss, method, true, false);
-
-    boolean success = true;
-    Object obj = ret;
-    @SuppressWarnings("unchecked")
-    Map<FederationNamespaceInfo, Boolean> results =
-        (Map<FederationNamespaceInfo, Boolean>)obj;
-    Collection<Boolean> sucesses = results.values();
-    for (boolean s : sucesses) {
-      if (!s) {
-        success = false;
-      }
-    }
-    return success;
+    rpcClient.invokeConcurrent(nss, method, true, false);
   }
 
   @Override // ClientProtocol
@@ -1659,19 +1636,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   }
 
   @Override // ClientProtocol
-  public void reencryptEncryptionZone(String zone, ReencryptAction action)
-      throws IOException {
-    checkOperation(OperationCategory.WRITE, false);
-  }
-
-  @Override // ClientProtocol
-  public BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(
-      long prevId) throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return null;
-  }
-
-  @Override // ClientProtocol
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
@@ -1784,30 +1748,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     checkOperation(OperationCategory.WRITE, false);
   }
 
-  @Override
-  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return null;
-  }
-
-  @Override // ClientProtocol
-  public ErasureCodingPolicy getErasureCodingPolicy(String src)
-      throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return null;
-  }
-
-  @Override // ClientProtocol
-  public void setErasureCodingPolicy(String src, String ecPolicyName)
-      throws IOException {
-    checkOperation(OperationCategory.WRITE, false);
-  }
-
-  @Override // ClientProtocol
-  public void unsetErasureCodingPolicy(String src) throws IOException {
-    checkOperation(OperationCategory.WRITE, false);
-  }
-
   @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
       StorageType type) throws IOException {
@@ -1865,46 +1805,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
 
   @Override
   public BlockStoragePolicy getStoragePolicy(String path) throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return null;
-  }
-
-  @Override
-  public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
-      ErasureCodingPolicy[] policies) throws IOException {
-    checkOperation(OperationCategory.WRITE, false);
-    return null;
-  }
-
-  @Override
-  public void removeErasureCodingPolicy(String arg0) throws IOException {
-    checkOperation(OperationCategory.WRITE, false);
-  }
-
-  @Override
-  public void disableErasureCodingPolicy(String arg0) throws IOException {
-    checkOperation(OperationCategory.WRITE, false);
-  }
-
-  @Override
-  public void enableErasureCodingPolicy(String arg0) throws IOException {
-    checkOperation(OperationCategory.WRITE, false);
-  }
-
-  @Override
-  public ECBlockGroupStats getECBlockGroupStats() throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return null;
-  }
-
-  @Override
-  public Map<String, String> getErasureCodingCodecs() throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return null;
-  }
-
-  @Override
-  public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
     checkOperation(OperationCategory.READ, false);
     return null;
   }
@@ -2017,9 +1917,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     }
     long inodeId = 0;
     return new HdfsFileStatus(0, true, 0, 0, modTime, accessTime, permission,
-        EnumSet.noneOf(HdfsFileStatus.Flags.class),
         owner, group, new byte[0], DFSUtil.string2Bytes(name), inodeId,
-        childrenNum, null, (byte) 0, null);
+        childrenNum, null, (byte) 0);
   }
 
   /**

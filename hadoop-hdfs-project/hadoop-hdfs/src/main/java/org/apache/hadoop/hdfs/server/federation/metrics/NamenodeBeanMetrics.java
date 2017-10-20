@@ -21,12 +21,14 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -52,7 +54,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.eclipse.jetty.util.ajax.JSON;
+import org.mortbay.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -232,24 +234,12 @@ public class NamenodeBeanMetrics
   }
 
   @Override
-  @Deprecated
   public long getPendingReplicationBlocks() {
     return getFederationMetrics().getNumOfBlocksPendingReplication();
   }
 
   @Override
-  public long getPendingReconstructionBlocks() {
-    return getFederationMetrics().getNumOfBlocksPendingReplication();
-  }
-
-  @Override
-  @Deprecated
   public long getUnderReplicatedBlocks() {
-    return getFederationMetrics().getNumOfBlocksUnderReplicated();
-  }
-
-  @Override
-  public long getLowRedundancyBlocks() {
     return getFederationMetrics().getNumOfBlocksUnderReplicated();
   }
 
@@ -338,7 +328,7 @@ public class NamenodeBeanMetrics
   @Override
   public String getClusterId() {
     try {
-      return getNamespaceInfo(FederationNamespaceInfo::getClusterId).toString();
+      return getNamespaceInfo("getClusterId").toString();
     } catch (IOException e) {
       LOG.error("Cannot fetch cluster ID metrics {}", e.getMessage());
       return "";
@@ -348,8 +338,7 @@ public class NamenodeBeanMetrics
   @Override
   public String getBlockPoolId() {
     try {
-      return
-          getNamespaceInfo(FederationNamespaceInfo::getBlockPoolId).toString();
+      return getNamespaceInfo("getBlockPoolId").toString();
     } catch (IOException e) {
       LOG.error("Cannot fetch block pool ID metrics {}", e.getMessage());
       return "";
@@ -359,13 +348,14 @@ public class NamenodeBeanMetrics
   /**
    * Build a set of unique values found in all namespaces.
    *
-   * @param f Method reference of the appropriate FederationNamespaceInfo
+   * @param getterName String name of the appropriate FederationNamespaceInfo
    *          getter function
    * @return Set of unique string values found in all discovered namespaces.
    * @throws IOException if the query could not be executed.
    */
-  private Collection<String> getNamespaceInfo(
-      Function<FederationNamespaceInfo, String> f) throws IOException {
+  public Collection<String> getNamespaceInfo(String getterName)
+      throws IOException {
+
     StateStoreService stateStore = router.getStateStore();
     MembershipStore membershipStore =
         stateStore.getRegisteredRecordStore(MembershipStore.class);
@@ -373,9 +363,20 @@ public class NamenodeBeanMetrics
     GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
     GetNamespaceInfoResponse response =
         membershipStore.getNamespaceInfo(request);
-    return response.getNamespaceInfo().stream()
-      .map(f)
-      .collect(Collectors.toSet());
+    Set<FederationNamespaceInfo> namespacesInfo = response.getNamespaceInfo();
+
+    Set<String> ret = new HashSet<String>();
+    for (FederationNamespaceInfo namespace : namespacesInfo) {
+      try {
+        Method m = FederationNamespaceInfo.class.getDeclaredMethod(getterName);
+        String data = (String) m.invoke(namespace);
+        ret.add(data);
+      } catch (SecurityException | ReflectiveOperationException ex) {
+        throw new IOException(
+            "Cannot invoke " + getterName + " from " + namespace);
+      }
+    }
+    return ret;
   }
 
   @Override
@@ -401,6 +402,12 @@ public class NamenodeBeanMetrics
   @Override
   public long getNNStartedTimeInMillis() {
     return this.router.getStartTime();
+  }
+
+  @Deprecated
+  @Override
+  public String getNNStarted() {
+    return new Date(this.router.getStartTime()).toString();
   }
 
   @Override
@@ -451,6 +458,12 @@ public class NamenodeBeanMetrics
 
   @Override
   public long getFilesTotal() {
+    return getFederationMetrics().getNumFiles();
+  }
+
+  @Deprecated
+  @Override
+  public long getTotalFiles() {
     return getFederationMetrics().getNumFiles();
   }
 

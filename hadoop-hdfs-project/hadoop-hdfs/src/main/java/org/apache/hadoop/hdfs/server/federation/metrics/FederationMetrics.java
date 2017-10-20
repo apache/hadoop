@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -38,10 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.function.ToIntFunction;
-import java.util.function.ToLongFunction;
-import java.util.stream.Collectors;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -72,7 +69,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jettison.json.JSONObject;
-import org.eclipse.jetty.util.ajax.JSON;
+import org.mortbay.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -263,12 +260,12 @@ public class FederationMetrics implements FederationMBean {
 
   @Override
   public long getTotalCapacity() {
-    return getNameserviceAggregatedLong(MembershipStats::getTotalSpace);
+    return getNameserviceAggregatedLong("getTotalSpace");
   }
 
   @Override
   public long getRemainingCapacity() {
-    return getNameserviceAggregatedLong(MembershipStats::getAvailableSpace);
+    return getNameserviceAggregatedLong("getAvailableSpace");
   }
 
   @Override
@@ -323,31 +320,27 @@ public class FederationMetrics implements FederationMBean {
 
   @Override
   public int getNumLiveNodes() {
-    return getNameserviceAggregatedInt(
-        MembershipStats::getNumOfActiveDatanodes);
+    return getNameserviceAggregatedInt("getNumOfActiveDatanodes");
   }
 
   @Override
   public int getNumDeadNodes() {
-    return getNameserviceAggregatedInt(MembershipStats::getNumOfDeadDatanodes);
+    return getNameserviceAggregatedInt("getNumOfDeadDatanodes");
   }
 
   @Override
   public int getNumDecommissioningNodes() {
-    return getNameserviceAggregatedInt(
-        MembershipStats::getNumOfDecommissioningDatanodes);
+    return getNameserviceAggregatedInt("getNumOfDecommissioningDatanodes");
   }
 
   @Override
   public int getNumDecomLiveNodes() {
-    return getNameserviceAggregatedInt(
-        MembershipStats::getNumOfDecomActiveDatanodes);
+    return getNameserviceAggregatedInt("getNumOfDecomActiveDatanodes");
   }
 
   @Override
   public int getNumDecomDeadNodes() {
-    return getNameserviceAggregatedInt(
-        MembershipStats::getNumOfDecomDeadDatanodes);
+    return getNameserviceAggregatedInt("getNumOfDecomDeadDatanodes");
   }
 
   @Override // NameNodeMXBean
@@ -398,35 +391,32 @@ public class FederationMetrics implements FederationMBean {
 
   @Override
   public long getNumBlocks() {
-    return getNameserviceAggregatedLong(MembershipStats::getNumOfBlocks);
+    return getNameserviceAggregatedLong("getNumOfBlocks");
   }
 
   @Override
   public long getNumOfMissingBlocks() {
-    return getNameserviceAggregatedLong(MembershipStats::getNumOfBlocksMissing);
+    return getNameserviceAggregatedLong("getNumOfBlocksMissing");
   }
 
   @Override
   public long getNumOfBlocksPendingReplication() {
-    return getNameserviceAggregatedLong(
-        MembershipStats::getNumOfBlocksPendingReplication);
+    return getNameserviceAggregatedLong("getNumOfBlocksPendingReplication");
   }
 
   @Override
   public long getNumOfBlocksUnderReplicated() {
-    return getNameserviceAggregatedLong(
-        MembershipStats::getNumOfBlocksUnderReplicated);
+    return getNameserviceAggregatedLong("getNumOfBlocksUnderReplicated");
   }
 
   @Override
   public long getNumOfBlocksPendingDeletion() {
-    return getNameserviceAggregatedLong(
-        MembershipStats::getNumOfBlocksPendingDeletion);
+    return getNameserviceAggregatedLong("getNumOfBlocksPendingDeletion");
   }
 
   @Override
   public long getNumFiles() {
-    return getNameserviceAggregatedLong(MembershipStats::getNumOfFiles);
+    return getNameserviceAggregatedLong("getNumOfFiles");
   }
 
   @Override
@@ -472,8 +462,7 @@ public class FederationMetrics implements FederationMBean {
   @Override
   public String getClusterId() {
     try {
-      Collection<String> clusterIds =
-          getNamespaceInfo(FederationNamespaceInfo::getClusterId);
+      Collection<String> clusterIds = getNamespaceInfo("getClusterId");
       return clusterIds.toString();
     } catch (IOException e) {
       LOG.error("Cannot fetch cluster ID metrics: {}", e.getMessage());
@@ -484,8 +473,7 @@ public class FederationMetrics implements FederationMBean {
   @Override
   public String getBlockPoolId() {
     try {
-      Collection<String> blockpoolIds =
-          getNamespaceInfo(FederationNamespaceInfo::getBlockPoolId);
+      Collection<String> blockpoolIds = getNamespaceInfo("getBlockPoolId");
       return blockpoolIds.toString();
     } catch (IOException e) {
       LOG.error("Cannot fetch block pool ID metrics: {}", e.getMessage());
@@ -501,19 +489,31 @@ public class FederationMetrics implements FederationMBean {
   /**
    * Build a set of unique values found in all namespaces.
    *
-   * @param f Method reference of the appropriate FederationNamespaceInfo
+   * @param getterName String name of the appropriate FederationNamespaceInfo
    *          getter function
    * @return Set of unique string values found in all discovered namespaces.
    * @throws IOException if the query could not be executed.
    */
-  private Collection<String> getNamespaceInfo(
-      Function<FederationNamespaceInfo, String> f) throws IOException {
+  public Collection<String> getNamespaceInfo(String getterName)
+      throws IOException {
+
     GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
     GetNamespaceInfoResponse response =
         membershipStore.getNamespaceInfo(request);
-    return response.getNamespaceInfo().stream()
-      .map(f)
-      .collect(Collectors.toSet());
+    Set<FederationNamespaceInfo> namespacesInfo = response.getNamespaceInfo();
+
+    Set<String> ret = new HashSet<>();
+    for (FederationNamespaceInfo namespace : namespacesInfo) {
+      try {
+        Method m = FederationNamespaceInfo.class.getDeclaredMethod(getterName);
+        String data = (String) m.invoke(namespace);
+        ret.add(data);
+      } catch (SecurityException | ReflectiveOperationException e) {
+        throw new IOException(
+            "Cannot invoke " + getterName + " from " + namespace);
+      }
+    }
+    return ret;
   }
 
   /**
@@ -521,15 +521,19 @@ public class FederationMetrics implements FederationMBean {
    * @param f Method reference
    * @return Aggregated integer.
    */
-  private int getNameserviceAggregatedInt(ToIntFunction<MembershipStats> f) {
+  private int getNameserviceAggregatedInt(String methodName) {
+    int total = 0;
     try {
-      return getActiveNamenodeRegistrations().stream()
-               .map(MembershipState::getStats)
-               .collect(Collectors.summingInt(f));
+      Collection<Object> data = getNameservicesStats(methodName);
+      for (Object o : data) {
+        Integer l = (Integer) o;
+        total += l;
+      }
     } catch (IOException e) {
-      LOG.error("Unable to extract metrics: {}", e.getMessage());
+      LOG.error("Cannot invoke {} for JMX: {}", methodName, e.getMessage());
       return 0;
     }
+    return total;
   }
 
   /**
@@ -537,15 +541,60 @@ public class FederationMetrics implements FederationMBean {
    * @param f Method reference
    * @return Aggregated long.
    */
-  private long getNameserviceAggregatedLong(ToLongFunction<MembershipStats> f) {
+  private long getNameserviceAggregatedLong(String methodName) {
+    long total = 0;
     try {
-      return getActiveNamenodeRegistrations().stream()
-               .map(MembershipState::getStats)
-               .collect(Collectors.summingLong(f));
+      Collection<Object> data = getNameservicesStats(methodName);
+      for (Object o : data) {
+        Long l = (Long) o;
+        total += l;
+      }
     } catch (IOException e) {
-      LOG.error("Unable to extract metrics: {}", e.getMessage());
+      LOG.error("Cannot invoke {} for JMX: {}", methodName, e.getMessage());
       return 0;
     }
+    return total;
+  }
+
+  /**
+   * Aggregate a namenode data element from the most active namenode in each
+   * registered nameservice.
+   *
+   * @param getter String name of the getter function to invoke on the
+   *          discovered NamenodeMembershipRecord object.
+   * @return Aggregated getter return values from all registered nameservices,
+   *         one per nameservice.
+   * @throws IOException if the query could not be performed.
+   */
+  private Collection<Object> getNameservicesStats(String getter)
+      throws IOException  {
+
+    List<Object> ret = new ArrayList<>();
+    try {
+      Method metricsGetter = MembershipStats.class.getDeclaredMethod(getter);
+      List<MembershipState> namenodes = getActiveNamenodeRegistrations();
+      for (MembershipState namenode : namenodes) {
+        try {
+          MembershipStats stats = namenode.getStats();
+          if (stats != null) {
+            Object data = metricsGetter.invoke(stats);
+            ret.add(data);
+          }
+        } catch (ReflectiveOperationException e) {
+          throw new IOException(
+              "Cannot invoke " + getter + " from " + namenode);
+        } catch (IllegalArgumentException e) {
+          throw new IOException("Bad arguments invoking " + getter);
+        }
+      }
+    } catch (NoSuchMethodException e) {
+      throw new IOException(
+          "Cannot invoke " + getter + " from membership stats record");
+    } catch (SecurityException e) {
+      throw new IOException(
+          "Cannot invoke " + getter + " from membership stats record");
+    }
+    return ret;
   }
 
   /**

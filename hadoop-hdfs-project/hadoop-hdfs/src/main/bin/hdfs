@@ -47,6 +47,8 @@ function print_usage(){
   echo "  datanode             run a DFS datanode"
   echo "  debug                run a Debug Admin to execute HDFS debug commands"
   echo "  dfsadmin             run a DFS admin client"
+  echo "  dfsrouter            run the DFS router"
+  echo "  dfsrouteradmin       manage Router-based federation"
   echo "  haadmin              run a DFS HA admin client"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  balancer             run a cluster balancing utility"
@@ -157,6 +159,11 @@ elif [ "$COMMAND" = "dfs" ] ; then
 elif [ "$COMMAND" = "dfsadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "dfsrouter" ] ; then
+  CLASS='org.apache.hadoop.hdfs.server.federation.router.DFSRouter'
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_ROUTER_OPTS"
+elif [ "$COMMAND" = "dfsrouteradmin" ] ; then
+  CLASS='org.apache.hadoop.hdfs.tools.federation.RouterAdmin'
 elif [ "$COMMAND" = "haadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
   CLASSPATH=${CLASSPATH}:${TOOL_PATH}
