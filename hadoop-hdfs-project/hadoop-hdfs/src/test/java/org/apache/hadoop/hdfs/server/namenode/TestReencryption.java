@@ -1467,8 +1467,8 @@ public class TestReencryption {
     assertEquals(5, getZoneStatus(zone.toString()).getFilesReencrypted());
   }
 
-  @Test
-  public void testCancelFuture() throws Exception {
+  private void cancelFutureDuringReencryption(final Path zone)
+      throws Exception {
     final AtomicBoolean callableRunning = new AtomicBoolean(false);
     class MyInjector extends EncryptionFaultInjector {
       private volatile int exceptionCount = 0;
@@ -1498,8 +1498,6 @@ public class TestReencryption {
      * /dir/f
      */
     final int len = 8196;
-    final Path zoneParent = new Path("/zones");
-    final Path zone = new Path(zoneParent, "zone");
     fsWrapper.mkdir(zone, FsPermission.getDirDefault(), true);
     dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
     for (int i = 0; i < 10; ++i) {
@@ -1546,6 +1544,59 @@ public class TestReencryption {
     assertEquals(0, zs.getFilesReencrypted());
 
     assertTrue(getUpdater().isRunning());
+  }
+
+  @Test
+  public void testCancelFutureThenReencrypt() throws Exception {
+    final Path zoneParent = new Path("/zones");
+    final Path zone = new Path(zoneParent, "zone");
+    cancelFutureDuringReencryption(zone);
+
+    // make sure new re-encryption after cancellation works.
+    getEzManager().resumeReencryptForTesting();
+    dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
+    waitForZoneCompletes(zone.toString());
+    final RemoteIterator<ZoneReencryptionStatus> it =
+        dfsAdmin.listReencryptionStatus();
+    final ZoneReencryptionStatus zs = it.next();
+    assertEquals(zone.toString(), zs.getZoneName());
+    assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
+    assertFalse(zs.isCanceled());
+    assertTrue(zs.getCompletionTime() > 0);
+    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    assertEquals(10, zs.getFilesReencrypted());
+  }
+
+  @Test
+  public void testCancelFutureThenRestart() throws Exception {
+    final Path zoneParent = new Path("/zones");
+    final Path zone = new Path(zoneParent, "zone");
+    cancelFutureDuringReencryption(zone);
+
+    // restart, and check status.
+    restartClusterDisableReencrypt();
+    RemoteIterator<ZoneReencryptionStatus> it =
+        dfsAdmin.listReencryptionStatus();
+    ZoneReencryptionStatus zs = it.next();
+    assertEquals(zone.toString(), zs.getZoneName());
+    assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
+    assertTrue(zs.isCanceled());
+    assertTrue(zs.getCompletionTime() > 0);
+    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    assertEquals(0, zs.getFilesReencrypted());
+
+    // verify re-encryption works after restart.
+    getEzManager().resumeReencryptForTesting();
+    dfsAdmin.reencryptEncryptionZone(zone, ReencryptAction.START);
+    waitForZoneCompletes(zone.toString());
+    it = dfsAdmin.listReencryptionStatus();
+    zs = it.next();
+    assertEquals(zone.toString(), zs.getZoneName());
+    assertEquals(ZoneReencryptionStatus.State.Completed, zs.getState());
+    assertFalse(zs.isCanceled());
+    assertTrue(zs.getCompletionTime() > 0);
+    assertTrue(zs.getCompletionTime() > zs.getSubmissionTime());
+    assertEquals(10, zs.getFilesReencrypted());
   }
 
   @Test
