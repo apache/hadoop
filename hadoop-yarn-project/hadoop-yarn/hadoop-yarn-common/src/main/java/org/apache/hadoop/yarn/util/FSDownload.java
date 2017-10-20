@@ -350,6 +350,11 @@ public class FSDownload implements Callable<Path> {
     } catch (URISyntaxException e) {
       throw new IOException("Invalid resource", e);
     }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Starting to download " + sCopy);
+    }
+
     createDir(destDirPath, cachePerms);
     final Path dst_work = new Path(destDirPath + "_tmp");
     createDir(dst_work, cachePerms);
@@ -364,6 +369,11 @@ public class FSDownload implements Callable<Path> {
       unpack(new File(dTmp.toUri()), new File(dFinal.toUri()));
       changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(dst_work, destDirPath, Rename.OVERWRITE);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("File has been downloaded to " +
+            new Path(destDirPath, sCopy.getName()));
+      }
     } catch (Exception e) {
       try {
         files.delete(destDirPath, true);
@@ -409,8 +419,11 @@ public class FSDownload implements Callable<Path> {
       // APPLICATION:
       perm = isDir ? PRIVATE_DIR_PERMS : PRIVATE_FILE_PERMS;
     }
-    LOG.debug("Changing permissions for path " + path
-        + " to perm " + perm);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Changing permissions for path " + path + " to perm " + perm);
+    }
+
     final FsPermission fPerm = perm;
     if (null == userUgi) {
       files.setPermission(path, perm);
