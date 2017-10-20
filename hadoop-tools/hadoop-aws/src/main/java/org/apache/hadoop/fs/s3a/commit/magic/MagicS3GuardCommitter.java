@@ -96,8 +96,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
 
   @Override
   public void setupJob(JobContext context) throws IOException {
-    try (DurationInfo d =
-             new DurationInfo("Setup Job %s", jobIdString(context))) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Setup Job %s", jobIdString(context))) {
       Path jobAttemptPath = getJobAttemptPath(context);
       FileSystem fs = getDestinationFS(jobAttemptPath,
           context.getConfiguration());
@@ -113,7 +113,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
     List<SinglePendingCommit> pending = Collections.emptyList();
     String r = getRole();
     String id = jobIdString(context);
-    try (DurationInfo d = new DurationInfo("%s: preparing to commit Job", r)) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: preparing to commit Job", r)) {
       pending = listPendingUploadsToCommit(context);
     } catch (IOException e) {
       LOG.warn("Precommit failure for job {}", id, e);
@@ -121,7 +122,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
       getCommitOperations().jobCompleted(false);
       throw e;
     }
-    try (DurationInfo d = new DurationInfo("%s: committing Job %s", r, id)) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: committing Job %s", r, id)) {
       commitJobInternal(context, pending);
     } catch (IOException e) {
       getCommitOperations().jobCompleted(false);
@@ -193,17 +195,17 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
   protected void cleanup(JobContext context, boolean suppressExceptions)
       throws IOException {
     CommitOperations.MaybeIOE outcome = CommitOperations.MaybeIOE.NONE;
-    try (DurationInfo d =
-             new DurationInfo("Cleanup: aborting pending uploads for Job %s",
-                 jobIdString(context))) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Cleanup: aborting pending uploads for Job %s",
+        jobIdString(context))) {
       if (getCommitOperations() != null) {
         Path pending = getJobAttemptPath(context);
         outcome = getCommitOperations()
             .abortAllSinglePendingCommits(pending, true);
       }
     }
-    try (DurationInfo d = new DurationInfo("Cleanup job %s",
-        jobIdString(context))) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Cleanup job %s", jobIdString(context))) {
       deleteWithWarning(getDestFS(),
           getMagicJobAttemptsPath(getOutputPath()), true);
       deleteWithWarning(getDestFS(),
@@ -218,8 +220,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
 
   @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
-    try (DurationInfo d = new DurationInfo("Setup Task %s",
-        context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Setup Task %s", context.getTaskAttemptID())) {
       Path taskAttemptPath = getTaskAttemptPath(context);
       FileSystem fs = taskAttemptPath.getFileSystem(getConf());
       fs.mkdirs(taskAttemptPath);
@@ -239,9 +241,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
   public boolean needsTaskCommit(TaskAttemptContext context)
       throws IOException {
     Path taskAttemptPath = getTaskAttemptPath(context);
-    try (DurationInfo d =
-             new DurationInfo("needsTaskCommit task %s",
-                 context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "needsTaskCommit task %s", context.getTaskAttemptID())) {
       return taskAttemptPath.getFileSystem(
           context.getConfiguration())
           .exists(taskAttemptPath);
@@ -250,8 +251,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
 
   @Override
   public void commitTask(TaskAttemptContext context) throws IOException {
-    try (DurationInfo d = new DurationInfo("Commit task %s",
-        context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Commit task %s", context.getTaskAttemptID())) {
       PendingSet commits = innerCommitTask(context);
       LOG.info("Task {} committed {} files", context.getTaskAttemptID(),
           commits.size());
@@ -332,8 +333,8 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
   @Override
   public void abortTask(TaskAttemptContext context) throws IOException {
     Path attemptPath = getTaskAttemptPath(context);
-    try (DurationInfo d =
-             new DurationInfo("Abort task %s", context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Abort task %s", context.getTaskAttemptID())) {
       getCommitOperations().abortAllSinglePendingCommits(attemptPath, true);
     } finally {
       deleteQuietly(attemptPath.getFileSystem(context.getConfiguration()),

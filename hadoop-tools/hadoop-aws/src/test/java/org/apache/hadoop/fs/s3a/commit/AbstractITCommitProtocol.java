@@ -289,8 +289,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   protected void writeTextOutput(TaskAttemptContext context)
       throws IOException, InterruptedException {
     describe("write output");
-    try (DurationInfo d = new DurationInfo("Writing Text output for task %s",
-        context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Writing Text output for task %s", context.getTaskAttemptID())) {
       writeOutput(new LoggingTextOutputFormat().getRecordWriter(context),
           context);
     }
@@ -329,8 +329,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   private void writeMapFileOutput(RecordWriter writer,
       TaskAttemptContext context) throws IOException, InterruptedException {
     describe("\nWrite map output");
-    try (DurationInfo d = new DurationInfo("Writing Text output for task %s",
-        context.getTaskAttemptID());
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Writing Text output for task %s", context.getTaskAttemptID());
          CloseWriter cw = new CloseWriter(writer, context)) {
       for (int i = 0; i < 10; ++i) {
         Text val = ((i & 1) == 1) ? VAL_1 : VAL_2;
@@ -440,12 +440,12 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
       JobContext jContext,
       TaskAttemptContext tContext) throws IOException {
     describe("\nsetup job");
-    try (DurationInfo d = new DurationInfo("setup job %s",
-        jContext.getJobID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "setup job %s", jContext.getJobID())) {
       committer.setupJob(jContext);
     }
-    try (DurationInfo d = new DurationInfo("setup task %s",
-        tContext.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "setup task %s", tContext.getTaskAttemptID())) {
       committer.setupTask(tContext);
     }
     describe("setup complete\n");
@@ -492,8 +492,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   protected void commit(AbstractS3GuardCommitter committer,
       JobContext jContext,
       TaskAttemptContext tContext) throws IOException {
-    try (DurationInfo d = new DurationInfo("committing work",
-        jContext.getJobID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "committing work", jContext.getJobID())) {
       describe("\ncommitting task");
       committer.commitTask(tContext);
       describe("\ncommitting job");
@@ -527,7 +527,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   public void executeWork(String name,
       JobData jobData,
       ActionToTest action) throws Exception {
-    try (DurationInfo d = new DurationInfo("Executing %s", name)) {
+    try (DurationInfo d = new DurationInfo(LOG, "Executing %s", name)) {
       action.exec(jobData.job,
           jobData.jContext,
           jobData.tContext,
@@ -964,9 +964,11 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
           // step 1: write the text
           writeTextOutput(tContext);
           // step 2: commit the job
-          AbstractS3GuardCommitter jobCommitter = createCommitter(tContext);
-          jobCommitter.commitJob(tContext);
+          createCommitter(tContext).commitJob(tContext);
+          // verify that no output can be observed
           assertPart0000DoesNotExist(outDir);
+          // that includes, no pending MPUs; commitJob is expected to
+          // cancel any.
           assertNoMultipartUploadsPending(outDir);
         }
     );

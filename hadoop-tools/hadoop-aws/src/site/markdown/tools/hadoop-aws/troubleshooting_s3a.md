@@ -733,12 +733,10 @@ The number of retries and interval between each retry can be configured:
 
 ```xml
 <property>
-  <name>fs.s3a.retry.limit</name>
-  <value>4</value>
-  <description>
-    Number of times to retry any repeatable S3 client request on failure,
-    excluding throttling requests.
-  </description>
+  <name>fs.s3a.attempts.maximum</name>
+  <value>20</value>
+  <description>How many times we should retry commands on transient errors,
+  excluding throttling errors.</description>
 </property>
 
 <property>
@@ -790,7 +788,7 @@ independently of the other retry limits.
 ```xml
 <property>
   <name>fs.s3a.retry.throttle.limit</name>
-  <value>10</value>
+  <value>20</value>
   <description>
     Number of times to retry any throttled request.
   </description>
@@ -798,7 +796,7 @@ independently of the other retry limits.
 
 <property>
   <name>fs.s3a.retry.throttle.interval</name>
-  <value>1000ms</value>
+  <value>500ms</value>
   <description>
     Interval between retry attempts on throttled requests.
   </description>

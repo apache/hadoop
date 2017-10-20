@@ -109,19 +109,20 @@ public final class Paths {
   }
 
   /**
-   * Using {@code URI.relativize()}, build the relative path from the
+   * Using {@code URI#relativize()}, build the relative path from the
    * base path to the full path.
-   * TODO: test this thoroughly
+   * If {@code childPath} is not a child of {@code basePath} the outcome
+   * os undefined.
    * @param basePath base path
-   * @param fullPath full path under the base path.
+   * @param childPath full path under the base path.
    * @return the relative path
    */
   public static String getRelativePath(Path basePath,
-      Path fullPath) {
+      Path childPath) {
     //
     // Use URI.create(Path#toString) to avoid URI character escape bugs
     URI relative = URI.create(basePath.toString())
-        .relativize(URI.create(fullPath.toString()));
+        .relativize(URI.create(childPath.toString()));
     return relative.getPath();
   }
 
@@ -203,7 +204,7 @@ public final class Paths {
 
   /**
    * Build a temporary path for the multipart upload commit information
-   * in the filesystem.
+   * in the supplied filesystem (which is expected to be the cluster FS)
    * @param conf configuration defining default FS.
    * @param uuid uuid of job
    * @return a path which can be used for temporary work
@@ -211,10 +212,25 @@ public final class Paths {
    */
   public static Path getMultipartUploadCommitsDirectory(Configuration conf,
       String uuid) throws IOException {
-    Path userTmp = new Path(tempDirForStaging(FileSystem.get(conf), conf),
-        UserGroupInformation.getCurrentUser().getShortUserName());
-    Path work = new Path(userTmp, uuid);
-    return new Path(work, STAGING_UPLOADS);
+    FileSystem fs = FileSystem.get(conf);
+    return getMultipartUploadCommitsDirectory(fs, conf, uuid);
+  }
+
+  /**
+   * Build a temporary path for the multipart upload commit information
+   * in the supplied filesystem (which is expected to be the cluster FS)
+   * @param fs target FS
+   * @param conf configuration
+   * @param uuid uuid of job
+   * @return a path which can be used for temporary work
+   * @throws IOException on an IO failure.
+   */
+  static Path getMultipartUploadCommitsDirectory(FileSystem fs,
+      Configuration conf, String uuid) throws IOException {
+    return path(tempDirForStaging(fs, conf),
+        UserGroupInformation.getCurrentUser().getShortUserName(),
+        uuid,
+        STAGING_UPLOADS);
   }
 
   // TODO: verify this is correct, it comes from dse-storage

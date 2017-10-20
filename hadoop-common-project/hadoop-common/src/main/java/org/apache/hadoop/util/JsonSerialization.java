@@ -49,8 +49,9 @@ import org.apache.hadoop.fs.Path;
  * and synchronizes access to those methods
  * which use the mapper.
  *
- * This method was copied from
- * {@code org.apache.hadoop.registry.client.binding.JsonSerDeser}.
+ * This class was extracted from
+ * {@code org.apache.hadoop.registry.client.binding.JsonSerDeser},
+ * which is now a subclass of this class.
  * @param <T> Type to marshal.
  */
 @InterfaceAudience.Private

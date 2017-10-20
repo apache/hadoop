@@ -229,7 +229,7 @@ public final class Tasks {
         Tasks.<E>throwOne(exceptions);
       }
 
-      return !threw;
+      return !threw && exceptions.isEmpty();
     }
 
     private <E extends Exception> boolean runParallel(final Task<I, E> task)
@@ -251,14 +251,17 @@ public final class Tasks {
               // run the task
               boolean threw = true;
               try {
+                LOG.debug("Executing task");
                 task.run(item);
                 succeeded.add(item);
+                LOG.debug("Task succeeded");
 
                 threw = false;
 
               } catch (Exception e) {
                 taskFailed.set(true);
                 exceptions.add(e);
+                LOG.debug("Task failed");
 
                 if (onFailure != null) {
                   try {
@@ -303,6 +306,7 @@ public final class Tasks {
 
       if (taskFailed.get() && revertTask != null) {
         // at least one task failed, revert any that succeeded
+        LOG.debug("Reverting all succeeded tasks");
         for (final I item : succeeded) {
           futures.add(service.submit(() -> {
             if (stopRevertsOnFailure && revertFailed.get()) {
@@ -337,13 +341,9 @@ public final class Tasks {
   }
 
   private static void waitFor(Collection<Future<?>> futures) {
+    LOG.debug("Waiting for {} tasks to complete", futures.size());
     while (true) {
-      int numFinished = 0;
-      for (Future<?> future : futures) {
-        if (future.isDone()) {
-          numFinished += 1;
-        }
-      }
+      int numFinished = (int) futures.stream().filter(Future::isDone).count();
 
       if (numFinished == futures.size()) {
         // all of the futures are done, stop looping
@@ -352,9 +352,7 @@ public final class Tasks {
         try {
           Thread.sleep(10);
         } catch (InterruptedException e) {
-          for (Future<?> future : futures) {
-            future.cancel(true);
-          }
+          futures.forEach(future -> future.cancel(true));
           Thread.currentThread().interrupt();
           break;
         }

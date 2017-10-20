@@ -301,11 +301,11 @@ public class CommitOperations {
   }
 
   /**
-   * Robust list files.
+   * List files.
    * @param path path
    * @param recursive recursive listing?
-   * @return iterator (which is *not* robust)
-   * @throws IOException IOE
+   * @return iterator
+   * @throws IOException failure
    */
   protected RemoteIterator<LocatedFileStatus> ls(Path path, boolean recursive)
       throws IOException {

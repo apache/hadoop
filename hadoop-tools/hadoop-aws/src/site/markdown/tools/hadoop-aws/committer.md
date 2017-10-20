@@ -28,7 +28,7 @@ For details on their internal design, see
 [S3A Committers: Architecture and Implementation](s3a_committer_architecture.html).
 
 
-## Introduction: The Commmit Problem 
+## Introduction: The Commit Problem 
 
 **Using the "classic" File Output Commmitters to write to Amazon S3 is dangerous**
 
@@ -45,7 +45,7 @@ and no files which are not in it (i.e. have been deleted).
 1. When you rename a directory, it is an `O(1)` atomic transaction. No other
 process across the cluster may rename a file or directory to the same path.
 If the rename fails for any reason, either the data is at the original location,
-or it is at the destination, -in which case the rename actually successed.
+or it is at the destination, -in which case the rename actually succeeded.
 
 **The `s3a://` filesystem client cannot meet these requirements.*
 
@@ -82,7 +82,7 @@ version in Apache Spark
 of the job. It may perform some of the actual computation too.  
 1. The job has "workers", which are processes which work the actual data
 and write the results.
-1. Workers execute "Tasks", which are fractiona of the job, a job whose
+1. Workers execute "Tasks", which are fractions of the job, a job whose
 input has been *partitioned* into units of work which can be executed independently.
 1. The Job Manager directs workers to execute "tasks", usually trying to schedule
 the work close to the data (if the filesystem provides locality information).
@@ -231,7 +231,7 @@ where adding new data to an existing dataset is the desired goal.
 ### The Magic Committer
 
 The "Magic" committer does its work through "magic" in the filesystem: 
-attempts to write to specifci "magic" paths are interpreted as writes
+attempts to write to specific "magic" paths are interpreted as writes
 to a parent directory *which are not to be completed*. When the output stream
 is closed, the information needed to complete the write is saved in the magic
 directory. The task committer saves the list of these to a directory for the
@@ -261,9 +261,9 @@ it the least mature of the committers.
 
 The Magic committer should be faster when large quantities of data are written.
 And as tasks do not need to store all generated output locally until they are
-committed, VMs using the committer do not need to so much storage
-But the committer needs a "consistent" S3 store (via S3Guard when working with
-Amazon S3).
+committed, VMs using this committer do not need local storage other than
+for buffering in-progress writes, but the committer does needsa "consistent" S3 store.
+For Amazon S3, that means S3Guard.
 
 The Staging Committers, in contrast, can write data to a S3 store without
 any consistency layer. It does, however, need local storage large enough
@@ -312,14 +312,15 @@ This declares a the classname of a factory class which creates committers for jo
 | `org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory` |  Partitioned Staging Committer|
 | `org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory` | Use the magic committer (not yet ready for production use) |
 
-All of the S3A committers revert to provide a classic FileOutputCommitter instance
+All of the S3A committers revert to providing a classic FileOutputCommitter instance
 when a commmitter is requested for any filesystem other than an S3A one.
 This allows any of these committers to be declared in an application configuration,
 without worrying about the job failing for any queries using `hdfs://` paths as
 the final destination of work.
 
 The Dynamic committer factory is different in that it allows any of the other committer
-factories to be used to create a committer, based on the specific value of theoption `fs.s3a.committer.name`:
+factories to be used to create a committer, based on the specific value of the option
+`fs.s3a.committer.name`:
 
 | value of `fs.s3a.committer.name` |  meaning |
 |--------|---------|
@@ -485,14 +486,15 @@ org.apache.hadoop.fs.s3a.commit.PathCommitException: `s3a://landsat-pds': Filesy
 in configuration option fs.s3a.committer.magic.enabled
 ```
 
-The Jjb is configured to use the magic committer, but the S3A bucket has not been explicitly
+The Job is configured to use the magic committer, but the S3A bucket has not been explicitly
 called out as supporting it,
 
 The destination bucket **must** be declared as supporting the magic committer.
 
 
 This can be done for those buckets which are known to be consistent, either
-because the [S3Guard](s3guard.html) is used to provide consistency,
+because [S3Guard](s3guard.html) is used to provide consistency,
+or because the S3-compatible filesystem is known to be strongly consistent.
 
 ```xml
 <property>
@@ -532,7 +534,7 @@ S3A Client
 `org.apache.hadoop.fs.PathIOException: s3a://landsat-pds/tmp/alice/local-1495211753375/staging-uploads': Directory for intermediate work cannot be on S3`
 
 The Staging committer uses Hadoop's original committer to manage the commit/abort
-protocol for the files listing the pending write operations. Tt uses
+protocol for the files listing the pending write operations. It uses
 the cluster filesystem for this. This must be HDFS or a similar distributed
 filesystem with consistent data and renames as O(1) atomic renames.
 

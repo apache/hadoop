@@ -156,14 +156,10 @@ public class PathOutputCommitterFactory extends Configured {
       String schemeKey = String.format(COMMITTER_FACTORY_SCHEME_PATTERN,
           scheme);
       if (StringUtils.isNotEmpty(conf.getTrimmed(schemeKey))) {
+        // it does, so use that key in the classname lookup
         LOG.debug("Using schema-specific factory for {}", outputPath);
-        // it does, so use that key
         key = schemeKey;
       }
-    } else {
-      // Either there's an explicit committer factory declared, or
-      // there's no output path, so trying to do schema-specific lookup
-      // cannot work.
     }
 
     // create the factory. Before using Configuration.getClass, check

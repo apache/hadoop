@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.commit;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -32,16 +31,19 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public class DurationInfo extends Duration
     implements AutoCloseable {
   private final String text;
-  private static final Logger LOG = LoggerFactory.getLogger(DurationInfo.class);
+
+  private final Logger log;
 
   /**
    * Create the duration text from a {@code String.format()} code call.
+   * @param log log to write to
    * @param format format string
    * @param args list of arguments
    */
-  public DurationInfo(String format, Object... args) {
+  public DurationInfo(Logger log, String format, Object... args) {
     this.text = String.format(format, args);
-    LOG.info("Starting: {}", text);
+    this.log = log;
+    log.info("Starting: {}", text);
   }
 
   @Override
@@ -52,6 +54,6 @@ public class DurationInfo extends Duration
   @Override
   public void close() {
     finished();
-    LOG.info(this.toString());
+    log.info(this.toString());
   }
 }

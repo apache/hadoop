@@ -56,7 +56,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
  * between different architectures.
  *
  * Although the committer APIs allow for a committer to be created without
- * an output path, this is no supported in this class or its subclasses:
+ * an output path, this is not supported in this class or its subclasses:
  * a destination must be supplied. It is left to the committer factory
  * to handle the creation of a committer when the destination is unknown.
  *
@@ -398,7 +398,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
 
   @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
-    try (DurationInfo d = new DurationInfo("Setup Task %s",
+    try (DurationInfo d = new DurationInfo(LOG, "Setup Task %s",
         context.getTaskAttemptID())) {
       Path taskAttemptPath = getTaskAttemptPath(context);
       FileSystem fs = getTaskAttemptFilesystem(context);
@@ -496,8 +496,9 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
       throws IOException {
     IOException ex = null;
     String r = getRole();
-    try (DurationInfo d = new DurationInfo("%s: aborting job in state %s ",
-        r, CommitUtils.jobIdString(context), state)) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: aborting job in state %s ", r, CommitUtils.jobIdString(context),
+        state)) {
       List<SinglePendingCommit> pending = listPendingUploadsToAbort(context);
       if (!pending.isEmpty()) {
         abortJobInternal(context, pending, false);
@@ -512,7 +513,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     }
 
     try (DurationInfo d =
-             new DurationInfo("%s: aborting all pending commits", r)) {
+             new DurationInfo(LOG, "%s: aborting all pending commits", r)) {
       int count = getCommitOperations()
           .abortPendingUploadsUnderPath(getOutputPath());
       if (count > 0) {
@@ -532,9 +533,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * Clean up any staging directories.
    * @throws IOException IO problem
    */
-  public void cleanupStagingDirs() throws IOException {
-
-  }
+  public abstract void cleanupStagingDirs() throws IOException;
 
   /**
    * Get the list of pending uploads for this job attempt, swallowing
@@ -554,10 +553,8 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException any failure if exceptions were not suppressed.
    */
-  protected void cleanup(JobContext context, boolean suppressExceptions)
-      throws IOException {
-
-  }
+  protected abstract void cleanup(JobContext context,
+      boolean suppressExceptions) throws IOException;
 
   @Override
   @SuppressWarnings("deprecation")
@@ -565,7 +562,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     String r = getRole();
     String id = jobIdString(context);
     LOG.warn("{}: using deprecated cleanupJob call for {}", r, id);
-    try (DurationInfo d = new DurationInfo("%s: cleanup Job %s", r, id)) {
+    try (DurationInfo d = new DurationInfo(LOG, "%s: cleanup Job %s", r, id)) {
       cleanup(context, true);
     }
   }
@@ -604,7 +601,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
           DEFAULT_COMMITTER_THREADS);
       LOG.debug("{}: creating thread pool of size {}", getRole(), numThreads);
       if (numThreads > 0) {
-        this.threadPool = Executors.newFixedThreadPool(numThreads,
+        threadPool = Executors.newFixedThreadPool(numThreads,
             new ThreadFactoryBuilder()
                 .setDaemon(true)
                 .setNameFormat("s3-committer-pool-%d")
@@ -671,8 +668,6 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
       Tasks.foreach(pending)
           .throwFailureWhenFinished(!suppressExceptions)
           .executeWith(buildThreadPool(context))
-          .onFailure((commit, exception) ->
-              getCommitOperations().abortSingleCommit(commit))
           .run(commit -> getCommitOperations().abortSingleCommit(commit));
     }
   }

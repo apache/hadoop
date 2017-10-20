@@ -1016,12 +1016,6 @@
 </property>
 
 <property>
-  <name>fs.s3a.attempts.maximum</name>
-  <value>20</value>
-  <description>How many times we should retry commands on transient errors.</description>
-</property>
-
-<property>
   <name>fs.s3a.connection.establish.timeout</name>
   <value>5000</value>
   <description>Socket connection setup timeout in milliseconds.</description>
@@ -1344,26 +1338,26 @@
   </description>
 </property>
 
+
 <property>
-  <name>fs.s3a.retry.limit</name>
-  <value>4</value>
-  <description>
-    Number of times to retry any repeatable S3 client request on failure,
-    excluding throttling requests.
-  </description>
+  <name>fs.s3a.attempts.maximum</name>
+  <value>20</value>
+  <description>How many times we should retry commands on transient errors,
+  excluding throttling errors.</description>
 </property>
 
 <property>
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between retry attempts.
+    Interval between attempts to retry operations for any reason other
+    than S3 throttle errors.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.retry.throttle.limit</name>
-  <value>10</value>
+  <value>20</value>
   <description>
     Number of times to retry any throttled request.
   </description>
@@ -1371,7 +1365,7 @@
 
 <property>
   <name>fs.s3a.retry.throttle.interval</name>
-  <value>1000ms</value>
+  <value>500ms</value>
   <description>
     Interval between retry attempts on throttled requests.
   </description>

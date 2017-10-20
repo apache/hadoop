@@ -541,8 +541,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   @Override
   public void commitJob(JobContext context) throws IOException {
     List<SinglePendingCommit> pending = Collections.emptyList();
-    try (DurationInfo d =
-             new DurationInfo("%s: preparing to commit Job", getRole())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: preparing to commit Job", getRole())) {
       pending = getPendingUploadsToCommit(context);
       preCommitJob(context, pending);
     } catch (IOException e) {
@@ -551,8 +551,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
       getCommitOperations().jobCompleted(false);
       throw e;
     }
-    try (DurationInfo d = new DurationInfo("%s: committing Job %s",
-        getRole(), jobIdString(context))) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: committing Job %s", getRole(), jobIdString(context))) {
       commitJobInternal(context, pending);
     } catch (IOException e) {
       getCommitOperations().jobCompleted(false);
@@ -632,9 +632,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
     Path taskAttemptPath = getTaskAttemptPath(context);
-    try (DurationInfo d = new
-        DurationInfo("%s: setup task attempt path %s ",
-        getRole(), taskAttemptPath)) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: setup task attempt path %s ", getRole(), taskAttemptPath)) {
       // create the local FS
       taskAttemptPath.getFileSystem(getConf()).mkdirs(taskAttemptPath);
       wrappedCommitter.setupTask(context);
@@ -644,8 +643,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   @Override
   public boolean needsTaskCommit(TaskAttemptContext context)
       throws IOException {
-    try (DurationInfo d = new DurationInfo("%s: needsTaskCommit() Task %s",
-        getRole(), context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: needsTaskCommit() Task %s", getRole(), context.getTaskAttemptID())) {
       // check for files on the local FS in the attempt path
       Path attemptPath = getTaskAttemptPath(context);
       FileSystem fs = getTaskAttemptFilesystem(context);
@@ -665,8 +664,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
 
   @Override
   public void commitTask(TaskAttemptContext context) throws IOException {
-    try (DurationInfo d = new DurationInfo("%s: commit task %s",
-        getRole(), context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: commit task %s", getRole(), context.getTaskAttemptID())) {
       int count = commitTaskInternal(context, getTaskOutput(context));
       LOG.info("{}: upload file count: {}", getRole(), count);
     } catch (IOException e) {
@@ -790,8 +789,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   public void abortTask(TaskAttemptContext context) throws IOException {
     // the API specifies that the task has not yet been committed, so there are
     // no uploads that need to be cancelled. just delete files on the local FS.
-    try (DurationInfo d =
-             new DurationInfo("Abort task %s", context.getTaskAttemptID())) {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Abort task %s", context.getTaskAttemptID())) {
       deleteTaskAttemptPathQuietly(context);
       deleteTaskWorkingPathQuietly(context);
       wrappedCommitter.abortTask(context);

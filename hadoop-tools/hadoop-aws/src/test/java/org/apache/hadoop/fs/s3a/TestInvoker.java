@@ -68,13 +68,14 @@ public class TestInvoker extends Assert {
       = new org.apache.http.conn.ConnectTimeoutException("apache");
   private static final SocketTimeoutException SOCKET_TIMEOUT_EX
       = new SocketTimeoutException("socket");
-  private static final int RETRIES_TOO_MANY = 10;
+  private static final int RETRIES_TOO_MANY = DEFAULT_MAX_ERROR_RETRIES + 10;
 
   static {
     FAST_RETRY_CONF = new Configuration();
     String interval = "10ms";
     FAST_RETRY_CONF.set(RETRY_INTERVAL, interval);
     FAST_RETRY_CONF.set(RETRY_THROTTLE_INTERVAL, interval);
+    FAST_RETRY_CONF.setInt(MAX_ERROR_RETRIES, DEFAULT_MAX_ERROR_RETRIES);
   }
 
   private static final S3ARetryPolicy RETRY_POLICY =
@@ -259,11 +260,11 @@ public class TestInvoker extends Assert {
     final AtomicInteger counter = new AtomicInteger(0);
     invoker.retry("test", null, false,
         () -> {
-          if (counter.incrementAndGet() < RETRY_LIMIT_DEFAULT) {
+          if (counter.incrementAndGet() < DEFAULT_MAX_ERROR_RETRIES) {
             throw CLIENT_TIMEOUT_EXCEPTION;
           }
         });
-    assertEquals(RETRY_LIMIT_DEFAULT, counter.get());
+    assertEquals(DEFAULT_MAX_ERROR_RETRIES, counter.get());
   }
 
   /**
@@ -272,7 +273,7 @@ public class TestInvoker extends Assert {
   @Test
   public void testRetryBadRequestIdempotent() throws Throwable {
     final AtomicInteger counter = new AtomicInteger(0);
-    final int attemptsBeforeSuccess = RETRY_LIMIT_DEFAULT;
+    final int attemptsBeforeSuccess = DEFAULT_MAX_ERROR_RETRIES;
     invoker.retry("test", null, true,
         () -> {
           if (counter.incrementAndGet() < attemptsBeforeSuccess) {

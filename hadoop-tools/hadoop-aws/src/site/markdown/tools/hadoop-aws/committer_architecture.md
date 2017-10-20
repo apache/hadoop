@@ -136,7 +136,7 @@ is if any instance of a speculative task is committed, the output MUST BE
 considered valid.
 
 There is an expectation that the Job Driver and tasks can communicate: if a task
-perform any operations itself during the task commit phase, it shall only do
+performs any operations itself during the task commit phase, it shall only do
 this when instructed by the Job Driver. Similarly, if a task is unable to
 communicate its final status to the Job Driver, it MUST NOT commit is work.
 This is very important when working with S3, as some network partitions could
@@ -148,7 +148,7 @@ isolate a task from the Job Driver, while the task retains access to S3.
 **setup**:
 
 * A job is created, assigned a Job ID (YARN?).
-* For each attempt, and attempt ID is created, to build the job attempt ID.
+* For each attempt, an attempt ID is created, to build the job attempt ID.
 * `Driver`: a `JobContext` is created/configured
 * A committer instance is instantiated with the `JobContext`; `setupJob()` invoked.
 
@@ -160,11 +160,11 @@ The standard commit protocols are implemented in
 
 There are two algorithms, the "v1" designed to address failures and restarts
 of the MapReduce application master. The V2 algorithm cannot recover from failure
-except by re-executing the entire job. It does, however, commit all its work
-during task the task commit algorithm. When working with object stores which
+except by re-executing the entire job. It does, however, propagate all its work
+to the output directory in the task commit. When working with object stores which
 mimic `rename()` by copy and delete, it is more efficient due to the reduced
 number of listings, copies and deletes, and, because these are executed in
-task commits, eliminate the final `O(data)` pause at the end of all work.
+task commits, eliminates the final `O(data)` pause at the end of all work.
 It is still highly inefficient, but the inefficiencies are less visible as
 large pauses in execution.
 
@@ -173,7 +173,7 @@ Notes
 
 * The v1 algorithm was implemented to handle MapReduce AM restarts, it was
  not used in Hadoop 1.x, whose JobTracker could not recover from failures.
- Historically then, it is the "v2 algorithm"
+ Historically then, it is the second version of a file commit algorithm.
 * Because the renames are considered to be fast, there is no logging
 of renames being in progress, or their duration.
 * Speculative execution is supported by having every task attempt write its
@@ -729,7 +729,7 @@ The `waitForValidCommitWindow()` operation is important: it declares that
 the committer must not commit unless there has been communication with the YARN
 Resource Manager with in `yarn.app.mapreduce.am.ob.committer.commit-window` milliseconds
 (default: 10,000). It does this by waiting until the next heartbeat it received.
-There's a s possible bug here: if the interval is set too small the thread may
+There's a possible bug here: if the interval is set too small the thread may
 permanently spin waiting a callback within the window. Ignoring that, this algorithm
 guarantees that 
 
@@ -827,7 +827,7 @@ parameter `fs.s3a.multipart.size` (default: 100MB).
 
 The S3Guard work, HADOOP-13345, adds a consistent view of the filesystem
 to all processes using the shared DynamoDB table as the authoritative store of
-metadata. Other implementations of the S3 protocol are fully consistent; the
+metadata. Some S3-compatible object stores are fully consistent; the
 proposed algorithm is designed to work with such object stores without the
 need for any DynamoDB tables.
 
@@ -911,9 +911,9 @@ and metadata.
 
 The completion operation is apparently `O(1)`; presumably the PUT requests
 have already uploaded the data to the server(s) which will eventually be
-serving up the data for the final path; all that is needed to complete
+serving up the data for the final path. All that is needed to complete
 the upload is to construct an object by linking together the files in
-the server's local filesystem can add/update an entry the index table of the
+the server's local filesystem and udate an entry the index table of the
 object store.
 
 In the S3A client, all PUT calls in the sequence and the final commit are
@@ -927,12 +927,12 @@ of the upload, which make this algorithm viable.
 Ryan Blue, of Netflix, has submitted an alternate committer, one which has a
 number of appealing features
 
-* Doesn't have any requirements of the destination object store, not even
-a need for a consistency layer.
-* Overall a simpler design.
+* Doesn't have any requirements of the destination object store,
 * Known to work.
 
-The final point is not to be underestimated, especially given the need to
+The final point is not to be underestimated, es not even
+a need for a consistency layer.
+* Overall a simpler design.pecially given the need to
 be resilient to the various failure modes which may arise.
 
 
@@ -1077,16 +1077,18 @@ Task will delete all local data; no uploads will be initiated.
 
 **Failure to communicate with S3 during data upload**
 
-If an upload fails, tasks will
+If an upload fails, tasks will:
 
-* attempt to abort PUT requests already uploaded to S3
-* remove temporary files on the local FS.
+* Retry using the retry policies implemented in the S3AFileSystem classes
+and the AWS libraries.
+* Eventually: attempt to abort outstanding multipart uploads already initiated.
+* Remove temporary files on the local FS.
 
 
 **Explicit Job Abort**
 
 All in-progress tasks are aborted and cleaned up. The pending commit data
-of all completed tasks can be loaded, the PUT requests aborted.
+of all completed tasks can be loaded, outstanding multipart PUT requests aborted.
 
 
 **Executor failure before Job Commit**
@@ -1096,10 +1098,12 @@ will need to be identified and cancelled;
 
 **Executor failure during Job Commit**
 
-PUT requests which have been finalized will be persisted, those which
-have not been finalized will remain outstanding. As the data for all the
-commits will be in the cluster FS, it will be possible for a cleanup to
+Multipart Put requests which have been completed with the final POST  will be persisted.
+Not-yet-completed requests will remain outstanding. As the data for all the
+commits will be in the cluster FS, it will be possible for a cleanup phase to
 load these and abort them.
+
+
 
 **Job failure prior to commit**
 
@@ -1468,9 +1472,10 @@ for any process to read or manipulated a file which it has just created.
 
 ### Changes to `S3ABlockOutputStream`
 
-We can avoid having to copy and past the `S3ABlockOutputStream` by
-having it take some input as a constructor parameter, say a
-`OutputUploadTracker` which will be called at appropriate points.
+To avoid having to copy and paste the `S3ABlockOutputStream` it has
+been modified to be constructed with a `PutTracker` class to
+managed the immediate/delayed completion of uploads. 
+It will be called at appropriate points.
 
 * Initialization, returning a marker to indicate whether or not multipart
 upload is commence immediately.
@@ -1481,13 +1486,12 @@ upload is commence immediately.
 whether any outstanding multipart should be committed.
 * Multipart abort in `abort()` call (maybe: move core logic elsewhere).
 
-The base implementation, `DefaultUploadTracker` would do nothing
+The base implementation would do nothing
 except declare that the MPU must be executed in the `close()` call.
 
-The S3ACommitter version, `S3ACommitterUploadTracker` would
-1. Request MPU started during init.
-1. In `close()` operation stop the Blockoutput stream from committing
-the upload -and instead save all the data required to commit later.
+The S3A Committer version, would
+1. Always initiate a during initialization
+1. In `close()` operation save all the data required to commit later.
 
 
 ## Integrating the Committers with Hadoop MapReduce
@@ -1557,14 +1561,13 @@ uses, these changes will allow an S3A committer to replace the `FileOutputCommit
 with minimal changes to the codebase.
 
 
-Update: There is a cost to this: MRv1 support is lost wihtout
-
+Update: There is a cost to this: MRv1 API support is lost.
 
 
 ### MRv1 support via `org.apache.hadoop.mapred.FileOutputFormat`
 
 A price of not subclassing `FileOutputCommitter` is that the code used
-to wrap and relay the MRv1 commitment protocol to the V2 `FileOutputCommitter`
+to wrap and relay the MRv1 API calls protocol to the `FileOutputCommitter`
 will not work: the new committer will not be picked up.
 
 This is visible in Spark, where the V1 API is exported from the `RDD` class
@@ -1582,12 +1585,6 @@ must be used, which means: the V2 classes.
 The design proposes the name `__magic` for the directory. HDFS and
 the various scanning routines always treat files and directories starting with `_`
 as temporary/excluded data.
-
-There's another option, `_temporary`, which is used by `FileOutputFormat` for its
-output. If that was used, then the static methods in `FileOutputCommitter`
-to generate paths, for example `getJobAttemptPath(JobContext, Path)` would
-return paths in the "magic" directory, so automatically be treated as
-delayed-completion files. This is potentially confusing.
 
 
 **Magic Committer: Subdirectories**
@@ -1617,7 +1614,7 @@ base for relative paths created underneath it.
 
 ## Testing
 
-Thr committers can only be tested against an S3-compatible object store.
+The committers can only be tested against an S3-compatible object store.
 
 Although a consistent object store is a requirement for a production deployment
 of the magic committer an inconsistent one has appeared to work during testing, simply by

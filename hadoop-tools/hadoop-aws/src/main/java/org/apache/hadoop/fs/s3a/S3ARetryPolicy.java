@@ -88,7 +88,7 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // base policy from configuration
     RetryPolicy fixedRetries = retryUpToMaximumCountWithFixedSleep(
-        conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT),
+        conf.getInt(MAX_ERROR_RETRIES, DEFAULT_MAX_ERROR_RETRIES),
         conf.getTimeDuration(RETRY_INTERVAL,
             RETRY_INTERVAL_DEFAULT,
             TimeUnit.MILLISECONDS),

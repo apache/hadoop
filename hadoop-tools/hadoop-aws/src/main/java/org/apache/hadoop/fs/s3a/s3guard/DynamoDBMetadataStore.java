@@ -620,11 +620,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
       int retryCount = 0;
       while (!unprocessed.isEmpty()) {
         retryBackoff(retryCount++);
-        final Map<String, List<WriteRequest>> p = unprocessed;
-        unprocessed = dataAccess.retry("batchWrite", "", true,
-            () ->
-              dynamoDB.batchWriteItemUnprocessed(p).getUnprocessedItems()
-             );
+        res = dynamoDB.batchWriteItemUnprocessed(unprocessed);
+        unprocessed = res.getUnprocessedItems();
       }
     }
   }
@@ -1053,8 +1050,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /**
    * Validates a path object; it must be absolute, have an s3a:/// scheme
-   * and contain a host
-   * (bucket) component.
+   * and contain a host (bucket) component.
    * @param path path to check
    * @return the path passed in
    */
@@ -1178,14 +1174,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
       }
       int eventCount = throttleEventCount.addAndGet(1);
       if (attempts == 1 && eventCount < THROTTLE_EVENT_LOG_LIMIT) {
-        LOG.warn(
-            "DynamoDB IO limits reached in {}; consider increasing capacity: {}",
-            text, ex.toString());
+        LOG.warn("DynamoDB IO limits reached in {};"
+                + " consider increasing capacity: {}", text, ex.toString());
         LOG.debug("Throttled", ex);
       } else {
-        LOG.debug(
-            "DynamoDB IO limits reached in {}; consider increasing capacity: {}",
-            text, ex.toString());
+        // user has been warned already, log at debug only.
+        LOG.debug("DynamoDB IO limits reached in {};"
+                + " consider increasing capacity: {}", text, ex.toString());
       }
     } else if (attempts == 1) {
       // not throttled. Log on the first attempt only

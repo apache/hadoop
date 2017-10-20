@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,6 +56,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.service.ServiceOperations;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -82,13 +84,15 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
   public static void setupClusters() throws IOException {
     // the HDFS and YARN clusters share the same configuration, so
     // the HDFS cluster binding is implicitly propagated to YARN
-    JobConf c = new JobConf();
+    conf = new JobConf();
+    conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
+    conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, Long.MAX_VALUE);
+
     hdfs = new MiniDFSClusterService();
-    hdfs.init(c);
+    hdfs.init(conf);
     hdfs.start();
-    conf = c;
     yarn = new MiniMRYarnCluster("ITCommitMRJob", 2);
-    yarn.init(c);
+    yarn.init(conf);
     yarn.start();
   }
 
@@ -205,7 +209,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     mrJob.setMaxMapAttempts(1);
 
     mrJob.submit();
-    try (DurationInfo d = new DurationInfo("Job Execution")) {
+    try (DurationInfo d = new DurationInfo(LOG, "Job Execution")) {
       boolean succeeded = mrJob.waitForCompletion(true);
       assertTrue("MR job failed", succeeded);
     }

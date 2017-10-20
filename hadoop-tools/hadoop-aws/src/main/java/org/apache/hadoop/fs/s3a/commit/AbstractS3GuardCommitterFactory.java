@@ -32,9 +32,7 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
 
 /**
- * Dynamically create the output committer based on the filesystem type.
- * For S3A output, uses the committer provided in the implementation class.
- * For other filesystems, returns the classic committer.
+ * Dynamically create the output committer based on subclass type and settings.
  */
 public abstract class AbstractS3GuardCommitterFactory
     extends PathOutputCommitterFactory {

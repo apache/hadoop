@@ -127,8 +127,8 @@ public class TestPathOutputCommitterFactory extends Assert {
   }
 
   /**
-   * Verify that if the committer factory class is unknown, you cannot
-   * create committers.
+   * Verify that if the committer output path is null, you get back
+   * a FileOutputCommitter with null output & work paths.
    */
   @Test
   public void testCommitterNullOutputPath() throws Throwable {

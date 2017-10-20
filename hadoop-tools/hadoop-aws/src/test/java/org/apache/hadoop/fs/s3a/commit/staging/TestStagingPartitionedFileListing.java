@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -184,53 +183,6 @@ public class TestStagingPartitionedFileListing
     List<FileStatus> statusList = mapLocatedFiles(
         fs.listFiles(base, true), s -> (FileStatus) s);
     return Paths.getPartitions(base, statusList);
-  }
-
-  @Test
-  public void testUUIDPart() throws Throwable {
-    assertUUIDAdded("/part-0000", "/part-0000-UUID");
-  }
-
-  @Test
-  public void testUUIDPartSuffix() throws Throwable {
-    assertUUIDAdded("/part-0000.gz.csv", "/part-0000-UUID.gz.csv");
-  }
-
-  @Test
-  public void testUUIDDottedPath() throws Throwable {
-    assertUUIDAdded("/parent.dir/part-0000", "/parent.dir/part-0000-UUID");
-  }
-
-  @Test
-  public void testUUIDPartUUID() throws Throwable {
-    assertUUIDAdded("/part-0000-UUID.gz.csv", "/part-0000-UUID.gz.csv");
-  }
-
-  @Test
-  public void testUUIDParentUUID() throws Throwable {
-    assertUUIDAdded("/UUID/part-0000.gz.csv", "/UUID/part-0000.gz.csv");
-  }
-
-  @Test
-  public void testUUIDDir() throws Throwable {
-    LambdaTestUtils.intercept(IllegalStateException.class,
-        () -> Paths.addUUID("/dest/", "UUID"));
-  }
-
-  @Test
-  public void testUUIDEmptyDir() throws Throwable {
-    LambdaTestUtils.intercept(IllegalArgumentException.class,
-        () -> Paths.addUUID("", "UUID"));
-  }
-  @Test
-  public void testEmptyUUID() throws Throwable {
-    LambdaTestUtils.intercept(IllegalArgumentException.class,
-        () -> Paths.addUUID("part-0000.gz", ""));
-  }
-
-  private void assertUUIDAdded(String path, String expected) {
-    String added = Paths.addUUID(path, "UUID");
-    assertEquals("from " + path, expected, added);
   }
 
 }
