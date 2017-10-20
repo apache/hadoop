@@ -138,6 +138,7 @@
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.11.199</aws-java-sdk.version>
     <hsqldb.version>2.3.4</hsqldb.version>
+    <frontend-maven-plugin.version>1.5</frontend-maven-plugin.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
     <declared.hadoop.version>${project.version}</declared.hadoop.version>
