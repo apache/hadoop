@@ -58,6 +58,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   private Resource fairShare = Resources.createResource(0, 0);
   private Resource steadyFairShare = Resources.createResource(0, 0);
   private Resource reservedResource = Resources.createResource(0, 0);
+  private final Resource resourceUsage = Resource.newInstance(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final YarnAuthorizationProvider authorizer;
@@ -477,6 +478,39 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   @Override
   public void decReservedResource(String nodeLabel, Resource resourceToDec) {
+  }
+
+  @Override
+  public Resource getResourceUsage() {
+    return resourceUsage;
+  }
+
+  /**
+   * Increase resource usage for this queue and all parent queues.
+   *
+   * @param res the resource to increase
+   */
+  protected void incUsedResource(Resource res) {
+    synchronized (resourceUsage) {
+      Resources.addTo(resourceUsage, res);
+      if (parent != null) {
+        parent.incUsedResource(res);
+      }
+    }
+  }
+
+  /**
+   * Decrease resource usage for this queue and all parent queues.
+   *
+   * @param res the resource to decrease
+   */
+  protected void decUsedResource(Resource res) {
+    synchronized (resourceUsage) {
+      Resources.subtractFrom(resourceUsage, res);
+      if (parent != null) {
+        parent.decUsedResource(res);
+      }
+    }
   }
 
   @Override
