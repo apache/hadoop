@@ -752,6 +752,33 @@ public class TestErasureCodingPolicies {
   }
 
   @Test
+  public void testAddECPoliciesExceeded() throws Exception {
+    ECSchema toAddSchema = new ECSchema("rs", 3, 2);
+    int allowNumPolicies = ErasureCodeConstants.MAX_POLICY_ID -
+        ErasureCodeConstants.USER_DEFINED_POLICY_START_ID + 1;
+    for (int i = 0; i < allowNumPolicies; i++) {
+      ErasureCodingPolicy erasureCodingPolicy = new ErasureCodingPolicy(
+          toAddSchema, 1024 + 1024 * i);
+      ErasureCodingPolicy[] policyArray =
+          new ErasureCodingPolicy[]{erasureCodingPolicy};
+      AddErasureCodingPolicyResponse[] responses =
+          fs.addErasureCodingPolicies(policyArray);
+      assertEquals(1, responses.length);
+      assertTrue(responses[0].isSucceed());
+      assertEquals(responses[0].getPolicy().getId(),
+          ErasureCodeConstants.USER_DEFINED_POLICY_START_ID + i);
+    }
+    ErasureCodingPolicy erasureCodingPolicy = new ErasureCodingPolicy(
+        toAddSchema, 1024 + 1024 * allowNumPolicies);
+    ErasureCodingPolicy[] policyArray =
+        new ErasureCodingPolicy[]{erasureCodingPolicy};
+    AddErasureCodingPolicyResponse[] responses =
+        fs.addErasureCodingPolicies(policyArray);
+    assertEquals(1, responses.length);
+    assertFalse(responses[0].isSucceed());
+  }
+
+  @Test
   public void testReplicationPolicy() throws Exception {
     ErasureCodingPolicy replicaPolicy =
         SystemErasureCodingPolicies.getReplicationPolicy();
