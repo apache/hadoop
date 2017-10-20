@@ -687,8 +687,9 @@ static int check_mount_permitted(const char **permitted_mounts, const char *requ
     }
     // directory check
     permitted_mount_len = strlen(permitted_mounts[i]);
-    if (permitted_mount_len > 0
-        && permitted_mounts[i][permitted_mount_len - 1] == '/') {
+    struct stat path_stat;
+    stat(permitted_mounts[i], &path_stat);
+    if(S_ISDIR(path_stat.st_mode)) {
       if (strncmp(normalized_path, permitted_mounts[i], permitted_mount_len) == 0) {
         ret = 1;
         break;
