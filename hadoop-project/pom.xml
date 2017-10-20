@@ -107,7 +107,7 @@
     for an open-ended enforcement
     -->
     <enforced.java.version>[${javac.version},)</enforced.java.version>
-    <enforced.maven.version>[3.0.2,)</enforced.maven.version>
+    <enforced.maven.version>[3.3.0,)</enforced.maven.version>
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:MaxPermSize=768m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
@@ -132,6 +132,10 @@
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.11.199</aws-java-sdk.version>
     <hsqldb.version>2.3.4</hsqldb.version>
+    <frontend-maven-plugin.version>1.5</frontend-maven-plugin.version>
+    <!-- the version of Hadoop declared in the version resources; can be overridden
+    so that Hadoop 3.x can declare itself a 2.x artifact. -->
+    <declared.hadoop.version>${project.version}</declared.hadoop.version>
   </properties>
 
   <dependencyManagement>

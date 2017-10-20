@@ -1,0 +1,86 @@
+{{!
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+}}
+
+<table id={{table-id}} class="display table table-striped table-bordered" cellspacing="0" width="100%">
+  <thead>
+    <tr>
+          <th>Application ID</th>
+          <th>Application Type</th>
+          <th>Name</th>
+          <th>User</th>
+          <th>Queue</th>
+          <th>State</th>
+          <th>Final Status</th>
+          <th>Start Time</th>
+          <th>Elapsed Time</th> <!-- idx = 7 -->
+          <th>Finished Time</th>
+          <th>Priority</th>
+          <th>Progress</th>
+          <th>%Cluster</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#if arr}}
+      {{#each arr as |app|}}
+        <tr>
+          <td><a href="#/yarn-app/{{app.id}}/info">{{app.id}}</a></td>
+          <td>{{app.applicationType}}</td>
+          <td>{{app.appName}}</td>
+          <td>{{app.user}}</td>
+          <td>{{app.queue}}</td>
+          <td>{{app.state}}</td>
+          <td><span class={{app.finalStatusStyle}}>{{app.finalStatus}}</span></td>
+          <td>{{app.startTime}}</td>
+          <td>{{app.elapsedTime}}</td>
+          <td>{{app.validatedFinishedTs}}</td>
+          <td>{{app.priority}}</td>
+          <td>
+            <div class="progress" style="margin-bottom: 0;">
+              <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style={{app.progressStyle}}>
+                {{app.progress}}%
+              </div>
+            </div>
+          </td>
+          <td>{{app.clusterUsagePercentage}}</td>
+        </tr>
+      {{/each}}
+    {{else}}
+      <tr>
+          <td><a href="#/yarn-app/{{app.id}}/info">{{app.id}}</a></td>
+          <td>{{app.applicationType}}</td>
+          <td>{{app.appName}}</td>
+          <td>{{app.user}}</td>
+          <td>{{app.queue}}</td>
+          <td>{{app.state}}</td>
+          <td><span class={{app.finalStatusStyle}}>{{app.finalStatus}}</span></td>
+          <td>{{app.startTime}}</td>
+          <td>{{app.elapsedTime}}</td>
+          <td>{{app.validatedFinishedTs}}</td>
+          <td>{{app.priority}}</td>
+          <td>
+            <div class="progress" style="margin-bottom: 0;">
+              <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style={{app.progressStyle}}>
+                {{app.progress}}%
+              </div>
+            </div>
+          </td>
+          <td>{{app.clusterUsagePercentage}}</td>
+      </tr>
+    {{/if}}
+  </tbody>
+</table>

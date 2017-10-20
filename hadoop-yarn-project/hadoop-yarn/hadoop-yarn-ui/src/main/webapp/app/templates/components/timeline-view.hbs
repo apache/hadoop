@@ -1,0 +1,73 @@
+{{!
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+}}
+
+<div class="col-md-12 container-fluid">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      {{#if attemptModel}}
+        Application Attempts
+      {{else}}
+        Containers
+      {{/if}}
+    </div>
+    {{#if isDataEmpty}}
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="active">
+          <a href="#graphViewTab" role="tab" data-toggle="tab">Graph View</a>
+        </li>
+        <li class="">
+          <a href="#gridViewTab" role="tab" data-toggle="tab">Grid View</a>
+        </li>
+      </ul>
+      <div class="panel-body">
+        <div class="tab-content">
+          <div role="tabpanel" class="tab-pane active" id="graphViewTab">
+            <br/><br/>
+            <div class="col-md-7 container-fluid" id={{parent-id}}></div>
+            <!-- diag info -->
+            <div class="col-md-5 container-fluid">
+              <div class="panel panel-default add-ellipsis attempt-info-panel">
+                <div class="panel-heading">
+                  {{#if selected.link}}
+                    {{#link-to selected.linkname selected.id (query-params service=serviceName)}}{{selected.id}}{{/link-to}}
+                  {{else}}
+                    {{selected.id}}
+                  {{/if}}
+                </div>
+                {{#if attemptModel}}
+                  {{app-attempt-table attempt=selected}}
+                {{else}}
+                  {{container-table container=selected}}
+                {{/if}}
+              </div>
+            </div>
+          </div>
+          <div role="tabpanel" class="tab-pane" id="gridViewTab">
+            {{em-table columns=gridColumns rows=gridRows}}
+          </div>
+        </div>
+      </div>
+    {{else}}
+      <div class="panel-body">
+        <h4 class="text-center">No data available!</h4>
+      </div>
+    {{/if}}
+  </div>
+</div>
+
+{{outlet}}

@@ -65,9 +65,16 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     snappy \
     zlib1g-dev
 
-# Fixing the Apache commons / Maven dependency problem under Ubuntu:
-# See http://wiki.apache.org/commons/VfsProblems
-RUN cd /usr/share/maven/lib && ln -s ../../java/commons-lang.jar .
+######
+# Install Apache Maven
+######
+RUN mkdir -p /opt/maven && \
+    curl -L -s -S \
+         http://www-us.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+         -o /opt/maven.tar.gz && \
+    tar xzf /opt/maven.tar.gz --strip-components 1 -C /opt/maven
+ENV MAVEN_HOME /opt/maven
+
 
 #######
 # Java OpenJDK
@@ -125,6 +132,15 @@ RUN pip install python-dateutil
 # Avoid out of memory errors in builds
 ###
 ENV MAVEN_OPTS -Xms256m -Xmx512m
+
+###
+# Install node js tools for web UI frameowkr
+###
+RUN apt-get -y install nodejs && \
+    ln -s /usr/bin/nodejs /usr/bin/node && \
+    apt-get -y install npm && \
+    npm install -g bower && \
+    npm install -g ember-cli
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
