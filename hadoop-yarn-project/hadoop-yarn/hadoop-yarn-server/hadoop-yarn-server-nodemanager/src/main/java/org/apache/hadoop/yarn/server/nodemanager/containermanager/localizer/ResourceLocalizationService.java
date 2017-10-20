@@ -859,7 +859,7 @@ public class ResourceLocalizationService extends CompositeService
       // TODO handle failures, cancellation, requests by other containers
       LocalizedResource rsrc = request.getResource();
       LocalResourceRequest key = rsrc.getRequest();
-      LOG.info("Downloading public rsrc:" + key);
+      LOG.info("Downloading public resource: " + key);
       /*
        * Here multiple containers may request the same resource. So we need
        * to start downloading only when
@@ -918,7 +918,16 @@ public class ResourceLocalizationService extends CompositeService
                 + " Either queue is full or threadpool is shutdown.", re);
           }
         } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skip downloading resource: " + key + " since it's in"
+                + " state: " + rsrc.getState());
+          }
           rsrc.unlock();
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skip downloading resource: " + key + " since it is locked"
+              + " by other threads");
         }
       }
     }
