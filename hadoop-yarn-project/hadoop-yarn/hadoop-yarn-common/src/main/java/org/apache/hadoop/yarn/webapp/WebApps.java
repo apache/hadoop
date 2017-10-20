@@ -402,7 +402,7 @@ public class WebApps {
       HttpServer2 httpServer = webApp.httpServer();
       if (ui2Context != null) {
         addFiltersForNewContext(ui2Context);
-        httpServer.addHandlerAtFront(ui2Context);
+        httpServer.addContext(ui2Context, true);
       }
       try {
         httpServer.start();
