@@ -385,8 +385,9 @@ public class Listing {
         status = statusBatchIterator.next();
         // We remove from provided list the file status listed by S3 so that
         // this does not return duplicate items.
-        LOG.debug("Removing the status from provided file status {}", status);
-        providedStatus.remove(status);
+        if (providedStatus.remove(status)) {
+          LOG.debug("Removed the status from provided file status {}", status);
+        }
       } else {
         if (providedStatusIterator.hasNext()) {
           status = providedStatusIterator.next();

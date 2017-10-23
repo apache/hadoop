@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
-import org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory;
+import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
 
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.COMMITTER_FACTORY_SCHEME_PATTERN;
@@ -147,7 +147,7 @@ public final class CommitConstants {
    * Partitioned committer: {@value}.
    */
   public static final String PARTITION_COMMITTER_FACTORY =
-      PartitonedStagingCommitterFactory.CLASSNAME;
+      PartitionedStagingCommitterFactory.CLASSNAME;
 
   /**
    * Dynamic committer: {@value}.

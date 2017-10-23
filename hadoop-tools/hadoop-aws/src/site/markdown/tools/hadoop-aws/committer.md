@@ -309,7 +309,7 @@ This declares a the classname of a factory class which creates committers for jo
 | `org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory` |  The default file output committer |
 | `org.apache.hadoop.fs.s3a.commit.DynamicCommitterFactory` | Dynamically choose the committer on a per-bucket basis |
 | `org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory` |  Use the Directory Staging Committer|
-| `org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory` |  Partitioned Staging Committer|
+| `org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory` |  Partitioned Staging Committer|
 | `org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory` | Use the magic committer (not yet ready for production use) |
 
 All of the S3A committers revert to providing a classic FileOutputCommitter instance

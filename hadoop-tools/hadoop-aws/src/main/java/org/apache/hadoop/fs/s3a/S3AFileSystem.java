@@ -404,8 +404,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         abortOutstandingMultipartUploads(purgeExistingMultipartAge);
       } catch (AccessDeniedException e) {
         instrumentation.errorIgnored();
-        LOG.info("Failed to purge multipart uploads against {}," +
-            " FS may be read only", bucket, e);
+        LOG.debug("Failed to purge multipart uploads against {}," +
+            " FS may be read only", bucket);
       }
     }
   }

@@ -167,7 +167,7 @@ class S3ABlockOutputStream extends OutputStream implements
     // writes a 0-byte entry.
     createBlockIfNeeded();
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
-        " output to {}", writeOperationHelper, activeBlock);
+        " output to {}", key, activeBlock);
     if (putTracker.initialize()) {
       LOG.debug("Put tracker requests multipart upload");
       initMultipartUpload();

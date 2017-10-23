@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 /**
  * Factory for the {@link PartitionedStagingCommitter}.
  */
-public class PartitonedStagingCommitterFactory
+public class PartitionedStagingCommitterFactory
     extends AbstractS3GuardCommitterFactory {
 
   /**
@@ -37,7 +37,7 @@ public class PartitonedStagingCommitterFactory
    */
   public static final String CLASSNAME
       = "org.apache.hadoop.fs.s3a.commit.staging"
-      + ".PartitonedStagingCommitterFactory";
+      + ".PartitionedStagingCommitterFactory";
 
   public PathOutputCommitter createTaskCommitter(S3AFileSystem fileSystem,
       Path outputPath,

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
-import org.apache.hadoop.fs.s3a.commit.staging.PartitonedStagingCommitterFactory;
+import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
@@ -102,7 +102,7 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
       factory = new DirectoryStagingCommitterFactory();
       break;
     case COMMITTER_NAME_PARTITION:
-      factory = new PartitonedStagingCommitterFactory();
+      factory = new PartitionedStagingCommitterFactory();
       break;
     case COMMITTER_NAME_MAGIC:
       factory = new MagicS3GuardCommitterFactory();
