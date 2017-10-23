@@ -140,16 +140,6 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     this(null);
   }
 
-  @VisibleForTesting
-  boolean isMonitoring() {
-    return monitoring;
-  }
-
-  @VisibleForTesting
-  int getRefCount() {
-    return refCount;
-  }
-
   /**
    * Initialized the metrics system with a prefix.
    * @param prefix  the system will look for configs with the prefix
@@ -157,12 +147,12 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
    */
   @Override
   public synchronized MetricsSystem init(String prefix) {
-    ++refCount;
     if (monitoring && !DefaultMetricsSystem.inMiniClusterMode()) {
       LOG.warn(this.prefix +" metrics system already initialized!");
       return this;
     }
     this.prefix = checkNotNull(prefix, "prefix");
+    ++refCount;
     if (monitoring) {
       // in mini cluster mode
       LOG.info(this.prefix +" metrics system started (again)");
