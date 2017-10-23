@@ -253,6 +253,14 @@ public final class ErasureCodingPolicyManager {
         return p;
       }
     }
+
+    if (getCurrentMaxPolicyID() == ErasureCodeConstants.MAX_POLICY_ID) {
+      throw new HadoopIllegalArgumentException("Adding erasure coding " +
+          "policy failed because the number of policies stored in the " +
+          "system already reached the threshold, which is " +
+          ErasureCodeConstants.MAX_POLICY_ID);
+    }
+
     policy.setName(assignedNewName);
     policy.setId(getNextAvailablePolicyID());
     this.policiesByName.put(policy.getName(), policy);
@@ -261,12 +269,14 @@ public final class ErasureCodingPolicyManager {
     return policy;
   }
 
+  private byte getCurrentMaxPolicyID() {
+    return policiesByID.keySet().stream().max(Byte::compareTo).orElse((byte)0);
+  }
+
   private byte getNextAvailablePolicyID() {
-    byte currentId = this.policiesByID.keySet().stream()
-        .max(Byte::compareTo)
-        .filter(id -> id >= ErasureCodeConstants.USER_DEFINED_POLICY_START_ID)
-        .orElse(ErasureCodeConstants.USER_DEFINED_POLICY_START_ID);
-    return (byte) (currentId + 1);
+    byte nextPolicyID = (byte)(getCurrentMaxPolicyID() + 1);
+    return nextPolicyID > ErasureCodeConstants.USER_DEFINED_POLICY_START_ID ?
+        nextPolicyID : ErasureCodeConstants.USER_DEFINED_POLICY_START_ID;
   }
 
   /**

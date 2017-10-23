@@ -33,11 +33,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceRequestI
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class to validate RouterWebServiceUtil methods.
  */
 public class TestRouterWebServiceUtil {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRouterWebServiceUtil.class);
 
   private static final ApplicationId APPID1 = ApplicationId.newInstance(1, 1);
   private static final ApplicationId APPID2 = ApplicationId.newInstance(2, 1);
@@ -407,8 +411,12 @@ public class TestRouterWebServiceUtil {
     ClusterMetricsInfo metrics = new ClusterMetricsInfo();
     ClusterMetricsInfo metricsResponse = new ClusterMetricsInfo();
 
-    setUpClusterMetrics(metrics);
-    setUpClusterMetrics(metricsResponse);
+    long seed = System.currentTimeMillis();
+    setUpClusterMetrics(metrics, seed);
+    // ensure that we don't reuse the same seed when setting up metricsResponse
+    // or it might mask bugs
+    seed += 1000000000;
+    setUpClusterMetrics(metricsResponse, seed);
     ClusterMetricsInfo metricsClone = createClusterMetricsClone(metrics);
     RouterWebServiceUtil.mergeMetrics(metrics, metricsResponse);
 
@@ -538,8 +546,9 @@ public class TestRouterWebServiceUtil {
 
   }
 
-  private void setUpClusterMetrics(ClusterMetricsInfo metrics) {
-    Random rand = new Random(System.currentTimeMillis());
+  private void setUpClusterMetrics(ClusterMetricsInfo metrics, long seed) {
+    LOG.info("Using seed: " + seed);
+    Random rand = new Random(seed);
     metrics.setAppsSubmitted(rand.nextInt(1000));
     metrics.setAppsCompleted(rand.nextInt(1000));
     metrics.setAppsPending(rand.nextInt(1000));

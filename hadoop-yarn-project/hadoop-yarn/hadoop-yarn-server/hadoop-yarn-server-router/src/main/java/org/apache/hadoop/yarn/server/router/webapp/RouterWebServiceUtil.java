@@ -406,22 +406,26 @@ public final class RouterWebServiceUtil {
     metrics.setContainersPending(metrics.getPendingContainers()
         + metricsResponse.getPendingContainers());
 
-    metrics.setTotalMB(metrics.getTotalMB() + metricsResponse.getTotalMB());
-    metrics.setTotalVirtualCores(
-        metrics.getTotalVirtualCores() + metrics.getTotalVirtualCores());
-    metrics.setTotalNodes(metrics.getTotalNodes() + metrics.getTotalNodes());
-    metrics.setLostNodes(metrics.getLostNodes() + metrics.getLostNodes());
-    metrics.setUnhealthyNodes(
-        metrics.getUnhealthyNodes() + metrics.getUnhealthyNodes());
-    metrics.setDecommissioningNodes(
-        metrics.getDecommissioningNodes() + metrics.getDecommissioningNodes());
-    metrics.setDecommissionedNodes(
-        metrics.getDecommissionedNodes() + metrics.getDecommissionedNodes());
-    metrics.setRebootedNodes(
-        metrics.getRebootedNodes() + metrics.getRebootedNodes());
-    metrics.setActiveNodes(metrics.getActiveNodes() + metrics.getActiveNodes());
-    metrics.setShutdownNodes(
-        metrics.getShutdownNodes() + metrics.getShutdownNodes());
+    metrics.setTotalMB(metrics.getTotalMB()
+        + metricsResponse.getTotalMB());
+    metrics.setTotalVirtualCores(metrics.getTotalVirtualCores()
+        + metricsResponse.getTotalVirtualCores());
+    metrics.setTotalNodes(metrics.getTotalNodes()
+        + metricsResponse.getTotalNodes());
+    metrics.setLostNodes(metrics.getLostNodes()
+        + metricsResponse.getLostNodes());
+    metrics.setUnhealthyNodes(metrics.getUnhealthyNodes()
+        + metricsResponse.getUnhealthyNodes());
+    metrics.setDecommissioningNodes(metrics.getDecommissioningNodes()
+        + metricsResponse.getDecommissioningNodes());
+    metrics.setDecommissionedNodes(metrics.getDecommissionedNodes()
+        + metricsResponse.getDecommissionedNodes());
+    metrics.setRebootedNodes(metrics.getRebootedNodes()
+        + metricsResponse.getRebootedNodes());
+    metrics.setActiveNodes(metrics.getActiveNodes()
+        + metricsResponse.getActiveNodes());
+    metrics.setShutdownNodes(metrics.getShutdownNodes()
+        + metricsResponse.getShutdownNodes());
   }
 
 }
