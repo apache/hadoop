@@ -149,6 +149,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         return znodeWorkingPath + "/" + ROOT_ZNODE_NAME + "/" + VERSION_NODE;
       }
 
+      @Override
       public Version getCurrentVersion() {
         return CURRENT_VERSION_INFO;
       }
@@ -198,6 +199,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       return createStore(conf);
     }
 
+    @Override
     public RMStateStore getRMStateStore() throws Exception {
       YarnConfiguration conf = new YarnConfiguration();
       return createStore(conf);
@@ -221,6 +223,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       return store.getCurrentVersion();
     }
 
+    @Override
     public boolean appExists(RMApp app) throws Exception {
       String appIdPath = app.getApplicationId().toString();
       int split =
@@ -230,6 +233,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
           .forPath(store.getAppNode(appIdPath, split));
     }
 
+    @Override
     public boolean attemptExists(RMAppAttempt attempt) throws Exception {
       ApplicationAttemptId attemptId = attempt.getAppAttemptId();
       return null != curatorFramework.checkExists()
@@ -279,6 +283,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   static class TestAppRejDispatcher extends TestDispatcher {
     private boolean appsavefailedEvnt;
 
+    @Override
     public void handle(Event event) {
       if (event instanceof RMAppEvent && event.getType()
           .equals(RMAppEventType.APP_SAVE_FAILED)) {
