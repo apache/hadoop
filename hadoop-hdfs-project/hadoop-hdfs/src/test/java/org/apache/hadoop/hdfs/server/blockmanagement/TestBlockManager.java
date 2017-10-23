@@ -1511,4 +1511,115 @@ public class TestBlockManager {
     return blockInfo;
   }
 
+  private BlockInfo makeBlockReplicasMaintenance(long blockId,
+      List<DatanodeDescriptor> nodesList) throws IOException {
+    long inodeId = ++mockINodeId;
+    final INodeFile bc = TestINodeFile.createINodeFile(inodeId);
+
+    BlockInfo blockInfo = blockOnNodes(blockId, nodesList);
+    blockInfo.setReplication((short) 3);
+    blockInfo.setBlockCollectionId(inodeId);
+
+    Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    nodesList.get(0).setInMaintenance();
+    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
+    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    bm.checkRedundancy(mockedBc);
+    return blockInfo;
+  }
+
+  @Test
+  public void testMetaSaveInMaintenanceReplicas() throws Exception {
+    List<DatanodeStorageInfo> origStorages = getStorages(0, 1);
+    List<DatanodeDescriptor> origNodes = getNodes(origStorages);
+    BlockInfo block = makeBlockReplicasMaintenance(0, origNodes);
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+    bm.metaSave(out);
+    out.flush();
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    StringBuffer buffer = new StringBuffer();
+    String line;
+    try {
+      while ((line = reader.readLine()) != null) {
+        buffer.append(line);
+        System.out.println(line);
+      }
+      String output = buffer.toString();
+      assertTrue("Metasave output should not have reported " +
+              "missing blocks.",
+          output.contains("Metasave: Blocks currently missing: 0"));
+      assertTrue("There should be 1 block waiting for reconstruction",
+          output.contains("Metasave: Blocks waiting for reconstruction: 1"));
+      String blockNameGS = block.getBlockName() + "_" +
+          block.getGenerationStamp();
+      assertTrue("Block " + blockNameGS +
+              " should be list as maintenance.",
+          output.contains(blockNameGS + " (replicas: live: 1 decommissioning " +
+              "and decommissioned: 0 corrupt: 0 in excess: " +
+              "0 maintenance mode: 1)"));
+    } finally {
+      reader.close();
+      file.delete();
+    }
+  }
+
+  private BlockInfo makeBlockReplicasDecommission(long blockId,
+      List<DatanodeDescriptor> nodesList) throws IOException {
+    long inodeId = ++mockINodeId;
+    final INodeFile bc = TestINodeFile.createINodeFile(inodeId);
+
+    BlockInfo blockInfo = blockOnNodes(blockId, nodesList);
+    blockInfo.setReplication((short) 3);
+    blockInfo.setBlockCollectionId(inodeId);
+
+    Mockito.doReturn(bc).when(fsn).getBlockCollection(inodeId);
+    bm.blocksMap.addBlockCollection(blockInfo, bc);
+    nodesList.get(0).startDecommission();
+    BlockCollection mockedBc = Mockito.mock(BlockCollection.class);
+    Mockito.when(mockedBc.getBlocks()).thenReturn(new BlockInfo[]{blockInfo});
+    bm.checkRedundancy(mockedBc);
+    return blockInfo;
+  }
+
+  @Test
+  public void testMetaSaveDecommissioningReplicas() throws Exception {
+    List<DatanodeStorageInfo> origStorages = getStorages(0, 1);
+    List<DatanodeDescriptor> origNodes = getNodes(origStorages);
+    BlockInfo block = makeBlockReplicasDecommission(0, origNodes);
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+    bm.metaSave(out);
+    out.flush();
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    StringBuffer buffer = new StringBuffer();
+    String line;
+    try {
+      while ((line = reader.readLine()) != null) {
+        buffer.append(line);
+      }
+      String output = buffer.toString();
+      assertTrue("Metasave output should not have reported " +
+              "missing blocks.",
+          output.contains("Metasave: Blocks currently missing: 0"));
+      assertTrue("There should be 1 block waiting for reconstruction",
+          output.contains("Metasave: Blocks waiting for reconstruction: 1"));
+      String blockNameGS = block.getBlockName() + "_" +
+          block.getGenerationStamp();
+      assertTrue("Block " + blockNameGS +
+              " should be list as maintenance.",
+          output.contains(blockNameGS + " (replicas: live: 1 decommissioning " +
+              "and decommissioned: 1 corrupt: 0 in excess: " +
+              "0 maintenance mode: 0)"));
+    } finally {
+      reader.close();
+      file.delete();
+    }
+  }
+
 }
