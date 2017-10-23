@@ -40,14 +40,16 @@ public final class ExecutorHelper {
 
     //For additional information, see: https://docs.oracle
     // .com/javase/7/docs/api/java/util/concurrent/ThreadPoolExecutor
-    // .html#afterExecute(java.lang.Runnable,%20java.lang.Throwable) .
+    // .html#afterExecute(java.lang.Runnable,%20java.lang.Throwable)
 
-    if (t == null && r instanceof Future<?>) {
+    // Handle JDK-8071638
+    if (t == null && r instanceof Future<?> && ((Future<?>) r).isDone()) {
       try {
         ((Future<?>) r).get();
       } catch (ExecutionException ee) {
-        LOG.warn("Execution exception when running task in " +
-            Thread.currentThread().getName());
+        LOG.warn(
+            "Execution exception when running task in " + Thread.currentThread()
+                .getName());
         t = ee.getCause();
       } catch (InterruptedException ie) {
         LOG.warn("Thread (" + Thread.currentThread() + ") interrupted: ", ie);
