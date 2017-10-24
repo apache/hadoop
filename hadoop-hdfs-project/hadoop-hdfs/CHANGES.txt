@@ -19,9 +19,6 @@ Release 2.7.5 - UNRELEASED
     (Ajay Kumar via Arpit Agarwal, zhz)
     
     HDFS-10984. Expose nntop output as metrics. (Siddharth Wagle via xyao, zhz)
-    
-    HDFS-12502. nntop should support a category based on FilesInGetListingOps.
-    (zhz)
 
   OPTIMIZATIONS
 
