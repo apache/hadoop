@@ -90,10 +90,6 @@ public class TestSCMMXBean {
     String clientRpcPort = (String)mbs.getAttribute(bean,
         "ClientRpcPort");
     assertEquals(scm.getClientRpcPort(), clientRpcPort);
-
-    TabularData nodeCountObj = (TabularData)mbs.getAttribute(bean,
-        "NodeCount");
-    verifyEquals(nodeCountObj, scm.getNodeCount());
   }
 
   @Test

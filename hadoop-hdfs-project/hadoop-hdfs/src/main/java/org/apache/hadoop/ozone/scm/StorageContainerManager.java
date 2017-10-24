@@ -800,15 +800,6 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     return scmNodeManager.getNodeCount(nodestate);
   }
 
-  @Override
-  public Map<String, Integer> getNodeCount() {
-    Map<String, Integer> countMap = new HashMap<String, Integer>();
-    for (NodeState state : NodeState.values()) {
-      countMap.put(state.toString(), scmNodeManager.getNodeCount(state));
-    }
-    return countMap;
-  }
-
   /**
    * Returns node manager.
    * @return - Node Manager
