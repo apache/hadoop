@@ -665,6 +665,16 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       if (!rmContainer.getState().equals(RMContainerState.COMPLETED)) {
         getQueue().incUsedResource(rmContainer.getContainer().getResource());
       }
+
+      // If not running unmanaged, the first container we recover is always
+      // the AM. Set the amResource for this app and update the leaf queue's AM
+      // usage
+      if (!isAmRunning() && !getUnmanagedAM()) {
+        Resource resource = rmContainer.getAllocatedResource();
+        setAMResource(resource);
+        getQueue().addAMResourceUsage(resource);
+        setAmRunning(true);
+      }
     } finally {
       writeLock.unlock();
     }
