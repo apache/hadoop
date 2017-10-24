@@ -95,7 +95,7 @@ public class TestMetadataStore {
 
     // Add 20 entries.
     // {a0 : a-value0} to {a9 : a-value9}
-    // {b0 : a-value0} to {b0 : b-value9}
+    // {b0 : b-value0} to {b9 : b-value9}
     for (int i=0; i<10; i++) {
       store.put(getBytes("a" + i), getBytes("a-value" + i));
       store.put(getBytes("b" + i), getBytes("b-value" + i));
@@ -241,6 +241,10 @@ public class TestMetadataStore {
     result = store.getRangeKVs(null, 5);
     Assert.assertEquals(5, result.size());
     Assert.assertEquals("a-value2", getString(result.get(2).getValue()));
+
+    // Empty list if startKey doesn't exist.
+    result = store.getRangeKVs(getBytes("a12"), 5);
+    Assert.assertEquals(0, result.size());
 
     // Returns max available entries after a valid startKey.
     result = store.getRangeKVs(getBytes("b0"), MAX_GETRANGE_LENGTH);

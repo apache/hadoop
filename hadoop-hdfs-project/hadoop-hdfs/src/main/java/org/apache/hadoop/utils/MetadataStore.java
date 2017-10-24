@@ -78,7 +78,7 @@ public interface MetadataStore extends Closeable{
    * If the startKey is specified and found in levelDB, this key and the keys
    * after this key will be included in the result. If the startKey is null
    * all entries will be included as long as other conditions are satisfied.
-   * If the given startKey doesn't exist, an IOException will be thrown.
+   * If the given startKey doesn't exist and empty list will be returned.
    * <p>
    * The count argument is to limit number of total entries to return,
    * the value for count must be an integer greater than 0.
