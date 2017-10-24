@@ -726,6 +726,15 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String KMS_CLIENT_TIMEOUT_SECONDS =
+      "hadoop.security.kms.client.timeout";
+  public static final int KMS_CLIENT_TIMEOUT_DEFAULT = 60;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   /** Default value is the number of providers specified. */
   public static final String KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY =
       "hadoop.security.kms.client.failover.max.retries";

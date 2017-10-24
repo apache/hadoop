@@ -96,6 +96,13 @@ public class TestJournalNodeSync {
 
   @Test(timeout=30000)
   public void testJournalNodeSync() throws Exception {
+
+    //As by default 3 journal nodes are started;
+    for(int i=0; i<3; i++) {
+      Assert.assertEquals(true,
+          jCluster.getJournalNode(i).getJournalSyncerStatus("ns1"));
+    }
+
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
         .getCurrentDir();

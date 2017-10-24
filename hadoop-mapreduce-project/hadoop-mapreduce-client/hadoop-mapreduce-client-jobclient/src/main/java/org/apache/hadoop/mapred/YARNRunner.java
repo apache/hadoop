@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -338,16 +340,41 @@ public class YARNRunner implements ClientProtocol {
     }
   }
 
-  private LocalResource createApplicationResource(FileContext fs, Path p, LocalResourceType type)
-      throws IOException {
+  private LocalResource createApplicationResource(FileContext fs, Path p,
+      LocalResourceType type) throws IOException {
+    return createApplicationResource(fs, p, null, type,
+        LocalResourceVisibility.APPLICATION, false);
+  }
+
+  private LocalResource createApplicationResource(FileContext fs, Path p,
+      String fileSymlink, LocalResourceType type, LocalResourceVisibility viz,
+      Boolean uploadToSharedCache) throws IOException {
     LocalResource rsrc = recordFactory.newRecordInstance(LocalResource.class);
     FileStatus rsrcStat = fs.getFileStatus(p);
-    rsrc.setResource(URL.fromPath(fs
-        .getDefaultFileSystem().resolvePath(rsrcStat.getPath())));
+    // We need to be careful when converting from path to URL to add a fragment
+    // so that the symlink name when localized will be correct.
+    Path qualifiedPath =
+        fs.getDefaultFileSystem().resolvePath(rsrcStat.getPath());
+    URI uriWithFragment = null;
+    boolean useFragment = fileSymlink != null && !fileSymlink.equals("");
+    try {
+      if (useFragment) {
+        uriWithFragment = new URI(qualifiedPath.toUri() + "#" + fileSymlink);
+      } else {
+        uriWithFragment = qualifiedPath.toUri();
+      }
+    } catch (URISyntaxException e) {
+      throw new IOException(
+          "Error parsing local resource path."
+              + " Path was not able to be converted to a URI: " + qualifiedPath,
+          e);
+    }
+    rsrc.setResource(URL.fromURI(uriWithFragment));
     rsrc.setSize(rsrcStat.getLen());
     rsrc.setTimestamp(rsrcStat.getModificationTime());
     rsrc.setType(type);
-    rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc.setVisibility(viz);
+    rsrc.setShouldBeUploadedToSharedCache(uploadToSharedCache);
     return rsrc;
   }
 
@@ -368,10 +395,21 @@ public class YARNRunner implements ClientProtocol {
             jobConfPath, LocalResourceType.FILE));
     if (jobConf.get(MRJobConfig.JAR) != null) {
       Path jobJarPath = new Path(jobConf.get(MRJobConfig.JAR));
+      // We hard code the job.jar symlink because mapreduce code expects the
+      // job.jar to be named that way.
+      FileContext fccc =
+          FileContext.getFileContext(jobJarPath.toUri(), jobConf);
+      LocalResourceVisibility jobJarViz =
+          jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+              MRJobConfig.JOBJAR_VISIBILITY_DEFAULT)
+                  ? LocalResourceVisibility.PUBLIC
+                  : LocalResourceVisibility.APPLICATION;
       LocalResource rc = createApplicationResource(
-          FileContext.getFileContext(jobJarPath.toUri(), jobConf),
-          jobJarPath,
-          LocalResourceType.PATTERN);
+          FileContext.getFileContext(jobJarPath.toUri(), jobConf), jobJarPath,
+          MRJobConfig.JOB_JAR, LocalResourceType.PATTERN, jobJarViz,
+          jobConf.getBoolean(
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY,
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT));
       String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN,
           JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
       rc.setPattern(pattern);

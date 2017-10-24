@@ -71,9 +71,11 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
@@ -2650,22 +2652,6 @@ public class NativeAzureFileSystem extends FileSystem {
   public FileStatus getFileStatus(Path f) throws FileNotFoundException, IOException {
 
     LOG.debug("Getting the file status for {}", f.toString());
-
-    // Capture the absolute path and the path to key.
-    Path absolutePath = makeAbsolute(f);
-
-    if (!isRenamePendingFile(absolutePath)) {
-      Path ancestor = getAncestor(absolutePath);
-      if (ancestor.equals(absolutePath) && !ancestor.equals(new Path("/"))) {
-        performAuthCheck(ancestor.getParent(), WasbAuthorizationOperations.READ,
-            "getFileStatus", absolutePath);
-      }
-      else {
-        performAuthCheck(ancestor, WasbAuthorizationOperations.READ,
-            "getFileStatus", absolutePath);
-      }
-    }
-
     return getFileStatusInternal(f);
   }
 
@@ -2693,7 +2679,15 @@ public class NativeAzureFileSystem extends FileSystem {
     }
   }
 
-  protected FileStatus getFileStatusInternal(Path f) throws FileNotFoundException, IOException {
+  /**
+   * Inner implementation of {@link #getFileStatus(Path)}.
+   * Return a file status object that represents the path.
+   * @param f The path we want information from
+   * @return a FileStatus object
+   * @throws FileNotFoundException when the path does not exist
+   * @throws IOException Other failure
+   */
+  private FileStatus getFileStatusInternal(Path f) throws FileNotFoundException, IOException {
 
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
@@ -3154,8 +3148,6 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     }
 
-    performAuthCheck(srcParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteSrcPath);
-
     String srcKey = pathToKey(absoluteSrcPath);
 
     if (srcKey.length() == 0) {
@@ -3163,11 +3155,29 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     }
 
+    performAuthCheck(srcParentFolder, WasbAuthorizationOperations.WRITE, "rename",
+        absoluteSrcPath);
+
+    if (this.azureAuthorization) {
+      try {
+        performStickyBitCheckForRenameOperation(absoluteSrcPath, srcParentFolder);
+      } catch (FileNotFoundException ex) {
+        return false;
+      } catch (IOException ex) {
+        Throwable innerException = checkForAzureStorageException(ex);
+        if (innerException instanceof StorageException
+          && isFileNotFoundException((StorageException) innerException)) {
+          LOG.debug("Encountered FileNotFound Exception when performing sticky bit check "
+            + "on {}. Failing rename", srcKey);
+          return false;
+        }
+        throw ex;
+      }
+    }
+
     // Figure out the final destination
     Path absoluteDstPath = makeAbsolute(dst);
     Path dstParentFolder = absoluteDstPath.getParent();
-
-    performAuthCheck(dstParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteDstPath);
 
     String dstKey = pathToKey(absoluteDstPath);
     FileMetadata dstMetadata = null;
@@ -3193,6 +3203,9 @@ public class NativeAzureFileSystem extends FileSystem {
 
     if (dstMetadata != null && dstMetadata.isDir()) {
       // It's an existing directory.
+      performAuthCheck(absoluteDstPath, WasbAuthorizationOperations.WRITE, "rename",
+          absoluteDstPath);
+
       dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
       LOG.debug("Destination {} "
           + " is a directory, adjusted the destination to be {}", dst, dstKey);
@@ -3228,6 +3241,9 @@ public class NativeAzureFileSystem extends FileSystem {
         LOG.debug("Parent of the destination {}"
             + " is a file, failing the rename.", dst);
         return false;
+      } else {
+        performAuthCheck(dstParentFolder, WasbAuthorizationOperations.WRITE,
+          "rename", absoluteDstPath);
       }
     }
     FileMetadata srcMetadata = null;
@@ -3403,6 +3419,43 @@ public class NativeAzureFileSystem extends FileSystem {
   private SelfRenewingLease leaseSourceFolder(String srcKey)
       throws AzureException {
     return store.acquireLease(srcKey);
+  }
+
+  /**
+   * Performs sticky bit check on source folder for rename operation.
+   *
+   * @param srcPath - path which is to be renamed.
+   * @param srcParentPath - parent to srcPath to check for stickybit check.
+   * @throws FileNotFoundException if srcPath or srcParentPath do not exist.
+   * @throws WasbAuthorizationException if stickybit check is violated.
+   * @throws IOException when retrieving metadata operation fails.
+   */
+  private void performStickyBitCheckForRenameOperation(Path srcPath,
+      Path srcParentPath)
+    throws FileNotFoundException, WasbAuthorizationException, IOException {
+
+    String srcKey = pathToKey(srcPath);
+    FileMetadata srcMetadata = null;
+    srcMetadata = store.retrieveMetadata(srcKey);
+    if (srcMetadata == null) {
+      LOG.debug("Source {} doesn't exist. Failing rename.", srcPath);
+      throw new FileNotFoundException(
+        String.format("%s does not exist.", srcPath));
+    }
+
+    String parentkey = pathToKey(srcParentPath);
+    FileMetadata parentMetadata = store.retrieveMetadata(parentkey);
+    if (parentMetadata == null) {
+      LOG.debug("Path {} doesn't exist, failing rename.", srcParentPath);
+      throw new FileNotFoundException(
+        String.format("%s does not exist.", parentkey));
+    }
+
+    if (isStickyBitCheckViolated(srcMetadata, parentMetadata)) {
+      throw new WasbAuthorizationException(
+        String.format("Rename operation for %s is not permitted."
+        + " Details : Stickybit check failed.", srcPath));
+    }
   }
 
   /**
@@ -3645,6 +3698,41 @@ public class NativeAzureFileSystem extends FileSystem {
       return wasbDelegationTokenManager.getDelegationToken(renewer);
     } else {
       return super.getDelegationToken(renewer);
+    }
+  }
+
+  @Override
+  public void access(Path path, FsAction mode) throws IOException {
+    if (azureAuthorization && authorizer != null) {
+      try {
+        // Required to check the existence of the path.
+        getFileStatus(path);
+        switch (mode) {
+        case READ:
+        case READ_EXECUTE:
+          performAuthCheck(path, WasbAuthorizationOperations.READ, "access", path);
+          break;
+        case WRITE:
+        case WRITE_EXECUTE:
+          performAuthCheck(path, WasbAuthorizationOperations.WRITE, "access",
+              path);
+          break;
+        case READ_WRITE:
+        case ALL:
+          performAuthCheck(path, WasbAuthorizationOperations.READ, "access", path);
+          performAuthCheck(path, WasbAuthorizationOperations.WRITE, "access",
+              path);
+          break;
+        case EXECUTE:
+        case NONE:
+        default:
+          break;
+        }
+      } catch (WasbAuthorizationException wae){
+        throw new AccessControlException(wae);
+      }
+    } else {
+      super.access(path, mode);
     }
   }
 

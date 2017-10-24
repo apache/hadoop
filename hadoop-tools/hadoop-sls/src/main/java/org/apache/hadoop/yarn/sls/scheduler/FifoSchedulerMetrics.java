@@ -35,8 +35,9 @@ public class FifoSchedulerMetrics extends SchedulerMetrics {
   }
 
   @Override
-  public void trackQueue(String queueName) {
-    trackedQueues.add(queueName);
+  protected void registerQueueMetrics(String queueName) {
+    super.registerQueueMetrics(queueName);
+
     FifoScheduler fifo = (FifoScheduler) scheduler;
     // for FifoScheduler, only DEFAULT_QUEUE
     // here the three parameters doesn't affect results

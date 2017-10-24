@@ -167,8 +167,9 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
   }
 
   @Override
-  public void trackQueue(String queueName) {
-    trackedQueues.add(queueName);
+  protected void registerQueueMetrics(String queueName) {
+    super.registerQueueMetrics(queueName);
+
     FairScheduler fair = (FairScheduler) scheduler;
     final FSQueue queue = fair.getQueueManager().getQueue(queueName);
     registerQueueMetrics(queue, Metric.DEMAND);
@@ -208,17 +209,5 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
         }
       }
     );
-  }
-
-  @Override
-  public void untrackQueue(String queueName) {
-    trackedQueues.remove(queueName);
-
-    for (Metric metric: Metric.values()) {
-      metrics.remove("variable.queue." + queueName + "." +
-          metric.value + ".memory");
-      metrics.remove("variable.queue." + queueName + "." +
-          metric.value + ".vcores");
-    }
   }
 }

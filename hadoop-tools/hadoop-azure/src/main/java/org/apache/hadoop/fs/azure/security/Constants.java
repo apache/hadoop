@@ -34,6 +34,7 @@ public final class Constants {
    */
   public static final String AZURE_ENABLE_SPNEGO_TOKEN_CACHE =
       "fs.azure.enable.spnego.token.cache";
+
   /**
    * Parameter to be used for impersonation.
    */

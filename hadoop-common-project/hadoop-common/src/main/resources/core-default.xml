@@ -2353,6 +2353,14 @@
     key will be dropped. Default = 12hrs
   </description>
 </property>
+<property>
+  <name>hadoop.security.kms.client.timeout</name>
+  <value>60</value>
+  <description>
+    Sets value for KMS client connection timeout, and the read timeout
+    to KMS servers.
+  </description>
+</property>
 
 <property>
   <name>hadoop.security.kms.client.failover.sleep.base.millis</name>
@@ -2774,6 +2782,19 @@
         This takes a comma-separated list of authentication mechanisms, each of the
         form 'scheme:auth' (the same syntax used for the 'addAuth' command in
         the ZK CLI).
+    </description>
+  </property>
+  <property>
+    <name>hadoop.treat.subject.external</name>
+    <value>false</value>
+    <description>
+      When creating UGI with UserGroupInformation(Subject), treat the passed
+      subject external if set to true, and assume the owner of the subject
+      should do the credential renewal.
+
+      When true this property will introduce an incompatible change which
+      may require changes in client code. For more details, see the jiras:
+      HADOOP-13805,HADOOP-13558.
     </description>
   </property>
 </configuration>

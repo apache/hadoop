@@ -145,21 +145,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       bind(GenericExceptionHandler.class);
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
-      Configuration conf = new Configuration();
       conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
-      conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      CapacitySchedulerConfiguration csconf =
-          new CapacitySchedulerConfiguration(conf);
-      String[] queues = { "default", "dedicated" };
-      csconf.setQueues("root", queues);
-      csconf.setCapacity("root.default", 50.0f);
-      csconf.setCapacity("root.dedicated", 50.0f);
-      csconf.setReservable("root.dedicated", true);
 
-      rm = new MockRM(csconf);
+      rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       if (setAuthFilter) {
         filter("/*").through(TestRMCustomAuthFilter.class);
@@ -173,6 +161,16 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     public void configureScheduler() {
       conf.set(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class.getName());
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+      CapacitySchedulerConfiguration csconf =
+          new CapacitySchedulerConfiguration(conf);
+      String[] queues = { "default", "dedicated" };
+      csconf.setQueues("root", queues);
+      csconf.setCapacity("root.default", 50.0f);
+      csconf.setCapacity("root.dedicated", 50.0f);
+      csconf.setReservable("root.dedicated", true);
+      conf = csconf;
     }
   }
 
@@ -189,9 +187,13 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
         out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
         out.println("  </queue>");
         out.println("  <queue name=\"dedicated\">");
+        out.println("    <reservation>");
+        out.println("    </reservation>");
         out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
         out.println("  </queue>");
         out.println("</queue>");
+        out.println("<defaultQueueSchedulingPolicy>drf" +
+            "</defaultQueueSchedulingPolicy>");
         out.println("</allocations>");
         out.close();
       } catch (IOException e) {

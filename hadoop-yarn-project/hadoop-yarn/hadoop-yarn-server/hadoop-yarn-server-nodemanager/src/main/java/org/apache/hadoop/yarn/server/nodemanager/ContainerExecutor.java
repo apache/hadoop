@@ -113,9 +113,10 @@ public abstract class ContainerExecutor implements Configurable {
    * Run the executor initialization steps.
    * Verify that the necessary configs and permissions are in place.
    *
+   * @param nmContext Context of NM
    * @throws IOException if initialization fails
    */
-  public abstract void init() throws IOException;
+  public abstract void init(Context nmContext) throws IOException;
 
   /**
    * This function localizes the JAR file on-demand.

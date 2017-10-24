@@ -65,6 +65,7 @@ public class JournalNodeSyncer {
   private final JournalNode jn;
   private final Journal journal;
   private final String jid;
+  private  String nameServiceId;
   private final JournalIdProto jidProto;
   private final JNStorage jnStorage;
   private final Configuration conf;
@@ -78,12 +79,14 @@ public class JournalNodeSyncer {
   private final int logSegmentTransferTimeout;
   private final DataTransferThrottler throttler;
   private final JournalMetrics metrics;
+  private boolean journalSyncerStarted;
 
   JournalNodeSyncer(JournalNode jouranlNode, Journal journal, String jid,
-      Configuration conf) {
+      Configuration conf, String nameServiceId) {
     this.jn = jouranlNode;
     this.journal = journal;
     this.jid = jid;
+    this.nameServiceId = nameServiceId;
     this.jidProto = convertJournalId(this.jid);
     this.jnStorage = journal.getStorage();
     this.conf = conf;
@@ -95,6 +98,7 @@ public class JournalNodeSyncer {
         DFSConfigKeys.DFS_EDIT_LOG_TRANSFER_TIMEOUT_DEFAULT);
     throttler = getThrottler(conf);
     metrics = journal.getMetrics();
+    journalSyncerStarted = false;
   }
 
   void stopSync() {
@@ -109,13 +113,21 @@ public class JournalNodeSyncer {
     }
   }
 
-  public void start() {
-    LOG.info("Starting SyncJournal daemon for journal " + jid);
-    if (getOtherJournalNodeProxies()) {
-      startSyncJournalsDaemon();
-    } else {
-      LOG.warn("Failed to start SyncJournal daemon for journal " + jid);
+  public void start(String nsId) {
+    if (nsId != null) {
+      this.nameServiceId = nsId;
+      journal.setTriedJournalSyncerStartedwithnsId(true);
     }
+    if (!journalSyncerStarted && getOtherJournalNodeProxies()) {
+      LOG.info("Starting SyncJournal daemon for journal " + jid);
+      startSyncJournalsDaemon();
+      journalSyncerStarted = true;
+    }
+
+  }
+
+  public boolean isJournalSyncerStarted() {
+    return journalSyncerStarted;
   }
 
   private boolean createEditsSyncDir() {

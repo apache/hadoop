@@ -833,10 +833,12 @@ public class BlockManager implements BlockStatsMXBean {
     // l: == live:, d: == decommissioned c: == corrupt e: == excess
     out.print(block + ((usableReplicas > 0)? "" : " MISSING") +
               " (replicas:" +
-              " l: " + numReplicas.liveReplicas() +
-              " d: " + numReplicas.decommissionedAndDecommissioning() +
-              " c: " + numReplicas.corruptReplicas() +
-              " e: " + numReplicas.excessReplicas() + ") ");
+              " live: " + numReplicas.liveReplicas() +
+              " decommissioning and decommissioned: " +
+        numReplicas.decommissionedAndDecommissioning() +
+              " corrupt: " + numReplicas.corruptReplicas() +
+              " in excess: " + numReplicas.excessReplicas() +
+              " maintenance mode: " + numReplicas.maintenanceReplicas() + ") ");
 
     Collection<DatanodeDescriptor> corruptNodes = 
                                   corruptReplicas.getNodes(block);
@@ -849,6 +851,8 @@ public class BlockManager implements BlockStatsMXBean {
       } else if (node.isDecommissioned() || 
           node.isDecommissionInProgress()) {
         state = "(decommissioned)";
+      } else if (node.isMaintenance() || node.isInMaintenance()){
+        state = "(maintenance)";
       }
       
       if (storage.areBlockContentsStale()) {
@@ -3889,11 +3893,15 @@ public class BlockManager implements BlockStatsMXBean {
       throw new IOException(
           "Got incremental block report from unregistered or dead node");
     }
+
+    boolean successful = false;
     try {
       processIncrementalBlockReport(node, srdb);
-    } catch (Exception ex) {
-      node.setForceRegistration(true);
-      throw ex;
+      successful = true;
+    } finally {
+      if (!successful) {
+        node.setForceRegistration(true);
+      }
     }
   }
 

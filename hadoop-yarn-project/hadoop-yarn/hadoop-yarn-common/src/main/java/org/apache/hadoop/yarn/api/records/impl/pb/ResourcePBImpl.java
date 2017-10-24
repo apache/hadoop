@@ -87,7 +87,7 @@ public class ResourcePBImpl extends Resource {
   @Override
   @SuppressWarnings("deprecation")
   public int getMemory() {
-    return (int) this.getMemorySize();
+    return castToIntSafely(this.getMemorySize());
   }
 
   @Override
@@ -117,7 +117,7 @@ public class ResourcePBImpl extends Resource {
   @Override
   public int getVirtualCores() {
     // vcores should always be present
-    return (int) resources[VCORES_INDEX].getValue();
+    return castToIntSafely(resources[VCORES_INDEX].getValue());
   }
 
   @Override

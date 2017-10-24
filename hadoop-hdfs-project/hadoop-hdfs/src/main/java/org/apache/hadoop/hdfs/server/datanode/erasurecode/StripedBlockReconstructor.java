@@ -113,7 +113,7 @@ class StripedBlockReconstructor extends StripedReconstructor
     }
   }
 
-  private void reconstructTargets(int toReconstructLen) {
+  private void reconstructTargets(int toReconstructLen) throws IOException {
     ByteBuffer[] inputs = getStripedReader().getInputBuffers(toReconstructLen);
 
     int[] erasedIndices = stripedWriter.getRealTargetIndices();

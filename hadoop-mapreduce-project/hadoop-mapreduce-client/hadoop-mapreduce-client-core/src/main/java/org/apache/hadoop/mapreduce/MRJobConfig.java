@@ -194,6 +194,77 @@ public interface MRJobConfig {
   public static final String CACHE_ARCHIVES_VISIBILITIES = "mapreduce.job.cache.archives.visibilities";
 
   /**
+   * This parameter controls the visibility of the localized job jar on the node
+   * manager. If set to true, the visibility will be set to
+   * LocalResourceVisibility.PUBLIC. If set to false, the visibility will be set
+   * to LocalResourceVisibility.APPLICATION. This is a generated parameter and
+   * should not be set manually via config files.
+   */
+  String JOBJAR_VISIBILITY = "mapreduce.job.jobjar.visibility";
+  boolean JOBJAR_VISIBILITY_DEFAULT = false;
+
+  /**
+   * This is a generated parameter and should not be set manually via config
+   * files.
+   */
+  String JOBJAR_SHARED_CACHE_UPLOAD_POLICY =
+      "mapreduce.job.jobjar.sharedcache.uploadpolicy";
+  boolean JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT = false;
+
+  /**
+   * This is a generated parameter and should not be set manually via config
+   * files.
+   */
+  String CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES =
+      "mapreduce.job.cache.files.sharedcache.uploadpolicies";
+
+  /**
+   * This is a generated parameter and should not be set manually via config
+   * files.
+   */
+  String CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES =
+      "mapreduce.job.cache.archives.sharedcache.uploadpolicies";
+
+  /**
+   * A comma delimited list of file resources that are needed for this MapReduce
+   * job. These resources, if the files resource type is enabled, should either
+   * use the shared cache or be added to the shared cache. This parameter can be
+   * modified programmatically using the MapReduce Job api.
+   */
+  String FILES_FOR_SHARED_CACHE = "mapreduce.job.cache.sharedcache.files";
+
+  /**
+   * A comma delimited list of libjar resources that are needed for this
+   * MapReduce job. These resources, if the libjars resource type is enabled,
+   * should either use the shared cache or be added to the shared cache. These
+   * resources will also be added to the classpath of all tasks for this
+   * MapReduce job. This parameter can be modified programmatically using the
+   * MapReduce Job api.
+   */
+  String FILES_FOR_CLASSPATH_AND_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.files.addtoclasspath";
+
+  /**
+   * A comma delimited list of archive resources that are needed for this
+   * MapReduce job. These resources, if the archives resource type is enabled,
+   * should either use the shared cache or be added to the shared cache. This
+   * parameter can be modified programmatically using the MapReduce Job api.
+   */
+  String ARCHIVES_FOR_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.archives";
+
+  /**
+   * A comma delimited list of resource categories that are enabled for the
+   * shared cache. If a category is enabled, resources in that category will be
+   * uploaded to the shared cache. The valid categories are: jobjar, libjars,
+   * files, archives. If "disabled" is specified then all categories are
+   * disabled. If "enabled" is specified then all categories are enabled.
+   */
+  String SHARED_CACHE_MODE = "mapreduce.job.sharedcache.mode";
+
+  String SHARED_CACHE_MODE_DEFAULT = "disabled";
+
+  /**
    * @deprecated Symlinks are always on and cannot be disabled.
    */
   @Deprecated
