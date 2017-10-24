@@ -88,6 +88,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(maxResource);
+    Mockito.when(app.getResourceUsage()).thenReturn(Resources.none());
 
     schedulable.addApp(app, true);
     schedulable.addApp(app, true);

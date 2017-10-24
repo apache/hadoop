@@ -5251,8 +5251,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     FSAppAttempt app1 = mock(FSAppAttempt.class);
     Mockito.when(app1.getDemand()).thenReturn(maxResource);
+    Mockito.when(app1.getResourceUsage()).thenReturn(Resources.none());
     FSAppAttempt app2 = mock(FSAppAttempt.class);
     Mockito.when(app2.getDemand()).thenReturn(maxResource);
+    Mockito.when(app2.getResourceUsage()).thenReturn(Resources.none());
 
     QueueManager queueManager = scheduler.getQueueManager();
     FSParentQueue queue1 = queueManager.getParentQueue("queue1", true);
