@@ -90,7 +90,7 @@ public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
    * @return true, always.
    */
   @Override
-  protected boolean isMagicFileSystemRequired() {
+  protected boolean requiresDelayedCommitOutputInFileSystem() {
     return true;
   }
 

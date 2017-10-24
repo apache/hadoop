@@ -162,7 +162,7 @@ public class StagingTestBase {
       JobContext job,
       ConflictResolution mode) {
     Assert.assertEquals("Conflict resolution mode in " + committer,
-        mode, committer.getConflictResolutionMode(job));
+        mode, committer.getConflictResolutionMode(job, new Configuration()));
   }
 
   public static void pathsExist(FileSystem mockS3, String... children)
@@ -314,10 +314,6 @@ public class StagingTestBase {
 
     protected StagingTestBase.ClientErrors getMockErrors() {
       return errors;
-    }
-
-    protected AmazonS3 getMockClient() {
-      return mockClient;
     }
 
     abstract C newJobCommitter() throws Exception;

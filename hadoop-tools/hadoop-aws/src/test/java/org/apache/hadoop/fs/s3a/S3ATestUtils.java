@@ -778,15 +778,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Path filter which ignores any file which starts with . or _.
-   */
-  public static final PathFilter TEMP_FILE_FILTER =
-      (Path path) -> {
-        String name = path.getName();
-        return !name.startsWith("_") && !name.startsWith(".");
-      };
-
-  /**
    * Turn on the inconsistent S3A FS client in a configuration,
    * with 100% probability of inconsistency, default delays.
    * For this to go live, the paths must include the element

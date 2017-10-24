@@ -19,22 +19,28 @@
 package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIsDirectoryException;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -114,18 +120,13 @@ public final class Paths {
    * If {@code childPath} is not a child of {@code basePath} the outcome
    * os undefined.
    * @param basePath base path
-   * @param childPath full path under the base path.
+   * @param fullPath full path under the base path.
    * @return the relative path
    */
   public static String getRelativePath(Path basePath,
-      Path childPath) {
-    //
-    // Use URI.create(Path#toString) to avoid URI character escape bugs
-    URI relative = URI.create(basePath.toString())
-        .relativize(URI.create(childPath.toString()));
-    return relative.getPath();
+      Path fullPath) {
+    return basePath.toUri().relativize(fullPath.toUri()).getPath();
   }
-
 
   /**
    * Varags constructor of paths. Not very efficient.
@@ -144,6 +145,13 @@ public final class Paths {
   }
 
   /**
+   * A cache of temporary folders. There's a risk here that the cache
+   * gets too big
+   */
+  private static Cache<TaskAttemptID, Path> tempFolders = CacheBuilder
+      .newBuilder().build();
+
+  /**
    * Get the task attempt temporary directory in the local filesystem.
    * @param conf configuration
    * @param uuid some UUID, such as a job UUID
@@ -151,14 +159,41 @@ public final class Paths {
    * @return a local task attempt directory.
    * @throws IOException IO problem.
    */
-  public static Path getLocalTaskAttemptTempDir(Configuration conf,
-      String uuid, TaskAttemptID attempt) throws IOException {
-    int taskId = attempt.getTaskID().getId();
-    int attemptId = attempt.getId();
-    return path(localTemp(conf, taskId, attemptId),
-        uuid,
-        Integer.toString(getAppAttemptId(conf)),
-        attempt.toString());
+  public static Path getLocalTaskAttemptTempDir(final Configuration conf,
+      final String uuid,
+      final TaskAttemptID attemptID)
+      throws IOException {
+    try {
+      final LocalDirAllocator allocator = new LocalDirAllocator(Constants.BUFFER_DIR);
+      return tempFolders.get(attemptID,
+          () -> {
+            return FileSystem.getLocal(conf).makeQualified(
+                allocator.getLocalPathForWrite(uuid, conf));
+          });
+    } catch (ExecutionException e) {
+      throw new RuntimeException(e.getCause());
+    } catch (UncheckedExecutionException e) {
+      if (e.getCause() instanceof RuntimeException) {
+        throw (RuntimeException) e.getCause();
+      }
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * remove all information held about task attempts
+   * @param attemptID attempt ID.
+   */
+  public static void clearTempFolderInfo(final TaskAttemptID attemptID) {
+    tempFolders.invalidate(attemptID);
+  }
+
+  /**
+   * Reset the temp folder cache; useful in tests.
+   */
+  @VisibleForTesting
+  public static void resetTempFolderCache() {
+    tempFolders.invalidateAll();
   }
 
   /**
@@ -233,7 +268,6 @@ public final class Paths {
         STAGING_UPLOADS);
   }
 
-  // TODO: verify this is correct, it comes from dse-storage
   private static Path localTemp(Configuration conf, int taskId, int attemptId)
       throws IOException {
     String[] dirs = conf.getTrimmedStrings(BUFFER_DIR);
@@ -281,26 +315,6 @@ public final class Paths {
     }
 
     return partitions;
-  }
-
-  /**
-   * path filter.
-   */
-  static final class HiddenPathFilter implements PathFilter {
-    private static final HiddenPathFilter INSTANCE = new HiddenPathFilter();
-
-    public static HiddenPathFilter get() {
-      return INSTANCE;
-    }
-
-    private HiddenPathFilter() {
-    }
-
-    @Override
-    public boolean accept(Path path) {
-      return !path.getName().startsWith(".")
-          && !path.getName().startsWith("_");
-    }
   }
 
 }

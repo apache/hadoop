@@ -72,28 +72,35 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
       Path outputPath,
       TaskAttemptContext context) throws IOException {
     AbstractS3GuardCommitterFactory factory = chooseCommitterFactory(fileSystem,
-        outputPath);
+        outputPath,
+        context.getConfiguration());
     return factory != null ?
       factory.createTaskCommitter(fileSystem, outputPath, context)
       : createFileOutputCommitter(outputPath, context);
   }
 
   /**
-   * Choose a committer from the FS configuration.
+   * Choose a committer from the FS and task configurations. Task Configuration
+   * takes priority, allowing execution engines to dynamically change
+   * committer on a query-by-query basis.
    * @param fileSystem FS
    * @param outputPath destination path
+   * @param taskConf configuration from the task
    * @return A s3guard committer if chosen, or "null" for the classic value
    * @throws PathCommitException on a failure to identify the committer
    */
   private AbstractS3GuardCommitterFactory chooseCommitterFactory(
       S3AFileSystem fileSystem,
-      Path outputPath) throws PathCommitException {
+      Path outputPath,
+      Configuration taskConf) throws PathCommitException {
     AbstractS3GuardCommitterFactory factory;
 
     // the FS conf will have had its per-bucket values resolved, unlike
     // job/task configurations.
-    Configuration conf = fileSystem.getConf();
-    String name = conf.getTrimmed(FS_S3A_COMMITTER_NAME, COMMITTER_NAME_FILE);
+    Configuration fsConf = fileSystem.getConf();
+
+    String name = fsConf.getTrimmed(FS_S3A_COMMITTER_NAME, COMMITTER_NAME_FILE);
+    name = taskConf.getTrimmed(FS_S3A_COMMITTER_NAME, name);
     switch (name) {
     case COMMITTER_NAME_FILE:
       factory = null;

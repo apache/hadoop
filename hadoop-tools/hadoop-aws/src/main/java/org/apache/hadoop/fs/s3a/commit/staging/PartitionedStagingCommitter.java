@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,7 +37,18 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
  * Partitioned committer.
- * This writes data to specific "partition" subdirectories.
+ * This writes data to specific "partition" subdirectories, applying
+ * conflict resolution on a partition-by-partition basis. The existence
+ * and state of any parallel partitions for which there is no are output
+ * files are not considered in the conflict resolution.
+ *
+ * The conflict policy is
+ * <ul>
+ *   <li>FAIL: fail the commit if any of the partitions have data.</li>
+ *   <li>APPEND: add extra data to the destination partitions.</li>
+ *   <li>REPLACE: delete the destination partition in the job commit
+ *   (i.e. after and only if all tasks have succeeded.</li>
+ * </ul>
  */
 public class PartitionedStagingCommitter extends StagingCommitter {
 
@@ -72,9 +84,9 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
     // enforce conflict resolution, but only if the mode is FAIL. for APPEND,
     // it doesn't matter that the partitions are already there, and for REPLACE,
-    // deletion should be done during task commit.
-    if (getConflictResolutionMode(context) == ConflictResolution.FAIL) {
-      FileSystem fs = getDestFS();
+    // deletion should be done during job commit.
+    FileSystem fs = getDestFS();
+    if (getConflictResolutionMode(context, fs.getConf()) == ConflictResolution.FAIL) {
       for (String partition : partitions) {
         // getFinalPath adds the UUID to the file name. this needs the parent.
         Path partitionPath = getFinalPath(partition + "/file",
@@ -89,11 +101,11 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
   /**
    * Job-side conflict resolution.
-   * The partition path conflict resolution assumes that:
+   * The partition path conflict resolution actions are:
    * <ol>
-   *   <li>FAIL checking has taken place earlier.</li>
-   *   <li>APPEND is allowed</li>
-   *   <li>REPLACE deletes all existing partitions</li>
+   *   <li>FAIL: assume checking has taken place earlier; no more checks.</li>
+   *   <li>APPEND: allowed.; no need to check.</li>
+   *   <li>REPLACE deletes all existing partitions.</li>
    * </ol>
    * @param context job context
    * @param pending the pending operations
@@ -111,7 +123,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
     }
 
     // enforce conflict resolution
-    switch (getConflictResolutionMode(context)) {
+    Configuration fsConf = fs.getConf();
+    switch (getConflictResolutionMode(context, fsConf)) {
     case FAIL:
       // FAIL checking is done on the task side, so this does nothing
       break;
@@ -127,7 +140,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       break;
     default:
       throw new IOException(getRole() + ": unknown conflict resolution mode: "
-          + getConflictResolutionMode(context));
+          + getConflictResolutionMode(context, fsConf));
     }
   }
 

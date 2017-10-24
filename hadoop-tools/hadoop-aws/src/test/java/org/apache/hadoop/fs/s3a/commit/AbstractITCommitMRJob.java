@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.StorageStatisticsTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -216,7 +217,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
 
     waitForConsistency();
     assertIsDirectory(outputPath);
-    FileStatus[] results = fs.listStatus(outputPath, TEMP_FILE_FILTER);
+    FileStatus[] results = fs.listStatus(outputPath, S3AUtils.HIDDEN_FILE_FILTER);
     int fileCount = results.length;
     List<String> actualFiles = new ArrayList<>(fileCount);
     assertTrue("No files in output directory", fileCount != 0);

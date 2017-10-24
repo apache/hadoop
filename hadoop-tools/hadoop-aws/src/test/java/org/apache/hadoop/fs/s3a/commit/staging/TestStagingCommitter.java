@@ -35,6 +35,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.google.common.collect.Sets;
+import org.hamcrest.core.StringStartsWith;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,7 +51,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
@@ -66,7 +66,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -168,11 +168,11 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     tmpDir.mkdirs();
 
     String tmp = tmpDir.getCanonicalPath();
-    this.conf.set(Constants.BUFFER_DIR,
+    this.conf.set(BUFFER_DIR,
         String.format("%s/local-0/, %s/local-1 ", tmp, tmp));
 
     this.committer = new MockedStagingCommitter(OUTPUT_PATH, tac);
-
+    Paths.resetTempFolderCache();
   }
 
   @After
@@ -187,35 +187,52 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   }
 
   @Test
-  public void testAttemptPathConstruction() throws Exception {
+  public void testUUIDPropagation() throws Exception {
     Configuration config = new Configuration();
-    String jobUUID = UUID.randomUUID().toString();
-    config.set(FS_S3A_COMMITTER_STAGING_UUID, jobUUID);
-
+    String jobUUID = addUUID(config);
     assertEquals("Upload UUID", jobUUID,
         StagingCommitter.getUploadUUID(config, JOB_ID));
+  }
 
-    // the temp directory is chosen based on a random seeded by the task and
-    // attempt ids, so the result is deterministic if those ids are fixed.
-    String dirs = "/tmp/mr-local-0,/tmp/mr-local-1";
-    config.set(Constants.BUFFER_DIR, dirs);
+  private String addUUID(Configuration config) {
+    String jobUUID = UUID.randomUUID().toString();
+    config.set(FS_S3A_COMMITTER_STAGING_UUID, jobUUID);
+    return jobUUID;
+  }
 
-    String message = "Missing scheme should produce local file paths";
-    String expected = "file:/tmp/mr-local-1/" + jobUUID +
-        "/0/attempt_job_0001_r_000002_3";
-    assertEquals(message,
-        expected,
+  @Test
+  public void testAttemptPathConstructionNoSchema() throws Exception {
+    Configuration config = new Configuration();
+    final String jobUUID = addUUID(config);
+    config.set(BUFFER_DIR, "/tmp/mr-local-0,/tmp/mr-local-1");
+    String commonPath = "file:/tmp/mr-local-";
+
+    assertThat("Missing scheme should produce local file paths",
         getLocalTaskAttemptTempDir(config,
-            jobUUID, tac.getTaskAttemptID()).toString());
+            jobUUID, tac.getTaskAttemptID()).toString(),
+        StringStartsWith.startsWith(commonPath));
+  }
 
-    config.set(Constants.BUFFER_DIR,
+  @Test
+  public void testAttemptPathConstructionWithSchema() throws Exception {
+    Configuration config = new Configuration();
+    final String jobUUID = addUUID(config);
+    String commonPath = "file:/tmp/mr-local-";
+
+    config.set(BUFFER_DIR,
         "file:/tmp/mr-local-0,file:/tmp/mr-local-1");
-    assertEquals("Path should be the same with file scheme",
-        expected,
-        getLocalTaskAttemptTempDir(config, jobUUID, tac.getTaskAttemptID())
-            .toString());
 
-    config.set(Constants.BUFFER_DIR,
+    assertThat("Path should be the same with file scheme",
+        getLocalTaskAttemptTempDir(config,
+            jobUUID, tac.getTaskAttemptID()).toString(),
+        StringStartsWith.startsWith(commonPath));
+  }
+
+  @Test
+  public void testAttemptPathConstructionWrongSchema() throws Exception {
+    Configuration config = new Configuration();
+    final String jobUUID = addUUID(config);
+    config.set(BUFFER_DIR,
         "hdfs://nn:8020/tmp/mr-local-0,hdfs://nn:8020/tmp/mr-local-1");
     intercept(IllegalArgumentException.class, "Wrong FS",
         () -> getLocalTaskAttemptTempDir(config, jobUUID,
@@ -600,11 +617,9 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private static Set<String> getAbortedIds(
       List<AbortMultipartUploadRequest> aborts) {
-    Set<String> abortedUploads = Sets.newHashSet();
-    for (AbortMultipartUploadRequest abort : aborts) {
-      abortedUploads.add(abort.getUploadId());
-    }
-    return abortedUploads;
+    return aborts.stream()
+        .map(AbortMultipartUploadRequest::getUploadId)
+        .collect(Collectors.toSet());
   }
 
   private static Set<String> getCommittedIds(

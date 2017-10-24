@@ -114,24 +114,22 @@ public class CommitOperations {
     try {
       commit.validate();
       destKey = commit.getDestinationKey();
-      innerCommit(commit);
-      LOG.debug("Successful commit");
+      long l = innerCommit(commit);
+      LOG.debug("Successful commit of file length {}", l);
       outcome = MaybeIOE.NONE;
+      statistics.commitCompleted(commit.getLength());
     } catch (IOException e) {
       String msg = String.format("Failed to commit upload against %s: %s",
           destKey, e);
       LOG.warn(msg, e);
       outcome = new MaybeIOE(e);
+      statistics.commitFailed();
     } catch (Exception e) {
       String msg = String.format("Failed to commit upload against %s," +
           " described in %s: %s", destKey, origin, e);
       LOG.warn(msg, e);
       outcome = new MaybeIOE(new PathCommitException(origin, msg, e));
-    }
-    if (outcome.hasException()) {
       statistics.commitFailed();
-    } else {
-      statistics.commitCompleted(commit.getLength());
     }
     return outcome;
   }
@@ -139,9 +137,10 @@ public class CommitOperations {
   /**
    * Inner commit operation.
    * @param commit entry to commit
+   * @return bytes committed.
    * @throws IOException failure
    */
-  private void innerCommit(SinglePendingCommit commit) throws IOException {
+  private long innerCommit(SinglePendingCommit commit) throws IOException {
     // finalize the commit
     writeOperations.completeMPUwithRetries(
         commit.getDestinationKey(),
@@ -149,6 +148,7 @@ public class CommitOperations {
               CommitUtils.toPartEtags(commit.getEtags()),
               commit.getLength(),
               new AtomicInteger(0));
+    return commit.getLength();
   }
 
   /**

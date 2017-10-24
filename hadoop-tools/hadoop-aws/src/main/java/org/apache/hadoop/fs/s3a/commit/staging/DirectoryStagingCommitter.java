@@ -24,6 +24,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
@@ -37,7 +38,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * <ul>
  *   <li>FAIL: fail the commit</li>
  *   <li>APPEND: add extra data to the destination.</li>
- *   <li>REPLACE: delete the destination directory.</li>
+ *   <li>REPLACE: delete the destination directory in the job commit
+ *   (i.e. after and only if all tasks have succeeded.</li>
  * </ul>
  */
 public class DirectoryStagingCommitter extends StagingCommitter {
@@ -58,9 +60,9 @@ public class DirectoryStagingCommitter extends StagingCommitter {
   @Override
   public void setupJob(JobContext context) throws IOException {
     super.setupJob(context);
-    Path outputPath = getOutputPath(context);
-    FileSystem fs = outputPath.getFileSystem(context.getConfiguration());
-    if (getConflictResolutionMode(context) == ConflictResolution.FAIL
+    Path outputPath = getOutputPath();
+    FileSystem fs = getDestFS();
+    if (getConflictResolutionMode(context, fs.getConf()) == ConflictResolution.FAIL
         && fs.exists(outputPath)) {
       throw new PathExistsException(outputPath.toString());
     }
@@ -77,9 +79,10 @@ public class DirectoryStagingCommitter extends StagingCommitter {
   @Override
   protected void preCommitJob(JobContext context,
       List<SinglePendingCommit> pending) throws IOException {
-    Path outputPath = getOutputPath(context);
-    FileSystem fs = outputPath.getFileSystem(context.getConfiguration());
-    switch (getConflictResolutionMode(context)) {
+    Path outputPath = getOutputPath();
+    FileSystem fs = getDestFS();
+    Configuration fsConf = fs.getConf();
+    switch (getConflictResolutionMode(context, fsConf)) {
     case FAIL:
       // this was checked in setupJob, but this avoids some cases where
       // output was created while the job was processing
@@ -98,7 +101,7 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       break;
     default:
       throw new IOException(getRole() + ": unknown conflict resolution mode: "
-          + getConfictModeOption(context));
+          + getConflictResolutionMode(context, fsConf));
     }
   }
 }

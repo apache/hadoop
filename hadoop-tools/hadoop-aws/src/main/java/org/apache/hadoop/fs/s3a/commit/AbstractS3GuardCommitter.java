@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -138,6 +139,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @param out output path
    * @throws IOException failure to create the FS.
    */
+  @VisibleForTesting
   protected void initOutput(Path out) throws IOException {
     FileSystem fs = getDestinationFS(out, getConf());
     setDestFS(fs);
@@ -262,7 +264,6 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * Compute the base path where the output of a task attempt is written.
    * This is the path which will be deleted when a task is cleaned up and
    * aborted.
-
    *
    * @param context the context of the task attempt.
    * @return the path where a task attempt should be stored.
@@ -304,16 +305,21 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    */
   protected FileSystem getDestinationFS(Path out, Configuration config)
       throws IOException {
-    return getS3AFileSystem(out, config, isMagicFileSystemRequired());
+    return getS3AFileSystem(out, config,
+        requiresDelayedCommitOutputInFileSystem());
   }
 
   /**
    * Flag to indicate whether or not the destination filesystem needs
-   * to be configured to support the magic path.
+   * to be configured to support magic paths where the output isn't immediately
+   * visible. If the committer returns true, then committer setup will
+   * fail if the FS doesn't have the capability.
+   * Base implementation returns false.
    * @return what the requirements of the committer are of the filesystem.
    */
-  protected abstract boolean isMagicFileSystemRequired();
-
+  protected boolean requiresDelayedCommitOutputInFileSystem() {
+    return false;
+  }
   /**
    * Task recovery considered unsupported: Warn and fail.
    * @param taskContext Context of the task whose output is being recovered
@@ -432,7 +438,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     LOG.debug("{}: committing the output of {} task(s)",
         getRole(), pending.size());
     Tasks.foreach(pending)
-        .stopOnFailure().throwFailureWhenFinished()
+        .stopOnFailure()
         .executeWith(buildThreadPool(context))
         .onFailure((commit, exception) ->
                 getCommitOperations().abortSingleCommit(commit))
@@ -461,7 +467,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
     final List<SinglePendingCommit> pending = Collections.synchronizedList(
         Lists.newArrayList());
     Tasks.foreach(pendingCommitFiles)
-        .throwFailureWhenFinished(!suppressExceptions)
+        .suppressExceptions(suppressExceptions)
         .executeWith(buildThreadPool(context))
         .run(pendingCommitFile ->
           pending.addAll(PendingSet.load(
@@ -666,8 +672,8 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
       LOG.info("{}: no pending commits to abort", getRole());
     } else {
       Tasks.foreach(pending)
-          .throwFailureWhenFinished(!suppressExceptions)
           .executeWith(buildThreadPool(context))
+          .suppressExceptions(suppressExceptions)
           .run(commit -> getCommitOperations().abortSingleCommit(commit));
     }
   }

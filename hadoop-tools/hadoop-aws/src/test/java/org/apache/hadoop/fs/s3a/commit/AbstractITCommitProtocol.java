@@ -892,7 +892,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // Ensure getReaders call works and also ignores
     // hidden filenames (_ or . prefixes)
     describe("listing");
-    FileStatus[] filtered = fs.listStatus(outDir, TEMP_FILE_FILTER);
+    FileStatus[] filtered = fs.listStatus(outDir, HIDDEN_FILE_FILTER);
     assertEquals("listed children under " + ls,
         1, filtered.length);
     FileStatus fileStatus = filtered[0];
@@ -921,7 +921,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   private static MapFile.Reader[] getReaders(FileSystem fs,
       Path dir,
       Configuration conf) throws IOException {
-    Path[] names = FileUtil.stat2Paths(fs.listStatus(dir, TEMP_FILE_FILTER));
+    Path[] names = FileUtil.stat2Paths(fs.listStatus(dir, HIDDEN_FILE_FILTER));
 
     // sort names, so that hash partitioning works
     Arrays.sort(names);

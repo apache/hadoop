@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
@@ -1175,5 +1176,37 @@ public final class S3AUtils {
         : genericKey;
     return conf.get(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey);
   }
+
+
+  /**
+   * Path filter which ignores any file which starts with . or _.
+   */
+  public static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path path) {
+      String name = path.getName();
+      return !name.startsWith("_") && !name.startsWith(".");
+    }
+
+    @Override
+    public String toString() {
+      return "HIDDEN_FILE_FILTER";
+    }
+  };
+
+  /**
+   * A Path filter which accepts all filenames.
+   */
+  public static final PathFilter ACCEPT_ALL = new PathFilter() {
+    @Override
+    public boolean accept(Path file) {
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      return "ACCEPT_ALL";
+    }
+  };
 
 }

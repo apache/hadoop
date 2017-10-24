@@ -817,19 +817,4 @@ public class Listing {
     }
   }
 
-  /**
-   * A Path filter which accepts all filenames.
-   */
-  static final PathFilter ACCEPT_ALL = new PathFilter() {
-    @Override
-    public boolean accept(Path file) {
-      return true;
-    }
-
-    @Override
-    public String toString() {
-      return "ACCEPT_ALL";
-    }
-  };
-
 }

@@ -36,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitter;
@@ -91,7 +90,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   private final FileOutputCommitter wrappedCommitter;
 
   private ConflictResolution conflictResolution;
-  private final Path finalOutputPath;
   private String s3KeyPrefix = null;
 
   /** The directory in the cluster FS for commits to go to. */
@@ -110,25 +108,23 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     Configuration conf = getConf();
     this.uploadPartSize = conf.getLongBytes(
         MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-
-    // Spark will use a fake app ID based on the current minute and job ID 0.
-    // To avoid collisions, use the YARN application ID for Spark.
     this.uuid = getUploadUUID(conf, context.getJobID());
     this.uniqueFilenames = conf.getBoolean(
         FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         DEFAULT_STAGING_COMMITTER_UNIQUE_FILENAMES);
     setWorkPath(buildWorkPath(context, uuid));
     this.wrappedCommitter = createWrappedCommitter(context, conf);
-    // forces evaluation and caching of the resolution mode.
-    ConflictResolution mode = getConflictResolutionMode(getJobContext());
-    LOG.debug("Conflict resolution mode: {}", mode);
-    this.finalOutputPath = constructorOutputPath;
+    setOutputPath(constructorOutputPath);
+    Path finalOutputPath = getOutputPath();
     Preconditions.checkNotNull(finalOutputPath, "Output path cannot be null");
     S3AFileSystem fs = getS3AFileSystem(finalOutputPath,
         context.getConfiguration(), false);
     s3KeyPrefix = fs.pathToKey(finalOutputPath);
     LOG.debug("{}: final output path is {}", getRole(), finalOutputPath);
-    setOutputPath(finalOutputPath);
+    // forces evaluation and caching of the resolution mode.
+    ConflictResolution mode = getConflictResolutionMode(getJobContext(),
+        fs.getConf());
+    LOG.debug("Conflict resolution mode: {}", mode);
   }
 
   @Override
@@ -179,7 +175,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   public String toString() {
     final StringBuilder sb = new StringBuilder("StagingCommitter{");
     sb.append(super.toString());
-    sb.append(", finalOutputPath=").append(finalOutputPath);
     sb.append(", conflictResolution=").append(conflictResolution);
     if (wrappedCommitter != null) {
       sb.append(", wrappedCommitter=").append(wrappedCommitter);
@@ -190,18 +185,29 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
 
   /**
    * Get the UUID of an upload; may be the job ID.
+   * Spark will use a fake app ID based on the current minute and job ID 0.
+   * To avoid collisions, the key policy is:
+   * <ol>
+   *   <li>Value of {@link CommitConstants#FS_S3A_COMMITTER_STAGING_UUID}.</li>
+   *   <li>Value of {@code "spark.sql.sources.writeJobUUID"}.</li>
+   *   <li>Value of {@code "spark.app.id"}.</li>
+   *   <li>JobId passed in.</li>
+   * </ol>
+   * The staging UUID is set in in {@link #setupJob(JobContext)} and so will
+   * be valid in all sequences where the job has been set up for the
+   * configuration passed in.
    * @param conf job/task configuration
    * @param jobId Job ID
    * @return an ID for use in paths.
    */
   public static String getUploadUUID(Configuration conf, String jobId) {
     return conf.getTrimmed(FS_S3A_COMMITTER_STAGING_UUID,
-        conf.get(SPARK_WRITE_UUID,
+        conf.getTrimmed(SPARK_WRITE_UUID,
             conf.getTrimmed(SPARK_APP_ID, jobId)));
   }
 
   /**
-   * Get the UUID of an upload; may be the job ID.
+   * Get the UUID of a Job.
    * @param conf job/task configuration
    * @param jobId Job ID
    * @return an ID for use in paths.
@@ -224,15 +230,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     } else {
       return null;
     }
-  }
-
-  /**
-   * The staging committers do not require "magic" commit support.
-   * @return false
-   */
-  @Override
-  protected boolean isMagicFileSystemRequired() {
-    return false;
   }
 
   /**
@@ -377,7 +374,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
    */
   protected List<FileStatus> getTaskOutput(TaskAttemptContext context)
       throws IOException {
-    PathFilter filter = Paths.HiddenPathFilter.get();
 
     // get files on the local FS in the attempt path
     Path attemptPath = getTaskAttemptPath(context);
@@ -389,7 +385,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     return flatmapLocatedFiles(
         getTaskAttemptFilesystem(context)
             .listFiles(attemptPath, true),
-        s -> maybe(filter.accept(s.getPath()), s));
+        s -> maybe(HIDDEN_FILE_FILTER.accept(s.getPath()), s));
   }
 
   /**
@@ -506,7 +502,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     FileStatus[] pendingCommitFiles;
     try {
       pendingCommitFiles = attemptFS.listStatus(
-          jobAttemptPath, Paths.HiddenPathFilter.get());
+          jobAttemptPath, HIDDEN_FILE_FILTER);
     } catch (FileNotFoundException e) {
       // file is not present, raise without bothering to report
       throw e;
@@ -622,7 +618,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     // delete the __temporary directory. This will cause problems
     // if there is >1 task targeting the same dest dir
     deleteWithWarning(getDestFS(),
-        new Path(getFinalOutputPath(), TEMPORARY),
+        new Path(getOutputPath(), TEMPORARY),
         true);
     // and the working path
     deleteTaskWorkingPathQuietly(context);
@@ -720,7 +716,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
       try {
         Tasks.foreach(taskOutput)
             .stopOnFailure()
-            .throwFailureWhenFinished()
             .executeWith(buildThreadPool(context))
             .run(stat -> {
               Path path = stat.getPath();
@@ -759,10 +754,13 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
               "{}: Exception during commit process, aborting {} commit(s)",
               getRole(), commits.size());
           Tasks.foreach(commits)
+              .suppressExceptions()
               .run(commit -> getCommitOperations().abortSingleCommit(commit));
           deleteTaskAttemptPathQuietly(context);
         }
       }
+      // always purge attempt information at this point.
+      Paths.clearTempFolderInfo(context.getTaskAttemptID());
     }
 
     LOG.debug("Committing wrapped task");
@@ -817,14 +815,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
             context.getTaskAttemptID()));
   }
 
-  static int getTaskId(TaskAttemptContext context) {
-    return context.getTaskAttemptID().getTaskID().getId();
-  }
-
-  static int getAttemptId(TaskAttemptContext context) {
-    return context.getTaskAttemptID().getId();
-  }
-
   /**
    * Delete the working path of a task; no-op if there is none, that
    * is: this is a job.
@@ -840,23 +830,6 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
       // the attempt to build the working path failed
       LOG.debug("{}: Failed to delete working path", getRole(), e);
     }
-  }
-
-  /**
-   * Get the output path.
-   * @param context job context
-   * @return the output path
-   */
-  protected final Path getOutputPath(JobContext context) {
-    return finalOutputPath;
-  }
-
-  /**
-   * The final output path.
-   * @return the path where output will finally go.
-   */
-  private Path getFinalOutputPath() {
-    return finalOutputPath;
   }
 
   /**
@@ -882,13 +855,15 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
    * Returns the {@link ConflictResolution} mode for this commit.
    *
    * @param context the JobContext for this commit
+   * @param fsConf filesystem config
    * @return the ConflictResolution mode
    */
   public final ConflictResolution getConflictResolutionMode(
-      JobContext context) {
+      JobContext context,
+      Configuration fsConf) {
     if (conflictResolution == null) {
       this.conflictResolution = ConflictResolution.valueOf(
-          getConfictModeOption(context));
+          getConfictModeOption(context, fsConf));
     }
     return conflictResolution;
   }
@@ -896,13 +871,15 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   /**
    * Get the conflict mode option string.
    * @param context context with the config
+   * @param fsConf filesystem config
    * @return the trimmed configuration option, upper case.
    */
-  public static String getConfictModeOption(JobContext context) {
-    return context
-        .getConfiguration()
-        .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE,
-            DEFAULT_CONFLICT_MODE)
-        .toUpperCase(Locale.ENGLISH);
+  public static String getConfictModeOption(JobContext context,
+      Configuration fsConf) {
+    return getConfigurationOption(context,
+        fsConf,
+        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE,
+        DEFAULT_CONFLICT_MODE).toUpperCase(Locale.ENGLISH);
   }
+
 }

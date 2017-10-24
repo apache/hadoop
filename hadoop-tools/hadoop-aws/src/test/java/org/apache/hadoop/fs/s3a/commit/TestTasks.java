@@ -67,7 +67,6 @@ public class TestTasks extends HadoopTestBase {
   private final CounterTask aborter
       = new CounterTask("aborter", 0, Item::abort);
 
-
   /**
    * Test array for parameterized test runs: how many threads and
    * to use. Threading makes some of the assertions brittle; there are
@@ -155,15 +154,16 @@ public class TestTasks extends HadoopTestBase {
   }
 
   @Test
-  public void testFailOnFourNoStopping() throws Throwable {
-    assertFailed(builder(), failingTask);
+  public void testFailOnFourNoStoppingSuppressed() throws Throwable {
+    assertFailed(builder().suppressExceptions(), failingTask);
     failingTask.assertInvoked("continued through operations", ITEM_COUNT);
     items.forEach(Item::assertCommitted);
   }
 
   @Test
-  public void testFailFast() throws Throwable {
+  public void testFailFastSuppressed() throws Throwable {
     assertFailed(builder()
+            .suppressExceptions()
             .stopOnFailure(),
         failingTask);
     if (isParallel()) {
@@ -174,11 +174,11 @@ public class TestTasks extends HadoopTestBase {
   }
 
   @Test
-  public void testFailedCallAbort() throws Throwable {
-
+  public void testFailedCallAbortSuppressed() throws Throwable {
     assertFailed(builder()
-        .stopOnFailure()
-        .abortWith(aborter),
+            .stopOnFailure()
+            .suppressExceptions()
+            .abortWith(aborter),
         failingTask);
     failingTask.assertInvokedAtLeast("success", FAILPOINT);
     if (!isParallel()) {
@@ -192,21 +192,24 @@ public class TestTasks extends HadoopTestBase {
   }
 
   @Test
-  public void testFailedCalledWhenNotStopping() throws Throwable {
-    assertFailed(builder().onFailure(failures), failingTask);
+  public void testFailedCalledWhenNotStoppingSuppressed() throws Throwable {
+    assertFailed(builder()
+            .suppressExceptions()
+            .onFailure(failures),
+        failingTask);
     failingTask.assertInvokedAtLeast("success", FAILPOINT);
     // only one failure was triggered
     failures.assertInvoked("failure event", 1);
   }
 
-
   @Test
-  public void testFailFastCallRevert() throws Throwable {
+  public void testFailFastCallRevertSuppressed() throws Throwable {
     assertFailed(builder()
-        .stopOnFailure()
-        .revertWith(reverter)
-        .abortWith(aborter)
-        .onFailure(failures),
+            .stopOnFailure()
+            .revertWith(reverter)
+            .abortWith(aborter)
+            .suppressExceptions()
+            .onFailure(failures),
         failingTask);
     failingTask.assertInvokedAtLeast("success", FAILPOINT);
     if (!isParallel()) {
@@ -227,10 +230,11 @@ public class TestTasks extends HadoopTestBase {
   }
 
   @Test
-  public void testFailSlowCallRevert() throws Throwable {
+  public void testFailSlowCallRevertSuppressed() throws Throwable {
     assertFailed(builder()
-        .revertWith(reverter)
-        .onFailure(failures),
+            .suppressExceptions()
+            .revertWith(reverter)
+            .onFailure(failures),
         failingTask);
     failingTask.assertInvokedAtLeast("success", FAILPOINT);
     // all committed were reverted
@@ -253,7 +257,6 @@ public class TestTasks extends HadoopTestBase {
     intercept(IOException.class,
         () -> builder()
             .stopOnFailure()
-            .throwFailureWhenFinished()
             .run(failingTask));
     if (isParallel()) {
       failingTask.assertInvokedAtLeast("stop fast", FAILPOINT);
@@ -266,7 +269,6 @@ public class TestTasks extends HadoopTestBase {
   public void testFailSlowExceptions() throws Throwable {
     intercept(IOException.class,
         () -> builder()
-            .throwFailureWhenFinished()
             .run(failingTask));
     failingTask.assertInvoked("continued through operations", ITEM_COUNT);
     items.forEach(Item::assertCommitted);
@@ -280,7 +282,6 @@ public class TestTasks extends HadoopTestBase {
         () -> builder()
             .stopOnFailure()
             .abortWith(a)
-            .throwFailureWhenFinished()
             .run(failFirst));
     if (!isParallel()) {
       // expect the other tasks to be aborted
@@ -297,7 +298,6 @@ public class TestTasks extends HadoopTestBase {
             .stopOnFailure()
             .stopAbortsOnFailure()
             .abortWith(a)
-            .throwFailureWhenFinished()
             .run(failFirst));
     if (!isParallel()) {
       // expect the other tasks to be aborted
@@ -311,10 +311,11 @@ public class TestTasks extends HadoopTestBase {
    * failure callback, as in the pool it may be one of any.
    */
   @Test
-  public void testRevertAll() throws Throwable {
+  public void testRevertAllSuppressed() throws Throwable {
     CounterTask failLast = new CounterTask("task", ITEM_COUNT, Item::commit);
 
     assertFailed(builder()
+            .suppressExceptions()
             .stopOnFailure()
             .revertWith(reverter)
             .abortWith(aborter)

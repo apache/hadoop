@@ -471,4 +471,27 @@ public final class CommitUtils {
     return (name != null && !name.isEmpty()) ? name : "(anonymous)";
   }
 
+
+  /**
+   * Get a configuration option, with any value in the job configuration
+   * taking priority over that in the filesystem.
+   * This allows for per-job override of FS parameters.
+   *
+   * Order is: job context, filesystem config, default value
+   *
+   * @param context job/task context
+   * @param fsConf filesystem configuration. Get this from the FS to guarantee
+   * per-bucket parameter propagation
+   * @param keykey to look for
+   * @param defVal default value
+   * @return the configuration option.
+   */
+  public static String getConfigurationOption(
+      JobContext context,
+      Configuration fsConf,
+      String key,
+      String defVal) {
+    return context.getConfiguration().getTrimmed(key,
+        fsConf.getTrimmed(key, defVal));
+  }
 }

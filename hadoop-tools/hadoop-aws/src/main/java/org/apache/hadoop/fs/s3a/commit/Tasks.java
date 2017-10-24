@@ -79,7 +79,7 @@ public final class Tasks {
     private ExecutorService service = null;
     private FailureTask<I, ?> onFailure = null;
     private boolean stopOnFailure = false;
-    private boolean throwFailureWhenFinished = false;
+    private boolean suppressExceptions = false;
     private Task<I, ?> revertTask = null;
     private boolean stopRevertsOnFailure = false;
     private Task<I, ?> abortTask = null;
@@ -114,13 +114,12 @@ public final class Tasks {
       return this;
     }
 
-    public Builder<I> throwFailureWhenFinished() {
-      this.throwFailureWhenFinished = true;
-      return this;
+    public Builder<I> suppressExceptions() {
+      return suppressExceptions(true);
     }
 
-    public Builder<I> throwFailureWhenFinished(boolean throwWhenFinished) {
-      this.throwFailureWhenFinished = throwWhenFinished;
+    public Builder<I> suppressExceptions(boolean suppress) {
+      this.suppressExceptions = suppress;
       return this;
     }
 
@@ -225,7 +224,7 @@ public final class Tasks {
         }
       }
 
-      if (throwFailureWhenFinished && !exceptions.isEmpty()) {
+      if (!suppressExceptions && !exceptions.isEmpty()) {
         Tasks.<E>throwOne(exceptions);
       }
 
@@ -332,7 +331,7 @@ public final class Tasks {
         waitFor(futures);
       }
 
-      if (throwFailureWhenFinished && !exceptions.isEmpty()) {
+      if (!suppressExceptions && !exceptions.isEmpty()) {
         Tasks.<E>throwOne(exceptions);
       }
 
