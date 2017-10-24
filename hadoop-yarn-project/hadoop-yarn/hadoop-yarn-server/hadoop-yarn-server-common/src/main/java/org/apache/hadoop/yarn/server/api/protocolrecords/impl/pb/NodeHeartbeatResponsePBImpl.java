@@ -26,6 +26,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
+import com.google.protobuf.ByteString;
+
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerRequestPBImpl;
@@ -83,6 +87,9 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
   // NOTE: This is required for backward compatibility.
   private List<Container> containersToDecrease = null;
   private List<SignalContainerRequest> containersToSignal = null;
+
+  private static final Interner<ByteString> BYTE_STRING_INTERNER =
+      Interners.newWeakInterner();
 
   public NodeHeartbeatResponsePBImpl() {
     builder = NodeHeartbeatResponseProto.newBuilder();
@@ -148,8 +155,8 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
     for (Map.Entry<ApplicationId, ByteBuffer> entry : systemCredentials.entrySet()) {
       builder.addSystemCredentialsForApps(SystemCredentialsForAppsProto.newBuilder()
         .setAppId(convertToProtoFormat(entry.getKey()))
-        .setCredentialsForApp(ProtoUtils.convertToProtoFormat(
-            entry.getValue().duplicate())));
+        .setCredentialsForApp(BYTE_STRING_INTERNER.intern(
+            ProtoUtils.convertToProtoFormat(entry.getValue()))));
     }
   }
 
