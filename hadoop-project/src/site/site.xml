@@ -100,6 +100,7 @@
       <item name="Memory Storage Support" href="hadoop-project-dist/hadoop-hdfs/MemoryStorage.html"/>
       <item name="Upgrade Domain" href="hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html"/>
       <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
+      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
