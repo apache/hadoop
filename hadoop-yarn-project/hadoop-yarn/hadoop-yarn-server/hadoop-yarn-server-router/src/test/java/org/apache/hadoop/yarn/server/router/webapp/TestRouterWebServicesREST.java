@@ -23,6 +23,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
@@ -451,10 +452,7 @@ public class TestRouterWebServicesREST {
         performCall(RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_LOGS,
             RMWSConsts.TIME, "1", null, HTTPMethods.POST);
 
-    if (response.getStatus() == STATUS_BADREQUEST) {
-      String ci = response.getEntity(String.class);
-      Assert.assertNotNull(ci);
-    } else {
+    if (response.getStatus() != HttpServletResponse.SC_NO_CONTENT) {
       Assert.fail();
     }
   }
