@@ -69,6 +69,8 @@ import org.apache.hadoop.ozone.scm.block.BlockManager;
 import org.apache.hadoop.ozone.scm.block.BlockManagerImpl;
 import org.apache.hadoop.ozone.scm.container.ContainerMapping;
 import org.apache.hadoop.ozone.scm.container.Mapping;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.ContainerStat;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMMetrics;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
@@ -163,6 +165,9 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   private final String scmUsername;
   private final Collection<String> scmAdminUsernames;
 
+  /** SCM metrics. */
+  private static SCMMetrics metrics;
+
   /**
    * Creates a new StorageContainerManager.  Configuration will be updated with
    * information on the actual listening addresses used for RPC servers.
@@ -177,6 +182,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     final int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
 
+    StorageContainerManager.initMetrics();
     // TODO : Fix the ClusterID generation code.
     scmNodeManager = new SCMNodeManager(conf, UUID.randomUUID().toString());
     scmContainerManager = new ContainerMapping(conf, scmNodeManager, cacheSize);
@@ -673,6 +679,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       LOG.error("SCM block manager service stop failed.", ex);
     }
 
+    metrics.unRegister();
     unregisterMXBean();
     IOUtils.cleanupWithLogger(LOG, scmContainerManager);
     IOUtils.cleanupWithLogger(LOG, scmBlockManager);
@@ -752,6 +759,27 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   @Override
   public ContainerReportsResponseProto sendContainerReport(
       ContainerReportsRequestProto reports) throws IOException {
+    // TODO: We should update the logic once incremental container report
+    // type is supported.
+    if (reports.getType() ==
+        ContainerReportsRequestProto.reportType.fullReport) {
+      ContainerStat stat = new ContainerStat();
+      for (StorageContainerDatanodeProtocolProtos.ContainerInfo info : reports
+          .getReportsList()) {
+        stat.add(new ContainerStat(info.getSize(), info.getUsed(),
+            info.getKeyCount(), info.getReadBytes(), info.getWriteBytes(),
+            info.getReadCount(), info.getWriteCount()));
+      }
+
+      // update container metrics
+      metrics.setLastContainerReportSize(stat.getSize().get());
+      metrics.setLastContainerReportUsed(stat.getUsed().get());
+      metrics.setLastContainerReportKeyCount(stat.getKeyCount().get());
+      metrics.setLastContainerReportReadBytes(stat.getReadBytes().get());
+      metrics.setLastContainerReportWriteBytes(stat.getWriteBytes().get());
+      metrics.setLastContainerReportReadCount(stat.getReadCount().get());
+      metrics.setLastContainerReportWriteCount(stat.getWriteCount().get());
+    }
 
     // TODO: handle the container reports either here or add container report
     // handler.
@@ -914,4 +942,17 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
   }
 
+  /**
+   * Initialize SCM metrics.
+   */
+  public static void initMetrics() {
+    metrics = SCMMetrics.create();
+  }
+
+  /**
+   * Return SCM metrics instance.
+   */
+  public static SCMMetrics getMetrics() {
+    return metrics == null ? SCMMetrics.create() : metrics;
+  }
 }
