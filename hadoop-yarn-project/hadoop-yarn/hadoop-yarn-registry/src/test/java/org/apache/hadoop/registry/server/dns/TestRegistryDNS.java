@@ -333,7 +333,7 @@ public class TestRegistryDNS extends Assert {
     query.addRecord(optRecord, Section.ADDITIONAL);
     byte[] responseBytes = getRegistryDNS().generateReply(query, null);
     Message response = new Message(responseBytes);
-    assertEquals("No answer should be returned", Rcode.NOTAUTH,
+    assertEquals("Missing record should be: ", Rcode.NXDOMAIN,
         response.getRcode());
   }
 
@@ -601,6 +601,12 @@ public class TestRegistryDNS extends Assert {
     assertEquals(4, registryDNS.getZoneCount());
   }
 
+  @Test
+  public void testExampleDotCom() throws Exception {
+    Name name = Name.fromString("example.com.");
+    Record[] records = getRegistryDNS().getRecords(name, Type.SOA);
+    assertNotNull("example.com exists:", records);
+  }
   public RegistryDNS getRegistryDNS() {
     return registryDNS;
   }
