@@ -177,6 +177,7 @@
       <item name="DistCp" href="hadoop-distcp/DistCp.html"/>
       <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
       <item name="Rumen" href="hadoop-rumen/Rumen.html"/>
+      <item name="Resource Estimator Service" href="hadoop-resourceestimator/ResourceEstimator.html"/>
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
       <item name="Hadoop Benchmarking" href="hadoop-project-dist/hadoop-common/Benchmarking.html"/>
     </menu>
