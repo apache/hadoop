@@ -98,6 +98,26 @@ RPC operations.
 | `GetSmallFile` | Get small file operations |
 | `CloseContainer` | Close container operations |
 
+### Storage Container Manager Metrics
+
+The metrics for containers that managed by Storage Container Manager.
+
+Storage Container Manager (SCM) is a master service which keeps track of
+replicas of storage containers. It also manages all data nodes and their
+states, dealing with container reports and dispatching commands for execution.
+
+Following are the counters for containers:
+
+| Name | Description |
+|:---- |:---- |
+| `LastContainerReportSize` | Total size in bytes of all containers |
+| `LastContainerReportUsed` | Total number of bytes used by all containers |
+| `LastContainerReportKeyCount` | Total number of keys in all containers |
+| `LastContainerReportReadBytes` | Total number of bytes have been read from all containers |
+| `LastContainerReportWriteBytes` | Total number of bytes have been written into all containers |
+| `LastContainerReportReadCount` | Total number of times containers have been read from |
+| `LastContainerReportWriteCount` | Total number of times containers have been written to |
+
 ### Key Space Metrics
 
 The metrics for various key space manager operations in HDFS Ozone.
