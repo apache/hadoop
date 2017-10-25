@@ -37,8 +37,10 @@ import org.xbill.DNS.DNSKEYRecord;
 import org.xbill.DNS.DNSSEC;
 import org.xbill.DNS.DSRecord;
 import org.xbill.DNS.ExtendedFlags;
+import org.xbill.DNS.ExtendedResolver;
 import org.xbill.DNS.Flags;
 import org.xbill.DNS.Header;
+import org.xbill.DNS.Lookup;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
@@ -49,9 +51,12 @@ import org.xbill.DNS.RRSIGRecord;
 import org.xbill.DNS.RRset;
 import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.Resolver;
+import org.xbill.DNS.ResolverConfig;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.Section;
 import org.xbill.DNS.SetResponse;
+import org.xbill.DNS.SimpleResolver;
 import org.xbill.DNS.TSIG;
 import org.xbill.DNS.TSIGRecord;
 import org.xbill.DNS.TextParseException;
@@ -66,8 +71,11 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
@@ -78,10 +86,13 @@ import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -134,6 +145,16 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   private boolean channelsInitialized = false;
 
   /**
+   * Lock to update resolver only once per request.
+   */
+  private final Object resolverUpdateLock = new Object();
+
+  /**
+   * Whether resolver update has been requested.
+   */
+  private boolean resolverUpdateRequested = true;
+
+  /**
    * Construct the service.
    *
    * @param name service name
@@ -172,6 +193,79 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   }
 
   /**
+   * Initialize registryDNS to use /etc/resolv.conf values
+   * as default resolvers.
+   */
+  private void updateDNSServer(Configuration conf) {
+    synchronized (resolverUpdateLock) {
+      if (!resolverUpdateRequested) {
+        return;
+      }
+      int port = conf.getInt(KEY_DNS_PORT, DEFAULT_DNS_PORT);
+      resolverUpdateRequested = false;
+      List<InetAddress> list = new ArrayList<InetAddress>();
+      try {
+        // If resolv.conf contains the server's own IP address,
+        // and RegistryDNS handles the lookup.  Local IP address
+        // must be filter out from default resolvers to prevent
+        // self recursive loop.
+        if (port != 53) {
+          // When registryDNS is not running on default port,
+          // registryDNS can utilize local DNS server as upstream lookup.
+          throw new SocketException("Bypass filtering local DNS server.");
+        }
+        Enumeration<NetworkInterface> net =
+            NetworkInterface.getNetworkInterfaces();
+        while(net.hasMoreElements()) {
+          NetworkInterface n = (NetworkInterface) net.nextElement();
+          Enumeration<InetAddress> ee = n.getInetAddresses();
+          while (ee.hasMoreElements()) {
+            InetAddress i = (InetAddress) ee.nextElement();
+            list.add(i);
+          }
+        }
+      } catch (SocketException e) {
+      }
+      ResolverConfig.refresh();
+      ExtendedResolver resolver;
+      try {
+        resolver = new ExtendedResolver();
+      } catch (UnknownHostException e) {
+        LOG.error("Can not resolve DNS servers: ", e);
+        return;
+      }
+      for (Resolver check : resolver.getResolvers()) {
+        if (check instanceof SimpleResolver) {
+          InetAddress address = ((SimpleResolver) check).getAddress()
+              .getAddress();
+          if (list.contains(address)) {
+            resolver.deleteResolver(check);
+            continue;
+          } else {
+            check.setTimeout(30);
+          }
+        } else {
+          LOG.error("Not simple resolver!!!?" + check);
+        }
+      }
+      synchronized (Lookup.class) {
+        Lookup.setDefaultResolver(resolver);
+        Lookup.setDefaultSearchPath(ResolverConfig.getCurrentConfig()
+            .searchPath());
+      }
+      StringBuilder message = new StringBuilder();
+      message.append("DNS servers: ");
+      if (ResolverConfig.getCurrentConfig().servers() != null) {
+        for (String server : ResolverConfig.getCurrentConfig()
+            .servers()) {
+          message.append(server);
+          message.append(" ");
+        }
+      }
+      LOG.info(message.toString());
+    }
+  }
+  /**
    * Initializes the registry.
    *
    * @param conf the hadoop configuration
@@ -183,6 +277,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
     // create the zone.  for now create a "dummy" SOA record
     try {
+      updateDNSServer(conf);
       setDomainName(conf);
 
       initializeZones(conf);
@@ -916,9 +1011,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     for (int i = 0; i < 4; i++) {
       response.removeAllRecords(i);
     }
-    if (rcode == Rcode.SERVFAIL) {
-      response.addRecord(question, Section.QUESTION);
-    }
+    response.addRecord(question, Section.QUESTION);
     header.setRcode(rcode);
     return response.toWire();
   }
@@ -975,6 +1068,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     response.getHeader().setFlag(Flags.QR);
     if (query.getHeader().getFlag(Flags.RD)) {
       response.getHeader().setFlag(Flags.RD);
+      response.getHeader().setFlag(Flags.RA);
     }
     response.addRecord(queryRecord, Section.QUESTION);
 
@@ -992,10 +1086,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
     LOG.debug("calling addAnswer");
     byte rcode = addAnswer(response, name, type, dclass, 0, flags);
-    if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN) {
-      return errorMessage(query, rcode);
+    if (rcode != Rcode.NOERROR) {
+      rcode = remoteLookup(response, name);
+      response.getHeader().setRcode(rcode);
     }
-
     addAdditional(response, flags);
 
     if (queryOPT != null) {
@@ -1006,6 +1100,45 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     }
 
     return response.toWire(maxLength);
+  }
+
+  /**
+   * Lookup record from upstream DNS servers.
+   */
+  private byte remoteLookup(Message response, Name name) {
+    // Forward lookup to primary DNS servers
+    Record[] answers = getRecords(name, Type.ANY);
+    try {
+      for (Record r : answers) {
+        if (r.getType() == Type.SOA) {
+          response.addRecord(r, Section.AUTHORITY);
+        } else {
+          response.addRecord(r, Section.ANSWER);
+        }
+      }
+    } catch (NullPointerException e) {
+      return Rcode.NXDOMAIN;
+    } catch (Throwable e) {
+      return Rcode.SERVFAIL;
+    }
+    return Rcode.NOERROR;
+  }
+
+  /**
+   * Requests records for the given resource name.
+   *
+   * @param name - query string
+   * @param type - type of DNS record to lookup
+   * @return DNS records
+   */
+  protected Record[] getRecords(Name name, int type) {
+    try {
+      return new Lookup(name, type).run();
+    } catch (NullPointerException |
+        ExceptionInInitializerError e) {
+      LOG.error("Fail to lookup: " + name, e);
+    }
+    return null;
   }
 
   /**
@@ -1180,7 +1313,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         rcode = Rcode.NOTAUTH;
       }
     }
-    LOG.info("found record? {}", sr != null && sr.isSuccessful());
+    LOG.info("found local record? {}", sr != null && sr.isSuccessful());
 
     if (sr != null) {
       if (sr.isCNAME()) {
@@ -1241,6 +1374,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         }
       }
     }
+
     return rcode;
   }
 
