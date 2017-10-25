@@ -309,14 +309,22 @@ public class JournalNodeSyncer {
         boolean success = false;
         try {
           if (remoteJNproxy.httpServerUrl == null) {
-            remoteJNproxy.httpServerUrl = getHttpServerURI("http",
-                remoteJNproxy.jnAddr.getHostName(), response.getHttpPort());
+            if (response.hasFromURL()) {
+              remoteJNproxy.httpServerUrl = getHttpServerURI(
+                  response.getFromURL(), remoteJNproxy.jnAddr.getHostName());
+            } else {
+              LOG.error("EditLogManifest response does not have fromUrl " +
+                  "field set. Aborting current sync attempt");
+              break;
+            }
           }
 
           String urlPath = GetJournalEditServlet.buildPath(jid, missingLog
               .getStartTxId(), nsInfo, false);
           url = new URL(remoteJNproxy.httpServerUrl, urlPath);
           success = downloadMissingLogSegment(url, missingLog);
+        } catch (URISyntaxException e) {
+          LOG.error("EditLogManifest's fromUrl field syntax incorrect", e);
         } catch (MalformedURLException e) {
           LOG.error("MalformedURL when download missing log segment", e);
         } catch (Exception e) {
@@ -374,9 +382,10 @@ public class JournalNodeSyncer {
     return missingEditLogs;
   }
 
-  private URL getHttpServerURI(String scheme, String hostname, int port)
-    throws MalformedURLException {
-    return new URL(scheme, hostname, port, "");
+  private URL getHttpServerURI(String fromUrl, String hostAddr)
+      throws URISyntaxException, MalformedURLException {
+    URI uri = new URI(fromUrl);
+    return new URL(uri.getScheme(), hostAddr, uri.getPort(), "");
   }
 
   /**
