@@ -38,6 +38,7 @@ import javax.management.ObjectName;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -83,6 +84,13 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * together with the modification in next snapshot.
    */
   private boolean skipCaptureAccessTimeOnlyChange = false;
+  /**
+   * If snapshotDiffAllowSnapRootDescendant is set to true, snapshot diff
+   * operation can be run for any descendant directory under a snapshot root
+   * directory and the diff calculation will be scoped to the descendant
+   * directory.
+   */
+  private final boolean snapshotDiffAllowSnapRootDescendant;
 
   private final AtomicInteger numSnapshots = new AtomicInteger();
   private static final int SNAPSHOT_ID_BIT_WIDTH = 24;
@@ -102,9 +110,15 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     this.skipCaptureAccessTimeOnlyChange = conf.getBoolean(
         DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE,
         DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE_DEFAULT);
+    this.snapshotDiffAllowSnapRootDescendant = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
+        DFSConfigKeys.
+            DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT);
     LOG.info("Loaded config captureOpenFiles: " + captureOpenFiles
-        + "skipCaptureAccessTimeOnlyChange: " +
-        skipCaptureAccessTimeOnlyChange);
+        + ", skipCaptureAccessTimeOnlyChange: "
+        + skipCaptureAccessTimeOnlyChange
+        + ", snapshotDiffAllowSnapRootDescendant: "
+        + snapshotDiffAllowSnapRootDescendant);
   }
 
   /**
@@ -226,6 +240,30 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           "Directory is not a snapshottable directory: " + path);
     }
     return dir;
+  }
+
+  /**
+   * Get the snapshot root directory for the given directory. The given
+   * directory must either be a snapshot root or a descendant of any
+   * snapshot root directories.
+   * @param iip INodesInPath for the directory to get snapshot root.
+   * @return the snapshot root INodeDirectory
+   */
+  public INodeDirectory getSnapshottableAncestorDir(final INodesInPath iip)
+      throws IOException {
+    final String path = iip.getPath();
+    final INodeDirectory dir = INodeDirectory.valueOf(iip.getLastINode(), path);
+    if (dir.isSnapshottable()) {
+      return dir;
+    } else {
+      for (INodeDirectory snapRoot : this.snapshottables.values()) {
+        if (dir.isAncestorDirectory(snapRoot)) {
+          return snapRoot;
+        }
+      }
+      throw new SnapshotException("Directory is neither snapshottable nor" +
+          " under a snap root!");
+    }
   }
 
   /**
@@ -396,22 +434,31 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * snapshot of the directory and its current tree.
    */
   public SnapshotDiffReport diff(final INodesInPath iip,
-      final String snapshotRootPath, final String from,
+      final String snapshotPath, final String from,
       final String to) throws IOException {
     // Find the source root directory path where the snapshots were taken.
     // All the check for path has been included in the valueOf method.
-    final INodeDirectory snapshotRoot = getSnapshottableRoot(iip);
+    INodeDirectory snapshotRootDir;
+    if (this.snapshotDiffAllowSnapRootDescendant) {
+      snapshotRootDir = getSnapshottableAncestorDir(iip);
+    } else {
+      snapshotRootDir = getSnapshottableRoot(iip);
+    }
+    Preconditions.checkNotNull(snapshotRootDir);
+    INodeDirectory snapshotDescendantDir = INodeDirectory.valueOf(
+        iip.getLastINode(), snapshotPath);
 
     if ((from == null || from.isEmpty())
         && (to == null || to.isEmpty())) {
       // both fromSnapshot and toSnapshot indicate the current tree
-      return new SnapshotDiffReport(snapshotRootPath, from, to,
+      return new SnapshotDiffReport(snapshotPath, from, to,
           Collections.<DiffReportEntry> emptyList());
     }
-    final SnapshotDiffInfo diffs = snapshotRoot
-        .getDirectorySnapshottableFeature().computeDiff(snapshotRoot, from, to);
+    final SnapshotDiffInfo diffs = snapshotRootDir
+        .getDirectorySnapshottableFeature().computeDiff(
+            snapshotRootDir, snapshotDescendantDir, from, to);
     return diffs != null ? diffs.generateReport() : new SnapshotDiffReport(
-        snapshotRootPath, from, to, Collections.<DiffReportEntry> emptyList());
+        snapshotPath, from, to, Collections.<DiffReportEntry> emptyList());
   }
   
   public void clearSnapshottableDirs() {
