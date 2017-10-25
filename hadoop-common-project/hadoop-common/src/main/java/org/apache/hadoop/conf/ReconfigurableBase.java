@@ -19,7 +19,6 @@
 package org.apache.hadoop.conf;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.util.Time;
@@ -31,6 +30,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Utility base class for implementing the Reconfigurable interface.
@@ -148,7 +148,7 @@ public abstract class ReconfigurableBase
         } catch (ReconfigurationException e) {
           errorMessage = e.getCause().getMessage();
         }
-        results.put(change, Optional.fromNullable(errorMessage));
+        results.put(change, Optional.ofNullable(errorMessage));
       }
 
       synchronized (parent.reconfigLock) {
