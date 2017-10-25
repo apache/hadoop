@@ -67,7 +67,7 @@ public class TestKDiag extends Assert {
 
   @BeforeClass
   public static void startMiniKdc() throws Exception {
-    workDir = new File(System.getProperty("test.dir", "target"));
+    workDir = GenericTestUtils.getTestDir(TestKDiag.class.getSimpleName());
     securityProperties = MiniKdc.createConf();
     kdc = new MiniKdc(securityProperties, workDir);
     kdc.start();
