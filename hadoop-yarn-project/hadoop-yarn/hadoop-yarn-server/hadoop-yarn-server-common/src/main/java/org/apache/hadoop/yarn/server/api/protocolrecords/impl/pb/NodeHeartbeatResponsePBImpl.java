@@ -156,7 +156,7 @@ public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
       builder.addSystemCredentialsForApps(SystemCredentialsForAppsProto.newBuilder()
         .setAppId(convertToProtoFormat(entry.getKey()))
         .setCredentialsForApp(BYTE_STRING_INTERNER.intern(
-            ProtoUtils.convertToProtoFormat(entry.getValue()))));
+            ProtoUtils.convertToProtoFormat(entry.getValue().duplicate()))));
     }
   }
 
