@@ -59,6 +59,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * A wrapper around {@link com.amazonaws.services.s3.AmazonS3} that injects
@@ -209,15 +210,15 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   }
 
   @Override
-  public DeleteObjectsResult deleteObjects(
-      DeleteObjectsRequest deleteObjectsRequest)
+  public DeleteObjectsResult deleteObjects(DeleteObjectsRequest
+      deleteObjectsRequest)
       throws AmazonClientException, AmazonServiceException {
+    maybeFail();
     for (DeleteObjectsRequest.KeyVersion keyVersion :
         deleteObjectsRequest.getKeys()) {
       registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest
         .getBucketName());
     }
-    maybeFail();
     return super.deleteObjects(deleteObjectsRequest);
   }
 
@@ -291,12 +292,9 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
       S3ObjectSummary item) {
     // Behavior of S3ObjectSummary
     String key = item.getKey();
-    for (S3ObjectSummary member : list) {
-      if (member.getKey().equals(key)) {
-        return;
-      }
+    if (list.stream().noneMatch((member) -> member.getKey().equals(key))) {
+      list.add(item);
     }
-    list.add(item);
   }
 
   /**
@@ -460,13 +458,9 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   }
 
   private List<String> filterPrefixes(List<String> prefixes) {
-    List<String> outputPrefixes = new ArrayList<>();
-    for (String key : prefixes) {
-      if (!isKeyDelayed(delayedPutKeys.get(key), key)) {
-        outputPrefixes.add(key);
-      }
-    }
-    return outputPrefixes;
+    return prefixes.stream()
+        .filter(key -> !isKeyDelayed(delayedPutKeys.get(key), key))
+        .collect(Collectors.toList());
   }
 
   private boolean isKeyDelayed(Long enqueueTime, String key) {
@@ -489,16 +483,14 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   private void registerDeleteObject(String key, String bucket) {
     if (shouldDelay(key)) {
       // Record summary so we can add it back for some time post-deletion
-      S3ObjectSummary summary = null;
-      ListObjectsV2Request request =
-          new ListObjectsV2Request().withBucketName(bucket)
+      ListObjectsRequest request = new ListObjectsRequest()
+              .withBucketName(bucket)
               .withPrefix(key);
-      for (S3ObjectSummary result : listObjectsV2(request).getObjectSummaries()) {
-        if (result.getKey().equals(key)) {
-          summary = result;
-          break;
-        }
-      }
+      S3ObjectSummary summary = innerlistObjects(request).getObjectSummaries()
+          .stream()
+          .filter(result -> result.getKey().equals(key))
+          .findFirst()
+          .orElse(null);
       delayedDeletes.put(key, new Delete(System.currentTimeMillis(), summary));
     }
   }
@@ -639,6 +631,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
   }
 
   /** Since ObjectListing is immutable, we just override it with wrapper. */
+  @SuppressWarnings("serial")
   private static class CustomObjectListing extends ObjectListing {
 
     private final List<S3ObjectSummary> customListing;
@@ -673,6 +666,7 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     }
   }
 
+  @SuppressWarnings("serial")
   private static class CustomListObjectsV2Result extends ListObjectsV2Result {
 
     private final List<S3ObjectSummary> customListing;
