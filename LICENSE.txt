@@ -618,7 +618,6 @@ hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/jquery.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jquery
 Apache HBase - Server which contains JQuery minified javascript library version 1.8.3
 Microsoft JDBC Driver for SQLServer - version 6.2.1.jre7
-oj! Algorithms - version 43.0
 --------------------------------------------------------------------------------
 
 Copyright jQuery Foundation and other contributors, https://jquery.org/

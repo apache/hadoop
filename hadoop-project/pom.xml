@@ -618,11 +618,6 @@
         <version>3.2</version>
       </dependency>
       <dependency>
-          <groupId>org.ojalgo</groupId>
-          <artifactId>ojalgo</artifactId>
-          <version>43.0</version>
-      </dependency>
-      <dependency>
         <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-core</artifactId>
         <version>${jersey.version}</version>

@@ -44,7 +44,6 @@
     <module>hadoop-pipes</module>
     <module>hadoop-openstack</module>
     <module>hadoop-sls</module>
-    <module>hadoop-resourceestimator</module>
     <module>hadoop-aws</module>
     <module>hadoop-azure</module>
     <module>hadoop-azure-datalake</module>
