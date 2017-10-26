@@ -21,7 +21,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,6 +48,8 @@ public abstract class ConfigurationStoreBaseTest {
   @Before
   public void setUp() throws Exception {
     this.conf = new Configuration();
+    this.conf.setClass(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class, CapacityScheduler.class);
     this.schedConf = new Configuration(false);
   }
 
