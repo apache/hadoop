@@ -80,7 +80,7 @@ message ListContainerRequestProto {
 }
 
 message ListContainerResponseProto {
-  repeated hadoop.hdfs.ozone.Pipeline pipeline = 1;
+  repeated hadoop.hdfs.ozone.SCMContainerInfo containers = 1;
 }
 
 message DeleteContainerRequestProto {

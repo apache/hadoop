@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.scm.container;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -44,9 +45,11 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.PriorityQueue;
+import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
@@ -126,7 +129,7 @@ public class ContainerStateManager {
 
   // A map that maintains the ContainerKey to Containers of that type ordered
   // by last access time.
-  private final Lock writeLock;
+  private final ReadWriteLock lock;
   private final Queue<BlockContainerInfo> containerCloseQueue;
   private Map<ContainerKey, PriorityQueue<BlockContainerInfo>> containers;
 
@@ -136,8 +139,8 @@ public class ContainerStateManager {
    * <p>
    * TODO : Add Container Tags so we know which containers are owned by SCM.
    */
-  public ContainerStateManager(Configuration configuration, final long
-      cacheSize) throws IOException {
+  public ContainerStateManager(Configuration configuration,
+      Mapping containerMapping, final long cacheSize) throws IOException {
     this.cacheSize = cacheSize;
 
     // Initialize the container state machine.
@@ -160,9 +163,10 @@ public class ContainerStateManager {
         OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB,
         OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT);
 
-    writeLock = new ReentrantLock();
+    lock = new ReentrantReadWriteLock();
     containers = new HashMap<>();
-    initializeContainerMaps(containers);
+    initializeContainerMaps();
+    loadExistingContainers(containerMapping);
     containerCloseQueue = new ConcurrentLinkedQueue<BlockContainerInfo>();
   }
 
@@ -179,18 +183,42 @@ public class ContainerStateManager {
    * of these {ALLOCATED, CREATING, OPEN, CLOSED, DELETING, DELETED}  container
    * states
    */
-  private void initializeContainerMaps(Map containerMaps) {
+  private void initializeContainerMaps() {
     // Called only from Ctor path, hence no lock is held.
-    Preconditions.checkNotNull(containerMaps);
+    Preconditions.checkNotNull(containers);
     for (OzoneProtos.Owner owner : OzoneProtos.Owner.values()) {
       for (ReplicationType type : ReplicationType.values()) {
         for (ReplicationFactor factor : ReplicationFactor.values()) {
           for (LifeCycleState state : LifeCycleState.values()) {
             ContainerKey key = new ContainerKey(owner, type, factor, state);
             PriorityQueue<BlockContainerInfo> queue = new PriorityQueue<>();
-            containerMaps.put(key, queue);
+            containers.put(key, queue);
           }
         }
+      }
+    }
+  }
+
+  /**
+   * Load containers from the container store into the containerMaps.
+   *
+   * @param containerMapping -- Mapping object containing container store.
+   */
+  private void loadExistingContainers(Mapping containerMapping) {
+    try {
+      List<ContainerInfo> containerList =
+          containerMapping.listContainer(null, null, Integer.MAX_VALUE);
+      for (ContainerInfo container : containerList) {
+        ContainerKey key = new ContainerKey(container.getOwner(),
+            container.getPipeline().getType(),
+            container.getPipeline().getFactor(), container.getState());
+        BlockContainerInfo blockContainerInfo =
+            new BlockContainerInfo(container, 0);
+        ((PriorityQueue) containers.get(key)).add(blockContainerInfo);
+      }
+    } catch (IOException e) {
+      if (!e.getMessage().equals("No container exists in current db")) {
+        LOG.info("Could not list the containers", e);
       }
     }
   }
@@ -271,7 +299,7 @@ public class ContainerStateManager {
     Preconditions.checkNotNull(info);
     BlockContainerInfo blockInfo = new BlockContainerInfo(info, 0);
     blockInfo.setLastUsed(Time.monotonicNow());
-    writeLock.lock();
+    lock.writeLock().lock();
     try {
       ContainerKey key = new ContainerKey(owner, type, replicationFactor,
           blockInfo.getState());
@@ -280,7 +308,7 @@ public class ContainerStateManager {
       queue.add(blockInfo);
       LOG.trace("New container allocated: {}", blockInfo);
     } finally {
-      writeLock.unlock();
+      lock.writeLock().unlock();
     }
     return info;
   }
@@ -321,7 +349,7 @@ public class ContainerStateManager {
 
     ContainerKey newKey = new ContainerKey(info.getOwner(), pipeline.getType(),
         pipeline.getFactor(), newState);
-    writeLock.lock();
+    lock.writeLock().lock();
     try {
 
       PriorityQueue<BlockContainerInfo> currentQueue = containers.get(oldKey);
@@ -349,7 +377,7 @@ public class ContainerStateManager {
 
       return newState;
     } finally {
-      writeLock.unlock();
+      lock.writeLock().unlock();
     }
   }
 
@@ -367,7 +395,7 @@ public class ContainerStateManager {
       Owner owner, ReplicationType type, ReplicationFactor factor,
       LifeCycleState state) {
     ContainerKey key = new ContainerKey(owner, type, factor, state);
-    writeLock.lock();
+    lock.writeLock().lock();
     try {
       PriorityQueue<BlockContainerInfo> queue = containers.get(key);
       if (queue.size() == 0) {
@@ -382,7 +410,7 @@ public class ContainerStateManager {
 
       while (iter.hasNext()) {
         BlockContainerInfo info = iter.next();
-        if (info.getAllocated() < this.containerSize + size) {
+        if (info.getAllocated() + size <= this.containerSize) {
 
           queue.remove(info);
           info.addAllocated(size);
@@ -399,7 +427,23 @@ public class ContainerStateManager {
       }
 
     } finally {
-      writeLock.unlock();
+      lock.writeLock().unlock();
+    }
+    return null;
+  }
+
+  @VisibleForTesting
+  public List<BlockContainerInfo> getMatchingContainers(Owner owner,
+      ReplicationType type, ReplicationFactor factor, LifeCycleState state) {
+    ContainerKey key = new ContainerKey(owner, type, factor, state);
+    lock.readLock().lock();
+    try {
+      return Arrays.asList((BlockContainerInfo[]) containers.get(key)
+          .toArray(new BlockContainerInfo[0]));
+    } catch (Exception e) {
+      LOG.error("Could not get matching containers", e);
+    } finally {
+      lock.readLock().unlock();
     }
     return null;
   }

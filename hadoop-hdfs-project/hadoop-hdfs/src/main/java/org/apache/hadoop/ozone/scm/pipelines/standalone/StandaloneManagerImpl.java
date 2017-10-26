@@ -74,6 +74,7 @@ public class StandaloneManagerImpl implements PipelineManager {
     String pipelineName = "SA-" + UUID.randomUUID().toString().substring(3);
     pipeline.setContainerName(containerName);
     pipeline.setPipelineName(pipelineName);
+    pipeline.setFactor(replicationFactor);
     LOG.info("Creating new standalone pipeline: {}", pipeline.toString());
     return pipeline;
   }

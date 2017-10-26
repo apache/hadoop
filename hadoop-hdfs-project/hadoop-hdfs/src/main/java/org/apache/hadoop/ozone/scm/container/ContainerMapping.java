@@ -34,7 +34,6 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.BlockContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
 import org.apache.hadoop.utils.MetadataStore;
@@ -107,8 +106,8 @@ public class ContainerMapping implements Mapping {
     this.lock = new ReentrantLock();
 
     this.pipelineSelector = new PipelineSelector(nodeManager, conf);
-    this.containerStateManager = new ContainerStateManager(conf, +this
-        .cacheSize * OzoneConsts.MB);
+    this.containerStateManager =
+        new ContainerStateManager(conf, this, this.cacheSize * OzoneConsts.MB);
     LOG.trace("Container State Manager created.");
 
     long containerCreationLeaseTimeout = conf.getLong(
@@ -144,10 +143,9 @@ public class ContainerMapping implements Mapping {
 
   /** {@inheritDoc} */
   @Override
-  public List<Pipeline> listContainer(String startName, String prefixName,
-      int count)
-      throws IOException {
-    List<Pipeline> pipelineList = new ArrayList<>();
+  public List<ContainerInfo> listContainer(String startName,
+      String prefixName, int count) throws IOException {
+    List<ContainerInfo> containerList = new ArrayList<>();
     lock.lock();
     try {
       if (containerStore.isEmpty()) {
@@ -160,7 +158,6 @@ public class ContainerMapping implements Mapping {
           containerStore.getSequentialRangeKVs(startKey, count, prefixFilter);
 
       // Transform the values into the pipelines.
-      // TODO: return list of ContainerInfo instead of pipelines.
       // TODO: filter by container state
       for (Map.Entry<byte[], byte[]> entry : range) {
         ContainerInfo containerInfo =
@@ -168,12 +165,12 @@ public class ContainerMapping implements Mapping {
                 OzoneProtos.SCMContainerInfo.PARSER.parseFrom(
                     entry.getValue()));
         Preconditions.checkNotNull(containerInfo);
-        pipelineList.add(containerInfo.getPipeline());
+        containerList.add(containerInfo);
       }
     } finally {
       lock.unlock();
     }
-    return pipelineList;
+    return containerList;
   }
 
   /**

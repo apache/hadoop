@@ -19,7 +19,6 @@ package org.apache.hadoop.ozone.scm.container;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
-import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -40,7 +39,7 @@ public interface Mapping extends Closeable {
   ContainerInfo getContainer(String containerName) throws IOException;
 
   /**
-   * Returns pipelines under certain conditions.
+   * Returns containers under certain conditions.
    * Search container names from start name(exclusive),
    * and use prefix name to filter the result. The max
    * size of the searching range cannot exceed the
@@ -52,11 +51,11 @@ public interface Mapping extends Closeable {
    *              Usually the count will be replace with a very big
    *              value instead of being unlimited in case the db is very big)
    *
-   * @return a list of pipeline.
+   * @return a list of container.
    * @throws IOException
    */
-  List<Pipeline> listContainer(String startName, String prefixName, int count)
-      throws IOException;
+  List<ContainerInfo> listContainer(String startName, String prefixName,
+      int count) throws IOException;
 
   /**
    * Allocates a new container for a given keyName and replication factor.

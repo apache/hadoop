@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
@@ -50,7 +51,7 @@ public interface StorageContainerLocationProtocol {
   Pipeline getContainer(String containerName) throws IOException;
 
   /**
-   * Ask SCM a list of pipelines with a range of container names
+   * Ask SCM a list of containers with a range of container names
    * and the limit of count.
    * Search container names between start name(exclusive), and
    * use prefix name to filter the result. the max size of the
@@ -62,11 +63,11 @@ public interface StorageContainerLocationProtocol {
    *              Usually the count will be replace with a very big
    *              value instead of being unlimited in case the db is very big)
    *
-   * @return a list of pipeline.
+   * @return a list of container.
    * @throws IOException
    */
-  List<Pipeline> listContainer(String startName, String prefixName, int count)
-      throws IOException;
+  List<ContainerInfo> listContainer(String startName, String prefixName,
+      int count) throws IOException;
 
   /**
    * Deletes a container in SCM.

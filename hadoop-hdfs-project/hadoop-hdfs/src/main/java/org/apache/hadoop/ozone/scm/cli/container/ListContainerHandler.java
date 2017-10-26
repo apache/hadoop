@@ -24,6 +24,7 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.ozone.scm.cli.OzoneCommandHandler;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
@@ -82,12 +83,12 @@ public class ListContainerHandler extends OzoneCommandHandler {
       }
     }
 
-    List<Pipeline> pipelineList =
+    List<ContainerInfo> containerList =
         getScmClient().listContainer(startName, prefixName, count);
 
     // Output data list
-    for (Pipeline pipeline : pipelineList) {
-      outputContainerPipeline(pipeline);
+    for (ContainerInfo container : containerList) {
+      outputContainerPipeline(container.getPipeline());
     }
   }
 
