@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.net.SocketFactory;
 
@@ -809,12 +811,26 @@ public class RPC {
   /** An RPC Server. */
   public abstract static class Server extends org.apache.hadoop.ipc.Server {
    boolean verbose;
-   static String classNameBase(String className) {
-      String[] names = className.split("\\.", -1);
-      if (names == null || names.length == 0) {
-        return className;
+
+    static String serverNameFromClass(Class<?> clazz) {
+      //The basic idea here is to handle names like
+      //org.apache.hadoop.ozone.protocol.proto.
+      //
+      // StorageDatanodeProtocolProtos$StorageContainerDatanodeProtocolService$2
+      //where the getSimpleName is also empty
+      String name = clazz.getName();
+      String[] names = clazz.getName().split("\\.", -1);
+      if (names != null && names.length > 0) {
+        name = names[names.length - 1];
       }
-      return names[names.length-1];
+      Pattern pattern =
+          Pattern.compile("(?:[^\\$]*\\$)*([A-Za-z][^\\$]+)(?:\\$\\d+)?");
+      Matcher matcher = pattern.matcher(name);
+      if (matcher.find()) {
+        return matcher.group(1);
+      } else {
+        return name;
+      }
     }
    
    /**

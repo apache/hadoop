@@ -140,6 +140,10 @@ public abstract class Server {
   private RpcSaslProto negotiateResponse;
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   private Tracer tracer;
+  /**
+   * Logical name of the server used in metrics and monitor.
+   */
+  private final String serverName;
   
   /**
    * Add exception classes for which server won't log stack traces.
@@ -2765,6 +2769,7 @@ public abstract class Server {
     this.rpcRequestClass = rpcRequestClass; 
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
+    this.serverName = serverName;
     this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     if (queueSizePerHandler != -1) {
@@ -3505,5 +3510,9 @@ public abstract class Server {
       };
       idleScanTimer.schedule(idleScanTask, idleScanInterval);
     }
+  }
+
+  public String getServerName() {
+    return serverName;
   }
 }
