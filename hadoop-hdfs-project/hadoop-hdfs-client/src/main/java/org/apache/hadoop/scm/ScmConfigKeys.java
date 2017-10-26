@@ -191,6 +191,12 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_CONTAINER_DELETION_CHOOSING_POLICY =
       "ozone.scm.container.deletion-choosing.policy";
 
+  public static final String OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT =
+      "ozone.scm.container.creation.lease.timeout";
+
+  public static final long OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT =
+      60000;
+
   /**
    * Don't start processing a pool if we have not had a minimum number of
    * seconds from the last processing.

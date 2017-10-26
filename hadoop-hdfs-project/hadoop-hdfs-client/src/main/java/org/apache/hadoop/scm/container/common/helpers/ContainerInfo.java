@@ -161,7 +161,6 @@ public class ContainerInfo {
   @Override
   public int hashCode() {
     return new HashCodeBuilder(11, 811)
-        .append(state)
         .append(pipeline.getContainerName())
         .append(pipeline.getFactor())
         .append(pipeline.getType())

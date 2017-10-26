@@ -52,7 +52,7 @@ public class LeaseManager<T> {
    * Creates an instance of lease manager.
    *
    * @param defaultTimeout
-   *        Default timeout value to be used for lease creation.
+   *        Default timeout in milliseconds to be used for lease creation.
    */
   public LeaseManager(long defaultTimeout) {
     this.defaultTimeout = defaultTimeout;

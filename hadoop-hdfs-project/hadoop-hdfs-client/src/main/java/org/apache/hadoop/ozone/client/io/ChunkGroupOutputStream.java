@@ -136,10 +136,6 @@ public class ChunkGroupOutputStream extends OutputStream {
     // create container if needed
     if (subKeyInfo.getShouldCreateContainer()) {
       try {
-        scmClient.notifyObjectCreationStage(
-            NotifyObjectCreationStageRequestProto.Type.container,
-            containerName,
-            NotifyObjectCreationStageRequestProto.Stage.begin);
         ContainerProtocolCalls.createContainer(xceiverClient, requestID);
         scmClient.notifyObjectCreationStage(
             NotifyObjectCreationStageRequestProto.Type.container,

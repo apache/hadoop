@@ -1072,6 +1072,19 @@
   </property>
 
   <property>
+    <name>ozone.scm.container.creation.lease.timeout</name>
+    <value>60000</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      Container creation timeout in milliseconds to be used by SCM. When
+      BEGIN_CREATE event happens the container is moved from ALLOCATED to
+      CREATING state, SCM will now wait for the configured amount of time
+      to get COMPLETE_CREATE event if it doesn't receive it will move the
+      container to DELETING.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.key.preallocation.maxsize</name>
     <value>134217728</value>
     <tag>OZONE, KSM, PERFORMANCE</tag>
