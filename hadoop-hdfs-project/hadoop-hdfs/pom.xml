@@ -193,6 +193,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>rocksdbjni</artifactId>
       <version>5.5.5</version>
     </dependency>
+    <dependency>
+      <groupId>io.swagger</groupId>
+      <artifactId>swagger-annotations</artifactId>
+      <version>1.5.9</version>
+      <scope>provided</scope>
+    </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
@@ -453,6 +459,48 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <followSymlinks>false</followSymlinks>
             </fileset>
           </filesets>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.github.kongchen</groupId>
+        <artifactId>swagger-maven-plugin</artifactId>
+        <version>3.1.5</version>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <apiSources>
+            <apiSource>
+              <springmvc>false</springmvc>
+              <swaggerDirectory>target/webapps/static</swaggerDirectory>
+              <swaggerFileName>ozone.swagger</swaggerFileName>
+              <schemes>
+                <scheme>http</scheme>
+              </schemes>
+              <host>localhost:9864</host>
+              <basePath>/</basePath>
+              <locations>
+                <location>org.apache.hadoop.ozone.web.interfaces</location>
+              </locations>
+              <info>
+                <title>HDFS Ozone REST Api</title>
+                <version>${project.version}</version>
+                <contact>
+                  <name>Apache Hadoop project</name>
+                  <url>https://hadoop.apache.org</url>
+                </contact>
+                <license>
+                  <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+                  <name>Apache 2.0</name>
+                </license>
+              </info>
+            </apiSource>
+          </apiSources>
         </configuration>
       </plugin>
     </plugins>
