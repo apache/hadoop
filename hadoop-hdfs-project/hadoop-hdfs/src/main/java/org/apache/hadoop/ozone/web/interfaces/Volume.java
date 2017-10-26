@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.ozone.web.interfaces;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
@@ -42,6 +46,7 @@ import javax.ws.rs.core.UriInfo;
  */
 @InterfaceAudience.Private
 @Path("/{volume}")
+@Api(tags = "volume")
 public interface Volume {
 
   /**
@@ -64,6 +69,16 @@ public interface Volume {
    */
 
   @POST
+  @ApiOperation("Creates a Volume owned by the user")
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
+          + "04:23:30 GMT", required = true, paramType = "header"),
+      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
+          true, paramType = "header")})
   Response createVolume(@PathParam("volume") String volume,
       @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
       @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
@@ -89,6 +104,16 @@ public interface Volume {
    * @throws OzoneException
    */
   @PUT
+  @ApiOperation("Updates a Volume owned by the user")
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
+          + "04:23:30 GMT", required = true, paramType = "header"),
+      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
+          true, paramType = "header")})
   Response updateVolume(@PathParam("volume") String volume,
       @DefaultValue(Header.OZONE_QUOTA_UNDEFINED)
       @QueryParam(Header.OZONE_QUOTA_QUERY_TAG) String quota,
@@ -105,6 +130,16 @@ public interface Volume {
    * @throws OzoneException
    */
   @DELETE
+  @ApiOperation("Deletes a Volume if it is empty")
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
+          + "04:23:30 GMT", required = true, paramType = "header"),
+      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
+          true, paramType = "header")})
   Response deleteVolume(@PathParam("volume") String volume,
       @Context Request req, @Context UriInfo uriInfo,
       @Context HttpHeaders headers) throws OzoneException;
@@ -122,6 +157,17 @@ public interface Volume {
    * @throws OzoneException
    */
   @GET
+  @ApiOperation(value = "Returns Volume info", notes = "This API can be "
+      + "invoked either by admin or the owner")
+  @ApiImplicitParams({
+      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
+          true, paramType = "header"),
+      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
+          + "04:23:30 GMT", required = true, paramType = "header"),
+      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
+          true, paramType = "header")})
   Response getVolumeInfo(@PathParam("volume") String volume,
       @DefaultValue(Header.OZONE_LIST_QUERY_BUCKET)
       @QueryParam(Header.OZONE_LIST_QUERY_TAG) String info,
