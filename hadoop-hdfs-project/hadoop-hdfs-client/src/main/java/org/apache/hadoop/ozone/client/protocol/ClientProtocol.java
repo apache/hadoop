@@ -25,10 +25,11 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.ReplicationFactor;
+import org.apache.hadoop.ozone.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.IOException;
 import java.util.List;
@@ -258,9 +259,8 @@ public interface ClientProtocol {
    *
    */
   OzoneOutputStream createKey(String volumeName, String bucketName,
-                              String keyName, long size,
-                              OzoneProtos.ReplicationType type,
-                              OzoneProtos.ReplicationFactor factor)
+                              String keyName, long size, ReplicationType type,
+                              ReplicationFactor factor)
       throws IOException;
 
   /**

@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ozone.client.ReplicationFactor;
+import org.apache.hadoop.ozone.client.ReplicationType;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
@@ -120,6 +122,14 @@ public final class OzoneConfigKeys {
   public static final String OZONE_CLIENT_CONNECTION_TIMEOUT_MS =
       "ozone.client.connection.timeout.ms";
   public static final int OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT = 5000;
+
+  public static final String OZONE_REPLICATION = "ozone.replication";
+  public static final int OZONE_REPLICATION_DEFAULT =
+      ReplicationFactor.THREE.getValue();
+
+  public static final String OZONE_REPLICATION_TYPE = "ozone.replication.type";
+  public static final String OZONE_REPLICATION_TYPE_DEFAULT =
+      ReplicationType.RATIS.toString();
 
   /**
    * Configuration property to configure the cache size of client list calls.
