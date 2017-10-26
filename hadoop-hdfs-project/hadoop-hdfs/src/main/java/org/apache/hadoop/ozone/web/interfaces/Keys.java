@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.ozone.web.interfaces;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiImplicitParams;
-import io.swagger.annotations.ApiOperation;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
 
@@ -43,8 +39,8 @@ import java.io.InputStream;
 /**
  * This interface defines operations permitted on a key.
  */
+
 @Path("/{volume}/{bucket}/{keys:.*}")
-@Api(tags = "key")
 public interface Keys {
 
   /**
@@ -65,18 +61,6 @@ public interface Keys {
    */
   @PUT
   @Consumes(MediaType.WILDCARD)
-  @ApiOperation(value = "Adds a key to an existing bucket.",notes = "If the "
-      + "object already exists this call will overwrite or add with new version "
-      + "number if the bucket versioning is turned on.")
-  @ApiImplicitParams({
-      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
-          true, paramType = "header"),
-      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
-          true, paramType = "header"),
-      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
-          + "04:23:30 GMT", required = true, paramType = "header"),
-      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
-          true, paramType = "header")})
   Response putKey(@PathParam("volume") String volume,
       @PathParam("bucket") String bucket, @PathParam("keys") String keys,
       InputStream is, @Context Request req, @Context UriInfo info,
@@ -98,16 +82,6 @@ public interface Keys {
    * @throws OzoneException
    */
   @GET
-  @ApiOperation("Gets the Key if it exists.")
-  @ApiImplicitParams({
-      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
-          true, paramType = "header"),
-      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
-          true, paramType = "header"),
-      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
-          + "04:23:30 GMT", required = true, paramType = "header"),
-      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
-          true, paramType = "header")})
   Response getKey(@PathParam("volume") String volume,
       @PathParam("bucket") String bucket, @PathParam("keys") String keys,
       @QueryParam(Header.OZONE_LIST_QUERY_TAG) String info,
@@ -128,16 +102,6 @@ public interface Keys {
    * @throws OzoneException
    */
   @DELETE
-  @ApiOperation("Deletes an existing key")
-  @ApiImplicitParams({
-      @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
-          true, paramType = "header"),
-      @ApiImplicitParam(name = "x-ozone-user", example = "user", required =
-          true, paramType = "header"),
-      @ApiImplicitParam(name = "Date", example = "Date: Mon, 26 Jun 2017 "
-          + "04:23:30 GMT", required = true, paramType = "header"),
-      @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
-          true, paramType = "header")})
   Response deleteKey(@PathParam("volume") String volume,
       @PathParam("bucket") String bucket, @PathParam("keys") String keys,
       @Context Request req, @Context UriInfo info, @Context HttpHeaders headers)
