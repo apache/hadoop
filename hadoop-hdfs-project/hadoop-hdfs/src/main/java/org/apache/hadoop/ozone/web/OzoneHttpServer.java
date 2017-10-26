@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.web;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
@@ -62,6 +63,17 @@ public abstract class OzoneHttpServer {
       HttpServer2.Builder builder = null;
       builder = DFSUtil.httpServerTemplateForNNAndJN(conf, this.httpAddress,
           this.httpsAddress, name, getSpnegoPrincipal(), getKeytabFile());
+
+      final boolean xFrameEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED,
+          DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED_DEFAULT);
+
+      final String xFrameOptionValue = conf.getTrimmed(
+          DFSConfigKeys.DFS_XFRAME_OPTION_VALUE,
+          DFSConfigKeys.DFS_XFRAME_OPTION_VALUE_DEFAULT);
+
+      builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
+
       httpServer = builder.build();
 
     }
