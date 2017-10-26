@@ -194,6 +194,9 @@ RUN mkdir -p /opt/apache-forrest && \
 RUN echo 'forrest.home=/opt/apache-forrest' > build.properties
 ENV FORREST_HOME=/opt/apache-forrest
 
+# Hugo static website generator (for new hadoop site and Ozone docs)
+RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb && dpkg --install hugo.deb && rm hugo.deb
+
 # Add a welcome message and environment checks.
 ADD hadoop_env_checks.sh /root/hadoop_env_checks.sh
 RUN chmod 755 /root/hadoop_env_checks.sh
