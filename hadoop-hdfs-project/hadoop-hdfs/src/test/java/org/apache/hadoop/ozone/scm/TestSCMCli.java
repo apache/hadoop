@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.KeyUtils;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.cli.ResultCode;
 import org.apache.hadoop.ozone.scm.cli.SCMCLI;
@@ -34,20 +33,16 @@ import org.apache.hadoop.scm.client.ScmClient;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.rules.Timeout;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState.CLOSED;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState.OPEN;
@@ -56,11 +51,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.junit.Assert.assertFalse;
 /**
  * This class tests the CLI of SCM.
  */
-@Ignore("Ignoring to fix configurable pipeline, Will bring this back.")
 public class TestSCMCli {
   private static SCMCLI cli;
 
@@ -70,7 +64,7 @@ public class TestSCMCli {
       storageContainerLocationClient;
 
   private static StorageContainerManager scm;
-  private static ContainerManager containerManager;
+  private static ScmClient containerOperationClient;
 
   private static ByteArrayOutputStream outContent;
   private static PrintStream outStream;
@@ -86,18 +80,17 @@ public class TestSCMCli {
     conf = new OzoneConfiguration();
     cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    xceiverClientManager = new XceiverClientManager(conf);
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
-    ScmClient client = new ContainerOperationClient(
+    containerOperationClient = new ContainerOperationClient(
         storageContainerLocationClient, new XceiverClientManager(conf));
     outContent = new ByteArrayOutputStream();
     outStream = new PrintStream(outContent);
     errContent = new ByteArrayOutputStream();
     errStream = new PrintStream(errContent);
-    cli = new SCMCLI(client, outStream, errStream);
+    cli = new SCMCLI(containerOperationClient, outStream, errStream);
     scm = cluster.getStorageContainerManager();
-    containerManager = cluster.getDataNodes().get(0)
-        .getOzoneContainerManager().getContainerManager();
   }
 
   private int runCommandAndGetOutput(String[] cmd,
@@ -163,12 +156,12 @@ public class TestSCMCli {
     // ****************************************
     // Create an non-empty container
     containerName = "non-empty-container";
-    pipeline = scm.allocateContainer(xceiverClientManager.getType(),
-        OzoneProtos.ReplicationFactor.ONE,
-        containerName);
-    containerData = new ContainerData(containerName, conf);
-    containerManager.createContainer(pipeline, containerData);
-    ContainerData cdata = containerManager.readContainer(containerName);
+    pipeline = containerOperationClient
+        .createContainer(xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, containerName);
+
+    ContainerData cdata = ContainerData
+        .getFromProtBuf(containerOperationClient.readContainer(pipeline), conf);
     KeyUtils.getDB(cdata, conf).put(containerName.getBytes(),
         "someKey".getBytes());
     Assert.assertTrue(containerExist(containerName));
@@ -184,7 +177,7 @@ public class TestSCMCli {
     Assert.assertTrue(containerExist(containerName));
 
     // Close the container
-    containerManager.closeContainer(containerName);
+    containerOperationClient.closeContainer(pipeline);
 
     // Gracefully delete a container should fail because it is not empty.
     testErr = new ByteArrayOutputStream();
@@ -198,31 +191,29 @@ public class TestSCMCli {
     delCmd = new String[] {"-container", "-delete", "-c", containerName, "-f"};
     exitCode = runCommandAndGetOutput(delCmd, out, null);
     assertEquals("Expected success, found:", ResultCode.SUCCESS, exitCode);
-    Assert.assertFalse(containerExist(containerName));
+    assertFalse(containerExist(containerName));
 
     // ****************************************
     // 2. Test to delete an empty container.
     // ****************************************
     // Create an empty container
     containerName = "empty-container";
-    pipeline = scm.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
-    containerData = new ContainerData(containerName, conf);
-    containerManager.createContainer(pipeline, containerData);
-    containerManager.closeContainer(containerName);
+    pipeline = containerOperationClient
+        .createContainer(xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, containerName);
+    containerOperationClient.closeContainer(pipeline);
     Assert.assertTrue(containerExist(containerName));
 
     // Successfully delete an empty container.
     delCmd = new String[] {"-container", "-delete", "-c", containerName};
     exitCode = runCommandAndGetOutput(delCmd, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
-    Assert.assertFalse(containerExist(containerName));
+    assertFalse(containerExist(containerName));
 
     // After the container is deleted,
     // a same name container can now be recreated.
-    pipeline = scm.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
-    containerManager.createContainer(pipeline, containerData);
+    containerOperationClient.createContainer(xceiverClientManager.getType(),
+        OzoneProtos.ReplicationFactor.ONE, containerName);
     Assert.assertTrue(containerExist(containerName));
 
     // ****************************************
@@ -269,10 +260,11 @@ public class TestSCMCli {
 
     // Create an empty container.
     cname = "ContainerTestInfo1";
-    Pipeline pipeline = scm.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), cname);
-    ContainerData data = new ContainerData(cname, conf);
-    containerManager.createContainer(pipeline, data);
+    Pipeline pipeline = containerOperationClient
+        .createContainer(xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, cname);
+    ContainerData data = ContainerData
+        .getFromProtBuf(containerOperationClient.readContainer(pipeline), conf);
 
     info = new String[]{"-container", "-info", "-c", cname};
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -290,12 +282,12 @@ public class TestSCMCli {
 
     // Create an non-empty container
     cname = "ContainerTestInfo2";
-    pipeline = scm.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), cname);
-    data = new ContainerData(cname, conf);
-    containerManager.createContainer(pipeline, data);
-    KeyUtils.getDB(data, conf).put(cname.getBytes(),
-        "someKey".getBytes());
+    pipeline = containerOperationClient
+        .createContainer(xceiverClientManager.getType(),
+            OzoneProtos.ReplicationFactor.ONE, cname);
+    data = ContainerData
+        .getFromProtBuf(containerOperationClient.readContainer(pipeline), conf);
+    KeyUtils.getDB(data, conf).put(cname.getBytes(), "someKey".getBytes());
 
     info = new String[]{"-container", "-info", "-c", cname};
     exitCode = runCommandAndGetOutput(info, out, null);
@@ -309,46 +301,20 @@ public class TestSCMCli {
 
     out.reset();
 
-    // Create a container with some meta data.
-    cname = "ContainerTestInfo3";
-    pipeline = scm.allocateContainer(xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), cname);
-    data = new ContainerData(cname, conf);
-    data.addMetadata("VOLUME", "shire");
-    data.addMetadata("owner", "bilbo");
-    containerManager.createContainer(pipeline, data);
-    KeyUtils.getDB(data, conf).put(cname.getBytes(),
-        "someKey".getBytes());
-
-    List<String> metaList = data.getAllMetadata().entrySet().stream()
-        .map(entry -> entry.getKey() + ":" + entry.getValue())
-        .collect(Collectors.toList());
-    String metadataStr = StringUtils.join(", ", metaList);
-
-    info = new String[]{"-container", "-info", "-c", cname};
-    exitCode = runCommandAndGetOutput(info, out, null);
-    assertEquals(ResultCode.SUCCESS, exitCode);
-
-    openStatus = data.isOpen() ? "OPEN" : "CLOSED";
-    expected = String.format(formatStr, cname, openStatus,
-        data.getDBPath(), data.getContainerPath(), metadataStr,
-        datanodeID.getHostName(), datanodeID.getHostName());
-    assertEquals(expected, out.toString());
-
-    out.reset();
 
     // Close last container and test info again.
-    containerManager.closeContainer(cname);
+    containerOperationClient.closeContainer(pipeline);
 
-    info = new String[]{"-container", "-info", "-c", cname};
+    info = new String[] {"-container", "-info", "-c", cname};
     exitCode = runCommandAndGetOutput(info, out, null);
     assertEquals(ResultCode.SUCCESS, exitCode);
-    data = containerManager.readContainer(cname);
+    data = ContainerData
+        .getFromProtBuf(containerOperationClient.readContainer(pipeline), conf);
 
     openStatus = data.isOpen() ? "OPEN" : "CLOSED";
     expected = String.format(formatStrWithHash, cname, openStatus,
         data.getHash(), data.getDBPath(), data.getContainerPath(),
-        metadataStr, datanodeID.getHostName(), datanodeID.getHostName());
+        "", datanodeID.getHostName(), datanodeID.getHostName());
     assertEquals(expected, out.toString());
   }
 
@@ -376,10 +342,8 @@ public class TestSCMCli {
     String prefix = "ContainerForTesting";
     for (int index = 0; index < 20; index++) {
       String containerName = String.format("%s%02d", prefix, index);
-      Pipeline pipeline = scm.allocateContainer(xceiverClientManager.getType(),
-          xceiverClientManager.getFactor(), containerName);
-      ContainerData data = new ContainerData(containerName, conf);
-      containerManager.createContainer(pipeline, data);
+      containerOperationClient.createContainer(xceiverClientManager.getType(),
+          OzoneProtos.ReplicationFactor.ONE, containerName);
     }
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -517,6 +481,7 @@ public class TestSCMCli {
     String expected1 =
         "usage: hdfs scm -container <commands> <options>\n" +
         "where <commands> can be one of the following\n" +
+        " -close    Close container\n" +
         " -create   Create container\n" +
         " -delete   Delete container\n" +
         " -info     Info container\n" +

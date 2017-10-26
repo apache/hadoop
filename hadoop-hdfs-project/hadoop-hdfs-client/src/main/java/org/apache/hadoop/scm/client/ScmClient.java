@@ -19,6 +19,7 @@ package org.apache.hadoop.scm.client;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
@@ -71,7 +72,7 @@ public interface ScmClient {
   void deleteContainer(Pipeline pipeline, boolean force) throws IOException;
 
   /**
-   * Lists a range of containers and get the pipelines info.
+   * Lists a range of containers and get their info.
    *
    * @param startName start name, if null, start searching at the head.
    * @param prefixName prefix name, if null, then filter is disabled.
@@ -82,8 +83,8 @@ public interface ScmClient {
    * @return a list of pipeline.
    * @throws IOException
    */
-  List<Pipeline> listContainer(String startName, String prefixName, int count)
-      throws IOException;
+  List<ContainerInfo> listContainer(String startName, String prefixName,
+      int count) throws IOException;
 
   /**
    * Read meta data from an existing container.

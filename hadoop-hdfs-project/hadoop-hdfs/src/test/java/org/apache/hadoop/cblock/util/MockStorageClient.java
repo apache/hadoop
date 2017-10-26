@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.cblock.util;
 
+import org.apache.hadoop.cblock.meta.ContainerDescriptor;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerData;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.client.ScmClient;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
@@ -68,7 +70,7 @@ public class MockStorageClient implements ScmClient {
   }
 
   /**
-   * This is a mock class, so returns the pipelines of start container
+   * This is a mock class, so returns the container infos of start container
    * and end container.
    *
    * @param startName start container name.
@@ -78,11 +80,18 @@ public class MockStorageClient implements ScmClient {
    * @throws IOException
    */
   @Override
-  public List<Pipeline> listContainer(String startName,
+  public List<ContainerInfo> listContainer(String startName,
       String prefixName, int count) throws IOException {
-    List<Pipeline> dataList = new ArrayList<>();
-    dataList.add(getContainer(startName));
-    return dataList;
+    List<ContainerInfo> containerList = new ArrayList<>();
+    ContainerDescriptor containerDescriptor =
+        ContainerLookUpService.lookUp(startName);
+    ContainerInfo container = new ContainerInfo.Builder()
+        .setContainerName(containerDescriptor.getContainerID())
+        .setPipeline(containerDescriptor.getPipeline())
+        .setState(OzoneProtos.LifeCycleState.ALLOCATED)
+        .build();
+    containerList.add(container);
+    return containerList;
   }
 
   /**

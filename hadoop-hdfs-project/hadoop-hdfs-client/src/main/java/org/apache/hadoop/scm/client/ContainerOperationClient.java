@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -100,6 +101,7 @@ public class ContainerOperationClient implements ScmClient {
         createPipeline(client, pipeline);
       }
       // TODO : Container Client State needs to be updated.
+      // TODO : Return ContainerInfo instead of Pipeline
       createContainer(containerId, client, pipeline);
       return pipeline;
     } finally {
@@ -201,6 +203,7 @@ public class ContainerOperationClient implements ScmClient {
         createPipeline(client, pipeline);
       }
 
+      // TODO : Return ContainerInfo instead of Pipeline
       // connect to pipeline leader and allocate container on leader datanode.
       client = xceiverClientManager.acquireClient(pipeline);
       createContainer(containerId, client, pipeline);
@@ -273,7 +276,7 @@ public class ContainerOperationClient implements ScmClient {
    * {@inheritDoc}
    */
   @Override
-  public List<Pipeline> listContainer(String startName,
+  public List<ContainerInfo> listContainer(String startName,
       String prefixName, int count)
       throws IOException {
     return storageContainerLocationClient.listContainer(

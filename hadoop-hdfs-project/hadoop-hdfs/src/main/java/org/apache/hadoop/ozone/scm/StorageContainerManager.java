@@ -414,7 +414,7 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    * {@inheritDoc}
    */
   @Override
-  public List<Pipeline> listContainer(String startName,
+  public List<ContainerInfo> listContainer(String startName,
       String prefixName, int count) throws IOException {
     return scmContainerManager.listContainer(startName, prefixName, count);
   }
@@ -826,6 +826,14 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   public int getNodeCount(NodeState nodestate) {
     return scmNodeManager.getNodeCount(nodestate);
+  }
+
+  /**
+   * Returns SCM container manager.
+   */
+  @VisibleForTesting
+  public Mapping getScmContainerManager() {
+    return scmContainerManager;
   }
 
   /**

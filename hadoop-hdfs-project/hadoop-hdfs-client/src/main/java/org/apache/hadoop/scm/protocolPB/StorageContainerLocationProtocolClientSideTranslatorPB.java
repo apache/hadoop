@@ -25,6 +25,7 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
@@ -132,7 +133,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * {@inheritDoc}
    */
   @Override
-  public List<Pipeline> listContainer(String startName, String prefixName,
+  public List<ContainerInfo> listContainer(String startName, String prefixName,
       int count) throws IOException {
     ListContainerRequestProto.Builder builder = ListContainerRequestProto
         .newBuilder();
@@ -148,11 +149,12 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     try {
       ListContainerResponseProto response =
           rpcProxy.listContainer(NULL_RPC_CONTROLLER, request);
-      List<Pipeline> pipelineList = new ArrayList<>();
-      for (OzoneProtos.Pipeline pipelineProto : response.getPipelineList()) {
-        pipelineList.add(Pipeline.getFromProtoBuf(pipelineProto));
+      List<ContainerInfo> containerList = new ArrayList<>();
+      for (OzoneProtos.SCMContainerInfo containerInfoProto : response
+          .getContainersList()) {
+        containerList.add(ContainerInfo.fromProtobuf(containerInfoProto));
       }
-      return pipelineList;
+      return containerList;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

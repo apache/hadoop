@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerRequestProto;
@@ -118,12 +119,12 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       }
 
       count = request.getCount();
-      List<Pipeline> pipelineList = impl.listContainer(startName,
-          prefixName, count);
+      List<ContainerInfo> containerList =
+          impl.listContainer(startName, prefixName, count);
       ListContainerResponseProto.Builder builder =
           ListContainerResponseProto.newBuilder();
-      for (Pipeline pipeline : pipelineList) {
-        builder.addPipeline(pipeline.getProtobufMessage());
+      for (ContainerInfo container : containerList) {
+        builder.addContainers(container.getProtobuf());
       }
       return builder.build();
     } catch (IOException e) {
