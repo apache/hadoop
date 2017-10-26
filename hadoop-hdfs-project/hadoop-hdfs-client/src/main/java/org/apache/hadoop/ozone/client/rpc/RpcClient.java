@@ -31,6 +31,8 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneQuota;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.ReplicationFactor;
+import org.apache.hadoop.ozone.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
 import org.apache.hadoop.ozone.client.io.ChunkGroupOutputStream;
@@ -297,8 +299,8 @@ public class RpcClient implements ClientProtocol {
     Preconditions.checkNotNull(bucketName);
     Preconditions.checkNotNull(bucketArgs);
 
-    Boolean isVersionEnabled = bucketArgs.isVersionEnabled() == null ?
-        Boolean.FALSE : bucketArgs.isVersionEnabled();
+    Boolean isVersionEnabled = bucketArgs.getVersioning() == null ?
+        Boolean.FALSE : bucketArgs.getVersioning();
     StorageType storageType = bucketArgs.getStorageType() == null ?
         StorageType.DEFAULT : bucketArgs.getStorageType();
     List<OzoneAcl> listOfAcls = new ArrayList<>();
@@ -438,7 +440,7 @@ public class RpcClient implements ClientProtocol {
   @Override
   public OzoneOutputStream createKey(
       String volumeName, String bucketName, String keyName, long size,
-      OzoneProtos.ReplicationType type, OzoneProtos.ReplicationFactor factor)
+      ReplicationType type, ReplicationFactor factor)
       throws IOException {
     String requestId = UUID.randomUUID().toString();
     KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
@@ -446,8 +448,8 @@ public class RpcClient implements ClientProtocol {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(size)
-        .setType(type)
-        .setFactor(factor)
+        .setType(OzoneProtos.ReplicationType.valueOf(type.toString()))
+        .setFactor(OzoneProtos.ReplicationFactor.valueOf(factor.getValue()))
         .build();
 
     OpenKeySession openKey = keySpaceManagerClient.openKey(keyArgs);

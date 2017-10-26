@@ -22,11 +22,11 @@ package org.apache.hadoop.ozone.client;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -51,6 +51,15 @@ public class OzoneBucket {
    * Name of the bucket.
    */
   private final String name;
+  /**
+   * Default replication factor to be used while creating keys.
+   */
+  private final ReplicationFactor defaultReplication;
+
+  /**
+   * Default replication type to be used while creating keys.
+   */
+  private final ReplicationType defaultReplicationType;
   /**
    * Bucket ACLs.
    */
@@ -100,6 +109,12 @@ public class OzoneBucket {
     this.versioning = versioning;
     this.listCacheSize = OzoneClientUtils.getListCacheSize(conf);
     this.creationTime = creationTime;
+    this.defaultReplication = ReplicationFactor.valueOf(conf.getInt(
+        OzoneConfigKeys.OZONE_REPLICATION,
+        OzoneConfigKeys.OZONE_REPLICATION_DEFAULT));
+    this.defaultReplicationType = ReplicationType.valueOf(conf.get(
+        OzoneConfigKeys.OZONE_REPLICATION_TYPE,
+        OzoneConfigKeys.OZONE_REPLICATION_TYPE_DEFAULT));
   }
 
   /**
@@ -206,17 +221,37 @@ public class OzoneBucket {
   }
 
   /**
-   * Creates a new key in the bucket.
+   * Creates a new key in the bucket, with default replication type RATIS and
+   * with replication factor THREE.
    * @param key Name of the key to be created.
    * @param size Size of the data the key will point to.
    * @return OzoneOutputStream to which the data has to be written.
    * @throws IOException
    */
-  public OzoneOutputStream createKey(String key, long size, OzoneProtos
-      .ReplicationType type, OzoneProtos.ReplicationFactor factor)
+  public OzoneOutputStream createKey(String key, long size)
       throws IOException {
     Preconditions.checkNotNull(proxy, "Client proxy is not set.");
     Preconditions.checkNotNull(key);
+    return createKey(key, size, defaultReplicationType, defaultReplication);
+  }
+
+  /**
+   * Creates a new key in the bucket.
+   * @param key Name of the key to be created.
+   * @param size Size of the data the key will point to.
+   * @param type Replication type to be used.
+   * @param factor Replication factor of the key.
+   * @return OzoneOutputStream to which the data has to be written.
+   * @throws IOException
+   */
+  public OzoneOutputStream createKey(String key, long size,
+                                     ReplicationType type,
+                                     ReplicationFactor factor)
+      throws IOException {
+    Preconditions.checkNotNull(proxy, "Client proxy is not set.");
+    Preconditions.checkNotNull(key);
+    Preconditions.checkNotNull(type);
+    Preconditions.checkNotNull(factor);
     return proxy.createKey(volumeName, name, key, size, type, factor);
   }
 

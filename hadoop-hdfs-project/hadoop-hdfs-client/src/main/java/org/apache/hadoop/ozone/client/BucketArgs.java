@@ -36,7 +36,7 @@ public final class BucketArgs {
   /**
    * Bucket Version flag.
    */
-  private Boolean isVersionEnabled;
+  private Boolean versioning;
   /**
    * Type of storage to be used for this bucket.
    * [RAM_DISK, SSD, DISK, ARCHIVE]
@@ -45,14 +45,14 @@ public final class BucketArgs {
 
   /**
    * Private constructor, constructed via builder.
-   * @param isVersionEnabled Bucket version flag.
+   * @param versioning Bucket version flag.
    * @param storageType Storage type to be used.
    * @param acls list of ACLs.
    */
-  private BucketArgs(Boolean isVersionEnabled, StorageType storageType,
+  private BucketArgs(Boolean versioning, StorageType storageType,
                      List<OzoneAcl> acls) {
     this.acls = acls;
-    this.isVersionEnabled = isVersionEnabled;
+    this.versioning = versioning;
     this.storageType = storageType;
   }
 
@@ -60,8 +60,8 @@ public final class BucketArgs {
    * Returns true if bucket version is enabled, else false.
    * @return isVersionEnabled
    */
-  public Boolean isVersionEnabled() {
-    return isVersionEnabled;
+  public Boolean getVersioning() {
+    return versioning;
   }
 
   /**
@@ -93,12 +93,12 @@ public final class BucketArgs {
    * Builder for KsmBucketInfo.
    */
   public static class Builder {
-    private Boolean isVersionEnabled;
+    private Boolean versioning;
     private StorageType storageType;
     private List<OzoneAcl> acls;
 
-    public BucketArgs.Builder setIsVersionEnabled(Boolean versionFlag) {
-      this.isVersionEnabled = versionFlag;
+    public BucketArgs.Builder setVersioning(Boolean versionFlag) {
+      this.versioning = versionFlag;
       return this;
     }
 
@@ -117,7 +117,7 @@ public final class BucketArgs {
      * @return instance of BucketArgs.
      */
     public BucketArgs build() {
-      return new BucketArgs(isVersionEnabled, storageType, acls);
+      return new BucketArgs(versioning, storageType, acls);
     }
   }
 }

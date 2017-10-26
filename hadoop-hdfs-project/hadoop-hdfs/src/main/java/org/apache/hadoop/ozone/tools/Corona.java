@@ -41,7 +41,6 @@ import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.util.*;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,8 +141,8 @@ public final class Corona extends Configured implements Tool {
   private String numOfKeys;
   private String jsonDir;
   private boolean useRatis;
-  private OzoneProtos.ReplicationType type;
-  private OzoneProtos.ReplicationFactor factor;
+  private ReplicationType type;
+  private ReplicationFactor factor;
 
   private int threadPoolSize;
   private int keySize;
@@ -372,18 +371,18 @@ public final class Corona extends Configured implements Tool {
 
     useRatis = cmdLine.hasOption(RATIS);
 
-    type = OzoneProtos.ReplicationType.STAND_ALONE;
-    factor = OzoneProtos.ReplicationFactor.ONE;
+    type = ReplicationType.STAND_ALONE;
+    factor = ReplicationFactor.ONE;
 
     if (useRatis) {
-      type = OzoneProtos.ReplicationType.RATIS;
+      type = ReplicationType.RATIS;
       int replicationFactor = Integer.parseInt(cmdLine.getOptionValue(RATIS));
       switch (replicationFactor) {
       case 1:
-        factor = OzoneProtos.ReplicationFactor.ONE;
+        factor = ReplicationFactor.ONE;
         break;
       case 3:
-        factor = OzoneProtos.ReplicationFactor.THREE;
+        factor = ReplicationFactor.THREE;
         break;
       default:
         throw new IllegalArgumentException("Illegal replication factor:"
