@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.After;
@@ -199,6 +198,8 @@ public class TestZKConfigurationStore extends ConfigurationStoreBaseTest {
   public Configuration createRMHAConf(String rmIds, String rmId,
       int adminPort) {
     Configuration conf = new YarnConfiguration();
+    this.conf.setClass(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class, CapacityScheduler.class);
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, rmIds);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
