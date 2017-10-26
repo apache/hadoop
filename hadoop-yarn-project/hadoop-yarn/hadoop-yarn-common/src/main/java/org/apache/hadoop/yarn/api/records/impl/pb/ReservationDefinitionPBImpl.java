@@ -226,6 +226,11 @@ public class ReservationDefinitionPBImpl extends ReservationDefinition {
 
   @Override
   public void setRecurrenceExpression(String recurrenceExpression) {
+    maybeInitBuilder();
+    if (recurrenceExpression == null) {
+      builder.clearRecurrenceExpression();
+      return;
+    }
     builder.setRecurrenceExpression(recurrenceExpression);
   }
 
