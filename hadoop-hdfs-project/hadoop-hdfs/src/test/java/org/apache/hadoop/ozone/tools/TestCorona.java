@@ -84,7 +84,7 @@ public class TestCorona {
         args.toArray(new String[0]));
     Assert.assertEquals(2, corona.getNumberOfVolumesCreated());
     Assert.assertEquals(10, corona.getNumberOfBucketsCreated());
-    Assert.assertEquals(99, corona.getNumberOfKeysAdded());
+    Assert.assertEquals(100, corona.getNumberOfKeysAdded());
     Assert.assertEquals(10240 - 36, corona.getKeyValueLength());
     Assert.assertEquals(0, res);
   }

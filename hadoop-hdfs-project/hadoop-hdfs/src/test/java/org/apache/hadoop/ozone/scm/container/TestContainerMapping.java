@@ -21,7 +21,9 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClientManager;
+import org.apache.hadoop.scm.container.common.helpers.BlockContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -48,6 +50,8 @@ public class TestContainerMapping {
   private static File testDir;
   private static XceiverClientManager xceiverClientManager;
 
+  private static final long TIMEOUT = 10000;
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
   @BeforeClass
@@ -58,6 +62,8 @@ public class TestContainerMapping {
         .getTestDir(TestContainerMapping.class.getSimpleName());
     conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS,
         testDir.getAbsolutePath());
+    conf.setLong(ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,
+        TIMEOUT);
     boolean folderExisted = testDir.exists() || testDir.mkdirs();
     if (!folderExisted) {
       throw new IOException("Unable to create test directory path");
@@ -154,5 +160,34 @@ public class TestContainerMapping {
     mapping.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), containerName,
         OzoneProtos.Owner.OZONE);
+  }
+
+  @Test
+  public void testContainerCreationLeaseTimeout() throws IOException,
+      InterruptedException {
+    String containerName = UUID.randomUUID().toString();
+    nodeManager.setChillmode(false);
+    ContainerInfo containerInfo = mapping.allocateContainer(
+        xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(),
+        containerName,
+        OzoneProtos.Owner.OZONE);
+    mapping.updateContainerState(containerInfo.getContainerName(),
+        OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+    Thread.sleep(TIMEOUT + 1000);
+
+    BlockContainerInfo deletingContainer = mapping.getStateManager()
+        .getMatchingContainer(
+            0, containerInfo.getOwner(),
+            xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(),
+            OzoneProtos.LifeCycleState.DELETING);
+    Assert.assertEquals(containerInfo.getContainerName(),
+        deletingContainer.getContainerName());
+
+    thrown.expect(IOException.class);
+    thrown.expectMessage("Lease Exception");
+    mapping.updateContainerState(containerInfo.getContainerName(),
+        OzoneProtos.LifeCycleEvent.COMPLETE_CREATE);
   }
 }
