@@ -112,8 +112,8 @@
 
                 var createPercentageMetrics = function (metricName, window) {
                     groupedMetrics.percentiles = groupedMetrics['percentiles'] || {}
-                    groupedMetrics.percentiles[metricName] = groupedMetrics.percentiles[metricName] || {};
-                    groupedMetrics.percentiles[metricName][window] = groupedMetrics.percentiles[metricName][window] || {
+                    groupedMetrics.percentiles[window] = groupedMetrics.percentiles[window] || {};
+                    groupedMetrics.percentiles[window][metricName] = groupedMetrics.percentiles[window][metricName] || {
                             graphdata: [{
                                 key: window,
                                 values: []
@@ -134,7 +134,7 @@
                         createPercentageMetrics(metricName, window);
 
 
-                        groupedMetrics.percentiles[metricName][window].graphdata[0]
+                        groupedMetrics.percentiles[window][metricName].graphdata[0]
                             .values.push({
                             label: percentage,
                             value: metrics[key]
@@ -169,7 +169,7 @@
                         var metricName = percentileNumOps[1];
                         var window = percentileNumOps[2];
                         createPercentageMetrics(metricName, window);
-                        groupedMetrics.percentiles[metricName][window].numOps = metrics[key];
+                        groupedMetrics.percentiles[window][metricName].numOps = metrics[key];
                     } else if (isIgnoredJmxKeys(key)) {
                         //ignore
                     } else {

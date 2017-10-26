@@ -20,14 +20,17 @@
     (eg. set to <b>60,300</b>) in your hdfs-site.xml
     to display Hadoop RPC related graphs.
 </div>
-<div ng-repeat="(metric,percentiles) in $ctrl.metrics.percentiles">
-    <h2>{{metric}}</h2>
+<div ng-repeat="(window,windowed) in $ctrl.metrics.percentiles">
+    <h2>{{window}} window</h2>
+    <p>Quantiles based on a fixed {{window}} window. Calculated once at every
+        {{window}}</p>
 
     <div class="container">
-        <div class="col-md-6" ng-repeat="(window,windowed) in percentiles">
-            <h3>{{window}} window ({{windowed.numOps}} request)</h3>
+        <div class="col-md-6" ng-repeat="(metric,percentiles) in windowed">
+            <h3>{{metric}}</h3>
+            <p>{{percentiles.numOps}} sample</p>
             <nvd3 options="$ctrl.percentileGraphOptions"
-                  data="windowed.graphdata"></nvd3>
+                  data="percentiles.graphdata"></nvd3>
         </div>
     </div>
 
