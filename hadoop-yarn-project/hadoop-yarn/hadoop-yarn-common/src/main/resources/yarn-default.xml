@@ -594,6 +594,24 @@
   </property>
 
   <property>
+    <description>Index at which the RM Delegation Token ids will be split so
+      that the delegation token znodes stored in the zookeeper RM state store
+      will be stored as two different znodes (parent-child). The split is done
+      from the end. For instance, with no split, a delegation token znode will
+      be of the form RMDelegationToken_123456789. If the value of this config is
+      1, the delegation token znode will be broken into two parts:
+      RMDelegationToken_12345678 and 9 respectively with former being the parent
+      node. This config can take values from 0 to 4. 0 means there will be no
+      split. If the value is outside this range, it will be treated as 0 (i.e.
+      no split). A value larger than 0 (up to 4) should be configured if you are
+      running a large number of applications, with long-lived delegation tokens
+      and state store operations (e.g. failover) are failing due to LenError in
+      Zookeeper.</description>
+    <name>yarn.resourcemanager.zk-delegation-token-node.split-index</name>
+    <value>0</value>
+  </property>
+
+  <property>
     <description>Specifies the maximum size of the data that can be stored
       in a znode. Value should be same or less than jute.maxbuffer configured
       in zookeeper. Default value configured is 1MB.</description>
