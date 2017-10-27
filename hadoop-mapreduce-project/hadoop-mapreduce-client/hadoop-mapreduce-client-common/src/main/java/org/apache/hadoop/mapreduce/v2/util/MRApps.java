@@ -34,8 +34,6 @@ import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -70,6 +68,8 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Apps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class for MR applications
@@ -77,7 +77,7 @@ import org.apache.hadoop.yarn.util.Apps;
 @Private
 @Unstable
 public class MRApps extends Apps {
-  public static final Log LOG = LogFactory.getLog(MRApps.class);
+  public static final Logger LOG = LoggerFactory.getLogger(MRApps.class);
 
   public static String toString(JobId jid) {
     return jid.toString();
