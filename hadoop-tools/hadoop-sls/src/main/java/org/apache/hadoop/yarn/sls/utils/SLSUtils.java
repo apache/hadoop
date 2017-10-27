@@ -39,6 +39,7 @@ import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
 import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
+import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 
 @Private
 @Unstable
@@ -118,21 +119,22 @@ public class SLSUtils {
   }
 
   private static void addNodes(Set<String> nodeSet, Map jsonEntry) {
-    if (jsonEntry.containsKey("num.nodes")) {
-      int numNodes = Integer.parseInt(jsonEntry.get("num.nodes").toString());
+    if (jsonEntry.containsKey(SLSConfiguration.NUM_NODES)) {
+      int numNodes = Integer.parseInt(
+          jsonEntry.get(SLSConfiguration.NUM_NODES).toString());
       int numRacks = 1;
-      if (jsonEntry.containsKey("num.racks")) {
+      if (jsonEntry.containsKey(SLSConfiguration.NUM_RACKS)) {
         numRacks = Integer.parseInt(
-            jsonEntry.get("num.racks").toString());
+            jsonEntry.get(SLSConfiguration.NUM_RACKS).toString());
       }
       nodeSet.addAll(generateNodes(numNodes, numRacks));
     }
 
-    if (jsonEntry.containsKey("job.tasks")) {
-      List tasks = (List) jsonEntry.get("job.tasks");
+    if (jsonEntry.containsKey(SLSConfiguration.JOB_TASKS)) {
+      List tasks = (List) jsonEntry.get(SLSConfiguration.JOB_TASKS);
       for (Object o : tasks) {
         Map jsonTask = (Map) o;
-        String hostname = (String) jsonTask.get("container.host");
+        String hostname = (String) jsonTask.get(SLSConfiguration.TASK_HOST);
         if (hostname != null) {
           nodeSet.add(hostname);
         }
