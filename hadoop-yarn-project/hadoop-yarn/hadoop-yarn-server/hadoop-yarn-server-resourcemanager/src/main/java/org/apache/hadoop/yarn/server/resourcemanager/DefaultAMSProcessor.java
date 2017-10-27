@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
@@ -180,6 +181,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setSchedulerResourceTypes(getScheduler()
         .getSchedulingResourceTypes());
+    response.setResourceTypes(ResourceUtils.getResourcesTypeInfo());
     if (getRmContext().getYarnConfiguration().getBoolean(
         YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
         YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED)) {

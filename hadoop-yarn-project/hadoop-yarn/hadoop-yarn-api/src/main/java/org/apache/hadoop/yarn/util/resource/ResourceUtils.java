@@ -44,8 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
-
 /**
  * Helper class to read the resource-types to be supported by the system.
  */
@@ -580,5 +578,26 @@ public class ResourceUtils {
               resourceInfo.getResourceType()));
     }
     return array;
+  }
+
+  /**
+   * Reinitialize all resource types from external source (in case of client,
+   * server will send the updated list and local resourceutils cache will be
+   * updated as per server's list of resources)
+   *
+   * @param resourceTypeInfo
+   *          List of resource types
+   */
+  public static void reinitializeResources(
+      List<ResourceTypeInfo> resourceTypeInfo) {
+    Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
+
+    for (ResourceTypeInfo resourceType : resourceTypeInfo) {
+      resourceInformationMap.put(resourceType.getName(),
+          ResourceInformation.newInstance(resourceType.getName(),
+              resourceType.getDefaultUnit(), resourceType.getResourceType()));
+    }
+    ResourceUtils
+        .initializeResourcesFromResourceInformationMap(resourceInformationMap);
   }
 }
