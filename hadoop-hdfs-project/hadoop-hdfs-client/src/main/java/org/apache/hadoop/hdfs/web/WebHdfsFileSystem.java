@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -193,6 +194,17 @@ public class WebHdfsFileSystem extends FileSystem
         HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
         HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
 
+    int connectTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_WEBHDFS_SOCKET_CONNECT_TIMEOUT_KEY,
+        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+        TimeUnit.MILLISECONDS);
+
+    int readTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_WEBHDFS_SOCKET_READ_TIMEOUT_KEY,
+        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+        TimeUnit.MILLISECONDS);
+
+
     boolean isOAuth = conf.getBoolean(
         HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_KEY,
         HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_DEFAULT);
@@ -200,11 +212,11 @@ public class WebHdfsFileSystem extends FileSystem
     if(isOAuth) {
       LOG.debug("Enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
-          .newOAuth2URLConnectionFactory(conf);
+          .newOAuth2URLConnectionFactory(connectTimeout, readTimeout, conf);
     } else {
       LOG.debug("Not enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
-          .newDefaultURLConnectionFactory(conf);
+          .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
     }
 
 
