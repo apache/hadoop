@@ -480,9 +480,25 @@ class FSDirStatAndListingOp {
       int childrenNum, FileEncryptionInfo feInfo, byte storagePolicy,
       ErasureCodingPolicy ecPolicy, LocatedBlocks locations) {
     if (locations == null) {
-      return new HdfsFileStatus(length, isdir, replication, blocksize,
-          mtime, atime, permission, flags, owner, group, symlink, path,
-          fileId, childrenNum, feInfo, storagePolicy, ecPolicy);
+      return new HdfsFileStatus.Builder()
+          .length(length)
+          .isdir(isdir)
+          .replication(replication)
+          .blocksize(blocksize)
+          .mtime(mtime)
+          .atime(atime)
+          .perm(permission)
+          .flags(flags)
+          .owner(owner)
+          .group(group)
+          .symlink(symlink)
+          .path(path)
+          .fileId(fileId)
+          .children(childrenNum)
+          .feInfo(feInfo)
+          .storagePolicy(storagePolicy)
+          .ecPolicy(ecPolicy)
+          .build();
     } else {
       return new HdfsLocatedFileStatus(length, isdir, replication, blocksize,
           mtime, atime, permission, flags, owner, group, symlink, path,

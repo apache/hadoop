@@ -23,7 +23,6 @@ import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -66,11 +65,19 @@ public class TestJsonUtil {
   public void testHdfsFileStatus() throws IOException {
     final long now = Time.now();
     final String parent = "/dir";
-    final HdfsFileStatus status = new HdfsFileStatus(1001L, false, 3, 1L << 26,
-        now, now + 10, new FsPermission((short) 0644),
-        EnumSet.noneOf(HdfsFileStatus.Flags.class), "user", "group",
-        DFSUtil.string2Bytes("bar"), DFSUtil.string2Bytes("foo"),
-        HdfsConstants.GRANDFATHER_INODE_ID, 0, null, (byte) 0, null);
+    final HdfsFileStatus status = new HdfsFileStatus.Builder()
+        .length(1001L)
+        .replication(3)
+        .blocksize(1L << 26)
+        .mtime(now)
+        .atime(now + 10)
+        .perm(new FsPermission((short) 0644))
+        .owner("user")
+        .group("group")
+        .symlink(DFSUtil.string2Bytes("bar"))
+        .path(DFSUtil.string2Bytes("foo"))
+        .fileId(HdfsConstants.GRANDFATHER_INODE_ID)
+        .build();
     final FileStatus fstatus = toFileStatus(status, parent);
     System.out.println("status  = " + status);
     System.out.println("fstatus = " + fstatus);
