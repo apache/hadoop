@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
@@ -68,7 +69,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSetUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -928,23 +931,24 @@ public class ParentQueue extends AbstractCSQueue {
     // Factor to scale down effective resource: When cluster has sufficient
     // resources, effective_min_resources will be same as configured
     // min_resources.
-    float effectiveMinRatio = 1;
+    Resource numeratorForMinRatio = null;
     ResourceCalculator rc = this.csContext.getResourceCalculator();
     if (getQueueName().equals("root")) {
       if (!resourceByLabel.equals(Resources.none()) && Resources.lessThan(rc,
           clusterResource, resourceByLabel, configuredMinResources)) {
-        effectiveMinRatio = Resources.divide(rc, clusterResource,
-            resourceByLabel, configuredMinResources);
+        numeratorForMinRatio = resourceByLabel;
       }
     } else {
       if (Resources.lessThan(rc, clusterResource,
           queueResourceQuotas.getEffectiveMinResource(label),
           configuredMinResources)) {
-        effectiveMinRatio = Resources.divide(rc, clusterResource,
-            queueResourceQuotas.getEffectiveMinResource(label),
-            configuredMinResources);
+        numeratorForMinRatio = queueResourceQuotas
+            .getEffectiveMinResource(label);
       }
     }
+
+    Map<String, Float> effectiveMinRatioPerResource = getEffectiveMinRatioPerResource(
+        configuredMinResources, numeratorForMinRatio);
 
     // loop and do this for all child queues
     for (CSQueue childQueue : getChildQueues()) {
@@ -955,7 +959,8 @@ public class ParentQueue extends AbstractCSQueue {
       if (childQueue.getCapacityConfigType()
           .equals(CapacityConfigType.ABSOLUTE_RESOURCE)) {
         childQueue.getQueueResourceQuotas().setEffectiveMinResource(label,
-            Resources.multiply(minResource, effectiveMinRatio));
+            getMinResourceNormalized(childQueue.getQueueName(), effectiveMinRatioPerResource,
+                minResource));
 
         // Max resource of a queue should be a minimum of {configuredMaxRes,
         // parentMaxRes}. parentMaxRes could be configured value. But if not
@@ -1001,6 +1006,53 @@ public class ParentQueue extends AbstractCSQueue {
                 .getEffectiveMaxResource(label));
       }
     }
+  }
+
+  private Resource getMinResourceNormalized(String name, Map<String, Float> effectiveMinRatio,
+      Resource minResource) {
+    Resource ret = Resource.newInstance(minResource);
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation nResourceInformation = minResource
+          .getResourceInformation(i);
+
+      Float ratio = effectiveMinRatio.get(nResourceInformation.getName());
+      if (ratio != null) {
+        ret.setResourceValue(i,
+            (long) (nResourceInformation.getValue() * ratio.floatValue()));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Updating min resource for Queue: " + name + " as "
+              + ret.getResourceInformation(i) + ", Actual resource: "
+              + nResourceInformation.getValue() + ", ratio: "
+              + ratio.floatValue());
+        }
+      }
+    }
+    return ret;
+  }
+
+  private Map<String, Float> getEffectiveMinRatioPerResource(
+      Resource configuredMinResources, Resource numeratorForMinRatio) {
+    Map<String, Float> effectiveMinRatioPerResource = new HashMap<>();
+    if (numeratorForMinRatio != null) {
+      int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+      for (int i = 0; i < maxLength; i++) {
+        ResourceInformation nResourceInformation = numeratorForMinRatio
+            .getResourceInformation(i);
+        ResourceInformation dResourceInformation = configuredMinResources
+            .getResourceInformation(i);
+
+        long nValue = nResourceInformation.getValue();
+        long dValue = UnitsConversionUtil.convert(
+            dResourceInformation.getUnits(), nResourceInformation.getUnits(),
+            dResourceInformation.getValue());
+        if (dValue != 0) {
+          effectiveMinRatioPerResource.put(nResourceInformation.getName(),
+              (float) nValue / dValue);
+        }
+      }
+    }
+    return effectiveMinRatioPerResource;
   }
 
   private void deriveCapacityFromAbsoluteConfigurations(String label,
