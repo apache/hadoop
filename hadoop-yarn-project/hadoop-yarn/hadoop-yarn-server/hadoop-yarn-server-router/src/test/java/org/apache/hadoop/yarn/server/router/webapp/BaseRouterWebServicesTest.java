@@ -20,15 +20,15 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -128,487 +128,263 @@ public abstract class BaseRouterWebServicesTest {
 
   protected ClusterInfo get(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ClusterInfo>() {
-          @Override
-          public ClusterInfo run() throws Exception {
-            return routerWebService.get();
-          }
-        });
+    // HSR is not used here
+    return routerWebService.get();
   }
 
   protected ClusterInfo getClusterInfo(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ClusterInfo>() {
-          @Override
-          public ClusterInfo run() throws Exception {
-            return routerWebService.getClusterInfo();
-          }
-        });
+    // HSR is not used here
+    return routerWebService.getClusterInfo();
   }
 
   protected ClusterMetricsInfo getClusterMetricsInfo(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ClusterMetricsInfo>() {
-          @Override
-          public ClusterMetricsInfo run() throws Exception {
-            return routerWebService.getClusterMetricsInfo();
-          }
-        });
+    // HSR is not used here
+    return routerWebService.getClusterMetricsInfo();
   }
 
   protected SchedulerTypeInfo getSchedulerInfo(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<SchedulerTypeInfo>() {
-          @Override
-          public SchedulerTypeInfo run() throws Exception {
-            return routerWebService.getSchedulerInfo();
-          }
-        });
+    // HSR is not used here
+    return routerWebService.getSchedulerInfo();
   }
 
   protected String dumpSchedulerLogs(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<String>() {
-          @Override
-          public String run() throws Exception {
-            return routerWebService.dumpSchedulerLogs(null, null);
-          }
-        });
+    return routerWebService.dumpSchedulerLogs(null,
+        createHttpServletRequest(user));
   }
 
   protected NodesInfo getNodes(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<NodesInfo>() {
-          @Override
-          public NodesInfo run() throws Exception {
-            return routerWebService.getNodes(null);
-          }
-        });
+    return routerWebService.getNodes(null);
   }
 
   protected NodeInfo getNode(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<NodeInfo>() {
-          @Override
-          public NodeInfo run() throws Exception {
-            return routerWebService.getNode(null);
-          }
-        });
+    return routerWebService.getNode(null);
   }
 
   protected AppsInfo getApps(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppsInfo>() {
-          @Override
-          public AppsInfo run() throws Exception {
-            return routerWebService.getApps(null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null);
-          }
-        });
+    return routerWebService.getApps(createHttpServletRequest(user), null, null,
+        null, null, null, null, null, null, null, null, null, null, null);
   }
 
   protected ActivitiesInfo getActivities(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ActivitiesInfo>() {
-          @Override
-          public ActivitiesInfo run() throws Exception {
-            return routerWebService.getActivities(null, null);
-          }
-        });
+    return routerWebService.getActivities(
+        createHttpServletRequest(user), null);
   }
 
   protected AppActivitiesInfo getAppActivities(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppActivitiesInfo>() {
-          @Override
-          public AppActivitiesInfo run() throws Exception {
-            return routerWebService.getAppActivities(null, null, null);
-          }
-        });
+    return routerWebService.getAppActivities(
+        createHttpServletRequest(user), null, null);
   }
 
   protected ApplicationStatisticsInfo getAppStatistics(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ApplicationStatisticsInfo>() {
-          @Override
-          public ApplicationStatisticsInfo run() throws Exception {
-            return routerWebService.getAppStatistics(null, null, null);
-          }
-        });
+    return routerWebService.getAppStatistics(
+        createHttpServletRequest(user), null, null);
   }
 
   protected AppInfo getApp(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppInfo>() {
-          @Override
-          public AppInfo run() throws Exception {
-            return routerWebService.getApp(null, null, null);
-          }
-        });
+    return routerWebService.getApp(createHttpServletRequest(user), null, null);
   }
 
   protected AppState getAppState(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppState>() {
-          @Override
-          public AppState run() throws Exception {
-            return routerWebService.getAppState(null, null);
-          }
-        });
+    return routerWebService.getAppState(createHttpServletRequest(user), null);
   }
 
   protected Response updateAppState(String user) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.updateAppState(null, null, null);
-          }
-        });
+    return routerWebService.updateAppState(
+        null, createHttpServletRequest(user), null);
   }
 
   protected NodeToLabelsInfo getNodeToLabels(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<NodeToLabelsInfo>() {
-          @Override
-          public NodeToLabelsInfo run() throws Exception {
-            return routerWebService.getNodeToLabels(null);
-          }
-        });
+    return routerWebService.getNodeToLabels(createHttpServletRequest(user));
   }
 
   protected LabelsToNodesInfo getLabelsToNodes(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<LabelsToNodesInfo>() {
-          @Override
-          public LabelsToNodesInfo run() throws Exception {
-            return routerWebService.getLabelsToNodes(null);
-          }
-        });
+    return routerWebService.getLabelsToNodes(null);
   }
 
   protected Response replaceLabelsOnNodes(String user) throws Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.replaceLabelsOnNodes(null, null);
-          }
-        });
+    return routerWebService.replaceLabelsOnNodes(
+        null, createHttpServletRequest(user));
   }
 
   protected Response replaceLabelsOnNode(String user) throws Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.replaceLabelsOnNode(null, null, null);
-          }
-        });
+    return routerWebService.replaceLabelsOnNode(
+        null, createHttpServletRequest(user), null);
   }
 
   protected NodeLabelsInfo getClusterNodeLabels(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<NodeLabelsInfo>() {
-          @Override
-          public NodeLabelsInfo run() throws Exception {
-            return routerWebService.getClusterNodeLabels(null);
-          }
-        });
+    return routerWebService.getClusterNodeLabels(
+        createHttpServletRequest(user));
   }
 
   protected Response addToClusterNodeLabels(String user) throws Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.addToClusterNodeLabels(null, null);
-          }
-        });
+    return routerWebService.addToClusterNodeLabels(
+        null, createHttpServletRequest(user));
   }
 
   protected Response removeFromCluserNodeLabels(String user) throws Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.removeFromCluserNodeLabels(null, null);
-          }
-        });
+    return routerWebService.removeFromCluserNodeLabels(
+        null, createHttpServletRequest(user));
   }
 
   protected NodeLabelsInfo getLabelsOnNode(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<NodeLabelsInfo>() {
-          @Override
-          public NodeLabelsInfo run() throws Exception {
-            return routerWebService.getLabelsOnNode(null, null);
-          }
-        });
+    return routerWebService.getLabelsOnNode(
+        createHttpServletRequest(user), null);
   }
 
   protected AppPriority getAppPriority(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppPriority>() {
-          @Override
-          public AppPriority run() throws Exception {
-            return routerWebService.getAppPriority(null, null);
-          }
-        });
+    return routerWebService.getAppPriority(
+        createHttpServletRequest(user), null);
   }
 
   protected Response updateApplicationPriority(String user)
       throws AuthorizationException, YarnException, InterruptedException,
       IOException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.updateApplicationPriority(null, null, null);
-          }
-        });
+    return routerWebService.updateApplicationPriority(
+        null, createHttpServletRequest(user), null);
   }
 
   protected AppQueue getAppQueue(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppQueue>() {
-          @Override
-          public AppQueue run() throws Exception {
-            return routerWebService.getAppQueue(null, null);
-          }
-        });
+    return routerWebService.getAppQueue(createHttpServletRequest(user), null);
   }
 
   protected Response updateAppQueue(String user) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.updateAppQueue(null, null, null);
-          }
-        });
+    return routerWebService.updateAppQueue(
+        null, createHttpServletRequest(user), null);
   }
 
   protected Response createNewApplication(String user)
       throws AuthorizationException, IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.createNewApplication(null);
-          }
-        });
+    return routerWebService.createNewApplication(
+        createHttpServletRequest(user));
   }
 
   protected Response submitApplication(String user)
       throws AuthorizationException, IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.submitApplication(null, null);
-          }
-        });
+    return routerWebService.submitApplication(
+        null, createHttpServletRequest(user));
   }
 
   protected Response postDelegationToken(String user)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.postDelegationToken(null, null);
-          }
-        });
+    return routerWebService.postDelegationToken(
+        null, createHttpServletRequest(user));
   }
 
   protected Response postDelegationTokenExpiration(String user)
       throws AuthorizationException, IOException, Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.postDelegationTokenExpiration(null);
-          }
-        });
+    return routerWebService.postDelegationTokenExpiration(
+        createHttpServletRequest(user));
   }
 
   protected Response cancelDelegationToken(String user)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.cancelDelegationToken(null);
-          }
-        });
+    return routerWebService.cancelDelegationToken(
+        createHttpServletRequest(user));
   }
 
   protected Response createNewReservation(String user)
       throws AuthorizationException, IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.createNewReservation(null);
-          }
-        });
+    return routerWebService.createNewReservation(
+        createHttpServletRequest(user));
   }
 
   protected Response submitReservation(String user)
       throws AuthorizationException, IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.submitReservation(null, null);
-          }
-        });
+    return routerWebService.submitReservation(
+        null, createHttpServletRequest(user));
   }
 
   protected Response updateReservation(String user)
       throws AuthorizationException, IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.updateReservation(null, null);
-          }
-        });
+    return routerWebService.updateReservation(
+        null, createHttpServletRequest(user));
   }
 
   protected Response deleteReservation(String user)
       throws AuthorizationException, IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.deleteReservation(null, null);
-          }
-        });
+    return routerWebService.deleteReservation(
+        null, createHttpServletRequest(user));
   }
 
   protected Response listReservation(String user) throws Exception {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.listReservation(null, null, 0, 0, false,
-                null);
-          }
-        });
+    return routerWebService.listReservation(
+        null, null, 0, 0, false, createHttpServletRequest(user));
   }
 
   protected AppTimeoutInfo getAppTimeout(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppTimeoutInfo>() {
-          @Override
-          public AppTimeoutInfo run() throws Exception {
-            return routerWebService.getAppTimeout(null, null, null);
-          }
-        });
+    return routerWebService.getAppTimeout(
+        createHttpServletRequest(user), null, null);
   }
 
   protected AppTimeoutsInfo getAppTimeouts(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppTimeoutsInfo>() {
-          @Override
-          public AppTimeoutsInfo run() throws Exception {
-            return routerWebService.getAppTimeouts(null, null);
-          }
-        });
+    return routerWebService.getAppTimeouts(
+        createHttpServletRequest(user), null);
   }
 
   protected Response updateApplicationTimeout(String user)
       throws AuthorizationException, YarnException, InterruptedException,
       IOException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<Response>() {
-          @Override
-          public Response run() throws Exception {
-            return routerWebService.updateApplicationTimeout(null, null, null);
-          }
-        });
+    return routerWebService.updateApplicationTimeout(
+        null, createHttpServletRequest(user), null);
   }
 
   protected AppAttemptsInfo getAppAttempts(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppAttemptsInfo>() {
-          @Override
-          public AppAttemptsInfo run() throws Exception {
-            return routerWebService.getAppAttempts(null, null);
-          }
-        });
+    return routerWebService.getAppAttempts(
+        createHttpServletRequest(user), null);
   }
 
   protected AppAttemptInfo getAppAttempt(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AppAttemptInfo>() {
-          @Override
-          public AppAttemptInfo run() throws Exception {
-            return routerWebService.getAppAttempt(null, null, null, null);
-          }
-        });
+    return routerWebService.getAppAttempt(
+        createHttpServletRequest(user), null, null, null);
   }
 
   protected ContainersInfo getContainers(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ContainersInfo>() {
-          @Override
-          public ContainersInfo run() throws Exception {
-            return routerWebService.getContainers(null, null, null, null);
-          }
-        });
+    return routerWebService.getContainers(
+        createHttpServletRequest(user), null, null, null);
   }
 
   protected ContainerInfo getContainer(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ContainerInfo>() {
-          @Override
-          public ContainerInfo run() throws Exception {
-            return routerWebService.getContainer(null, null, null, null, null);
-          }
-        });
+    return routerWebService.getContainer(
+        createHttpServletRequest(user), null, null, null, null);
   }
 
   protected RequestInterceptorChainWrapper getInterceptorChain(String user)
       throws IOException, InterruptedException {
-    return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<RequestInterceptorChainWrapper>() {
-          @Override
-          public RequestInterceptorChainWrapper run() throws Exception {
-            return routerWebService.getInterceptorChain();
-          }
-        });
+    HttpServletRequest request = createHttpServletRequest(user);
+    return routerWebService.getInterceptorChain(request);
   }
 
+  private HttpServletRequest createHttpServletRequest(String user) {
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRemoteUser()).thenReturn(user);
+    return request;
+  }
 }
