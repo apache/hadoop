@@ -257,22 +257,32 @@ public class TestDFSClientRetries {
                          Matchers.<EnumSet<AddBlockFlag>>any()))
         .thenAnswer(answer);
     
-    Mockito.doReturn(
-            new HdfsFileStatus(0, false, 1, 1024, 0, 0, new FsPermission(
-                (short) 777), EnumSet.noneOf(HdfsFileStatus.Flags.class),
-                "owner", "group", new byte[0], new byte[0],
-                1010, 0, null, (byte) 0, null)).when(mockNN).getFileInfo(anyString());
+    Mockito.doReturn(new HdfsFileStatus.Builder()
+          .replication(1)
+          .blocksize(1024)
+          .perm(new FsPermission((short) 777))
+          .owner("owner")
+          .group("group")
+          .symlink(new byte[0])
+          .fileId(1010)
+          .build())
+      .when(mockNN)
+      .getFileInfo(anyString());
     
-    Mockito.doReturn(
-            new HdfsFileStatus(0, false, 1, 1024, 0, 0, new FsPermission(
-                (short) 777), EnumSet.noneOf(HdfsFileStatus.Flags.class),
-                "owner", "group", new byte[0], new byte[0],
-                1010, 0, null, (byte) 0, null))
+    Mockito.doReturn(new HdfsFileStatus.Builder()
+          .replication(1)
+          .blocksize(1024)
+          .perm(new FsPermission((short) 777))
+          .owner("owner")
+          .group("group")
+          .symlink(new byte[0])
+          .fileId(1010)
+          .build())
         .when(mockNN)
         .create(anyString(), (FsPermission) anyObject(), anyString(),
-            (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
-            anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
-            anyObject());
+          (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
+          anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
+          anyObject());
 
     final DFSClient client = new DFSClient(null, mockNN, conf, null);
     OutputStream os = client.create("testfile", true);

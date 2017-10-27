@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -152,11 +151,23 @@ class JsonUtilClient {
     final byte storagePolicy = m.containsKey("storagePolicy") ?
         (byte) ((Number) m.get("storagePolicy")).longValue() :
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-    return new HdfsFileStatus(len,
-        type == WebHdfsConstants.PathType.DIRECTORY, replication, blockSize,
-        mTime, aTime, permission, f, owner, group, symlink,
-        DFSUtilClient.string2Bytes(localName), fileId, childrenNum,
-        null, storagePolicy, null);
+    return new HdfsFileStatus.Builder()
+      .length(len)
+      .isdir(type == WebHdfsConstants.PathType.DIRECTORY)
+      .replication(replication)
+      .blocksize(blockSize)
+      .mtime(mTime)
+      .atime(aTime)
+      .perm(permission)
+      .flags(f)
+      .owner(owner)
+      .group(group)
+      .symlink(symlink)
+      .path(DFSUtilClient.string2Bytes(localName))
+      .fileId(fileId)
+      .children(childrenNum)
+      .storagePolicy(storagePolicy)
+      .build();
   }
 
   static HdfsFileStatus[] toHdfsFileStatusArray(final Map<?, ?> json) {
@@ -399,9 +410,9 @@ class JsonUtilClient {
     final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
     final Map<?, ?> typem = (Map<?, ?>) m.get("typeQuota");
 
-    Builder contentSummaryBuilder = new ContentSummary.Builder().length(length)
-        .fileCount(fileCount).directoryCount(directoryCount).quota(quota)
-        .spaceConsumed(spaceConsumed).spaceQuota(spaceQuota);
+    ContentSummary.Builder contentSummaryBuilder =new ContentSummary.Builder()
+        .length(length).fileCount(fileCount).directoryCount(directoryCount)
+        .quota(quota).spaceConsumed(spaceConsumed).spaceQuota(spaceQuota);
     if (typem != null) {
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
         Map<?, ?> type = (Map<?, ?>) typem.get(t.toString());
