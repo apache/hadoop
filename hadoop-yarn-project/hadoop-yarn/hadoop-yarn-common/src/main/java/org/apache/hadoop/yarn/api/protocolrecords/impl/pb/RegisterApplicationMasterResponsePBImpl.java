@@ -29,15 +29,18 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourceTypeInfoPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProfilesProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProfileEntry;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypeInfoProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.NMTokenProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
@@ -62,6 +65,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
   private List<NMToken> nmTokens = null;
   private EnumSet<SchedulerResourceTypes> schedulerResourceTypes = null;
   private Map<String, Resource> profiles = null;
+  private List<ResourceTypeInfo> resourceTypeInfo = null;
 
   public RegisterApplicationMasterResponsePBImpl() {
     builder = RegisterApplicationMasterResponseProto.newBuilder();
@@ -129,8 +133,10 @@ public class RegisterApplicationMasterResponsePBImpl extends
     if (profiles != null) {
       addResourceProfiles();
     }
+    if (resourceTypeInfo != null) {
+      addResourceTypeInfosToProto();
+    }
   }
-
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
@@ -513,5 +519,76 @@ public class RegisterApplicationMasterResponsePBImpl extends
 
   private NMToken convertFromProtoFormat(NMTokenProto proto) {
     return new NMTokenPBImpl(proto);
+  }
+
+  private ResourceTypeInfoPBImpl convertFromProtoFormat(
+      ResourceTypeInfoProto p) {
+    return new ResourceTypeInfoPBImpl(p);
+  }
+
+  private ResourceTypeInfoProto convertToProtoFormat(ResourceTypeInfo t) {
+    return ((ResourceTypeInfoPBImpl) t).getProto();
+  }
+
+  @Override
+  public List<ResourceTypeInfo> getResourceTypes() {
+    initResourceTypeInfosList();
+    return this.resourceTypeInfo;
+  }
+
+  @Override
+  public void setResourceTypes(List<ResourceTypeInfo> types) {
+    if (resourceTypeInfo == null) {
+      builder.clearResourceTypes();
+    }
+    this.resourceTypeInfo = types;
+  }
+
+  private void addResourceTypeInfosToProto() {
+    maybeInitBuilder();
+    builder.clearResourceTypes();
+    if (resourceTypeInfo == null) {
+      return;
+    }
+    Iterable<ResourceTypeInfoProto> iterable = new Iterable<ResourceTypeInfoProto>() {
+      @Override
+      public Iterator<ResourceTypeInfoProto> iterator() {
+        return new Iterator<ResourceTypeInfoProto>() {
+
+          Iterator<ResourceTypeInfo> iter = resourceTypeInfo.iterator();
+
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+
+          @Override
+          public ResourceTypeInfoProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+
+          }
+        };
+
+      }
+    };
+    builder.addAllResourceTypes(iterable);
+  }
+
+  private void initResourceTypeInfosList() {
+    if (this.resourceTypeInfo != null) {
+      return;
+    }
+    RegisterApplicationMasterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ResourceTypeInfoProto> list = p.getResourceTypesList();
+    resourceTypeInfo = new ArrayList<ResourceTypeInfo>();
+
+    for (ResourceTypeInfoProto a : list) {
+      resourceTypeInfo.add(convertFromProtoFormat(a));
+    }
   }
 }

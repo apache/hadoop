@@ -21,9 +21,11 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -700,6 +702,189 @@ public class TestInMemoryPlan {
   }
 
   @Test
+  public void testGetReservationSearchIntervalBeforeReservationStart() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    long searchStart = Timestamp.valueOf("2050-12-03 10:10:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 10:20:37").getTime();
+
+    // 10 minute period in milliseconds.
+    long period = 10 * 60 * 1000;
+
+    // Negative test because even though the reservation would be encompassed
+    // if it was interpolated, it should not be picked up. Also test only one
+    // cycle because if we test more cycles, some of them will pass.
+    testNegativeGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 1, period, 10);
+  }
+
+  @Test
+  public void testGetReservationSearchIntervalGreaterThanPeriod() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // 1 Hour search interval will for sure encompass the recurring
+    // reservation with 20 minute recurrence.
+    long searchStart = Timestamp.valueOf("2050-12-03 10:57:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 11:57:37").getTime();
+
+    // 20 minute period in milliseconds.
+    long period = 20 * 60 * 1000;
+
+    testPositiveGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testGetReservationReservationFitWithinSearchInterval() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // Search interval fits the entire reservation but is smaller than the
+    // period.
+    long searchStart = Timestamp.valueOf("2050-12-03 10:36:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 10:48:37").getTime();
+
+    // 20 minute period in milliseconds.
+    long period = 20 * 60 * 1000;
+
+    testPositiveGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testGetReservationReservationStartTimeOverlap() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // Search interval fits the starting portion of the reservation.
+    long searchStart = Timestamp.valueOf("2050-12-03 11:36:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 11:38:37").getTime();
+
+    // 60 minute period in milliseconds.
+    long period = 60 * 60 * 1000;
+
+    testPositiveGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testGetReservationReservationEndTimeOverlap() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // Search interval fits the ending portion of the reservation.
+    long searchStart = Timestamp.valueOf("2050-12-03 11:46:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 11:48:37").getTime();
+
+    // 60 minute period in milliseconds.
+    long period = 60 * 60 * 1000;
+
+    testPositiveGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testGetReservationSearchIntervalFitsInReservation() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // Search interval fits the within the reservation.
+    long searchStart = Timestamp.valueOf("2050-12-03 10:40:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 10:43:37").getTime();
+
+    // 60 minute period in milliseconds.
+    long period = 60 * 60 * 1000;
+
+    testPositiveGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testNegativeGetReservationSearchIntervalCloseToEndTime() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // Reservation does not fit within search interval, but is close to the end
+    // time.
+    long searchStart = Timestamp.valueOf("2050-12-03 10:48:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 10:50:37").getTime();
+
+    // 60 minute period in milliseconds.
+    long period = 60 * 60 * 1000;
+
+    testNegativeGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testNegativeGetReservationSearchIntervalCloseToStartTime() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // Search interval does not fit within the reservation but is close to
+    // the start time.
+    long searchStart = Timestamp.valueOf("2050-12-03 11:30:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 11:35:37").getTime();
+
+    // 60 minute period in milliseconds.
+    long period = 60 * 60 * 1000;
+
+    testNegativeGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testReservationIntervalGreaterThanPeriodInOrderWhenShifted() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 10:37:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:47:37").getTime();
+
+    // Search interval is more than 2 hours, but after shifting, and turning
+    // it into periodic values, we expect 13 minutes and 18 minutes
+    // respectively for the search start and search end. After shifting and
+    // turning into periodic, the reservation interval will be 0 and 10
+    // minutes respectively for the search start and search end. At first
+    // sight, it would appear that the reservation does not fall within the
+    // search interval, when it does in reality.
+    long searchStart = Timestamp.valueOf("2050-12-03 9:50:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 11:55:37").getTime();
+
+    // 60 minute period in milliseconds.
+    long period = 60 * 60 * 1000;
+
+    testPositiveGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
+  public void testEnsureReservationEndNotNegativeWhenShifted() {
+    // Reservation duration is 10 minutes
+    long reservationStart = Timestamp.valueOf("2050-12-03 9:57:37").getTime();
+    long reservationEnd = Timestamp.valueOf("2050-12-03 10:07:37").getTime();
+
+    // If the reservation end is made periodic, and then shifted, then it can
+    // end up negative. This test guards against this scenario.
+    long searchStart = Timestamp.valueOf("2050-12-03 9:58:37").getTime();
+    long searchEnd = Timestamp.valueOf("2050-12-03 10:08:37").getTime();
+
+    // 60 minute period in milliseconds.
+    long period = 60 * 60 * 1000;
+
+    testPositiveGetRecurringReservationsHelper(reservationStart,
+        reservationEnd, searchStart, searchEnd, 100, period, 10);
+  }
+
+  @Test
   public void testGetReservationsWithNoInput() {
     Plan plan = new InMemoryPlan(queueMetrics, policy, agent, totalCapacity, 1L,
         resCalc, minAlloc, maxAlloc, planName, replanner, true, context);
@@ -735,6 +920,64 @@ public class TestInMemoryPlan {
     Set<ReservationAllocation> rAllocations =
         plan.getReservations(null, interval, "");
     Assert.assertTrue(rAllocations.size() == 0);
+  }
+
+  private void testPositiveGetRecurringReservationsHelper(long reservationStart,
+      long reservationEnd, long searchStart, long searchEnd, long cycles,
+      long period, int periodMultiplier) {
+    maxPeriodicity = period * periodMultiplier;
+    Plan plan = new InMemoryPlan(queueMetrics, policy, agent, totalCapacity, 1L,
+        resCalc, minAlloc, maxAlloc, planName, replanner, true, maxPeriodicity,
+        context, new UTCClock());
+
+    ReservationId reservationID = submitReservation(plan, reservationStart,
+        reservationEnd, period);
+
+    for (int i = 0; i < cycles; i++) {
+      long searchStepIncrease = i * period;
+      Set<ReservationAllocation> alloc = plan.getReservations(null,
+          new ReservationInterval(searchStart + searchStepIncrease,
+              searchEnd + searchStepIncrease));
+      assertEquals(1, alloc.size());
+      assertEquals(reservationID, alloc.iterator().next().getReservationId());
+    }
+  }
+
+  private void testNegativeGetRecurringReservationsHelper(long reservationStart,
+      long reservationEnd, long searchStart, long searchEnd, long cycles,
+      long period, int periodMultiplier) {
+    maxPeriodicity = period * periodMultiplier;
+    Plan plan = new InMemoryPlan(queueMetrics, policy, agent, totalCapacity, 1L,
+        resCalc, minAlloc, maxAlloc, planName, replanner, true, maxPeriodicity,
+        context, new UTCClock());
+    submitReservation(plan, reservationStart, reservationEnd, period);
+
+    for (int i = 0; i < cycles; i++) {
+      long searchStepIncrease = i * period;
+      Set<ReservationAllocation> alloc = plan.getReservations(null,
+          new ReservationInterval(searchStart + searchStepIncrease,
+              searchEnd + searchStepIncrease));
+      assertEquals(0, alloc.size());
+    }
+  }
+
+  private ReservationId submitReservation(Plan plan,
+      long reservationStartTime, long reservationEndTime, long period) {
+    ReservationId reservation = ReservationSystemTestUtil.getNewReservationId();
+
+    ReservationAllocation rAllocation = createReservationAllocation(
+        reservation, reservationStartTime, reservationEndTime,
+        String.valueOf(period));
+
+    rAllocation.setPeriodicity(period);
+
+    Assert.assertNull(plan.getReservationById(reservation));
+    try {
+      plan.addReservation(rAllocation, false);
+    } catch (PlanningException e) {
+      Assert.fail(e.getMessage());
+    }
+    return reservation;
   }
 
   private void doAssertions(Plan plan, ReservationAllocation rAllocation) {
@@ -802,6 +1045,24 @@ public class TestInMemoryPlan {
       String recurrenceExp) {
     return createReservationAllocation(reservationID, start, alloc, false,
         recurrenceExp);
+  }
+
+  private ReservationAllocation createReservationAllocation(
+      ReservationId reservationID, long startTime, long endTime,
+      String period) {
+    ReservationInterval interval = new ReservationInterval(startTime, endTime);
+
+    List<ReservationRequest> request = new ArrayList<>();
+    request.add(ReservationRequest.newInstance(minAlloc, 1, 1,
+        endTime - startTime));
+
+    ReservationDefinition rDef = createSimpleReservationDefinition(startTime,
+        endTime, endTime - startTime, request, period);
+
+    Map<ReservationInterval, Resource> allocations = new HashMap<>();
+    allocations.put(interval, minAlloc);
+    return new InMemoryReservationAllocation(reservationID, rDef, user,
+        planName, startTime, endTime, allocations, resCalc, minAlloc);
   }
 
   private ReservationAllocation createReservationAllocation(

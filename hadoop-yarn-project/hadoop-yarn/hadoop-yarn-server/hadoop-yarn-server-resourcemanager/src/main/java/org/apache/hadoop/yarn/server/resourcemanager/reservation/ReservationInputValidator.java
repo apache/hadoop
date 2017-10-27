@@ -164,6 +164,14 @@ public class ReservationInputValidator {
             + ". Please try again with a smaller duration.";
         throw RPCUtil.getRemoteException(message);
       }
+      // verify maximum period is divisible by recurrence expression.
+      if (recurrence > 0 && plan.getMaximumPeriodicity() % recurrence != 0) {
+        message = "The maximum periodicity: " + plan.getMaximumPeriodicity() +
+            " must be divisible by the recurrence expression provided: " +
+            recurrence + ". Please try again with a recurrence expression" +
+            " that satisfies this requirement.";
+        throw RPCUtil.getRemoteException(message);
+      }
     } catch (NumberFormatException e) {
       message = "Invalid period " + recurrenceExpression + ". Please try"
           + " again with a non-negative long value as period.";

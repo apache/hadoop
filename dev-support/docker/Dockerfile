@@ -134,8 +134,9 @@ ENV MAVEN_HOME /usr
 
 ######
 # Install findbugs 3.0.1 (3.0.1 ships with Xenial)
+# Ant is needed for findbugs
 ######
-RUN apt-get -q update && apt-get -q install -y findbugs
+RUN apt-get -q update && apt-get -q install -y findbugs ant
 ENV FINDBUGS_HOME /usr
 
 ####
@@ -182,9 +183,9 @@ ENV MAVEN_OPTS -Xms256m -Xmx1g
 ###
 
 ####
-# Install svn, Ant, & Forrest (for Apache Hadoop website)
+# Install svn & Forrest (for Apache Hadoop website)
 ###
-RUN apt-get -q update && apt-get -q install -y ant subversion
+RUN apt-get -q update && apt-get -q install -y subversion
 
 RUN mkdir -p /opt/apache-forrest && \
     curl -L -s -S \

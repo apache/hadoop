@@ -742,18 +742,27 @@ public class NetUtils {
               + ";"
               + see("BindException"));
     } else if (exception instanceof ConnectException) {
-      // connection refused; include the host:port in the error
-      return wrapWithMessage(exception, 
-          "Call From "
-              + localHost
-              + " to "
-              + destHost
-              + ":"
-              + destPort
-              + " failed on connection exception: "
-              + exception
-              + ";"
-              + see("ConnectionRefused"));
+      // Check if client was trying to connect to an unspecified IPv4 address
+      // (0.0.0.0) or IPv6 address(0:0:0:0:0:0:0:0 or ::)
+      if ((destHost != null && (destHost.equals("0.0.0.0") ||
+          destHost.equals("0:0:0:0:0:0:0:0") || destHost.equals("::")))
+          || destPort == 0) {
+        return wrapWithMessage(exception, "Your endpoint configuration" +
+            " is wrong;" + see("UnsetHostnameOrPort"));
+      } else {
+        // connection refused; include the host:port in the error
+        return wrapWithMessage(exception,
+            "Call From "
+                + localHost
+                + " to "
+                + destHost
+                + ":"
+                + destPort
+                + " failed on connection exception: "
+                + exception
+                + ";"
+                + see("ConnectionRefused"));
+      }
     } else if (exception instanceof UnknownHostException) {
       return wrapWithMessage(exception,
           "Invalid host name: "

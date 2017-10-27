@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationDefinitionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestsPBImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -79,6 +80,8 @@ public class TestReservationInputValidator {
     Resource resource = Resource.newInstance(10240, 10);
     when(plan.getResourceCalculator()).thenReturn(rCalc);
     when(plan.getTotalCapacity()).thenReturn(resource);
+    when(plan.getMaximumPeriodicity()).thenReturn(
+        YarnConfiguration.DEFAULT_RM_RESERVATION_SYSTEM_MAX_PERIODICITY);
     when(rSystem.getQueueForReservation(any(ReservationId.class))).thenReturn(
         PLAN_NAME);
     when(rSystem.getPlan(PLAN_NAME)).thenReturn(plan);
@@ -297,6 +300,26 @@ public class TestReservationInputValidator {
       String message = e.getMessage();
       Assert.assertTrue(message
           .startsWith("Negative Period : "));
+      LOG.info(message);
+    }
+  }
+
+  @Test
+  public void testSubmitReservationMaxPeriodIndivisibleByRecurrenceExp() {
+    long indivisibleRecurrence =
+        YarnConfiguration.DEFAULT_RM_RESERVATION_SYSTEM_MAX_PERIODICITY / 2 + 1;
+    String recurrenceExp = Long.toString(indivisibleRecurrence);
+    ReservationSubmissionRequest request =
+        createSimpleReservationSubmissionRequest(1, 1, 1, 5, 3, recurrenceExp);
+    plan = null;
+    try {
+      plan = rrValidator.validateReservationSubmissionRequest(rSystem, request,
+          ReservationSystemTestUtil.getNewReservationId());
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertNull(plan);
+      String message = e.getMessage();
+      Assert.assertTrue(message.startsWith("The maximum periodicity:"));
       LOG.info(message);
     }
   }

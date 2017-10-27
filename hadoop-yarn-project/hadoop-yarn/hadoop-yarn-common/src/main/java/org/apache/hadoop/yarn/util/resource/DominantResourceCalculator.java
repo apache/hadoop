@@ -557,6 +557,14 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public boolean isAnyMajorResourceZero(Resource resource) {
-    return resource.getMemorySize() == 0f || resource.getVirtualCores() == 0;
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation resourceInformation = resource
+          .getResourceInformation(i);
+      if (resourceInformation.getValue() == 0L) {
+        return true;
+      }
+    }
+    return false;
   }
 }
