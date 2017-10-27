@@ -189,8 +189,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
     LOG.info("Opening TCP and UDP channels on {} port {}", addr, port);
     addNIOUDP(addr, port);
-    //TODO Fix dns lookup over TCP
-//    addNIOTCP(addr, port);
+    addNIOTCP(addr, port);
   }
 
   /**
@@ -768,7 +767,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       buf.get(in, 0, messageLength);
 
       Message query;
-      byte[] response = null;
+      byte[] response;
       try {
         query = new Message(in);
         LOG.info("received TCP query {}", query.getQuestion());
@@ -781,10 +780,19 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
 
       ByteBuffer out = ByteBuffer.allocate(response.length + 2);
-      out.putShort(0, (short) (response.length & 0xffff));
-      out.put(response);
+      out.clear();
+      byte[] data = new byte[2];
 
-      ch.write(out);
+      data[1] = (byte)(response.length & 0xFF);
+      data[0] = (byte)((response.length >> 8) & 0xFF);
+      out.put(data);
+      out.put(response);
+      out.flip();
+
+      while(out.hasRemaining()) {
+        ch.write(out);
+      }
+
     } catch (IOException e) {
       throw NetUtils.wrapException(ch.socket().getInetAddress().getHostName(),
           ch.socket().getPort(),
@@ -836,6 +844,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
             }
           });
 
+        } else {
+          Thread.sleep(500);
         }
       }
     } catch (IOException e) {
