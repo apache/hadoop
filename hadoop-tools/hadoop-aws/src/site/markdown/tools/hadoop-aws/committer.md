@@ -12,11 +12,11 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Committing work to S3 with the "S3Guard Committers"
+# Committing work to S3 with the "S3A Committers"
 
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
-This page covers the S3Guard Committers, which can commit work directly
+This page covers the S3A Committers, which can commit work directly
 to an S3 object store.
 
 These committers are designed to solve a fundamental problem which
@@ -30,7 +30,7 @@ For details on their internal design, see
 
 ## Introduction: The Commit Problem 
 
-**Using the "classic" File Output Commmitters to write to Amazon S3 is dangerous**
+**Using the "classic" `FileOutputCommmitter` to write to Amazon S3 is dangerous**
 
 Normally, Hadoop uses the `FileOutputFormatCommitter` to manage the
 promotion of files created in a single task attempt to the final output of
@@ -38,7 +38,7 @@ a query. This is done in a way to handle failures of tasks and jobs, and to
 support speculative execution. It does that by listing directories and renaming
 their content into the final destination when tasks and then jobs are committed.
 
-This has some key requirement of the underlying filesystem
+This has some key requirement of the underlying filesystem:
 
 1. When you list a directory, you see all the files which have been created in it,
 and no files which are not in it (i.e. have been deleted).
@@ -47,12 +47,12 @@ process across the cluster may rename a file or directory to the same path.
 If the rename fails for any reason, either the data is at the original location,
 or it is at the destination, -in which case the rename actually succeeded.
 
-**The `s3a://` filesystem client cannot meet these requirements.*
+**The S3 object store and the `s3a://` filesystem client cannot meet these requirements.*
 
 1. Amazon S3 has inconsistent directory listings unless S3Guard is enabled.
 1. The S3A mimics `rename()` by copying files and then deleting the originals.
 This can fail partway through, and there is nothing to prevent any other process
-in the cluster attempting a rename at the same time
+in the cluster attempting a rename at the same time.
 
 As a result,
 
@@ -63,10 +63,17 @@ of failure.
 * If more than one process attempts to commit work simultaneously, the output
 directory may contain the results of both processes: it is no longer an exclusive
 operation.
+1. While S3Guard delivers the consistency, commit time is still
+proportional to the amount of data created. The bigger the job, the slower
+the commit.
 
-To address this problem there is now explicit support in the `hadop-aws`
-module for committing work to Amazon S3 via the S3A filesystem client.
+To address these problems there is now explicit support in the `hadop-aws`
+module for committing work to Amazon S3 via the S3A filesystem client,
+*the S3A Committers*
 
+
+For safe, as well as high-performance output of work to S3, 
+an S3A committer must be used.
 
 
 ### Background : Hadoop's "commit protocol"
@@ -75,7 +82,7 @@ How exactly is work written to its final destination? That is accomplished by
 a "commit protocol" between the workers and the job manager.
 
 This protocol is implemented in Hadoop MapReduce, with a similar but extended
-version in Apache Spark
+version in Apache Spark:
 
 1. A "Job" is the entire query, with inputs to outputs
 1. The "Job Manager" is the process in charge of choreographing the execution
@@ -146,17 +153,17 @@ be committed.
 * renames go from being fast, atomic operations to slow operations which can fail partway through.
 
 
-This then is the problem which the S3Guard committers address: how to safely
+This then is the problem which the S3A committers address: how to safely
 and reliably commit work to Amazon S3 or compatible object store.
 
 
-## Meet the S3Guard Commmitters
+## Meet the S3A Commmitters
 
 
-There are two new commit mechanisms for writing data, *the staging committer*
-and *the magic committer*.
+S3A supports two alternative algorithms for commiting data, *staging*
+and *magic*.
 
-The underlying architecture of these committers is quite complex, and
+The underlying architecture of these algorithms is quite complex, and
 covered in [the committer architecture documentation](./s3a_committer_architecture.html).
 
 The key concept to know of is S3's "Multipart upload mechanism", which allows
@@ -209,7 +216,7 @@ uploads. For extra safety, all outstanding multipart writes to the destination d
 are aborted.
 
 The staging committer comes in two slightly different forms, with slightly
-diffrent conflict resolution policies
+diffrent conflict resolution policies:
 
 
 * **Directory**: the entire directory tree of data is written or overwritten. 
@@ -223,9 +230,80 @@ The Partitioned Committer is intended to allow jobs updating a partitioned
 directory tree to restrict the conflict resolution to only those partition
 directories containing new data.
 
+
+## Conflict Resolution in the Staging Committers
+
+The Staging committers offer the ability to replace the conflict policy
+of the execution engine with policy designed to work with the tree of data.
+This is based on the experience and needs of Netflix, where efficiently adding
+new data to an existing partitioned directory tree is a common operation.
+
+```xml
+<property>
+  <name>fs.s3a.committer.staging.conflict-mode</name>
+  <value>fail</value>
+  <description>
+    Staging committer conflict resolution policy: {@value}.
+    Supported: fail, append, replace.
+  </description>
+</property>
+```
+
+
+**replace** : when the job is committed (and not before), delete files in
+directories into which new data will be written.
+
+**fail**: when there are existing files in the destination, fail the job.
+
+**append**: Add new data to the directories at the destination; overwriting
+any with the same name. Reliable use requires unique names for generated files,
+which the committers generate
+by default.
+
+The difference between the two committers are as follows:
+
+The Directory Committer uses the entire directory tree for conflict resolution.
+If any file exists at the destination it will fail in job setup; if the resolution
+mechanism is "replace" then all existing files will be deleted.
+
+The partitioned committer calculates the partitions into which files are added,
+the final directories in the tree, and uses that in its conflict resolution
+process:
+
+
+**replace** : delete all data in the destination partition before committing
+the new files.
+
+**fail**: fail if there is data in the destination partition, ignoring the state
+of any parallel partitions.
+
+**append**: add the new data.
+
 It's intended for use in Apache Spark Dataset operations, rather
-not compatible with Hadoop's original MapReduce engine, and only in jobs
+than Hadoop's original MapReduce engine, and only in jobs
 where adding new data to an existing dataset is the desired goal.
+
+Preequisites for successful work
+
+1. The output is written into partitions via `PARTITIONED BY` or `partitionedBy()`
+instructions.
+2. There is no data written directly to the root path (all files there are
+ignored; it's implicitly "append").
+
+Here's an example in Spark, assuming that `sourceDataset` is a dataset
+whose columns include "year" and "month":
+
+```scala
+sourceDataset
+  .write
+  .partitionBy("year", "month")
+  .mode(SaveMode.Append)
+  .opt("fs.s3a.committer.name", "partitioned")
+  .opt("fs.s3a.committer.staging.conflict-mode", "replace")
+  .format("orc")
+  .save("s3a://examples/statistics")
+```
+
 
 
 ### The Magic Committer
@@ -259,83 +337,48 @@ it the least mature of the committers.
 
 #### Which Committer to Use?
 
-The Magic committer should be faster when large quantities of data are written.
-And as tasks do not need to store all generated output locally until they are
-committed, VMs using this committer do not need local storage other than
-for buffering in-progress writes, but the committer does needsa "consistent" S3 store.
-For Amazon S3, that means S3Guard.
+1. If you want to create or update existing partitioned data trees in Spark, use thee
+Partitioned Committer. Make sure you have enough hard disk capacity for all staged data.
+Do not use it in other situations. 
 
-The Staging Committers, in contrast, can write data to a S3 store without
-any consistency layer. It does, however, need local storage large enough
-to store the output of all active tasks running on the machine. The more
-CPUs and worker processes, the more data generated: the more storage is needed.
-Furthermore, because this data is uploaded in task commit, tasks take longer
-to commit.
+1. If you know that your object store is consistent, or that the processes
+writing data use S3Guard, use the Magic Committer for higher performance
+writing of large amounts of data.
 
-Of the two Staging committers, the directory committer is the general
-purpose committer to use in all operations except for jobs whose output is
-expected to update an existing directory tree of partitioned data.
+1. Otherwise: use the directory committer, making sure you have enough
+hard disk capacity for all staged data.
 
-The Partitioned committer is only for use in Spark jobs generating data where
-`partitionBy` has been used to declare partitions used, the Spark-level
-committer has been told to append the data, and so all conflict resolution
-offloaded to the committer itself
+Put differently: start with the Directory Committer. 
 
-```scala
-sourceData
-  .write
-  .partitionBy("year", "month")
-  .mode(SaveMode.Append)
-  .format("orc").save("s3a://examples/statistics")
+## Switching to an S3A Committer
+
+To use an S3A committer, the property `mapreduce.outputcommitter.factory.scheme.s3a`
+must be set to the S3A committer factory, `org.apache.hadoop.fs.s3a.commit.staging.S3ACommitterFactory`.
+This is done in `core-default.xml`
+
+```xml
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
+  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
+  <description>
+    The committer factory to use when writing data to S3A filesystems.
+  </description>
+</property>
 ```
 
-Even though the staging committers don't need a consistent
-AWS S3 endpoint to commit their work into, chaining a sequence of queries together
-does meanthat the subsequent readers of work *will* need a consistent listing
-of the output. Which comes from either a consistent store *or* adding a "sufficient"
-delay between queries for the listing to stabilize.
+What is missing is an explicit choice of committer to use in the property
+`fs.s3a.committer.name`; so the classic (and unsafe) file committer is used.
 
-
-## Switching to a S3Guard Committer
-
-A choice of which committer a job will use for writing data to S3A
-is set in the property `mapreduce.outputcommitter.factory.scheme.s3a`
-This declares a the classname of a factory class which creates committers for jobs and tasks.
-
-
-
-| factory | description |
+| `fs.s3a.committer.name` |  Committer |
 |--------|---------|
-| `org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory` |  The default file output committer |
-| `org.apache.hadoop.fs.s3a.commit.DynamicCommitterFactory` | Dynamically choose the committer on a per-bucket basis |
-| `org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory` |  Use the Directory Staging Committer|
-| `org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory` |  Partitioned Staging Committer|
-| `org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory` | Use the magic committer (not yet ready for production use) |
-
-All of the S3A committers revert to providing a classic FileOutputCommitter instance
-when a commmitter is requested for any filesystem other than an S3A one.
-This allows any of these committers to be declared in an application configuration,
-without worrying about the job failing for any queries using `hdfs://` paths as
-the final destination of work.
-
-The Dynamic committer factory is different in that it allows any of the other committer
-factories to be used to create a committer, based on the specific value of the option
-`fs.s3a.committer.name`:
-
-| value of `fs.s3a.committer.name` |  meaning |
-|--------|---------|
-| `file` | the original File committer; (not safe for use with S3 storage unless S3Guard is enabled) |
 | `directory` | directory staging committer |
-| `partition` | partition staging committer |
+| `partitioned` | partition staging committer (for use in Spark only) |
 | `magic` | the "magic" committer |
-
-The dynamic committer lets you choose different committers for different
-filesystems, such as only using the magic committer with an S3 bucket known
-to have S3Guard enabled. 
+| `file` | the original and unsafe File committer; (default) |
 
 
 
-## Using the Staging Committer 
+## Using the Directory and Partitioned Staging Committers 
 
 Generated files are initially written to a local directory underneath one of the temporary
 directories listed in `fs.s3a.buffer.dir`.
@@ -461,6 +504,15 @@ Amazon S3, that means S3Guard must *always* be enabled.
 
 ### Enabling the committer
 
+```xml
+<property>
+  <name>fs.s3a.committer.name</name>
+  <value>magic</value>
+</property>
+
+```
+
+Conflict management is left to the execution engine itself.
 
 ## Committer Configuration Options
 
@@ -501,7 +553,6 @@ or because the S3-compatible filesystem is known to be strongly consistent.
   <name>fs.s3a.bucket.landsat-pds.committer.magic.enabled</name>
   <value>true</value>
 </property>
-
 ```
 
 *IMPORTANT*: only enable the magic committer against object stores which

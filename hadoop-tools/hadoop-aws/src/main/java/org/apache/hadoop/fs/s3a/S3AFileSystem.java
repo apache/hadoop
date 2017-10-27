@@ -354,9 +354,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Retries.RetryTranslated
   protected void verifyBucketExists()
       throws FileNotFoundException, IOException {
-    if (!invoker.retry(
-        "doesBucketExist", bucket,
-        true,
+    if (!invoker.retry("doesBucketExist", bucket, true,
         () -> s3.doesBucketExist(bucket))) {
       throw new FileNotFoundException("Bucket " + bucket + " does not exist");
     }
@@ -510,9 +508,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    */
   @Retries.RetryTranslated
   public String getBucketLocation(String bucketName) throws IOException {
-    return invoker.retry("getBucketLocation()",
-        bucketName,
-        true,
+    return invoker.retry("getBucketLocation()", bucketName, true,
         ()-> s3.getBucketLocation(bucketName));
   }
 
@@ -1197,9 +1193,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         StringUtils.isNotBlank(getServerSideEncryptionKey(getConf()))){
       request.setSSECustomerKey(generateSSECustomerKey());
     }
-    ObjectMetadata meta = invoker.retryUntranslated(
-        "GET " + key,
-        true,
+    ObjectMetadata meta = invoker.retryUntranslated("GET " + key, true,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
           return s3.getObjectMetadata(request);
@@ -1227,10 +1221,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         true,
         () -> {
           if (useListV1) {
-            Preconditions.checkArgument(request.isV1());
             return S3ListResult.v1(s3.listObjects(request.getV1()));
           } else {
-            Preconditions.checkArgument(!request.isV1());
             return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
           }
         });
@@ -2598,7 +2590,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param length  total length of file written
    */
   @InterfaceAudience.Private
-  @Retries.RetryRaw("Exceptions are swallowed")
+  @Retries.RetryTranslated("Exceptions are swallowed")
   void finishedWrite(String key, long length) {
     LOG.debug("Finished write to {}, len {}", key, length);
     Path p = keyToQualifiedPath(key);
@@ -3139,4 +3131,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       return false;
     }
   }
+
 }

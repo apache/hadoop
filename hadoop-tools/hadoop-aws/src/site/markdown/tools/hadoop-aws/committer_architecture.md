@@ -1750,7 +1750,7 @@ declare two spark SQL options as well as three spark.hadoop ones
 ```
 spark.sql.sources.commitProtocolClass=com.hortonworks.spark.cloud.commit.PathOutputCommitProtocol
 spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter
-spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.DynamicCommitterFactory
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
 spark.hadoop.fs.s3a.committer.committer.name=magic
 spark.hadoop.fs.s3a.committer.magic.enabled=true
 ```

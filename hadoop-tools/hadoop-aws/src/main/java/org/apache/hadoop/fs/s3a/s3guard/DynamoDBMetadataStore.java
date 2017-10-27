@@ -336,7 +336,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * Set retry policy. This is driven by the value of
    * {@link Constants#S3GUARD_DDB_MAX_RETRIES} with an exponential backoff
    * between each attempt of {@link #MIN_RETRY_SLEEP_MSEC} milliseconds.
-   * @param config
+   * @param config configuration for data access
    */
   private void initDataAccessRetries(Configuration config) {
     int maxRetries = config.getInt(S3GUARD_DDB_MAX_RETRIES,
@@ -344,9 +344,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     dataAccessRetryPolicy = RetryPolicies
         .exponentialBackoffRetry(maxRetries, MIN_RETRY_SLEEP_MSEC,
             TimeUnit.MILLISECONDS);
-    dataAccess = new Invoker(dataAccessRetryPolicy,
-        this::retryEvent
-    );
+    dataAccess = new Invoker(dataAccessRetryPolicy, this::retryEvent);
   }
 
   @Override

@@ -32,7 +32,7 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
 /**
- * A committer factory which chooses the committer based on the
+ * The S3A committer factory which chooses the committer based on the
  * specific option chosen in a per-bucket basis from the property
  * {@link CommitConstants#FS_S3A_COMMITTER_NAME}.
  *
@@ -51,16 +51,16 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  * There are no checks to verify that the filesystem is compatible with
  * the committer.
  */
-public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
+public class S3ACommitterFactory extends AbstractS3GuardCommitterFactory {
 
   /**
    * Name of this class: {@value}.
    */
   public static final String CLASSNAME
-      = "org.apache.hadoop.fs.s3a.commit.DynamicCommitterFactory";
+      = "org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory";
 
   /**
-   * Dynamically create a task committer.
+   * Create a task committer.
    * @param fileSystem destination FS.
    * @param outputPath final output path for work
    * @param context job context
@@ -86,7 +86,7 @@ public class DynamicCommitterFactory extends AbstractS3GuardCommitterFactory {
    * @param fileSystem FS
    * @param outputPath destination path
    * @param taskConf configuration from the task
-   * @return A s3guard committer if chosen, or "null" for the classic value
+   * @return An S3A committer if chosen, or "null" for the classic value
    * @throws PathCommitException on a failure to identify the committer
    */
   private AbstractS3GuardCommitterFactory chooseCommitterFactory(
