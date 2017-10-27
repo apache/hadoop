@@ -67,6 +67,8 @@ if [[ "${1}" = "start" || "${1}" = "run" ]]; then
   catalina_set_property "httpfs.admin.port" "${HTTPFS_ADMIN_PORT}"
   catalina_set_property "httpfs.http.port" "${HTTPFS_HTTP_PORT}"
   catalina_set_property "httpfs.http.hostname" "${HTTPFS_HTTP_HOSTNAME}"
+  catalina_set_property "httpfs.max.http.header.size" \
+    "${HTTPFS_MAX_HTTP_HEADER_SIZE}"
   catalina_set_property "httpfs.ssl.enabled" "${HTTPFS_SSL_ENABLED}"
   catalina_set_property "httpfs.ssl.client.auth" "${HTTPFS_SSL_CLIENT_AUTH}"
   catalina_set_property "httpfs.ssl.enabled.protocols" \
