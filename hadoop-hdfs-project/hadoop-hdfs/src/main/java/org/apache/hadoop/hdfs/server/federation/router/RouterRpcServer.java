@@ -2016,10 +2016,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
       LOG.error("Cannot get the remote user: {}", e.getMessage());
     }
     long inodeId = 0;
-    return new HdfsFileStatus(0, true, 0, 0, modTime, accessTime, permission,
-        EnumSet.noneOf(HdfsFileStatus.Flags.class),
-        owner, group, new byte[0], DFSUtil.string2Bytes(name), inodeId,
-        childrenNum, null, (byte) 0, null);
+    return new HdfsFileStatus.Builder()
+      .isdir(true)
+      .mtime(modTime)
+      .atime(accessTime)
+      .perm(permission)
+      .owner(owner)
+      .group(group)
+      .symlink(new byte[0])
+      .path(DFSUtil.string2Bytes(name))
+      .fileId(inodeId)
+      .children(childrenNum)
+      .build();
   }
 
   /**
