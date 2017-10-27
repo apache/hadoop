@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -28,6 +31,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -45,6 +49,8 @@ import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.sun.jersey.api.ConflictException;
 import com.sun.jersey.api.client.Client;
@@ -52,8 +58,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.WebResource.Builder;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The Router webservice util class.
@@ -85,9 +89,11 @@ public final class RouterWebServiceUtil {
    *          call in case the call has no servlet request
    * @return the retrieved entity from the REST call
    */
-  protected static <T> T genericForward(String webApp, HttpServletRequest hsr,
-      final Class<T> returnType, HTTPMethods method, String targetPath,
-      Object formParam, Map<String, String[]> additionalParam) {
+  protected static <T> T genericForward(
+      final String webApp, final HttpServletRequest hsr,
+      final Class<T> returnType, final HTTPMethods method,
+      final String targetPath, final Object formParam,
+      final Map<String, String[]> additionalParam) {
 
     UserGroupInformation callerUGI = null;
 
@@ -121,13 +127,21 @@ public final class RouterWebServiceUtil {
 
           ClientResponse response = RouterWebServiceUtil.invokeRMWebService(
               webApp, targetPath, method,
-              (hsr == null) ? null : hsr.getPathInfo(), paramMap, formParam);
+              (hsr == null) ? null : hsr.getPathInfo(), paramMap, formParam,
+              getMediaTypeFromHttpServletRequest(hsr, returnType));
           if (Response.class.equals(returnType)) {
             return (T) RouterWebServiceUtil.clientResponseToResponse(response);
           }
           // YARN RM can answer with Status.OK or it throws an exception
-          if (response.getStatus() == 200) {
+          if (response.getStatus() == SC_OK) {
             return response.getEntity(returnType);
+          }
+          if (response.getStatus() == SC_NO_CONTENT) {
+            try {
+              return returnType.getConstructor().newInstance();
+            } catch (RuntimeException | ReflectiveOperationException e) {
+              LOG.error("Cannot create empty entity for {}", returnType, e);
+            }
           }
           RouterWebServiceUtil.retrieveException(response);
           return null;
@@ -147,7 +161,7 @@ public final class RouterWebServiceUtil {
    */
   private static ClientResponse invokeRMWebService(String webApp, String path,
       HTTPMethods method, String additionalPath,
-      Map<String, String[]> queryParams, Object formParam) {
+      Map<String, String[]> queryParams, Object formParam, String mediaType) {
     Client client = Client.create();
 
     WebResource webResource = client.resource(webApp).path(path);
@@ -168,14 +182,12 @@ public final class RouterWebServiceUtil {
       webResource = webResource.queryParams(paramMap);
     }
 
-    // I can forward the call in JSON or XML since the Router will convert it
-    // again in Object before send it back to the client
     Builder builder = null;
     if (formParam != null) {
-      builder = webResource.entity(formParam, MediaType.APPLICATION_XML);
-      builder = builder.accept(MediaType.APPLICATION_XML);
+      builder = webResource.entity(formParam, mediaType);
+      builder = builder.accept(mediaType);
     } else {
-      builder = webResource.accept(MediaType.APPLICATION_XML);
+      builder = webResource.accept(mediaType);
     }
 
     ClientResponse response = null;
@@ -426,6 +438,27 @@ public final class RouterWebServiceUtil {
         + metricsResponse.getActiveNodes());
     metrics.setShutdownNodes(metrics.getShutdownNodes()
         + metricsResponse.getShutdownNodes());
+  }
+
+  /**
+   * Extract from HttpServletRequest the MediaType in output.
+   */
+  protected static <T> String getMediaTypeFromHttpServletRequest(
+      HttpServletRequest request, final Class<T> returnType) {
+    if (request == null) {
+      // By default we return XML for REST call without HttpServletRequest
+      return MediaType.APPLICATION_XML;
+    }
+    // TODO
+    if (!returnType.equals(Response.class)) {
+      return MediaType.APPLICATION_XML;
+    }
+    String header = request.getHeader(HttpHeaders.ACCEPT);
+    if (header == null || header.equals("*")) {
+      // By default we return JSON
+      return MediaType.APPLICATION_JSON;
+    }
+    return header;
   }
 
 }
