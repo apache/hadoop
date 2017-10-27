@@ -15,34 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.fs.azure;
 
-package org.apache.hadoop.fs.azure.contract;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
-import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
 /**
- * Azure Contract. Test paths are created using any maven fork
- * identifier, if defined. This guarantees paths unique to tests
- * running in parallel.
+ * Run the base Azure file system tests strictly on page blobs to make sure fundamental
+ * operations on page blob files and folders work as expected.
+ * These operations include create, delete, rename, list, and so on.
  */
-public class NativeAzureFileSystemContract extends AbstractBondedFSContract {
-
-  public static final String CONTRACT_XML = "wasb.xml";
-
-  public NativeAzureFileSystemContract(Configuration conf) {
-    super(conf); //insert the base features
-    addConfResource(CONTRACT_XML);
-  }
+public class ITestNativeAzureFSPageBlobLive extends
+    NativeAzureFileSystemBaseTest {
 
   @Override
-  public String getScheme() {
-    return "wasb";
-  }
+  protected AzureBlobStorageTestAccount createTestAccount()
+      throws Exception {
+    Configuration conf = new Configuration();
 
-  @Override
-  public Path getTestPath() {
-    return AzureTestUtils.createTestPath(super.getTestPath());
+    // Configure the page blob directories key so every file created is a page blob.
+    conf.set(AzureNativeFileSystemStore.KEY_PAGE_BLOB_DIRECTORIES, "/");
+
+    // Configure the atomic rename directories key so every folder will have
+    // atomic rename applied.
+    conf.set(AzureNativeFileSystemStore.KEY_ATOMIC_RENAME_DIRECTORIES, "/");
+    return AzureBlobStorageTestAccount.create(conf);
   }
 }

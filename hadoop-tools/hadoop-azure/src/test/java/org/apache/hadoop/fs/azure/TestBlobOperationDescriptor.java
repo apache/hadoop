@@ -33,9 +33,6 @@ import org.junit.Test;
 
 import java.net.HttpURLConnection;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertEquals;
-
 /**
  * Tests for <code>BlobOperationDescriptor</code>.
  */

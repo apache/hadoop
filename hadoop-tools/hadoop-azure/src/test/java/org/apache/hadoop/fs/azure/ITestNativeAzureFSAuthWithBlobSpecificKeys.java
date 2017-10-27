@@ -16,33 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azure.contract;
+package org.apache.hadoop.fs.azure;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
-import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+
+import static org.apache.hadoop.fs.azure.SecureStorageInterfaceImpl.KEY_USE_CONTAINER_SASKEY_FOR_ALL_ACCESS;
 
 /**
- * Azure Contract. Test paths are created using any maven fork
- * identifier, if defined. This guarantees paths unique to tests
- * running in parallel.
+ * Test class to hold all WASB authorization tests that use blob-specific keys
+ * to access storage.
  */
-public class NativeAzureFileSystemContract extends AbstractBondedFSContract {
+public class ITestNativeAzureFSAuthWithBlobSpecificKeys
+    extends TestNativeAzureFileSystemAuthorization {
 
-  public static final String CONTRACT_XML = "wasb.xml";
-
-  public NativeAzureFileSystemContract(Configuration conf) {
-    super(conf); //insert the base features
-    addConfResource(CONTRACT_XML);
-  }
 
   @Override
-  public String getScheme() {
-    return "wasb";
+  public Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    conf.set(KEY_USE_CONTAINER_SASKEY_FOR_ALL_ACCESS, "false");
+    return conf;
   }
 
-  @Override
-  public Path getTestPath() {
-    return AzureTestUtils.createTestPath(super.getTestPath());
-  }
 }

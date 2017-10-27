@@ -17,32 +17,31 @@
  */
 
 package org.apache.hadoop.fs.azure.contract;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
-import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
+import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
 
 /**
- * Azure Contract. Test paths are created using any maven fork
- * identifier, if defined. This guarantees paths unique to tests
- * running in parallel.
+ * Contract test suite covering WASB integration with DistCp.
  */
-public class NativeAzureFileSystemContract extends AbstractBondedFSContract {
+public class ITestAzureNativeContractDistCp extends AbstractContractDistCpTest {
 
-  public static final String CONTRACT_XML = "wasb.xml";
-
-  public NativeAzureFileSystemContract(Configuration conf) {
-    super(conf); //insert the base features
-    addConfResource(CONTRACT_XML);
+  @Override
+  protected int getTestTimeoutMillis() {
+    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
   }
 
   @Override
-  public String getScheme() {
-    return "wasb";
+  protected NativeAzureFileSystemContract createContract(Configuration conf) {
+    return new NativeAzureFileSystemContract(conf);
   }
 
   @Override
-  public Path getTestPath() {
-    return AzureTestUtils.createTestPath(super.getTestPath());
+  public void setup() throws Exception {
+    super.setup();
+    assumeScaleTestsEnabled(getContract().getConf());
   }
 }

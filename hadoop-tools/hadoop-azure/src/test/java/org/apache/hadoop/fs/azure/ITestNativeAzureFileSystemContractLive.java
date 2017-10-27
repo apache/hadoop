@@ -20,18 +20,47 @@ package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.junit.Ignore;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 
 /**
- * Mocked testing of FileSystemContractBaseTest.
+ * Run the {@link FileSystemContractBaseTest} test suite against azure storage.
  */
-public class TestNativeAzureFileSystemContractMocked extends
+public class ITestNativeAzureFileSystemContractLive extends
     FileSystemContractBaseTest {
+  private AzureBlobStorageTestAccount testAccount;
+  private Path basePath;
 
   @Override
   protected void setUp() throws Exception {
-    fs = AzureBlobStorageTestAccount.createMock().getFileSystem();
+    testAccount = AzureBlobStorageTestAccount.create();
+    if (testAccount != null) {
+      fs = testAccount.getFileSystem();
+      basePath = fs.makeQualified(
+          AzureTestUtils.createTestPath(
+              new Path("NativeAzureFileSystemContractLive")));
+    }
   }
-  
+
+  @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    testAccount = AzureTestUtils.cleanup(testAccount);
+    fs = null;
+  }
+
+  @Override
+  public Path getTestBaseDir() {
+    return basePath;
+  }
+
+  @Override
+  protected void runTest() throws Throwable {
+    if (testAccount != null) {
+      super.runTest();
+    }
+  }
+
   /**
    * The following tests are failing on Azure and the Azure 
    * file system code needs to be modified to make them pass.
@@ -44,15 +73,15 @@ public class TestNativeAzureFileSystemContractMocked extends
   @Ignore
   public void testRenameFileToSelf() throws Throwable {
   }
-  
+
   @Ignore
   public void testRenameChildDirForbidden() throws Exception {
   }
-  
+
   @Ignore
   public void testMoveDirUnderParent() throws Throwable {
   }
-  
+
   @Ignore
   public void testRenameDirToSelf() throws Throwable {
   }

@@ -21,13 +21,10 @@ package org.apache.hadoop.fs.azure;
 import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-
 /**
  * Tests for <code>ClientThrottlingAnalyzer</code>.
  */
-public class TestClientThrottlingAnalyzer {
+public class TestClientThrottlingAnalyzer extends AbstractWasbTestWithTimeout {
   private static final int ANALYSIS_PERIOD = 1000;
   private static final int ANALYSIS_PERIOD_PLUS_10_PERCENT = ANALYSIS_PERIOD
       + ANALYSIS_PERIOD / 10;

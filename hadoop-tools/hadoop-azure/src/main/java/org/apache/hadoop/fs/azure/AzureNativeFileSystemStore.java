@@ -346,7 +346,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private String delegationToken;
 
   /** The error message template when container is not accessible. */
-  static final String NO_ACCESS_TO_CONTAINER_MSG = "No credentials found for "
+  public static final String NO_ACCESS_TO_CONTAINER_MSG = "No credentials found for "
       + "account %s in the configuration, and its container %s is not "
       + "accessible using anonymous credentials. Please check if the container "
       + "exists first. If it is not publicly available, you have to provide "

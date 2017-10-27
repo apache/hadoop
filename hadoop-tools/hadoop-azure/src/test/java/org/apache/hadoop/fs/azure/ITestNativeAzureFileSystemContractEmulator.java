@@ -16,33 +16,38 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azure.contract;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+package org.apache.hadoop.fs.azure;
+
+import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
-import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
 /**
- * Azure Contract. Test paths are created using any maven fork
- * identifier, if defined. This guarantees paths unique to tests
- * running in parallel.
+ * Run the {@code FileSystemContractBaseTest} tests against the emulator
  */
-public class NativeAzureFileSystemContract extends AbstractBondedFSContract {
+public class ITestNativeAzureFileSystemContractEmulator extends
+    FileSystemContractBaseTest {
+  private AzureBlobStorageTestAccount testAccount;
 
-  public static final String CONTRACT_XML = "wasb.xml";
-
-  public NativeAzureFileSystemContract(Configuration conf) {
-    super(conf); //insert the base features
-    addConfResource(CONTRACT_XML);
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    testAccount = AzureBlobStorageTestAccount.createForEmulator();
+    if (testAccount != null) {
+      fs = testAccount.getFileSystem();
+    }
   }
 
   @Override
-  public String getScheme() {
-    return "wasb";
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    testAccount = AzureTestUtils.cleanup(testAccount);
+    fs = null;
   }
 
   @Override
-  public Path getTestPath() {
-    return AzureTestUtils.createTestPath(super.getTestPath());
+  protected void runTest() throws Throwable {
+    if (testAccount != null) {
+      super.runTest();
+    }
   }
 }

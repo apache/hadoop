@@ -18,50 +18,16 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.IOException;
-import org.junit.Ignore;
-
 /**
- * Run {@link NativeAzureFileSystemBaseTest} tests against a mocked store,
- * skipping tests of unsupported features
+ * Extends ITestAzureConcurrentOutOfBandIo in order to run testReadOOBWrites with secure mode
+ * (fs.azure.secure.mode) both enabled and disabled.
  */
-public class TestNativeAzureFileSystemMocked extends
-    NativeAzureFileSystemBaseTest {
+public class ITestAzureConcurrentOutOfBandIoWithSecureMode
+    extends ITestAzureConcurrentOutOfBandIo {
 
   @Override
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
-    return AzureBlobStorageTestAccount.createMock();
-  }
-
-  // Ignore the following tests because taking a lease requires a real
-  // (not mock) file system store. These tests don't work on the mock.
-  @Override
-  @Ignore
-  public void testLeaseAsDistributedLock() {
-  }
-
-  @Override
-  @Ignore
-  public void testSelfRenewingLease() {
-  }
-
-  @Override
-  @Ignore
-  public void testRedoFolderRenameAll() {
-  }
-
-  @Override
-  @Ignore
-  public void testCreateNonRecursive() {
-  }
-
-  @Override
-  @Ignore
-  public void testSelfRenewingLeaseFileDelete() {
-  }
-
-  @Override
-  @Ignore
-  public void testRenameRedoFolderAlreadyDone() throws IOException{
+    return AzureBlobStorageTestAccount.createOutOfBandStore(
+        UPLOAD_BLOCK_SIZE, DOWNLOAD_BLOCK_SIZE, true);
   }
 }
