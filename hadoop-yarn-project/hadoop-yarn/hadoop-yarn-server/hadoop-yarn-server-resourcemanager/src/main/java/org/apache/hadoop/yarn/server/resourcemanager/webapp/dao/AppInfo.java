@@ -300,19 +300,19 @@ public class AppInfo {
       if (!deSelects.contains(DeSelectType.TIMEOUTS)) {
         Map<ApplicationTimeoutType, Long> applicationTimeouts =
             app.getApplicationTimeouts();
+        timeouts = new AppTimeoutsInfo();
         if (applicationTimeouts.isEmpty()) {
           // If application is not set timeout, lifetime should be sent
           // as default with expiryTime=UNLIMITED and remainingTime=-1
           AppTimeoutInfo timeoutInfo = new AppTimeoutInfo();
           timeoutInfo.setTimeoutType(ApplicationTimeoutType.LIFETIME);
-          timeouts = new AppTimeoutsInfo();
           timeouts.add(timeoutInfo);
         } else {
           for (Map.Entry<ApplicationTimeoutType, Long> entry : app
               .getApplicationTimeouts().entrySet()) {
             AppTimeoutInfo timeout = new AppTimeoutInfo();
             timeout.setTimeoutType(entry.getKey());
-            long timeoutInMillis = entry.getValue().longValue();
+            long timeoutInMillis = entry.getValue();
             timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis));
             if (app.isAppInCompletedStates()) {
               timeout.setRemainingTime(0);
