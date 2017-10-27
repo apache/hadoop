@@ -1802,4 +1802,10 @@ public class FairScheduler extends
   ReadLock getSchedulerReadLock() {
     return this.readLock;
   }
+
+  @Override
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
+    // Lifetime is the application lifetime by default.
+    return lifetime;
+  }
 }
