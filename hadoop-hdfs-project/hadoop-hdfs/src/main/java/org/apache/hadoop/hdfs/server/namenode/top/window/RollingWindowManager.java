@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -141,7 +142,7 @@ public class RollingWindowManager {
    * maintains the set of {@link RollingWindow}s for the users that have
    * operated on that metric.
    */
-  public ConcurrentHashMap<String, RollingWindowMap> metricMap =
+  public ConcurrentMap<String, RollingWindowMap> metricMap =
       new ConcurrentHashMap<String, RollingWindowMap>();
 
   public RollingWindowManager(Configuration conf, int reportingPeriodMs) {

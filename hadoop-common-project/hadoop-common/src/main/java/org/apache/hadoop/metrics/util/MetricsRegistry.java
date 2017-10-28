@@ -19,6 +19,7 @@ package org.apache.hadoop.metrics.util;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -33,7 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MetricsRegistry {
-  private ConcurrentHashMap<String, MetricsBase> metricsList =
+  private ConcurrentMap<String, MetricsBase> metricsList =
       new ConcurrentHashMap<String, MetricsBase>();
 
   public MetricsRegistry() {
