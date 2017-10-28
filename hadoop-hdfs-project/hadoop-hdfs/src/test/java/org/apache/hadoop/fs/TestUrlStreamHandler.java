@@ -164,6 +164,55 @@ public class TestUrlStreamHandler {
 
   }
 
+  /**
+   * Test opening and reading from an InputStream through a file:// URL with Windows backslashes
+   *
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testFileUrlsForWindows() throws IOException, URISyntaxException {
+    // URLStreamHandler is already set in JVM by testDfsUrls()
+    Configuration conf = new HdfsConfiguration();
+
+    File file = new File("C:/testFile");
+    URL url = new URL("file://" + file.getCanonicalPath());
+    URI uri = url.toURI();
+
+    FileSystem fs = FileSystem.get(uri, conf);
+
+    try {
+      byte[] fileContent = new byte[1024];
+      for (int i = 0; i < fileContent.length; ++i)
+        fileContent[i] = (byte) i;
+
+      // First create the file through the FileSystem API
+      OutputStream os = fs.create(new Path(uri.getPath()));
+      os.write(fileContent);
+      os.close();
+
+      // Second, open and read the file content through the URL API.
+      URL fileURL = uri.toURL();
+
+      InputStream is = fileURL.openStream();
+      assertNotNull(is);
+
+      byte[] bytes = new byte[4096];
+      assertEquals(1024, is.read(bytes));
+      is.close();
+
+      for (int i = 0; i < fileContent.length; ++i)
+        assertEquals(fileContent[i], bytes[i]);
+
+      // Cleanup: delete the file
+      fs.delete(new Path(uri.getPath()), false);
+
+    } finally {
+      fs.close();
+    }
+
+  }
+
   @Test
   public void testHttpDefaultHandler() throws Throwable {
     assertNull("Handler for HTTP is the Hadoop one",
