@@ -369,17 +369,20 @@ public class FairScheduler extends
   }
 
   public float getAppWeight(FSAppAttempt app) {
-    try {
+    double weight = 1.0;
+
+    if (sizeBasedWeight) {
       readLock.lock();
-      double weight = 1.0;
-      if (sizeBasedWeight) {
+
+      try {
         // Set weight based on current memory demand
         weight = Math.log1p(app.getDemand().getMemorySize()) / Math.log(2);
+      } finally {
+        readLock.unlock();
       }
-      return (float)weight * app.getPriority().getPriority();
-    } finally {
-      readLock.unlock();
     }
+
+    return (float)weight * app.getPriority().getPriority();
   }
 
   public Resource getIncrementResourceCapability() {
