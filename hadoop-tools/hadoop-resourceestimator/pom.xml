@@ -29,7 +29,7 @@
         <relativePath>../../hadoop-project</relativePath>
     </parent>
     <artifactId>hadoop-resourceestimator</artifactId>
-    <name>Apache Resource Estimator Service</name>
+    <name>Apache Hadoop Resource Estimator Service</name>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>
