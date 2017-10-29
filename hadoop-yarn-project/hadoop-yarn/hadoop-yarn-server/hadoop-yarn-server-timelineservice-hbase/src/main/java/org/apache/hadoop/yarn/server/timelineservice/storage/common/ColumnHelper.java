@@ -258,7 +258,7 @@ public class ColumnHelper<T> {
               for (Entry<Long, byte[]> cell : cells.entrySet()) {
                 V value =
                     (V) converter.decodeValue(cell.getValue());
-                Long ts = supplementTs ? TimestampGenerator.
+                long ts = supplementTs ? TimestampGenerator.
                     getTruncatedTimestamp(cell.getKey()) : cell.getKey();
                 cellResults.put(ts, value);
               }
