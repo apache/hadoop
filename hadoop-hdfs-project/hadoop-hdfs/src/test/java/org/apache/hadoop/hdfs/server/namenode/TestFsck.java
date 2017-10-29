@@ -48,7 +48,6 @@ import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -92,6 +91,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -1340,25 +1340,20 @@ public class TestFsck {
 
     String pathString = "/tmp/testFile";
 
-    long length = 123L;
-    boolean isDir = false;
-    int blockReplication = 1;
-    long blockSize = 128 *1024L;
-    long modTime = 123123123L;
-    long accessTime = 123123120L;
-    FsPermission perms = FsPermission.getDefault();
-    String owner = "foo";
-    String group = "bar";
-    byte[] symlink = null;
-    byte[] path = DFSUtil.string2Bytes(pathString);
-    long fileId = 312321L;
-    int numChildren = 1;
-    byte storagePolicy = 0;
-
-    HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
-        blockSize, modTime, accessTime, perms,
-        EnumSet.noneOf(HdfsFileStatus.Flags.class), owner, group, symlink,
-        path, fileId, numChildren, null, storagePolicy, null);
+    HdfsFileStatus file = new HdfsFileStatus.Builder()
+        .length(123L)
+        .replication(1)
+        .blocksize(128 * 1024L)
+        .mtime(123123123L)
+        .atime(123123120L)
+        .perm(FsPermission.getDefault())
+        .owner("foo")
+        .group("bar")
+        .path(DFSUtil.string2Bytes(pathString))
+        .fileId(312321L)
+        .children(1)
+        .storagePolicy(HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED)
+        .build();
     Result replRes = new ReplicationResult(conf);
     Result ecRes = new ErasureCodingResult(conf);
 

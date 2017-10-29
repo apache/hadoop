@@ -322,3 +322,55 @@ Changing queue/scheduler properties and adding/removing queues can be done in tw
   **Note:** When enabling scheduler configuration mutations via `yarn.scheduler.configuration.store.class`, *yarn rmadmin -refreshQueues* will be disabled, i.e. it will no longer be possible to update configuration via file.
 
   See the [YARN Resource Manager REST API](ResourceManagerRest.html#Scheduler_Configuration_Mutation_API) for examples on how to change scheduler configuration via REST, and [YARN Commands Reference](YarnCommands.html#schedulerconf) for examples on how to change scheduler configuration via command line.
+
+Updating a Container (Experimental - API may change in the future)
+--------------------
+
+  Once an Application Master has received a Container from the Resource Manager, it may request the Resource Manager to update certain attributes of the container.
+
+  Currently only two types of container updates are supported:
+
+  * **Resource Update** : Where the AM can request the RM to update the resource size of the container. For eg: Change the container from a 2GB, 2 vcore container to a 4GB, 2 vcore container.
+  * **ExecutionType Update** : Where the AM can request the RM to update the ExecutionType of the container. For eg: Change the execution type from *GUARANTEED* to *OPPORTUNISTIC* or vice versa.
+  
+  This is facilitated by the AM populating the **updated_containers** field, which is a list of type **UpdateContainerRequestProto**, in **AllocateRequestProto.** The AM can make multiple container update requests in the same allocate call.
+  
+  The schema of the **UpdateContainerRequestProto** is as follows:
+  
+    message UpdateContainerRequestProto {
+      required int32 container_version = 1;
+      required ContainerIdProto container_id = 2;
+      required ContainerUpdateTypeProto update_type = 3;
+      optional ResourceProto capability = 4;
+      optional ExecutionTypeProto execution_type = 5;
+    }
+
+  The **ContainerUpdateTypeProto** is an enum:
+  
+    enum ContainerUpdateTypeProto {
+      INCREASE_RESOURCE = 0;
+      DECREASE_RESOURCE = 1;
+      PROMOTE_EXECUTION_TYPE = 2;
+      DEMOTE_EXECUTION_TYPE = 3;
+    }
+
+  As constrained by the above enum, the scheduler currently supports changing either the resource update OR executionType of a container in one update request.
+  
+  The AM must also provide the latest **ContainerProto** it received from the RM. This is the container which the RM will attempt to update.
+
+  If the RM is able to update the requested container, the updated container will be returned, in the **updated_containers** list field of type **UpdatedContainerProto** in the **AllocateResponseProto** return value of either the same allocate call or in one of the subsequent calls.
+  
+  The schema of the **UpdatedContainerProto** is as follows:
+  
+    message UpdatedContainerProto {
+      required ContainerUpdateTypeProto update_type = 1;
+      required ContainerProto container = 2;
+    }
+  
+  It specifies the type of container update that was performed on the Container and the updated Container object which container an updated token.
+
+  The container token can then be used by the AM to ask the corresponding NM to either start the container, if the container has not already been started or update the container using the updated token.
+  
+  The **DECREASE_RESOURCE** and **DEMOTE_EXECUTION_TYPE** container updates are automatic - the AM does not explicitly have to ask the NM to decrease the resources of the container. The other update types require the AM to explicitly ask the NM to update the container.
+  
+  If the **yarn.resourcemanager.auto-update.containers** configuration parameter is set to **true** (false by default), The RM will ensure that all container updates are automatic.  

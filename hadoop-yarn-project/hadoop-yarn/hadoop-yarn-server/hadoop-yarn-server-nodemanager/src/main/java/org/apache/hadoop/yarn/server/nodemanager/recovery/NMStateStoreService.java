@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Localize
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 
 @Private
@@ -731,12 +732,12 @@ public abstract class NMStateStoreService extends AbstractService {
   /**
    * Store the assigned resources to a container.
    *
-   * @param containerId Container Id
+   * @param container NMContainer
    * @param resourceType Resource Type
    * @param assignedResources Assigned resources
    * @throws IOException if fails
    */
-  public abstract void storeAssignedResources(ContainerId containerId,
+  public abstract void storeAssignedResources(Container container,
       String resourceType, List<Serializable> assignedResources)
       throws IOException;
 
@@ -745,4 +746,14 @@ public abstract class NMStateStoreService extends AbstractService {
   protected abstract void startStorage() throws IOException;
 
   protected abstract void closeStorage() throws IOException;
+
+  protected void updateContainerResourceMapping(Container container,
+      String resourceType, List<Serializable> assignedResources) {
+    // Update Container#getResourceMapping.
+    ResourceMappings.AssignedResources newAssigned =
+        new ResourceMappings.AssignedResources();
+    newAssigned.updateAssignedResources(assignedResources);
+    container.getResourceMappings().addAssignedResources(resourceType,
+        newAssigned);
+  }
 }

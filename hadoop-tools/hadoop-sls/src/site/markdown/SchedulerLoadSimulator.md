@@ -344,7 +344,7 @@ Here we provide an example format of the sls json file, which contains 2 jobs. T
         "container.host" : "/default-rack/node1",  // host the container asks for
         "container.start.ms" : 6664,  // container start time, optional
         "container.end.ms" : 23707,   // container finish time, optional
-        "duration.ms":  50000,        // duration of the container, optional if start and end time is specified
+        "container.duration.ms":  50000, // duration of the container, optional if start and end time is specified
         "container.priority" : 20,    // priority of the container, optional, the default value is 20
         "container.type" : "map"      // type of the container, could be "map" or "reduce", optional, the default value is "map"
       }, {

@@ -43,12 +43,15 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -60,7 +63,6 @@ import org.slf4j.LoggerFactory;
 public class TestSnapshotDiffReport {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestSnapshotDiffReport.class);
-
   private static final long SEED = 0;
   private static final short REPLICATION = 3;
   private static final short REPLICATION_1 = 2;
@@ -74,7 +76,6 @@ public class TestSnapshotDiffReport {
   protected Configuration conf;
   protected MiniDFSCluster cluster;
   protected DistributedFileSystem hdfs;
-  
   private final HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
 
   @Before
@@ -85,6 +86,9 @@ public class TestSnapshotDiffReport {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 1);
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE,
+        true);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
         true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .format(true).build();
@@ -99,7 +103,11 @@ public class TestSnapshotDiffReport {
       cluster = null;
     }
   }
-  
+
+  protected Path getSnapRootDir() {
+    return sub1;
+  }
+
   private String genSnapshotName(Path snapshotDir) {
     int sNum = -1;
     if (snapshotNumberMap.containsKey(snapshotDir)) {
@@ -108,12 +116,12 @@ public class TestSnapshotDiffReport {
     snapshotNumberMap.put(snapshotDir, ++sNum);
     return "s" + sNum;
   }
-  
+
   /**
    * Create/modify/delete files under a given directory, also create snapshots
    * of directories.
-   */ 
-  private void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
+   */
+  protected void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
       throws Exception {
     Path file10 = new Path(modifyDir, "file10");
     Path file11 = new Path(modifyDir, "file11");
@@ -133,7 +141,7 @@ public class TestSnapshotDiffReport {
       hdfs.allowSnapshot(snapshotDir);
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
-    
+
     // delete file11
     hdfs.delete(file11, true);
     // modify file12
@@ -146,12 +154,12 @@ public class TestSnapshotDiffReport {
     DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, SEED);
     // create file15
     DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, SEED);
-    
+
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
-    
+
     // create file11 again
     DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, SEED);
     // delete file12
@@ -164,7 +172,7 @@ public class TestSnapshotDiffReport {
     hdfs.delete(file14, true);
     // modify file15
     hdfs.setReplication(file15, (short) (REPLICATION - 1));
-    
+
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
@@ -172,8 +180,10 @@ public class TestSnapshotDiffReport {
     // modify file10
     hdfs.setReplication(file10, (short) (REPLICATION + 1));
   }
-  
-  /** check the correctness of the diff reports */
+
+  /**
+   * Check the correctness of the diff reports.
+   */
   private void verifyDiffReport(Path dir, String from, String to,
       DiffReportEntry... entries) throws IOException {
     SnapshotDiffReport report = hdfs.getSnapshotDiffReport(dir, from, to);
@@ -182,10 +192,10 @@ public class TestSnapshotDiffReport {
         .getSnapshotDiffReport(dir, to, from);
     LOG.info(report.toString());
     LOG.info(inverseReport.toString() + "\n");
-    
+
     assertEquals(entries.length, report.getDiffList().size());
     assertEquals(entries.length, inverseReport.getDiffList().size());
-    
+
     for (DiffReportEntry entry : entries) {
       if (entry.getType() == DiffType.MODIFY) {
         assertTrue(report.getDiffList().contains(entry));
@@ -201,9 +211,11 @@ public class TestSnapshotDiffReport {
       }
     }
   }
-  
-  /** Test the computation and representation of diff between snapshots */
-  @Test (timeout=60000)
+
+  /**
+   * Test the computation and representation of diff between snapshots.
+   */
+  @Test(timeout = 60000)
   public void testDiffReport() throws Exception {
     cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
 
@@ -212,45 +224,38 @@ public class TestSnapshotDiffReport {
     hdfs.mkdirs(subsubsub1);
     modifyAndCreateSnapshot(sub1, new Path[]{sub1, subsubsub1});
     modifyAndCreateSnapshot(subsubsub1, new Path[]{sub1, subsubsub1});
-    
-    try {
-      hdfs.getSnapshotDiffReport(subsub1, "s1", "s2");
-      fail("Expect exception when getting snapshot diff report: " + subsub1
-          + " is not a snapshottable directory.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "Directory is not a snapshottable directory: " + subsub1, e);
-    }
-    
+
     final String invalidName = "invalid";
     try {
       hdfs.getSnapshotDiffReport(sub1, invalidName, invalidName);
-      fail("Expect exception when providing invalid snapshot name for diff report");
+      fail("Expect exception when providing invalid snapshot name " +
+          "for diff report");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "Cannot find the snapshot of directory " + sub1 + " with name "
               + invalidName, e);
     }
-    
+
     // diff between the same snapshot
     SnapshotDiffReport report = hdfs.getSnapshotDiffReport(sub1, "s0", "s0");
     LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
-    
+
     report = hdfs.getSnapshotDiffReport(sub1, "", "");
     LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
-    
+
     report = hdfs.getSnapshotDiffReport(subsubsub1, "s0", "s2");
     LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
 
     // test path with scheme also works
-    report = hdfs.getSnapshotDiffReport(hdfs.makeQualified(subsubsub1), "s0", "s2");
+    report = hdfs.getSnapshotDiffReport(hdfs.makeQualified(subsubsub1),
+        "s0", "s2");
     LOG.info(report.toString());
     assertEquals(0, report.getDiffList().size());
 
-    verifyDiffReport(sub1, "s0", "s2", 
+    verifyDiffReport(sub1, "s0", "s2",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
@@ -260,7 +265,7 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")));
 
-    verifyDiffReport(sub1, "s0", "s5", 
+    verifyDiffReport(sub1, "s0", "s5",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
@@ -282,7 +287,7 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
-    
+
     verifyDiffReport(sub1, "s2", "s5",
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
         new DiffReportEntry(DiffType.MODIFY,
@@ -297,7 +302,7 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
-    
+
     verifyDiffReport(sub1, "s3", "",
         new DiffReportEntry(DiffType.MODIFY,
             DFSUtil.string2Bytes("subsub1/subsubsub1")),
@@ -318,7 +323,467 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
   }
-  
+
+  @Test(timeout = 60000)
+  public void testSnapRootDescendantDiffReport() throws Exception {
+    Assume.assumeTrue(conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
+        DFSConfigKeys.
+            DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT));
+    Path subSub = new Path(sub1, "subsub1");
+    Path subSubSub = new Path(subSub, "subsubsub1");
+    Path nonSnapDir = new Path(dir, "non_snap");
+    hdfs.mkdirs(subSubSub);
+    hdfs.mkdirs(nonSnapDir);
+
+    modifyAndCreateSnapshot(sub1, new Path[]{sub1});
+    modifyAndCreateSnapshot(subSub, new Path[]{sub1});
+    modifyAndCreateSnapshot(subSubSub, new Path[]{sub1});
+
+    try {
+      hdfs.getSnapshotDiffReport(subSub, "s1", "s2");
+      hdfs.getSnapshotDiffReport(subSubSub, "s1", "s2");
+    } catch (IOException e) {
+      fail("Unexpected exception when getting snapshot diff report " +
+          subSub + ": " + e);
+    }
+
+    try {
+      hdfs.getSnapshotDiffReport(nonSnapDir, "s1", "s2");
+      fail("Snapshot diff report on a non snapshot directory '"
+          + nonSnapDir.getName() + "'should fail!");
+    } catch (SnapshotException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Directory is neither snapshottable nor under a snap root!", e);
+    }
+
+    final String invalidName = "invalid";
+    try {
+      hdfs.getSnapshotDiffReport(subSub, invalidName, invalidName);
+      fail("Expect exception when providing invalid snapshot name " +
+          "for diff report");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Cannot find the snapshot of directory " + sub1 + " with name "
+              + invalidName, e);
+    }
+
+    // diff between the same snapshot
+    SnapshotDiffReport report = hdfs.getSnapshotDiffReport(subSub, "s0", "s0");
+    assertEquals(0, report.getDiffList().size());
+
+    report = hdfs.getSnapshotDiffReport(subSub, "", "");
+    assertEquals(0, report.getDiffList().size());
+
+    report = hdfs.getSnapshotDiffReport(subSubSub, "s0", "s2");
+    assertEquals(0, report.getDiffList().size());
+
+    report = hdfs.getSnapshotDiffReport(
+        hdfs.makeQualified(subSubSub), "s0", "s2");
+    assertEquals(0, report.getDiffList().size());
+
+    verifyDescendantDiffReports(sub1, subSub, subSubSub);
+  }
+
+  private void verifyDescendantDiffReports(final Path snapDir,
+      final Path snapSubDir, final Path snapSubSubDir) throws
+      IOException {
+    verifyDiffReport(snapDir, "s0", "s2",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")));
+    verifyDiffReport(snapSubDir, "s0", "s2", new DiffReportEntry[]{});
+    verifyDiffReport(snapSubSubDir, "s0", "s2", new DiffReportEntry[]{});
+
+    verifyDiffReport(snapDir, "s0", "s8",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file15")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
+
+    verifyDiffReport(snapSubDir, "s0", "s8",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file15")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsubsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file15")));
+
+    verifyDiffReport(snapSubSubDir, "s0", "s8",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file15")));
+
+    verifyDiffReport(snapDir, "s2", "s5",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file15")));
+
+    verifyDiffReport(snapSubDir, "s2", "s5",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file15")));
+    verifyDiffReport(snapSubSubDir, "s2", "s5",
+        new DiffReportEntry[]{});
+
+    verifyDiffReport(snapDir, "s3", "",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file15")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/file12")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1/file10")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/file11")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/link13")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/link13")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
+
+    verifyDiffReport(snapSubDir, "s3", "",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file15")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("file12")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsubsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsubsub1/file15")));
+
+    verifyDiffReport(snapSubSubDir, "s3", "",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file15")));
+  }
+
+  @Test
+  public void testSnapRootDescendantDiffReportWithRename() throws Exception {
+    Assume.assumeTrue(conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
+        DFSConfigKeys.
+            DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT));
+    Path subSub = new Path(sub1, "subsub1");
+    Path subSubSub = new Path(subSub, "subsubsub1");
+    Path nonSnapDir = new Path(dir, "non_snap");
+    hdfs.mkdirs(subSubSub);
+    hdfs.mkdirs(nonSnapDir);
+
+    hdfs.allowSnapshot(sub1);
+    hdfs.createSnapshot(sub1, genSnapshotName(sub1));
+    Path file20 = new Path(subSubSub, "file20");
+    DFSTestUtil.createFile(hdfs, file20, BLOCKSIZE, REPLICATION_1, SEED);
+    hdfs.createSnapshot(sub1, genSnapshotName(sub1));
+
+    // Case 1: Move a file away from a descendant dir, but within the snap root.
+    // mv <snaproot>/<subsub>/<subsubsub>/file20 <snaproot>/<subsub>/file20
+    hdfs.rename(file20, new Path(subSub, file20.getName()));
+    hdfs.createSnapshot(sub1, genSnapshotName(sub1));
+
+    // The snapshot diff for the snap root detects the change as file rename
+    // as the file move happened within the snap root.
+    verifyDiffReport(sub1, "s1", "s2",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(DiffType.RENAME,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file20"),
+            DFSUtil.string2Bytes("subsub1/file20")));
+
+    // The snapshot diff for the descendant dir <subsub> still detects the
+    // change as file rename as the file move happened under the snap root
+    // descendant dir.
+    verifyDiffReport(subSub, "s1", "s2",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsubsub1")),
+        new DiffReportEntry(DiffType.RENAME,
+            DFSUtil.string2Bytes("subsubsub1/file20"),
+            DFSUtil.string2Bytes("file20")));
+
+    // The snapshot diff for the descendant dir <subsubsub> detects the
+    // change as file delete as the file got moved from its scope.
+    verifyDiffReport(subSubSub, "s1", "s2",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("file20")));
+
+    // Case 2: Move the file from the snap root descendant dir to any
+    // non snap root dir. mv <snaproot>/<subsub>/file20 <nonsnaproot>/file20.
+    hdfs.rename(new Path(subSub, file20.getName()),
+        new Path(dir, file20.getName()));
+    hdfs.createSnapshot(sub1, genSnapshotName(sub1));
+
+    // The snapshot diff for the snap root detects the change as file delete
+    // as the file got moved away from the snap root dir to some non snap
+    // root dir.
+    verifyDiffReport(sub1, "s2", "s3",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/file20")));
+
+    // The snapshot diff for the snap root descendant <subsub> detects the
+    // change as file delete as the file was previously under its scope and
+    // got moved away from its scope.
+    verifyDiffReport(subSub, "s2", "s3",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("file20")));
+
+    // The file was already not under the descendant dir <subsubsub> scope.
+    // So, the snapshot diff report for the descendant dir doesn't
+    // show the file rename at all.
+    verifyDiffReport(subSubSub, "s2", "s3",
+        new DiffReportEntry[]{});
+
+    // Case 3: Move the file from the non-snap root dir to snap root dir
+    // mv <nonsnaproot>/file20 <snaproot>/file20
+    hdfs.rename(new Path(dir, file20.getName()),
+        new Path(sub1, file20.getName()));
+    hdfs.createSnapshot(sub1, genSnapshotName(sub1));
+
+    // Snap root directory should show the file moved in as a new file.
+    verifyDiffReport(sub1, "s3", "s4",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file20")));
+
+    // Snap descendant directories don't have visibility to the moved in file.
+    verifyDiffReport(subSub, "s3", "s4",
+        new DiffReportEntry[]{});
+    verifyDiffReport(subSubSub, "s3", "s4",
+        new DiffReportEntry[]{});
+
+    hdfs.rename(new Path(sub1, file20.getName()),
+        new Path(subSub, file20.getName()));
+    hdfs.createSnapshot(sub1, genSnapshotName(sub1));
+
+    // Snap root directory now shows the rename as both source and
+    // destination paths are under the snap root.
+    verifyDiffReport(sub1, "s4", "s5",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.RENAME,
+            DFSUtil.string2Bytes("file20"),
+            DFSUtil.string2Bytes("subsub1/file20")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1")));
+
+    // For the descendant directory under the snap root, the file
+    // moved in shows up as a new file created.
+    verifyDiffReport(subSub, "s4", "s5",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("file20")));
+
+    verifyDiffReport(subSubSub, "s4", "s5",
+        new DiffReportEntry[]{});
+
+    // Case 4: Snapshot diff for the newly created descendant directory.
+    Path subSubSub2 = new Path(subSub, "subsubsub2");
+    hdfs.mkdirs(subSubSub2);
+    Path file30 = new Path(subSubSub2, "file30");
+    DFSTestUtil.createFile(hdfs, file30, BLOCKSIZE, REPLICATION_1, SEED);
+    hdfs.createFile(file30);
+    hdfs.createSnapshot(sub1, genSnapshotName(sub1));
+
+    verifyDiffReport(sub1, "s5", "s6",
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub2")));
+
+    verifyDiffReport(subSubSub2, "s5", "s6",
+        new DiffReportEntry[]{});
+
+    verifyDiffReport(subSubSub2, "s1", "s2",
+        new DiffReportEntry[]{});
+  }
+
+  @Test
+  public void testSnapshotDiffInfo() throws Exception {
+    Path snapshotRootDirPath = dir;
+    Path snapshotDirDescendantPath = new Path(snapshotRootDirPath, "desc");
+    Path snapshotDirNonDescendantPath = new Path("/dummy/non/snap/desc");
+    hdfs.mkdirs(snapshotDirDescendantPath);
+    hdfs.mkdirs(snapshotDirNonDescendantPath);
+
+    hdfs.allowSnapshot(snapshotRootDirPath);
+    hdfs.createSnapshot(snapshotRootDirPath, "s0");
+    hdfs.createSnapshot(snapshotRootDirPath, "s1");
+
+    INodeDirectory snapshotRootDir = cluster.getNameNode()
+        .getNamesystem().getFSDirectory().getINode(
+            snapshotRootDirPath.toUri().getPath())
+        .asDirectory();
+    INodeDirectory snapshotRootDescendantDir = cluster.getNameNode()
+        .getNamesystem().getFSDirectory().getINode(
+            snapshotDirDescendantPath.toUri().getPath())
+        .asDirectory();
+    INodeDirectory snapshotRootNonDescendantDir = cluster.getNameNode()
+        .getNamesystem().getFSDirectory().getINode(
+            snapshotDirNonDescendantPath.toUri().getPath())
+        .asDirectory();
+    try {
+      SnapshotDiffInfo sdi = new SnapshotDiffInfo(
+          snapshotRootDir,
+          snapshotRootDescendantDir,
+          new Snapshot(0, "s0", snapshotRootDescendantDir),
+          new Snapshot(0, "s1", snapshotRootDescendantDir));
+      LOG.info("SnapshotDiffInfo: " + sdi.getFrom() + " - " + sdi.getTo());
+    } catch (IllegalArgumentException iae){
+      fail("Unexpected exception when constructing SnapshotDiffInfo: " + iae);
+    }
+
+    try {
+      SnapshotDiffInfo sdi = new SnapshotDiffInfo(
+          snapshotRootDir,
+          snapshotRootNonDescendantDir,
+          new Snapshot(0, "s0", snapshotRootNonDescendantDir),
+          new Snapshot(0, "s1", snapshotRootNonDescendantDir));
+      LOG.info("SnapshotDiffInfo: " + sdi.getFrom() + " - " + sdi.getTo());
+      fail("SnapshotDiffInfo construction should fail for non snapshot root " +
+          "or non snapshot root descendant directories!");
+    } catch (IllegalArgumentException iae) {
+      // expected exception
+    }
+  }
+
   /**
    * Make changes under a sub-directory, then delete the sub-directory. Make
    * sure the diff report computation correctly retrieve the diff from the

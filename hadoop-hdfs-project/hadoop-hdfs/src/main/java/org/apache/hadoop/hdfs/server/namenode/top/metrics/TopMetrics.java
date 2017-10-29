@@ -70,14 +70,6 @@ public class TopMetrics implements MetricsSource {
   public static final Logger LOG = LoggerFactory.getLogger(TopMetrics.class);
   public static final String TOPMETRICS_METRICS_SOURCE_NAME =
       "NNTopUserOpCounts";
-  /**
-   * In addition to counts of different RPC calls, NNTop also reports top
-   * users listing large directories (measured by the number of files involved
-   * in listing operations from the user). This is important because the CPU
-   * and GC overhead of a listing operation grows linearly with the number of
-   * files involved. This category in NNTop is {@link #FILES_IN_GETLISTING}.
-   */
-  public static final String FILES_IN_GETLISTING = "filesInGetListing";
   private final boolean isMetricsSourceEnabled;
 
   private static void logConf(Configuration conf) {
@@ -131,30 +123,22 @@ public class TopMetrics implements MetricsSource {
   public void report(boolean succeeded, String userName, InetAddress addr,
       String cmd, String src, String dst, FileStatus status) {
     // currently nntop only makes use of the username and the command
-    report(userName, cmd, 1);
+    report(userName, cmd);
   }
 
-  public void reportFilesInGetListing(String userName, int numFiles) {
-    report(userName, FILES_IN_GETLISTING, numFiles);
-  }
-
-  public void report(String userName, String cmd, int delta) {
+  public void report(String userName, String cmd) {
     long currTime = Time.monotonicNow();
-    report(currTime, userName, cmd, delta);
+    report(currTime, userName, cmd);
   }
 
-  public void report(long currTime, String userName, String cmd, int delta) {
+  public void report(long currTime, String userName, String cmd) {
     LOG.debug("a metric is reported: cmd: {} user: {}", cmd, userName);
     userName = UserGroupInformation.trimLoginMethod(userName);
     for (RollingWindowManager rollingWindowManager : rollingWindowManagers
         .values()) {
-      rollingWindowManager.recordMetric(currTime, cmd, userName, delta);
-      // Increase the number of all RPC calls by the user, unless the report
-      // is for the number of files in a listing operation.
-      if (!cmd.equals(FILES_IN_GETLISTING)) {
-        rollingWindowManager.recordMetric(currTime,
-            TopConf.ALL_CMDS, userName, delta);
-      }
+      rollingWindowManager.recordMetric(currTime, cmd, userName, 1);
+      rollingWindowManager.recordMetric(currTime,
+          TopConf.ALL_CMDS, userName, 1);
     }
   }
 

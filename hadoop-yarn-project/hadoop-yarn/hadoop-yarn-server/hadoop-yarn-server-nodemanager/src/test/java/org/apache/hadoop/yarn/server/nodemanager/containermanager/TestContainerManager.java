@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
@@ -111,6 +115,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.when;
 import org.slf4j.LoggerFactory;
 
 public class TestContainerManager extends BaseContainerManagerTest {
@@ -311,6 +316,41 @@ public class TestContainerManager extends BaseContainerManagerTest {
     BufferedReader reader = new BufferedReader(new FileReader(targetFile));
     Assert.assertEquals("Hello World!", reader.readLine());
     Assert.assertEquals(null, reader.readLine());
+  }
+
+  @Test (timeout = 10000L)
+  public void testAuxPathHandler() throws Exception {
+    File testDir = GenericTestUtils.getTestDir(GenericTestUtils.getTestDir(
+        TestContainerManager.class.getSimpleName() + "LocDir").
+        getAbsolutePath());
+    testDir.mkdirs();
+    File testFile = new File(testDir, "test");
+    testFile.createNewFile();
+    YarnConfiguration configuration = new YarnConfiguration();
+    configuration.set(YarnConfiguration.NM_LOCAL_DIRS,
+        testDir.getAbsolutePath());
+    LocalDirsHandlerService spyDirHandlerService =
+        Mockito.spy(new LocalDirsHandlerService());
+    spyDirHandlerService.init(configuration);
+    when(spyDirHandlerService.getConfig()).thenReturn(configuration);
+    AuxiliaryLocalPathHandler auxiliaryLocalPathHandler =
+        new ContainerManagerImpl.AuxiliaryLocalPathHandlerImpl(
+            spyDirHandlerService);
+    Path p = auxiliaryLocalPathHandler.getLocalPathForRead("test");
+    assertTrue(p != null &&
+        !spyDirHandlerService.getLocalDirsForRead().isEmpty());
+
+    when(spyDirHandlerService.getLocalDirsForRead()).thenReturn(
+        new ArrayList<String>());
+    try {
+      auxiliaryLocalPathHandler.getLocalPathForRead("test");
+      fail("Should not have passed!");
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("Could not find"));
+    } finally {
+      testFile.delete();
+      testDir.delete();
+    }
   }
 
   //@Test

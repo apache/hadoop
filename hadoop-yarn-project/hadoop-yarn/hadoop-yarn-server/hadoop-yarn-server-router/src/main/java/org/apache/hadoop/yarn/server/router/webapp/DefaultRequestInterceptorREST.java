@@ -129,7 +129,9 @@ public class DefaultRequestInterceptorREST
   public NodesInfo getNodes(String states) {
     // states will be part of additionalParam
     Map<String, String[]> additionalParam = new HashMap<String, String[]>();
-    additionalParam.put(RMWSConsts.STATES, new String[] {states});
+    if (states != null && !states.isEmpty()) {
+      additionalParam.put(RMWSConsts.STATES, new String[] {states});
+    }
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         NodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null,
@@ -226,9 +228,11 @@ public class DefaultRequestInterceptorREST
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
     // labels will be part of additionalParam
-    Map<String, String[]> additionalParam = new HashMap<String, String[]>();
-    additionalParam.put(RMWSConsts.LABELS,
-        labels.toArray(new String[labels.size()]));
+    Map<String, String[]> additionalParam = new HashMap<>();
+    if (labels != null && !labels.isEmpty()) {
+      additionalParam.put(RMWSConsts.LABELS,
+          labels.toArray(new String[labels.size()]));
+    }
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         LabelsToNodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.LABEL_MAPPINGS, null,

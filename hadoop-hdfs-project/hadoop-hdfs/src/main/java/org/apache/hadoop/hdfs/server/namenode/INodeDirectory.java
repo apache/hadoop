@@ -253,6 +253,24 @@ public class INodeDirectory extends INodeWithAdditionalFields
     return getDirectorySnapshottableFeature() != null;
   }
 
+  /**
+   * Check if this directory is a descendant directory
+   * of a snapshot root directory.
+   * @param snapshotRootDir the snapshot root directory
+   * @return true if this directory is a descendant of snapshot root
+   */
+  public boolean isDescendantOfSnapshotRoot(INodeDirectory snapshotRootDir) {
+    Preconditions.checkArgument(snapshotRootDir.isSnapshottable());
+    INodeDirectory dir = this;
+    while(dir != null) {
+      if (dir.equals(snapshotRootDir)) {
+        return true;
+      }
+      dir = dir.getParent();
+    }
+    return false;
+  }
+
   public Snapshot getSnapshot(byte[] snapshotName) {
     return getDirectorySnapshottableFeature().getSnapshot(snapshotName);
   }

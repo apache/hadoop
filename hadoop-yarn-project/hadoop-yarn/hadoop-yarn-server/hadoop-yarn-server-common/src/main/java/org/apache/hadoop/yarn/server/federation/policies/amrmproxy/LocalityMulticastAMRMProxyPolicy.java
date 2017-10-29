@@ -326,10 +326,8 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     // any RM we have previously contacted (this might be the user way
     // to cancel a previous request).
     if (numContainer == 0) {
-      for (SubClusterId targetId : targetSubclusters) {
-        if (headroom.containsKey(targetId)) {
-          allocationBookkeeper.addAnyRR(targetId, originalResourceRequest);
-        }
+      for (SubClusterId targetId : headroom.keySet()) {
+        allocationBookkeeper.addAnyRR(targetId, originalResourceRequest);
       }
       return;
     }
@@ -562,23 +560,27 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       Preconditions
           .checkArgument(!ResourceRequest.isAnyLocation(rr.getResourceName()));
 
-      if (!countContainersPerRM.containsKey(rr.getAllocationRequestId())) {
-        countContainersPerRM.put(rr.getAllocationRequestId(), new HashMap<>());
-      }
-      if (!countContainersPerRM.get(rr.getAllocationRequestId())
-          .containsKey(targetId)) {
-        countContainersPerRM.get(rr.getAllocationRequestId()).put(targetId,
-            new AtomicLong(0));
-      }
-      countContainersPerRM.get(rr.getAllocationRequestId()).get(targetId)
-          .addAndGet(rr.getNumContainers());
+      if (rr.getNumContainers() > 0) {
+        if (!countContainersPerRM.containsKey(rr.getAllocationRequestId())) {
+          countContainersPerRM.put(rr.getAllocationRequestId(),
+              new HashMap<>());
+        }
+        if (!countContainersPerRM.get(rr.getAllocationRequestId())
+            .containsKey(targetId)) {
+          countContainersPerRM.get(rr.getAllocationRequestId()).put(targetId,
+              new AtomicLong(0));
+        }
+        countContainersPerRM.get(rr.getAllocationRequestId()).get(targetId)
+            .addAndGet(rr.getNumContainers());
 
-      if (!totNumLocalizedContainers.containsKey(rr.getAllocationRequestId())) {
-        totNumLocalizedContainers.put(rr.getAllocationRequestId(),
-            new AtomicLong(0));
+        if (!totNumLocalizedContainers
+            .containsKey(rr.getAllocationRequestId())) {
+          totNumLocalizedContainers.put(rr.getAllocationRequestId(),
+              new AtomicLong(0));
+        }
+        totNumLocalizedContainers.get(rr.getAllocationRequestId())
+            .addAndGet(rr.getNumContainers());
       }
-      totNumLocalizedContainers.get(rr.getAllocationRequestId())
-          .addAndGet(rr.getNumContainers());
 
       internalAddToAnswer(targetId, rr);
     }

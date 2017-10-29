@@ -76,6 +76,11 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand setVolumeDriver(String volumeDriver) {
+    super.addCommandArguments("volume-driver", volumeDriver);
+    return this;
+  }
+
   public DockerRunCommand setCGroupParent(String parentPath) {
     super.addCommandArguments("cgroup-parent", parentPath);
     return this;

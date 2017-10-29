@@ -173,8 +173,8 @@ public class SLSRunner extends Configured implements Tool {
     // <AMType, Class> map
     for (Map.Entry e : tempConf) {
       String key = e.getKey().toString();
-      if (key.startsWith(SLSConfiguration.AM_TYPE)) {
-        String amType = key.substring(SLSConfiguration.AM_TYPE.length());
+      if (key.startsWith(SLSConfiguration.AM_TYPE_PREFIX)) {
+        String amType = key.substring(SLSConfiguration.AM_TYPE_PREFIX.length());
         amClassMap.put(amType, Class.forName(tempConf.get(key)));
       }
     }
@@ -384,33 +384,36 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   private void createAMForJob(Map jsonJob) throws YarnException {
-    long jobStartTime = Long.parseLong(jsonJob.get("job.start.ms").toString());
+    long jobStartTime = Long.parseLong(
+        jsonJob.get(SLSConfiguration.JOB_START_MS).toString());
 
     long jobFinishTime = 0;
-    if (jsonJob.containsKey("job.end.ms")) {
-      jobFinishTime = Long.parseLong(jsonJob.get("job.end.ms").toString());
+    if (jsonJob.containsKey(SLSConfiguration.JOB_END_MS)) {
+      jobFinishTime = Long.parseLong(
+          jsonJob.get(SLSConfiguration.JOB_END_MS).toString());
     }
 
-    String user = (String) jsonJob.get("job.user");
+    String user = (String) jsonJob.get(SLSConfiguration.JOB_USER);
     if (user == null) {
       user = "default";
     }
 
-    String queue = jsonJob.get("job.queue.name").toString();
+    String queue = jsonJob.get(SLSConfiguration.JOB_QUEUE_NAME).toString();
     increaseQueueAppNum(queue);
 
-    String amType = (String)jsonJob.get("am.type");
+    String amType = (String)jsonJob.get(SLSConfiguration.AM_TYPE);
     if (amType == null) {
       amType = SLSUtils.DEFAULT_JOB_TYPE;
     }
 
     int jobCount = 1;
-    if (jsonJob.containsKey("job.count")) {
-      jobCount = Integer.parseInt(jsonJob.get("job.count").toString());
+    if (jsonJob.containsKey(SLSConfiguration.JOB_COUNT)) {
+      jobCount = Integer.parseInt(
+          jsonJob.get(SLSConfiguration.JOB_COUNT).toString());
     }
     jobCount = Math.max(jobCount, 1);
 
-    String oldAppId = (String)jsonJob.get("job.id");
+    String oldAppId = (String)jsonJob.get(SLSConfiguration.JOB_ID);
     // Job id is generated automatically if this job configuration allows
     // multiple job instances
     if(jobCount > 1) {
@@ -426,7 +429,7 @@ public class SLSRunner extends Configured implements Tool {
   private List<ContainerSimulator> getTaskContainers(Map jsonJob)
       throws YarnException {
     List<ContainerSimulator> containers = new ArrayList<>();
-    List tasks = (List) jsonJob.get("job.tasks");
+    List tasks = (List) jsonJob.get(SLSConfiguration.JOB_TASKS);
     if (tasks == null || tasks.size() == 0) {
       throw new YarnException("No task for the job!");
     }
@@ -434,17 +437,22 @@ public class SLSRunner extends Configured implements Tool {
     for (Object o : tasks) {
       Map jsonTask = (Map) o;
 
-      String hostname = (String) jsonTask.get("container.host");
+      String hostname = (String) jsonTask.get(SLSConfiguration.TASK_HOST);
 
       long duration = 0;
-      if (jsonTask.containsKey("duration.ms")) {
-        duration = Integer.parseInt(jsonTask.get("duration.ms").toString());
-      } else if (jsonTask.containsKey("container.start.ms") &&
-          jsonTask.containsKey("container.end.ms")) {
-        long taskStart = Long.parseLong(jsonTask.get("container.start.ms")
-            .toString());
-        long taskFinish = Long.parseLong(jsonTask.get("container.end.ms")
-            .toString());
+      if (jsonTask.containsKey(SLSConfiguration.TASK_DURATION_MS)) {
+        duration = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.TASK_DURATION_MS).toString());
+      } else if (jsonTask.containsKey(SLSConfiguration.DURATION_MS)) {
+        // Also support "duration.ms" for backward compatibility
+        duration = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.DURATION_MS).toString());
+      } else if (jsonTask.containsKey(SLSConfiguration.TASK_START_MS) &&
+          jsonTask.containsKey(SLSConfiguration.TASK_END_MS)) {
+        long taskStart = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_START_MS).toString());
+        long taskFinish = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_END_MS).toString());
         duration = taskFinish - taskStart;
       }
       if (duration <= 0) {
@@ -453,32 +461,33 @@ public class SLSRunner extends Configured implements Tool {
       }
 
       Resource res = getDefaultContainerResource();
-      if (jsonTask.containsKey("container.memory")) {
-        int containerMemory =
-            Integer.parseInt(jsonTask.get("container.memory").toString());
+      if (jsonTask.containsKey(SLSConfiguration.TASK_MEMORY)) {
+        int containerMemory = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.TASK_MEMORY).toString());
         res.setMemorySize(containerMemory);
       }
 
-      if (jsonTask.containsKey("container.vcores")) {
-        int containerVCores =
-            Integer.parseInt(jsonTask.get("container.vcores").toString());
+      if (jsonTask.containsKey(SLSConfiguration.CONTAINER_VCORES)) {
+        int containerVCores = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.CONTAINER_VCORES).toString());
         res.setVirtualCores(containerVCores);
       }
 
       int priority = DEFAULT_MAPPER_PRIORITY;
-      if (jsonTask.containsKey("container.priority")) {
-        priority = Integer.parseInt(jsonTask.get("container.priority")
-            .toString());
+      if (jsonTask.containsKey(SLSConfiguration.TASK_PRIORITY)) {
+        priority = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.TASK_PRIORITY).toString());
       }
 
       String type = "map";
-      if (jsonTask.containsKey("container.type")) {
-        type = jsonTask.get("container.type").toString();
+      if (jsonTask.containsKey(SLSConfiguration.TASK_TYPE)) {
+        type = jsonTask.get(SLSConfiguration.TASK_TYPE).toString();
       }
 
       int count = 1;
-      if (jsonTask.containsKey("count")) {
-        count = Integer.parseInt(jsonTask.get("count").toString());
+      if (jsonTask.containsKey(SLSConfiguration.COUNT)) {
+        count = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.COUNT).toString());
       }
       count = Math.max(count, 1);
 
@@ -708,14 +717,14 @@ public class SLSRunner extends Configured implements Tool {
       return amContainerResource;
     }
 
-    if (jsonJob.containsKey("am.memory")) {
+    if (jsonJob.containsKey(SLSConfiguration.AM_MEMORY)) {
       amContainerResource.setMemorySize(
-          Long.parseLong(jsonJob.get("am.memory").toString()));
+          Long.parseLong(jsonJob.get(SLSConfiguration.AM_MEMORY).toString()));
     }
 
-    if (jsonJob.containsKey("am.vcores")) {
+    if (jsonJob.containsKey(SLSConfiguration.AM_VCORES)) {
       amContainerResource.setVirtualCores(
-          Integer.parseInt(jsonJob.get("am.vcores").toString()));
+          Integer.parseInt(jsonJob.get(SLSConfiguration.AM_VCORES).toString()));
     }
     return amContainerResource;
   }

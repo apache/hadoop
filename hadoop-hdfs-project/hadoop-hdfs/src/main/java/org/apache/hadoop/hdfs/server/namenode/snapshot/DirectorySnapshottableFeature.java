@@ -249,8 +249,12 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
 
   /**
    * Compute the difference between two snapshots (or a snapshot and the current
-   * directory) of the directory.
+   * directory) of the directory. The diff calculation can be scoped to either
+   * the snapshot root or any descendant directory under the snapshot root.
    *
+   * @param snapshotRootDir the snapshot root directory
+   * @param snapshotDiffScopeDir the descendant directory under snapshot root
+   *          to scope the diff calculation to.
    * @param from The name of the start point of the comparison. Null indicating
    *          the current tree.
    * @param to The name of the end point. Null indicating the current tree.
@@ -259,18 +263,24 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    *           point, or if endSnapshotName is not null but cannot be identified
    *           as a previous snapshot.
    */
-  SnapshotDiffInfo computeDiff(final INodeDirectory snapshotRoot,
-      final String from, final String to) throws SnapshotException {
-    Snapshot fromSnapshot = getSnapshotByName(snapshotRoot, from);
-    Snapshot toSnapshot = getSnapshotByName(snapshotRoot, to);
+  SnapshotDiffInfo computeDiff(final INodeDirectory snapshotRootDir,
+      final INodeDirectory snapshotDiffScopeDir, final String from,
+      final String to) throws SnapshotException {
+    Preconditions.checkArgument(snapshotDiffScopeDir
+        .isDescendantOfSnapshotRoot(snapshotRootDir));
+    Snapshot fromSnapshot = getSnapshotByName(snapshotRootDir, from);
+    Snapshot toSnapshot = getSnapshotByName(snapshotRootDir, to);
     // if the start point is equal to the end point, return null
     if (from.equals(to)) {
       return null;
     }
-    SnapshotDiffInfo diffs = new SnapshotDiffInfo(snapshotRoot, fromSnapshot,
-        toSnapshot);
-    computeDiffRecursively(snapshotRoot, snapshotRoot, new ArrayList<byte[]>(),
-        diffs);
+    SnapshotDiffInfo diffs = new SnapshotDiffInfo(snapshotRootDir,
+        snapshotDiffScopeDir, fromSnapshot, toSnapshot);
+    // The snapshot diff scope dir is passed in as the snapshot dir
+    // so that the file paths in the diff report are relative to the
+    // snapshot scope dir.
+    computeDiffRecursively(snapshotDiffScopeDir, snapshotDiffScopeDir,
+        new ArrayList<>(), diffs);
     return diffs;
   }
 
@@ -300,13 +310,15 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   /**
    * Recursively compute the difference between snapshots under a given
    * directory/file.
-   * @param snapshotRoot The directory where snapshots were taken.
+   * @param snapshotDir The directory where snapshots were taken. Can be a
+   *                    snapshot root directory or any descendant directory
+   *                    under snapshot root directory.
    * @param node The directory/file under which the diff is computed.
    * @param parentPath Relative path (corresponding to the snapshot root) of
    *                   the node's parent.
    * @param diffReport data structure used to store the diff.
    */
-  private void computeDiffRecursively(final INodeDirectory snapshotRoot,
+  private void computeDiffRecursively(final INodeDirectory snapshotDir,
       INode node, List<byte[]> parentPath, SnapshotDiffInfo diffReport) {
     final Snapshot earlierSnapshot = diffReport.isFromEarlier() ?
         diffReport.getFrom() : diffReport.getTo();
@@ -331,7 +343,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         boolean toProcess = diff.searchIndex(ListType.DELETED, name) < 0;
         if (!toProcess && child instanceof INodeReference.WithName) {
           byte[][] renameTargetPath = findRenameTargetPath(
-              snapshotRoot, (WithName) child,
+              snapshotDir, (WithName) child,
               laterSnapshot == null ? Snapshot.CURRENT_STATE_ID :
                 laterSnapshot.getId());
           if (renameTargetPath != null) {
@@ -341,7 +353,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
         }
         if (toProcess) {
           parentPath.add(name);
-          computeDiffRecursively(snapshotRoot, child, parentPath, diffReport);
+          computeDiffRecursively(snapshotDir, child, parentPath, diffReport);
           parentPath.remove(parentPath.size() - 1);
         }
       }

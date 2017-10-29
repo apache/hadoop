@@ -639,6 +639,13 @@ public class YarnConfiguration extends Configuration {
       RM_ZK_PREFIX + "appid-node.split-index";
   public static final int DEFAULT_ZK_APPID_NODE_SPLIT_INDEX = 0;
 
+  /** Index at which the RM Delegation Token ids will be split so that the
+   * delegation token znodes stored in the zookeeper RM state store will be
+   * stored as two different znodes (parent-child). **/
+  public static final  String ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX =
+      RM_ZK_PREFIX + "delegation-token-node.split-index";
+  public static final int DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX = 0;
+
   public static final String RM_ZK_ACL = RM_ZK_PREFIX + "acl";
   public static final String DEFAULT_RM_ZK_ACL = "world:anyone:rwcda";
 
@@ -967,6 +974,17 @@ public class YarnConfiguration extends Configuration {
   @Unstable
   public static final String DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE =
       "resource-profiles.json";
+
+  /**
+   * Enable/disable loading resource-types.xml at client side.
+   */
+  @Public
+  @Unstable
+  public static final String YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER = YARN_PREFIX
+      + "client.load.resource-types.from-server";
+  @Public
+  @Unstable
+  public static final boolean DEFAULT_YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER = false;
 
   /**
    * Timeout in seconds for YARN node graceful decommission.
@@ -1464,6 +1482,35 @@ public class YarnConfiguration extends Configuration {
 
   @Private
   public static final String DEFAULT_NM_GPU_PATH_TO_EXEC = "";
+
+  /**
+   * Settings to control which implementation of docker plugin for GPU will be
+   * used.
+   *
+   * By default uses NVIDIA docker v1.
+   */
+  @Private
+  public static final String NM_GPU_DOCKER_PLUGIN_IMPL =
+      NM_GPU_RESOURCE_PREFIX + "docker-plugin";
+
+  @Private
+  public static final String NVIDIA_DOCKER_V1 = "nvidia-docker-v1";
+
+  @Private
+  public static final String DEFAULT_NM_GPU_DOCKER_PLUGIN_IMPL =
+      NVIDIA_DOCKER_V1;
+
+  /**
+   * This setting controls end point of nvidia-docker-v1 plugin
+   */
+  @Private
+  public static final String NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
+      NM_GPU_RESOURCE_PREFIX + "docker-plugin." + NVIDIA_DOCKER_V1
+          + ".endpoint";
+
+  @Private
+  public static final String DEFAULT_NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
+      "http://localhost:3476/v1.0/docker/cli";
 
 
   /** NM Webapp address.**/

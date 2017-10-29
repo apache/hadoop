@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 
 /**
  * {@link ResourcePlugin} is an interface for node manager to easier support
@@ -80,4 +81,14 @@ public interface ResourcePlugin {
    * @throws YarnException if any issue occurs
    */
   void cleanup() throws YarnException;
+
+  /**
+   * Plugin need to get {@link DockerCommandPlugin}. This will be invoked by
+   * {@link DockerLinuxContainerRuntime} when execute docker commands such as
+   * run/stop/pull, etc.
+   *
+   * @return DockerCommandPlugin instance. return null if plugin doesn't
+   *         have requirement to update docker command.
+   */
+  DockerCommandPlugin getDockerCommandPluginInstance();
 }

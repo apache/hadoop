@@ -158,12 +158,19 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   @VisibleForTesting
-  protected RequestInterceptorChainWrapper getInterceptorChain() {
+  protected RequestInterceptorChainWrapper getInterceptorChain(
+      final HttpServletRequest hsr) {
     String user = "";
+    if (hsr != null) {
+      user = hsr.getRemoteUser();
+    }
     try {
-      user = UserGroupInformation.getCurrentUser().getUserName();
+      if (user == null || user.equals("")) {
+        // Yarn Router user
+        user = UserGroupInformation.getCurrentUser().getUserName();
+      }
     } catch (IOException e) {
-      LOG.error("IOException " + e.getMessage());
+      LOG.error("Cannot get user: {}", e.getMessage());
     }
     if (!userPipelineMap.containsKey(user)) {
       initializePipeline(user);
@@ -316,7 +323,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Override
   public ClusterInfo getClusterInfo() {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getClusterInfo();
   }
 
@@ -327,7 +334,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getClusterMetricsInfo();
   }
 
@@ -338,7 +345,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getSchedulerInfo();
   }
 
@@ -350,7 +357,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public String dumpSchedulerLogs(@FormParam(RMWSConsts.TIME) String time,
       @Context HttpServletRequest hsr) throws IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().dumpSchedulerLogs(time, hsr);
   }
 
@@ -361,7 +368,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Override
   public NodesInfo getNodes(@QueryParam(RMWSConsts.STATES) String states) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getNodes(states);
   }
 
@@ -372,7 +379,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Override
   public NodeInfo getNode(@PathParam(RMWSConsts.NODEID) String nodeId) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getNode(nodeId);
   }
 
@@ -396,7 +403,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.APPLICATION_TAGS) Set<String> applicationTags,
       @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getApps(hsr, stateQuery, statesQuery,
         finalStatusQuery, userQuery, queueQuery, count, startedBegin,
         startedEnd, finishBegin, finishEnd, applicationTypes, applicationTags,
@@ -411,7 +418,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public ActivitiesInfo getActivities(@Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.NODEID) String nodeId) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getActivities(hsr, nodeId);
   }
 
@@ -424,7 +431,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.APP_ID) String appId,
       @QueryParam(RMWSConsts.MAX_TIME) String time) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppActivities(hsr, appId, time);
   }
 
@@ -438,7 +445,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.STATES) Set<String> stateQueries,
       @QueryParam(RMWSConsts.APPLICATION_TYPES) Set<String> typeQueries) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppStatistics(hsr, stateQueries,
         typeQueries);
   }
@@ -452,7 +459,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId,
       @QueryParam(RMWSConsts.DESELECTS) Set<String> unselectedFields) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getApp(hsr, appId, unselectedFields);
   }
 
@@ -464,7 +471,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public AppState getAppState(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppState(hsr, appId);
   }
 
@@ -478,7 +485,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().updateAppState(targetState, hsr,
         appId);
   }
@@ -491,7 +498,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public NodeToLabelsInfo getNodeToLabels(@Context HttpServletRequest hsr)
       throws IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getNodeToLabels(hsr);
   }
 
@@ -503,7 +510,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public LabelsToNodesInfo getLabelsToNodes(
       @QueryParam(RMWSConsts.LABELS) Set<String> labels) throws IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getLabelsToNodes(labels);
   }
 
@@ -516,7 +523,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       final NodeToLabelsEntryList newNodeToLabels,
       @Context HttpServletRequest hsr) throws Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().replaceLabelsOnNodes(newNodeToLabels,
         hsr);
   }
@@ -531,7 +538,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.NODEID) String nodeId) throws Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().replaceLabelsOnNode(newNodeLabelsName,
         hsr, nodeId);
   }
@@ -544,7 +551,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public NodeLabelsInfo getClusterNodeLabels(@Context HttpServletRequest hsr)
       throws IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getClusterNodeLabels(hsr);
   }
 
@@ -556,7 +563,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels,
       @Context HttpServletRequest hsr) throws Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().addToClusterNodeLabels(newNodeLabels,
         hsr);
   }
@@ -570,7 +577,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.LABELS) Set<String> oldNodeLabels,
       @Context HttpServletRequest hsr) throws Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor()
         .removeFromCluserNodeLabels(oldNodeLabels, hsr);
   }
@@ -583,7 +590,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public NodeLabelsInfo getLabelsOnNode(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.NODEID) String nodeId) throws IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getLabelsOnNode(hsr, nodeId);
   }
 
@@ -595,7 +602,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public AppPriority getAppPriority(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppPriority(hsr, appId);
   }
 
@@ -609,7 +616,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor()
         .updateApplicationPriority(targetPriority, hsr, appId);
   }
@@ -622,7 +629,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public AppQueue getAppQueue(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppQueue(hsr, appId);
   }
 
@@ -636,7 +643,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().updateAppQueue(targetQueue, hsr,
         appId);
   }
@@ -649,7 +656,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public Response createNewApplication(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().createNewApplication(hsr);
   }
 
@@ -662,7 +669,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().submitApplication(newApp, hsr);
   }
 
@@ -675,7 +682,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr) throws AuthorizationException,
       IOException, InterruptedException, Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().postDelegationToken(tokenData, hsr);
   }
 
@@ -687,7 +694,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public Response postDelegationTokenExpiration(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().postDelegationTokenExpiration(hsr);
   }
 
@@ -700,7 +707,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().cancelDelegationToken(hsr);
   }
 
@@ -712,7 +719,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public Response createNewReservation(@Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().createNewReservation(hsr);
   }
 
@@ -725,7 +732,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().submitReservation(resContext, hsr);
   }
 
@@ -738,7 +745,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().updateReservation(resContext, hsr);
   }
 
@@ -751,7 +758,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @Context HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().deleteReservation(resContext, hsr);
   }
 
@@ -768,7 +775,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.INCLUDE_RESOURCE) @DefaultValue(DEFAULT_INCLUDE_RESOURCE) boolean includeResourceAllocations,
       @Context HttpServletRequest hsr) throws Exception {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().listReservation(queue, reservationId,
         startTime, endTime, includeResourceAllocations, hsr);
   }
@@ -782,7 +789,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId,
       @PathParam(RMWSConsts.TYPE) String type) throws AuthorizationException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppTimeout(hsr, appId, type);
   }
 
@@ -794,7 +801,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public AppTimeoutsInfo getAppTimeouts(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppTimeouts(hsr, appId);
   }
 
@@ -808,7 +815,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().updateApplicationTimeout(appTimeout,
         hsr, appId);
   }
@@ -821,7 +828,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public AppAttemptsInfo getAppAttempts(@Context HttpServletRequest hsr,
       @PathParam(RMWSConsts.APPID) String appId) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
     return pipeline.getRootInterceptor().getAppAttempts(hsr, appId);
   }
 
@@ -834,7 +841,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId,
       @PathParam(RMWSConsts.APPATTEMPTID) String appAttemptId) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(req);
     return pipeline.getRootInterceptor().getAppAttempt(req, res, appId,
         appAttemptId);
   }
@@ -848,7 +855,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPID) String appId,
       @PathParam(RMWSConsts.APPATTEMPTID) String appAttemptId) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(req);
     return pipeline.getRootInterceptor().getContainers(req, res, appId,
         appAttemptId);
   }
@@ -863,7 +870,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
       @PathParam(RMWSConsts.APPATTEMPTID) String appAttemptId,
       @PathParam(RMWSConsts.CONTAINERID) String containerId) {
     init();
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(req);
     return pipeline.getRootInterceptor().getContainer(req, res, appId,
         appAttemptId, containerId);
   }

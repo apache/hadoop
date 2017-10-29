@@ -24,17 +24,22 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu.GpuResourceHandlerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.NodeResourceUpdaterPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 
 public class GpuResourcePlugin implements ResourcePlugin {
   private ResourceHandler gpuResourceHandler = null;
   private GpuNodeResourceUpdateHandler resourceDiscoverHandler = null;
+  private DockerCommandPlugin dockerCommandPlugin = null;
 
   @Override
   public synchronized void initialize(Context context) throws YarnException {
     resourceDiscoverHandler = new GpuNodeResourceUpdateHandler();
     GpuDiscoverer.getInstance().initialize(context.getConf());
+    dockerCommandPlugin =
+        GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
+            context.getConf());
   }
 
   @Override
@@ -57,5 +62,9 @@ public class GpuResourcePlugin implements ResourcePlugin {
   @Override
   public void cleanup() throws YarnException {
     // Do nothing.
+  }
+
+  public DockerCommandPlugin getDockerCommandPluginInstance() {
+    return dockerCommandPlugin;
   }
 }

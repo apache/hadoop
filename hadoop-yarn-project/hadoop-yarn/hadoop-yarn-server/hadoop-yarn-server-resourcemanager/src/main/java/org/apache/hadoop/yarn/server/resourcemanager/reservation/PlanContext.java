@@ -91,6 +91,17 @@ public interface PlanContext {
   public Resource getMaximumAllocation();
 
   /**
+   * Returns the maximum periodicity allowed in a recurrence expression
+   * for reservations of a particular plan. This value must be divisible by
+   * the recurrence expression of a newly submitted reservation. Otherwise, the
+   * reservation submission will fail.
+   *
+   * @return the maximum periodicity allowed in a recurrence expression for
+   * reservations of a particular plan.
+   */
+  long getMaximumPeriodicity();
+
+  /**
    * Return the name of the queue in the {@link ResourceScheduler} corresponding
    * to this plan
    * 
