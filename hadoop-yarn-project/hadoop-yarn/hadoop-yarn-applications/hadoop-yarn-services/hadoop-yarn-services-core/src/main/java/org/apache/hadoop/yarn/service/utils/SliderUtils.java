@@ -29,8 +29,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.service.client.params.Arguments;
-import org.apache.hadoop.yarn.service.client.params.SliderActions;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.containerlaunch.ClasspathConstructor;
 import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
@@ -484,8 +482,8 @@ public final class SliderUtils {
         classpath.addLibDir(YarnServiceConstants.DEPENDENCY_LOCALIZED_DIR_LINK);
       } else {
         log.info(
-            "For faster submission of apps, upload dependencies using cmd {} {}",
-            SliderActions.ACTION_DEPENDENCY, Arguments.ARG_UPLOAD);
+            "For faster submission of apps, upload dependencies using cmd " +
+                "enableFastLaunch");
       }
       classpath.addRemoteClasspathEnvVar();
       classpath.append(ApplicationConstants.Environment.HADOOP_CONF_DIR.$$());

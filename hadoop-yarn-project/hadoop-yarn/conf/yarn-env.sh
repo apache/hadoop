@@ -150,18 +150,6 @@
 #export YARN_ROUTER_OPTS=
 
 ###
-# Services API specific parameters
-###
-# Specify the JVM options to be used when starting the services API.
-#
-# These options will be appended to the options specified as HADOOP_OPTS
-# and therefore may override any similar flags set in HADOOP_OPTS
-#
-# See ResourceManager for some examples
-#
-#export YARN_APISERVER_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-apiserver.log-$(date +'%Y%m%d%H%M')"
-
-###
 # Registry DNS specific parameters
 ###
 # For privileged registry DNS, user to run as after dropping privileges
@@ -172,3 +160,9 @@
 # By default, Hadoop uses jsvc which needs to know to launch a
 # server jvm.
 # export YARN_REGISTRYDNS_SECURE_EXTRA_OPTS="-jvm server"
+
+###
+# YARN Services parameters
+###
+# Directory containing service examples
+# export YARN_SERVICE_EXAMPLES_DIR = $HADOOP_YARN_HOME/share/hadoop/yarn/yarn-service-examples

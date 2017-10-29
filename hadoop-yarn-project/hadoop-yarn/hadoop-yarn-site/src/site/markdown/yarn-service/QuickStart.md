@@ -45,11 +45,11 @@ Below is a simple service definition that launches sleep containers on YARN by w
 ```
 User can simply run a pre-built example service on YARN using below command:
 ```
-yarn service create [service-name] --example [example-name]
+yarn app -launch <service-name> <example-name>
 ```
 e.g. Below command launches a `sleeper` service named as `my-sleeper` on YARN.
 ```
-yarn service create my-sleeper --example sleeper
+yarn app -launch my-sleeper sleeper
 ```
 For launching docker based services using YARN Service framework, please refer to [API doc](YarnServiceAPI.md).
 
@@ -58,51 +58,53 @@ Below steps walk you through deploying a services on YARN using CLI.
 Refer to [Yarn Commands](../YarnCommands.md) for the full list of commands and options.
 ### Deploy a service
 ```
-yarn service create --file ${PATH_TO_SERVICE_DEF_FILE}
+yarn app -launch ${SERVICE_NAME} ${PATH_TO_SERVICE_DEF_FILE}
 ```
 Params:
-- SERVICE_NAME: The name of the service. Note that this needs to be unique across all running services.
+- SERVICE_NAME: The name of the service. Note that this needs to be unique across running services for the current user.
 - PATH_TO_SERVICE_DEF: The path to the service definition file in JSON format.
 
 For example:
 ```
-yarn service create --file /path/to/local/sleeper.json
+yarn app -launch sleeper-service /path/to/local/sleeper.json
 ```
 
 ### Flex a component of a service
 Increase or decrease the number of containers for a component.
 ```
-yarn service flex ${SERVICE_NAME} --component ${COMPONENT_NAME} ${NUMBER_OF_CONTAINERS}
+yarn app -flex ${SERVICE_NAME} -component ${COMPONENT_NAME} ${NUMBER_OF_CONTAINERS}
 ```
 For example, for a service named `sleeper-service`:
 
 Set the `sleeper` component to `2` containers (absolute number).
 
 ```
-yarn service flex sleeper-service --component sleeper 2
+yarn app -flex sleeper-service -component sleeper 2
 ```
+
+Relative changes are also supported for the ${NUMBER_OF_CONTAINERS} in the flex command, such as +2 or -2.
 
 ### Stop a service
 Stopping a service will stop all containers of the service and the ApplicationMaster, but does not delete the state of a service, such as the service root folder on hdfs.
 ```
-yarn service stop ${SERVICE_NAME}
+yarn app -stop ${SERVICE_NAME}
 ```
 
 ### Restart a stopped service
 Restarting a stopped service is easy - just call start!
 ```
-yarn service start ${SERVICE_NAME}
+yarn app -start ${SERVICE_NAME}
 ```
 
 ### Destroy a service
 In addition to stopping a service, it also deletes the service root folder on hdfs and the records in YARN Service Registry.
 ```
-yarn service destroy ${SERVICE_NAME}
+yarn app -destroy ${SERVICE_NAME}
 ```
 
 ## Manage services on YARN via REST API
 
-YARN API Server REST API can be activated in two modes: embedded or standalone.
+YARN API Server REST API can be activated as part of the ResourceManager.
 
 ### Start Embedded API-Server as part of ResourceManager
 For running inside ResourceManager, add this property to `yarn-site.xml` and restart ResourceManager.
@@ -119,13 +121,6 @@ For running inside ResourceManager, add this property to `yarn-site.xml` and res
 
 Services can be deployed on YARN through the ResourceManager web endpoint.
 
-### Start Standalone API-Server for deploying services on YARN
-API server is the service that sits in front of YARN ResourceManager and lets users submit their service specs via HTTP.
-```
- yarn --daemon start apiserver
- ```
-The above command starts the API Server on the localhost at port 9191 by default. 
-
 Refer to [API doc](YarnServiceAPI.md)  for the detailed API specificatiosn.
 
 ### Deploy a service
@@ -135,19 +130,14 @@ POST the aforementioned example service definition to the ResourceManager api-se
 POST  http://localhost:8088/ws/v1/services
 ```
 
-Or standalone API server:
-```
-POST  http://localhost:9191/ws/v1/services
-```
-
 ### Get a service status
 ```
-GET  http://localhost:9191/ws/v1/services/${SERVICE_NAME}
+GET  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
 ```
 
 ### Flex a component of a service
 ```
-PUT  http://localhost:9191/ws/v1/services/${SERVICE_NAME}/components/${COMPONENT_NAME}
+PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}/components/${COMPONENT_NAME}
 ```
 `PUT` Request body:
 ```
@@ -168,7 +158,7 @@ For example:
 Stopping a service will stop all containers of the service and the ApplicationMaster, but does not delete the state of a service, such as the service root folder on hdfs.
 
 ```
-PUT  http://localhost:9191/ws/v1/services/${SERVICE_NAME}
+PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
 ```
 
 `PUT` Request body:
@@ -183,7 +173,7 @@ PUT  http://localhost:9191/ws/v1/services/${SERVICE_NAME}
 Restarting a stopped service is easy.
 
 ```
-PUT  http://localhost:9191/ws/v1/services/${SERVICE_NAME}
+PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
 ```
 
 `PUT` Request body:
@@ -196,7 +186,7 @@ PUT  http://localhost:9191/ws/v1/services/${SERVICE_NAME}
 ### Destroy a service
 In addition to stopping a service, it also deletes the service root folder on hdfs and the records in YARN Service Registry.
 ```
-DELETE  http://localhost:9191/ws/v1/services/${SERVICE_NAME}
+DELETE  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
 ```
 
 ## Services UI with YARN UI2 and Timeline Service v2

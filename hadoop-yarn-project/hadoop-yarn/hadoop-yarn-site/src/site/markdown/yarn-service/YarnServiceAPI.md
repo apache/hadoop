@@ -37,7 +37,7 @@ License URL: http://www.apache.org/licenses/LICENSE-2.0.html
 ### URI scheme
 Host: host.mycompany.com
 
-Port: 9191(default)
+Port: 8088(default RM port)
 
 Schemes: HTTP
 
@@ -368,7 +368,7 @@ The current status of a submitted service, returned as a response to the GET API
 ## Examples
 
 ### Create a simple single-component service with most attribute values as defaults
-POST URL - http://localhost:9191/ws/v1/services
+POST URL - http://localhost:8088/ws/v1/services
 
 ##### POST Request JSON
 ```json
@@ -394,7 +394,7 @@ POST URL - http://localhost:9191/ws/v1/services
 ```
 
 ##### GET Response JSON
-GET URL - http://localhost:9191/ws/v1/services/hello-world
+GET URL - http://localhost:8088/ws/v1/services/hello-world
 
 Note, lifetime value of -1 means unlimited lifetime.
 
@@ -452,7 +452,7 @@ Note, lifetime value of -1 means unlimited lifetime.
 
 ```
 ### Update to modify the lifetime of a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/ws/v1/services/hello-world
 
 ##### PUT Request JSON
 
@@ -464,7 +464,7 @@ Note, irrespective of what the current lifetime value is, this update request wi
 }
 ```
 ### Stop a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/ws/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
@@ -474,7 +474,7 @@ PUT URL - http://localhost:9191/ws/v1/services/hello-world
 ```
 
 ### Start a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/ws/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
@@ -484,7 +484,7 @@ PUT URL - http://localhost:9191/ws/v1/services/hello-world
 ```
 
 ### Update to flex up/down the no of containers (instances) of a component of a service
-PUT URL - http://localhost:9191/ws/v1/services/hello-world/components/hello
+PUT URL - http://localhost:8088/ws/v1/services/hello-world/components/hello
 
 ##### PUT Request JSON
 ```json
@@ -495,12 +495,12 @@ PUT URL - http://localhost:9191/ws/v1/services/hello-world/components/hello
 ```
 
 ### Destroy a service
-DELETE URL - http://localhost:9191/ws/v1/services/hello-world
+DELETE URL - http://localhost:8088/ws/v1/services/hello-world
 
 ***
 
 ### Create a complicated service  - HBase
-POST URL - http://localhost:9191:/ws/v1/services/hbase-app-1
+POST URL - http://localhost:8088:/ws/v1/services/hbase-app-1
 
 ##### POST Request JSON
 
