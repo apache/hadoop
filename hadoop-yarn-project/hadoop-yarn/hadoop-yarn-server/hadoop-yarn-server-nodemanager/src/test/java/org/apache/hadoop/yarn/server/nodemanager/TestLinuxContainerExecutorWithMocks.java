@@ -158,7 +158,7 @@ public class TestLinuxContainerExecutorWithMocks {
         mockPrivilegedExec);
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
-    linuxContainerRuntime.initialize(conf);
+    linuxContainerRuntime.initialize(conf, null);
     mockExec = new LinuxContainerExecutor(linuxContainerRuntime);
     mockExec.setConf(conf);
     mockExecMockRuntime = new LinuxContainerExecutor(mockLinuxContainerRuntime);
@@ -315,7 +315,7 @@ public class TestLinuxContainerExecutorWithMocks {
           DefaultLinuxContainerRuntime(PrivilegedOperationExecutor.getInstance(
               conf));
 
-      linuxContainerRuntime.initialize(conf);
+      linuxContainerRuntime.initialize(conf, null);
       exec = new LinuxContainerExecutor(linuxContainerRuntime);
 
       mockExec = spy(exec);
@@ -545,7 +545,7 @@ public class TestLinuxContainerExecutorWithMocks {
             any(File.class), any(Map.class), anyBoolean(), anyBoolean());
     LinuxContainerRuntime runtime = new DefaultLinuxContainerRuntime(
         spyPrivilegedExecutor);
-    runtime.initialize(conf);
+    runtime.initialize(conf, null);
     mockExec = new LinuxContainerExecutor(runtime);
     mockExec.setConf(conf);
     LinuxContainerExecutor lce = new LinuxContainerExecutor(runtime) {

@@ -26,12 +26,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -54,8 +53,8 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 public class GpuResourceAllocator {
   final static Log LOG = LogFactory.getLog(GpuResourceAllocator.class);
 
-  private Set<Integer> allowedGpuDevices = new TreeSet<>();
-  private Map<Integer, ContainerId> usedDevices = new TreeMap<>();
+  private Set<GpuDevice> allowedGpuDevices = new TreeSet<>();
+  private Map<GpuDevice, ContainerId> usedDevices = new TreeMap<>();
   private Context nmContext;
 
   public GpuResourceAllocator(Context ctx) {
@@ -63,14 +62,14 @@ public class GpuResourceAllocator {
   }
 
   /**
-   * Contains allowed and denied devices with minor number.
+   * Contains allowed and denied devices
    * Denied devices will be useful for cgroups devices module to do blacklisting
    */
   static class GpuAllocation {
-    private Set<Integer> allowed = Collections.emptySet();
-    private Set<Integer> denied = Collections.emptySet();
+    private Set<GpuDevice> allowed = Collections.emptySet();
+    private Set<GpuDevice> denied = Collections.emptySet();
 
-    GpuAllocation(Set<Integer> allowed, Set<Integer> denied) {
+    GpuAllocation(Set<GpuDevice> allowed, Set<GpuDevice> denied) {
       if (allowed != null) {
         this.allowed = ImmutableSet.copyOf(allowed);
       }
@@ -79,21 +78,21 @@ public class GpuResourceAllocator {
       }
     }
 
-    public Set<Integer> getAllowedGPUs() {
+    public Set<GpuDevice> getAllowedGPUs() {
       return allowed;
     }
 
-    public Set<Integer> getDeniedGPUs() {
+    public Set<GpuDevice> getDeniedGPUs() {
       return denied;
     }
   }
 
   /**
    * Add GPU to allowed list
-   * @param minorNumber minor number of the GPU device.
+   * @param gpuDevice gpu device
    */
-  public synchronized void addGpu(int minorNumber) {
-    allowedGpuDevices.add(minorNumber);
+  public synchronized void addGpu(GpuDevice gpuDevice) {
+    allowedGpuDevices.add(gpuDevice);
   }
 
   private String getResourceHandlerExceptionMessage(int numRequestedGpuDevices,
@@ -117,42 +116,42 @@ public class GpuResourceAllocator {
               + containerId);
     }
 
-    for (Serializable deviceId : c.getResourceMappings().getAssignedResources(
-        GPU_URI)){
-      if (!(deviceId instanceof String)) {
+    for (Serializable gpuDeviceSerializable : c.getResourceMappings()
+        .getAssignedResources(GPU_URI)) {
+      if (!(gpuDeviceSerializable instanceof GpuDevice)) {
         throw new ResourceHandlerException(
             "Trying to recover device id, however it"
-                + " is not String, this shouldn't happen");
+                + " is not GpuDevice, this shouldn't happen");
       }
 
-
-      int devId;
-      try {
-        devId = Integer.parseInt((String)deviceId);
-      } catch (NumberFormatException e) {
-        throw new ResourceHandlerException("Failed to recover device id because"
-            + "it is not a valid integer, devId:" + deviceId);
-      }
+      GpuDevice gpuDevice = (GpuDevice) gpuDeviceSerializable;
 
       // Make sure it is in allowed GPU device.
-      if (!allowedGpuDevices.contains(devId)) {
-        throw new ResourceHandlerException("Try to recover device id = " + devId
-            + " however it is not in allowed device list:" + StringUtils
-            .join(",", allowedGpuDevices));
+      if (!allowedGpuDevices.contains(gpuDevice)) {
+        throw new ResourceHandlerException(
+            "Try to recover device = " + gpuDevice
+                + " however it is not in allowed device list:" + StringUtils
+                .join(",", allowedGpuDevices));
       }
 
       // Make sure it is not occupied by anybody else
-      if (usedDevices.containsKey(devId)) {
-        throw new ResourceHandlerException("Try to recover device id = " + devId
-            + " however it is already assigned to container=" + usedDevices
-            .get(devId) + ", please double check what happened.");
+      if (usedDevices.containsKey(gpuDevice)) {
+        throw new ResourceHandlerException(
+            "Try to recover device id = " + gpuDevice
+                + " however it is already assigned to container=" + usedDevices
+                .get(gpuDevice) + ", please double check what happened.");
       }
 
-      usedDevices.put(devId, containerId);
+      usedDevices.put(gpuDevice, containerId);
     }
   }
 
-  private int getRequestedGpus(Resource requestedResource) {
+  /**
+   * Get number of requested GPUs from resource.
+   * @param requestedResource requested resource
+   * @return #gpus.
+   */
+  public static int getRequestedGpus(Resource requestedResource) {
     try {
       return Long.valueOf(requestedResource.getResourceValue(
           GPU_URI)).intValue();
@@ -164,8 +163,8 @@ public class GpuResourceAllocator {
   /**
    * Assign GPU to requestor
    * @param container container to allocate
-   * @return List of denied Gpus with minor numbers
-   * @throws ResourceHandlerException When failed to
+   * @return allocation results.
+   * @throws ResourceHandlerException When failed to assign GPUs.
    */
   public synchronized GpuAllocation assignGpus(Container container)
       throws ResourceHandlerException {
@@ -180,12 +179,12 @@ public class GpuResourceAllocator {
                 containerId));
       }
 
-      Set<Integer> assignedGpus = new HashSet<>();
+      Set<GpuDevice> assignedGpus = new TreeSet<>();
 
-      for (int deviceNum : allowedGpuDevices) {
-        if (!usedDevices.containsKey(deviceNum)) {
-          usedDevices.put(deviceNum, containerId);
-          assignedGpus.add(deviceNum);
+      for (GpuDevice gpu : allowedGpuDevices) {
+        if (!usedDevices.containsKey(gpu)) {
+          usedDevices.put(gpu, containerId);
+          assignedGpus.add(gpu);
           if (assignedGpus.size() == numRequestedGpuDevices) {
             break;
           }
@@ -194,21 +193,10 @@ public class GpuResourceAllocator {
 
       // Record in state store if we allocated anything
       if (!assignedGpus.isEmpty()) {
-        List<Serializable> allocatedDevices = new ArrayList<>();
-        for (int gpu : assignedGpus) {
-          allocatedDevices.add(String.valueOf(gpu));
-        }
         try {
-          // Update Container#getResourceMapping.
-          ResourceMappings.AssignedResources assignedResources =
-              new ResourceMappings.AssignedResources();
-          assignedResources.updateAssignedResources(allocatedDevices);
-          container.getResourceMappings().addAssignedResources(GPU_URI,
-              assignedResources);
-
           // Update state store.
-          nmContext.getNMStateStore().storeAssignedResources(containerId,
-              GPU_URI, allocatedDevices);
+          nmContext.getNMStateStore().storeAssignedResources(container, GPU_URI,
+              new ArrayList<>(assignedGpus));
         } catch (IOException e) {
           cleanupAssignGpus(containerId);
           throw new ResourceHandlerException(e);
@@ -226,7 +214,7 @@ public class GpuResourceAllocator {
    * @param containerId containerId
    */
   public synchronized void cleanupAssignGpus(ContainerId containerId) {
-    Iterator<Map.Entry<Integer, ContainerId>> iter =
+    Iterator<Map.Entry<GpuDevice, ContainerId>> iter =
         usedDevices.entrySet().iterator();
     while (iter.hasNext()) {
       if (iter.next().getValue().equals(containerId)) {
@@ -236,7 +224,7 @@ public class GpuResourceAllocator {
   }
 
   @VisibleForTesting
-  public synchronized Map<Integer, ContainerId> getDeviceAllocationMapping() {
+  public synchronized Map<GpuDevice, ContainerId> getDeviceAllocationMapping() {
      return new HashMap<>(usedDevices);
   }
 }

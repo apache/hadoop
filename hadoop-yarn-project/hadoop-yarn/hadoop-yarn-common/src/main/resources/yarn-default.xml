@@ -3451,6 +3451,15 @@
 
   <property>
     <description>
+      Provides an option for client to load supported resource types from RM
+      instead of depending on local resource-types.xml file.
+    </description>
+    <name>yarn.client.load.resource-types.from-server</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
       When yarn.nodemanager.resource.gpu.allowed-gpu-devices=auto specified,
       YARN NodeManager needs to run GPU discovery binary (now only support
       nvidia-smi) to get GPU-related information.
@@ -3477,12 +3486,18 @@
       Number of GPU devices will be reported to RM to make scheduling decisions.
       Set to auto (default) let YARN automatically discover GPU resource from
       system.
+
       Manually specify GPU devices if auto detect GPU device failed or admin
       only want subset of GPU devices managed by YARN. GPU device is identified
-      by their minor device number. A common approach to get minor device number
-      of GPUs is using "nvidia-smi -q" and search "Minor Number" output. An
-      example of manual specification is "0,1,2,4" to allow YARN NodeManager
-      to manage GPU devices with minor number 0/1/2/4.
+      by their minor device number and index. A common approach to get minor
+      device number of GPUs is using "nvidia-smi -q" and search "Minor Number"
+      output.
+
+      When manual specify minor numbers, admin needs to include indice of GPUs
+      as well, format is index:minor_number[,index:minor_number...]. An example
+      of manual specification is "0:0,1:1,2:2,3:4" to allow YARN NodeManager to
+      manage GPU devices with indice 0/1/2/3 and minor number 0/1/2/4.
+      numbers .
     </description>
     <name>yarn.nodemanager.resource-plugins.gpu.allowed-gpu-devices</name>
     <value>auto</value>
@@ -3490,11 +3505,22 @@
 
   <property>
     <description>
-      Provides an option for client to load supported resource types from RM
-      instead of depending on local resource-types.xml file.
+      Specify docker command plugin for GPU. By default uses Nvidia docker V1.
     </description>
-    <name>yarn.client.load.resource-types.from-server</name>
-    <value>false</value>
+    <name>yarn.nodemanager.resource-plugins.gpu.docker-plugin</name>
+    <value>nvidia-docker-v1</value>
   </property>
+
+  <property>
+    <description>
+      Specify end point of nvidia-docker-plugin.
+      Please find documentation: https://github.com/NVIDIA/nvidia-docker/wiki
+      For more details.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.gpu.docker-plugin.nvidia-docker-v1.endpoint</name>
+    <value>http://localhost:3476/v1.0/docker/cli</value>
+  </property>
+
+>>>>>>> theirs
 
 </configuration>
