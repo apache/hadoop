@@ -1120,4 +1120,46 @@ namespace ContainerExecutor {
     }
   }
 
+  TEST_F(TestDockerUtil, test_docker_volume_command) {
+    std::string container_executor_contents = "[docker]\n  docker.allowed.volume-drivers=driver1\n";
+    write_file(container_executor_cfg_file, container_executor_contents);
+    int ret = read_config(container_executor_cfg_file.c_str(), &container_executor_cfg);
+    if (ret != 0) {
+      FAIL();
+    }
+
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=volume\n  sub-command=create\n  volume=volume1 \n driver=driver1",
+        "volume create --name=volume1 --driver=driver1"));
+
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+
+    // Wrong subcommand
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=volume\n  sub-command=ls\n  volume=volume1 \n driver=driver1",
+        static_cast<int>(INVALID_DOCKER_VOLUME_COMMAND)));
+
+    // Volume not specified
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=volume\n  sub-command=create\n  driver=driver1",
+        static_cast<int>(INVALID_DOCKER_VOLUME_NAME)));
+
+    // Invalid volume name
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=volume\n  sub-command=create\n  volume=/a/b/c \n driver=driver1",
+        static_cast<int>(INVALID_DOCKER_VOLUME_NAME)));
+
+    // Driver not specified
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=volume\n  sub-command=create\n  volume=volume1 \n",
+        static_cast<int>(INVALID_DOCKER_VOLUME_DRIVER)));
+
+    // Invalid driver name
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=volume\n  sub-command=create\n volume=volume1 \n driver=driver2",
+        static_cast<int>(INVALID_DOCKER_VOLUME_DRIVER)));
+
+    run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_volume_command);
+  }
 }
