@@ -19,10 +19,10 @@ package org.apache.hadoop.yarn.service.client;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
-import org.apache.hadoop.yarn.service.client.params.ClientArgs;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.junit.After;
@@ -36,7 +36,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_FILE;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
 
 /**
@@ -60,18 +59,10 @@ public class TestBuildExternalComponents {
   // 2. check component names
   private void buildAndCheckComponents(String appName, String appDef,
       SliderFileSystem sfs, Set<String> names) throws Throwable {
-    String[] args =
-        { "build", ARG_FILE, ExampleAppJson.resourceName(appDef) };
-    ClientArgs clientArgs = new ClientArgs(args);
-    clientArgs.parse();
-    ServiceCLI cli = new ServiceCLI() {
-      @Override protected void createServiceClient() {
-        client = new ServiceClient();
-        client.init(conf);
-        client.start();
-      }
-    };
-    cli.exec(clientArgs);
+    AppAdminClient client = AppAdminClient.createAppAdminClient(AppAdminClient
+        .DEFAULT_TYPE, conf);
+    client.actionSave(ExampleAppJson.resourceName(appDef), null, null,
+        null);
 
     // verify generated conf
     List<Component> components =

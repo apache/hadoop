@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.service;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -34,7 +36,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
-import org.apache.hadoop.yarn.service.client.params.ServiceAMArgs;
 import org.apache.hadoop.yarn.service.monitor.ServiceMonitor;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
@@ -51,7 +52,9 @@ public class ServiceMaster extends CompositeService {
   private static final Logger LOG =
       LoggerFactory.getLogger(ServiceMaster.class);
 
-  private static ServiceAMArgs amArgs;
+  public static final String YARNFILE_OPTION = "yarnfile";
+
+  private static String serviceDefPath;
   protected ServiceContext context;
 
   public ServiceMaster(String name) {
@@ -108,7 +111,7 @@ public class ServiceMaster extends CompositeService {
   }
 
   protected Path getAppDir() {
-    return new Path(amArgs.getServiceDefPath()).getParent();
+    return new Path(serviceDefPath).getParent();
   }
 
   protected ServiceScheduler createServiceScheduler(ServiceContext context)
@@ -119,7 +122,7 @@ public class ServiceMaster extends CompositeService {
   protected void loadApplicationJson(ServiceContext context,
       SliderFileSystem fs) throws IOException {
     context.service = ServiceApiUtil
-        .loadServiceFrom(fs, new Path(amArgs.getServiceDefPath()));
+        .loadServiceFrom(fs, new Path(serviceDefPath));
     LOG.info(context.service.toString());
   }
 
@@ -138,14 +141,18 @@ public class ServiceMaster extends CompositeService {
   public static void main(String[] args) throws Exception {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(ServiceMaster.class, args, LOG);
-    amArgs = new ServiceAMArgs(args);
-    amArgs.parse();
     try {
       ServiceMaster serviceMaster = new ServiceMaster("Service Master");
       ShutdownHookManager.get()
           .addShutdownHook(new CompositeServiceShutdownHook(serviceMaster), 30);
       YarnConfiguration conf = new YarnConfiguration();
-      new GenericOptionsParser(conf, args);
+      Options opts = new Options();
+      opts.addOption(YARNFILE_OPTION, true, "HDFS path to JSON service " +
+          "specification");
+      opts.getOption(YARNFILE_OPTION).setRequired(true);
+      GenericOptionsParser parser = new GenericOptionsParser(conf, opts, args);
+      CommandLine cmdLine = parser.getCommandLine();
+      serviceMaster.serviceDefPath = cmdLine.getOptionValue(YARNFILE_OPTION);
       serviceMaster.init(conf);
       serviceMaster.start();
     } catch (Throwable t) {

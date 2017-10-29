@@ -37,25 +37,36 @@ User Commands
 
 Commands useful for users of a Hadoop cluster.
 
-### `application`
+### `application` or `app`
 
 Usage: `yarn application [options] `
+Usage: `yarn app [options] `
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -appId \<ApplicationId\> | Specify Application Id to be operated |
 | -appStates \<States\> | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
+| -appTags \<Tags\> | Works with -list to filter applications based on input comma-separated list of application tags. |
 | -appTypes \<Types\> | Works with -list to filter applications based on input comma-separated list of application types. |
-| -help | Help |
-| -list | Lists applications from the RM. Supports optional use of -appTypes to filter applications based on application type, and -appStates to filter applications based on application state. |
-| -kill \<ApplicationId\> | Kills the application. |
-| -movetoqueue \<Application Id\> | Moves the application to a different queue. |
+| -changeQueue \<Queue Name\> | Moves application to a new queue. ApplicationId can be passed using 'appId' option. 'movetoqueue' command is deprecated, this new command 'changeQueue' performs same functionality. |
+| -component \<Component Name\> \<Count\> | Works with -flex option to change the number of components/containers running for an application / long-running service. Supports absolute or relative changes, such as +1, 2, or -3. |
+| -destroy \<Application Name\> | Destroys a saved application specification and removes all application data permanently. Supports -appTypes option to specify which client implementation to use. |
+| -enableFastLaunch | Uploads AM dependencies to HDFS to make future launches faster. Supports -appTypes option to specify which client implementation to use. |
+| -flex \<Application Name or ID\> | Changes number of running containers for a component of an application / long-running service. Requires -component option. If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
+| -help | Displays help for all commands. |
+| -kill \<Application ID\> | Kills the application. Set of applications can be provided separated with space |
+| -launch \<Application Name\> \<File Name\> | Launches application from specification file (saves specification and starts application). Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
+| -list | List applications. Supports optional use of -appTypes to filter applications based on application type, -appStates to filter applications based on application state and -appTags to filter applications based on application tag. |
+| -movetoqueue \<Application ID\> | Moves the application to a different queue. Deprecated command. Use 'changeQueue' instead. |
 | -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
+| -save \<Application Name\> \<File Name\> | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
+| -start \<Application Name\> | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. |
 | -status \<ApplicationId\> | Prints the status of the application. |
-| -updateLifetime \<Timeout\> | Update application timeout (from the time of request) in seconds. ApplicationId can be specified using 'appId' option. |
+| -stop \<Application Name or ID\> | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
+| -updateLifetime \<Timeout\> | Update timeout of an application from NOW. ApplicationId can be passed using 'appId' option. Timeout value is in seconds. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
 
-Prints application(s) report/kill application
+Prints application(s) report/kill application/manage long running application
 
 ### `applicationattempt`
 
@@ -68,61 +79,6 @@ Usage: `yarn applicationattempt [options] `
 | -status \<Application Attempt Id\> | Prints the status of the application attempt. |
 
 prints applicationattempt(s) report
-
-### `service`
-Usage `yarn service [sub-command] [service-name] [options]`
-
-#### `SUB_COMMAND`
-
-* `build`:  Build a service with its specifications, but do not start it.
-    ```
-    Usage: yarn service build [service-name] --file [file]
-    Fields:
-    service-name     Optional. If specified, it will override the name in the service definition.
-
-    Options:
-      --file,-f      The local path to the service definition file
-    ```
-
-* `create`:  create a service, it's equivalent to first invoke build and then start.
-   ```
-   Usage: yarn service create [service-name] --file [file]
-   Fields:
-    service-name    Optional. If specified, it will override the name in the service definition.
-
-   Options:
-    --file,-f       The local path to the service definition file.
-    --queue,-q      The queue to which the service is submitted.
-    --example,-e    The name of the example service such as:
-                    Sleeper      A simple service that launches a few non-docker sleep containers on YARN.
-   ```
-
-* `dependency`:  Yarn service framework dependency (libraries) management.
-  ```
-  Usage: yarn service dependency [options]
-  Option:
-     --upload      Pre-upload the dependency jars onto HDFS to expediate service launch process.
-  ```
-
-* `destroy`:  Destroy a stopped service, service must be stopped first before destroying.
-  ```
-  Usage: yarn service destroy [service-name]
-  ```
-* `flex`:   Flex a service's component by increasing or decreasing the number of containers.
-  ```
-  Usage: yarn service flex [service-name] --component [component-name] [count]
-  Options:
-    --component [component-name] [count]
-            Specifies the component name and its number of containers. e.g. +1 incr by 1, -2 decr by 2, and 3 makes final count 3.
-  ```
-* `status`:  Get the status of a service.
-  ```
-  Usage: yarn service status [service-name]
-  ```
-* `start`:  Start a service with pre-built specification or a previously stopped service.
-  ```
-  Usage: yarn service start [service-name]
-  ```
 
 ### `classpath`
 
@@ -327,12 +283,6 @@ Start the Shared Cache Manager
 Usage: `yarn timelineserver`
 
 Start the TimeLineServer
-
-### apiserver
-
-Usage: `yarn apiserver`
-
-Start the API-server for deploying/managing services on YARN
 
 ### registrydns
 

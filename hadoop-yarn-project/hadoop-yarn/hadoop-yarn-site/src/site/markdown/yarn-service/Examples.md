@@ -100,16 +100,18 @@ ProxyPassReverse "/"  "balancer://test/"
 
 Then run the service with the command:
 ```
-yarn service create [service-name] --example httpd
+yarn app -launch <service-name> httpd
 ```
-where `service-name` is optional. If omitted, it uses the name defined in the `Yarnfile`.
+
+The last argument is either the path to a JSON specification of the service, or in this case, the name of an example service.
+The directory where examples can be found can be configured by setting the YARN\_EXAMPLES\_DIR environment variable.
 
 Once the service is running, navigate to `http://httpd-proxy-0.${SERVICE_NAME}.${USER}.${DOMAIN}:8080` to see the root page.
 The pages should alternately show "Hello from httpd-0!" or "Hello from httpd-1!"
 
 The individual httpd URLs can also be visited, `http://httpd-0.${SERVICE_NAME}.${USER}.${DOMAIN}:8080` and `http://httpd-1.${SERVICE_NAME}.${USER}.${DOMAIN}:8080`.
 
-If unsure of your hostnames, visit the apiserver REST endpoint `http://<apiserver host>:9191/ws/v1/services/httpd-service`.
+If unsure of your hostnames, visit the RM REST endpoint `http://<RM host>:8088/ws/v1/services/httpd-service`.
 
 ## Apache web server - httpd (without registry DNS)
 
@@ -151,9 +153,9 @@ hdfs dfs -copyFromLocal ${HADOOP_YARN_HOME}/share/hadoop/yarn/yarn-service-examp
 
 Then run the service with the command:
 ```
-yarn service create [service-name] --example httpd-no-dns
+yarn app -launch <service-name> httpd-no-dns
 ```
 where `service-name` is optional. If omitted, it uses the name defined in the `Yarnfile`.
 
-Look up your IPs at the apiserver REST endpoint `http://<apiserver host>:9191/ws/v1/services/httpd-service`.
+Look up your IPs at the RM REST endpoint `http://<RM host>:8088/ws/v1/services/httpd-service`.
 Then visit port 8080 for each IP to view the pages.

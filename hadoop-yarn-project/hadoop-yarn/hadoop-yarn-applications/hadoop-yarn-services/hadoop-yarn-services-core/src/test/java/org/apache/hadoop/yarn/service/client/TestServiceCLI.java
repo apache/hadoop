@@ -20,88 +20,71 @@ package org.apache.hadoop.yarn.service.client;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.service.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.service.client.params.ClientArgs;
+import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.conf.ExampleAppJson;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.RESOURCEMANAGER_CONNECT_MAX_WAIT_MS;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS;
-import static org.apache.hadoop.yarn.service.client.params.Arguments.ARG_FILE;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
-import static org.mockito.Mockito.*;
 
 public class TestServiceCLI {
+  private static final Logger LOG = LoggerFactory.getLogger(TestServiceCLI
+      .class);
 
-  protected Configuration conf = new YarnConfiguration();
+  private Configuration conf = new YarnConfiguration();
   private File basedir;
-  private ServiceCLI cli;
   private SliderFileSystem fs;
+  private String basedirProp;
 
-  private void buildApp(String appDef) throws Throwable {
-    String[] args =
-        { "build", ARG_FILE, ExampleAppJson.resourceName(appDef)};
-    ClientArgs clientArgs = new ClientArgs(args);
-    clientArgs.parse();
-    cli.exec(clientArgs);
+  private void runCLI(String[] args) throws Exception {
+    LOG.info("running CLI: yarn {}", Arrays.asList(args));
+    ApplicationCLI cli = new ApplicationCLI();
+    cli.setSysOutPrintStream(System.out);
+    cli.setSysErrPrintStream(System.err);
+    int res = ToolRunner.run(cli, ApplicationCLI.preProcessArgs(args));
+    cli.stop();
+  }
+
+  private void buildApp(String serviceName, String appDef) throws Throwable {
+    String[] args = {"app", "-D", basedirProp, "-save", serviceName,
+        ExampleAppJson.resourceName(appDef)};
+    runCLI(args);
+  }
+
+  private void buildApp(String serviceName, String appDef, String lifetime,
+      String queue) throws Throwable {
+    String[] args = {"app", "-D", basedirProp, "-save", serviceName,
+        ExampleAppJson.resourceName(appDef), "-updateLifetime", lifetime,
+        "-changeQueue", queue};
+    runCLI(args);
   }
 
   @Before
   public void setup() throws Throwable {
     basedir = new File("target", "apps");
+    basedirProp = YARN_SERVICE_BASE_PATH + "=" + basedir.getAbsolutePath();
     conf.set(YARN_SERVICE_BASE_PATH, basedir.getAbsolutePath());
-    conf.setLong(RESOURCEMANAGER_CONNECT_MAX_WAIT_MS, 0);
-    conf.setLong(RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS, 1);
-    conf.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
-    conf.setInt(CommonConfigurationKeysPublic.
-        IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY, 0);
     fs = new SliderFileSystem(conf);
     if (basedir.exists()) {
       FileUtils.deleteDirectory(basedir);
     } else {
       basedir.mkdirs();
     }
-
-    // create a CLI and skip connection to AM
-    cli = new ServiceCLI() {
-      @Override protected void createServiceClient() {
-        client = new ServiceClient() {
-          @Override
-          protected void serviceInit(Configuration configuration)
-              throws Exception {
-            super.serviceInit(conf);
-            yarnClient = spy(yarnClient);
-            ApplicationReport report = Records.newRecord(ApplicationReport.class);
-            report.setYarnApplicationState(YarnApplicationState.RUNNING);
-            report.setHost("localhost");
-            doReturn(report).when(yarnClient).getApplicationReport(anyObject());
-          }
-          @Override
-          protected ClientAMProtocol createAMProxy(String host, int port)
-              throws IOException {
-            return mock(ClientAMProtocol.class);
-          }
-        };
-        client.init(conf);
-        client.start();
-      }
-    };
   }
 
   @After
@@ -111,41 +94,31 @@ public class TestServiceCLI {
     }
   }
 
-  // Test flex components count are persisted.
   @Test
   public void testFlexComponents() throws Throwable {
+    // currently can only test building apps, since that is the only
+    // operation that doesn't require an RM
+    // TODO: expand CLI test to try other commands
     String serviceName = "app-1";
-    buildApp(ExampleAppJson.APP_JSON);
-    checkCompCount("master",serviceName,  1L);
+    buildApp(serviceName, ExampleAppJson.APP_JSON);
+    checkApp(serviceName, "master", 1L, 3600L, null);
 
-    // increase by 2
-    String[] flexUpArgs = {"flex", serviceName, "--component", "master" , "+2"};
-    ClientArgs clientArgs = new ClientArgs(flexUpArgs);
-    clientArgs.parse();
-    cli.exec(clientArgs);
-    checkCompCount("master", serviceName, 3L);
-
-    // decrease by 1
-    String[] flexDownArgs = {"flex", serviceName, "--component", "master", "-1"};
-    clientArgs = new ClientArgs(flexDownArgs);
-    clientArgs.parse();
-    cli.exec(clientArgs);
-    checkCompCount("master", serviceName, 2L);
-
-    String[] flexAbsoluteArgs = {"flex", serviceName, "--component", "master", "10"};
-    clientArgs = new ClientArgs(flexAbsoluteArgs);
-    clientArgs.parse();
-    cli.exec(clientArgs);
-    checkCompCount("master", serviceName, 10L);
+    serviceName = "app-2";
+    buildApp(serviceName, ExampleAppJson.APP_JSON, "1000", "qname");
+    checkApp(serviceName, "master", 1L, 1000L, "qname");
   }
 
-  private void checkCompCount(String compName, String serviceName, long count)
-      throws IOException {
-    List<Component> components =
-        ServiceApiUtil.getComponents(fs, serviceName);
+  private void checkApp(String serviceName, String compName, long count, Long
+      lifetime, String queue) throws IOException {
+    Service service = ServiceApiUtil.loadService(fs, serviceName);
+    Assert.assertEquals(serviceName, service.getName());
+    Assert.assertEquals(lifetime, service.getLifetime());
+    Assert.assertEquals(queue, service.getQueue());
+    List<Component> components = service.getComponents();
     for (Component component : components) {
       if (component.getName().equals(compName)) {
-        Assert.assertEquals(count, component.getNumberOfContainers().longValue());
+        Assert.assertEquals(count, component.getNumberOfContainers()
+            .longValue());
         return;
       }
     }

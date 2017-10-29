@@ -146,7 +146,6 @@
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>1.16</snakeyaml.version>
-    <jcommander.version>1.48</jcommander.version>
   </properties>
 
   <dependencyManagement>
@@ -1352,11 +1351,6 @@
           <groupId>org.yaml</groupId>
           <artifactId>snakeyaml</artifactId>
           <version>${snakeyaml.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>com.beust</groupId>
-          <artifactId>jcommander</artifactId>
-          <version>${jcommander.version}</version>
         </dependency>
 
     </dependencies>

@@ -582,10 +582,6 @@ Ehcache 3.3.1,
 which has the following notices:
  * Ehcache V3 Copyright 2014-2016 Terracotta, Inc.
 
-JCommander (https://github.com/cbeust/jcommander),
-which has the following notices:
- * Copyright 2010 Cedric Beust cedric@beust.com
-
 The binary distribution of this product bundles binaries of
 snakeyaml (https://bitbucket.org/asomov/snakeyaml),
 which has the following notices:

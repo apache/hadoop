@@ -34,7 +34,6 @@ import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.api.RegistryOperationsFactory;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -50,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -65,13 +65,6 @@ import org.apache.hadoop.yarn.service.ServiceMaster;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
-import org.apache.hadoop.yarn.service.client.params.AbstractClusterBuildingActionArgs;
-import org.apache.hadoop.yarn.service.client.params.ActionCreateArgs;
-import org.apache.hadoop.yarn.service.client.params.ActionDependencyArgs;
-import org.apache.hadoop.yarn.service.client.params.ActionFlexArgs;
-import org.apache.hadoop.yarn.service.client.params.Arguments;
-import org.apache.hadoop.yarn.service.client.params.ClientArgs;
-import org.apache.hadoop.yarn.service.client.params.CommonArgs;
 import org.apache.hadoop.yarn.service.conf.SliderExitCodes;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
@@ -80,7 +73,6 @@ import org.apache.hadoop.yarn.service.containerlaunch.JavaCommandLineBuilder;
 import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
-import org.apache.hadoop.yarn.service.exceptions.UsageException;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
@@ -107,16 +99,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.*;
-import static org.apache.hadoop.yarn.service.client.params.SliderActions.ACTION_CREATE;
-import static org.apache.hadoop.yarn.service.client.params.SliderActions.ACTION_FLEX;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_QUEUE;
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.jsonSerDeser;
 import static org.apache.hadoop.yarn.service.utils.SliderUtils.*;
 
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class ServiceClient extends CompositeService
-    implements SliderExitCodes, YarnServiceConstants {
+public class ServiceClient extends AppAdminClient implements SliderExitCodes,
+    YarnServiceConstants {
   private static final Logger LOG =
       LoggerFactory.getLogger(ServiceClient.class);
   private SliderFileSystem fs;
@@ -136,10 +126,6 @@ public class ServiceClient extends CompositeService
   private static EnumSet<YarnApplicationState> preRunningStates =
       EnumSet.of(NEW, NEW_SAVING, SUBMITTED, ACCEPTED);
 
-  public ServiceClient() {
-    super(ServiceClient.class.getName());
-  }
-
   @Override protected void serviceInit(Configuration configuration)
       throws Exception {
     fs = new SliderFileSystem(configuration);
@@ -157,28 +143,60 @@ public class ServiceClient extends CompositeService
     super.serviceStop();
   }
 
-  private Service loadAppJsonFromLocalFS(
-      AbstractClusterBuildingActionArgs args) throws IOException {
-    File file = args.getFile();
+  public Service loadAppJsonFromLocalFS(String fileName, String serviceName,
+      Long lifetime, String queue) throws IOException, YarnException {
+    File file = new File(fileName);
+    if (!file.exists() && fileName.equals(file.getName())) {
+      String examplesDirStr = System.getenv("YARN_SERVICE_EXAMPLES_DIR");
+      String[] examplesDirs;
+      if (examplesDirStr == null) {
+        String yarnHome = System
+            .getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
+        examplesDirs = new String[]{
+            yarnHome + "/share/hadoop/yarn/yarn-service-examples",
+            yarnHome + "/yarn-service-examples"
+        };
+      } else {
+        examplesDirs = StringUtils.split(examplesDirStr, ":");
+      }
+      for (String dir : examplesDirs) {
+        file = new File(MessageFormat.format("{0}/{1}/{2}.json",
+            dir, fileName, fileName));
+        if (file.exists()) {
+          break;
+        }
+        // Then look for secondary location.
+        file = new File(MessageFormat.format("{0}/{1}.json",
+            dir, fileName));
+        if (file.exists()) {
+          break;
+        }
+      }
+    }
+    if (!file.exists()) {
+      throw new YarnException("File or example could not be found: " +
+          fileName);
+    }
     Path filePath = new Path(file.getAbsolutePath());
     LOG.info("Loading service definition from: " + filePath);
     Service service = jsonSerDeser
         .load(FileSystem.getLocal(getConfig()), filePath);
-    if (args.lifetime > 0) {
-      service.setLifetime(args.lifetime);
+    if (!StringUtils.isEmpty(serviceName)) {
+      service.setName(serviceName);
     }
-    if (!StringUtils.isEmpty(args.getServiceName())) {
-      service.setName(args.getServiceName());
+    if (lifetime != null && lifetime > 0) {
+      service.setLifetime(lifetime);
     }
-    if (!StringUtils.isEmpty(args.queue)) {
-      service.setQueue(args.queue);
+    if (!StringUtils.isEmpty(queue)) {
+      service.setQueue(queue);
     }
     return service;
   }
 
-  public int actionBuild(AbstractClusterBuildingActionArgs args)
-      throws IOException, YarnException {
-    return actionBuild(loadAppJsonFromLocalFS(args));
+  public int actionSave(String fileName, String serviceName, Long lifetime,
+      String queue) throws IOException, YarnException {
+    return actionBuild(loadAppJsonFromLocalFS(fileName, serviceName,
+        lifetime, queue));
   }
 
   public int actionBuild(Service service)
@@ -189,41 +207,11 @@ public class ServiceClient extends CompositeService
     return EXIT_SUCCESS;
   }
 
-  public int actionCreate(ActionCreateArgs args)
-      throws IOException, YarnException {
-    Service serviceDef;
-    if (args.file != null) {
-      serviceDef = loadAppJsonFromLocalFS(args);
-    } else if (!StringUtils.isEmpty(args.example)) {
-      // create an example service
-      args.file = findExampleService(args);
-      serviceDef = loadAppJsonFromLocalFS(args);
-    } else {
-      throw new YarnException("No service definition provided!");
-    }
-    actionCreate(serviceDef);
+  public int actionLaunch(String fileName, String serviceName, Long lifetime,
+      String queue) throws IOException, YarnException {
+    actionCreate(loadAppJsonFromLocalFS(fileName, serviceName, lifetime,
+        queue));
     return EXIT_SUCCESS;
-  }
-
-  private File findExampleService(ActionCreateArgs args) throws YarnException {
-    String yarnHome = System
-        .getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
-    // First look for the standard location.
-    File file = new File(MessageFormat
-        .format("{0}/share/hadoop/yarn/yarn-service-examples/{1}/{2}.json",
-            yarnHome, args.example, args.example));
-    if (file.exists()) {
-      return file;
-    }
-    // Then look for secondary location.
-    file = new File(MessageFormat
-        .format("{0}/yarn-service-examples/{1}/{2}.json", yarnHome,
-            args.example, args.example));
-    if (file.exists()) {
-      return file;
-    }
-    throw new YarnException(
-        "Example service " + args.example + " does not exist!");
   }
 
   public ApplicationId actionCreate(Service service)
@@ -244,14 +232,12 @@ public class ServiceClient extends CompositeService
     return appId;
   }
 
-  // Called by ServiceCLI
-  protected int actionFlexByCLI(ClientArgs args)
-      throws YarnException, IOException {
-    ActionFlexArgs flexArgs = args.getActionFlexArgs();
+  public int actionFlex(String serviceName, Map<String, String>
+      componentCountStrings) throws YarnException, IOException {
     Map<String, Long> componentCounts =
-        new HashMap<>(flexArgs.getComponentMap().size());
+        new HashMap<>(componentCountStrings.size());
     Service persistedService =
-        ServiceApiUtil.loadService(fs, flexArgs.getServiceName());
+        ServiceApiUtil.loadService(fs, serviceName);
     if (!StringUtils.isEmpty(persistedService.getId())) {
       cachedAppIds.put(persistedService.getName(),
           ApplicationId.fromString(persistedService.getId()));
@@ -260,8 +246,7 @@ public class ServiceClient extends CompositeService
           + " appId is null, may be not submitted to YARN yet");
     }
 
-    for (Map.Entry<String, String> entry : flexArgs.getComponentMap()
-        .entrySet()) {
+    for (Map.Entry<String, String> entry : componentCountStrings.entrySet()) {
       String compName = entry.getKey();
       ServiceApiUtil.validateNameFormat(compName, getConfig());
       Component component = persistedService.getComponent(compName);
@@ -272,11 +257,7 @@ public class ServiceClient extends CompositeService
           parseNumberOfContainers(component, entry.getValue());
       componentCounts.put(compName, numberOfContainers);
     }
-    // throw usage exception if no changes proposed
-    if (componentCounts.size() == 0) {
-      actionHelp(ACTION_FLEX, args);
-    }
-    flexComponents(args.getClusterName(), componentCounts, persistedService);
+    flexComponents(serviceName, componentCounts, persistedService);
     return EXIT_SUCCESS;
   }
 
@@ -372,6 +353,11 @@ public class ServiceClient extends CompositeService
     return original;
   }
 
+  public int actionStop(String serviceName)
+      throws YarnException, IOException {
+    return actionStop(serviceName, true);
+  }
+
   public int actionStop(String serviceName, boolean waitForAppStopped)
       throws YarnException, IOException {
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
@@ -442,7 +428,8 @@ public class ServiceClient extends CompositeService
     return EXIT_SUCCESS;
   }
 
-  public int actionDestroy(String serviceName) throws Exception {
+  public int actionDestroy(String serviceName) throws YarnException,
+      IOException {
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
     verifyNoLiveAppInRM(serviceName, "destroy");
 
@@ -461,7 +448,11 @@ public class ServiceClient extends CompositeService
         throw new YarnException(message);
       }
     }
-    deleteZKNode(serviceName);
+    try {
+      deleteZKNode(serviceName);
+    } catch (Exception e) {
+      throw new IOException("Could not delete zk node for " + serviceName, e);
+    }
     String registryPath = ServiceRegistryUtils.registryPathForInstance(serviceName);
     try {
       getRegistryClient().delete(registryPath, true);
@@ -515,11 +506,6 @@ public class ServiceClient extends CompositeService
       curatorClient.start();
     }
     return curatorClient;
-  }
-
-  private int actionHelp(String actionName, CommonArgs args)
-      throws YarnException, IOException {
-    throw new UsageException(CommonArgs.usage(args, actionName));
   }
 
   private void verifyNoLiveAppInRM(String serviceName, String action)
@@ -634,9 +620,9 @@ public class ServiceClient extends CompositeService
       CLI.sysprop(SYSPROP_LOG_DIR, ApplicationConstants.LOG_DIR_EXPANSION_VAR);
     }
     CLI.add(ServiceMaster.class.getCanonicalName());
-    CLI.add(ACTION_CREATE, serviceName);
     //TODO debugAM CLI.add(Arguments.ARG_DEBUG)
-    CLI.add(Arguments.ARG_SERVICE_DEF_PATH, new Path(appRootDir, serviceName + ".json"));
+    CLI.add("-" + ServiceMaster.YARNFILE_OPTION, new Path(appRootDir,
+        serviceName + ".json"));
     // pass the registry binding
     CLI.addConfOptionToCLI(conf, RegistryConstants.KEY_REGISTRY_ZK_ROOT,
         RegistryConstants.DEFAULT_ZK_REGISTRY_ROOT);
@@ -841,6 +827,24 @@ public class ServiceClient extends CompositeService
     return ServiceState.ACCEPTED;
   }
 
+  public String getStatusString(String appId)
+      throws IOException, YarnException {
+    ApplicationReport appReport =
+        yarnClient.getApplicationReport(ApplicationId.fromString(appId));
+
+    if (appReport.getYarnApplicationState() != RUNNING) {
+      return "";
+    }
+    if (StringUtils.isEmpty(appReport.getHost())) {
+      return "";
+    }
+    ClientAMProtocol amProxy =
+        createAMProxy(appReport.getHost(), appReport.getRpcPort());
+    GetStatusResponseProto response =
+        amProxy.getStatus(GetStatusRequestProto.newBuilder().build());
+    return response.getStatus();
+  }
+
   public Service getStatus(String serviceName)
       throws IOException, YarnException {
     ServiceApiUtil.validateNameFormat(serviceName, getConfig());
@@ -877,7 +881,11 @@ public class ServiceClient extends CompositeService
     return this.yarnClient;
   }
 
-  public int actionDependency(ActionDependencyArgs args)
+  public int enableFastLaunch() throws IOException, YarnException {
+    return actionDependency(true);
+  }
+
+  public int actionDependency(boolean overwrite)
       throws IOException, YarnException {
     String currentUser = RegistryUtils.currentUser();
     LOG.info("Running command as user {}", currentUser);
@@ -886,11 +894,10 @@ public class ServiceClient extends CompositeService
 
     // Check if dependency has already been uploaded, in which case log
     // appropriately and exit success (unless overwrite has been requested)
-    if (fs.isFile(dependencyLibTarGzip) && !args.overwrite) {
+    if (fs.isFile(dependencyLibTarGzip) && !overwrite) {
       System.out.println(String.format(
-          "Dependency libs are already uploaded to %s. Use %s "
-              + "if you want to re-upload", dependencyLibTarGzip.toUri(),
-          Arguments.ARG_OVERWRITE));
+          "Dependency libs are already uploaded to %s.", dependencyLibTarGzip
+              .toUri()));
       return EXIT_SUCCESS;
     }
 
