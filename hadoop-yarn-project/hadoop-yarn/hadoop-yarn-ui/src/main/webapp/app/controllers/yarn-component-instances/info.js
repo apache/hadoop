@@ -31,7 +31,7 @@ export default Ember.Controller.extend({
 
     cols.push({
       id: 'instanceName',
-      headerTitle: 'Component Name',
+      headerTitle: 'Component Instance',
       contentPath: 'instanceName',
       cellComponentName: 'em-table-linked-cell',
       getCellContent: function(row) {

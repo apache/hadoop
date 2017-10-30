@@ -21,7 +21,6 @@ module.exports = { // YARN UI App configurations
       localBaseAddress: "",
       timelineWebAddress: "localhost:8188",
       rmWebAddress: "localhost:8088",
-      dashWebAddress: "localhost:9191",
       protocolScheme: "http:"
     },
     namespaces: {
@@ -30,7 +29,7 @@ module.exports = { // YARN UI App configurations
       cluster: 'ws/v1/cluster',
       metrics: 'ws/v1/cluster/metrics',
       timelineV2: 'ws/v2/timeline',
-      dashService: 'services/v1/applications',
+      dashService: 'ws/v1/services',
       node: '{nodeAddress}/ws/v1/node'
     },
 };

@@ -20,7 +20,7 @@
   <div class="row">
     <div class="panel panel-default">
       <div class="panel-heading">
-        <div class="panel-title">{{type}} Metrics: Success Information</div>
+        <div class="panel-title">{{type}} Metrics: Detailed Information</div>
       </div>
       <div class="">
         <table class="table table-hover table-custom-bordered table-custom-stripped table-radius-none table-border-none">
@@ -28,45 +28,18 @@
             <tr>
               <th>Desired Containers</th>
               <th>Running Containers</th>
-              <th>Completed Containers</th>
-              <th>Pending Containers</th>
-              <th>Surplus Containers</th>
+              <th>Ready Containers</th>
+              <th>Failed Containers</th>
+              <th>Preempted Containers</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>{{metrics.ContainersDesired}}</td>
               <td>{{metrics.ContainersRunning}}</td>
-              <td>{{metrics.ContainersCompleted}}</td>
-              <td>{{metrics.ContainersPending}}</td>
-              <td>{{metrics.SurplusContainers}}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        <div class="panel-title">{{type}} Metrics: Failure Information</div>
-      </div>
-      <div class="">
-        <table class="table table-hover table-custom-bordered table-custom-stripped table-radius-none table-border-none">
-          <thead>
-            <tr>
-              <th>Failed Containers</th>
-              <th>Containers Failed Since Last Threshold</th>
-              <th>Preempted Containers</th>
-              <th>Pending Anti-Affinity Containers</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
+              <td>{{metrics.ContainersReady}}</td>
               <td>{{metrics.ContainersFailed}}</td>
-              <td>{{metrics.FailedSinceLastThreshold}}</td>
               <td>{{metrics.ContainersPreempted}}</td>
-              <td>{{metrics.PendingAAContainers}}</td>
             </tr>
           </tbody>
         </table>
