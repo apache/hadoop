@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
@@ -55,15 +56,17 @@ public class AuxServices extends AbstractService
 
   protected final Map<String,AuxiliaryService> serviceMap;
   protected final Map<String,ByteBuffer> serviceMetaData;
+  private final AuxiliaryLocalPathHandler auxiliaryLocalPathHandler;
 
   private final Pattern p = Pattern.compile("^[A-Za-z_]+[A-Za-z0-9_]*$");
 
-  public AuxServices() {
+  public AuxServices(AuxiliaryLocalPathHandler auxiliaryLocalPathHandler) {
     super(AuxServices.class.getName());
     serviceMap =
       Collections.synchronizedMap(new HashMap<String,AuxiliaryService>());
     serviceMetaData =
       Collections.synchronizedMap(new HashMap<String,ByteBuffer>());
+    this.auxiliaryLocalPathHandler = auxiliaryLocalPathHandler;
     // Obtain services from configuration in init()
   }
 
@@ -134,6 +137,7 @@ public class AuxServices extends AbstractService
                   +"Service Meta Data may have issues unless the refer to "
                   +"the name in the config.");
         }
+        s.setAuxiliaryLocalPathHandler(auxiliaryLocalPathHandler);
         addService(sName, s);
         if (recoveryEnabled) {
           Path storePath = new Path(stateStoreRoot, sName);

@@ -57,7 +57,6 @@ import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -83,7 +82,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
@@ -838,8 +836,6 @@ public class ShuffleHandler extends AuxiliaryService {
 
     private final Configuration conf;
     private final IndexCache indexCache;
-    private final LocalDirAllocator lDirAlloc =
-      new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
     private int port;
 
     public Shuffle(Configuration conf) {
@@ -1064,13 +1060,14 @@ public class ShuffleHandler extends AuxiliaryService {
     protected MapOutputInfo getMapOutputInfo(String base, String mapId,
         int reduce, String user) throws IOException {
       // Index file
-      Path indexFileName =
-          lDirAlloc.getLocalPathToRead(base + "/file.out.index", conf);
+      Path indexFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(base + "/file.out.index");
       IndexRecord info =
           indexCache.getIndexInformation(mapId, reduce, indexFileName, user);
 
       Path mapOutputFileName =
-          lDirAlloc.getLocalPathToRead(base + "/file.out", conf);
+          getAuxiliaryLocalPathHandler().getLocalPathForRead(base +
+              "/file.out");
       if (LOG.isDebugEnabled()) {
         LOG.debug(base + " : " + mapOutputFileName + " : " + indexFileName);
       }
@@ -1092,7 +1089,8 @@ public class ShuffleHandler extends AuxiliaryService {
         }
         // Index file
         Path indexFileName =
-            lDirAlloc.getLocalPathToRead(base + "/file.out.index", conf);
+            getAuxiliaryLocalPathHandler().getLocalPathForRead(
+                base + "/file.out.index");
         IndexRecord info =
             indexCache.getIndexInformation(mapId, reduce, indexFileName, user);
         ShuffleHeader header =

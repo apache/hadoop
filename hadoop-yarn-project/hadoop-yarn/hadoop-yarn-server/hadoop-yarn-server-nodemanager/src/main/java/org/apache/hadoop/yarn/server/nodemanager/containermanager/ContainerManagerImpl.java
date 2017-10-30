@@ -42,6 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -97,6 +98,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedContainersEvent;
@@ -213,8 +215,10 @@ public class ContainerManagerImpl extends CompositeService implements
 
     this.nodeStatusUpdater = nodeStatusUpdater;
 
+    AuxiliaryLocalPathHandler auxiliaryLocalPathHandler =
+        new AuxiliaryLocalPathHandlerImpl(dirsHandler);
     // Start configurable services
-    auxiliaryServices = new AuxServices();
+    auxiliaryServices = new AuxServices(auxiliaryLocalPathHandler);
     auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
@@ -1323,6 +1327,35 @@ public class ContainerManagerImpl extends CompositeService implements
         LOG.warn("Event " + event + " sent to absent application "
             + event.getApplicationID());
       }
+    }
+  }
+
+  /**
+   * Implements AuxiliaryLocalPathHandler.
+   * It links NodeManager's LocalDirsHandlerService to the Auxiliary Services
+   */
+  static class AuxiliaryLocalPathHandlerImpl
+      implements AuxiliaryLocalPathHandler {
+    private LocalDirsHandlerService dirhandlerService;
+    AuxiliaryLocalPathHandlerImpl(
+        LocalDirsHandlerService dirhandlerService) {
+      this.dirhandlerService = dirhandlerService;
+    }
+
+    @Override
+    public Path getLocalPathForRead(String path) throws IOException {
+      return dirhandlerService.getLocalPathForRead(path);
+    }
+
+    @Override
+    public Path getLocalPathForWrite(String path) throws IOException {
+      return dirhandlerService.getLocalPathForWrite(path);
+    }
+
+    @Override
+    public Path getLocalPathForWrite(String path, long size)
+        throws IOException {
+      return dirhandlerService.getLocalPathForWrite(path, size, false);
     }
   }
 

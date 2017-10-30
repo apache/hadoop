@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
@@ -59,6 +60,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestAuxServices {
   private static final Log LOG = LogFactory.getLog(TestAuxServices.class);
@@ -66,6 +68,8 @@ public class TestAuxServices {
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),
       TestAuxServices.class.getName());
+  private final static AuxiliaryLocalPathHandler MOCK_AUX_PATH_HANDLER =
+      Mockito.mock(AuxiliaryLocalPathHandler.class);
 
   static class LightService extends AuxiliaryService implements Service
        {
@@ -160,7 +164,7 @@ public class TestAuxServices {
         ServiceB.class, Service.class);
     conf.setInt("A.expected.init", 1);
     conf.setInt("B.expected.stop", 1);
-    final AuxServices aux = new AuxServices();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER);
     aux.init(conf);
     aux.start();
 
@@ -224,7 +228,7 @@ public class TestAuxServices {
         ServiceA.class, Service.class);
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         ServiceB.class, Service.class);
-    final AuxServices aux = new AuxServices();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER);
     aux.init(conf);
 
     int latch = 1;
@@ -236,8 +240,9 @@ public class TestAuxServices {
     }
     assertEquals("Invalid mix of services", 6, latch);
     aux.start();
-    for (Service s : aux.getServices()) {
+    for (AuxiliaryService s : aux.getServices()) {
       assertEquals(STARTED, s.getServiceState());
+      assertEquals(s.getAuxiliaryLocalPathHandler(), MOCK_AUX_PATH_HANDLER);
     }
 
     aux.stop();
@@ -255,7 +260,7 @@ public class TestAuxServices {
         ServiceA.class, Service.class);
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         ServiceB.class, Service.class);
-    final AuxServices aux = new AuxServices();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER);
     aux.init(conf);
 
     int latch = 1;
@@ -292,7 +297,7 @@ public class TestAuxServices {
         ServiceA.class, Service.class);
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         ServiceB.class, Service.class);
-    final AuxServices aux = new AuxServices();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER);
     aux.init(conf);
     aux.start();
 
@@ -305,7 +310,7 @@ public class TestAuxServices {
 
   @Test
   public void testValidAuxServiceName() {
-    final AuxServices aux = new AuxServices();
+    final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER);
     Configuration conf = new Configuration();
     conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] {"Asrv1", "Bsrv_2"});
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Asrv1"),
@@ -319,7 +324,7 @@ public class TestAuxServices {
     }
 
     //Test bad auxService Name
-    final AuxServices aux1 = new AuxServices();
+    final AuxServices aux1 = new AuxServices(MOCK_AUX_PATH_HANDLER);
     conf.setStrings(YarnConfiguration.NM_AUX_SERVICES, new String[] {"1Asrv1"});
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "1Asrv1"),
         ServiceA.class, Service.class);
@@ -345,7 +350,7 @@ public class TestAuxServices {
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "Bsrv"),
         RecoverableServiceB.class, Service.class);
     try {
-      final AuxServices aux = new AuxServices();
+      final AuxServices aux = new AuxServices(MOCK_AUX_PATH_HANDLER);
       aux.init(conf);
       Assert.assertEquals(2, aux.getServices().size());
       File auxStorageDir = new File(TEST_DIR,

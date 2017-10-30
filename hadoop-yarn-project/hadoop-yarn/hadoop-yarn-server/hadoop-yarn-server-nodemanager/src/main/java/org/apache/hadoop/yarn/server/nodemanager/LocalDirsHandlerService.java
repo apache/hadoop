@@ -551,6 +551,10 @@ public class LocalDirsHandlerService extends AbstractService {
                                                    checkWrite);
   }
 
+  public Path getLocalPathForRead(String pathStr) throws IOException {
+    return getPathToRead(pathStr, getLocalDirsForRead());
+  }
+
   public Path getLogPathForWrite(String pathStr, boolean checkWrite)
       throws IOException {
     return logDirsAllocator.getLocalPathForWrite(pathStr,
