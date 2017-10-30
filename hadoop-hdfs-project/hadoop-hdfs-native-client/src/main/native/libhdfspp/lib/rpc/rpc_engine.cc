@@ -213,6 +213,11 @@ void RpcEngine::RpcCommsError(
   optional<RetryAction> head_action = optional<RetryAction>();
 
   // Filter out anything with too many retries already
+  if(event_handlers_) {
+    event_handlers_->call(FS_NN_PRE_RPC_RETRY_EVENT, "RpcCommsError",
+                          reinterpret_cast<int64_t>(this));
+  }
+
   for (auto it = pendingRequests.begin(); it < pendingRequests.end();) {
     auto req = *it;
 
@@ -261,15 +266,34 @@ void RpcEngine::RpcCommsError(
       // If HA is enabled and we have valid HA info then fail over to the standby (hopefully now active)
       if(head_action->action == RetryAction::FAILOVER_AND_RETRY && ha_persisted_info_) {
 
-        for(unsigned int i=0; i<pendingRequests.size();i++)
+        for(unsigned int i=0; i<pendingRequests.size();i++) {
           pendingRequests[i]->IncrementFailoverCount();
+        }
 
-        ResolvedNamenodeInfo new_active_nn_info =
-            ha_persisted_info_->GetFailoverAndUpdate(last_endpoints_[0]/*reverse lookup*/);
+        ResolvedNamenodeInfo new_active_nn_info;
+        bool failoverInfoFound = ha_persisted_info_->GetFailoverAndUpdate(last_endpoints_, new_active_nn_info);
+        if(!failoverInfoFound) {
+          // This shouldn't be a common case, the set of endpoints was empty, likely due to DNS issues.
+          // Another possibility is a network device has been added or removed due to a VM starting or stopping.
 
-        LOG_INFO(kRPC, << "Going to try connecting to alternate Namenode: " << new_active_nn_info.uri.str());
+          LOG_ERROR(kRPC, << "Failed to find endpoints for the alternate namenode."
+                          << "Make sure Namenode hostnames can be found with a DNS lookup.");
+          // Kill all pending RPC requests since there's nowhere for this to go
+          Status badEndpointStatus = Status::Error("No endpoints found for namenode");
+
+          for(unsigned int i=0; i<pendingRequests.size(); i++) {
+            std::shared_ptr<Request> sharedCurrentRequest = pendingRequests[i];
+            io_service().post([sharedCurrentRequest, badEndpointStatus]() {
+              sharedCurrentRequest->OnResponseArrived(nullptr, badEndpointStatus);  // Never call back while holding a lock
+            });
+          }
+
+          // Clear request vector. This isn't a recoverable error.
+          pendingRequests.clear();
+        }
 
         if(ha_persisted_info_->is_resolved()) {
+          LOG_INFO(kRPC, << "Going to try connecting to alternate Namenode: " << new_active_nn_info.uri.str());
           last_endpoints_ = new_active_nn_info.endpoints;
         } else {
           LOG_WARN(kRPC, << "It looks HA is turned on, but unable to fail over. has info="

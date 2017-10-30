@@ -48,15 +48,18 @@ class HANamenodeTracker {
   bool is_enabled() const { return enabled_; }
   bool is_resolved() const { return resolved_; }
 
-  // Get node opposite of the current one if possible (swaps active/standby)
+  // Pass in vector of endpoints held by RpcConnection, use endpoints to infer node
+  // currently being used.  Swap internal state and set out to other node.
   // Note: This will always mutate internal state.  Use IsCurrentActive/Standby to
   // get info without changing state
-  ResolvedNamenodeInfo GetFailoverAndUpdate(::asio::ip::tcp::endpoint current_endpoint);
+  bool GetFailoverAndUpdate(const std::vector<::asio::ip::tcp::endpoint>& current_endpoints,
+                            ResolvedNamenodeInfo& out);
 
+ private:
+  // See if endpoint ep is part of the list of endpoints for the active or standby NN
   bool IsCurrentActive_locked(const ::asio::ip::tcp::endpoint &ep) const;
   bool IsCurrentStandby_locked(const ::asio::ip::tcp::endpoint &ep) const;
 
- private:
   // If HA should be enabled, according to our options and runtime info like # nodes provided
   bool enabled_;
   // If we were able to resolve at least 1 HA namenode

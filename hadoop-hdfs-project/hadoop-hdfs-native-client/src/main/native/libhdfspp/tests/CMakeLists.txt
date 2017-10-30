@@ -120,6 +120,12 @@ add_executable(user_lock_test user_lock_test.cc)
 target_link_libraries(user_lock_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(user_lock user_lock_test)
 
+add_executable(hdfs_config_connect_bugs_test hdfs_config_connect_bugs.cc)
+target_link_libraries(hdfs_config_connect_bugs_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+add_memcheck_test(hdfs_config_connect_bugs hdfs_config_connect_bugs_test)
+
+
+
 #
 #
 #   INTEGRATION TESTS - TESTS THE FULL LIBRARY AGAINST ACTUAL SERVERS
@@ -136,7 +142,7 @@ include_directories (
 
 add_library(hdfspp_test_shim_static STATIC hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
 
-# TODO: get all of the mini dfs library bits here in one plase
+# TODO: get all of the mini dfs library bits here in one place
 # add_library(hdfspp_mini_cluster     native_mini_dfs ${JAVA_JVM_LIBRARY} )
 
 #TODO: Link against full library rather than just parts
@@ -156,5 +162,9 @@ add_libhdfs_test(libhdfs_mini_stress hdfspp_test_shim_static)
 build_libhdfs_test(hdfs_ext hdfspp_test_shim_static ${CMAKE_CURRENT_LIST_DIR}/hdfs_ext_test.cc)
 link_libhdfs_test (hdfs_ext hdfspp_test_shim_static hdfspp_static gmock_main native_mini_dfs ${JAVA_JVM_LIBRARY}  ${SASL_LIBRARIES})
 add_libhdfs_test  (hdfs_ext hdfspp_test_shim_static)
+
+#build_libhdfs_test(hdfs_config_connect_bugs hdfspp_test_shim_static ${CMAKE_CURRENT_LIST_DIR}/hdfs_config_connect_bugs.cc)
+#link_libhdfs_test (hdfs_config_connect_bugs hdfspp_test_shim_static hdfspp_static gmock_main native_mini_dfs ${JAVA_JVM_LIBRARY}  ${SASL_LIBRARIES})
+#add_libhdfs_test  (hdfs_config_connect_bugs hdfspp_test_shim_static)
 
 endif(HADOOP_BUILD)

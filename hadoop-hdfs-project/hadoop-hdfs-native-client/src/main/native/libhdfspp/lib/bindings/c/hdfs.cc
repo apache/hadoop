@@ -41,6 +41,12 @@ using namespace std::placeholders;
 
 static constexpr tPort kDefaultPort = 8020;
 
+/** Annotate what parts of the code below are implementatons of API functions
+ *  and if they are normal vs. extended API.
+ */
+#define LIBHDFS_C_API
+#define LIBHDFSPP_EXT_API
+
 /* Separate the handles used by the C api from the C++ API*/
 struct hdfs_internal {
   hdfs_internal(FileSystem *p) : filesystem_(p), working_directory_("/") {}
@@ -79,6 +85,7 @@ struct hdfsFile_internal {
 thread_local std::string errstr;
 
 /* Fetch last error that happened in this thread */
+LIBHDFSPP_EXT_API
 int hdfsGetLastError(char *buf, int len) {
   //No error message
   if(errstr.empty()){
@@ -255,6 +262,7 @@ optional<std::string> getAbsolutePath(hdfsFS fs, const char* path) {
  * C API implementations
  **/
 
+LIBHDFS_C_API
 int hdfsFileIsOpenForRead(hdfsFile file) {
   /* files can only be open for reads at the moment, do a quick check */
   if (!CheckHandle(file)){
@@ -263,6 +271,7 @@ int hdfsFileIsOpenForRead(hdfsFile file) {
   return 1; // Update implementation when we get file writing
 }
 
+LIBHDFS_C_API
 int hdfsFileIsOpenForWrite(hdfsFile file) {
   /* files can only be open for reads at the moment, so return false */
   CheckHandle(file);
@@ -332,6 +341,7 @@ hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<st
   }
 }
 
+LIBHDFSPP_EXT_API
 hdfsFS hdfsAllocateFileSystem(struct hdfsBuilder *bld) {
   // Same idea as the first half of doHdfsConnect, but return the wrapped FS before
   // connecting.
@@ -367,6 +377,7 @@ hdfsFS hdfsAllocateFileSystem(struct hdfsBuilder *bld) {
   return nullptr;
 }
 
+LIBHDFSPP_EXT_API
 int hdfsConnectAllocated(hdfsFS fs, struct hdfsBuilder *bld) {
   if(!CheckSystem(fs)) {
     return ENODEV;
@@ -420,24 +431,29 @@ int hdfsConnectAllocated(hdfsFS fs, struct hdfsBuilder *bld) {
   return 0;
 }
 
+LIBHDFS_C_API
 hdfsFS hdfsConnect(const char *nn, tPort port) {
   return hdfsConnectAsUser(nn, port, "");
 }
 
+LIBHDFS_C_API
 hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
   return doHdfsConnect(std::string(nn), port, std::string(user), Options());
 }
 
+LIBHDFS_C_API
 hdfsFS hdfsConnectAsUserNewInstance(const char* nn, tPort port, const char *user ) {
   //libhdfspp always returns a new instance
   return doHdfsConnect(std::string(nn), port, std::string(user), Options());
 }
 
+LIBHDFS_C_API
 hdfsFS hdfsConnectNewInstance(const char* nn, tPort port) {
   //libhdfspp always returns a new instance
   return hdfsConnectAsUser(nn, port, "");
 }
 
+LIBHDFSPP_EXT_API
 int hdfsCancelPendingConnection(hdfsFS fs) {
   // todo: stick an enum in hdfs_internal to check the connect state
   if(!CheckSystem(fs)) {
@@ -458,6 +474,7 @@ int hdfsCancelPendingConnection(hdfsFS fs) {
   }
 }
 
+LIBHDFS_C_API
 int hdfsDisconnect(hdfsFS fs) {
   try
   {
@@ -476,6 +493,7 @@ int hdfsDisconnect(hdfsFS fs) {
   }
 }
 
+LIBHDFS_C_API
 hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
                       short replication, tSize blocksize) {
   try
@@ -512,6 +530,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
   }
 }
 
+LIBHDFS_C_API
 int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
   try
   {
@@ -528,6 +547,7 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
   }
 }
 
+LIBHDFS_C_API
 char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize) {
   try
   {
@@ -556,6 +576,7 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize) {
   }
 }
 
+LIBHDFS_C_API
 int hdfsSetWorkingDirectory(hdfsFS fs, const char* path) {
   try
   {
@@ -582,6 +603,7 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path) {
   }
 }
 
+LIBHDFS_C_API
 int hdfsAvailable(hdfsFS fs, hdfsFile file) {
   //Since we do not have read ahead implemented, return 0 if fs and file are good;
   errno = 0;
@@ -591,6 +613,7 @@ int hdfsAvailable(hdfsFS fs, hdfsFile file) {
   return 0;
 }
 
+LIBHDFS_C_API
 tOffset hdfsGetDefaultBlockSize(hdfsFS fs) {
   try {
     errno = 0;
@@ -604,6 +627,7 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs) {
   }
 }
 
+LIBHDFS_C_API
 tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path) {
   try {
     errno = 0;
@@ -633,6 +657,7 @@ tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path) {
   }
 }
 
+LIBHDFS_C_API
 int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication) {
     try {
       errno = 0;
@@ -659,6 +684,7 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication) {
     }
 }
 
+LIBHDFS_C_API
 int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime) {
     try {
       errno = 0;
@@ -682,6 +708,7 @@ int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime) {
     }
 }
 
+LIBHDFS_C_API
 tOffset hdfsGetCapacity(hdfsFS fs) {
   try {
     errno = 0;
@@ -705,6 +732,7 @@ tOffset hdfsGetCapacity(hdfsFS fs) {
   }
 }
 
+LIBHDFS_C_API
 tOffset hdfsGetUsed(hdfsFS fs) {
   try {
     errno = 0;
@@ -777,6 +805,7 @@ void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
   file_info->mLastAccess = stat_info.access_time;
 }
 
+LIBHDFS_C_API
 int hdfsExists(hdfsFS fs, const char *path) {
   try {
     errno = 0;
@@ -800,6 +829,7 @@ int hdfsExists(hdfsFS fs, const char *path) {
   }
 }
 
+LIBHDFS_C_API
 hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
   try {
     errno = 0;
@@ -828,6 +858,7 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
   }
 }
 
+LIBHDFS_C_API
 hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
   try {
       errno = 0;
@@ -868,6 +899,7 @@ hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
     }
 }
 
+LIBHDFS_C_API
 void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
 {
     errno = 0;
@@ -880,6 +912,7 @@ void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
     delete[] hdfsFileInfo;
 }
 
+LIBHDFS_C_API
 int hdfsCreateDirectory(hdfsFS fs, const char* path) {
   try {
     errno = 0;
@@ -904,6 +937,7 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path) {
   }
 }
 
+LIBHDFS_C_API
 int hdfsDelete(hdfsFS fs, const char* path, int recursive) {
   try {
       errno = 0;
@@ -927,6 +961,7 @@ int hdfsDelete(hdfsFS fs, const char* path, int recursive) {
     }
 }
 
+LIBHDFS_C_API
 int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
   try {
     errno = 0;
@@ -951,6 +986,7 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
   }
 }
 
+LIBHDFS_C_API
 int hdfsChmod(hdfsFS fs, const char* path, short mode){
   try {
       errno = 0;
@@ -977,6 +1013,7 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode){
     }
 }
 
+LIBHDFS_C_API
 int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group){
   try {
       errno = 0;
@@ -1003,6 +1040,7 @@ int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
     }
 }
 
+LIBHDFSPP_EXT_API
 hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t * numEntries){
   try {
       errno = 0;
@@ -1041,6 +1079,7 @@ hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t 
     }
 }
 
+LIBHDFSPP_EXT_API
 int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
   try {
     errno = 0;
@@ -1068,6 +1107,7 @@ int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
   }
 }
 
+LIBHDFSPP_EXT_API
 int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
   try {
     errno = 0;
@@ -1125,6 +1165,7 @@ int hdfsRenameSnapshot(hdfsFS fs, const char* path, const char* old_name, const 
 
 }
 
+LIBHDFSPP_EXT_API
 int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
   try {
     errno = 0;
@@ -1148,6 +1189,7 @@ int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
   }
 }
 
+LIBHDFSPP_EXT_API
 int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
   try {
     errno = 0;
@@ -1171,6 +1213,7 @@ int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
   }
 }
 
+LIBHDFS_C_API
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
                 tSize length) {
   try
@@ -1193,6 +1236,7 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
   }
 }
 
+LIBHDFS_C_API
 tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
   try
   {
@@ -1215,12 +1259,14 @@ tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
   }
 }
 
+LIBHDFS_C_API
 int hdfsUnbufferFile(hdfsFile file) {
   //Currently we are not doing any buffering
   CheckHandle(file);
   return -1;
 }
 
+LIBHDFS_C_API
 int hdfsFileGetReadStatistics(hdfsFile file, struct hdfsReadStatistics **stats) {
   try
     {
@@ -1239,6 +1285,7 @@ int hdfsFileGetReadStatistics(hdfsFile file, struct hdfsReadStatistics **stats) 
     }
 }
 
+LIBHDFS_C_API
 int hdfsFileClearReadStatistics(hdfsFile file) {
   try
     {
@@ -1255,16 +1302,19 @@ int hdfsFileClearReadStatistics(hdfsFile file) {
     }
 }
 
+LIBHDFS_C_API
 int64_t hdfsReadStatisticsGetRemoteBytesRead(const struct hdfsReadStatistics *stats) {
     return stats->totalBytesRead - stats->totalLocalBytesRead;
 }
 
+LIBHDFS_C_API
 void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats) {
     errno = 0;
     delete stats;
 }
 
 /* 0 on success, -1 on error*/
+LIBHDFS_C_API
 int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
   try
   {
@@ -1287,6 +1337,7 @@ int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
   }
 }
 
+LIBHDFS_C_API
 tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
   try
   {
@@ -1326,7 +1377,7 @@ int hdfsCancel(hdfsFS fs, hdfsFile file) {
   }
 }
 
-
+LIBHDFSPP_EXT_API
 int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations ** locations_out)
 {
   try
@@ -1402,6 +1453,7 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
   }
 }
 
+LIBHDFSPP_EXT_API
 int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
   errno = 0;
   if (blockLocations == nullptr)
@@ -1422,6 +1474,7 @@ int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
   return 0;
 }
 
+LIBHDFS_C_API
 char*** hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length) {
   try
     {
@@ -1462,6 +1515,7 @@ char*** hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
     }
 }
 
+LIBHDFS_C_API
 void hdfsFreeHosts(char ***blockHosts) {
   errno = 0;
   if (blockHosts == nullptr)
@@ -1526,6 +1580,7 @@ event_response file_callback_glue(libhdfspp_file_event_callback handler,
   return event_response::make_ok();
 }
 
+LIBHDFSPP_EXT_API
 int hdfsPreAttachFSMonitor(libhdfspp_fs_event_callback handler, int64_t cookie)
 {
   fs_event_callback callback = std::bind(fs_callback_glue, handler, cookie, _1, _2, _3);
@@ -1533,7 +1588,7 @@ int hdfsPreAttachFSMonitor(libhdfspp_fs_event_callback handler, int64_t cookie)
   return 0;
 }
 
-
+LIBHDFSPP_EXT_API
 int hdfsPreAttachFileMonitor(libhdfspp_file_event_callback handler, int64_t cookie)
 {
   file_event_callback callback = std::bind(file_callback_glue, handler, cookie, _1, _2, _3, _4);
@@ -1572,6 +1627,7 @@ hdfsBuilder::hdfsBuilder(const char * directory) :
   config = LoadDefault(loader);
 }
 
+LIBHDFS_C_API
 struct hdfsBuilder *hdfsNewBuilder(void)
 {
   try
@@ -1587,18 +1643,21 @@ struct hdfsBuilder *hdfsNewBuilder(void)
   }
 }
 
+LIBHDFS_C_API
 void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn)
 {
   errno = 0;
   bld->overrideHost = std::string(nn);
 }
 
+LIBHDFS_C_API
 void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port)
 {
   errno = 0;
   bld->overridePort = port;
 }
 
+LIBHDFS_C_API
 void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
 {
   errno = 0;
@@ -1607,12 +1666,14 @@ void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
   }
 }
 
+LIBHDFS_C_API
 void hdfsBuilderSetForceNewInstance(struct hdfsBuilder *bld) {
   //libhdfspp always returns a new instance, so nothing to do
   (void)bld;
   errno = 0;
 }
 
+LIBHDFS_C_API
 void hdfsFreeBuilder(struct hdfsBuilder *bld)
 {
   try
@@ -1626,6 +1687,7 @@ void hdfsFreeBuilder(struct hdfsBuilder *bld)
   }
 }
 
+LIBHDFS_C_API
 int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
                           const char *val)
 {
@@ -1650,16 +1712,22 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
   }
 }
 
+LIBHDFS_C_API
 void hdfsConfStrFree(char *val)
 {
   errno = 0;
   free(val);
 }
 
+LIBHDFS_C_API
 hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
-  return doHdfsConnect(bld->overrideHost, bld->overridePort, bld->user, bld->config.GetOptions());
+  hdfsFS fs = doHdfsConnect(bld->overrideHost, bld->overridePort, bld->user, bld->config.GetOptions());
+  // Always free the builder
+  hdfsFreeBuilder(bld);
+  return fs;
 }
 
+LIBHDFS_C_API
 int hdfsConfGetStr(const char *key, char **val)
 {
   try
@@ -1674,6 +1742,7 @@ int hdfsConfGetStr(const char *key, char **val)
   }
 }
 
+LIBHDFS_C_API
 int hdfsConfGetInt(const char *key, int32_t *val)
 {
   try
@@ -1706,6 +1775,7 @@ struct hdfsBuilder *hdfsNewBuilderFromDirectory(const char * configDirectory)
   }
 }
 
+LIBHDFSPP_EXT_API
 int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
                           char **val)
 {
@@ -1739,6 +1809,7 @@ bool isValidInt(int64_t value)
           value <= std::numeric_limits<int>::max());
 }
 
+LIBHDFSPP_EXT_API
 int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val)
 {
   try
@@ -1765,6 +1836,7 @@ int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val
   }
 }
 
+LIBHDFSPP_EXT_API
 int hdfsBuilderConfGetLong(struct hdfsBuilder *bld, const char *key, int64_t *val)
 {
   try
@@ -1859,15 +1931,17 @@ void CForwardingLogger::FreeLogData(LogData *data) {
   free(data);
 }
 
-
+LIBHDFSPP_EXT_API
 LogData *hdfsCopyLogData(LogData *data) {
   return CForwardingLogger::CopyLogData(data);
 }
 
+LIBHDFSPP_EXT_API
 void hdfsFreeLogData(LogData *data) {
   CForwardingLogger::FreeLogData(data);
 }
 
+LIBHDFSPP_EXT_API
 void hdfsSetLogFunction(void (*callback)(LogData*)) {
   CForwardingLogger *logger = new CForwardingLogger();
   logger->SetCallback(callback);
@@ -1900,6 +1974,7 @@ static bool IsComponentValid(int component) {
   return true;
 }
 
+LIBHDFSPP_EXT_API
 int hdfsEnableLoggingForComponent(int component) {
   errno = 0;
   if(!IsComponentValid(component))
@@ -1908,6 +1983,7 @@ int hdfsEnableLoggingForComponent(int component) {
   return 0;
 }
 
+LIBHDFSPP_EXT_API
 int hdfsDisableLoggingForComponent(int component) {
   errno = 0;
   if(!IsComponentValid(component))
@@ -1916,6 +1992,7 @@ int hdfsDisableLoggingForComponent(int component) {
   return 0;
 }
 
+LIBHDFSPP_EXT_API
 int hdfsSetLoggingLevel(int level) {
   errno = 0;
   if(!IsLevelValid(level))
@@ -1923,3 +2000,8 @@ int hdfsSetLoggingLevel(int level) {
   LogManager::SetLogLevel(static_cast<LogLevel>(level));
   return 0;
 }
+
+#undef LIBHDFS_C_API
+#undef LIBHDFSPP_EXT_API
+
+
