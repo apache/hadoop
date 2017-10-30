@@ -420,7 +420,7 @@ esac
 # These options will be appended to the options specified as HADOOP_OPTS
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
-# export HDFS_KEYSPACEMANAGER_OPTS=""
+# export HDFS_KSM_OPTS=""
 
 ###
 # HDFS StorageContainerManager specific parameters

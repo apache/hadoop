@@ -35,7 +35,7 @@ function hadoop_usage
   hadoop_add_subcommand "balancer" daemon "run a cluster balancing utility"
   hadoop_add_subcommand "cacheadmin" admin "configure the HDFS cache"
   hadoop_add_subcommand "cblock" admin "cblock CLI"
-   hadoop_add_subcommand "cblockserver" daemon "run cblock server"
+  hadoop_add_subcommand "cblockserver" daemon "run cblock server"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
   hadoop_add_subcommand "corona" client "run an ozone data generator"
   hadoop_add_subcommand "crypto" admin "configure HDFS encryption zones"
@@ -101,8 +101,6 @@ function hdfscmd_case
     cblockserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.cblock.CBlockManager
-      hadoop_debug "Appending HDFS_CBLOCKSERVER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_CBLOCKSERVER_OPTS}"
     ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
@@ -175,8 +173,6 @@ function hdfscmd_case
     jscsi)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.cblock.jscsiHelper.SCSITargetDaemon
-      hadoop_debug "Appending HDFS_JSCSI_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_JSCSI_OPTS}"
     ;;
     jmxget)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.JMXGet
@@ -184,8 +180,6 @@ function hdfscmd_case
     ksm)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.ksm.KeySpaceManager
-      hadoop_debug "Appending HDFS_KEYSPACEMANAGER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_KEYSPACEMANAGER_OPTS}"
     ;;
     lsSnapshottableDir)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
@@ -231,10 +225,8 @@ function hdfscmd_case
       else
         HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
         HADOOP_CLASSNAME='org.apache.hadoop.ozone.scm.StorageContainerManager'
-        hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
-        HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
       fi
-    ;;    
+    ;;
     secondarynamenode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
