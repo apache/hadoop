@@ -52,8 +52,10 @@ HANamenodeTracker::HANamenodeTracker(const std::vector<ResolvedNamenodeInfo> &se
 
     active_info_ = servers[0];
     standby_info_ = servers[1];
-    LOG_INFO(kRPC, << "Active namenode url  = " << active_info_.uri.str());
-    LOG_INFO(kRPC, << "Standby namenode url = " << standby_info_.uri.str());
+    LOG_INFO(kRPC, << "HA enabled.  Using the following namenodes from the configuration."
+                   << "\nNote: Active namenode cannot be determined until a connection has been made.")
+    LOG_INFO(kRPC, << "First namenode url  = " << active_info_.uri.str());
+    LOG_INFO(kRPC, << "Second namenode url = " << standby_info_.uri.str());
 
     enabled_ = true;
     if(!active_info_.endpoints.empty() || !standby_info_.endpoints.empty()) {
@@ -64,50 +66,56 @@ HANamenodeTracker::HANamenodeTracker(const std::vector<ResolvedNamenodeInfo> &se
 
 HANamenodeTracker::~HANamenodeTracker() {}
 
-//  Pass in endpoint from current connection, this will do a reverse lookup
-//  and return the info for the standby node. It will also swap its state internally.
-ResolvedNamenodeInfo HANamenodeTracker::GetFailoverAndUpdate(::asio::ip::tcp::endpoint current_endpoint) {
-  LOG_TRACE(kRPC, << "Swapping from endpoint " << current_endpoint);
+bool HANamenodeTracker::GetFailoverAndUpdate(const std::vector<::asio::ip::tcp::endpoint>& current_endpoints,
+                                             ResolvedNamenodeInfo& out)
+{
   mutex_guard swap_lock(swap_lock_);
 
-  ResolvedNamenodeInfo failover_node;
+  // Cannot look up without a key.
+  if(current_endpoints.size() == 0) {
+    event_handlers_->call(FS_NN_EMPTY_ENDPOINTS_EVENT, active_info_.nameservice.c_str(),
+                          0 /*Not much to say about context without endpoints*/);
+    LOG_ERROR(kRPC, << "HANamenodeTracker@" << this << "::GetFailoverAndUpdate requires at least 1 endpoint.");
+    return false;
+  }
 
-  // Connected to standby, switch standby to active
-  if(IsCurrentActive_locked(current_endpoint)) {
+  LOG_TRACE(kRPC, << "Swapping from endpoint " << current_endpoints[0]);
+
+  if(IsCurrentActive_locked(current_endpoints[0])) {
     std::swap(active_info_, standby_info_);
     if(event_handlers_)
       event_handlers_->call(FS_NN_FAILOVER_EVENT, active_info_.nameservice.c_str(),
                             reinterpret_cast<int64_t>(active_info_.uri.str().c_str()));
-    failover_node = active_info_;
-  } else if(IsCurrentStandby_locked(current_endpoint)) {
+    out = active_info_;
+  } else if(IsCurrentStandby_locked(current_endpoints[0])) {
     // Connected to standby
     if(event_handlers_)
       event_handlers_->call(FS_NN_FAILOVER_EVENT, active_info_.nameservice.c_str(),
                             reinterpret_cast<int64_t>(active_info_.uri.str().c_str()));
-    failover_node = active_info_;
+    out = active_info_;
   } else {
-    // Invalid state, throw for testing
-    std::string ep1 = format_endpoints(active_info_.endpoints);
-    std::string ep2 = format_endpoints(standby_info_.endpoints);
-
-    std::stringstream msg;
-    msg << "Looked for " << current_endpoint << " in\n";
-    msg << ep1 << " and\n";
-    msg << ep2 << std::endl;
-
-    LOG_ERROR(kRPC, << "Unable to find RPC connection in config " << msg.str() << ". Bailing out.");
-    throw std::runtime_error(msg.str());
+    // Invalid state (or a NIC was added that didn't show up during DNS)
+    std::stringstream errorMsg; // asio specializes endpoing operator<< for stringstream
+    errorMsg << "Unable to find RPC connection in config. Looked for " << current_endpoints[0] << " in\n"
+             << format_endpoints(active_info_.endpoints) << " and\n"
+             << format_endpoints(standby_info_.endpoints) << std::endl;
+    LOG_ERROR(kRPC, << errorMsg.str());
+    return false;
   }
 
-  if(failover_node.endpoints.empty()) {
-    LOG_WARN(kRPC, << "No endpoints for node " << failover_node.uri.str() << " attempting to resolve again");
-    if(!ResolveInPlace(ioservice_, failover_node)) {
-      LOG_ERROR(kRPC, << "Fallback endpoint resolution for node " << failover_node.uri.str()
-                      << "failed.  Please make sure your configuration is up to date.");
+  // Extra DNS on swapped node to try and get EPs if it didn't already have them
+  if(out.endpoints.empty()) {
+    LOG_WARN(kRPC, << "No endpoints for node " << out.uri.str() << " attempting to resolve again");
+    if(!ResolveInPlace(ioservice_, out)) {
+      // Stuck retrying against the same NN that was able to be resolved in this case
+      LOG_ERROR(kRPC, << "Fallback endpoint resolution for node " << out.uri.str()
+                      << " failed.  Please make sure your configuration is up to date.");
     }
   }
-  return failover_node;
+
+  return true;
 }
+
 
 bool HANamenodeTracker::IsCurrentActive_locked(const ::asio::ip::tcp::endpoint &ep) const {
   for(unsigned int i=0;i<active_info_.endpoints.size();i++) {

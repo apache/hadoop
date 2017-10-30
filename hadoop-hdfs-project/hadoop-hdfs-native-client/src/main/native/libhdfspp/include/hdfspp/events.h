@@ -37,17 +37,23 @@ static constexpr const char * FS_NN_CONNECT_EVENT = "NN::connect";
 static constexpr const char * FS_NN_READ_EVENT = "NN::read";
 static constexpr const char * FS_NN_WRITE_EVENT = "NN::write";
 
+static constexpr const char * FILE_DN_CONNECT_EVENT = "DN::connect";
+static constexpr const char * FILE_DN_READ_EVENT = "DN::read";
+static constexpr const char * FILE_DN_WRITE_EVENT = "DN::write";
+
+
 // NN failover event due to issues with the current NN; might be standby, might be dead.
 // Invokes the fs_event_callback using the nameservice name in the cluster string.
 // The uint64_t value argument holds an address that can be reinterpreted as a const char *
 // and provides the full URI of the node the failover will attempt to connect to next.
 static constexpr const char * FS_NN_FAILOVER_EVENT = "NN::failover";
 
-static constexpr const char * FILE_DN_CONNECT_EVENT = "DN::connect";
-static constexpr const char * FILE_DN_READ_EVENT = "DN::read";
-static constexpr const char * FILE_DN_WRITE_EVENT = "DN::write";
+// Invoked when RpcConnection tries to use an empty set of endpoints to figure out
+// which NN in a HA cluster to connect to.
+static constexpr const char * FS_NN_EMPTY_ENDPOINTS_EVENT = "NN::bad_failover::no_endpoints";
 
-
+// Invoked prior to determining if failed NN rpc calls should be retried or discarded.
+static constexpr const char * FS_NN_PRE_RPC_RETRY_EVENT = "NN::rpc::get_retry_action";
 
 class event_response {
 public:

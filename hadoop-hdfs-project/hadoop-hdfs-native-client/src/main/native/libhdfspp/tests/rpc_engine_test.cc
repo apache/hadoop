@@ -398,14 +398,20 @@ TEST(RpcEngineTest, TestEventCallbacks)
     io_service.stop();
     ASSERT_TRUE(stat.ok());
   });
+
+  // If you're adding event hooks you'll most likely need to update this.
+  // It's a brittle test but makes it hard to miss control flow changes in RPC retry.
+  for(const auto& m : callbacks)
+    std::cerr << m << std::endl;
   io_service.run();
   ASSERT_TRUE(complete);
-  ASSERT_EQ(8, callbacks.size());
+  ASSERT_EQ(9, callbacks.size());
   ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[0]); // error
-  ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[1]); // reconnect
-  ASSERT_EQ(FS_NN_READ_EVENT, callbacks[2]); // makes an error
-  ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[3]); // reconnect
-  for (int i=4; i < 7; i++)
+  ASSERT_EQ(FS_NN_PRE_RPC_RETRY_EVENT, callbacks[1]); // figure out retry decision
+  ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[2]); // reconnect
+  ASSERT_EQ(FS_NN_PRE_RPC_RETRY_EVENT, callbacks[3]); // makes an error
+  ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[4]); // reconnect
+  for (int i=5; i < 8; i++)
     ASSERT_EQ(FS_NN_READ_EVENT, callbacks[i]);
 }
 
