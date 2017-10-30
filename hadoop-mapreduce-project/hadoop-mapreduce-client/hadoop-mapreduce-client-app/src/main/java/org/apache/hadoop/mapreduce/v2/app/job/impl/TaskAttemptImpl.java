@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -123,6 +125,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -136,6 +139,8 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.RackResolver;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -667,12 +672,8 @@ public abstract class TaskAttemptImpl implements
     this.jobFile = jobFile;
     this.partition = partition;
 
-    //TODO:create the resource reqt for this Task attempt
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
-    this.resourceCapability.setMemorySize(
-        getMemoryRequired(conf, taskId.getTaskType()));
-    this.resourceCapability.setVirtualCores(
-        getCpuRequired(conf, taskId.getTaskType()));
+    populateResourceCapability(taskId.getTaskType());
 
     this.dataLocalHosts = resolveHosts(dataLocalHosts);
     RackResolver.init(conf);
@@ -689,23 +690,135 @@ public abstract class TaskAttemptImpl implements
     stateMachine = stateMachineFactory.make(this);
   }
 
+  private void populateResourceCapability(TaskType taskType) {
+    String resourceTypePrefix =
+        getResourceTypePrefix(taskType);
+    boolean memorySet = false;
+    boolean cpuVcoresSet = false;
+    if (resourceTypePrefix != null) {
+      List<ResourceInformation> resourceRequests =
+          ResourceUtils.getRequestedResourcesFromConfig(conf,
+              resourceTypePrefix);
+      for (ResourceInformation resourceRequest : resourceRequests) {
+        String resourceName = resourceRequest.getName();
+        if (MRJobConfig.RESOURCE_TYPE_NAME_MEMORY.equals(resourceName) ||
+            MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY.equals(
+                resourceName)) {
+          if (memorySet) {
+            throw new IllegalArgumentException(
+                "Only one of the following keys " +
+                    "can be specified for a single job: " +
+                    MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY + ", " +
+                    MRJobConfig.RESOURCE_TYPE_NAME_MEMORY);
+          }
+          String units = isEmpty(resourceRequest.getUnits()) ?
+              ResourceUtils.getDefaultUnit(ResourceInformation.MEMORY_URI) :
+                resourceRequest.getUnits();
+          this.resourceCapability.setMemorySize(
+              UnitsConversionUtil.convert(units, "Mi",
+                  resourceRequest.getValue()));
+          memorySet = true;
+          String memoryKey = getMemoryKey(taskType);
+          if (memoryKey != null && conf.get(memoryKey) != null) {
+            LOG.warn("Configuration " + resourceTypePrefix + resourceName +
+                "=" + resourceRequest.getValue() + resourceRequest.getUnits() +
+                " is overriding the " + memoryKey + "=" + conf.get(memoryKey) +
+                " configuration");
+          }
+        } else if (MRJobConfig.RESOURCE_TYPE_NAME_VCORE.equals(
+            resourceName)) {
+          this.resourceCapability.setVirtualCores(
+              (int) UnitsConversionUtil.convert(resourceRequest.getUnits(), "",
+                  resourceRequest.getValue()));
+          cpuVcoresSet = true;
+          String cpuKey = getCpuVcoresKey(taskType);
+          if (cpuKey != null && conf.get(cpuKey) != null) {
+            LOG.warn("Configuration " + resourceTypePrefix +
+                MRJobConfig.RESOURCE_TYPE_NAME_VCORE + "=" +
+                resourceRequest.getValue() + resourceRequest.getUnits() +
+                " is overriding the " + cpuKey + "=" +
+                conf.get(cpuKey) + " configuration");
+          }
+        } else {
+          ResourceInformation resourceInformation =
+              this.resourceCapability.getResourceInformation(resourceName);
+          resourceInformation.setUnits(resourceRequest.getUnits());
+          resourceInformation.setValue(resourceRequest.getValue());
+          this.resourceCapability.setResourceInformation(resourceName,
+              resourceInformation);
+        }
+      }
+    }
+    if (!memorySet) {
+      this.resourceCapability.setMemorySize(getMemoryRequired(conf, taskType));
+    }
+    if (!cpuVcoresSet) {
+      this.resourceCapability.setVirtualCores(getCpuRequired(conf, taskType));
+    }
+  }
+
+  private String getCpuVcoresKey(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.MAP_CPU_VCORES;
+    case REDUCE:
+      return MRJobConfig.REDUCE_CPU_VCORES;
+    default:
+      return null;
+    }
+  }
+
+  private String getMemoryKey(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.MAP_MEMORY_MB;
+    case REDUCE:
+      return MRJobConfig.REDUCE_MEMORY_MB;
+    default:
+      return null;
+    }
+  }
+
+  private Integer getCpuVcoreDefault(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.DEFAULT_MAP_CPU_VCORES;
+    case REDUCE:
+      return MRJobConfig.DEFAULT_REDUCE_CPU_VCORES;
+    default:
+      return null;
+    }
+  }
+
   private int getMemoryRequired(JobConf conf, TaskType taskType) {
     return conf.getMemoryRequired(TypeConverter.fromYarn(taskType));
   }
 
   private int getCpuRequired(Configuration conf, TaskType taskType) {
     int vcores = 1;
-    if (taskType == TaskType.MAP)  {
-      vcores =
-          conf.getInt(MRJobConfig.MAP_CPU_VCORES,
-              MRJobConfig.DEFAULT_MAP_CPU_VCORES);
-    } else if (taskType == TaskType.REDUCE) {
-      vcores =
-          conf.getInt(MRJobConfig.REDUCE_CPU_VCORES,
-              MRJobConfig.DEFAULT_REDUCE_CPU_VCORES);
+    String cpuVcoreKey = getCpuVcoresKey(taskType);
+    if (cpuVcoreKey != null) {
+      Integer defaultCpuVcores = getCpuVcoreDefault(taskType);
+      if (null == defaultCpuVcores) {
+        defaultCpuVcores = vcores;
+      }
+      vcores = conf.getInt(cpuVcoreKey, defaultCpuVcores);
     }
-    
     return vcores;
+  }
+
+  private String getResourceTypePrefix(TaskType taskType) {
+    switch (taskType) {
+    case MAP:
+      return MRJobConfig.MAP_RESOURCE_TYPE_PREFIX;
+    case REDUCE:
+      return MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX;
+    default:
+      LOG.info("TaskType " + taskType +
+          " does not support custom resource types - this support can be " +
+          "added in " + getClass().getSimpleName());
+      return null;
+    }
   }
 
   /**

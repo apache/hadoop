@@ -363,11 +363,46 @@ public interface MRJobConfig {
 
   public static final String MAP_INPUT_START = "mapreduce.map.input.start";
 
+  /**
+   * Configuration key for specifying memory requirement for the mapper.
+   * Kept for backward-compatibility, mapreduce.map.resource.memory
+   * is the new preferred way to specify this.
+   */
   public static final String MAP_MEMORY_MB = "mapreduce.map.memory.mb";
   public static final int DEFAULT_MAP_MEMORY_MB = 1024;
 
+  /**
+   * Configuration key for specifying CPU requirement for the mapper.
+   * Kept for backward-compatibility, mapreduce.map.resource.vcores
+   * is the new preferred way to specify this.
+   */
   public static final String MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
   public static final int DEFAULT_MAP_CPU_VCORES = 1;
+
+  /**
+   * Custom resource names required by the mapper should be
+   * appended to this prefix, the value's format is {amount}[ ][{unit}].
+   * If no unit is defined, the default unit will be used.
+   * Standard resource names: memory (default unit: Mi), vcores
+   */
+  public static final String MAP_RESOURCE_TYPE_PREFIX =
+      "mapreduce.map.resource.";
+
+  /**
+   * Resource type name for CPU vcores.
+   */
+  public static final String RESOURCE_TYPE_NAME_VCORE = "vcores";
+
+  /**
+   * Resource type name for memory.
+   */
+  public static final String RESOURCE_TYPE_NAME_MEMORY = "memory";
+
+  /**
+   * Alternative resource type name for memory.
+   */
+  public static final String RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY =
+      "memory-mb";
 
   public static final String MAP_ENV = "mapreduce.map.env";
 
@@ -417,11 +452,30 @@ public interface MRJobConfig {
 
   public static final String REDUCE_MARKRESET_BUFFER_SIZE = "mapreduce.reduce.markreset.buffer.size";
 
+  /**
+   * Configuration key for specifying memory requirement for the reducer.
+   * Kept for backward-compatibility, mapreduce.reduce.resource.memory
+   * is the new preferred way to specify this.
+   */
   public static final String REDUCE_MEMORY_MB = "mapreduce.reduce.memory.mb";
   public static final int DEFAULT_REDUCE_MEMORY_MB = 1024;
 
+  /**
+   * Configuration key for specifying CPU requirement for the reducer.
+   * Kept for backward-compatibility, mapreduce.reduce.resource.vcores
+   * is the new preferred way to specify this.
+   */
   public static final String REDUCE_CPU_VCORES = "mapreduce.reduce.cpu.vcores";
   public static final int DEFAULT_REDUCE_CPU_VCORES = 1;
+
+  /**
+   * Resource names required by the reducer should be
+   * appended to this prefix, the value's format is {amount}[ ][{unit}].
+   * If no unit is defined, the default unit will be used.
+   * Standard resource names: memory (default unit: Mi), vcores
+   */
+  public static final String REDUCE_RESOURCE_TYPE_PREFIX =
+      "mapreduce.reduce.resource.";
 
   public static final String REDUCE_MEMORY_TOTAL_BYTES = "mapreduce.reduce.memory.totalbytes";
 
@@ -608,7 +662,10 @@ public interface MRJobConfig {
   public static final String DEFAULT_MR_AM_STAGING_DIR = 
     "/tmp/hadoop-yarn/staging";
 
-  /** The amount of memory the MR app master needs.*/
+  /** The amount of memory the MR app master needs.
+   * Kept for backward-compatibility, yarn.app.mapreduce.am.resource.memory is
+   * the new preferred way to specify this
+   */
   public static final String MR_AM_VMEM_MB =
     MR_AM_PREFIX+"resource.mb";
   public static final int DEFAULT_MR_AM_VMEM_MB = 1536;
@@ -617,6 +674,15 @@ public interface MRJobConfig {
   public static final String MR_AM_CPU_VCORES =
     MR_AM_PREFIX+"resource.cpu-vcores";
   public static final int DEFAULT_MR_AM_CPU_VCORES = 1;
+
+  /**
+   * Resource names required by the MR AM should be
+   * appended to this prefix, the value's format is {amount}[ ][{unit}].
+   * If no unit is defined, the default unit will be used
+   * Standard resource names: memory (default unit: Mi), vcores
+   */
+  public static final String MR_AM_RESOURCE_PREFIX =
+      MR_AM_PREFIX + "resource.";
 
   /** Command line arguments passed to the MR app master.*/
   public static final String MR_AM_COMMAND_OPTS =
