@@ -40,7 +40,7 @@ class RpcConnectionImpl : public RpcConnection {
 public:
   MEMCHECKED_CLASS(RpcConnectionImpl)
 
-  RpcConnectionImpl(RpcEngine *engine);
+  RpcConnectionImpl(std::shared_ptr<RpcEngine> engine);
   virtual ~RpcConnectionImpl() override;
 
   virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
@@ -73,7 +73,7 @@ public:
 };
 
 template <class Socket>
-RpcConnectionImpl<Socket>::RpcConnectionImpl(RpcEngine *engine)
+RpcConnectionImpl<Socket>::RpcConnectionImpl(std::shared_ptr<RpcEngine> engine)
     : RpcConnection(engine),
       options_(engine->options()),
       socket_(engine->io_service()),
@@ -88,8 +88,8 @@ RpcConnectionImpl<Socket>::~RpcConnectionImpl() {
 
   if (pending_requests_.size() > 0)
     LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the pending queue");
-  if (requests_on_fly_.size() > 0)
-    LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the requests_on_fly queue");
+  if (sent_requests_.size() > 0)
+    LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the sent_requests queue");
 }
 
 template <class Socket>
@@ -101,13 +101,23 @@ void RpcConnectionImpl<Socket>::Connect(
 
   this->auth_info_ = auth_info;
 
-  auto connectionSuccessfulReq = std::make_shared<Request>(
-      engine_, [handler](::google::protobuf::io::CodedInputStream *is,
-                         const Status &status) {
-        (void)is;
-        handler(status);
-      });
-  pending_requests_.push_back(connectionSuccessfulReq);
+  std::shared_ptr<Request> connectionRequest;
+  { // Scope to minimize how long RpcEngine's lifetime may be extended
+    std::shared_ptr<LockFreeRpcEngine> pinned_engine = engine_.lock();
+    if(!pinned_engine) {
+      LOG_ERROR(kRPC, << "RpcConnectionImpl@" << this << " attempted to access invalid RpcEngine");
+      handler(Status::Error("Invalid RpcEngine access."));
+      return;
+    }
+
+    connectionRequest = std::make_shared<Request>(pinned_engine,
+        [handler](::google::protobuf::io::CodedInputStream *is,const Status &status) {
+            (void)is;
+            handler(status);
+        });
+  }
+
+  pending_requests_.push_back(connectionRequest);
   this->ConnectAndFlush(server);  // need "this" so compiler can infer type of CAF
 }
 
@@ -263,7 +273,7 @@ void RpcConnectionImpl<Socket>::OnSendCompleted(const ::asio::error_code &ec,
 
   LOG_TRACE(kRPC, << "RpcConnectionImpl::OnSendCompleted called");
 
-  request_over_the_wire_.reset();
+  outgoing_request_.reset();
   if (ec) {
     LOG_WARN(kRPC, << "Network error during RPC write: " << ec.message());
     CommsError(ToStatus(ec));
@@ -283,7 +293,7 @@ void RpcConnectionImpl<Socket>::FlushPendingRequests() {
   LOG_TRACE(kRPC, << "RpcConnectionImpl::FlushPendingRequests called");
 
   // Don't send if we don't need to
-  if (request_over_the_wire_) {
+  if (outgoing_request_) {
     return;
   }
 
@@ -324,9 +334,9 @@ void RpcConnectionImpl<Socket>::FlushPendingRequests() {
   std::shared_ptr<std::string> payload = std::make_shared<std::string>();
   req->GetPacket(payload.get());
   if (!payload->empty()) {
-    assert(requests_on_fly_.find(req->call_id()) == requests_on_fly_.end());
-    requests_on_fly_[req->call_id()] = req;
-    request_over_the_wire_ = req;
+    assert(sent_requests_.find(req->call_id()) == sent_requests_.end());
+    sent_requests_[req->call_id()] = req;
+    outgoing_request_ = req;
 
     req->timer().expires_from_now(
         std::chrono::milliseconds(options_.rpc_timeout));
@@ -343,7 +353,15 @@ void RpcConnectionImpl<Socket>::FlushPendingRequests() {
                         OnSendCompleted(ec, size);
                       });
   } else {  // Nothing to send for this request, inform the handler immediately
-    io_service().post(
+    ::asio::io_service *service = GetIoService();
+    if(!service) {
+      LOG_ERROR(kRPC, << "RpcConnectionImpl@" << this << " attempted to access null IoService");
+      // No easy way to bail out of this context, but the only way to get here is when
+      // the FileSystem is being destroyed.
+      return;
+    }
+
+    service->post(
         // Never hold locks when calling a callback
         [req]() { req->OnResponseArrived(nullptr, Status::OK()); }
     );
@@ -433,7 +451,7 @@ void RpcConnectionImpl<Socket>::Disconnect() {
 
   LOG_INFO(kRPC, << "RpcConnectionImpl::Disconnect called");
 
-  request_over_the_wire_.reset();
+  outgoing_request_.reset();
   if (connected_ == kConnecting || connected_ == kHandshaking || connected_ == kAuthenticating || connected_ == kConnected) {
     // Don't print out errors, we were expecting a disconnect here
     SafeDisconnect(get_asio_socket_ptr(&socket_));

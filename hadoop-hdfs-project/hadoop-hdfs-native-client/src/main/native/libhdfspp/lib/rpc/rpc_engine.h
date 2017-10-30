@@ -75,16 +75,16 @@ public:
                       std::vector<std::shared_ptr<Request>> pendingRequests) = 0;
 
 
-  virtual const RetryPolicy * retry_policy() const = 0;
+  virtual const RetryPolicy *retry_policy() = 0;
   virtual int NextCallId() = 0;
 
-  virtual const std::string &client_name() const = 0;
-  virtual const std::string &client_id() const = 0;
-  virtual const std::string &user_name() const = 0;
-  virtual const std::string &protocol_name() const = 0;
-  virtual int protocol_version() const = 0;
+  virtual const std::string &client_name() = 0;
+  virtual const std::string &client_id() = 0;
+  virtual const std::string &user_name() = 0;
+  virtual const std::string &protocol_name() = 0;
+  virtual int protocol_version() = 0;
   virtual ::asio::io_service &io_service() = 0;
-  virtual const Options &options() const = 0;
+  virtual const Options &options() = 0;
 };
 
 
@@ -95,7 +95,7 @@ public:
  * Threading model: thread-safe.  All callbacks will be called back from
  *   an asio pool and will not hold any internal locks
  */
-class RpcEngine : public LockFreeRpcEngine {
+class RpcEngine : public LockFreeRpcEngine, public std::enable_shared_from_this<RpcEngine> {
  public:
   MEMCHECKED_CLASS(RpcEngine)
   enum { kRpcVersion = 9 };
@@ -133,20 +133,20 @@ class RpcEngine : public LockFreeRpcEngine {
                      std::vector<std::shared_ptr<Request>> pendingRequests);
 
 
-  const RetryPolicy * retry_policy() const override { return retry_policy_.get(); }
+  const RetryPolicy * retry_policy() override { return retry_policy_.get(); }
   int NextCallId() override { return ++call_id_; }
 
   void TEST_SetRpcConnection(std::shared_ptr<RpcConnection> conn);
   void TEST_SetRetryPolicy(std::unique_ptr<const RetryPolicy> policy);
   std::unique_ptr<const RetryPolicy> TEST_GenerateRetryPolicyUsingOptions();
 
-  const std::string &client_name() const override { return client_name_; }
-  const std::string &client_id() const override { return client_id_; }
-  const std::string &user_name() const override { return auth_info_.getUser(); }
-  const std::string &protocol_name() const override { return protocol_name_; }
-  int protocol_version() const override { return protocol_version_; }
+  const std::string &client_name() override { return client_name_; }
+  const std::string &client_id() override { return client_id_; }
+  const std::string &user_name() override { return auth_info_.getUser(); }
+  const std::string &protocol_name() override { return protocol_name_; }
+  int protocol_version() override { return protocol_version_; }
   ::asio::io_service &io_service() override { return *io_service_; }
-  const Options &options() const override { return options_; }
+  const Options &options() override { return options_; }
   static std::string GetRandomClientName();
 
   void SetFsEventCallback(fs_event_callback callback);

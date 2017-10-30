@@ -171,7 +171,7 @@ std::shared_ptr<RpcConnection> RpcEngine::NewConnection()
 {
   LOG_DEBUG(kRPC, << "RpcEngine::NewConnection called");
 
-  return std::make_shared<RpcConnectionImpl<::asio::ip::tcp::socket>>(this);
+  return std::make_shared<RpcConnectionImpl<::asio::ip::tcp::socket>>(shared_from_this());
 }
 
 std::shared_ptr<RpcConnection> RpcEngine::InitializeConnection()

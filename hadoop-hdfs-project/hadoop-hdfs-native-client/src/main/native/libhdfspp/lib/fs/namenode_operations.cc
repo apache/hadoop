@@ -42,11 +42,11 @@ namespace hdfs {
 void NameNodeOperations::Connect(const std::string &cluster_name,
                                  const std::vector<ResolvedNamenodeInfo> &servers,
                                  std::function<void(const Status &)> &&handler) {
-  engine_.Connect(cluster_name, servers, handler);
+  engine_->Connect(cluster_name, servers, handler);
 }
 
 bool NameNodeOperations::CancelPendingConnect() {
-  return engine_.CancelPendingConnect();
+  return engine_->CancelPendingConnect();
 }
 
 void NameNodeOperations::GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
@@ -678,7 +678,7 @@ void NameNodeOperations::DisallowSnapshot(const std::string & path, std::functio
 }
 
 void NameNodeOperations::SetFsEventCallback(fs_event_callback callback) {
-  engine_.SetFsEventCallback(callback);
+  engine_->SetFsEventCallback(callback);
 }
 
 void NameNodeOperations::HdfsFileStatusProtoToStatInfo(

@@ -66,17 +66,29 @@ static void AddHeadersToPacket(
 
 RpcConnection::~RpcConnection() {}
 
-RpcConnection::RpcConnection(LockFreeRpcEngine *engine)
+RpcConnection::RpcConnection(std::shared_ptr<LockFreeRpcEngine> engine)
     : engine_(engine),
       connected_(kNotYetConnected) {}
 
-::asio::io_service &RpcConnection::io_service() {
-  return engine_->io_service();
+::asio::io_service *RpcConnection::GetIoService() {
+  std::shared_ptr<LockFreeRpcEngine> pinnedEngine = engine_.lock();
+  if(!pinnedEngine) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid RpcEngine");
+    return nullptr;
+  }
+
+  return &pinnedEngine->io_service();
 }
 
 void RpcConnection::StartReading() {
   auto shared_this = shared_from_this();
-  io_service().post([shared_this, this] () {
+  ::asio::io_service *service = GetIoService();
+  if(!service) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid IoService");
+    return;
+  }
+
+  service->post([shared_this, this] () {
     OnRecvCompleted(::asio::error_code(), 0);
   });
 }
@@ -151,12 +163,19 @@ void RpcConnection::ContextComplete(const Status &s) {
 
 void RpcConnection::AsyncFlushPendingRequests() {
   std::shared_ptr<RpcConnection> shared_this = shared_from_this();
-  io_service().post([shared_this, this]() {
+
+  ::asio::io_service *service = GetIoService();
+  if(!service) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid IoService");
+    return;
+  }
+
+  service->post([shared_this, this]() {
     std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
     LOG_TRACE(kRPC, << "RpcConnection::AsyncFlushPendingRequests called (connected=" << ToString(connected_) << ")");
 
-    if (!request_over_the_wire_) {
+    if (!outgoing_request_) {
       FlushPendingRequests();
     }
   });
@@ -209,7 +228,13 @@ Status RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
     return status;
   }
 
-  io_service().post([req, response, status]() {
+  ::asio::io_service *service = GetIoService();
+  if(!service) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid IoService");
+    return Status::Error("RpcConnection attempted to access invalid IoService");
+  }
+
+  service->post([req, response, status]() {
     req->OnResponseArrived(response->in.get(), status);  // Never call back while holding a lock
   });
 
@@ -267,23 +292,29 @@ std::shared_ptr<std::string> RpcConnection::PrepareContextPacket() {
   // after the SASL handshake (if any)
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
 
-  auto res = std::make_shared<std::string>();
+  std::shared_ptr<LockFreeRpcEngine> pinnedEngine = engine_.lock();
+  if(!pinnedEngine) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid RpcEngine");
+    return std::make_shared<std::string>();
+  }
 
-  RpcRequestHeaderProto h;
-  h.set_rpckind(RPC_PROTOCOL_BUFFER);
-  h.set_rpcop(RpcRequestHeaderProto::RPC_FINAL_PACKET);
-  h.set_callid(RpcEngine::kCallIdConnectionContext);
-  h.set_clientid(engine_->client_name());
+  std::shared_ptr<std::string> serializedPacketBuffer = std::make_shared<std::string>();
 
-  IpcConnectionContextProto handshake;
-  handshake.set_protocol(engine_->protocol_name());
+  RpcRequestHeaderProto headerProto;
+  headerProto.set_rpckind(RPC_PROTOCOL_BUFFER);
+  headerProto.set_rpcop(RpcRequestHeaderProto::RPC_FINAL_PACKET);
+  headerProto.set_callid(RpcEngine::kCallIdConnectionContext);
+  headerProto.set_clientid(pinnedEngine->client_name());
+
+  IpcConnectionContextProto handshakeContextProto;
+  handshakeContextProto.set_protocol(pinnedEngine->protocol_name());
   const std::string & user_name = auth_info_.getUser();
   if (!user_name.empty()) {
-    *handshake.mutable_userinfo()->mutable_effectiveuser() = user_name;
+    *handshakeContextProto.mutable_userinfo()->mutable_effectiveuser() = user_name;
   }
-  AddHeadersToPacket(res.get(), {&h, &handshake}, nullptr);
+  AddHeadersToPacket(serializedPacketBuffer.get(), {&headerProto, &handshakeContextProto}, nullptr);
 
-  return res;
+  return serializedPacketBuffer;
 }
 
 void RpcConnection::AsyncRpc(
@@ -310,11 +341,22 @@ void RpcConnection::AsyncRpc_locked(
         handler(status);
       };
 
-  int call_id = (method_name != SASL_METHOD_NAME ? engine_->NextCallId() : RpcEngine::kCallIdSasl);
-  auto r = std::make_shared<Request>(engine_, method_name, call_id, req,
-                                     std::move(wrapped_handler));
-  auto r_vector = std::vector<std::shared_ptr<Request> > (1, r);
-  SendRpcRequests(r_vector);
+
+  std::shared_ptr<Request> rpcRequest;
+  { // Scope to minimize how long RpcEngine's lifetime may be extended
+    std::shared_ptr<LockFreeRpcEngine> pinnedEngine = engine_.lock();
+    if(!pinnedEngine) {
+      LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid RpcEngine");
+      handler(Status::Error("Invalid RpcEngine access."));
+      return;
+    }
+
+    int call_id = (method_name != SASL_METHOD_NAME ? pinnedEngine->NextCallId() : RpcEngine::kCallIdSasl);
+    rpcRequest = std::make_shared<Request>(pinnedEngine, method_name, call_id,
+                                           req, std::move(wrapped_handler));
+  }
+
+  SendRpcRequests({rpcRequest});
 }
 
 void RpcConnection::AsyncRpc(const std::vector<std::shared_ptr<Request> > & requests) {
@@ -330,13 +372,20 @@ void RpcConnection::SendRpcRequests(const std::vector<std::shared_ptr<Request> >
     // Oops.  The connection failed _just_ before the engine got a chance
     //    to send it.  Register it as a failure
     Status status = Status::ResourceUnavailable("RpcConnection closed before send.");
-    engine_->AsyncRpcCommsError(status, shared_from_this(), requests);
+
+    std::shared_ptr<LockFreeRpcEngine> pinnedEngine = engine_.lock();
+    if(!pinnedEngine) {
+      LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access invalid RpcEngine");
+      return;
+    }
+
+    pinnedEngine->AsyncRpcCommsError(status, shared_from_this(), requests);
   } else {
-    for (auto r: requests) {
-      if (r->method_name() != SASL_METHOD_NAME)
-        pending_requests_.push_back(r);
+    for (auto request : requests) {
+      if (request->method_name() != SASL_METHOD_NAME)
+        pending_requests_.push_back(request);
       else
-        auth_requests_.push_back(r);
+        auth_requests_.push_back(request);
     }
     if (connected_ == kConnected || connected_ == kHandshaking || connected_ == kAuthenticating) { // Dont flush if we're waiting or handshaking
       FlushPendingRequests();
@@ -395,26 +444,32 @@ void RpcConnection::CommsError(const Status &status) {
   // Anything that has been queued to the connection (on the fly or pending)
   //    will get dinged for a retry
   std::vector<std::shared_ptr<Request>> requestsToReturn;
-  std::transform(requests_on_fly_.begin(), requests_on_fly_.end(),
+  std::transform(sent_requests_.begin(), sent_requests_.end(),
                  std::back_inserter(requestsToReturn),
-                 std::bind(&RequestOnFlyMap::value_type::second, _1));
-  requests_on_fly_.clear();
+                 std::bind(&SentRequestMap::value_type::second, _1));
+  sent_requests_.clear();
 
   requestsToReturn.insert(requestsToReturn.end(),
                          std::make_move_iterator(pending_requests_.begin()),
                          std::make_move_iterator(pending_requests_.end()));
   pending_requests_.clear();
 
-  engine_->AsyncRpcCommsError(status, shared_from_this(), requestsToReturn);
+  std::shared_ptr<LockFreeRpcEngine> pinnedEngine = engine_.lock();
+  if(!pinnedEngine) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " attempted to access an invalid RpcEngine");
+    return;
+  }
+
+  pinnedEngine->AsyncRpcCommsError(status, shared_from_this(), requestsToReturn);
 }
 
 void RpcConnection::ClearAndDisconnect(const ::asio::error_code &ec) {
   Disconnect();
   std::vector<std::shared_ptr<Request>> requests;
-  std::transform(requests_on_fly_.begin(), requests_on_fly_.end(),
+  std::transform(sent_requests_.begin(), sent_requests_.end(),
                  std::back_inserter(requests),
-                 std::bind(&RequestOnFlyMap::value_type::second, _1));
-  requests_on_fly_.clear();
+                 std::bind(&SentRequestMap::value_type::second, _1));
+  sent_requests_.clear();
   requests.insert(requests.end(),
                   std::make_move_iterator(pending_requests_.begin()),
                   std::make_move_iterator(pending_requests_.end()));
@@ -426,13 +481,13 @@ void RpcConnection::ClearAndDisconnect(const ::asio::error_code &ec) {
 
 std::shared_ptr<Request> RpcConnection::RemoveFromRunningQueue(int call_id) {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
-  auto it = requests_on_fly_.find(call_id);
-  if (it == requests_on_fly_.end()) {
+  auto it = sent_requests_.find(call_id);
+  if (it == sent_requests_.end()) {
     return std::shared_ptr<Request>();
   }
 
   auto req = it->second;
-  requests_on_fly_.erase(it);
+  sent_requests_.erase(it);
   return req;
 }
 
