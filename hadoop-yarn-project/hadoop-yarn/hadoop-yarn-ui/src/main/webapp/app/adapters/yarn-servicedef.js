@@ -20,7 +20,7 @@ import Ember from 'ember';
 import RESTAbstractAdapter from './restabstract';
 
 export default RESTAbstractAdapter.extend({
-  address: "dashWebAddress",
+  address: "rmWebAddress",
   restNameSpace: "dashService",
   serverName: "DASH",
 

@@ -30,7 +30,7 @@ export default Ember.Controller.extend({
 
     cols.push({
       id: 'name',
-      headerTitle: 'Component Group',
+      headerTitle: 'Component',
       contentPath: 'name',
       cellComponentName: 'em-table-linked-cell',
       getCellContent: function(row) {
@@ -49,13 +49,9 @@ export default Ember.Controller.extend({
       contentPath: 'memory'
     }, {
       id: 'instances',
-      headerTitle: '# Components',
+      headerTitle: 'Number Of Instances',
       contentPath: 'instances',
       observePath: true
-    }, {
-      id: 'createdDate',
-      headerTitle: 'Created Time',
-      contentPath: 'createdDate'
     });
 
     return ColumnDef.make(cols);

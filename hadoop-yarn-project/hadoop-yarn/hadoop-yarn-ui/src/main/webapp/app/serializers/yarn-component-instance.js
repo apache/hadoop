@@ -28,7 +28,7 @@ export default DS.JSONAPISerializer.extend({
       attributes: {
         containerId: payload.id,
         component: info.COMPONENT_NAME,
-        instanceName: info.COMPONENT_NAME + '_' + payload.instanceId,
+        instanceName: info.COMPONENT_INSTANCE_NAME,
         state: info.STATE,
         createdTimestamp: payload.createdtime,
         startedTimestamp: info.LAUNCH_TIME,
