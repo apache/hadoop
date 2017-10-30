@@ -252,11 +252,9 @@ public class DefaultSpeculator extends AbstractService implements
 
   // This interface is intended to be used only for test cases.
   public void scanForSpeculations() {
-    LOG.info("We got asked to run a debug speculation scan.");
-    // debug
-    System.out.println("We got asked to run a debug speculation scan.");
-    System.out.println("There are " + scanControl.size()
-        + " events stacked already.");
+    LOG.debug("We got asked to run a debug speculation scan.");
+    LOG.debug("There are " + scanControl.size()
+            + " events stacked already.");
     scanControl.add(new Object());
     Thread.yield();
   }
