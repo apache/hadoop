@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import org.apache.curator.shaded.com.google.common.reflect.ClassPath;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;

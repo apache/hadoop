@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -66,8 +67,10 @@ public abstract class Resource implements Comparable<Resource> {
   // copy array, etc.
   protected static final int NUM_MANDATORY_RESOURCES = 2;
 
-  protected static final int MEMORY_INDEX = 0;
-  protected static final int VCORES_INDEX = 1;
+  @Private
+  public static final int MEMORY_INDEX = 0;
+  @Private
+  public static final int VCORES_INDEX = 1;
 
   @Public
   @Stable
