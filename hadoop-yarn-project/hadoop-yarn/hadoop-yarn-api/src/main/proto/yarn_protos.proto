@@ -405,6 +405,20 @@ message ExecutionTypeRequestProto {
   optional bool enforce_execution_type = 2 [default = false];
 }
 
+message SchedulingRequestProto {
+  optional int64 allocationRequestId = 1 [default = 0];
+  optional PriorityProto priority = 2;
+  optional ExecutionTypeRequestProto executionType = 3;
+  repeated string allocationTags = 4;
+  optional ResourceSizingProto resourceSizing = 5;
+  optional PlacementConstraintProto placementConstraint = 6;
+}
+
+message ResourceSizingProto {
+  optional int32 numAllocations = 1;
+  optional ResourceProto resources = 2;
+}
+
 enum AMCommandProto {
   AM_RESYNC = 1;
   AM_SHUTDOWN = 2;
