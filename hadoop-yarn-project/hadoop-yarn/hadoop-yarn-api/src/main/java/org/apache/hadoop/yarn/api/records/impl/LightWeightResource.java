@@ -155,9 +155,6 @@ public class LightWeightResource extends Resource {
   @Override
   public int hashCode() {
     final int prime = 47;
-    long result = prime + getMemorySize();
-    result = prime * result + getVirtualCores();
-
-    return (int) result;
+    return prime * (prime + Long.hashCode(getMemorySize())) + getVirtualCores();
   }
 }
