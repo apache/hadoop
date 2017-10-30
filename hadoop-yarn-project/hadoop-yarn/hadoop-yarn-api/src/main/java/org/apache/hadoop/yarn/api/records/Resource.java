@@ -463,11 +463,11 @@ public abstract class Resource implements Comparable<Resource> {
   @Override
   public int hashCode() {
     final int prime = 47;
-    long result = 0;
+    int result = 0;
     for (ResourceInformation entry : resources) {
       result = prime * result + entry.hashCode();
     }
-    return (int) result;
+    return result;
   }
 
   /**
