@@ -42,7 +42,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Helper class to read the resource-types to be supported by the system.
@@ -56,6 +59,8 @@ public class ResourceUtils {
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
+  private static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
+      Pattern.compile("^([0-9]+) ?([a-zA-Z]*)$");
 
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
@@ -600,4 +605,43 @@ public class ResourceUtils {
     ResourceUtils
         .initializeResourcesFromResourceInformationMap(resourceInformationMap);
   }
+
+  /**
+   * From a given configuration get all entries representing requested
+   * resources: entries that match the {prefix}{resourceName}={value}[{units}]
+   * pattern.
+   * @param configuration The configuration
+   * @param prefix Keys with this prefix are considered from the configuration
+   * @return The list of requested resources as described by the configuration
+   */
+  public static List<ResourceInformation> getRequestedResourcesFromConfig(
+      Configuration configuration, String prefix) {
+    List<ResourceInformation> result = new ArrayList<>();
+    Map<String, String> customResourcesMap = configuration
+        .getValByRegex("^" + Pattern.quote(prefix) + "[^.]+$");
+    for (Entry<String, String> resource : customResourcesMap.entrySet()) {
+      String resourceName = resource.getKey().substring(prefix.length());
+      Matcher matcher =
+          RESOURCE_REQUEST_VALUE_PATTERN.matcher(resource.getValue());
+      if (!matcher.matches()) {
+        String errorMsg = "Invalid resource request specified for property "
+            + resource.getKey() + ": \"" + resource.getValue()
+            + "\", expected format is: value[ ][units]";
+        LOG.error(errorMsg);
+        throw new IllegalArgumentException(errorMsg);
+      }
+      long value = Long.parseLong(matcher.group(1));
+      String unit = matcher.group(2);
+      if (unit.isEmpty()) {
+        unit = ResourceUtils.getDefaultUnit(resourceName);
+      }
+      ResourceInformation resourceInformation = new ResourceInformation();
+      resourceInformation.setName(resourceName);
+      resourceInformation.setValue(value);
+      resourceInformation.setUnits(unit);
+      result.add(resourceInformation);
+    }
+    return result;
+  }
+
 }
