@@ -64,11 +64,11 @@ void StubGenerator::EmitService(const ServiceDescriptor *service,
   out->Print("\n// GENERATED AUTOMATICALLY. DO NOT MODIFY.\n"
              "class $service$ {\n"
              "private:\n"
-             "  ::hdfs::RpcEngine *const engine_;\n"
+             "  std::shared_ptr<::hdfs::RpcEngine> engine_;\n"
              "public:\n"
              "  typedef std::function<void(const ::hdfs::Status &)> Callback;\n"
              "  typedef ::google::protobuf::MessageLite Message;\n"
-             "  inline $service$(::hdfs::RpcEngine *engine)\n"
+             "  inline $service$(std::shared_ptr<::hdfs::RpcEngine> engine)\n"
              "    : engine_(engine) {}\n",
              "service", service->name());
   for (int i = 0; i < service->method_count(); ++i) {

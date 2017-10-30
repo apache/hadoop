@@ -52,7 +52,7 @@ class SaslProtocol;
 class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
  public:
   MEMCHECKED_CLASS(RpcConnection)
-  RpcConnection(LockFreeRpcEngine *engine);
+  RpcConnection(std::shared_ptr<LockFreeRpcEngine> engine);
   virtual ~RpcConnection();
 
   // Note that a single server can have multiple endpoints - especially both
@@ -82,8 +82,8 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   void SetClusterName(std::string cluster_name);
   void SetAuthInfo(const AuthInfo& auth_info);
 
-  LockFreeRpcEngine *engine() { return engine_; }
-  ::asio::io_service &io_service();
+  std::weak_ptr<LockFreeRpcEngine> engine() { return engine_; }
+  ::asio::io_service *GetIoService();
 
  protected:
   struct Response {
@@ -139,7 +139,7 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   void ClearAndDisconnect(const ::asio::error_code &ec);
   std::shared_ptr<Request> RemoveFromRunningQueue(int call_id);
 
-  LockFreeRpcEngine *const engine_;
+  std::weak_ptr<LockFreeRpcEngine> engine_;
   std::shared_ptr<Response> current_response_state_;
   AuthInfo auth_info_;
 
@@ -158,16 +158,17 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
 
   // State machine for performing a SASL handshake
   std::shared_ptr<SaslProtocol> sasl_protocol_;
-  // The request being sent over the wire; will also be in requests_on_fly_
-  std::shared_ptr<Request> request_over_the_wire_;
+  // The request being sent over the wire; will also be in sent_requests_
+  std::shared_ptr<Request> outgoing_request_;
   // Requests to be sent over the wire
   std::deque<std::shared_ptr<Request>> pending_requests_;
   // Requests to be sent over the wire during authentication; not retried if
   //   there is a connection error
   std::deque<std::shared_ptr<Request>> auth_requests_;
   // Requests that are waiting for responses
-  typedef std::unordered_map<int, std::shared_ptr<Request>> RequestOnFlyMap;
-  RequestOnFlyMap requests_on_fly_;
+  typedef std::unordered_map<int, std::shared_ptr<Request>> SentRequestMap;
+  SentRequestMap sent_requests_;
+
   std::shared_ptr<LibhdfsEvents> event_handlers_;
   std::string cluster_name_;
 

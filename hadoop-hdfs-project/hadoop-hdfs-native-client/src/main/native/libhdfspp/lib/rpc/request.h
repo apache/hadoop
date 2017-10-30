@@ -23,6 +23,7 @@
 #include "common/new_delete.h"
 
 #include <string>
+#include <memory>
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -48,14 +49,13 @@ class Request {
   typedef std::function<void(::google::protobuf::io::CodedInputStream *is,
                              const Status &status)> Handler;
 
-  Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
-          const std::string &request, Handler &&callback);
-  Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
+  // Constructors will not make any blocking calls while holding the shared_ptr<RpcEngine>
+  Request(std::shared_ptr<LockFreeRpcEngine> engine, const std::string &method_name, int call_id,
           const ::google::protobuf::MessageLite *request, Handler &&callback);
 
   // Null request (with no actual message) used to track the state of an
   //    initial Connect call
-  Request(LockFreeRpcEngine *engine, Handler &&handler);
+  Request(std::shared_ptr<LockFreeRpcEngine> engine, Handler &&handler);
 
   int call_id() const { return call_id_; }
   std::string  method_name() const { return method_name_; }
@@ -71,7 +71,7 @@ class Request {
   std::string GetDebugString() const;
 
  private:
-  LockFreeRpcEngine *const engine_;
+  std::weak_ptr<LockFreeRpcEngine> engine_;
   const std::string method_name_;
   const int call_id_;
 

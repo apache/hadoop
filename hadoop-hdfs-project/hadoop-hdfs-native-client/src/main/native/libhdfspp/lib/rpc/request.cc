@@ -38,6 +38,11 @@ using namespace ::std::placeholders;
 static const int kNoRetry = -1;
 
 // Protobuf helper functions.
+// Note/todo: Using the zero-copy protobuf API here makes the simple procedures
+//   below tricky to read and debug while providing minimal benefit.  Reducing
+//   allocations in BlockReader (HDFS-11266) and smarter use of std::stringstream
+//   will have a much larger impact according to cachegrind profiles on common
+//   workloads.
 static void AddHeadersToPacket(std::string *res,
                                std::initializer_list<const pb::MessageLite *> headers,
                                const std::string *payload) {
@@ -82,50 +87,33 @@ static void ConstructPayload(std::string *res, const pb::MessageLite *header) {
   buf = header->SerializeWithCachedSizesToArray(buf);
 }
 
-static void ConstructPayload(std::string *res, const std::string *request) {
-  int len =
-      pbio::CodedOutputStream::VarintSize32(request->size()) + request->size();
-  res->reserve(len);
-  pbio::StringOutputStream ss(res);
-  pbio::CodedOutputStream os(&ss);
-  uint8_t *buf = os.GetDirectBufferForNBytesAndAdvance(len);
-  assert(buf);
-  buf = pbio::CodedOutputStream::WriteVarint32ToArray(request->size(), buf);
-  buf = os.WriteStringToArray(*request, buf);
-}
-
-static void SetRequestHeader(LockFreeRpcEngine *engine, int call_id,
+static void SetRequestHeader(std::weak_ptr<LockFreeRpcEngine> weak_engine, int call_id,
                              const std::string &method_name, int retry_count,
                              RpcRequestHeaderProto *rpc_header,
-                             RequestHeaderProto *req_header) {
+                             RequestHeaderProto *req_header)
+{
+  // Ensure the RpcEngine is live.  If it's not then the FileSystem is being destructed.
+  std::shared_ptr<LockFreeRpcEngine> counted_engine = weak_engine.lock();
+  if(!counted_engine) {
+    LOG_ERROR(kRPC, << "SetRequestHeader attempted to access an invalid RpcEngine");
+    return;
+  }
+
   rpc_header->set_rpckind(RPC_PROTOCOL_BUFFER);
   rpc_header->set_rpcop(RpcRequestHeaderProto::RPC_FINAL_PACKET);
   rpc_header->set_callid(call_id);
-  if (retry_count != kNoRetry)
+  if (retry_count != kNoRetry) {
     rpc_header->set_retrycount(retry_count);
-  rpc_header->set_clientid(engine->client_id());
-
+  }
+  rpc_header->set_clientid(counted_engine->client_id());
   req_header->set_methodname(method_name);
-  req_header->set_declaringclassprotocolname(engine->protocol_name());
-  req_header->set_clientprotocolversion(engine->protocol_version());
+  req_header->set_declaringclassprotocolname(counted_engine->protocol_name());
+  req_header->set_clientprotocolversion(counted_engine->protocol_version());
 }
 
 // Request implementation
 
-Request::Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
-                 const std::string &request, Handler &&handler)
-    : engine_(engine),
-      method_name_(method_name),
-      call_id_(call_id),
-      timer_(engine->io_service()),
-      handler_(std::move(handler)),
-      retry_count_(engine->retry_policy() ? 0 : kNoRetry),
-      failover_count_(0) {
-  ConstructPayload(&payload_, &request);
-}
-
-
-Request::Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
+Request::Request(std::shared_ptr<LockFreeRpcEngine> engine, const std::string &method_name, int call_id,
                  const pb::MessageLite *request, Handler &&handler)
     : engine_(engine),
       method_name_(method_name),
@@ -133,13 +121,14 @@ Request::Request(LockFreeRpcEngine *engine, const std::string &method_name, int 
       timer_(engine->io_service()),
       handler_(std::move(handler)),
       retry_count_(engine->retry_policy() ? 0 : kNoRetry),
-      failover_count_(0) {
+      failover_count_(0)
+{
   ConstructPayload(&payload_, request);
 }
 
-Request::Request(LockFreeRpcEngine *engine, Handler &&handler)
+Request::Request(std::shared_ptr<LockFreeRpcEngine> engine, Handler &&handler)
     : engine_(engine),
-      call_id_(-1),
+      call_id_(-1/*Handshake ID*/),
       timer_(engine->io_service()),
       handler_(std::move(handler)),
       retry_count_(engine->retry_policy() ? 0 : kNoRetry),

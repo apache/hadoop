@@ -46,8 +46,9 @@ public:
             const std::string &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version) :
   io_service_(io_service),
-  engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
-  namenode_(& engine_), options_(options) {}
+  engine_(std::make_shared<RpcEngine>(io_service, options, client_name, user_name, protocol_name, protocol_version)),
+  namenode_(engine_), options_(options) {}
+
 
   void Connect(const std::string &cluster_name,
                const std::vector<ResolvedNamenodeInfo> &servers,
@@ -119,7 +120,14 @@ private:
   static void GetFsStatsResponseProtoToFsInfo(hdfs::FsInfo & fs_info, const std::shared_ptr<::hadoop::hdfs::GetFsStatsResponseProto> & fs);
 
   ::asio::io_service * io_service_;
-  RpcEngine engine_;
+
+  // This is the only permanent owner of the RpcEngine, however the RPC layer
+  // needs to reference count it prevent races during FileSystem destruction.
+  // In order to do this they hold weak_ptrs and promote them to shared_ptr
+  // when calling non-blocking RpcEngine methods e.g. get_client_id().
+  std::shared_ptr<RpcEngine> engine_;
+
+  // Automatically generated methods for RPC calls.  See protoc_gen_hrpc.cc
   ClientNamenodeProtocol namenode_;
   const Options options_;
 };
