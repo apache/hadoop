@@ -18,21 +18,49 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging.integration;
 
+import org.junit.Test;
+
+import org.hamcrest.core.StringContains;
+import org.hamcrest.core.StringEndsWith;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitter;
+import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants;
+import org.apache.hadoop.security.UserGroupInformation;
+
+import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
 
 /**
  * Full integration test for the staging committer.
  */
 public class ITStagingCommitMRJob extends AbstractITCommitMRJob {
-  @Override
-  protected String committerFactoryClassname() {
-    return CommitConstants.STAGING_COMMITTER_FACTORY;
-  }
 
   @Override
   protected String committerName() {
     return StagingCommitter.NAME;
   }
+
+  /**
+   * Verify that staging commit dirs are made absolute under the user's
+   * home directory, so, in a secure cluster, private.
+   */
+  @Test
+  public void testStagingDirectory() throws Throwable {
+    FileSystem hdfs = getDFS();
+    Configuration conf = hdfs.getConf();
+    conf.set(CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH,
+        "private");
+    Path dir = getMultipartUploadCommitsDirectory(conf, "UUID");
+    assertThat(dir.toString(), StringEndsWith.endsWith(
+        "UUID/"
+        + StagingCommitterConstants.STAGING_UPLOADS));
+    assertTrue("path unqualified", dir.isAbsolute());
+    String self = UserGroupInformation.getCurrentUser().getShortUserName();
+    assertThat(dir.toString(),
+        StringContains.containsString("/user/" + self + "/private"));
+  }
+
 }

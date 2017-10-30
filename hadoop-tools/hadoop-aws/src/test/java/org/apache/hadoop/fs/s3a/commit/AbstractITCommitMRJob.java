@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
-import org.apache.hadoop.fs.s3a.StorageStatisticsTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
@@ -119,14 +118,8 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
   public final TemporaryFolder temp = new TemporaryFolder();
 
   /**
-   * Get the classname of the factory for this committer.
-   * @return the classname to set in the job setup
-   */
-  protected abstract String committerFactoryClassname();
-
-  /**
    * The name of the committer as returned by
-   * {@link AbstractS3GuardCommitter#getName()}.
+   * {@link AbstractS3ACommitter#getName()} and used for committer construction.
    */
   protected abstract String committerName();
 
@@ -149,7 +142,6 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     S3AFileSystem fs = getFileSystem();
     // final dest is in S3A
     Path outputPath = path("testMRJob");
-    StorageStatisticsTracker tracker = new StorageStatisticsTracker(fs);
 
     String commitUUID = UUID.randomUUID().toString();
     String suffix = uniqueFilenames ? ("-" + commitUUID) : "";
@@ -173,8 +165,10 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         uniqueFilenames);
 
-    jobConf.set(S3A_COMMITTER_FACTORY_KEY,
-        committerFactoryClassname());
+
+    bindCommitter(jobConf,
+        CommitConstants.S3A_COMMITTER_FACTORY,
+        committerName());
     // pass down the scale test flag
     jobConf.setBoolean(KEY_SCALE_TESTS_ENABLED, scaleTest);
 
@@ -185,7 +179,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     mockResultsFile.delete();
     String committerPath = "file:" + mockResultsFile;
     jobConf.set("mock-results-file", committerPath);
-    jobConf.set(CommitConstants.FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
+    jobConf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
 
     mrJob.setInputFormatClass(TextInputFormat.class);
     FileInputFormat.addInputPath(mrJob, new Path(temp.getRoot().toURI()));
@@ -236,7 +230,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
         status.getLen() > 0);
     SuccessData successData = SuccessData.load(fs, success);
     String commitDetails = successData.toString();
-    LOG.info("Committer from " + committerFactoryClassname() + "\n{}",
+    LOG.info("Committer name " + committerName() + "\n{}",
         commitDetails);
     LOG.info("Committer statistics: \n{}",
         successData.dumpMetrics("  ", " = ", "\n"));

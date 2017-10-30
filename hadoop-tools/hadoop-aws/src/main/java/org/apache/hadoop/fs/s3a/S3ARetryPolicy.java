@@ -88,7 +88,7 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // base policy from configuration
     RetryPolicy fixedRetries = retryUpToMaximumCountWithFixedSleep(
-        conf.getInt(MAX_ERROR_RETRIES, DEFAULT_MAX_ERROR_RETRIES),
+        conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT),
         conf.getTimeDuration(RETRY_INTERVAL,
             RETRY_INTERVAL_DEFAULT,
             TimeUnit.MILLISECONDS),
@@ -151,7 +151,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     // comes and goes on test runs: try again
     policyMap.put(AWSBadRequestException.class, connectivityFailure);
 
-    // Status 500 error code is also treaded as a connectivity problem
+    // Status 500 error code is also treated as a connectivity problem
     policyMap.put(AWSStatus500Exception.class, connectivityFailure);
 
     // server didn't respond.

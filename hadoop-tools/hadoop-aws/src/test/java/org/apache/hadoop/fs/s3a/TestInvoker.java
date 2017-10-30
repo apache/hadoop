@@ -68,14 +68,14 @@ public class TestInvoker extends Assert {
       = new org.apache.http.conn.ConnectTimeoutException("apache");
   private static final SocketTimeoutException SOCKET_TIMEOUT_EX
       = new SocketTimeoutException("socket");
-  private static final int RETRIES_TOO_MANY = DEFAULT_MAX_ERROR_RETRIES + 10;
+  private static final int RETRIES_TOO_MANY = RETRY_LIMIT_DEFAULT + 10;
 
   static {
     FAST_RETRY_CONF = new Configuration();
     String interval = "10ms";
     FAST_RETRY_CONF.set(RETRY_INTERVAL, interval);
     FAST_RETRY_CONF.set(RETRY_THROTTLE_INTERVAL, interval);
-    FAST_RETRY_CONF.setInt(MAX_ERROR_RETRIES, DEFAULT_MAX_ERROR_RETRIES);
+    FAST_RETRY_CONF.setInt(RETRY_LIMIT, DEFAULT_MAX_ERROR_RETRIES);
   }
 
   private static final S3ARetryPolicy RETRY_POLICY =

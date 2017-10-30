@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -54,7 +55,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       PartitionedStagingCommitter.class);
-  public static final String NAME = "PartitionedStagingCommitter";
+  public static final String NAME = CommitConstants.COMMITTER_NAME_PARTITIONED;
 
   public PartitionedStagingCommitter(Path outputPath,
       TaskAttemptContext context)

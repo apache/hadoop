@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitProtocol;
-import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitter;
+import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
@@ -58,9 +58,17 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
-    conf.set(S3A_COMMITTER_FACTORY_KEY,
-        MagicS3GuardCommitterFactory.CLASSNAME);
     return conf;
+  }
+
+  @Override
+  protected String getCommitterFactoryName() {
+    return CommitConstants.S3A_COMMITTER_FACTORY;
+  }
+
+  @Override
+  protected String getCommitterName() {
+    return CommitConstants.COMMITTER_NAME_MAGIC;
   }
 
   @Override
@@ -74,19 +82,14 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected String getCommitterFactoryName() {
-    return CommitConstants.MAGIC_COMMITTER_FACTORY;
-  }
-
-  @Override
-  protected AbstractS3GuardCommitter createCommitter(
+  protected AbstractS3ACommitter createCommitter(
       Path outputPath,
       TaskAttemptContext context)
       throws IOException {
     return new MagicS3GuardCommitter(outputPath, context);
   }
 
-  public AbstractS3GuardCommitter createFailingCommitter(
+  public AbstractS3ACommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
   }

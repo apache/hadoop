@@ -200,31 +200,16 @@ public final class Paths {
    * Try to come up with a good temp directory for different filesystems.
    * @param fs filesystem
    * @param conf configuration
-   * @return a path under which temporary work can go.
+   * @return a qualified path under which temporary work can go.
    */
   public static Path tempDirForStaging(FileSystem fs,
       Configuration conf) {
-    Path temp;
-    switch (fs.getScheme()) {
-    case "file":
-      temp = fs.makeQualified(
-          new Path(System.getProperty(JAVA_IO_TMPDIR)));
-      break;
+    String fallbackPath = fs.getScheme().equals("file")
+        ? System.getProperty(JAVA_IO_TMPDIR)
+        : FILESYSTEM_TEMP_PATH;
 
-    case "s3a":
-      // the Staging committer may reject this if it doesn't believe S3A
-      // is consistent.
-      temp = fs.makeQualified(new Path(FILESYSTEM_TEMP_PATH));
-      break;
-
-    // here assume that /tmp is valid
-    case "hdfs":
-    default:
-      String pathname = conf.getTrimmed(
-          FS_S3A_COMMITTER_STAGING_TMP_PATH, FILESYSTEM_TEMP_PATH);
-      temp = fs.makeQualified(new Path(pathname));
-    }
-    return temp;
+    return fs.makeQualified(new Path(conf.getTrimmed(
+        FS_S3A_COMMITTER_STAGING_TMP_PATH, fallbackPath)));
   }
 
   /**
@@ -238,8 +223,10 @@ public final class Paths {
   }
 
   /**
-   * Build a temporary path for the multipart upload commit information
-   * in the supplied filesystem (which is expected to be the cluster FS)
+   * Build a qualified temporary path for the multipart upload commit
+   * information in the cluster filesystem.
+   * Path is built by
+   * {@link #getMultipartUploadCommitsDirectory(FileSystem, Configuration, String)}
    * @param conf configuration defining default FS.
    * @param uuid uuid of job
    * @return a path which can be used for temporary work
@@ -247,34 +234,30 @@ public final class Paths {
    */
   public static Path getMultipartUploadCommitsDirectory(Configuration conf,
       String uuid) throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    return getMultipartUploadCommitsDirectory(fs, conf, uuid);
+    return getMultipartUploadCommitsDirectory(FileSystem.get(conf), conf, uuid);
   }
 
   /**
-   * Build a temporary path for the multipart upload commit information
-   * in the supplied filesystem (which is expected to be the cluster FS)
+   * Build a qualified temporary path for the multipart upload commit
+   * information in the supplied filesystem
+   * (which is expected to be the cluster FS).
+   * Currently {code $tempDir/$user/$uuid/staging-uploads} where
+   * {@code tempDir} is from
+   * {@link #tempDirForStaging(FileSystem, Configuration)}.
    * @param fs target FS
    * @param conf configuration
    * @param uuid uuid of job
    * @return a path which can be used for temporary work
    * @throws IOException on an IO failure.
    */
+  @VisibleForTesting
   static Path getMultipartUploadCommitsDirectory(FileSystem fs,
       Configuration conf, String uuid) throws IOException {
-    return path(tempDirForStaging(fs, conf),
+    return path(
+        tempDirForStaging(fs, conf),
         UserGroupInformation.getCurrentUser().getShortUserName(),
         uuid,
         STAGING_UPLOADS);
-  }
-
-  private static Path localTemp(Configuration conf, int taskId, int attemptId)
-      throws IOException {
-    String[] dirs = conf.getTrimmedStrings(BUFFER_DIR);
-    Random rand = new Random(Objects.hashCode(taskId, attemptId));
-    String dir = dirs[rand.nextInt(dirs.length)];
-
-    return FileSystem.getLocal(conf).makeQualified(new Path(dir));
   }
 
   /**

@@ -255,6 +255,7 @@ public class Invoker {
    * @return the result of the call
    * @throws IOException any IOE raised
    * @throws SdkBaseException any AWS exception raised
+   * @throws RuntimeException : these are never caught and retries.
    */
   @Retries.RetryRaw
   public <T> T retryUntranslated(

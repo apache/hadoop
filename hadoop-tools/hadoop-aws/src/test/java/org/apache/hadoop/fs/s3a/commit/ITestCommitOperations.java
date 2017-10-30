@@ -77,9 +77,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.set(S3A_COMMITTER_FACTORY_KEY,
-        MagicS3GuardCommitterFactory.CLASSNAME);
-
+    bindCommitter(conf, CommitConstants.S3A_COMMITTER_FACTORY,
+        CommitConstants.COMMITTER_NAME_MAGIC);
     return conf;
   }
 

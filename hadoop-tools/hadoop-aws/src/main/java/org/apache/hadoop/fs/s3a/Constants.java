@@ -462,6 +462,17 @@ public final class Constants {
       "org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory";
 
   /**
+   * Number of times to retry any repeatable S3 client request on failure,
+   * excluding throttling requests: {@value}.
+   */
+  public static final String RETRY_LIMIT = "fs.s3a.retry.limit";
+
+  /**
+   * Default retry limit: {@value}.
+   */
+  public static final int RETRY_LIMIT_DEFAULT = DEFAULT_MAX_ERROR_RETRIES;
+
+  /**
    * Interval between retry attempts.: {@value}.
    */
   public static final String RETRY_INTERVAL = "fs.s3a.retry.interval";

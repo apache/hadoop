@@ -1463,6 +1463,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param putObjectRequest the request
    * @return the upload initiated
    */
+  @Retries.OnceRaw
   public UploadInfo putObject(PutObjectRequest putObjectRequest) {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {} via transfer manager ",

@@ -36,11 +36,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitter;
+import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.Tasks;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -77,12 +77,16 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
  *     Delete all task attempt directories.
  *   </li>
  * </ol>
+ *
+ * This is the base class of the Partitioned and Directory committers.
+ * It does not do any conflict resolution, and is made non-abstract
+ * primarily for test purposes. It is not expected to be used in production.
  */
-public class StagingCommitter extends AbstractS3GuardCommitter {
+public class StagingCommitter extends AbstractS3ACommitter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       StagingCommitter.class);
-  public static final String NAME = "StagingCommitter";
+  public static final String NAME = "staging";
   private final Path constructorOutputPath;
   private final long uploadPartSize;
   private final String uuid;
@@ -90,7 +94,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   private final FileOutputCommitter wrappedCommitter;
 
   private ConflictResolution conflictResolution;
-  private String s3KeyPrefix = null;
+  private String s3KeyPrefix;
 
   /** The directory in the cluster FS for commits to go to. */
   private Path commitsDirectory;
@@ -147,17 +151,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
     // explicitly choose commit algorithm
     initFileOutputCommitterOptions(context);
     commitsDirectory = Paths.getMultipartUploadCommitsDirectory(conf, uuid);
-    FileSystem stagingFS = commitsDirectory.getFileSystem(conf);
-    Path qualified = stagingFS.makeQualified(commitsDirectory);
-    if (stagingFS instanceof S3AFileSystem) {
-      // currently refuse to work with S3a for the working FS; you need
-      // a consistent FS. This isn't entirely true with s3guard and
-      // alternative S3 endpoints, but doing it now stops
-      // accidental use of S3
-      throw new PathIOException(qualified.toUri().toString(),
-          "Directory for intermediate work cannot be on S3");
-    }
-    return new FileOutputCommitter(qualified, context);
+    return new FileOutputCommitter(commitsDirectory, context);
   }
 
   /**
@@ -188,7 +182,7 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
    * Spark will use a fake app ID based on the current minute and job ID 0.
    * To avoid collisions, the key policy is:
    * <ol>
-   *   <li>Value of {@link CommitConstants#FS_S3A_COMMITTER_STAGING_UUID}.</li>
+   *   <li>Value of {@link InternalCommitterConstants#FS_S3A_COMMITTER_STAGING_UUID}.</li>
    *   <li>Value of {@code "spark.sql.sources.writeJobUUID"}.</li>
    *   <li>Value of {@code "spark.app.id"}.</li>
    *   <li>JobId passed in.</li>
@@ -201,7 +195,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
    * @return an ID for use in paths.
    */
   public static String getUploadUUID(Configuration conf, String jobId) {
-    return conf.getTrimmed(FS_S3A_COMMITTER_STAGING_UUID,
+    return conf.getTrimmed(
+        InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
         conf.getTrimmed(SPARK_WRITE_UUID,
             conf.getTrimmed(SPARK_APP_ID, jobId)));
   }
@@ -457,7 +452,8 @@ public class StagingCommitter extends AbstractS3GuardCommitter {
   @Override
   public void setupJob(JobContext context) throws IOException {
     LOG.debug("{}, Setting up job {}", getRole(), jobIdString(context));
-    context.getConfiguration().set(FS_S3A_COMMITTER_STAGING_UUID, uuid);
+    context.getConfiguration().set(
+        InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID, uuid);
     wrappedCommitter.setupJob(context);
   }
 

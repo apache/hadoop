@@ -75,7 +75,7 @@ public class BindingPathOutputCommitter extends PathOutputCommitter {
   private final PathOutputCommitter committer;
 
   /**
-   * Instantiate
+   * Instantiate.
    * @param outputPath output path (may be null)
    * @param context task context
    * @throws IOException on any failure.

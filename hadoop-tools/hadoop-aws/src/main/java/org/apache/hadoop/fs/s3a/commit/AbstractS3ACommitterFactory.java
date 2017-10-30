@@ -34,10 +34,10 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
 /**
  * Dynamically create the output committer based on subclass type and settings.
  */
-public abstract class AbstractS3GuardCommitterFactory
+public abstract class AbstractS3ACommitterFactory
     extends PathOutputCommitterFactory {
   public static final Logger LOG = LoggerFactory.getLogger(
-      AbstractS3GuardCommitterFactory.class);
+      AbstractS3ACommitterFactory.class);
 
   @Override
   public PathOutputCommitter createOutputCommitter(Path outputPath,

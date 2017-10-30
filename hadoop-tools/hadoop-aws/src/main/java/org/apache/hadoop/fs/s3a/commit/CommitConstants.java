@@ -168,7 +168,7 @@ public final class CommitConstants {
    * Option for {@link #FS_S3A_COMMITTER_NAME}:
    * partition output committer: {@value}.
    */
-  public static final String COMMITTER_NAME_PARTITION = "partitioned";
+  public static final String COMMITTER_NAME_PARTITIONED = "partitioned";
 
   /**
    * Option for final files to have a uniqueness name through job attempt info,
@@ -184,12 +184,6 @@ public final class CommitConstants {
    * {@value}.
    */
   public static final boolean DEFAULT_STAGING_COMMITTER_UNIQUE_FILENAMES = true;
-
-  /**
-   * A unique identifier to use for this work: {@value}.
-   */
-  public static final String FS_S3A_COMMITTER_STAGING_UUID =
-      "fs.s3a.committer.staging.uuid";
 
   /**
    * Staging committer conflict resolution policy: {@value}.
@@ -229,28 +223,5 @@ public final class CommitConstants {
    */
   public static final String FS_S3A_COMMITTER_STAGING_TMP_PATH =
       "fs.s3a.committer.staging.tmp.path";
-  /**
-   * Directory committer: {@value}.
-   */
-  public static final String STAGING_COMMITTER_FACTORY =
-      StagingCommitterFactory.CLASSNAME;
-
-  /**
-   * Directory committer: {@value}.
-   */
-  public static final String DIRECTORY_COMMITTER_FACTORY =
-      DirectoryStagingCommitterFactory.CLASSNAME;
-
-  /**
-   * Partitioned committer: {@value}.
-   */
-  public static final String PARTITION_COMMITTER_FACTORY =
-      PartitionedStagingCommitterFactory.CLASSNAME;
-
-  /**
-   * Magic committer factory: {@value}.
-   */
-  public static final String MAGIC_COMMITTER_FACTORY =
-      MagicS3GuardCommitterFactory.CLASSNAME;
 
 }

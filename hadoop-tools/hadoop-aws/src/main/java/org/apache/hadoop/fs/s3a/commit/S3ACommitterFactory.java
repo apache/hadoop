@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
+import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
@@ -43,15 +44,17 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  *   <li>{@link CommitConstants#COMMITTER_NAME_FILE}: File committer.</li>
  *   <li>{@link CommitConstants#COMMITTER_NAME_DIRECTORY}:
  *   Staging directory committer.</li>
- *   <li>{@link CommitConstants#COMMITTER_NAME_PARTITION}:
- *   Staging partition committer.</li>
+ *   <li>{@link CommitConstants#COMMITTER_NAME_PARTITIONED}:
+ *   Staging partitioned committer.</li>
  *   <li>{@link CommitConstants#COMMITTER_NAME_MAGIC}:
  *   the "Magic" committer</li>
+ *   <li>{@link InternalCommitterConstants#COMMITTER_NAME_STAGING}:
+ *   the "staging" committer, which isn't intended for use outside tests.</li>
  * </ul>
  * There are no checks to verify that the filesystem is compatible with
  * the committer.
  */
-public class S3ACommitterFactory extends AbstractS3GuardCommitterFactory {
+public class S3ACommitterFactory extends AbstractS3ACommitterFactory {
 
   /**
    * Name of this class: {@value}.
@@ -71,7 +74,7 @@ public class S3ACommitterFactory extends AbstractS3GuardCommitterFactory {
   public PathOutputCommitter createTaskCommitter(S3AFileSystem fileSystem,
       Path outputPath,
       TaskAttemptContext context) throws IOException {
-    AbstractS3GuardCommitterFactory factory = chooseCommitterFactory(fileSystem,
+    AbstractS3ACommitterFactory factory = chooseCommitterFactory(fileSystem,
         outputPath,
         context.getConfiguration());
     return factory != null ?
@@ -89,11 +92,11 @@ public class S3ACommitterFactory extends AbstractS3GuardCommitterFactory {
    * @return An S3A committer if chosen, or "null" for the classic value
    * @throws PathCommitException on a failure to identify the committer
    */
-  private AbstractS3GuardCommitterFactory chooseCommitterFactory(
+  private AbstractS3ACommitterFactory chooseCommitterFactory(
       S3AFileSystem fileSystem,
       Path outputPath,
       Configuration taskConf) throws PathCommitException {
-    AbstractS3GuardCommitterFactory factory;
+    AbstractS3ACommitterFactory factory;
 
     // the FS conf will have had its per-bucket values resolved, unlike
     // job/task configurations.
@@ -108,11 +111,14 @@ public class S3ACommitterFactory extends AbstractS3GuardCommitterFactory {
     case COMMITTER_NAME_DIRECTORY:
       factory = new DirectoryStagingCommitterFactory();
       break;
-    case COMMITTER_NAME_PARTITION:
+    case COMMITTER_NAME_PARTITIONED:
       factory = new PartitionedStagingCommitterFactory();
       break;
     case COMMITTER_NAME_MAGIC:
       factory = new MagicS3GuardCommitterFactory();
+      break;
+    case InternalCommitterConstants.COMMITTER_NAME_STAGING:
+      factory = new StagingCommitterFactory();
       break;
     default:
       throw new PathCommitException(outputPath,

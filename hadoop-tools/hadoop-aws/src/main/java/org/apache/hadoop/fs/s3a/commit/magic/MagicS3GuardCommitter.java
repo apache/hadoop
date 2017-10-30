@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitter;
+import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitUtils;
@@ -58,11 +58,11 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class MagicS3GuardCommitter extends AbstractS3GuardCommitter {
+public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   private static final Logger LOG =
       LoggerFactory.getLogger(MagicS3GuardCommitter.class);
 
-  public static final String NAME = "MagicS3GuardCommitter";
+  public static final String NAME = CommitConstants.COMMITTER_NAME_MAGIC;
 
   /**
    * Create a task committer.

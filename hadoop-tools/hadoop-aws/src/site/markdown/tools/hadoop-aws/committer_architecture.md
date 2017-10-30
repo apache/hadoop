@@ -1742,22 +1742,119 @@ option which takes a committer class, but still use the factory mechanism
 underneath.
 
 1. Add a patch to Spark 2.3 [SPARK-21762], which allows any output committer
-to be used for ParquetFileOutput. 
+to be used for `ParquetFileOutput`. 
 
 Overall, its a bit convoluted to implement, document and use. Users must
 declare two spark SQL options as well as three spark.hadoop ones
 
-```
+```properties
 spark.sql.sources.commitProtocolClass=com.hortonworks.spark.cloud.commit.PathOutputCommitProtocol
 spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
-spark.hadoop.fs.s3a.committer.committer.name=magic
+spark.hadoop.fs.s3a.committer.name=magic
 spark.hadoop.fs.s3a.committer.magic.enabled=true
 ```
 
 We could actually simplify this by adding a new algorithm "3" to the existing
-FileOutputFormat, telling FileOutputFormat itself to use the factory
+`FileOutputFormat`, telling `FileOutputFormat` itself to use the factory
 to create committers. This would then automatically pick up the factory 
 Avoiding loops in this situation would be "challenging": If instantiated
 via a factory, the file committer must not attempt to use the factory
 itself.
+
+
+## Security
+
+What are the obvious possible security risks which need to be covered
+and which code reviews should check for?
+
+* Leakage of AWS credentials in jobs/logging.
+* Exposure of data to unauthorized users.
+* Exposure of workflow to unauthorized users (e.g. paths & filenames, sequence
+of queries).
+* Silent tampering of data by unauthed users.
+* Attacks on jobs which run up (large) bills by leaking pending datasets.
+* DoS attacks with malicious users sabotaging/hindering progress of other
+users' work.
+
+#### Security Risks of the Staging Committers
+
+Staged data is on local FS, in directories listed by `fs.s3a.buffer.dir`,
+falling back to the directory in `hadoop.tmp.dir`.
+These are the same directories already
+used to buffer blocks of data being written in output streams, prior to 
+PUT/POST to S3. Therefore: there is more risk than before. We should
+clearly document the security aspects of the temp dirs to ensure this.
+
+As all files written by a task are not uploaded until task commit, more
+local storage is needed. A malicious user executing work on one system
+could potentially fill up the temp disk space. Mitigation: storage
+quotas in local FS, keeping temp dirs on different mounted FS from root.
+
+The intermediate `.pendingset` files are saved in HDFS under the directory in
+`fs.s3a.committer.staging.tmp.path`; defaulting to  `/tmp`. This data can
+disclose the workflow (it contains the destination paths & amount of data
+generated), and if deleted, breaks the job. If malicous code were to edit
+the file, by, for example, reordering the ordered etag list, the generated
+data would be committed out of order, creating invalid files. As this is
+the (usually transient) cluster FS, any user in the cluster has the potential
+to do this.
+
+*Locking down the temporary directories is critical to prevent malicious
+cluster users damaging the workflow and output.*
+
+#### Security Risks of the Magic Committer
+
+The directory defined by `fs.s3a.buffer.dir` is used to buffer blocks
+before upload, unless the job is configured to buffer the blocks in memory.
+This is as before: no incremental risk. As blocks are deleted from the filesystem
+after upload, the amount of storage needed is determined by the data generation
+bandwidth and the data upload bandwdith.
+
+No use is made of the cluster filesystem; there are no risks there.
+
+A consistent store is required, which, for Amazon's infrastructure, means S3Guard.
+This is covered below.
+
+A malicious user with write access to the `__magic` directory could manipulate
+or delete the metadata of pending uploads, or potentially inject new work int
+the commit. Having access to the `__magic` directory implies write access
+to the parent destination directory: a malicious user could just as easily
+manipulate the final output, without needing to attack the committer's intermediate
+files.
+
+
+### Security Risks of all committers
+
+* If S3Guard is used for storing metadata, then the metadata is visible to
+all users with read access. A malicious user with write access could delete
+entries of newly generated files, so they would not be visible.
+
+* Killed jobs will leak uncommitted uploads, which will run up bills.
+A restarted job will automatically purge
+all pending uploads under the destination path on job commit, so if the job
+is rerun it will cancel the pending writes of the previous job attempt.
+
+We shall also provide a CLI tool to list and delete pending uploads under a path. 
+
+Finally, configuring a store to automatically clean pending uploads after a
+time period such as 24h will guarantee that pending upload data will always
+be deleted, even without a rerun of the job or use of the CLI tool.
+
+AWS document [the permissions for MPU](http://docs.aws.amazon.com/AmazonS3/latest/dev/mpuAndPermissions.html).
+There are special permissions `s3:ListBucketMultipartUploads`, 
+`s3:ListMultipartUploadParts` and `s3:AbortMultipartUpload`. By default
+bucket owner has all these permissions, MPU initiator will be granted
+the permissions to list the upload, list hte parts and abort their own uploads.
+Bucket owner may grant/deny perms to either (this may permit a user to be
+able to initiate & complete MPU, but not delete and abort).
+
+
+### Proposed security settings & recommendations
+
+* Bucket access restricted to specific IAM roles.
+* `fs.s3a.buffer.dir` set to location under `/tmp` with read & write access
+restricted to the active user.
+* `fs.s3a.committer.staging.tmp.path` set to a location specific for
+each user. Proposed: make default an unqualified path for the FS
+

@@ -30,11 +30,6 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  */
 public class ITMagicCommitMRJob extends AbstractITCommitMRJob {
 
-  @Override
-  protected String committerFactoryClassname() {
-    return MAGIC_COMMITTER_FACTORY;
-  }
-
   /**
    * Need consistency here.
    * @return false

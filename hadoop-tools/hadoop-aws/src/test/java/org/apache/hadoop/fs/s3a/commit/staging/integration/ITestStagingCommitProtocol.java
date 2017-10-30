@@ -27,10 +27,10 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.InconsistentS3ClientFactory;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitProtocol;
-import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitter;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.staging.Paths;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitter;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -52,8 +52,6 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     conf.setInt(FS_S3A_COMMITTER_THREADS, 1);
-    conf.set(S3A_COMMITTER_FACTORY_KEY,
-        getCommitterFactoryName());
     // switch to the inconsistent filesystem
     conf.setClass(S3_CLIENT_FACTORY_IMPL, InconsistentS3ClientFactory.class,
         S3ClientFactory.class);
@@ -78,17 +76,17 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected String getCommitterFactoryName() {
-    return CommitConstants.STAGING_COMMITTER_FACTORY;
+  protected String getCommitterName() {
+    return InternalCommitterConstants.COMMITTER_NAME_STAGING;
   }
 
   @Override
-  protected AbstractS3GuardCommitter createCommitter(Path outputPath,
+  protected AbstractS3ACommitter createCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
     return new StagingCommitter(outputPath, context);
   }
 
-  public AbstractS3GuardCommitter createFailingCommitter(
+  public AbstractS3ACommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
   }
@@ -100,7 +98,7 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
 
   @Override
   protected void expectJobCommitToFail(JobContext jContext,
-      AbstractS3GuardCommitter committer) throws Exception {
+      AbstractS3ACommitter committer) throws Exception {
     expectJobCommitFailure(jContext, committer,
         IOException.class);
   }

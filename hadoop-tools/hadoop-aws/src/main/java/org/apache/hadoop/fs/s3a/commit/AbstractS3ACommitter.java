@@ -53,7 +53,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 
 /**
- * Abstract base class for s3guard committers; allows for any commonality
+ * Abstract base class for S3A committers; allows for any commonality
  * between different architectures.
  *
  * Although the committer APIs allow for a committer to be created without
@@ -63,9 +63,9 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
  *
  * Requiring an output directory simplifies coding and testing.
  */
-public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
+public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   private static final Logger LOG =
-      LoggerFactory.getLogger(AbstractS3GuardCommitter.class);
+      LoggerFactory.getLogger(AbstractS3ACommitter.class);
 
   /**
    * Thread pool for task execution.
@@ -114,7 +114,7 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
    * @param context the task's context
    * @throws IOException on a failure
    */
-  protected AbstractS3GuardCommitter(
+  protected AbstractS3ACommitter(
       Path outputPath,
       TaskAttemptContext context) throws IOException {
     super(outputPath, context);
@@ -287,8 +287,9 @@ public abstract class AbstractS3GuardCommitter extends PathOutputCommitter {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "AbstractS3GuardCommitter{");
+        "AbstractS3ACommitter{");
     sb.append("role=").append(role);
+    sb.append("name").append(getName());
     sb.append(", outputPath=").append(getOutputPath());
     sb.append(", workPath=").append(workPath);
     sb.append('}');

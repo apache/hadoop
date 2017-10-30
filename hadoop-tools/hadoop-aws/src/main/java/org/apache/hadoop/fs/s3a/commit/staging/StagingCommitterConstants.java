@@ -31,7 +31,12 @@ public final class StagingCommitterConstants {
   private StagingCommitterConstants() {
   }
 
-  public static final String FILESYSTEM_TEMP_PATH = "/tmp";
+  /**
+   * The temporary path for staging data, if not explicitly set.
+   * By using an unqualified path, this will be qualified to be relative
+   * to the users' home directory, so protectec from access for others.
+   */
+  public static final String FILESYSTEM_TEMP_PATH = "tmp/staging";
 
   /** Name of the root partition :{@value}. */
   public static final String TABLE_ROOT = "table_root";

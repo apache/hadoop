@@ -19,18 +19,12 @@
 package org.apache.hadoop.fs.s3a.commit.staging.integration;
 
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitter;
 
 /**
  * Full integration test for the partition committer.
  */
 public class ITPartitionCommitMRJob extends AbstractITCommitMRJob {
-
-  @Override
-  protected String committerFactoryClassname() {
-    return CommitConstants.PARTITION_COMMITTER_FACTORY;
-  }
 
   @Override
   protected String committerName() {

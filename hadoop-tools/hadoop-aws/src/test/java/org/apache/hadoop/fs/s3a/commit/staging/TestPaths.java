@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
-import org.hamcrest.core.StringContains;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,8 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.*;
-import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.JAVA_IO_TMPDIR;
-import static org.apache.hadoop.test.LambdaTestUtils.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestPaths extends HadoopTestBase {
 
@@ -114,7 +112,6 @@ public class TestPaths extends HadoopTestBase {
         getPartition("year=2017/month=10/part-0000.avro"));
   }
 
-
   @Test
   public void testMPUCommitDir() throws Throwable {
     Configuration conf = new Configuration();
@@ -122,15 +119,6 @@ public class TestPaths extends HadoopTestBase {
     Path dir = getMultipartUploadCommitsDirectory(localFS, conf, "UUID");
     assertTrue(dir.toString().endsWith("UUID/"
         + StagingCommitterConstants.STAGING_UPLOADS));
-  }
-
-  @Test
-  public void testTempDirLocal() throws Throwable {
-    Configuration conf = new Configuration();
-    LocalFileSystem localFS = LocalFileSystem.getLocal(conf);
-    Path dir = tempDirForStaging(localFS, conf);
-    String tmp = System.getProperty(JAVA_IO_TMPDIR);
-    assertThat(dir.toString() +"/", StringContains.containsString(tmp));
   }
 
 }

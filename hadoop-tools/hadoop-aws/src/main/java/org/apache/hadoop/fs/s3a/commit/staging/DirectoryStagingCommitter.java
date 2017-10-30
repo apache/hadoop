@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -45,7 +46,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public class DirectoryStagingCommitter extends StagingCommitter {
   private static final Logger LOG = LoggerFactory.getLogger(
       DirectoryStagingCommitter.class);
-  public static final String NAME = "DirectoryStagingCommitter";
+  public static final String NAME = CommitConstants.COMMITTER_NAME_DIRECTORY;
 
   public DirectoryStagingCommitter(Path outputPath, TaskAttemptContext context)
       throws IOException {

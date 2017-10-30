@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.commit.staging.integration;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.commit.AbstractS3GuardCommitter;
+import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
@@ -39,7 +39,12 @@ public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
   }
 
   @Override
-  protected AbstractS3GuardCommitter createCommitter(
+  protected String getCommitterName() {
+    return CommitConstants.COMMITTER_NAME_DIRECTORY;
+  }
+
+  @Override
+  protected AbstractS3ACommitter createCommitter(
       Path outputPath,
       TaskAttemptContext context)
       throws IOException {
@@ -47,12 +52,7 @@ public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
   }
 
   @Override
-  protected String getCommitterFactoryName() {
-    return CommitConstants.DIRECTORY_COMMITTER_FACTORY;
-  }
-
-  @Override
-  public AbstractS3GuardCommitter createFailingCommitter(
+  public AbstractS3ACommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
   }

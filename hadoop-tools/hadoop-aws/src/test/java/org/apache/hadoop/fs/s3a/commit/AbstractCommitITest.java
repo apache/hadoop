@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -118,6 +119,21 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    */
   public Logger log() {
     return LOG;
+  }
+
+  /***
+   * Bind to the named committer.
+   *
+   * @param conf configuration
+   * @param factory factory name
+   * @param committerName committer; set if non null/empty
+   */
+  protected void bindCommitter(Configuration conf, String factory,
+      String committerName) {
+    conf.set(S3A_COMMITTER_FACTORY_KEY, factory);
+    if (StringUtils.isNotEmpty(committerName)) {
+      conf.set(FS_S3A_COMMITTER_NAME, committerName);
+    }
   }
 
   /**

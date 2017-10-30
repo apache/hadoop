@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractCommitITest;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.MiniDFSClusterService;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -81,16 +82,20 @@ import static org.mockito.Mockito.*;
  * Test base for mock tests of staging committers:
  * core constants and static methods, inner classes
  * for specific test types.
+ *
+ * Some of the verification methods here are unused...they are being left
+ * in place in case changes on the implementation make the verifications
+ * relevant again.
  */
 public class StagingTestBase {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StagingTestBase.class);
 
   public static final String BUCKET = MockS3AFileSystem.BUCKET;
   public static final String OUTPUT_PREFIX = "output/path";
-  public static final Path OUTPUT_PATH = new Path(
-      "s3a://" + BUCKET + "/" + OUTPUT_PREFIX);
+  public static final Path OUTPUT_PATH =
+      new Path("s3a://" + BUCKET + "/" + OUTPUT_PREFIX);
   public static final URI OUTPUT_PATH_URI = OUTPUT_PATH.toUri();
-  private static final Logger LOG =
-      LoggerFactory.getLogger(StagingTestBase.class);
 
   protected StagingTestBase() {
   }
@@ -270,7 +275,7 @@ public class StagingTestBase {
     @Before
     public void setupJob() throws Exception {
       this.jobConf = new JobConf();
-      jobConf.set(CommitConstants.FS_S3A_COMMITTER_STAGING_UUID,
+      jobConf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
           UUID.randomUUID().toString());
       jobConf.setBoolean(
           CommitConstants.CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,

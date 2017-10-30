@@ -1016,6 +1016,12 @@
 </property>
 
 <property>
+  <name>fs.s3a.attempts.maximum</name>
+  <value>20</value>
+  <description>How many times we should retry commands on transient errors.</description>
+</property>
+
+<property>
   <name>fs.s3a.connection.establish.timeout</name>
   <value>5000</value>
   <description>Socket connection setup timeout in milliseconds.</description>
@@ -1357,17 +1363,9 @@
 
 <property>
   <name>fs.s3a.retry.throttle.limit</name>
-  <value>20</value>
+  <value>${fs.s3a.attempts.maximum}</value>
   <description>
     Number of times to retry any throttled request.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.retry.throttle.interval</name>
-  <value>500ms</value>
-  <description>
-    Interval between retry attempts on throttled requests.
   </description>
 </property>
 
@@ -1414,12 +1412,15 @@
 
 <property>
   <name>fs.s3a.committer.staging.tmp.path</name>
-  <value>/tmp</value>
+  <value>tmp/staging</value>
   <description>
     Path in the cluster filesystem for temporary data.
     This is for HDFS, not the local filesystem.
     It is only for the summary data of each file, not the actual
     data being committed.
+    Using an unqualified path guarantees that the full path will be
+    generated relative to the home directory of the user creating the job,
+    hence private (assuming home directory permissions are secure).
   </description>
 </property>
 
@@ -1431,15 +1432,6 @@
     or the value of fs.s3a.committer.staging.uuid
     When writing data with the "append" conflict option, this guarantees
     that new data will not overwrite any existing data.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.committer.staging.uuid</name>
-  <value></value>
-  <description>
-    A unique ID for filenammes.
-    If unset the values of the Spark or Hadoop Job attenmt IDs will be used.
   </description>
 </property>
 
