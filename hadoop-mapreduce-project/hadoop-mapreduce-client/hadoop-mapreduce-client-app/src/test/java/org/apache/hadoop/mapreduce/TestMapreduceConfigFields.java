@@ -71,6 +71,17 @@ public class TestMapreduceConfigFields extends TestConfigurationFieldsBase {
             .add(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY);
     configurationPropsToSkipCompare
             .add(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY);
+
+    // Resource type related properties are only prefixes,
+    // they need to be postfixed with the resource name
+    // in order to take effect.
+    // There is nothing to be added to mapred-default.xml
+    configurationPropsToSkipCompare.add(
+        MRJobConfig.MR_AM_RESOURCE_PREFIX);
+    configurationPropsToSkipCompare.add(
+        MRJobConfig.MAP_RESOURCE_TYPE_PREFIX);
+    configurationPropsToSkipCompare.add(
+        MRJobConfig.REDUCE_RESOURCE_TYPE_PREFIX);
   }
 
 }

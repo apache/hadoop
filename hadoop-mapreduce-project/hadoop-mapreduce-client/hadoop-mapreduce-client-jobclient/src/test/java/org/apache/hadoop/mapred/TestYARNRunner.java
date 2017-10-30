@@ -33,10 +33,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -44,6 +46,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -69,6 +72,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -96,27 +100,36 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.log4j.Appender;
+import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Layout;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Test YarnRunner and make sure the client side plugin works
@@ -131,6 +144,53 @@ public class TestYARNRunner {
       MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.substring(0,
           MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.lastIndexOf("%"));
 
+  private static class CustomResourceTypesConfigurationProvider
+      extends LocalConfigurationProvider {
+
+    @Override
+    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
+        String name) throws YarnException, IOException {
+      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
+        return new ByteArrayInputStream(
+            ("<configuration>\n" +
+            " <property>\n" +
+            "   <name>yarn.resource-types</name>\n" +
+            "   <value>a-custom-resource</value>\n" +
+            " </property>\n" +
+            " <property>\n" +
+            "   <name>yarn.resource-types.a-custom-resource.units</name>\n" +
+            "   <value>G</value>\n" +
+            " </property>\n" +
+            "</configuration>\n").getBytes());
+      } else {
+        return super.getConfigurationInputStream(bootstrapConf, name);
+      }
+    }
+  }
+
+  private static class TestAppender extends AppenderSkeleton {
+
+    private final List<LoggingEvent> logEvents = new CopyOnWriteArrayList<>();
+
+    @Override
+    public boolean requiresLayout() {
+      return false;
+    }
+
+    @Override
+    public void close() {
+    }
+
+    @Override
+    protected void append(LoggingEvent arg0) {
+      logEvents.add(arg0);
+    }
+
+    private List<LoggingEvent> getLogEvents() {
+      return logEvents;
+    }
+  }
+
   private YARNRunner yarnRunner;
   private ResourceMgrDelegate resourceMgrDelegate;
   private YarnConfiguration conf;
@@ -142,6 +202,11 @@ public class TestYARNRunner {
   private ApplicationSubmissionContext submissionContext;
   private  ClientServiceDelegate clientDelegate;
   private static final String failString = "Rejected job";
+
+  @BeforeClass
+  public static void setupBeforeClass() {
+    ResourceUtils.resetResourceTypes(new Configuration());
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -175,6 +240,7 @@ public class TestYARNRunner {
   @After
   public void cleanup() {
     FileUtil.fullyDelete(testWorkDir);
+    ResourceUtils.resetResourceTypes(new Configuration());
   }
 
   @Test(timeout=20000)
@@ -880,5 +946,100 @@ public class TestYARNRunner {
     Assert.assertTrue(confSent.get("hadoop.tmp.dir") == null || !confSent
         .get("hadoop.tmp.dir").equals("testconfdir"));
     UserGroupInformation.reset();
+  }
+
+  @Test
+  public void testCustomAMRMResourceType() throws Exception {
+    initResourceTypes();
+    String customResourceName = "a-custom-resource";
+
+    JobConf jobConf = new JobConf();
+
+    jobConf.setInt(MRJobConfig.MR_AM_RESOURCE_PREFIX +
+        customResourceName, 5);
+    jobConf.setInt(MRJobConfig.MR_AM_CPU_VCORES, 3);
+
+    yarnRunner = new YARNRunner(jobConf);
+
+    submissionContext = buildSubmitContext(yarnRunner, jobConf);
+
+    List<ResourceRequest> resourceRequests =
+        submissionContext.getAMContainerResourceRequests();
+
+    Assert.assertEquals(1, resourceRequests.size());
+    ResourceRequest resourceRequest = resourceRequests.get(0);
+
+    ResourceInformation resourceInformation = resourceRequest.getCapability()
+        .getResourceInformation(customResourceName);
+    Assert.assertEquals("Expecting the default unit (G)",
+        "G", resourceInformation.getUnits());
+    Assert.assertEquals(5L, resourceInformation.getValue());
+    Assert.assertEquals(3, resourceRequest.getCapability().getVirtualCores());
+  }
+
+  @Test
+  public void testAMRMemoryRequest() throws Exception {
+    for (String memoryName : ImmutableList.of(
+        MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
+        MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
+      JobConf jobConf = new JobConf();
+      jobConf.set(MRJobConfig.MR_AM_RESOURCE_PREFIX + memoryName, "3 Gi");
+
+      yarnRunner = new YARNRunner(jobConf);
+
+      submissionContext = buildSubmitContext(yarnRunner, jobConf);
+
+      List<ResourceRequest> resourceRequests =
+          submissionContext.getAMContainerResourceRequests();
+
+      Assert.assertEquals(1, resourceRequests.size());
+      ResourceRequest resourceRequest = resourceRequests.get(0);
+
+      long memorySize = resourceRequest.getCapability().getMemorySize();
+      Assert.assertEquals(3072, memorySize);
+    }
+  }
+
+  @Test
+  public void testAMRMemoryRequestOverriding() throws Exception {
+    for (String memoryName : ImmutableList.of(
+        MRJobConfig.RESOURCE_TYPE_NAME_MEMORY,
+        MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY)) {
+      TestAppender testAppender = new TestAppender();
+      Logger logger = Logger.getLogger(YARNRunner.class);
+      logger.addAppender(testAppender);
+      try {
+        JobConf jobConf = new JobConf();
+        jobConf.set(MRJobConfig.MR_AM_RESOURCE_PREFIX + memoryName, "3 Gi");
+        jobConf.setInt(MRJobConfig.MR_AM_VMEM_MB, 2048);
+
+        yarnRunner = new YARNRunner(jobConf);
+
+        submissionContext = buildSubmitContext(yarnRunner, jobConf);
+
+        List<ResourceRequest> resourceRequests =
+            submissionContext.getAMContainerResourceRequests();
+
+        Assert.assertEquals(1, resourceRequests.size());
+        ResourceRequest resourceRequest = resourceRequests.get(0);
+
+        long memorySize = resourceRequest.getCapability().getMemorySize();
+        Assert.assertEquals(3072, memorySize);
+        assertTrue(testAppender.getLogEvents().stream().anyMatch(
+            e -> e.getLevel() == Level.WARN && ("Configuration " +
+                "yarn.app.mapreduce.am.resource." + memoryName + "=3Gi is " +
+                "overriding the yarn.app.mapreduce.am.resource.mb=2048 " +
+                "configuration").equals(e.getMessage())));
+      } finally {
+        logger.removeAppender(testAppender);
+      }
+    }
+  }
+
+  private void initResourceTypes() {
+    Configuration configuration = new Configuration();
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        CustomResourceTypesConfigurationProvider.class.getName());
+    ResourceUtils.resetResourceTypes(configuration);
   }
 }
