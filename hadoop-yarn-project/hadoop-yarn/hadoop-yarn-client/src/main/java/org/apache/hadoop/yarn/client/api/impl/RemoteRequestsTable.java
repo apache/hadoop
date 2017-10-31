@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -36,10 +34,13 @@ import java.util.TreeMap;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl.ResourceRequestInfo;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl.ResourceReverseMemoryThenCpuComparator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
 
-  private static final Log LOG = LogFactory.getLog(RemoteRequestsTable.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(RemoteRequestsTable.class);
 
   static ResourceReverseMemoryThenCpuComparator resourceComparator =
       new ResourceReverseMemoryThenCpuComparator();

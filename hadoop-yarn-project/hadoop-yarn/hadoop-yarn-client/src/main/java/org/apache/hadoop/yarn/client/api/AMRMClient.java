@@ -23,8 +23,6 @@ import java.util.Collection;
 import java.util.function.Supplier;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -47,12 +45,15 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     AbstractService {
-  private static final Log LOG = LogFactory.getLog(AMRMClient.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(AMRMClient.class);
 
   private TimelineV2Client timelineV2Client;
 

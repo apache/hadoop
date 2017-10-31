@@ -34,8 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
@@ -82,6 +80,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestNMClient {
   Configuration conf = null;
@@ -101,8 +101,8 @@ public class TestNMClient {
   public static class DebugSumContainerStateListener
       implements ContainerStateTransitionListener {
 
-    private static final Log LOG =
-        LogFactory.getLog(DebugSumContainerStateListener.class);
+    private static final Logger LOG =
+        LoggerFactory.getLogger(DebugSumContainerStateListener.class);
     private static final Map<ContainerId,
         Map<org.apache.hadoop.yarn.server.nodemanager.containermanager
             .container.ContainerState, Long>>
