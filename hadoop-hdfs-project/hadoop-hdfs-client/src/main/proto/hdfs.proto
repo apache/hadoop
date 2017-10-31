@@ -397,6 +397,13 @@ message AddErasureCodingPolicyResponseProto {
 }
 
 /**
+ * Placeholder type for consistent HDFS operations.
+ */
+message HdfsPathHandleProto {
+  optional uint64 inodeId = 1;
+}
+
+/**
  * Status of a file, directory or symlink
  * Optionally includes a file's block locations if requested by client on the rpc call.
  */
