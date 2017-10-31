@@ -577,13 +577,60 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-For:
+The binary distribution of this product bundles these dependencies under the
+following license:
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/bootstrap-3.0.2
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap.min.css
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap-responsive.min.css
-And the binary distribution of this product bundles these dependencies under the
-following license:
+bootstrap v3.3.6
+broccoli-asset-rev v2.4.2
+broccoli-funnel v1.0.1
+broccoli-merge-trees v1.1.1
+datatables v1.10.8
+em-helpers v0.5.13
+em-table v0.1.6
+ember v2.2.0
+ember-array-contains-helper v1.0.2
+ember-bootstrap v0.5.1
+ember-cli v1.13.13
+ember-cli-app-version v1.0.0
+ember-cli-babel v5.1.6
+ember-cli-content-security-policy v0.4.0
+ember-cli-dependency-checker v1.2.0
+ember-cli-htmlbars v1.0.2
+ember-cli-htmlbars-inline-precompile v0.3.1
+ember-cli-ic-ajax v0.2.1
+ember-cli-inject-live-reload v1.4.0
+ember-cli-jquery-ui v0.0.20
+ember-cli-moment-shim v0.7.3
+ember-cli-numeral v0.2.0
+ember-cli-qunit v1.2.1
+ember-cli-release v0.2.8
+ember-cli-shims v0.0.6
+ember-cli-sri v1.2.1
+ember-cli-test-loader v0.2.1
+ember-cli-uglify v1.2.0
+ember-d3 v0.1.0
+ember-data v2.1.0
+ember-disable-proxy-controllers v1.0.1
+ember-export-application-global v1.0.5
+ember-lodash v0.0.10
+ember-load-initializers v0.1.7
+ember-qunit v0.4.16
+ember-qunit-notifications v0.1.0
+ember-resolver v2.0.3
+ember-spin-spinner v0.2.3
+ember-truth-helpers v1.2.0
+jquery v2.1.4
+jquery-ui v1.11.4
+loader.js v3.3.0
+momentjs v2.10.6
+qunit v1.19.0
+select2 v4.0.0
+snippet-ss v1.11.0
+spin.js v2.3.2
+testem v0.9.11
 Mockito 1.8.5
 JUL to SLF4J bridge 1.7.25
 SLF4J API Module 1.7.25
@@ -686,7 +733,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
 For:
-hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/d3.v3.js
+hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/d3.v3.js and
+D3 v3.5.6 in hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui
 --------------------------------------------------------------------------------
 
 D3 is available under a 3-clause BSD license. For details, see:
