@@ -204,43 +204,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
           Seekable.class.getName());
     }
 
-    //find the position of first BZip2 start up marker
-    ((Seekable)seekableIn).seek(0);
-
-    // BZip2 start of block markers are of 6 bytes.  But the very first block
-    // also has "BZh9", making it 10 bytes.  This is the common case.  But at
-    // time stream might start without a leading BZ.
-    final long FIRST_BZIP2_BLOCK_MARKER_POSITION =
-      CBZip2InputStream.numberOfBytesTillNextMarker(seekableIn);
-    long adjStart = 0L;
-    if (start != 0) {
-      // Other than the first of file, the marker size is 6 bytes.
-      adjStart = Math.max(0L, start - (FIRST_BZIP2_BLOCK_MARKER_POSITION
-          - (HEADER_LEN + SUB_HEADER_LEN)));
-    }
-
-    ((Seekable)seekableIn).seek(adjStart);
-    SplitCompressionInputStream in =
-      new BZip2CompressionInputStream(seekableIn, adjStart, end, readMode);
-
-
-    // The following if clause handles the following case:
-    // Assume the following scenario in BZip2 compressed stream where
-    // . represent compressed data.
-    // .....[48 bit Block].....[48 bit   Block].....[48 bit Block]...
-    // ........................[47 bits][1 bit].....[48 bit Block]...
-    // ................................^[Assume a Byte alignment here]
-    // ........................................^^[current position of stream]
-    // .....................^^[We go back 10 Bytes in stream and find a Block marker]
-    // ........................................^^[We align at wrong position!]
-    // ...........................................................^^[While this pos is correct]
-
-    if (in.getPos() < start) {
-      ((Seekable)seekableIn).seek(start);
-      in = new BZip2CompressionInputStream(seekableIn, start, end, readMode);
-    }
-
-    return in;
+    ((Seekable)seekableIn).seek(start);
+    return new BZip2CompressionInputStream(seekableIn, start, end, readMode);
   }
 
   /**
