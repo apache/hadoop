@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
     .OZONE_KSM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
@@ -186,7 +187,13 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   public static void main(String[] argv) throws IOException {
     StringUtils.startupShutdownMessage(KeySpaceManager.class, argv, LOG);
     try {
-      KeySpaceManager ksm = new KeySpaceManager(new OzoneConfiguration());
+      OzoneConfiguration conf = new OzoneConfiguration();
+      if (!DFSUtil.isOzoneEnabled(conf)) {
+        System.out.println("KSM cannot be started in secure mode or when " +
+            OZONE_ENABLED + " is set to false");
+        System.exit(1);
+      }
+      KeySpaceManager ksm = new KeySpaceManager(conf);
       ksm.start();
       ksm.join();
     } catch (Throwable t) {

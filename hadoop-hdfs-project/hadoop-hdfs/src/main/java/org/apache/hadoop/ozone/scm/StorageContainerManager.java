@@ -104,6 +104,7 @@ import java.util.UUID;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.DeleteScmBlockResult.Result;
 import static org.apache.hadoop.scm.ScmConfigKeys
@@ -321,8 +322,13 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     StringUtils.startupShutdownMessage(StorageContainerManager.class,
         argv, LOG);
     try {
-      StorageContainerManager scm = new StorageContainerManager(
-          new OzoneConfiguration());
+      OzoneConfiguration conf = new OzoneConfiguration();
+      if (!DFSUtil.isOzoneEnabled(conf)) {
+        System.out.println("SCM cannot be started in secure mode or when " +
+            OZONE_ENABLED + " is set to false");
+        System.exit(1);
+      }
+      StorageContainerManager scm = new StorageContainerManager(conf);
       scm.start();
       scm.join();
     } catch (Throwable t) {
