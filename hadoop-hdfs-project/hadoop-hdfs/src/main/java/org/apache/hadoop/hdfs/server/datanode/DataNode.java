@@ -46,8 +46,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -475,8 +473,8 @@ public class DataNode extends ReconfigurableBase
     this.pipelineSupportECN = conf.getBoolean(
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED,
         DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED_DEFAULT);
-    this.ozoneEnabled = conf.getBoolean(OZONE_ENABLED,
-        OZONE_ENABLED_DEFAULT);
+
+    this.ozoneEnabled = DFSUtil.isOzoneEnabled(conf);
 
     confVersion = "core-" +
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +

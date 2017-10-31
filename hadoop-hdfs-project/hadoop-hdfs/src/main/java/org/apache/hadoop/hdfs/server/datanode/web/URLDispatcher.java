@@ -68,12 +68,32 @@ class URLDispatcher extends SimpleChannelInboundHandler<HttpRequest> {
       p.replace(this,
           RequestDispatchObjectStoreChannelHandler.class.getSimpleName(), h);
       h.channelRead0(ctx, req);
-    } else {
+    } else if (!isObjectStoreRequestHeaders(req)){
       SimpleHttpProxyHandler h = new SimpleHttpProxyHandler(proxyHost);
       p.replace(this, SimpleHttpProxyHandler.class.getSimpleName(), h);
       h.channelRead0(ctx, req);
     }
   }
+
+
+  /*
+   * Returns true if the request has ozone headers
+   *
+   * @param req HTTP request
+   * @return true if request has ozone header, else false
+   */
+
+  private boolean isObjectStoreRequestHeaders(HttpRequest req) {
+    for (String version : req.headers().getAll(Header.OZONE_VERSION_HEADER)) {
+      if (version != null) {
+        LOG.debug("ozone : dispatching call to Ozone, when security is not " +
+            "enabled");
+        return true;
+      }
+    }
+    return false;
+  }
+
 
   /*
    * Returns true if the request is to be handled by the object store.
@@ -83,16 +103,11 @@ class URLDispatcher extends SimpleChannelInboundHandler<HttpRequest> {
    */
   private boolean isObjectStoreRequest(HttpRequest req) {
     if (this.objectStoreJerseyContainer == null) {
-      LOG.debug("ozone : dispatching call to webHDFS");
+      LOG.debug("ozone : ozone is disabled or when security is enabled, ozone" +
+          " is not supported");
       return false;
     }
-    for (String version : req.headers().getAll(Header.OZONE_VERSION_HEADER)) {
-      if (version != null) {
-        LOG.debug("ozone : dispatching call to Ozone");
-        return true;
-      }
-    }
-    return false;
+    return isObjectStoreRequestHeaders(req);
   }
 
   /**

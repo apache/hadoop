@@ -36,6 +36,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -71,6 +73,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -1524,6 +1527,23 @@ public class DFSUtil {
       password = null;
     }
     return password;
+  }
+
+  public static boolean isOzoneEnabled(Configuration conf) {
+    String securityEnabled = conf.get(CommonConfigurationKeysPublic
+            .HADOOP_SECURITY_AUTHENTICATION,
+        "simple");
+    boolean securityAuthorizationEnabled = conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+        false);
+
+    if (securityEnabled.equals("kerberos") || securityAuthorizationEnabled) {
+      LOG.error("Ozone is not supported in a security enabled cluster. ");
+      return false;
+    } else {
+      return conf.getBoolean(OZONE_ENABLED,
+          OZONE_ENABLED_DEFAULT);
+    }
   }
 
   /**
