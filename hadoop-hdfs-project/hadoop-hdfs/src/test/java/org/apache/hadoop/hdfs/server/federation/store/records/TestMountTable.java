@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -113,7 +112,7 @@ public class TestMountTable {
   @Test
   public void testReadOnly() throws IOException {
 
-    Map<String, String> dest = new HashMap<>();
+    Map<String, String> dest = new LinkedHashMap<>();
     dest.put(DST_NS_0, DST_PATH_0);
     dest.put(DST_NS_1, DST_PATH_1);
     MountTable record1 = MountTable.newInstance(SRC, dest);
