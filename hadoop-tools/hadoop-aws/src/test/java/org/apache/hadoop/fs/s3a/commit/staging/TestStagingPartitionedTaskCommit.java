@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.mapreduce.JobContext;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -95,7 +96,8 @@ public class TestStagingPartitionedTaskCommit
     reset(mockS3);
     pathExists(mockS3, new Path(OUTPUT_PATH, relativeFiles.get(0)).getParent());
 
-    intercept(PathExistsException.class, "",
+    intercept(PathExistsException.class,
+        InternalCommitterConstants.E_DEST_EXISTS,
         "Expected a PathExistsException as a partition already exists",
         () -> committer.commitTask(getTAC()));
 

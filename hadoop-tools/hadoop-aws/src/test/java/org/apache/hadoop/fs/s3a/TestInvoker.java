@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,14 +67,29 @@ public class TestInvoker extends Assert {
       = new org.apache.http.conn.ConnectTimeoutException("apache");
   private static final SocketTimeoutException SOCKET_TIMEOUT_EX
       = new SocketTimeoutException("socket");
-  private static final int RETRIES_TOO_MANY = RETRY_LIMIT_DEFAULT + 10;
+
+  /**
+   * What retry limit to use.
+   */
+  private static final int ACTIVE_RETRY_LIMIT = RETRY_LIMIT_DEFAULT;
+
+  /**
+   * A retry count guaranteed to be out of range.
+   */
+  private static final int RETRIES_TOO_MANY = ACTIVE_RETRY_LIMIT + 10;
+
+  /**
+   * A count of retry attempts guaranteed to be within the permitted range.
+   */
+  public static final int SAFE_RETRY_COUNT = 5;
 
   static {
     FAST_RETRY_CONF = new Configuration();
     String interval = "10ms";
     FAST_RETRY_CONF.set(RETRY_INTERVAL, interval);
     FAST_RETRY_CONF.set(RETRY_THROTTLE_INTERVAL, interval);
-    FAST_RETRY_CONF.setInt(RETRY_LIMIT, DEFAULT_MAX_ERROR_RETRIES);
+    FAST_RETRY_CONF.setInt(RETRY_LIMIT, ACTIVE_RETRY_LIMIT);
+    FAST_RETRY_CONF.setInt(RETRY_THROTTLE_LIMIT, ACTIVE_RETRY_LIMIT);
   }
 
   private static final S3ARetryPolicy RETRY_POLICY =
@@ -83,8 +97,7 @@ public class TestInvoker extends Assert {
 
   private int retryCount;
   private Invoker invoker = new Invoker(RETRY_POLICY,
-      (text, e, retries, idempotent) -> retryCount++
-  );
+      (text, e, retries, idempotent) -> retryCount++);
   private static final AmazonClientException CLIENT_TIMEOUT_EXCEPTION =
       new AmazonClientException(new Local.ConnectTimeoutException("timeout"));
   private static final AmazonServiceException BAD_REQUEST = serviceException(
@@ -203,12 +216,13 @@ public class TestInvoker extends Assert {
     assertRetryAction("Expected retry on first throttle",
         policy, RetryPolicy.RetryAction.RETRY,
         ex, 0, true);
+    int retries = SAFE_RETRY_COUNT;
     assertRetryAction("Expected retry on repeated throttle",
         policy, RetryPolicy.RetryAction.RETRY,
-        ex, 5, true);
+        ex, retries, true);
     assertRetryAction("Expected retry on non-idempotent throttle",
         policy, RetryPolicy.RetryAction.RETRY,
-        ex, 5, false);
+        ex, retries, false);
   }
 
   @Test
@@ -223,7 +237,6 @@ public class TestInvoker extends Assert {
     return serviceException(
         AWSServiceThrottledException.STATUS_CODE, "throttled");
   }
-
 
   /**
    * Repeatedly retry until a throttle eventually stops being raised.
@@ -260,11 +273,11 @@ public class TestInvoker extends Assert {
     final AtomicInteger counter = new AtomicInteger(0);
     invoker.retry("test", null, false,
         () -> {
-          if (counter.incrementAndGet() < DEFAULT_MAX_ERROR_RETRIES) {
+          if (counter.incrementAndGet() < ACTIVE_RETRY_LIMIT) {
             throw CLIENT_TIMEOUT_EXCEPTION;
           }
         });
-    assertEquals(DEFAULT_MAX_ERROR_RETRIES, counter.get());
+    assertEquals(ACTIVE_RETRY_LIMIT, counter.get());
   }
 
   /**
@@ -273,7 +286,7 @@ public class TestInvoker extends Assert {
   @Test
   public void testRetryBadRequestIdempotent() throws Throwable {
     final AtomicInteger counter = new AtomicInteger(0);
-    final int attemptsBeforeSuccess = DEFAULT_MAX_ERROR_RETRIES;
+    final int attemptsBeforeSuccess = ACTIVE_RETRY_LIMIT;
     invoker.retry("test", null, true,
         () -> {
           if (counter.incrementAndGet() < attemptsBeforeSuccess) {
@@ -312,7 +325,7 @@ public class TestInvoker extends Assert {
   public void testInterruptedIOExceptionRetry() throws Throwable {
     assertRetryAction("Expected retry on connection timeout",
         RETRY_POLICY, RetryPolicy.RetryAction.FAIL,
-        new InterruptedIOException(), 1, false);
+        new InterruptedIOException("interrupted"), 1, false);
   }
 
   @Test
@@ -350,7 +363,7 @@ public class TestInvoker extends Assert {
   public void testNPEsNotRetried() throws Throwable {
     assertRetryAction("Expected NPE trigger failure",
         RETRY_POLICY, RetryPolicy.RetryAction.FAIL,
-        new NullPointerException(), 1, true);
+        new NullPointerException("oops"), 1, true);
     // catch notification didn't see it
     assertEquals("retry count ", 0, retryCount);
   }
@@ -382,20 +395,21 @@ public class TestInvoker extends Assert {
   }
 
   @Test
-  public void testQuietlyVoid() throws Throwable {
-    Optional<Object> quietly = quietlyEval("", "", () -> {
+  public void testQuietlyVoid() {
+    quietlyEval("", "",
+        () -> {
       throw HADOOP_CONNECTION_TIMEOUT_EX;
     });
   }
 
   @Test
-  public void testQuietlyEvalReturnValueSuccess() throws Throwable {
+  public void testQuietlyEvalReturnValueSuccess() {
     assertOptionalEquals("quietly", 3,
         quietlyEval("", "", () -> 3));
   }
 
   @Test
-  public void testQuietlyEvalReturnValueFail() throws Throwable {
+  public void testQuietlyEvalReturnValueFail() {
     // use a variable so IDEs don't warn of numeric overflows
     int d = 0;
     assertOptionalUnset("quietly",
@@ -410,10 +424,10 @@ public class TestInvoker extends Assert {
         AWSServiceThrottledException.class, exceededException);
     assertTrue(isThrottleException(exceededException));
     assertTrue(isThrottleException(ddb));
-    assertRetryAction("Expected throttleing retry",
+    assertRetryAction("Expected throttling retry",
         RETRY_POLICY,
         RetryPolicy.RetryAction.RETRY,
-        ddb, 3, false);
+        ddb, SAFE_RETRY_COUNT, false);
     // and briefly attempt an operation
     CatchCallback catcher = new CatchCallback();
     AtomicBoolean invoked = new AtomicBoolean(false);

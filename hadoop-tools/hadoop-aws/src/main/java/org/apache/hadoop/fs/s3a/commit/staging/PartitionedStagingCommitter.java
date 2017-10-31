@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -93,7 +94,11 @@ public class PartitionedStagingCommitter extends StagingCommitter {
         Path partitionPath = getFinalPath(partition + "/file",
             context).getParent();
         if (fs.exists(partitionPath)) {
-          throw new PathExistsException(partitionPath.toString());
+          LOG.debug("Failing commit by task attempt {} to write"
+              + " to existing path {} under {}",
+              context.getTaskAttemptID(), partitionPath, getOutputPath());
+          throw new PathExistsException(partitionPath.toString(),
+              InternalCommitterConstants.E_DEST_EXISTS);
         }
       }
     }
@@ -134,7 +139,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       break;
     case REPLACE:
       for (Path partitionPath : partitions) {
-        LOG.info("{}: removing partition path to be replaced: " +
+        LOG.debug("{}: removing partition path to be replaced: " +
             getRole(), partitionPath);
         fs.delete(partitionPath, true);
       }

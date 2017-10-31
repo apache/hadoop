@@ -49,23 +49,6 @@ public final class CommitUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(CommitUtils.class);
 
-  /** Error message for bad path: {@value}. */
-  public static final String E_BAD_PATH
-      = "Path does not represent a magic-commit path";
-
-  /** Error message if filesystem isn't magic: {@value}. */
-  public static final String E_NORMAL_FS
-      = "Filesystem does not have support for 'magic' committer enabled"
-      + " in configuration option " + MAGIC_COMMITTER_ENABLED;
-
-  /** Error message if the dest FS isn't S3A: {@value}. */
-  public static final String E_WRONG_FS
-      = "Output path is not on an S3A Filesystem";
-
-  /** Error message for a path without a magic element in the list: {@value}. */
-  public static final String E_NO_MAGIC_PATH_ELEMENT
-      = "No " + MAGIC + " element in path";
-
   private CommitUtils() {
   }
 
@@ -128,7 +111,7 @@ public final class CommitUtils {
    */
   public static int magicElementIndex(List<String> elements) {
     int index = elements.indexOf(MAGIC);
-    checkArgument(index >= 0, E_NO_MAGIC_PATH_ELEMENT);
+    checkArgument(index >= 0, InternalCommitterConstants.E_NO_MAGIC_PATH_ELEMENT);
     return index;
   }
 
@@ -280,7 +263,7 @@ public final class CommitUtils {
       Path path) throws PathCommitException {
     verifyIsMagicCommitFS(fs);
     if (!fs.isMagicCommitPath(path)) {
-      throw new PathCommitException(path, E_BAD_PATH);
+      throw new PathCommitException(path, InternalCommitterConstants.E_BAD_PATH);
     }
   }
 
@@ -294,9 +277,9 @@ public final class CommitUtils {
     if (!fs.isMagicCommitEnabled()) {
       // dump out details to console for support diagnostics
       String fsUri = fs.getUri().toString();
-      LOG.error("{}: {}:\n{}", E_NORMAL_FS, fsUri, fs);
+      LOG.error("{}: {}:\n{}", InternalCommitterConstants.E_NORMAL_FS, fsUri, fs);
       // then fail
-      throw new PathCommitException(fsUri, E_NORMAL_FS);
+      throw new PathCommitException(fsUri, InternalCommitterConstants.E_NORMAL_FS);
     }
   }
 
@@ -310,7 +293,7 @@ public final class CommitUtils {
   public static S3AFileSystem verifyIsS3AFS(FileSystem fs, Path path)
       throws PathCommitException {
     if (!(fs instanceof S3AFileSystem)) {
-      throw new PathCommitException(path, E_WRONG_FS);
+      throw new PathCommitException(path, InternalCommitterConstants.E_WRONG_FS);
     }
     return (S3AFileSystem) fs;
   }

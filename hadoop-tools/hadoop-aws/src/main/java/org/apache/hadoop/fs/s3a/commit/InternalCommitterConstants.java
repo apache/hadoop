@@ -21,9 +21,13 @@ package org.apache.hadoop.fs.s3a.commit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
+import org.apache.hadoop.fs.s3a.commit.staging.ConflictResolution;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
+
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 
 /**
  * These are internal constants not intended for public use.
@@ -66,4 +70,29 @@ public class InternalCommitterConstants {
    */
   public static final String MAGIC_COMMITTER_FACTORY =
       MagicS3GuardCommitterFactory.CLASSNAME;
+
+  /**
+   * Error text when the destination path exists and the committer
+   * must abort the job/task {@value}.
+   */
+  public static final String E_DEST_EXISTS =
+      "Destination path exists and committer conflict resolution mode is "
+          + ConflictResolution.FAIL;
+
+  /** Error message for bad path: {@value}. */
+  public static final String E_BAD_PATH
+      = "Path does not represent a magic-commit path";
+
+  /** Error message if filesystem isn't magic: {@value}. */
+  public static final String E_NORMAL_FS
+      = "Filesystem does not have support for 'magic' committer enabled"
+      + " in configuration option " + MAGIC_COMMITTER_ENABLED;
+
+  /** Error message if the dest FS isn't S3A: {@value}. */
+  public static final String E_WRONG_FS
+      = "Output path is not on an S3A Filesystem";
+
+  /** Error message for a path without a magic element in the list: {@value}. */
+  public static final String E_NO_MAGIC_PATH_ELEMENT
+      = "No " + MAGIC + " element in path";
 }

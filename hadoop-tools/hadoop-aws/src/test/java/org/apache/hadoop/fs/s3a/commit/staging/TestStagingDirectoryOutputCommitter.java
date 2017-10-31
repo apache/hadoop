@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.*;
@@ -66,11 +67,13 @@ public class TestStagingDirectoryOutputCommitter
     pathExists(mockS3, OUTPUT_PATH);
     final DirectoryStagingCommitter committer = newJobCommitter();
 
-    intercept(PathExistsException.class, "",
+    intercept(PathExistsException.class,
+        InternalCommitterConstants.E_DEST_EXISTS,
         "Should throw an exception because the path exists",
         () -> committer.setupJob(getJob()));
 
-    intercept(PathExistsException.class, "",
+    intercept(PathExistsException.class,
+        InternalCommitterConstants.E_DEST_EXISTS,
         "Should throw an exception because the path exists",
         () -> committer.commitJob(getJob()));
 

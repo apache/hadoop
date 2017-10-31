@@ -580,14 +580,6 @@ S3A Client
 
 ```
 
-### `Directory for intermediate work cannot be on S3`
-
-`org.apache.hadoop.fs.PathIOException: s3a://landsat-pds/tmp/alice/local-1495211753375/staging-uploads': Directory for intermediate work cannot be on S3`
-
-The Staging committer uses Hadoop's original committer to manage the commit/abort
-protocol for the files listing the pending write operations. It uses
-the cluster filesystem for this. This must be HDFS or a similar distributed
-filesystem with consistent data and renames as O(1) atomic renames.
 
 ### `FileOutputCommitter` appears to be still used (from logs or delays in commits)
 
@@ -616,3 +608,15 @@ at org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand.
 
 While that will not make the problem go away, it will at least make
 the failure happen at the start of a job.
+
+## Job/Task fails "Destination path exists and committer conflict resolution mode is FAIL" 
+
+This surfaces when either of two conditions are met.
+
+1. The Directory committer is used conflict resolution mode == "fail" and the output/destination directory exists.
+The job will fail in the driver during job setup.
+1. the Partitioned Committer is used with conflict resolution mode == "fail" and one of the partitions.
+The specific task(s) generating conflicting data will fail during task commit.
+
+If you are trying to write data and want write conflicts to be rejected, this is the correct
+behavior: there was data at the destination so the job was aborted.
