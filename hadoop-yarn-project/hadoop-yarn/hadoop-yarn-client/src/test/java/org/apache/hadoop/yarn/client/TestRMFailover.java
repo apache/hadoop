@@ -34,8 +34,6 @@ import java.util.concurrent.TimeoutException;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -64,10 +62,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestRMFailover extends ClientBaseWithFixes {
-  private static final Log LOG =
-      LogFactory.getLog(TestRMFailover.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRMFailover.class.getName());
   private static final HAServiceProtocol.StateChangeRequestInfo req =
       new HAServiceProtocol.StateChangeRequestInfo(
           HAServiceProtocol.RequestSource.REQUEST_BY_USER);
@@ -114,7 +114,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
         client.getApplications();
         return;
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString());
       } finally {
         client.stop();
       }
