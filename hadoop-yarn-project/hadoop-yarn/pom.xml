@@ -109,7 +109,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>2.7.2</jdiff.stable.api>
+        <jdiff.stable.api>2.8.2</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
         <jdiff.compatibility></jdiff.compatibility>
         <jdiff.javadoc.maxmemory>512m</jdiff.javadoc.maxmemory>
