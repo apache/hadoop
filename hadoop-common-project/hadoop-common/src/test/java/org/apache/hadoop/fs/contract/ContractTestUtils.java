@@ -403,6 +403,21 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
+   * Rename operation. Safety check for attempts to rename the root directory.
+   * Verifies that src no longer exists after rename.
+   * @param fileSystem filesystem to work with
+   * @param src source path
+   * @param dst destination path
+   * @throws IOException If rename fails or src is the root directory.
+   */
+  public static void rename(FileSystem fileSystem, Path src, Path dst)
+      throws IOException {
+    rejectRootOperation(src, false);
+    assertTrue(fileSystem.rename(src, dst));
+    assertPathDoesNotExist(fileSystem, "renamed", src);
+  }
+
+  /**
    * Block any operation on the root path. This is a safety check
    * @param path path in the filesystem
    * @param allowRootOperation can the root directory be manipulated?
@@ -619,6 +634,23 @@ public class ContractTestUtils extends Assert {
       stream.close();
     } finally {
       IOUtils.closeStream(stream);
+    }
+  }
+
+  /**
+   * Append to an existing file.
+   * @param fs filesystem
+   * @param path path to file
+   * @param data data to append. Can be null
+   * @throws IOException On any error
+   */
+  public static void appendFile(FileSystem fs,
+                                Path path,
+                                byte[] data) throws IOException {
+    try (FSDataOutputStream stream = fs.appendFile(path).build()) {
+      if (data != null && data.length > 0) {
+        stream.write(data);
+      }
     }
   }
 

@@ -860,4 +860,25 @@ public class DFSUtilClient {
     }
     return threadPoolExecutor;
   }
+
+  private static final int INODE_PATH_MAX_LENGTH = 3 * Path.SEPARATOR.length()
+      + HdfsConstants.DOT_RESERVED_STRING.length()
+      + HdfsConstants.DOT_INODES_STRING.length()
+      + (int)Math.ceil(Math.log10(Long.MAX_VALUE)) + 1;
+
+  /**
+   * Create the internal unique file path from HDFS file ID (inode ID). Unlike
+   * a regular file path, this one is guaranteed to refer to the same file at
+   * all times, across overwrites, etc.
+   * @param fileId File ID.
+   * @return The internal ID-based path.
+   */
+  public static Path makePathFromFileId(long fileId) {
+    StringBuilder sb = new StringBuilder(INODE_PATH_MAX_LENGTH);
+    sb.append(Path.SEPARATOR).append(HdfsConstants.DOT_RESERVED_STRING)
+      .append(Path.SEPARATOR).append(HdfsConstants.DOT_INODES_STRING)
+      .append(Path.SEPARATOR).append(fileId);
+    return new Path(sb.toString());
+  }
+
 }

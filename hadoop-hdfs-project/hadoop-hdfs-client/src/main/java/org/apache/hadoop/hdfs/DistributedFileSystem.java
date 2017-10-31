@@ -44,9 +44,11 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
@@ -81,6 +83,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
@@ -105,6 +108,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -317,6 +321,56 @@ public class DistributedFileSystem extends FileSystem {
         return fs.open(p, bufferSize);
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Opens an FSDataInputStream with the indicated file ID extracted from
+   * the {@link PathHandle}.
+   * @param fd Reference to entity in this FileSystem.
+   * @param bufferSize the size of the buffer to be used.
+   */
+  @Override
+  public FSDataInputStream open(PathHandle fd, int bufferSize)
+      throws IOException {
+    if (!(fd instanceof HdfsPathHandle)) {
+      fd = new HdfsPathHandle(fd.bytes());
+    }
+    HdfsPathHandle id = (HdfsPathHandle) fd;
+    return open(DFSUtilClient.makePathFromFileId(id.getInodeId()), bufferSize);
+  }
+
+  /**
+   * Create a handle to an HDFS file.
+   * @param st HdfsFileStatus instance from NameNode
+   * @param opts Standard handle arguments
+   * @throws IllegalArgumentException If the FileStatus instance refers to a
+   * directory, symlink, or another namesystem.
+   * @throws UnsupportedOperationException If opts are not specified or both
+   * data and location are not allowed to change.
+   * @return A handle to the file.
+   */
+  @Override
+  protected PathHandle createPathHandle(FileStatus st, HandleOpt... opts) {
+    if (!(st instanceof HdfsFileStatus)) {
+      throw new IllegalArgumentException("Invalid FileStatus "
+          + st.getClass().getSimpleName());
+    }
+    if (st.isDirectory() || st.isSymlink()) {
+      throw new IllegalArgumentException("PathHandle only available for files");
+    }
+    if (!getUri().getAuthority().equals(st.getPath().toUri().getAuthority())) {
+      throw new IllegalArgumentException("Wrong FileSystem: " + st.getPath());
+    }
+    HandleOpt.Data data = HandleOpt.getOpt(HandleOpt.Data.class, opts)
+        .orElse(HandleOpt.changed(false));
+    HandleOpt.Location loc = HandleOpt.getOpt(HandleOpt.Location.class, opts)
+        .orElse(HandleOpt.moved(false));
+    if (!data.allowChange() || !loc.allowChange()) {
+      throw new UnsupportedOperationException("Unsupported opts "
+          + Arrays.stream(opts)
+                  .map(HandleOpt::toString).collect(Collectors.joining(",")));
+    }
+    return new HdfsPathHandle((HdfsFileStatus)st);
   }
 
   @Override
