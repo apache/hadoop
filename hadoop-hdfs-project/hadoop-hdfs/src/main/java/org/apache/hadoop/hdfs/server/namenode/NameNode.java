@@ -248,6 +248,7 @@ public class NameNode extends ReconfigurableBase implements
     DFS_NAMENODE_RPC_BIND_HOST_KEY,
     DFS_NAMENODE_NAME_DIR_KEY,
     DFS_NAMENODE_EDITS_DIR_KEY,
+    DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
     DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY,
@@ -277,8 +278,7 @@ public class NameNode extends ReconfigurableBase implements
    * for a specific namenode.
    */
   public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
-      DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
-      DFS_NAMENODE_SHARED_EDITS_DIR_KEY
+    DFS_HA_AUTO_FAILOVER_ENABLED_KEY
   };
 
   private String ipcClientRPCBackoffEnable;

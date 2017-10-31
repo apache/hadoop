@@ -402,7 +402,7 @@ public class TestDFSUtil {
   public void testSomeConfsNNSpecificSomeNSSpecific() {
     final HdfsConfiguration conf = new HdfsConfiguration();
 
-    String key = DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
+    String key = DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
     conf.set(key, "global-default");
     conf.set(key + ".ns1", "ns1-override");
     conf.set(key + ".ns1.nn1", "nn1-override");
