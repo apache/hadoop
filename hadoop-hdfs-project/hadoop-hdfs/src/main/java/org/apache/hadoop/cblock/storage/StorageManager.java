@@ -209,7 +209,8 @@ public class StorageManager {
 
   private boolean createVolumeContainers(VolumeDescriptor volume) {
     ArrayList<String> containerIds = new ArrayList<>();
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(numThreads,
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        Math.min(numThreads, MAX_THREADS),
         MAX_THREADS, 1, TimeUnit.SECONDS,
         new ArrayBlockingQueue<>(MAX_QUEUE_CAPACITY),
         new ThreadPoolExecutor.CallerRunsPolicy());
@@ -254,7 +255,8 @@ public class StorageManager {
 
   private void deleteVolumeContainers(List<String> containers, boolean force)
       throws CBlockException {
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(numThreads,
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        Math.min(numThreads, MAX_THREADS),
         MAX_THREADS, 1, TimeUnit.SECONDS,
         new ArrayBlockingQueue<>(MAX_QUEUE_CAPACITY),
         new ThreadPoolExecutor.CallerRunsPolicy());
