@@ -101,14 +101,4 @@
     <value>true</value>
   </property>
 
-  <property>
-    <name>fs.contract.supports-file-reference</name>
-    <value>true</value>
-  </property>
-
-  <property>
-    <name>fs.contract.supports-content-check</name>
-    <value>false</value>
-  </property>
-
 </configuration>

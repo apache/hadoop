@@ -19,7 +19,6 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
@@ -698,19 +697,6 @@ public class HarFileSystem extends FileSystem {
     return new HarFSDataInputStream(fs, new Path(archivePath, 
         hstatus.getPartName()),
         hstatus.getStartIndex(), hstatus.getLength(), bufferSize);
-  }
-
-  @Override
-  protected PathHandle createPathHandle(FileStatus stat, HandleOpt... opts) {
-    // har consistency managed through metadata cache
-    // could extend HarMetaData to track more explicitly
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public FSDataInputStream open(PathHandle fd, int bufferSize)
-      throws IOException {
-    throw new UnsupportedOperationException();
   }
 
   /**

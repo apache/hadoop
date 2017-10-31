@@ -192,16 +192,6 @@ public interface ContractOptions {
   String SUPPORTS_POSITIONED_READABLE = "supports-positioned-readable";
 
   /**
-   * Indicates that FS exposes durable references to files.
-   */
-  String SUPPORTS_FILE_REFERENCE = "supports-file-reference";
-
-  /**
-   * Indicates that FS supports content checks on open.
-   */
-  String SUPPORTS_CONTENT_CHECK = "supports-content-check";
-
-  /**
    * Maximum path length
    * {@value}
    */

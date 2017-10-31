@@ -50,7 +50,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
-import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -949,51 +948,6 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FSDataInputStream open(Path f) throws IOException {
     return open(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
         IO_FILE_BUFFER_SIZE_DEFAULT));
-  }
-
-  /**
-   * Open an FSDataInputStream matching the PathHandle instance. The
-   * implementation may encode metadata in PathHandle to address the
-   * resource directly and verify that the resource referenced
-   * satisfies constraints specified at its construciton.
-   * @param fd PathHandle object returned by the FS authority.
-   * @param bufferSize the size of the buffer to use
-   * @throws IOException IO failure
-   * @throws UnsupportedOperationException If not overridden by subclass
-   */
-  public FSDataInputStream open(PathHandle fd, int bufferSize)
-      throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Create a durable, serializable handle to the referent of the given
-   * entity.
-   * @param stat Referent in the target FileSystem
-   * @param opt If absent, assume {@link HandleOpt#path()}.
-   * @throws IllegalArgumentException If the FileStatus does not belong to
-   *         this FileSystem
-   * @throws UnsupportedOperationException If
-   *         {@link #createPathHandle(FileStatus, HandleOpt[])}
-   *         not overridden by subclass.
-   * @throws UnsupportedOperationException If this FileSystem cannot enforce
-   *         the specified constraints.
-   */
-  public final PathHandle getPathHandle(FileStatus stat, HandleOpt... opt) {
-    if (null == opt || 0 == opt.length) {
-      return createPathHandle(stat, HandleOpt.path());
-    }
-    return createPathHandle(stat, opt);
-  }
-
-  /**
-   * Hook to implement support for {@link PathHandle} operations.
-   * @param stat Referent in the target FileSystem
-   * @param opt Constraints that determine the validity of the
-   *            {@link PathHandle} reference.
-   */
-  protected PathHandle createPathHandle(FileStatus stat, HandleOpt... opt) {
-    throw new UnsupportedOperationException();
   }
 
   /**

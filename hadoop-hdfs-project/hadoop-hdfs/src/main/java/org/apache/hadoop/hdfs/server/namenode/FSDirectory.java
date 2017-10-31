@@ -122,16 +122,14 @@ public class FSDirectory implements Closeable {
 
   @VisibleForTesting
   static boolean CHECK_RESERVED_FILE_NAMES = true;
-  public final static String DOT_RESERVED_STRING =
-      HdfsConstants.DOT_RESERVED_STRING;
-  public final static String DOT_RESERVED_PATH_PREFIX =
-      HdfsConstants.DOT_RESERVED_PATH_PREFIX;
+  public final static String DOT_RESERVED_STRING = ".reserved";
+  public final static String DOT_RESERVED_PATH_PREFIX = Path.SEPARATOR
+      + DOT_RESERVED_STRING;
   public final static byte[] DOT_RESERVED = 
       DFSUtil.string2Bytes(DOT_RESERVED_STRING);
   private final static String RAW_STRING = "raw";
   private final static byte[] RAW = DFSUtil.string2Bytes(RAW_STRING);
-  public final static String DOT_INODES_STRING =
-      HdfsConstants.DOT_INODES_STRING;
+  public final static String DOT_INODES_STRING = ".inodes";
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
   private final static byte[] DOT_DOT =

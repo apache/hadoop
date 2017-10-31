@@ -82,14 +82,13 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
-import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
@@ -160,7 +159,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FsServerDefaultsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.FileType;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsPathHandleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
@@ -1561,19 +1559,6 @@ public class PBHelperClient {
 
   public static FsPermissionProto convert(FsPermission p) {
     return FsPermissionProto.newBuilder().setPerm(p.toShort()).build();
-  }
-
-  public static HdfsPathHandle convert(HdfsPathHandleProto fd) {
-    if (null == fd) {
-      return null;
-    }
-    return new HdfsPathHandle(fd.getInodeId());
-  }
-
-  public static HdfsPathHandleProto convert(HdfsPathHandle fd) {
-    return HdfsPathHandleProto.newBuilder()
-        .setInodeId(fd.getInodeId())
-        .build();
   }
 
   public static HdfsFileStatus convert(HdfsFileStatusProto fs) {

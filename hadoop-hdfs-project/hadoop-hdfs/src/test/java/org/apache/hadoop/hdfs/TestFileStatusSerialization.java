@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.URI;
 
 import org.apache.hadoop.fs.FSProtos.FileStatusProto;
@@ -37,7 +33,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import com.google.protobuf.ByteString;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Verify compatible FileStatus/HdfsFileStatus serialization.
@@ -57,27 +53,6 @@ public class TestFileStatusSerialization {
     assertEquals(expected.getBlockSize(), actual.getBlockSize());
   }
 
-  private static final URI  BASEURI  = new Path("hdfs://foobar").toUri();
-  private static final Path BASEPATH = new Path("/dingos");
-  private static final String FILE   = "zot";
-  private static final Path FULLPATH = new Path("hdfs://foobar/dingos/zot");
-  private static HdfsFileStatusProto.Builder baseStatus() {
-    FsPermission perm = FsPermission.getFileDefault();
-    HdfsFileStatusProto.Builder hspb = HdfsFileStatusProto.newBuilder()
-        .setFileType(FileType.IS_FILE)
-        .setPath(ByteString.copyFromUtf8("zot"))
-        .setLength(4344)
-        .setPermission(PBHelperClient.convert(perm))
-        .setOwner("hadoop")
-        .setGroup("unqbbc")
-        .setModificationTime(12345678L)
-        .setAccessTime(87654321L)
-        .setBlockReplication(10)
-        .setBlocksize(1L << 33)
-        .setFlags(0);
-    return hspb;
-  }
-
   /**
    * Test API backwards-compatibility with 2.x applications w.r.t. FsPermission.
    */
@@ -90,12 +65,21 @@ public class TestFileStatusSerialization {
     // test verifies.
     for (int i = 0; i < flagmask; ++i) {
       FsPermission perm = FsPermission.createImmutable((short) 0013);
-      HdfsFileStatusProto.Builder hspb = baseStatus()
+      HdfsFileStatusProto.Builder hspb = HdfsFileStatusProto.newBuilder()
+          .setFileType(FileType.IS_FILE)
+          .setPath(ByteString.copyFromUtf8("hdfs://foobar/dingos/zot"))
+          .setLength(4344)
           .setPermission(PBHelperClient.convert(perm))
+          .setOwner("hadoop")
+          .setGroup("unqbbc")
+          .setModificationTime(12345678L)
+          .setAccessTime(87654321L)
+          .setBlockReplication(10)
+          .setBlocksize(1L << 33)
           .setFlags(i);
       HdfsFileStatus stat = PBHelperClient.convert(hspb.build());
-      stat.makeQualified(BASEURI, BASEPATH);
-      assertEquals(FULLPATH, stat.getPath());
+      stat.makeQualified(new URI("hdfs://foobar"), new Path("/dingos"));
+      assertEquals(new Path("hdfs://foobar/dingos/zot"), stat.getPath());
 
       // verify deprecated FsPermissionExtension methods
       FsPermission sp = stat.getPermission();
@@ -119,29 +103,23 @@ public class TestFileStatusSerialization {
       assertEquals(sp.getErasureCodedBit(), fstat.isErasureCoded());
     }
   }
-
-  @Test
-  public void testJavaSerialization() throws Exception {
-    HdfsFileStatusProto hsp = baseStatus().build();
-    HdfsFileStatus hs = PBHelperClient.convert(hsp);
-    hs.makeQualified(BASEURI, BASEPATH);
-    ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
-    try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-      oos.writeObject(hs);
-    }
-    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-    try (ObjectInputStream ois = new ObjectInputStream(bais)) {
-      FileStatus deser = (FileStatus) ois.readObject();
-      assertEquals(hs, deser);
-      checkFields(hs, deser);
-    }
-  }
+  // param for LocatedFileStatus, HttpFileStatus
 
   @Test
   public void testCrossSerializationProto() throws Exception {
+    FsPermission perm = FsPermission.getFileDefault();
     for (FileType t : FileType.values()) {
-      HdfsFileStatusProto.Builder hspb = baseStatus()
-          .setFileType(t);
+      HdfsFileStatusProto.Builder hspb = HdfsFileStatusProto.newBuilder()
+          .setFileType(t)
+          .setPath(ByteString.copyFromUtf8("hdfs://foobar/dingos"))
+          .setLength(4344)
+          .setPermission(PBHelperClient.convert(perm))
+          .setOwner("hadoop")
+          .setGroup("unqbbc")
+          .setModificationTime(12345678L)
+          .setAccessTime(87654321L)
+          .setBlockReplication(10)
+          .setBlocksize(1L << 33);
       if (FileType.IS_SYMLINK.equals(t)) {
         hspb.setSymlink(ByteString.copyFromUtf8("hdfs://yaks/dingos"));
       }
@@ -168,9 +146,7 @@ public class TestFileStatusSerialization {
       byte[] dst = fsp.toByteArray();
       HdfsFileStatusProto hsp2 = HdfsFileStatusProto.parseFrom(dst);
       assertEquals(hsp, hsp2);
-      FileStatus hstat  = PBHelperClient.convert(hsp);
-      FileStatus hstat2 = PBHelperClient.convert(hsp2);
-      checkFields(hstat, hstat2);
+      checkFields(PBHelperClient.convert(hsp), PBHelperClient.convert(hsp2));
     }
   }
 
