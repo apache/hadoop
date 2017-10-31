@@ -185,8 +185,9 @@
     <value>16</value>
     <tag>CBLOCK, PERFORMANCE</tag>
     <description>
-      Number of threads that cblock manager will use for container
-      operations.
+      Number of active threads that cblock manager will use for container
+      operations. The maximum number of the threads are limited to the
+      processor count * 2.
     </description>
   </property>
   <property>
