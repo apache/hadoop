@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
@@ -87,6 +88,8 @@ public class MagicCommitIntegration {
     if (isMagicCommitPath(elements)) {
       final String destKey = keyOfFinalDestination(elements, key);
       String pendingObject = key + CommitConstants.PENDING_SUFFIX;
+      owner.getInstrumentation()
+          .incrementCounter(Statistic.COMMITTER_MAGIC_FILES_CREATED, 1);
       tracker = new MagicCommitTracker(path,
           owner.getBucket(),
           key,

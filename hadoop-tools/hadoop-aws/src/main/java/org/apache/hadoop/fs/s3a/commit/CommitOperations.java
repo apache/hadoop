@@ -431,7 +431,7 @@ public class CommitOperations {
 
       long offset = 0;
       long numParts = (length / uploadPartSize +
-                           ((length % uploadPartSize) > 0 ? 1 : 0));
+          ((length % uploadPartSize) > 0 ? 1 : 0));
       // always write one part, even if it is just an empty one
       if (numParts == 0) {
         numParts = 1;

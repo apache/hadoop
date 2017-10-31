@@ -178,6 +178,9 @@ public enum Statistic {
   COMMITTER_COMMITS_REVERTED(
       "committer_commits_reverted",
       "Number of commits reverted"),
+  COMMITTER_MAGIC_FILES_CREATED(
+      "committer_magic_files_created",
+      "Number of files created under 'magic' paths"),
 
   // S3guard stats
   S3GUARD_METADATASTORE_PUT_PATH_REQUEST(

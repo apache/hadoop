@@ -144,7 +144,7 @@ public class MagicCommitTracker extends PutTracker {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "DelayedCompleteTracker{");
+        "MagicCommitTracker{");
     sb.append(", destKey=").append(getDestKey());
     sb.append(", pendingPartKey='").append(pendingPartKey).append('\'');
     sb.append(", path=").append(path);
