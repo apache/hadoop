@@ -48,8 +48,8 @@ public class TestWorkPreservingUnmanagedAM
 
   private YarnConfiguration conf;
 
-  public TestWorkPreservingUnmanagedAM() throws IOException {
-    super();
+  public TestWorkPreservingUnmanagedAM(SchedulerType type) throws IOException {
+    super(type);
   }
 
   @Before
