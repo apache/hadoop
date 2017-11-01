@@ -596,6 +596,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT = 5000; //5s
   public static final String  DFS_DN_EC_RECONSTRUCTION_THREADS_KEY = "dfs.datanode.ec.reconstruction.threads";
   public static final int     DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT = 8;
+  public static final String  DFS_DN_EC_RECONSTRUCTION_XMITS_WEIGHT_KEY =
+      "dfs.datanode.ec.reconstruction.xmits.weight";
+  public static final float   DFS_DN_EC_RECONSTRUCTION_XMITS_WEIGHT_DEFAULT =
+      0.5f;
 
   public static final String
       DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY =
