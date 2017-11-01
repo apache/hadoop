@@ -646,7 +646,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     default:
       LOG.warn(this + ": unknown response code " + resp.getStatus() +
           " while attempting to set up short-circuit access. " +
-          resp.getMessage());
+          resp.getMessage() + ". Disabling short-circuit read for DataNode "
+          + datanode + " temporarily.");
       clientContext.getDomainSocketFactory()
           .disableShortCircuitForPath(pathInfo.getPath());
       return null;
