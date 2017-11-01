@@ -85,7 +85,8 @@ public class TestDockerCommandExecutor {
 
     builder.setExecutionAttribute(CONTAINER_ID_STR, MOCK_CONTAINER_ID);
     runtime.initialize(
-        TestDockerContainerRuntime.enableMockContainerExecutor(configuration));
+        TestDockerContainerRuntime.enableMockContainerExecutor(configuration),
+        null);
   }
 
   @Test

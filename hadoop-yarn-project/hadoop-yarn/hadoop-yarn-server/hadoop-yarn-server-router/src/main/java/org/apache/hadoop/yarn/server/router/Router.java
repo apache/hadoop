@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -74,6 +75,8 @@ public class Router extends CompositeService {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
+  private static final String METRICS_NAME = "Router";
+
   public Router() {
     super(Router.class.getName());
   }
@@ -95,6 +98,8 @@ public class Router extends CompositeService {
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
         YarnConfiguration.ROUTER_BIND_HOST,
         WebAppUtils.getRouterWebAppURLWithoutScheme(this.conf));
+    // Metrics
+    DefaultMetricsSystem.initialize(METRICS_NAME);
     super.serviceInit(conf);
   }
 
@@ -118,6 +123,7 @@ public class Router extends CompositeService {
       return;
     }
     super.serviceStop();
+    DefaultMetricsSystem.shutdown();
   }
 
   protected void shutDown() {

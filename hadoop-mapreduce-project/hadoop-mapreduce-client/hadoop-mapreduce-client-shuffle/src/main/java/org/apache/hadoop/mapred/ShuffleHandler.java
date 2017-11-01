@@ -57,7 +57,6 @@ import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -84,7 +83,6 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
@@ -855,8 +853,6 @@ public class ShuffleHandler extends AuxiliaryService {
     private static final int ALLOWED_CONCURRENCY = 16;
     private final Configuration conf;
     private final IndexCache indexCache;
-    private final LocalDirAllocator lDirAlloc =
-      new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
     private int port;
     private final LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache =
       CacheBuilder.newBuilder().expireAfterAccess(EXPIRE_AFTER_ACCESS_MINUTES,
@@ -889,10 +885,10 @@ public class ShuffleHandler extends AuxiliaryService {
             Exception {
           String base = getBaseLocation(key.jobId, key.user);
           String attemptBase = base + key.attemptId;
-          Path indexFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + INDEX_FILE_NAME, conf);
-          Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + DATA_FILE_NAME, conf);
+          Path indexFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + INDEX_FILE_NAME);
+          Path mapOutputFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + DATA_FILE_NAME);
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("Loaded : " + key + " via loader");

@@ -1483,6 +1483,35 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String DEFAULT_NM_GPU_PATH_TO_EXEC = "";
 
+  /**
+   * Settings to control which implementation of docker plugin for GPU will be
+   * used.
+   *
+   * By default uses NVIDIA docker v1.
+   */
+  @Private
+  public static final String NM_GPU_DOCKER_PLUGIN_IMPL =
+      NM_GPU_RESOURCE_PREFIX + "docker-plugin";
+
+  @Private
+  public static final String NVIDIA_DOCKER_V1 = "nvidia-docker-v1";
+
+  @Private
+  public static final String DEFAULT_NM_GPU_DOCKER_PLUGIN_IMPL =
+      NVIDIA_DOCKER_V1;
+
+  /**
+   * This setting controls end point of nvidia-docker-v1 plugin
+   */
+  @Private
+  public static final String NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
+      NM_GPU_RESOURCE_PREFIX + "docker-plugin." + NVIDIA_DOCKER_V1
+          + ".endpoint";
+
+  @Private
+  public static final String DEFAULT_NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
+      "http://localhost:3476/v1.0/docker/cli";
+
 
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";

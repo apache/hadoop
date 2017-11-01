@@ -22,7 +22,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -61,19 +64,36 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Test class for application life time monitor feature test.
  */
+@RunWith(Parameterized.class)
 public class TestApplicationLifetimeMonitor {
   private YarnConfiguration conf;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{CapacityScheduler.class});
+    params.add(new Object[]{FairScheduler.class});
+    return params;
+  }
+
+  private Class scheduler;
+
+  public TestApplicationLifetimeMonitor(Class schedulerParameter) {
+    scheduler = schedulerParameter;
+  }
 
   @Before
   public void setup() throws IOException {
     conf = new YarnConfiguration();
     // Always run for CS, since other scheduler do not support this.
     conf.setClass(YarnConfiguration.RM_SCHEDULER,
-        CapacityScheduler.class, ResourceScheduler.class);
+        scheduler, ResourceScheduler.class);
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     UserGroupInformation.setConfiguration(conf);
@@ -82,15 +102,20 @@ public class TestApplicationLifetimeMonitor {
   }
 
   @Test(timeout = 60000)
-  public void testApplicationLifetimeMonitor() throws Exception {
+  public void testApplicationLifetimeMonitor()
+      throws Exception {
     MockRM rm = null;
     try {
       long maxLifetime = 30L;
       long defaultLifetime = 15L;
 
-      YarnConfiguration newConf =
-          new YarnConfiguration(setUpCSQueue(maxLifetime, defaultLifetime));
-      conf = new YarnConfiguration(newConf);
+      YarnConfiguration newConf;
+      if (scheduler.equals(CapacityScheduler.class)) {
+        // Since there is limited lifetime monitoring support in fair scheduler
+        // it does not need queue setup
+        conf =
+            new YarnConfiguration(setUpCSQueue(maxLifetime, defaultLifetime));
+      }
       rm = new MockRM(conf);
       rm.start();
 
@@ -172,17 +197,21 @@ public class TestApplicationLifetimeMonitor {
       Assert.assertTrue("Application killed before lifetime value",
           app2.getFinishTime() > afterUpdate);
 
-      rm.waitForState(app3.getApplicationId(), RMAppState.KILLED);
+      if (scheduler.equals(CapacityScheduler.class)) {
+        // Supported only on capacity scheduler
+        rm.waitForState(app3.getApplicationId(), RMAppState.KILLED);
 
-      // app4 submitted exceeding queue max lifetime, so killed after queue max
-      // lifetime.
-      rm.waitForState(app4.getApplicationId(), RMAppState.KILLED);
-      long totalTimeRun = (app4.getFinishTime() - app4.getSubmitTime()) / 1000;
-      Assert.assertTrue("Application killed before lifetime value",
-          totalTimeRun > maxLifetime);
-      Assert.assertTrue(
-          "Application killed before lifetime value " + totalTimeRun,
-          totalTimeRun < maxLifetime + 10L);
+        // app4 submitted exceeding queue max lifetime,
+        // so killed after queue max lifetime.
+        rm.waitForState(app4.getApplicationId(), RMAppState.KILLED);
+        long totalTimeRun =
+            (app4.getFinishTime() - app4.getSubmitTime()) / 1000;
+        Assert.assertTrue("Application killed before lifetime value",
+            totalTimeRun > maxLifetime);
+        Assert.assertTrue(
+            "Application killed before lifetime value " + totalTimeRun,
+            totalTimeRun < maxLifetime + 10L);
+      }
     } finally {
       stopRM(rm);
     }

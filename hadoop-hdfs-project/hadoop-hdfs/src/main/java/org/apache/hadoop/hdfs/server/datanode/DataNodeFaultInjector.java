@@ -89,4 +89,10 @@ public class DataNodeFaultInjector {
 
   public void throwTooManyOpenFiles() throws FileNotFoundException {
   }
+
+  /**
+   * Used as a hook to inject failure in erasure coding reconstruction
+   * process.
+   */
+  public void stripedBlockReconstruction() throws IOException {}
 }

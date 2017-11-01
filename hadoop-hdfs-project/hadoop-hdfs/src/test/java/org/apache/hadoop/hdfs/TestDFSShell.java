@@ -893,6 +893,33 @@ public class TestDFSShell {
   }
 
   /**
+   * Test that -head displays first kilobyte of the file to stdout.
+   */
+  @Test (timeout = 30000)
+  public void testHead() throws Exception {
+    final int fileLen = 5 * BLOCK_SIZE;
+
+    // create a text file with multiple KB bytes (and multiple blocks)
+    final Path testFile = new Path("testHead", "file1");
+    final String text = RandomStringUtils.randomAscii(fileLen);
+    try (OutputStream pout = dfs.create(testFile)) {
+      pout.write(text.getBytes());
+    }
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    final String[] argv = new String[]{"-head", testFile.toString()};
+    final int ret = ToolRunner.run(new FsShell(dfs.getConf()), argv);
+
+    assertEquals(Arrays.toString(argv) + " returned " + ret, 0, ret);
+    assertEquals("-head returned " + out.size() + " bytes data, expected 1KB",
+            1024, out.size());
+    // tailed out last 1KB of the file content
+    assertArrayEquals("Head output doesn't match input",
+            text.substring(0, 1024).getBytes(), out.toByteArray());
+    out.reset();
+  }
+
+  /**
    * Test that -tail displays last kilobyte of the file to stdout.
    */
   @Test (timeout = 30000)

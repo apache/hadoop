@@ -24,8 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -35,6 +33,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer;
 
 import java.util.ArrayList;
@@ -64,17 +64,23 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   @Override
   public List<PrivilegedOperation> bootstrap(Configuration configuration)
       throws ResourceHandlerException {
-    List<Integer> minorNumbersOfUsableGpus;
+    List<GpuDevice> usableGpus;
     try {
-      minorNumbersOfUsableGpus = GpuDiscoverer.getInstance()
-          .getMinorNumbersOfGpusUsableByYarn();
+      usableGpus = GpuDiscoverer.getInstance()
+          .getGpusUsableByYarn();
+      if (usableGpus == null || usableGpus.isEmpty()) {
+        String message = "GPU is enabled on the NodeManager, but couldn't find "
+            + "any usable GPU devices, please double check configuration.";
+        LOG.error(message);
+        throw new ResourceHandlerException(message);
+      }
     } catch (YarnException e) {
       LOG.error("Exception when trying to get usable GPU device", e);
       throw new ResourceHandlerException(e);
     }
 
-    for (int minorNumber : minorNumbersOfUsableGpus) {
-      gpuAllocator.addGpu(minorNumber);
+    for (GpuDevice gpu : usableGpus) {
+      gpuAllocator.addGpu(gpu);
     }
 
     // And initialize cgroups
@@ -96,33 +102,55 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
     // Create device cgroups for the container
     cGroupsHandler.createCGroup(CGroupsHandler.CGroupController.DEVICES,
         containerIdStr);
-    try {
-      // Execute c-e to setup GPU isolation before launch the container
-      PrivilegedOperation privilegedOperation = new PrivilegedOperation(
-          PrivilegedOperation.OperationType.GPU, Arrays
-          .asList(CONTAINER_ID_CLI_OPTION, containerIdStr));
-      if (!allocation.getDeniedGPUs().isEmpty()) {
-        privilegedOperation.appendArgs(Arrays.asList(EXCLUDED_GPUS_CLI_OPTION,
-            StringUtils.join(",", allocation.getDeniedGPUs())));
+    if (!DockerLinuxContainerRuntime.isDockerContainerRequested(
+        container.getLaunchContext().getEnvironment())) {
+      // Write to devices cgroup only for non-docker container. The reason is
+      // docker engine runtime runc do the devices cgroups initialize in the
+      // pre-hook, see:
+      //   https://github.com/opencontainers/runc/blob/master/libcontainer/configs/device_defaults.go
+      //
+      // YARN by default runs docker container inside cgroup, if we setup cgroups
+      // devices.deny for the parent cgroup for launched container, we can see
+      // errors like: failed to write c *:* m to devices.allow:
+      // write path-to-parent-cgroup/<container-id>/devices.allow:
+      // operation not permitted.
+      //
+      // To avoid this happen, if docker is requested when container being
+      // launched, we will not setup devices.deny for the container. Instead YARN
+      // will pass --device parameter to docker engine. See NvidiaDockerV1CommandPlugin
+      try {
+        // Execute c-e to setup GPU isolation before launch the container
+        PrivilegedOperation privilegedOperation = new PrivilegedOperation(
+            PrivilegedOperation.OperationType.GPU,
+            Arrays.asList(CONTAINER_ID_CLI_OPTION, containerIdStr));
+        if (!allocation.getDeniedGPUs().isEmpty()) {
+          List<Integer> minorNumbers = new ArrayList<>();
+          for (GpuDevice deniedGpu : allocation.getDeniedGPUs()) {
+            minorNumbers.add(deniedGpu.getMinorNumber());
+          }
+          privilegedOperation.appendArgs(Arrays.asList(EXCLUDED_GPUS_CLI_OPTION,
+              StringUtils.join(",", minorNumbers)));
+        }
+
+        privilegedOperationExecutor.executePrivilegedOperation(
+            privilegedOperation, true);
+      } catch (PrivilegedOperationException e) {
+        cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
+            containerIdStr);
+        LOG.warn("Could not update cgroup for container", e);
+        throw new ResourceHandlerException(e);
       }
 
-      privilegedOperationExecutor.executePrivilegedOperation(
-          privilegedOperation, true);
-    } catch (PrivilegedOperationException e) {
-      cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.DEVICES,
-          containerIdStr);
-      LOG.warn("Could not update cgroup for container", e);
-      throw new ResourceHandlerException(e);
+      List<PrivilegedOperation> ret = new ArrayList<>();
+      ret.add(new PrivilegedOperation(
+          PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+          PrivilegedOperation.CGROUP_ARG_PREFIX + cGroupsHandler
+              .getPathForCGroupTasks(CGroupsHandler.CGroupController.DEVICES,
+                  containerIdStr)));
+
+      return ret;
     }
-
-    List<PrivilegedOperation> ret = new ArrayList<>();
-    ret.add(new PrivilegedOperation(
-        PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
-        PrivilegedOperation.CGROUP_ARG_PREFIX
-            + cGroupsHandler.getPathForCGroupTasks(
-            CGroupsHandler.CGroupController.DEVICES, containerIdStr)));
-
-    return ret;
+    return null;
   }
 
   @VisibleForTesting
