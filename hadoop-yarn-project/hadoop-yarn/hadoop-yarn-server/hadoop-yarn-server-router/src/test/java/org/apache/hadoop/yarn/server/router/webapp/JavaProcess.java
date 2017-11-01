@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Helper class to start a new process.
@@ -28,13 +29,23 @@ public class JavaProcess {
 
   private Process process = null;
 
-  public JavaProcess(Class<?> klass) throws IOException, InterruptedException {
+  public JavaProcess(Class<?> clazz) throws IOException, InterruptedException {
+    this(clazz, null);
+  }
+
+  public JavaProcess(Class<?> clazz, List<String> addClasspaths)
+      throws IOException, InterruptedException {
     String javaHome = System.getProperty("java.home");
     String javaBin =
         javaHome + File.separator + "bin" + File.separator + "java";
     String classpath = System.getProperty("java.class.path");
     classpath = classpath.concat("./src/test/resources");
-    String className = klass.getCanonicalName();
+    if (addClasspaths != null) {
+      for (String addClasspath : addClasspaths) {
+        classpath = classpath.concat(File.pathSeparatorChar + addClasspath);
+      }
+    }
+    String className = clazz.getCanonicalName();
     ProcessBuilder builder =
         new ProcessBuilder(javaBin, "-cp", classpath, className);
     builder.inheritIO();
