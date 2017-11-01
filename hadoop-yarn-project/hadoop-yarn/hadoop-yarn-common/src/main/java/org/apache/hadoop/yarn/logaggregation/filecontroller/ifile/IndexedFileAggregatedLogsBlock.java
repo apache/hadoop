@@ -221,8 +221,8 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
                       __(" for the full log.").__();
             }
             long totalSkipped = 0;
-            while (totalSkipped < start) {
-              long ret = in.skip(start - totalSkipped);
+            while (totalSkipped < startIndex) {
+              long ret = in.skip(startIndex - totalSkipped);
               if (ret == 0) {
                 //Read one byte
                 int nextByte = in.read();
