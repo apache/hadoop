@@ -175,91 +175,97 @@ public class TestStorageContainerManager {
         new MiniOzoneCluster.Builder(conf).numDataNodes(1)
             .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
 
-    DeletedBlockLog delLog = cluster.getStorageContainerManager()
-        .getScmBlockManager().getDeletedBlockLog();
-    Assert.assertEquals(0, delLog.getNumOfValidTransactions());
+    try {
+      DeletedBlockLog delLog = cluster.getStorageContainerManager()
+          .getScmBlockManager().getDeletedBlockLog();
+      Assert.assertEquals(0, delLog.getNumOfValidTransactions());
 
-    // Create 20 random names keys.
-    TestStorageContainerManagerHelper helper =
-        new TestStorageContainerManagerHelper(cluster, conf);
-    Map<String, KsmKeyInfo> keyLocations = helper.createKeys(20, 4096);
+      // Create 20 random names keys.
+      TestStorageContainerManagerHelper helper =
+          new TestStorageContainerManagerHelper(cluster, conf);
+      Map<String, KsmKeyInfo> keyLocations = helper.createKeys(20, 4096);
 
-    // These keys will be written into a bunch of containers,
-    // gets a set of container names, verify container containerBlocks
-    // on datanodes.
-    Set<String> containerNames = new HashSet<>();
-    for (Map.Entry<String, KsmKeyInfo> entry : keyLocations.entrySet()) {
-      entry.getValue().getKeyLocationList()
-          .forEach(loc -> containerNames.add(loc.getContainerName()));
-    }
+      // These keys will be written into a bunch of containers,
+      // gets a set of container names, verify container containerBlocks
+      // on datanodes.
+      Set<String> containerNames = new HashSet<>();
+      for (Map.Entry<String, KsmKeyInfo> entry : keyLocations.entrySet()) {
+        entry.getValue().getKeyLocationList()
+            .forEach(loc -> containerNames.add(loc.getContainerName()));
+      }
 
-    // Total number of containerBlocks of these containers should be equal to
-    // total number of containerBlocks via creation call.
-    int totalCreatedBlocks = 0;
-    for (KsmKeyInfo info : keyLocations.values()) {
-      totalCreatedBlocks += info.getKeyLocationList().size();
-    }
-    Assert.assertTrue(totalCreatedBlocks > 0);
-    Assert.assertEquals(totalCreatedBlocks,
-        helper.getAllBlocks(containerNames).size());
+      // Total number of containerBlocks of these containers should be equal to
+      // total number of containerBlocks via creation call.
+      int totalCreatedBlocks = 0;
+      for (KsmKeyInfo info : keyLocations.values()) {
+        totalCreatedBlocks += info.getKeyLocationList().size();
+      }
+      Assert.assertTrue(totalCreatedBlocks > 0);
+      Assert.assertEquals(totalCreatedBlocks,
+          helper.getAllBlocks(containerNames).size());
 
-    // Create a deletion TX for each key.
-    Map<String, List<String>> containerBlocks = Maps.newHashMap();
-    for (KsmKeyInfo info : keyLocations.values()) {
-      List<KsmKeyLocationInfo> list = info.getKeyLocationList();
-      list.forEach(location -> {
-        if (containerBlocks.containsKey(location.getContainerName())) {
-          containerBlocks.get(location.getContainerName())
-              .add(location.getBlockID());
-        } else {
-          List<String> blks = Lists.newArrayList();
-          blks.add(location.getBlockID());
-          containerBlocks.put(location.getContainerName(), blks);
+      // Create a deletion TX for each key.
+      Map<String, List<String>> containerBlocks = Maps.newHashMap();
+      for (KsmKeyInfo info : keyLocations.values()) {
+        List<KsmKeyLocationInfo> list = info.getKeyLocationList();
+        list.forEach(location -> {
+          if (containerBlocks.containsKey(location.getContainerName())) {
+            containerBlocks.get(location.getContainerName())
+                .add(location.getBlockID());
+          } else {
+            List<String> blks = Lists.newArrayList();
+            blks.add(location.getBlockID());
+            containerBlocks.put(location.getContainerName(), blks);
+          }
+        });
+      }
+      for (Map.Entry<String, List<String>> tx : containerBlocks.entrySet()) {
+        delLog.addTransaction(tx.getKey(), tx.getValue());
+      }
+
+      // Verify a few TX gets created in the TX log.
+      Assert.assertTrue(delLog.getNumOfValidTransactions() > 0);
+
+      // Once TXs are written into the log, SCM starts to fetch TX
+      // entries from the log and schedule block deletions in HB interval,
+      // after sometime, all the TX should be proceed and by then
+      // the number of containerBlocks of all known containers will be
+      // empty again.
+      GenericTestUtils.waitFor(() -> {
+        try {
+          return delLog.getNumOfValidTransactions() == 0;
+        } catch (IOException e) {
+          return false;
         }
-      });
-    }
-    for (Map.Entry<String, List<String>> tx : containerBlocks.entrySet()) {
-      delLog.addTransaction(tx.getKey(), tx.getValue());
-    }
+      }, 1000, 10000);
+      Assert.assertTrue(helper.getAllBlocks(containerNames).isEmpty());
 
-    // Verify a few TX gets created in the TX log.
-    Assert.assertTrue(delLog.getNumOfValidTransactions() > 0);
-
-    // Once TXs are written into the log, SCM starts to fetch TX
-    // entries from the log and schedule block deletions in HB interval,
-    // after sometime, all the TX should be proceed and by then
-    // the number of containerBlocks of all known containers will be
-    // empty again.
-    GenericTestUtils.waitFor(() -> {
-      try {
-        return delLog.getNumOfValidTransactions() == 0;
-      } catch (IOException e) {
-        return false;
+      // Continue the work, add some TXs that with known container names,
+      // but unknown block IDs.
+      for (String containerName : containerBlocks.keySet()) {
+        // Add 2 TXs per container.
+        delLog.addTransaction(containerName,
+            Collections.singletonList(RandomStringUtils.randomAlphabetic(5)));
+        delLog.addTransaction(containerName,
+            Collections.singletonList(RandomStringUtils.randomAlphabetic(5)));
       }
-    }, 1000, 10000);
-    Assert.assertTrue(helper.getAllBlocks(containerNames).isEmpty());
 
-    // Continue the work, add some TXs that with known container names,
-    // but unknown block IDs.
-    for (String containerName : containerBlocks.keySet()) {
-      // Add 2 TXs per container.
-      delLog.addTransaction(containerName,
-          Collections.singletonList(RandomStringUtils.randomAlphabetic(5)));
-      delLog.addTransaction(containerName,
-          Collections.singletonList(RandomStringUtils.randomAlphabetic(5)));
-    }
+      // Verify a few TX gets created in the TX log.
+      Assert.assertTrue(delLog.getNumOfValidTransactions() > 0);
 
-    // Verify a few TX gets created in the TX log.
-    Assert.assertTrue(delLog.getNumOfValidTransactions() > 0);
-
-    // These blocks cannot be found in the container, skip deleting them
-    // eventually these TX will success.
-    GenericTestUtils.waitFor(() -> {
-      try {
-        return delLog.getFailedTransactions().size() == 0;
-      } catch (IOException e) {
-        return false;
+      // These blocks cannot be found in the container, skip deleting them
+      // eventually these TX will success.
+      GenericTestUtils.waitFor(() -> {
+        try {
+          return delLog.getFailedTransactions().size() == 0;
+        } catch (IOException e) {
+          return false;
+        }
+      }, 1000, 10000);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
       }
-    }, 1000, 10000);
+    }
   }
 }
