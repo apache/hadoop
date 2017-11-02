@@ -387,6 +387,8 @@ class DataXceiver extends Receiver implements Runnable {
       } catch (IOException e) {
         bld.setStatus(ERROR);
         bld.setMessage(e.getMessage());
+        LOG.error("Request short-circuit read file descriptor" +
+            " failed with unknown error.", e);
       }
       bld.build().writeDelimitedTo(socketOut);
       if (fis != null) {

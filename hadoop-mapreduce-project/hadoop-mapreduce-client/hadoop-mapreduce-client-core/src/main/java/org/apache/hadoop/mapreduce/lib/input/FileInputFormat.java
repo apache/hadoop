@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +43,8 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
@@ -80,7 +80,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       "mapreduce.input.fileinputformat.list-status.num-threads";
   public static final int DEFAULT_LIST_STATUS_NUM_THREADS = 1;
 
-  private static final Log LOG = LogFactory.getLog(FileInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileInputFormat.class);
 
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
   

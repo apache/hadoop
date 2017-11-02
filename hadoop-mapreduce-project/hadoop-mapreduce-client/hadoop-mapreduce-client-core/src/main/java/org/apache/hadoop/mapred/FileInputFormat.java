@@ -30,8 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BlockLocation;
@@ -50,6 +48,8 @@ import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.Iterables;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 
  * A base class for file-based {@link InputFormat}.
@@ -68,8 +68,8 @@ import com.google.common.collect.Iterables;
 @InterfaceStability.Stable
 public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
-  public static final Log LOG =
-    LogFactory.getLog(FileInputFormat.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FileInputFormat.class);
   
   @Deprecated
   public enum Counter {

@@ -30,8 +30,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -46,6 +44,8 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A InputFormat that reads input data from an SQL table.
@@ -61,7 +61,8 @@ import org.apache.hadoop.util.StringUtils;
 public class DBInputFormat<T extends DBWritable>
     extends InputFormat<LongWritable, T> implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(DBInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DBInputFormat.class);
   
   protected String dbProductName = "DEFAULT";
 

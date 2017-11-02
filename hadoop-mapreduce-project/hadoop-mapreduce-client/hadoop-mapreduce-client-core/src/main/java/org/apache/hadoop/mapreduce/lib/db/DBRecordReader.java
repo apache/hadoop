@@ -30,8 +30,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -45,6 +43,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A RecordReader that reads records from a SQL table.
@@ -56,7 +56,8 @@ import org.apache.hadoop.conf.Configuration;
 public class DBRecordReader<T extends DBWritable> extends
     RecordReader<LongWritable, T> {
 
-  private static final Log LOG = LogFactory.getLog(DBRecordReader.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DBRecordReader.class);
 
   private ResultSet results = null;
 

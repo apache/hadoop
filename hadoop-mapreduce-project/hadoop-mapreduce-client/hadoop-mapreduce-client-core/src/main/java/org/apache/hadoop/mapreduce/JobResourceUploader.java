@@ -27,8 +27,6 @@ import java.util.LinkedList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +43,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -55,7 +55,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 class JobResourceUploader {
-  protected static final Log LOG = LogFactory.getLog(JobResourceUploader.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(JobResourceUploader.class);
   private final boolean useWildcard;
   private final FileSystem jtFs;
   private SharedCacheClient scClient = null;

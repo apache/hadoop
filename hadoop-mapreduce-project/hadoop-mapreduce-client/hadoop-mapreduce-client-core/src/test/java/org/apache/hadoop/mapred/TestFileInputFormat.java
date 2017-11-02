@@ -23,8 +23,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -42,13 +40,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
 @RunWith(value = Parameterized.class)
 public class TestFileInputFormat {
   
-  private static final Log LOG = LogFactory.getLog(TestFileInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileInputFormat.class);
   
   private static String testTmpDir = System.getProperty("test.build.data", "/tmp");
   private static final Path TEST_ROOT_DIR = new Path(testTmpDir, "TestFIF");

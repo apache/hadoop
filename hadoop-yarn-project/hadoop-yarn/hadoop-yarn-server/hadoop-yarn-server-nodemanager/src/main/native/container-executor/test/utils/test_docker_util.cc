@@ -429,12 +429,12 @@ namespace ContainerExecutor {
   }
 
   TEST_F(TestDockerUtil, test_check_mount_permitted) {
-    const char *permitted_mounts[] = {"/etc", "/usr/bin/touch", "/tmp/", NULL};
+    const char *permitted_mounts[] = {"/etc", "/usr/bin/cut", "/tmp/", NULL};
     std::vector<std::pair<std::string, int> > test_data;
     test_data.push_back(std::make_pair<std::string, int>("/etc", 1));
     test_data.push_back(std::make_pair<std::string, int>("/etc/", 1));
     test_data.push_back(std::make_pair<std::string, int>("/etc/passwd", 1));
-    test_data.push_back(std::make_pair<std::string, int>("/usr/bin/touch", 1));
+    test_data.push_back(std::make_pair<std::string, int>("/usr/bin/cut", 1));
     test_data.push_back(std::make_pair<std::string, int>("//usr/", 0));
     test_data.push_back(std::make_pair<std::string, int>("/etc/random-file", -1));
 
@@ -447,8 +447,8 @@ namespace ContainerExecutor {
 
   TEST_F(TestDockerUtil, test_normalize_mounts) {
     const int entries = 4;
-    const char *permitted_mounts[] = {"/home", "/etc", "/usr/bin/touch", NULL};
-    const char *expected[] = {"/home/", "/etc/", "/usr/bin/touch", NULL};
+    const char *permitted_mounts[] = {"/home", "/etc", "/usr/bin/cut", NULL};
+    const char *expected[] = {"/home/", "/etc/", "/usr/bin/cut", NULL};
     char **ptr = static_cast<char **>(malloc(entries * sizeof(char *)));
     for (int i = 0; i < entries; ++i) {
       if (permitted_mounts[i] != NULL) {
@@ -660,7 +660,7 @@ namespace ContainerExecutor {
     const int buff_len = 1024;
     char buff[buff_len];
     int ret = 0;
-    std::string container_executor_cfg_contents = "[docker]\n  docker.allowed.rw-mounts=/opt,/var,/usr/bin/touch,..\n  "
+    std::string container_executor_cfg_contents = "[docker]\n  docker.allowed.rw-mounts=/opt,/var,/usr/bin/cut,..\n  "
                                                               "docker.allowed.ro-mounts=/etc/passwd";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -668,8 +668,8 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  rw-mounts=/var/:/var/", "-v '/var/:/var/' "));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  rw-mounts=/usr/bin/touch:/usr/bin/touch",
-         "-v '/usr/bin/touch:/usr/bin/touch' "));
+        "[docker-command-execution]\n  docker-command=run\n  rw-mounts=/usr/bin/cut:/usr/bin/cut",
+         "-v '/usr/bin/cut:/usr/bin/cut' "));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  rw-mounts=/opt:/mydisk1,/var/log/:/mydisk2",
         "-v '/opt:/mydisk1' -v '/var/log/:/mydisk2' "));
@@ -767,7 +767,7 @@ namespace ContainerExecutor {
     char buff[buff_len];
     int ret = 0;
 
-    std::string container_executor_cfg_contents = "[docker]\n  docker.allowed.rw-mounts=/home/,/var,/usr/bin/touch,..\n  "
+    std::string container_executor_cfg_contents = "[docker]\n  docker.allowed.rw-mounts=/home/,/var,/usr/bin/cut,..\n  "
                                                               "docker.allowed.ro-mounts=/etc/passwd,/etc/group";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -779,8 +779,8 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  ro-mounts=/home/:/home", "-v '/home/:/home:ro' "));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  ro-mounts=/usr/bin/touch:/usr/bin/touch",
-        "-v '/usr/bin/touch:/usr/bin/touch:ro' "));
+        "[docker-command-execution]\n  docker-command=run\n  ro-mounts=/usr/bin/cut:/usr/bin/cut",
+        "-v '/usr/bin/cut:/usr/bin/cut:ro' "));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  ro-mounts=/etc/group:/etc/group",
         "-v '/etc/group:/etc/group:ro' "));
@@ -856,7 +856,7 @@ namespace ContainerExecutor {
 
   TEST_F(TestDockerUtil, test_docker_run_privileged) {
 
-    std::string container_executor_contents = "[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/touch\n"
+    std::string container_executor_contents = "[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
         "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n "
         "  docker.privileged-containers.enabled=1\n  docker.allowed.capabilities=CHOWN,SETUID\n"
         "  docker.allowed.devices=/dev/test";
@@ -883,36 +883,36 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
-            " -v '/usr/bin/touch:/usr/bin/touch:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN'"
+            " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN'"
             " --cap-add='SETUID' --hostname='host-id' --device='/dev/test:/dev/test' 'docker-image' 'bash' "
             "'test_script.sh' 'arg1' 'arg2' "));
 
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
-            " -v '/usr/bin/touch:/usr/bin/touch:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN' "
+            " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN' "
             "--cap-add='SETUID' --hostname='host-id' --device='/dev/test:/dev/test' 'docker-image' 'bash'"
             " 'test_script.sh' 'arg1' 'arg2' "));
 
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
-            " -v '/usr/bin/touch:/usr/bin/touch:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --privileged --cap-drop='ALL' "
+            " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --privileged --cap-drop='ALL' "
             "--cap-add='CHOWN' --cap-add='SETUID' --hostname='host-id' --device='/dev/test:/dev/test' 'docker-image' "
             "'bash' 'test_script.sh' 'arg1' 'arg2' "));
 
@@ -920,12 +920,12 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
-            " -v '/usr/bin/touch:/usr/bin/touch:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --privileged --cap-drop='ALL' "
+            " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --privileged --cap-drop='ALL' "
             "--cap-add='CHOWN' --cap-add='SETUID' --hostname='host-id' --group-add '1000' --group-add '1001' "
             "--device='/dev/test:/dev/test' 'docker-image' 'bash' 'test_script.sh' 'arg1' 'arg2' "));
 
@@ -946,7 +946,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/var/log:/var/log\n"
+            "  ro-mounts=/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/var/log:/var/log\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -956,7 +956,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/bin:/bin,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/bin:/bin,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -966,7 +966,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID,SETGID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -976,7 +976,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/dev1:/dev/dev1\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -986,7 +986,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n  net=host\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -997,11 +997,11 @@ namespace ContainerExecutor {
 
   TEST_F(TestDockerUtil, test_docker_run_no_privileged) {
 
-    std::string container_executor_contents[] = {"[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/touch\n"
+    std::string container_executor_contents[] = {"[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
                                                      "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n "
                                                      "  docker.allowed.capabilities=CHOWN,SETUID\n"
                                                      "  docker.allowed.devices=/dev/test",
-                                                 "[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/touch\n"
+                                                 "[docker]\n  docker.allowed.ro-mounts=/var,/etc,/usr/bin/cut\n"
                                                      "  docker.allowed.rw-mounts=/tmp\n  docker.allowed.networks=bridge\n "
                                                      "  docker.allowed.capabilities=CHOWN,SETUID\n"
                                                      "  privileged=0\n"
@@ -1030,24 +1030,24 @@ namespace ContainerExecutor {
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
               "  network=bridge\n  devices=/dev/test:/dev/test\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
           "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
-              " -v '/usr/bin/touch:/usr/bin/touch:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN'"
+              " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN'"
               " --cap-add='SETUID' --hostname='host-id' --device='/dev/test:/dev/test' 'docker-image' 'bash' "
               "'test_script.sh' 'arg1' 'arg2' "));
 
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
               "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
           "run --name='container_e1_12312_11111_02_000001' --user='test' -d --rm --net='bridge' -v '/var/log:/var/log:ro' -v '/var/lib:/lib:ro'"
-              " -v '/usr/bin/touch:/usr/bin/touch:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN' "
+              " -v '/usr/bin/cut:/usr/bin/cut:ro' -v '/tmp:/tmp' --cgroup-parent='ctr-cgroup' --cap-drop='ALL' --cap-add='CHOWN' "
               "--cap-add='SETUID' --hostname='host-id' --device='/dev/test:/dev/test' 'docker-image' 'bash'"
               " 'test_script.sh' 'arg1' 'arg2' "));
 
@@ -1055,7 +1055,7 @@ namespace ContainerExecutor {
       bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=test\n  hostname=host-id\n"
-              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/touch:/usr/bin/touch\n  rw-mounts=/tmp:/tmp\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
               "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",

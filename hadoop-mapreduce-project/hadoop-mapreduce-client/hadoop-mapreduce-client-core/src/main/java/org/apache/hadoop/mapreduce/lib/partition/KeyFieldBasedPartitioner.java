@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.lib.partition;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -32,6 +30,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.lib.partition.KeyFieldHelper.KeyDescription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
  /**   
   *  Defines a way to partition keys based on certain key fields (also see
@@ -51,7 +51,7 @@ import org.apache.hadoop.mapreduce.lib.partition.KeyFieldHelper.KeyDescription;
 public class KeyFieldBasedPartitioner<K2, V2> extends Partitioner<K2, V2> 
     implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
                                    KeyFieldBasedPartitioner.class.getName());
   public static String PARTITIONER_OPTIONS = 
     "mapreduce.partition.keypartitioner.options";

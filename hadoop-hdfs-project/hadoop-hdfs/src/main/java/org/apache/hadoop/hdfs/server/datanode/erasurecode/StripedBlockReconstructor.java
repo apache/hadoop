@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.util.Time;
 
@@ -80,6 +81,7 @@ class StripedBlockReconstructor extends StripedReconstructor
 
   void reconstruct() throws IOException {
     while (getPositionInBlock() < getMaxTargetLength()) {
+      DataNodeFaultInjector.get().stripedBlockReconstruction();
       long remaining = getMaxTargetLength() - getPositionInBlock();
       final int toReconstructLen =
           (int) Math.min(getStripedReader().getBufferSize(), remaining);

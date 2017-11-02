@@ -40,8 +40,8 @@ import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class that is used by the Job clients to write splits (both the meta
@@ -51,7 +51,8 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceStability.Unstable
 public class JobSplitWriter {
 
-  private static final Log LOG = LogFactory.getLog(JobSplitWriter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobSplitWriter.class);
   private static final int splitVersion = JobSplit.META_SPLIT_VERSION;
   private static final byte[] SPLIT_FILE_HEADER;
 

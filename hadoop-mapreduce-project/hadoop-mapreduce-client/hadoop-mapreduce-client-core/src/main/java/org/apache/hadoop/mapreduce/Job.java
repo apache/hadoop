@@ -26,8 +26,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -44,6 +42,8 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The job submitter's view of the Job.
@@ -81,7 +81,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Job extends JobContextImpl implements JobContext, AutoCloseable {
-  private static final Log LOG = LogFactory.getLog(Job.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Job.class);
 
   @InterfaceStability.Evolving
   public enum JobState {DEFINE, RUNNING};
