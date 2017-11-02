@@ -309,31 +309,28 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeHostXmlFile
         .getAbsolutePath());
+
     writeToHostsXmlFile(excludeHostXmlFile, Pair.of("", null));
-    final File yarnSite = new File(TEMP_DIR + File.separator +
-        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    conf.writeXml(new FileWriter(yarnSite));
     rm = new MockRM(conf);
     rm.start();
-    rm.getNodesListManager().getDynamicConf().addResource(yarnSite.toURI().toURL());
-    
+
     int nodeMemory = 1024;
     MockNM nm1 = rm.registerNode("host1:1234", nodeMemory);
     MockNM nm2 = rm.registerNode("host2:5678", nodeMemory);
     MockNM nm3 = rm.registerNode("host3:9101", nodeMemory);
-    
+
     NodeHeartbeatResponse nodeHeartbeat1 = nm1.nodeHeartbeat(true);
     NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
     NodeHeartbeatResponse nodeHeartbeat3 = nm3.nodeHeartbeat(true);
-    
+
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
-    
+
     rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
     rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.waitForState(nm3.getNodeId(), NodeState.RUNNING);
-  
+
     // Graceful decommission both host1 and host2, with non default timeout for host1
     final Integer nm1DecommissionTimeout = 20;
     writeToHostsXmlFile(
@@ -347,14 +344,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         conf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
             YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
     Assert.assertEquals(defaultDecTimeout, rm.getDecommissioningTimeout(nm2.getNodeId()));
-    
+
     // Graceful decommission host3 with a new default timeout
     final Integer newDefaultDecTimeout = defaultDecTimeout + 10;
     writeToHostsXmlFile(excludeHostXmlFile, Pair.of(nm3.getNodeId().getHost(), null));
-    Configuration updatedConf = new YarnConfiguration(conf);
-    updatedConf.setInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+    conf.setInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
         newDefaultDecTimeout);
-    updatedConf.writeXml(new FileWriter(yarnSite));
     rm.getNodesListManager().refreshNodes(conf, true);
     rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONING);
     Assert.assertEquals(newDefaultDecTimeout, rm.getDecommissioningTimeout(nm3.getNodeId()));

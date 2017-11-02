@@ -76,7 +76,6 @@ public class NodesListManager extends CompositeService implements
   // Negative value indicates no timeout. 0 means immediate.
   private int defaultDecTimeoutSecs =
       YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT;
-  private final Configuration dynamicConf = new YarnConfiguration();
 
   private String includesFile;
   private String excludesFile;
@@ -222,7 +221,7 @@ public class NodesListManager extends CompositeService implements
           throws IOException, YarnException {
     // resolve the default timeout to the decommission timeout that is
     // configured at this moment
-    timeout = (timeout == null) ?  readDecommissioningTimeout() : timeout;
+    timeout = (timeout == null) ? readDecommissioningTimeout(yarnConf) : timeout;
     if (null == yarnConf) {
       yarnConf = new YarnConfiguration();
     }
@@ -261,7 +260,7 @@ public class NodesListManager extends CompositeService implements
   // Gracefully decommission excluded nodes that are not already
   // DECOMMISSIONED nor DECOMMISSIONING; Take no action for excluded nodes
   // that are already DECOMMISSIONED or DECOMMISSIONING.
-  private void handleExcludeNodeList(boolean graceful, Integer timeout) {
+  private void handleExcludeNodeList(boolean graceful, int timeout) {
     // DECOMMISSIONED/DECOMMISSIONING nodes need to be re-commissioned.
     List<RMNode> nodesToRecom = new ArrayList<RMNode>();
 
@@ -622,11 +621,13 @@ public class NodesListManager extends CompositeService implements
   
   // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.
   // This enables NodesListManager to pick up new value without ResourceManager restart.
-  private int readDecommissioningTimeout() {
+  private int readDecommissioningTimeout(Configuration conf) {
     try {
-      dynamicConf.reloadConfiguration();
+      if (conf == null) {
+        conf = new YarnConfiguration();
+      }
       int configuredDefaultDecTimeoutSecs =
-          dynamicConf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+          conf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
               YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
       if (defaultDecTimeoutSecs != configuredDefaultDecTimeoutSecs) {
         defaultDecTimeoutSecs = configuredDefaultDecTimeoutSecs;
@@ -636,11 +637,6 @@ public class NodesListManager extends CompositeService implements
       LOG.warn("Error readDecommissioningTimeout " + e.getMessage());
     }
     return defaultDecTimeoutSecs;
-  }
-  
-  @VisibleForTesting
-  Configuration getDynamicConf() {
-    return this.dynamicConf;
   }
   
   /**
