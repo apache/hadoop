@@ -54,6 +54,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -182,6 +183,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private boolean enableUserReMapping;
   private int userRemappingUidThreshold;
   private int userRemappingGidThreshold;
+  private Set<String> capabilities;
 
   /**
    * Return whether the given environment variables indicate that the operation
@@ -279,6 +281,30 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     userRemappingGidThreshold = conf.getInt(
       YarnConfiguration.NM_DOCKER_USER_REMAPPING_GID_THRESHOLD,
       YarnConfiguration.DEFAULT_NM_DOCKER_USER_REMAPPING_GID_THRESHOLD);
+
+    capabilities = getDockerCapabilitiesFromConf();
+  }
+
+  private Set<String> getDockerCapabilitiesFromConf() throws
+      ContainerExecutionException {
+    Set<String> caps = new HashSet<>(Arrays.asList(
+        conf.getTrimmedStrings(
+        YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+        YarnConfiguration.DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES)));
+    if(caps.contains("none") || caps.contains("NONE")) {
+      if(caps.size() > 1) {
+        String msg = "Mixing capabilities with the none keyword is" +
+            " not supported";
+        throw new ContainerExecutionException(msg);
+      }
+      caps = Collections.emptySet();
+    }
+
+    return caps;
+  }
+
+  public Set<String> getCapabilities() {
+    return capabilities;
   }
 
   @Override
@@ -551,10 +577,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         LOCALIZED_RESOURCES);
     @SuppressWarnings("unchecked")
     List<String> userLocalDirs = ctx.getExecutionAttribute(USER_LOCAL_DIRS);
-    Set<String> capabilities = new HashSet<>(Arrays.asList(
-        conf.getTrimmedStrings(
-            YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
-            YarnConfiguration.DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES)));
 
     @SuppressWarnings("unchecked")
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
