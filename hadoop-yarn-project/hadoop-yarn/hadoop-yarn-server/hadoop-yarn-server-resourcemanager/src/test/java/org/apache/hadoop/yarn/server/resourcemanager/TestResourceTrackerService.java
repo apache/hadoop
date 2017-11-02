@@ -26,9 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,7 +40,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.OutputKeys;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -102,14 +107,19 @@ import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 public class TestResourceTrackerService extends NodeLabelTestBase {
 
   private final static File TEMP_DIR = new File(System.getProperty(
       "test.build.data", "/tmp"), "decommision");
-  private final File hostFile = new File(TEMP_DIR + File.separator + "hostFile.txt");
+  private final File hostFile =
+      new File(TEMP_DIR + File.separator + "hostFile.txt");
   private final File excludeHostFile = new File(TEMP_DIR + File.separator +
       "excludeHostFile.txt");
+  private final File excludeHostXmlFile =
+      new File(TEMP_DIR + File.separator + "excludeHostFile.xml");
 
   private MockRM rm;
 
@@ -297,9 +307,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   @Test
   public void testGracefulDecommissionDefaultTimeoutResolution() throws Exception  {
     Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeHostXmlFile
         .getAbsolutePath());
-    writeToHostsFile("");
+    writeToHostsXmlFile(excludeHostXmlFile, Pair.of("", null));
     final File yarnSite = new File(TEMP_DIR + File.separator +
         YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
     conf.writeXml(new FileWriter(yarnSite));
@@ -307,9 +317,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
     rm.getNodesListManager().getDynamicConf().addResource(yarnSite.toURI().toURL());
     
-    MockNM nm1 = rm.registerNode("host1:1234", 5120);
-    MockNM nm2 = rm.registerNode("host2:5678", 5120);
-    MockNM nm3 = rm.registerNode("host3:9101", 5120);
+    int nodeMemory = 1024;
+    MockNM nm1 = rm.registerNode("host1:1234", nodeMemory);
+    MockNM nm2 = rm.registerNode("host2:5678", nodeMemory);
+    MockNM nm3 = rm.registerNode("host3:9101", nodeMemory);
     
     NodeHeartbeatResponse nodeHeartbeat1 = nm1.nodeHeartbeat(true);
     NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
@@ -322,11 +333,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
     rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.waitForState(nm3.getNodeId(), NodeState.RUNNING);
-    
+  
     // Graceful decommission both host1 and host2, with non default timeout for host1
     final Integer nm1DecommissionTimeout = 20;
-    writeToHostsFile(nm1.getNodeId().getHost() + " " + nm1DecommissionTimeout,
-        nm2.getNodeId().getHost());
+    writeToHostsXmlFile(
+        excludeHostXmlFile, Pair.of(nm1.getNodeId().getHost(), nm1DecommissionTimeout),
+        Pair.of(nm2.getNodeId().getHost(), null));
     rm.getNodesListManager().refreshNodes(conf, true);
     rm.waitForState(nm1.getNodeId(), NodeState.DECOMMISSIONING);
     rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONING);
@@ -338,7 +350,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     
     // Graceful decommission host3 with a new default timeout
     final Integer newDefaultDecTimeout = defaultDecTimeout + 10;
-    writeToHostsFile(nm3.getNodeId().getHost());
+    writeToHostsXmlFile(excludeHostXmlFile, Pair.of(nm3.getNodeId().getHost(), null));
     Configuration updatedConf = new YarnConfiguration(conf);
     updatedConf.setInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
         newDefaultDecTimeout);
@@ -2024,16 +2036,20 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.stop();
   }
 
-  private void writeToHostsFile(String... hosts) throws IOException {
-    writeToHostsFile(hostFile, hosts);
-  }
-
-  private void writeToHostsFile(File file, String... hosts)
-      throws IOException {
+  private void ensureFileExists(File file) throws IOException {
     if (!file.exists()) {
       TEMP_DIR.mkdirs();
       file.createNewFile();
     }
+  }
+  
+  private void writeToHostsFile(String... hosts) throws IOException {
+    writeToHostsFile(hostFile, hosts);
+  }
+  
+  private void writeToHostsFile(File file, String... hosts)
+      throws IOException {
+    ensureFileExists(file);
     FileOutputStream fStream = null;
     try {
       fStream = new FileOutputStream(file);
@@ -2048,7 +2064,32 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
       }
     }
   }
-
+  
+  private void writeToHostsXmlFile(File file, Pair<String, Integer>... hostsAndTimeouts)
+      throws Exception {
+    ensureFileExists(file);
+    DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+    Document doc = dbFactory.newDocumentBuilder().newDocument();
+    Element hosts = doc.createElement("hosts");
+    doc.appendChild(hosts);
+    for (Pair<String, Integer> hostsAndTimeout : hostsAndTimeouts) {
+      Element host = doc.createElement("host");
+      hosts.appendChild(host);
+      Element name = doc.createElement("name");
+      host.appendChild(name);
+      name.appendChild(doc.createTextNode(hostsAndTimeout.getLeft()));
+      if (hostsAndTimeout.getRight() != null) {
+        Element timeout = doc.createElement("timeout");
+        host.appendChild(timeout);
+        timeout.appendChild(doc.createTextNode(hostsAndTimeout.getRight().toString()));
+      }
+    }
+    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    Transformer transformer = transformerFactory.newTransformer();
+    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+    transformer.transform(new DOMSource(doc), new StreamResult(file));
+  }
+  
   private void checkDecommissionedNMCount(MockRM rm, int count)
       throws InterruptedException {
     int waitCount = 0;
