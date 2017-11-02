@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +54,8 @@ import org.apache.hadoop.mapreduce.task.reduce.Shuffle;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** A Reduce task. */
 @InterfaceAudience.Private
@@ -70,7 +70,8 @@ public class ReduceTask extends Task {
        });
   }
   
-  private static final Log LOG = LogFactory.getLog(ReduceTask.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReduceTask.class.getName());
   private int numMaps;
 
   private CompressionCodec codec;
@@ -456,7 +457,7 @@ public class ReduceTask extends Task {
       out.close(reporter);
       out = null;
     } finally {
-      IOUtils.cleanup(LOG, reducer);
+      IOUtils.cleanupWithLogger(LOG, reducer);
       closeQuietly(out, reporter);
     }
   }
