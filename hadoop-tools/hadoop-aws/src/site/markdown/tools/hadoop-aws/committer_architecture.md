@@ -412,7 +412,6 @@ def mergePathsV2(fs, src, dest) :
         fs.mkdirs(dest)                                     #
         for child in fs.listStatus(src.getPath) :           # HERE
           mergePathsV2(fs, child, dest + child.getName)     #
-
 ```
 
 Both recurse down any source directory tree, and commit single files
@@ -535,8 +534,6 @@ output, and `index` which contains an index of some of the keys in the file.
 This is all written to the local filesystem.
 
 The `ReduceTask` does the final write to the destination filesystem.
-
-
 
 Because the Map phase uses a committer to commits intermediate work,
 any plug in committer supplied to a process
@@ -727,17 +724,25 @@ try {
 
 The `waitForValidCommitWindow()` operation is important: it declares that
 the committer must not commit unless there has been communication with the YARN
-Resource Manager with in `yarn.app.mapreduce.am.ob.committer.commit-window` milliseconds
+Resource Manager with in `yarn.app.mapreduce.am.job.committer.commit-window` milliseconds
 (default: 10,000). It does this by waiting until the next heartbeat it received.
 There's a possible bug here: if the interval is set too small the thread may
 permanently spin waiting a callback within the window. Ignoring that, this algorithm
 guarantees that 
 
-1. As only one call can create a file with overwrite=false,
+1. As only one call can create a file with `overwrite=false`,
    only one process's attempt to commit a non-repeatable job will proceed 
   
 1. Only a process with contact with the YARN within the configured window 
    may commit a job. 
+   
+1. If the AM is partitioned from the rest of the network, provided that its clock
+is monotonically increasing at the same rate as the rest of the cluster, then
+the rest of the cluster can be confident that
+`yarn.app.mapreduce.am.ob.committer.commit-window` milliseconds after the AM
+successfully heartbeated to the YARN RM, then the output of this job attempt
+will *never* be committed. This permits 1 job to run simultaneously, but 
+helps ensure that only one of them will attempt to commit.  
    
 1. Provided YARN heartbeats are only sent to the AM which successfully created
 the `COMMIT_STARTED` file, it will initiate the commit operation.
