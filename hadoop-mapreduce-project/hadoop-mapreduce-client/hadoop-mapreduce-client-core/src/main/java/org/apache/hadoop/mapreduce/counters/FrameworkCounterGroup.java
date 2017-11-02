@@ -26,13 +26,13 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
@@ -47,7 +47,8 @@ import com.google.common.collect.Iterators;
 @InterfaceAudience.Private
 public abstract class FrameworkCounterGroup<T extends Enum<T>,
     C extends Counter> implements CounterGroupBase<C> {
-  private static final Log LOG = LogFactory.getLog(FrameworkCounterGroup.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FrameworkCounterGroup.class);
   
   private final Class<T> enumClass; // for Enum.valueOf
   private final Object[] counters;  // local casts are OK and save a class ref

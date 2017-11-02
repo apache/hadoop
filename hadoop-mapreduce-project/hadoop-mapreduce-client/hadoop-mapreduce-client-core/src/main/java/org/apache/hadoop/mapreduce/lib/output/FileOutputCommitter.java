@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.lib.output;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -40,6 +38,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An {@link OutputCommitter} that commits files specified 
  * in job output directory i.e. ${mapreduce.output.fileoutputformat.outputdir}.
@@ -47,7 +47,8 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FileOutputCommitter extends PathOutputCommitter {
-  private static final Log LOG = LogFactory.getLog(FileOutputCommitter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileOutputCommitter.class);
 
   /** 
    * Name of directory where pending data is placed.  Data that has not been

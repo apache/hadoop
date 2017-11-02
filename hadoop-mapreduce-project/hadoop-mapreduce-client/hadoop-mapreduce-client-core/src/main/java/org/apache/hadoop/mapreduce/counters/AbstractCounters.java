@@ -29,8 +29,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
@@ -41,6 +39,8 @@ import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.StringInterner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -59,7 +59,8 @@ public abstract class AbstractCounters<C extends Counter,
                                        G extends CounterGroupBase<C>>
     implements Writable, Iterable<G> {
 
-  protected static final Log LOG = LogFactory.getLog("mapreduce.Counters");
+  protected static final Logger LOG =
+      LoggerFactory.getLogger("mapreduce.Counters");
 
   /**
    * A cache from enum values to the associated counter.

@@ -35,8 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.crypto.SecretKey;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -73,6 +71,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for tasks.
@@ -80,8 +80,8 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
 abstract public class Task implements Writable, Configurable {
-  private static final Log LOG =
-    LogFactory.getLog(Task.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Task.class);
 
   public static String MERGED_OUTPUT_PREFIX = ".merged";
   public static final long DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS = 10000;
@@ -355,7 +355,7 @@ abstract public class Task implements Writable, Configurable {
    */
   protected void reportFatalError(TaskAttemptID id, Throwable throwable, 
                                   String logMsg) {
-    LOG.fatal(logMsg);
+    LOG.error(logMsg);
     
     if (ShutdownHookManager.get().isShutdownInProgress()) {
       return;
@@ -368,7 +368,7 @@ abstract public class Task implements Writable, Configurable {
     try {
       umbilical.fatalError(id, cause);
     } catch (IOException ioe) {
-      LOG.fatal("Failed to contact the tasktracker", ioe);
+      LOG.error("Failed to contact the tasktracker", ioe);
       System.exit(-1);
     }
   }
@@ -849,13 +849,13 @@ abstract public class Task implements Writable, Configurable {
         } catch (TaskLimitException e) {
           String errMsg = "Task exceeded the limits: " +
                   StringUtils.stringifyException(e);
-          LOG.fatal(errMsg);
+          LOG.error(errMsg);
           try {
             umbilical.fatalError(taskId, errMsg);
           } catch (IOException ioe) {
-            LOG.fatal("Failed to update failure diagnosis", ioe);
+            LOG.error("Failed to update failure diagnosis", ioe);
           }
-          LOG.fatal("Killing " + taskId);
+          LOG.error("Killing " + taskId);
           resetDoneFlag();
           ExitUtil.terminate(69);
         } catch (Throwable t) {
