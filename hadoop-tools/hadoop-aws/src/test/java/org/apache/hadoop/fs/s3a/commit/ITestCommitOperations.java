@@ -510,7 +510,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
 
   /**
    * Test a normal stream still works as expected in a magic filesystem,
-   * with a call of {@code hasCapability()} to check that it is normal
+   * with a call of {@code hasCapability()} to check that it is normal.
    * @throws Throwable failure
    */
   @Test

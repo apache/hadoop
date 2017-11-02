@@ -636,7 +636,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
   public boolean needsTaskCommit(TaskAttemptContext context)
       throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
-        "%s: needsTaskCommit() Task %s", getRole(), context.getTaskAttemptID())) {
+        "%s: needsTaskCommit() Task %s",
+        getRole(), context.getTaskAttemptID())) {
       // check for files on the local FS in the attempt path
       Path attemptPath = getTaskAttemptPath(context);
       FileSystem fs = getTaskAttemptFilesystem(context);

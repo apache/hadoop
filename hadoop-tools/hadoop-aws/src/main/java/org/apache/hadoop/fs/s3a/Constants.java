@@ -491,7 +491,8 @@ public final class Constants {
   /**
    * Default throttled retry limit: {@value}.
    */
-  public static final int RETRY_THROTTLE_LIMIT_DEFAULT = DEFAULT_MAX_ERROR_RETRIES;
+  public static final int RETRY_THROTTLE_LIMIT_DEFAULT =
+      DEFAULT_MAX_ERROR_RETRIES;
 
   /**
    * Interval between retry attempts on throttled requests: {@value}.

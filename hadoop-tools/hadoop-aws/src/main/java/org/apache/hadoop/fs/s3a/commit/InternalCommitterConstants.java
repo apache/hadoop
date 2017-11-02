@@ -34,7 +34,11 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_EN
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class InternalCommitterConstants {
+public final class InternalCommitterConstants {
+
+  private InternalCommitterConstants() {
+  }
+
   /**
    * This is the staging committer base class; only used for testing.
    */

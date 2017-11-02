@@ -885,7 +885,7 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Verify that a path exists, returning the file status of the path
+   * Verify that a path exists, returning the file status of the path.
    *
    * @param fileSystem filesystem to examine
    * @param message message to include in the assertion failure message

@@ -20,12 +20,10 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -38,14 +36,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
 
@@ -164,7 +160,8 @@ public final class Paths {
       final TaskAttemptID attemptID)
       throws IOException {
     try {
-      final LocalDirAllocator allocator = new LocalDirAllocator(Constants.BUFFER_DIR);
+      final LocalDirAllocator allocator =
+          new LocalDirAllocator(Constants.BUFFER_DIR);
       return tempFolders.get(attemptID,
           () -> {
             return FileSystem.getLocal(conf).makeQualified(
@@ -181,7 +178,7 @@ public final class Paths {
   }
 
   /**
-   * remove all information held about task attempts
+   * Remove all information held about task attempts.
    * @param attemptID attempt ID.
    */
   public static void clearTempFolderInfo(final TaskAttemptID attemptID) {

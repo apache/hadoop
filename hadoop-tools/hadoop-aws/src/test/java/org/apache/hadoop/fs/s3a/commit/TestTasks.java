@@ -58,7 +58,7 @@ public class TestTasks extends HadoopTestBase {
    */
   private ExecutorService threadPool;
   private final CounterTask failingTask
-      = new CounterTask("runner",FAILPOINT, Item::commit);
+      = new CounterTask("runner", FAILPOINT, Item::commit);
 
   private final FailureCounter failures
       = new FailureCounter("failures", 0, null);
@@ -349,25 +349,31 @@ public class TestTasks extends HadoopTestBase {
    * The Item which tasks process.
    */
   private static class Item {
-    final int id;
-    boolean committed;
-    boolean aborted;
-    boolean reverted;
+    private final int id;
+
+    private boolean committed;
+
+    private boolean aborted;
+
+    private boolean reverted;
 
     private Item(int item) {
       this.id = item;
     }
 
     boolean commit() {
-      return committed = true;
+      committed = true;
+      return true;
     }
 
     boolean abort() {
-      return aborted = true;
+      aborted = true;
+      return true;
     }
 
     boolean revert() {
-      return reverted = true;
+      reverted = true;
+      return true;
     }
 
     public Item assertCommitted() {
@@ -411,13 +417,13 @@ public class TestTasks extends HadoopTestBase {
     private final Optional<Function<Item, Boolean>> action;
 
     /**
-     * Base counter, tracks items
+     * Base counter, tracks items.
      * @param name name for string/exception/logs.
      * @param limit limit at which an exception is raised, 0 == never
      * @param action optional action to invoke after the increment,
      * before limit check
      */
-    public BaseCounter(String name,
+    private BaseCounter(String name,
         int limit,
         Function<Item, Boolean> action) {
       this.name = name;
@@ -425,14 +431,14 @@ public class TestTasks extends HadoopTestBase {
       this.action = Optional.ofNullable(action);
     }
 
-    void process(Item item) throws IOException {
-      this.item = item;
-      action.map(a -> a.apply(item));
+    void process(Item i) throws IOException {
+      this.item = i;
+      action.map(a -> a.apply(i));
       int count = counter.incrementAndGet();
-      LOG.info("{}: processed({})", this, item);
+      LOG.info("{}: processed({})", this, i);
       if (limit == count) {
         throw new IOException(String.format("%s: Limit %d reached",
-            this, limit, item));
+            this, limit, i));
       }
     }
 
@@ -477,11 +483,7 @@ public class TestTasks extends HadoopTestBase {
   private static class CounterTask
       extends BaseCounter implements Tasks.Task<Item, IOException> {
 
-    public CounterTask(String name) {
-      this(name, 0, null);
-    }
-
-    public CounterTask(String name, int limit,
+    private CounterTask(String name, int limit,
         Function<Item, Boolean> action) {
       super(name, limit, action);
     }
@@ -498,21 +500,20 @@ public class TestTasks extends HadoopTestBase {
       extends BaseCounter implements Tasks.FailureTask<Item, IOException> {
     private Exception exception;
 
-    public FailureCounter(String name, int limit,
+    private FailureCounter(String name, int limit,
         Function<Item, Boolean> action) {
       super(name, limit, action);
     }
 
     @Override
-    public void run(Item item, Exception exception) throws IOException {
+    public void run(Item item, Exception ex) throws IOException {
       process(item);
-      this.exception = exception;
+      this.exception = ex;
     }
 
     Exception getException() {
       return exception;
     }
-
 
   }
 

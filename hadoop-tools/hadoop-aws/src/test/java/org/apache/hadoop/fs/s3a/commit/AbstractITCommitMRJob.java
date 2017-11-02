@@ -61,6 +61,7 @@ import org.apache.hadoop.service.ServiceOperations;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 
 /** Full integration test of an MR job. */
 public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
@@ -179,7 +180,7 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
     mockResultsFile.delete();
     String committerPath = "file:" + mockResultsFile;
     jobConf.set("mock-results-file", committerPath);
-    jobConf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
+    jobConf.set(FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
 
     mrJob.setInputFormatClass(TextInputFormat.class);
     FileInputFormat.addInputPath(mrJob, new Path(temp.getRoot().toURI()));
@@ -211,7 +212,8 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
 
     waitForConsistency();
     assertIsDirectory(outputPath);
-    FileStatus[] results = fs.listStatus(outputPath, S3AUtils.HIDDEN_FILE_FILTER);
+    FileStatus[] results = fs.listStatus(outputPath,
+        S3AUtils.HIDDEN_FILE_FILTER);
     int fileCount = results.length;
     List<String> actualFiles = new ArrayList<>(fileCount);
     assertTrue("No files in output directory", fileCount != 0);

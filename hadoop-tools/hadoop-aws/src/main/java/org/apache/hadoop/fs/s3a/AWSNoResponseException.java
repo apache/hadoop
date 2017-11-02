@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.AmazonServiceException;
 
+/**
+ * Status code 443, no response from server. This is considered idempotent.
+ */
 public class AWSNoResponseException extends AWSServiceIOException {
   public AWSNoResponseException(String operation,
       AmazonServiceException cause) {

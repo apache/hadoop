@@ -1104,7 +1104,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     FileOutputFormat.setOutputPath(job, outDir);
     final Configuration conf = job.getConfiguration();
 
-    final JobContext jContext = new JobContextImpl(conf, taskAttempt0.getJobID());
+    final JobContext jContext =
+        new JobContextImpl(conf, taskAttempt0.getJobID());
     AbstractS3ACommitter amCommitter = createCommitter(
         new TaskAttemptContextImpl(conf, taskAttempt0));
     amCommitter.setupJob(jContext);

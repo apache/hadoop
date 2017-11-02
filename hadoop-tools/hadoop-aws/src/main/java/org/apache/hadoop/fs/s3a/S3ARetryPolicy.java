@@ -69,8 +69,8 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * does this translation if an {@code AmazonClientException} is processed,
  * the policy defined for the IOEs also applies to the original exceptions.
  *
- * Put differently: this retry policy aims to work for handlers of the untranslated
- * exceptions, as well as the translated ones.
+ * Put differently: this retry policy aims to work for handlers of the
+ * untranslated exceptions, as well as the translated ones.
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
  * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>

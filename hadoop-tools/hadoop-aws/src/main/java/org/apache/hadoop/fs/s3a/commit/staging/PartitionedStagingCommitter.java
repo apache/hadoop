@@ -31,11 +31,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 
 /**
  * Partitioned committer.
@@ -56,7 +57,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       PartitionedStagingCommitter.class);
-  public static final String NAME = CommitConstants.COMMITTER_NAME_PARTITIONED;
+  public static final String NAME = COMMITTER_NAME_PARTITIONED;
 
   public PartitionedStagingCommitter(Path outputPath,
       TaskAttemptContext context)
@@ -98,7 +99,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
               + " to existing path {} under {}",
               context.getTaskAttemptID(), partitionPath, getOutputPath());
           throw new PathExistsException(partitionPath.toString(),
-              InternalCommitterConstants.E_DEST_EXISTS);
+              E_DEST_EXISTS);
         }
       }
     }

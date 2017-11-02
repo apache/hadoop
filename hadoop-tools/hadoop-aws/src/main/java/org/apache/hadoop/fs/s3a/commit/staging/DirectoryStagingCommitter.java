@@ -28,11 +28,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 
 /**
  * This commits to a directory.
@@ -47,7 +48,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public class DirectoryStagingCommitter extends StagingCommitter {
   private static final Logger LOG = LoggerFactory.getLogger(
       DirectoryStagingCommitter.class);
-  public static final String NAME = CommitConstants.COMMITTER_NAME_DIRECTORY;
+  public static final String NAME = COMMITTER_NAME_DIRECTORY;
 
   public DirectoryStagingCommitter(Path outputPath, TaskAttemptContext context)
       throws IOException {
@@ -64,13 +65,13 @@ public class DirectoryStagingCommitter extends StagingCommitter {
     super.setupJob(context);
     Path outputPath = getOutputPath();
     FileSystem fs = getDestFS();
-    if (getConflictResolutionMode(context, fs.getConf()) == ConflictResolution.FAIL
+    if (getConflictResolutionMode(context, fs.getConf())
+        == ConflictResolution.FAIL
         && fs.exists(outputPath)) {
       LOG.debug("Failing commit by task attempt {} to write"
               + " to existing output path {}",
           context.getJobID(),getOutputPath());
-      throw new PathExistsException(outputPath.toString(),
-          InternalCommitterConstants.E_DEST_EXISTS);
+      throw new PathExistsException(outputPath.toString(), E_DEST_EXISTS);
     }
   }
 
@@ -93,8 +94,7 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       // this was checked in setupJob, but this avoids some cases where
       // output was created while the job was processing
       if (fs.exists(outputPath)) {
-        throw new PathExistsException(outputPath.toString(),
-            InternalCommitterConstants.E_DEST_EXISTS);
+        throw new PathExistsException(outputPath.toString(), E_DEST_EXISTS);
       }
       break;
     case APPEND:

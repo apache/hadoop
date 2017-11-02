@@ -521,7 +521,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
     fs.delete(root, true);
 
-    ListObjectsV2Result postDeleteDelimited = listObjectsV2(fs, key, "/");;
+    ListObjectsV2Result postDeleteDelimited = listObjectsV2(fs, key, "/");
     ListObjectsV2Result postDeleteUndelimited = listObjectsV2(fs, key, null);
 
     assertEquals("InconsistentAmazonS3Client added back objects incorrectly " +
@@ -547,7 +547,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
   }
 
   /**
-   * retrying v2 list
+   * retrying v2 list.
    * @param fs
    * @param key
    * @param delimiter

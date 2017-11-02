@@ -96,7 +96,8 @@ public class WriteOperationHelper {
    * @param retries number of retries
    * @param idempotent is the method idempotent
    */
-  void operationRetried(String text, Exception ex, int retries, boolean idempotent) {
+  void operationRetried(String text, Exception ex, int retries,
+      boolean idempotent) {
     owner.operationRetried(text, ex, retries, idempotent);
   }
 

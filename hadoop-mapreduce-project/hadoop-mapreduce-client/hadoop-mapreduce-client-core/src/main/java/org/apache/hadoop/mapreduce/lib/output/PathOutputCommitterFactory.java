@@ -194,8 +194,8 @@ public class PathOutputCommitterFactory extends Configured {
    * @return the committer to use
    * @throws IOException problems instantiating the committer
    */
-  public static PathOutputCommitter createCommitter(Path outputPath, TaskAttemptContext context)
-      throws IOException {
+  public static PathOutputCommitter createCommitter(Path outputPath,
+      TaskAttemptContext context) throws IOException {
     return getCommitterFactory(outputPath,
         context.getConfiguration())
         .createOutputCommitter(outputPath, context);

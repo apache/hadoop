@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.HadoopTestBase;
@@ -28,31 +29,33 @@ import org.apache.hadoop.test.HadoopTestBase;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Test {@link org.apache.hadoop.fs.s3a.commit.staging.Paths}.
+ */
 public class TestPaths extends HadoopTestBase {
 
-
   @Test
-  public void testUUIDPart() throws Throwable {
+  public void testUUIDPart() {
     assertUUIDAdded("/part-0000", "/part-0000-UUID");
   }
 
   @Test
-  public void testUUIDPartSuffix() throws Throwable {
+  public void testUUIDPartSuffix() {
     assertUUIDAdded("/part-0000.gz.csv", "/part-0000-UUID.gz.csv");
   }
 
   @Test
-  public void testUUIDDottedPath() throws Throwable {
+  public void testUUIDDottedPath() {
     assertUUIDAdded("/parent.dir/part-0000", "/parent.dir/part-0000-UUID");
   }
 
   @Test
-  public void testUUIDPartUUID() throws Throwable {
+  public void testUUIDPartUUID() {
     assertUUIDAdded("/part-0000-UUID.gz.csv", "/part-0000-UUID.gz.csv");
   }
 
   @Test
-  public void testUUIDParentUUID() throws Throwable {
+  public void testUUIDParentUUID() {
     assertUUIDAdded("/UUID/part-0000.gz.csv", "/UUID/part-0000.gz.csv");
   }
 
@@ -79,35 +82,35 @@ public class TestPaths extends HadoopTestBase {
   }
 
   private static final String DATA = "s3a://landsat-pds/data/";
-  private static final Path base = new Path(DATA);
+  private static final Path BASE = new Path(DATA);
 
   @Test
-  public void testRelativizeOneLevel() throws Throwable {
+  public void testRelativizeOneLevel() {
     String suffix = "year=2017";
-    Path pathn = new Path(DATA + suffix);
-    assertEquals(suffix, getRelativePath(base, pathn) );
+    Path path = new Path(DATA + suffix);
+    assertEquals(suffix, getRelativePath(BASE, path));
   }
 
   @Test
-  public void testRelativizeTwoLevel() throws Throwable {
+  public void testRelativizeTwoLevel() {
     String suffix = "year=2017/month=10";
-    Path path = path(base, suffix);
-    assertEquals(suffix, getRelativePath(base, path) );
+    Path path = path(BASE, suffix);
+    assertEquals(suffix, getRelativePath(BASE, path));
   }
 
   @Test
-  public void testRelativizeSelf() throws Throwable {
-    assertEquals("", getRelativePath(base, base) );
+  public void testRelativizeSelf() {
+    assertEquals("", getRelativePath(BASE, BASE) );
   }
 
   @Test
-  public void testRelativizeParent() throws Throwable {
+  public void testRelativizeParent() {
     // goes up to the parent if one is above the other
-    assertEquals("/", getRelativePath(base, base.getParent()) );
+    assertEquals("/", getRelativePath(BASE, BASE.getParent()));
   }
 
   @Test
-  public void testGetPartition() throws Throwable {
+  public void testGetPartition() {
     assertEquals("year=2017/month=10",
         getPartition("year=2017/month=10/part-0000.avro"));
   }
@@ -115,7 +118,7 @@ public class TestPaths extends HadoopTestBase {
   @Test
   public void testMPUCommitDir() throws Throwable {
     Configuration conf = new Configuration();
-    LocalFileSystem localFS = LocalFileSystem.getLocal(conf);
+    LocalFileSystem localFS = FileSystem.getLocal(conf);
     Path dir = getMultipartUploadCommitsDirectory(localFS, conf, "UUID");
     assertTrue(dir.toString().endsWith("UUID/"
         + StagingCommitterConstants.STAGING_UPLOADS));

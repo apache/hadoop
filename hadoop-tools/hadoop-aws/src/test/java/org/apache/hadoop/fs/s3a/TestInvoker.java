@@ -418,8 +418,8 @@ public class TestInvoker extends Assert {
 
   @Test
   public void testDynamoDBThrottleConversion() throws Throwable {
-    ProvisionedThroughputExceededException exceededException
-        = new ProvisionedThroughputExceededException("iops");
+    ProvisionedThroughputExceededException exceededException =
+        new ProvisionedThroughputExceededException("iops");
     AWSServiceThrottledException ddb = verifyTranslated(
         AWSServiceThrottledException.class, exceededException);
     assertTrue(isThrottleException(exceededException));

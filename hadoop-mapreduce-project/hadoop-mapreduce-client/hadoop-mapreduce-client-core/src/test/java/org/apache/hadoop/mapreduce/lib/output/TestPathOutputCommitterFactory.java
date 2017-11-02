@@ -207,11 +207,13 @@ public class TestPathOutputCommitterFactory extends Assert {
    * @throws IOException failure to create
    */
   private <T extends PathOutputCommitterFactory, U extends PathOutputCommitter>
-    U createCommitter(Class<T> factoryClass, Class<U> committerClass,
+  U createCommitter(Class<T> factoryClass,
+      Class<U> committerClass,
       Path path,
       Configuration conf) throws IOException {
     T f = createCommitterFactory(factoryClass, path, conf);
-    PathOutputCommitter committer = f.createOutputCommitter(path, taskAttempt(conf));
+    PathOutputCommitter committer = f.createOutputCommitter(path,
+        taskAttempt(conf));
     assertEquals(" Wrong committer for path " + path + " from factory " + f,
         committerClass, committer.getClass());
     return (U) committer;
@@ -227,8 +229,9 @@ public class TestPathOutputCommitterFactory extends Assert {
    * @return the committer
    * @throws IOException failure to create
    */
-  private <U extends PathOutputCommitter>
-    U createCommitter(Class<U> committerClass, Path path,
+  private <U extends PathOutputCommitter> U createCommitter(
+      Class<U> committerClass,
+      Path path,
       TaskAttemptContext context) throws IOException {
     PathOutputCommitter committer = PathOutputCommitterFactory
         .createCommitter(path, context);
@@ -256,7 +259,7 @@ public class TestPathOutputCommitterFactory extends Assert {
   }
 
   /**
-   * Create a new task attempt context
+   * Create a new task attempt context.
    * @param conf config
    * @return a new context
    */
@@ -336,7 +339,7 @@ public class TestPathOutputCommitterFactory extends Assert {
   }
 
   /**
-   * Extract the (mandatory) cause of an exception,
+   * Extract the (mandatory) cause of an exception.
    * @param ex exception
    * @param clazz expected class
    * @return the cause, which will be of the expected type
@@ -419,7 +422,7 @@ public class TestPathOutputCommitterFactory extends Assert {
     }
 
     /**
-     * Job setup throws an exception
+     * Job setup throws an exception.
      * @param jobContext Context of the job
      * @throws IOException always
      */

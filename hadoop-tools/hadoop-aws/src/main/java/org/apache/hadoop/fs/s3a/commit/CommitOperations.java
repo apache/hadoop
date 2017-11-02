@@ -55,21 +55,28 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * This doesn't implement the protocol/binding to a specific execution engine,
  * just the operations needed to to build one.
  *
- * When invoking FS operations, it assumes that the underlying FS is implementing
- * retries and exception translation: it does not attempt to duplicate that
- * work.
+ * When invoking FS operations, it assumes that the underlying FS is
+ * handling retries and exception translation: it does not attempt to
+ * duplicate that work.
  *
  */
 public class CommitOperations {
   private static final Logger LOG = LoggerFactory.getLogger(
       CommitOperations.class);
 
+  /**
+   * Destination filesystem.
+   */
   private final S3AFileSystem fs;
 
   /** Statistics. */
   private final S3AInstrumentation.CommitterStatistics statistics;
 
+  /**
+   * Write operations for the destination fs.
+   */
   private final WriteOperationHelper writeOperations;
+
   /**
    * Instantiate.
    * @param fs FS to bind to
@@ -162,7 +169,7 @@ public class CommitOperations {
       Path pendingDir,
       boolean recursive) throws IOException {
     final List<LocatedFileStatus> result = new ArrayList<>();
-    FileStatus fileStatus = getFileStatus(pendingDir);
+    FileStatus fileStatus = fs.getFileStatus(pendingDir);
     if (!fileStatus.isDirectory()) {
       throw new PathCommitException(pendingDir,
           "Not a directory : " + fileStatus);
@@ -310,16 +317,6 @@ public class CommitOperations {
   protected RemoteIterator<LocatedFileStatus> ls(Path path, boolean recursive)
       throws IOException {
     return fs.listFiles(path, recursive);
-  }
-
-  /**
-   * Robust get file status call.
-   * @param path path
-   * @return file status
-   * @throws IOException failure
-   */
-  protected FileStatus getFileStatus(Path path) throws IOException {
-    return fs.getFileStatus(path);
   }
 
   /**

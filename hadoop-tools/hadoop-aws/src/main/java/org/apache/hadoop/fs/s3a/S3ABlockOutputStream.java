@@ -506,7 +506,7 @@ class S3ABlockOutputStream extends OutputStream implements
       return false;
 
     default:
-        return false;
+      return false;
     }
   }
 

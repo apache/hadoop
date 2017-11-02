@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 import static com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
 
@@ -111,7 +112,7 @@ public final class CommitUtils {
    */
   public static int magicElementIndex(List<String> elements) {
     int index = elements.indexOf(MAGIC);
-    checkArgument(index >= 0, InternalCommitterConstants.E_NO_MAGIC_PATH_ELEMENT);
+    checkArgument(index >= 0, E_NO_MAGIC_PATH_ELEMENT);
     return index;
   }
 
@@ -263,7 +264,7 @@ public final class CommitUtils {
       Path path) throws PathCommitException {
     verifyIsMagicCommitFS(fs);
     if (!fs.isMagicCommitPath(path)) {
-      throw new PathCommitException(path, InternalCommitterConstants.E_BAD_PATH);
+      throw new PathCommitException(path, E_BAD_PATH);
     }
   }
 
@@ -277,9 +278,9 @@ public final class CommitUtils {
     if (!fs.isMagicCommitEnabled()) {
       // dump out details to console for support diagnostics
       String fsUri = fs.getUri().toString();
-      LOG.error("{}: {}:\n{}", InternalCommitterConstants.E_NORMAL_FS, fsUri, fs);
+      LOG.error("{}: {}:\n{}", E_NORMAL_FS, fsUri, fs);
       // then fail
-      throw new PathCommitException(fsUri, InternalCommitterConstants.E_NORMAL_FS);
+      throw new PathCommitException(fsUri, E_NORMAL_FS);
     }
   }
 
@@ -293,7 +294,7 @@ public final class CommitUtils {
   public static S3AFileSystem verifyIsS3AFS(FileSystem fs, Path path)
       throws PathCommitException {
     if (!(fs instanceof S3AFileSystem)) {
-      throw new PathCommitException(path, InternalCommitterConstants.E_WRONG_FS);
+      throw new PathCommitException(path, E_WRONG_FS);
     }
     return (S3AFileSystem) fs;
   }

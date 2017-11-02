@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapred.JobConf;
@@ -69,6 +68,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.*;
@@ -140,7 +140,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     jobConf.setInt(FS_S3A_COMMITTER_THREADS, numThreads);
     jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         uniqueFilenames);
-    jobConf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
+    jobConf.set(FS_S3A_COMMITTER_STAGING_UUID,
         UUID.randomUUID().toString());
 
     this.results = new StagingTestBase.ClientResults();
@@ -197,7 +197,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private String addUUID(Configuration config) {
     String jobUUID = UUID.randomUUID().toString();
-    config.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID, jobUUID);
+    config.set(FS_S3A_COMMITTER_STAGING_UUID, jobUUID);
     return jobUUID;
   }
 

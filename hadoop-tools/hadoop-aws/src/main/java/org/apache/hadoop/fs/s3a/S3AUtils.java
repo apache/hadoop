@@ -960,7 +960,7 @@ public final class S3AUtils {
 
   /**
    * Map an operation to every {@link LocatedFileStatus} in a remote
-   * iterator, returning a list of the all results which were not empty
+   * iterator, returning a list of the all results which were not empty.
    * @param iterator iterator from a list
    * @param eval closure to evaluate
    * @throws IOException anything in the closure, or iteration logic.
