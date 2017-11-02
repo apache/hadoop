@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
@@ -72,6 +73,8 @@ import org.junit.runners.Parameterized;
  */
 @RunWith(Parameterized.class)
 public class TestApplicationLifetimeMonitor {
+  private final long maxLifetime = 30L;
+
   private YarnConfiguration conf;
 
   @Parameterized.Parameters
@@ -90,7 +93,16 @@ public class TestApplicationLifetimeMonitor {
 
   @Before
   public void setup() throws IOException {
-    conf = new YarnConfiguration();
+    if (scheduler.equals(CapacityScheduler.class)) {
+      // Since there is limited lifetime monitoring support in fair scheduler
+      // it does not need queue setup
+      long defaultLifetime = 15L;
+      Configuration capacitySchedulerConfiguration =
+          setUpCSQueue(maxLifetime, defaultLifetime);
+      conf = new YarnConfiguration(capacitySchedulerConfiguration);
+    } else {
+      conf = new YarnConfiguration();
+    }
     // Always run for CS, since other scheduler do not support this.
     conf.setClass(YarnConfiguration.RM_SCHEDULER,
         scheduler, ResourceScheduler.class);
@@ -106,16 +118,6 @@ public class TestApplicationLifetimeMonitor {
       throws Exception {
     MockRM rm = null;
     try {
-      long maxLifetime = 30L;
-      long defaultLifetime = 15L;
-
-      YarnConfiguration newConf;
-      if (scheduler.equals(CapacityScheduler.class)) {
-        // Since there is limited lifetime monitoring support in fair scheduler
-        // it does not need queue setup
-        conf =
-            new YarnConfiguration(setUpCSQueue(maxLifetime, defaultLifetime));
-      }
       rm = new MockRM(conf);
       rm.start();
 
