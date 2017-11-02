@@ -71,6 +71,12 @@ public class NodesListManager extends CompositeService implements
   private HostsFileReader hostsReader;
   private Configuration conf;
   private final RMContext rmContext;
+  
+  // Default decommissioning timeout value in seconds.
+  // Negative value indicates no timeout. 0 means immediate.
+  private int defaultDecTimeoutSecs =
+      YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT;
+  private final Configuration dynamicConf = new YarnConfiguration();
 
   private String includesFile;
   private String excludesFile;
@@ -214,6 +220,9 @@ public class NodesListManager extends CompositeService implements
   private void refreshHostsReader(
       Configuration yarnConf, boolean graceful, Integer timeout)
           throws IOException, YarnException {
+    // resolve the default timeout to the decommission timeout that is
+    // configured at this moment
+    timeout = (timeout == null) ?  readDecommissioningTimeout() : timeout;
     if (null == yarnConf) {
       yarnConf = new YarnConfiguration();
     }
@@ -610,7 +619,30 @@ public class NodesListManager extends CompositeService implements
       }
     }
   }
-
+  
+  // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.
+  // This enables NodesListManager to pick up new value without ResourceManager restart.
+  private int readDecommissioningTimeout() {
+    try {
+      dynamicConf.reloadConfiguration();
+      int configuredDefaultDecTimeoutSecs =
+          dynamicConf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+              YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
+      if (defaultDecTimeoutSecs != configuredDefaultDecTimeoutSecs) {
+        defaultDecTimeoutSecs = configuredDefaultDecTimeoutSecs;
+        LOG.info("Use new decommissioningTimeoutSecs: " + defaultDecTimeoutSecs);
+      }
+    } catch (Exception e) {
+      LOG.warn("Error readDecommissioningTimeout " + e.getMessage());
+    }
+    return defaultDecTimeoutSecs;
+  }
+  
+  @VisibleForTesting
+  Configuration getDynamicConf() {
+    return this.dynamicConf;
+  }
+  
   /**
    * A NodeId instance needed upon startup for populating inactive nodes Map.
    * It only knows the hostname/ip and marks the port to -1 or invalid.

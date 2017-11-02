@@ -26,7 +26,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -289,6 +292,60 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
     Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat2.getNodeAction());
     Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
+  }
+  
+  @Test
+  public void testGracefulDecommissionDefaultTimeoutResolution() throws Exception  {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+    writeToHostsFile("");
+    final File yarnSite = new File(TEMP_DIR + File.separator +
+        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    conf.writeXml(new FileWriter(yarnSite));
+    rm = new MockRM(conf);
+    rm.start();
+    rm.getNodesListManager().getDynamicConf().addResource(yarnSite.toURI().toURL());
+    
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 5120);
+    MockNM nm3 = rm.registerNode("host3:9101", 5120);
+    
+    NodeHeartbeatResponse nodeHeartbeat1 = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat3 = nm3.nodeHeartbeat(true);
+    
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
+    
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm3.getNodeId(), NodeState.RUNNING);
+    
+    // Graceful decommission both host1 and host2, with non default timeout for host1
+    final Integer nm1DecommissionTimeout = 20;
+    writeToHostsFile(nm1.getNodeId().getHost() + " " + nm1DecommissionTimeout,
+        nm2.getNodeId().getHost());
+    rm.getNodesListManager().refreshNodes(conf, true);
+    rm.waitForState(nm1.getNodeId(), NodeState.DECOMMISSIONING);
+    rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONING);
+    Assert.assertEquals(nm1DecommissionTimeout, rm.getDecommissioningTimeout(nm1.getNodeId()));
+    Integer defaultDecTimeout =
+        conf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+            YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
+    Assert.assertEquals(defaultDecTimeout, rm.getDecommissioningTimeout(nm2.getNodeId()));
+    
+    // Graceful decommission host3 with a new default timeout
+    final Integer newDefaultDecTimeout = defaultDecTimeout + 10;
+    writeToHostsFile(nm3.getNodeId().getHost());
+    Configuration updatedConf = new YarnConfiguration(conf);
+    updatedConf.setInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+        newDefaultDecTimeout);
+    updatedConf.writeXml(new FileWriter(yarnSite));
+    rm.getNodesListManager().refreshNodes(conf, true);
+    rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONING);
+    Assert.assertEquals(newDefaultDecTimeout, rm.getDecommissioningTimeout(nm3.getNodeId()));
   }
 
   /**

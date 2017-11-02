@@ -657,7 +657,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
       NodeId nodeId = NodeId.newInstance("localhost", 0);
       NodeReport report =
           NodeReport.newInstance(nodeId, NodeState.RUNNING, "localhost",
-              "rack1", null, null, 4, null, 1000l, null);
+              "rack1", null, null, 4, null, 1000l);
       List<NodeReport> reports = new ArrayList<NodeReport>();
       reports.add(report);
       return reports;

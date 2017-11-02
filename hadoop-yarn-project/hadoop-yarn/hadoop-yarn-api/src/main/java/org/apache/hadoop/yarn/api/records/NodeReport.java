@@ -53,7 +53,7 @@ public abstract class NodeReport {
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime) {
     return newInstance(nodeId, nodeState, httpAddress, rackName, used,
-        capability, numContainers, healthReport, lastHealthReportTime, null);
+        capability, numContainers, healthReport, lastHealthReportTime, null, null);
   }
 
   @Private
@@ -61,7 +61,7 @@ public abstract class NodeReport {
   public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime,
-      Set<String> nodeLabels) {
+      Set<String> nodeLabels, Integer decommissioningTimeout) {
     NodeReport nodeReport = Records.newRecord(NodeReport.class);
     nodeReport.setNodeId(nodeId);
     nodeReport.setNodeState(nodeState);
@@ -73,6 +73,7 @@ public abstract class NodeReport {
     nodeReport.setHealthReport(healthReport);
     nodeReport.setLastHealthReportTime(lastHealthReportTime);
     nodeReport.setNodeLabels(nodeLabels);
+    nodeReport.setDecommissioningTimeout(decommissioningTimeout);
     return nodeReport;
   }
 
@@ -227,4 +228,15 @@ public abstract class NodeReport {
   @Private
   @Unstable
   public abstract void setNodeUtilization(ResourceUtilization nodeUtilization);
+
+  /**
+   * Optional decommissioning timeout in seconds (null indicates absent timeout).
+   * @return the decommissioning timeout in second.
+   */
+  public abstract Integer getDecommissioningTimeout();
+
+  /**
+   * Set the decommissioning timeout in seconds (null indicates absent timeout).
+   * */
+  public abstract void setDecommissioningTimeout(Integer decommissioningTimeout);
 }

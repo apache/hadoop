@@ -345,6 +345,7 @@ message NodeReportProto {
   repeated string node_labels = 10;
   optional ResourceUtilizationProto containers_utilization = 11;
   optional ResourceUtilizationProto node_utilization = 12;
+  optional uint32 decommissioning_timeout = 13;
 }
 
 message NodeIdToLabelsProto {

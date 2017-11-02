@@ -179,7 +179,46 @@ public class TestClientRMService {
   
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
-
+  
+  
+  @Test
+  public void testGetDecommissioningClusterNodes() throws Exception {
+    MockRM rm = new MockRM() {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+            this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
+            this.getRMContext().getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.start();
+    
+    MockNM decommissioningNodeWithTimeout = rm.registerNode("host1:1234", 1024);
+    rm.sendNodeStarted(decommissioningNodeWithTimeout);
+    decommissioningNodeWithTimeout.nodeHeartbeat(true);
+    Integer decommissioningTimeout = 600;
+    rm.sendNodeGracefulDecommission(decommissioningNodeWithTimeout, decommissioningTimeout);
+    rm.waitForState(decommissioningNodeWithTimeout.getNodeId(), NodeState.DECOMMISSIONING);
+    
+    // Create a client.
+    Configuration conf = new Configuration();
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc
+            .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+    
+    // Make call
+    List<NodeReport> nodeReports = client.getClusterNodes(
+        GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.DECOMMISSIONING))).getNodeReports();
+    Assert.assertEquals(1, nodeReports.size());
+    Assert.assertEquals(decommissioningTimeout,
+        nodeReports.iterator().next().getDecommissioningTimeout());
+    
+    rpc.stopProxy(client, conf);
+    rm.close();
+  }
+  
   @Test
   public void testGetClusterNodes() throws Exception {
     MockRM rm = new MockRM() {
@@ -228,6 +267,7 @@ public class TestClientRMService {
     
     // Check node's label = x
     Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("x"));
+    Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
@@ -251,6 +291,7 @@ public class TestClientRMService {
         nodeReports.get(0).getNodeState());
     
     Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("y"));
+    Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
     
     // Remove labels of host1
     map = new HashMap<NodeId, Set<String>>();
@@ -267,6 +308,7 @@ public class TestClientRMService {
     for (NodeReport report : nodeReports) {
       Assert.assertTrue(report.getNodeLabels() != null
           && report.getNodeLabels().isEmpty());
+      Assert.assertNull(report.getDecommissioningTimeout());
     }
 
     rpc.stopProxy(client, conf);

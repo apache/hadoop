@@ -387,4 +387,20 @@ public class NodeReportPBImpl extends NodeReport {
     }
     this.nodeUtilization = nodeResourceUtilization;
   }
+
+  @Override
+  public Integer getDecommissioningTimeout() {
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasDecommissioningTimeout()) ? p.getDecommissioningTimeout() : null;
+  }
+
+  @Override
+  public void setDecommissioningTimeout(Integer decommissioningTimeout) {
+    maybeInitBuilder();
+    if (decommissioningTimeout == null || decommissioningTimeout < 0) {
+      builder.clearDecommissioningTimeout();
+      return;
+    }
+    builder.setDecommissioningTimeout(decommissioningTimeout);
+  }
 }

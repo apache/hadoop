@@ -344,7 +344,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
                 rmNode.getHttpAddress(), rmNode.getRackName(), used,
                 rmNode.getTotalCapability(), numContainers,
                 rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
-                rmNode.getNodeLabels());
+                rmNode.getNodeLabels(), rmNode.getDecommissioningTimeout());
 
         updatedNodeReports.add(report);
       }
