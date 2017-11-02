@@ -296,7 +296,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       "reservation-enforcement-window";
 
   @Private
-  public static final String LAZY_PREEMPTION_ENALBED = PREFIX + "lazy-preemption-enabled";
+  public static final String LAZY_PREEMPTION_ENABLED =
+      PREFIX + "lazy-preemption-enabled";
 
   @Private
   public static final boolean DEFAULT_LAZY_PREEMPTION_ENABLED = false;
@@ -1166,7 +1167,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public boolean getLazyPreemptionEnabled() {
-    return getBoolean(LAZY_PREEMPTION_ENALBED, DEFAULT_LAZY_PREEMPTION_ENABLED);
+    return getBoolean(LAZY_PREEMPTION_ENABLED, DEFAULT_LAZY_PREEMPTION_ENABLED);
   }
 
   private static final String PREEMPTION_CONFIG_PREFIX =
@@ -1207,7 +1208,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * completions) it might prevent convergence to guaranteed capacity. */
   public static final String PREEMPTION_MAX_IGNORED_OVER_CAPACITY =
       PREEMPTION_CONFIG_PREFIX + "max_ignored_over_capacity";
-  public static final float DEFAULT_PREEMPTION_MAX_IGNORED_OVER_CAPACITY = 0.1f;
+  public static final double DEFAULT_PREEMPTION_MAX_IGNORED_OVER_CAPACITY = 0.1;
   /**
    * Given a computed preemption target, account for containers naturally
    * expiring and preempt only this percentage of the delta. This determines
@@ -1217,8 +1218,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * #PREEMPTION_WAIT_TIME_BEFORE_KILL}, even absent natural termination. */
   public static final String PREEMPTION_NATURAL_TERMINATION_FACTOR =
       PREEMPTION_CONFIG_PREFIX + "natural_termination_factor";
-  public static final float DEFAULT_PREEMPTION_NATURAL_TERMINATION_FACTOR =
-      0.2f;
+  public static final double DEFAULT_PREEMPTION_NATURAL_TERMINATION_FACTOR =
+      0.2;
 
   /**
    * By default, reserved resource will be excluded while balancing capacities
