@@ -192,9 +192,12 @@ public class TestClientRMService {
     };
     rm.start();
     
-    MockNM decommissioningNodeWithTimeout = rm.registerNode("host1:1234", 1024);
+    int nodeMemory = 1024;
+    MockNM decommissioningNodeWithTimeout = rm.registerNode("host1:1234", nodeMemory);
     rm.sendNodeStarted(decommissioningNodeWithTimeout);
     decommissioningNodeWithTimeout.nodeHeartbeat(true);
+    // keep the node busy so it doesn't get DECOMMISSIONED immediately
+    RMApp app1 = rm.submitApp(nodeMemory / 2);
     Integer decommissioningTimeout = 600;
     rm.sendNodeGracefulDecommission(decommissioningNodeWithTimeout, decommissioningTimeout);
     rm.waitForState(decommissioningNodeWithTimeout.getNodeId(), NodeState.DECOMMISSIONING);
