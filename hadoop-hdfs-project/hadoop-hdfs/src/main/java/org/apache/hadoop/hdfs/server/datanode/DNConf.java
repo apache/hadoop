@@ -102,6 +102,8 @@ public class DNConf {
   final long initialBlockReportDelayMs;
   final long cacheReportInterval;
   final long datanodeSlowIoWarningThresholdMs;
+  final long dfsDatanodeReRegisterBlockReportWaitDeltaMs;
+  final long dfsDatanodeReRegisterBlockReportWaitMaxMs;
 
   final String minimumNameNodeVersion;
   final String encryptionAlgorithm;
@@ -196,6 +198,13 @@ public class DNConf {
     this.datanodeSlowIoWarningThresholdMs = getConf().getLong(
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
+
+    this.dfsDatanodeReRegisterBlockReportWaitDeltaMs = getConf().getLong(
+        DFSConfigKeys.DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_DELTA_KEY,
+        DFSConfigKeys.DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_DELTA_DEFAULT);
+    this.dfsDatanodeReRegisterBlockReportWaitMaxMs = getConf().getLong(
+        DFSConfigKeys.DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_MAX_KEY,
+        DFSConfigKeys.DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_MAX_DEFAULT);
 
     long initBRDelay = getConf().getTimeDuration(
         DFS_BLOCKREPORT_INITIAL_DELAY_KEY,

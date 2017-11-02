@@ -762,6 +762,7 @@ class BPServiceActor implements Runnable {
 
     LOG.info(this + " beginning handshake with NN");
 
+    int dnRegisterCount = 0;
     while (shouldRun()) {
       try {
         // Use returned registration from namenode with updated fields
@@ -769,14 +770,16 @@ class BPServiceActor implements Runnable {
         newBpRegistration.setNamespaceInfo(nsInfo);
         bpRegistration = newBpRegistration;
         break;
-      } catch(EOFException e) {  // namenode might have just restarted
-        LOG.info("Problem connecting to server: " + nnAddr + " :"
-            + e.getLocalizedMessage());
-        sleepAndLogInterrupts(1000, "connecting to server");
-      } catch(SocketTimeoutException e) {  // namenode is busy
-        LOG.info("Problem connecting to server: " + nnAddr);
+      } catch(IOException ioe) {
+        if (ioe instanceof SocketTimeoutException) {  // namenode is busy
+          LOG.warn("Problem connecting to server: " + nnAddr);
+        } else {  // other namenode IOException
+          LOG.warn("Problem connecting to server: " + nnAddr + " ioe: "
+              + ioe.getLocalizedMessage());
+        }
         sleepAndLogInterrupts(1000, "connecting to server");
       }
+      dnRegisterCount ++;
     }
     
     LOG.info("Block pool " + this + " successfully registered with NN");
@@ -784,6 +787,18 @@ class BPServiceActor implements Runnable {
 
     // random short delay - helps scatter the BR from all DNs
     scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs);
+    if (dnRegisterCount > 1) {
+      // When datanode send block report, if namenode is busy, wait for
+      // some time to reduce concurrency. See MTHDP-3222 for more details.
+      long waitTime = dnConf.initialBlockReportDelayMs
+           + Math.min(dnConf.dfsDatanodeReRegisterBlockReportWaitDeltaMs * (dnRegisterCount - 1),
+             dnConf.dfsDatanodeReRegisterBlockReportWaitMaxMs);
+      scheduler.scheduleBlockReport(waitTime);
+      LOG.info(this + " dn register ioexception count: " + dnRegisterCount
+           + ", wait for 0-" + waitTime + " ms before br");
+    } else {
+      scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs);
+    }
   }
 
 

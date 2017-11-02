@@ -343,6 +343,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DATANODE_OOB_TIMEOUT_KEY = "dfs.datanode.oob.timeout-ms";
   public static final String  DFS_DATANODE_OOB_TIMEOUT_DEFAULT = "1500,0,0,0"; // OOB_TYPE1, OOB_TYPE2, OOB_TYPE3, OOB_TYPE4
 
+  // after dn re-register, block report wait some time if br catch ioexception
+  public static final String DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_DELTA_KEY = "dfs.datanode.re.register.blockreport.wait.delta";
+  public static final long DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_DELTA_DEFAULT = 5 * 1000; // 5 sec
+  public static final String DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_MAX_KEY = "dfs.datanode.re.register.blockreport.wait.max";
+  public static final long DFS_DATANODE_RE_REGISTER_BLOCKREPORT_WAIT_MAX_DEFAULT = 120 * 1000; // 120 sec
+
   public static final String DFS_DATANODE_CACHE_REVOCATION_TIMEOUT_MS = "dfs.datanode.cache.revocation.timeout.ms";
   public static final long DFS_DATANODE_CACHE_REVOCATION_TIMEOUT_MS_DEFAULT = 900000L;
 
