@@ -32,8 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -44,6 +42,8 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This protocol is a binary implementation of the Pipes protocol.
@@ -60,8 +60,8 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
 
   private DataOutputStream stream;
   private DataOutputBuffer buffer = new DataOutputBuffer();
-  private static final Log LOG = 
-    LogFactory.getLog(BinaryProtocol.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BinaryProtocol.class.getName());
   private UplinkReaderThread uplink;
 
   /**

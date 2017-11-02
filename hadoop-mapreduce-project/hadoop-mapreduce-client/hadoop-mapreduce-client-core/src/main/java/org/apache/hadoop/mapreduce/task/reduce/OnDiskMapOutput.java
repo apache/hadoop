@@ -23,8 +23,8 @@ import java.io.OutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +45,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class OnDiskMapOutput<K, V> extends IFileWrappedMapOutput<K, V> {
-  private static final Log LOG = LogFactory.getLog(OnDiskMapOutput.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OnDiskMapOutput.class);
   private final FileSystem fs;
   private final Path tmpOutputPath;
   private final Path outputPath;
@@ -120,7 +121,7 @@ class OnDiskMapOutput<K, V> extends IFileWrappedMapOutput<K, V> {
       disk.close();
     } catch (IOException ioe) {
       // Close the streams
-      IOUtils.cleanup(LOG, disk);
+      IOUtils.cleanupWithLogger(LOG, disk);
 
       // Re-throw
       throw ioe;

@@ -47,8 +47,6 @@ import java.util.ArrayList;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.IFileInputStream;
@@ -63,12 +61,14 @@ import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test that the Fetcher does what we expect it to.
  */
 public class TestFetcher {
-  private static final Log LOG = LogFactory.getLog(TestFetcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFetcher.class);
   JobConf job = null;
   JobConf jobWithRetry = null;
   TaskAttemptID id = null;
