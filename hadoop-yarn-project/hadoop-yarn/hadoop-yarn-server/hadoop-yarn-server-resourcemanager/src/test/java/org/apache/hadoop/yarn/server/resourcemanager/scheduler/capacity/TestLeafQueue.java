@@ -385,7 +385,7 @@ public class TestLeafQueue {
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
     assertEquals(
-        (int)(node_0.getTotalResource().getMemorySize() * a.getCapacity()) - (1*GB),
+        (int)(node_0.getCapacity().getMemorySize() * a.getCapacity()) - (1*GB),
         a.getMetrics().getAvailableMB());
   }
 
@@ -684,7 +684,7 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, a.getMetrics().getReservedMB());
     assertEquals(0*GB, a.getMetrics().getAllocatedMB());
-    assertEquals((int)(a.getCapacity() * node_0.getTotalResource().getMemorySize()),
+    assertEquals((int)(a.getCapacity() * node_0.getCapacity().getMemorySize()),
         a.getMetrics().getAvailableMB());
   }
   @Test

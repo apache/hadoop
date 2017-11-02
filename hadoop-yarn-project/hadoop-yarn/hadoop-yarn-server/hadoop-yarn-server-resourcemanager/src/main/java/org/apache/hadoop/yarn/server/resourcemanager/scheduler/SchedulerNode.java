@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -60,23 +61,32 @@ public abstract class SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
 
+  private Resource capacity;
   private Resource unallocatedResource = Resource.newInstance(0, 0);
-  private Resource allocatedResource = Resource.newInstance(0, 0);
-  private Resource totalResource;
+
   private RMContainer reservedContainer;
-  private volatile int numContainers;
   private volatile ResourceUtilization containersUtilization =
       ResourceUtilization.newInstance(0, 0, 0f);
   private volatile ResourceUtilization nodeUtilization =
       ResourceUtilization.newInstance(0, 0, 0f);
 
-  /* set of containers that are allocated containers */
-  private final Map<ContainerId, ContainerInfo> launchedContainers =
-      new HashMap<>();
+  private final Map<ContainerId, ContainerInfo>
+      allocatedContainers = new HashMap<>();
+
+  private volatile int numGuaranteedContainers = 0;
+  private Resource allocatedResourceGuaranteed = Resource.newInstance(0, 0);
+
+  private volatile int numOpportunisticContainers = 0;
+  private Resource allocatedResourceOpportunistic = Resource.newInstance(0, 0);
 
   private final RMNode rmNode;
   private final String nodeName;
   private final RMContext rmContext;
+
+  // The total amount of resources requested by containers that have been
+  // allocated but not yet launched on the node.
+  protected Resource resourceAllocatedPendingLaunch =
+      Resource.newInstance(0, 0);
 
   private volatile Set<String> labels = null;
 
@@ -90,7 +100,7 @@ public abstract class SchedulerNode {
     this.rmNode = node;
     this.rmContext = node.getRMContext();
     this.unallocatedResource = Resources.clone(node.getTotalCapability());
-    this.totalResource = Resources.clone(node.getTotalCapability());
+    this.capacity = Resources.clone(node.getTotalCapability());
     if (usePortForNodeName) {
       nodeName = rmNode.getHostName() + ":" + node.getNodeID().getPort();
     } else {
@@ -113,9 +123,9 @@ public abstract class SchedulerNode {
    * @param resource Total resources on the node.
    */
   public synchronized void updateTotalResource(Resource resource){
-    this.totalResource = resource;
-    this.unallocatedResource = Resources.subtract(totalResource,
-        this.allocatedResource);
+    this.capacity = Resources.clone(resource);
+    this.unallocatedResource = Resources.subtract(capacity,
+        this.allocatedResourceGuaranteed);
   }
 
   /**
@@ -174,17 +184,83 @@ public abstract class SchedulerNode {
   protected synchronized void allocateContainer(RMContainer rmContainer,
       boolean launchedOnNode) {
     Container container = rmContainer.getContainer();
-    if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-      deductUnallocatedResource(container.getResource());
-      ++numContainers;
+
+    if (container.getExecutionType() == ExecutionType.GUARANTEED) {
+      guaranteedContainerResourceAllocated(rmContainer, launchedOnNode);
+    } else {
+      opportunisticContainerResourceAllocated(rmContainer, launchedOnNode);
     }
 
-    launchedContainers.put(container.getId(),
-        new ContainerInfo(rmContainer, launchedOnNode));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Assigned container " + container.getId() + " of capacity "
+          + container.getResource() + " and type " +
+          container.getExecutionType() + " on host " + toString());
+    }
   }
 
   /**
-   * Get unallocated resources on the node.
+   * Handle an allocation of a GUARANTEED container.
+   * @param rmContainer the allocated GUARANTEED container
+   * @param launchedOnNode true if the container has been launched
+   */
+  private void guaranteedContainerResourceAllocated(
+      RMContainer rmContainer, boolean launchedOnNode) {
+    Container container = rmContainer.getContainer();
+
+    if (container.getExecutionType() != ExecutionType.GUARANTEED) {
+      throw new YarnRuntimeException("Inapplicable ExecutionType: " +
+          container.getExecutionType());
+    }
+
+    allocatedContainers.put(container.getId(),
+        new ContainerInfo(rmContainer, launchedOnNode));
+
+    Resource resource = container.getResource();
+    if (containerResourceAllocated(resource, allocatedResourceGuaranteed)) {
+      Resources.subtractFrom(unallocatedResource, resource);
+    }
+
+    numGuaranteedContainers++;
+  }
+
+  /**
+   * Handle an allocation of a OPPORTUNISTIC container.
+   * @param rmContainer the allocated OPPORTUNISTIC container
+   * @param launchedOnNode true if the container has been launched
+   */
+  private void opportunisticContainerResourceAllocated(
+      RMContainer rmContainer, boolean launchedOnNode) {
+    Container container = rmContainer.getContainer();
+
+    if (container.getExecutionType() != ExecutionType.OPPORTUNISTIC) {
+      throw new YarnRuntimeException("Inapplicable ExecutionType: " +
+          container.getExecutionType());
+    }
+
+    allocatedContainers.put(rmContainer.getContainerId(),
+        new ContainerInfo(rmContainer, launchedOnNode));
+    if (containerResourceAllocated(
+        container.getResource(), allocatedResourceOpportunistic)) {
+      // nothing to do here
+    }
+    numOpportunisticContainers++;
+  }
+
+  private boolean containerResourceAllocated(Resource allocated,
+      Resource aggregatedResources) {
+    if (allocated == null) {
+      LOG.error("Invalid deduction of null resource for "
+          + rmNode.getNodeAddress());
+      return false;
+    }
+    Resources.addTo(resourceAllocatedPendingLaunch, allocated);
+    Resources.addTo(aggregatedResources, allocated);
+    return true;
+  }
+
+
+  /**
+   * Get resources that are not allocated to GUARANTEED containers on the node.
    * @return Unallocated resources on the node
    */
   public synchronized Resource getUnallocatedResource() {
@@ -192,42 +268,57 @@ public abstract class SchedulerNode {
   }
 
   /**
-   * Get allocated resources on the node.
-   * @return Allocated resources on the node
+   * Get resources allocated to GUARANTEED containers on the node.
+   * @return Allocated resources to GUARANTEED containers on the node
    */
   public synchronized Resource getAllocatedResource() {
-    return this.allocatedResource;
+    return this.allocatedResourceGuaranteed;
+  }
+
+  /**
+   * Get resources allocated to OPPORTUNISTIC containers on the node.
+   * @return Allocated resources to OPPORTUNISTIC containers on the node
+   */
+  public synchronized Resource getOpportunisticResourceAllocated() {
+    return this.allocatedResourceOpportunistic;
+  }
+
+  @VisibleForTesting
+  public synchronized Resource getResourceAllocatedPendingLaunch() {
+    return this.resourceAllocatedPendingLaunch;
   }
 
   /**
    * Get total resources on the node.
    * @return Total resources on the node.
    */
-  public synchronized Resource getTotalResource() {
-    return this.totalResource;
+  public synchronized Resource getCapacity() {
+    return this.capacity;
   }
 
   /**
-   * Check if a container is launched by this node.
+   * Check if a GUARANTEED container is launched by this node.
    * @return If the container is launched by the node.
    */
-  public synchronized boolean isValidContainer(ContainerId containerId) {
-    if (launchedContainers.containsKey(containerId)) {
-      return true;
-    }
-    return false;
+  @VisibleForTesting
+  public synchronized boolean isValidGuaranteedContainer(
+      ContainerId containerId) {
+    ContainerInfo containerInfo = allocatedContainers.get(containerId);
+    return containerInfo != null && ExecutionType.GUARANTEED ==
+        containerInfo.container.getExecutionType();
   }
 
   /**
-   * Update the resources of the node when releasing a container.
-   * @param container Container to release.
+   * Check if an OPPORTUNISTIC container is launched by this node.
+   * @param containerId id of the container to check
+   * @return If the container is launched by the node.
    */
-  protected synchronized void updateResourceForReleasedContainer(
-      Container container) {
-    if (container.getExecutionType() == ExecutionType.GUARANTEED) {
-      addUnallocatedResource(container.getResource());
-      --numContainers;
-    }
+  @VisibleForTesting
+  public synchronized boolean isValidOpportunisticContainer(
+      ContainerId containerId)  {
+    ContainerInfo containerInfo = allocatedContainers.get(containerId);
+    return containerInfo != null && ExecutionType.OPPORTUNISTIC ==
+        containerInfo.container.getExecutionType();
   }
 
   /**
@@ -237,17 +328,30 @@ public abstract class SchedulerNode {
    */
   public synchronized void releaseContainer(ContainerId containerId,
       boolean releasedByNode) {
-    ContainerInfo info = launchedContainers.get(containerId);
-    if (info == null) {
-      return;
-    }
-    if (!releasedByNode && info.launchedOnNode) {
-      // wait until node reports container has completed
+    RMContainer rmContainer = getContainer(containerId);
+    if (rmContainer == null) {
+      LOG.warn("Invalid container " + containerId + " is released.");
       return;
     }
 
-    launchedContainers.remove(containerId);
-    Container container = info.container.getContainer();
+    if (!allocatedContainers.containsKey(containerId)) {
+      // do not process if the container is never allocated on the node
+      return;
+    }
+
+    if (!releasedByNode &&
+        allocatedContainers.get(containerId).launchedOnNode) {
+      // only process if the container has not been launched on a node
+      // yet or it is released by node.
+      return;
+    }
+
+    Container container = rmContainer.getContainer();
+    if (container.getExecutionType() == ExecutionType.GUARANTEED) {
+      guaranteedContainerReleased(container);
+    } else {
+      opportunisticContainerReleased(container);
+    }
 
     // We remove allocation tags when a container is actually
     // released on NM. This is to avoid running into situation
@@ -260,14 +364,16 @@ public abstract class SchedulerNode {
               container.getId(), container.getAllocationTags());
     }
 
-    updateResourceForReleasedContainer(container);
-
     if (LOG.isDebugEnabled()) {
       LOG.debug("Released container " + container.getId() + " of capacity "
-              + container.getResource() + " on host " + rmNode.getNodeAddress()
-              + ", which currently has " + numContainers + " containers, "
-              + getAllocatedResource() + " used and " + getUnallocatedResource()
-              + " available" + ", release resources=" + true);
+          + container.getResource() + " on host " + rmNode.getNodeAddress()
+          + ", with " + numGuaranteedContainers
+          + " guaranteed containers taking"
+          + getAllocatedResource() + " and " + numOpportunisticContainers
+          + " opportunistic containers taking "
+          + getOpportunisticResourceAllocated()
+          + " and " + getUnallocatedResource() + " (guaranteed) available"
+          + ", release resources=" + true);
     }
   }
 
@@ -275,42 +381,75 @@ public abstract class SchedulerNode {
    * Inform the node that a container has launched.
    * @param containerId ID of the launched container
    */
-  public synchronized void containerStarted(ContainerId containerId) {
-    ContainerInfo info = launchedContainers.get(containerId);
-    if (info != null) {
+  public synchronized void containerLaunched(ContainerId containerId) {
+    ContainerInfo info = allocatedContainers.get(containerId);
+    if (info != null && !info.launchedOnNode) {
       info.launchedOnNode = true;
+      Resources.subtractFrom(resourceAllocatedPendingLaunch,
+          info.container.getContainer().getResource());
     }
   }
 
   /**
-   * Add unallocated resources to the node. This is used when unallocating a
-   * container.
-   * @param resource Resources to add.
+   * Handle the release of a GUARANTEED container.
+   * @param container Container to release.
    */
-  private synchronized void addUnallocatedResource(Resource resource) {
-    if (resource == null) {
+  protected synchronized void guaranteedContainerReleased(
+      Container container) {
+    if (container.getExecutionType() != ExecutionType.GUARANTEED) {
+      throw new YarnRuntimeException("Inapplicable ExecutionType: " +
+          container.getExecutionType());
+    }
+
+    if (containerResourceReleased(container, allocatedResourceGuaranteed)) {
+      Resources.addTo(unallocatedResource, container.getResource());
+    }
+    // do not update allocated containers until the resources of
+    // the container are released because we need to check if we
+    // need to update resourceAllocatedPendingLaunch in case the
+    // container has not been launched on the node.
+    allocatedContainers.remove(container.getId());
+    numGuaranteedContainers--;
+  }
+
+  /**
+   * Handle the release of an OPPORTUNISTIC container.
+   * @param container Container to release.
+   */
+  private void opportunisticContainerReleased(
+      Container container) {
+    if (container.getExecutionType() != ExecutionType.OPPORTUNISTIC) {
+      throw new YarnRuntimeException("Inapplicable ExecutionType: " +
+          container.getExecutionType());
+    }
+
+    if (containerResourceReleased(container, allocatedResourceOpportunistic)) {
+      // nothing to do here
+    }
+    // do not update allocated containers until the resources of
+    // the container are released because we need to check if we
+    // need to update resourceAllocatedPendingLaunch in case the
+    // container has not been launched on the node.
+    allocatedContainers.remove(container.getId());
+    numOpportunisticContainers--;
+  }
+
+  private boolean containerResourceReleased(Container container,
+      Resource aggregatedResource) {
+    Resource released = container.getResource();
+    if (released == null) {
       LOG.error("Invalid resource addition of null resource for "
           + rmNode.getNodeAddress());
-      return;
+      return false;
     }
-    Resources.addTo(unallocatedResource, resource);
-    Resources.subtractFrom(allocatedResource, resource);
-  }
+    Resources.subtractFrom(aggregatedResource, released);
 
-  /**
-   * Deduct unallocated resources from the node. This is used when allocating a
-   * container.
-   * @param resource Resources to deduct.
-   */
-  @VisibleForTesting
-  public synchronized void deductUnallocatedResource(Resource resource) {
-    if (resource == null) {
-      LOG.error("Invalid deduction of null resource for "
-          + rmNode.getNodeAddress());
-      return;
+    if (!allocatedContainers.get(container.getId()).launchedOnNode) {
+      // update resourceAllocatedPendingLaunch if the container is has
+      // not yet been launched on the node
+      Resources.subtractFrom(resourceAllocatedPendingLaunch, released);
     }
-    Resources.subtractFrom(unallocatedResource, resource);
-    Resources.addTo(allocatedResource, resource);
+    return true;
   }
 
   /**
@@ -330,17 +469,28 @@ public abstract class SchedulerNode {
 
   @Override
   public String toString() {
-    return "host: " + rmNode.getNodeAddress() + " #containers="
-        + getNumContainers() + " available=" + getUnallocatedResource()
-        + " used=" + getAllocatedResource();
+    return "host: " + rmNode.getNodeAddress() + " #guaranteed containers=" +
+        getNumGuaranteedContainers() + " #opportunistic containers="  +
+        getNumOpportunisticContainers() + " available=" +
+        getUnallocatedResource() + " used by guaranteed containers=" +
+        allocatedResourceGuaranteed + " used by opportunistic containers=" +
+        allocatedResourceOpportunistic;
   }
 
   /**
-   * Get number of active containers on the node.
-   * @return Number of active containers on the node.
+   * Get number of active GUARANTEED containers on the node.
+   * @return Number of active OPPORTUNISTIC containers on the node.
    */
-  public int getNumContainers() {
-    return numContainers;
+  public int getNumGuaranteedContainers() {
+    return numGuaranteedContainers;
+  }
+
+  /**
+   * Get number of active OPPORTUNISTIC containers on the node.
+   * @return Number of active OPPORTUNISTIC containers on the node.
+   */
+  public int getNumOpportunisticContainers() {
+    return numOpportunisticContainers;
   }
 
   /**
@@ -348,8 +498,8 @@ public abstract class SchedulerNode {
    * @return A copy of containers running on the node.
    */
   public synchronized List<RMContainer> getCopiedListOfRunningContainers() {
-    List<RMContainer> result = new ArrayList<>(launchedContainers.size());
-    for (ContainerInfo info : launchedContainers.values()) {
+    List<RMContainer> result = new ArrayList<>(allocatedContainers.size());
+    for (ContainerInfo info : allocatedContainers.values()) {
       result.add(info.container);
     }
     return result;
@@ -359,12 +509,14 @@ public abstract class SchedulerNode {
    * Get the containers running on the node with AM containers at the end.
    * @return A copy of running containers with AM containers at the end.
    */
-  public synchronized List<RMContainer> getRunningContainersWithAMsAtTheEnd() {
+  public synchronized List<RMContainer>
+      getRunningGuaranteedContainersWithAMsAtTheEnd() {
     LinkedList<RMContainer> result = new LinkedList<>();
-    for (ContainerInfo info : launchedContainers.values()) {
+    for (ContainerInfo info : allocatedContainers.values()) {
       if(info.container.isAMContainer()) {
         result.addLast(info.container);
-      } else {
+      } else if (info.container.getExecutionType() ==
+          ExecutionType.GUARANTEED){
         result.addFirst(info.container);
       }
     }
@@ -377,12 +529,9 @@ public abstract class SchedulerNode {
    * @return The container for the specified container ID
    */
   protected synchronized RMContainer getContainer(ContainerId containerId) {
-    RMContainer container = null;
-    ContainerInfo info = launchedContainers.get(containerId);
-    if (info != null) {
-      container = info.container;
-    }
-    return container;
+    ContainerInfo info = allocatedContainers.get(containerId);
+
+    return info != null ? info.container : null;
   }
 
   /**

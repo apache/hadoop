@@ -20,16 +20,26 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.NoOpSystemMetricPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -48,7 +58,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -324,7 +336,9 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
           for (FSSchedulerNode node : clusterNodeTracker.getAllNodes()) {
             int i = ThreadLocalRandom.current().nextInt(-30, 30);
             synchronized (scheduler) {
-              node.deductUnallocatedResource(Resource.newInstance(i * 1024, i));
+              RMContainer container = createRMContainer(
+                  node.getRMNode(), Resource.newInstance(i * 1024, 1));
+              node.allocateContainer(container);
             }
           }
         }
@@ -336,6 +350,32 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     } catch (Exception e) {
       fail(e.getMessage());
     }
+  }
+
+  private static RMContainer createRMContainer(
+      RMNode node, Resource resource) {
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.
+        newInstance(ApplicationId.newInstance(0, 0), 0);
+    ContainerId cId =
+        ContainerId.newContainerId(appAttemptId, 0);
+    Container container = Container.newInstance(
+        cId, node.getNodeID(), node.getNodeAddress(), resource,
+        Priority.newInstance(0), null, ExecutionType.GUARANTEED);
+
+    Dispatcher dispatcher = new AsyncDispatcher();
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getDispatcher()).thenReturn(dispatcher);
+    when(rmContext.getSystemMetricsPublisher()).
+        thenReturn(new NoOpSystemMetricPublisher());
+    when(rmContext.getYarnConfiguration()).
+        thenReturn(new YarnConfiguration());
+    when(rmContext.getContainerAllocationExpirer()).
+        thenReturn(new ContainerAllocationExpirer(dispatcher));
+    when(rmContext.getRMApplicationHistoryWriter()).
+        thenReturn(new RMApplicationHistoryWriter());
+    return new RMContainerImpl(container, null,
+        container.getId().getApplicationAttemptId(),
+        node.getNodeID(), "test", rmContext);
   }
 
   @Test

@@ -51,7 +51,7 @@ public class TempSchedulerNode {
   public static TempSchedulerNode fromSchedulerNode(
       FiCaSchedulerNode schedulerNode) {
     TempSchedulerNode n = new TempSchedulerNode();
-    n.totalResource = Resources.clone(schedulerNode.getTotalResource());
+    n.totalResource = Resources.clone(schedulerNode.getCapacity());
     n.allocatedResource = Resources.clone(schedulerNode.getAllocatedResource());
     n.runningContainers = schedulerNode.getCopiedListOfRunningContainers();
     n.reservedContainer = schedulerNode.getReservedContainer();

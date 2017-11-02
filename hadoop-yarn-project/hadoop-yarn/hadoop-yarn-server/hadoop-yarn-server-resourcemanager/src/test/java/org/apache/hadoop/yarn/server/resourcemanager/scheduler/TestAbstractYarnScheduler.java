@@ -289,12 +289,12 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       SchedulerNode mockNode1 = mock(SchedulerNode.class);
       when(mockNode1.getNodeID()).thenReturn(NodeId.newInstance("foo", 8080));
       when(mockNode1.getUnallocatedResource()).thenReturn(emptyResource);
-      when(mockNode1.getTotalResource()).thenReturn(fullResource1);
+      when(mockNode1.getCapacity()).thenReturn(fullResource1);
 
       SchedulerNode mockNode2 = mock(SchedulerNode.class);
       when(mockNode1.getNodeID()).thenReturn(NodeId.newInstance("bar", 8081));
       when(mockNode2.getUnallocatedResource()).thenReturn(emptyResource);
-      when(mockNode2.getTotalResource()).thenReturn(fullResource2);
+      when(mockNode2.getCapacity()).thenReturn(fullResource2);
 
       verifyMaximumResourceCapability(configuredMaximumResource, scheduler);
 
@@ -482,7 +482,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       // mock container start
       rm1.getRMContext().getScheduler()
-          .getSchedulerNode(nm1.getNodeId()).containerStarted(cid);
+          .getSchedulerNode(nm1.getNodeId()).containerLaunched(cid);
 
       // verifies the allocation is made with correct number of tags
       Map<String, Long> nodeTags = rm1.getRMContext()

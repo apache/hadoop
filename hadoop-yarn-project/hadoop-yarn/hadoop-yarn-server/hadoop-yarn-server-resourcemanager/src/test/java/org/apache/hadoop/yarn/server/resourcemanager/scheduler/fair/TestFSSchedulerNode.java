@@ -87,7 +87,7 @@ public class TestFSSchedulerNode {
     while (!Resources.isNone(schedulerNode.getUnallocatedResource())) {
       createDefaultContainer();
       schedulerNode.allocateContainer(containers.get(containers.size() - 1));
-      schedulerNode.containerStarted(containers.get(containers.size() - 1).
+      schedulerNode.containerLaunched(containers.get(containers.size() - 1).
           getContainerId());
     }
   }
@@ -183,9 +183,9 @@ public class TestFSSchedulerNode {
     assertEquals("Nothing should have been allocated, yet",
         Resources.none(), schedulerNode.getAllocatedResource());
     schedulerNode.allocateContainer(containers.get(0));
-    schedulerNode.containerStarted(containers.get(0).getContainerId());
+    schedulerNode.containerLaunched(containers.get(0).getContainerId());
     schedulerNode.allocateContainer(containers.get(1));
-    schedulerNode.containerStarted(containers.get(1).getContainerId());
+    schedulerNode.containerLaunched(containers.get(1).getContainerId());
     schedulerNode.allocateContainer(containers.get(2));
     assertEquals("Container should be allocated",
         Resources.multiply(containers.get(0).getContainer().getResource(), 3.0),
@@ -225,7 +225,7 @@ public class TestFSSchedulerNode {
     schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
     allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
-        schedulerNode.getTotalResource(),
+        schedulerNode.getCapacity(),
         schedulerNode.getAllocatedResource());
 
     // Release all remaining containers
@@ -266,7 +266,7 @@ public class TestFSSchedulerNode {
     schedulerNode.releaseContainer(containers.get(0).getContainerId(), true);
     allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
-        schedulerNode.getTotalResource(),
+        schedulerNode.getCapacity(),
         schedulerNode.getAllocatedResource());
 
     // Release all remaining containers
@@ -312,7 +312,7 @@ public class TestFSSchedulerNode {
 
     allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
-        schedulerNode.getTotalResource(),
+        schedulerNode.getCapacity(),
         schedulerNode.getAllocatedResource());
 
     // Release all containers
@@ -360,7 +360,7 @@ public class TestFSSchedulerNode {
     allocateContainers(schedulerNode);
 
     assertEquals("Container should be allocated",
-        schedulerNode.getTotalResource(),
+        schedulerNode.getCapacity(),
         schedulerNode.getAllocatedResource());
 
     // Release all containers
@@ -399,7 +399,7 @@ public class TestFSSchedulerNode {
     when(starvingApp.isStopped()).thenReturn(true);
     allocateContainers(schedulerNode);
     assertNotEquals("Container should be allocated",
-        schedulerNode.getTotalResource(),
+        schedulerNode.getCapacity(),
         schedulerNode.getAllocatedResource());
 
     // Release all containers
@@ -437,7 +437,7 @@ public class TestFSSchedulerNode {
     // Container partially reassigned
     allocateContainers(schedulerNode);
     assertEquals("Container should be allocated",
-        Resources.subtract(schedulerNode.getTotalResource(),
+        Resources.subtract(schedulerNode.getCapacity(),
             Resource.newInstance(512, 0)),
         schedulerNode.getAllocatedResource());
 

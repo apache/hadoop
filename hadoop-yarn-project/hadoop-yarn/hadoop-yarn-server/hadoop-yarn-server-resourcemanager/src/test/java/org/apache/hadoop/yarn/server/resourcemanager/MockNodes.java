@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 
@@ -261,6 +262,11 @@ public class MockNodes {
     @Override
     public ResourceUtilization getNodeUtilization() {
       return this.nodeUtilization;
+    }
+
+    @Override
+    public OverAllocationInfo getOverAllocationInfo() {
+      return null;
     }
 
     public OpportunisticContainersStatus getOpportunisticContainersStatus() {

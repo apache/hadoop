@@ -514,13 +514,13 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     Resource capability = pendingAsk.getPerAllocationResource();
     Resource available = node.getUnallocatedResource();
-    Resource totalResource = node.getTotalResource();
+    Resource totalResource = node.getCapacity();
 
     if (!Resources.lessThanOrEqual(rc, clusterResource,
         capability, totalResource)) {
       LOG.warn("Node : " + node.getNodeID()
           + " does not have sufficient resource for ask : " + pendingAsk
-          + " node total capability : " + node.getTotalResource());
+          + " node total capability : " + node.getCapacity());
       // Skip this locality request
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, priority,

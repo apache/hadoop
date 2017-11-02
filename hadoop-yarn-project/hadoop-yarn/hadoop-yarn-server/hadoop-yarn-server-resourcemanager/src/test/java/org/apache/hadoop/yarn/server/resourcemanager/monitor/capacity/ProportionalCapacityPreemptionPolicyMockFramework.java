@@ -519,7 +519,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
           totalRes = parseResourceFromString(resSring);
         }
       }
-      when(sn.getTotalResource()).thenReturn(totalRes);
+      when(sn.getCapacity()).thenReturn(totalRes);
       when(sn.getUnallocatedResource()).thenReturn(Resources.clone(totalRes));
 
       // TODO, add settings of killable resources when necessary

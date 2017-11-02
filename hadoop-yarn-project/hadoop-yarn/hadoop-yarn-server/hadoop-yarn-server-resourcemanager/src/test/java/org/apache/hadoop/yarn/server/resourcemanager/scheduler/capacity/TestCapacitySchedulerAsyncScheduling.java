@@ -229,8 +229,8 @@ public class TestCapacitySchedulerAsyncScheduling {
 
     // nm1 runs 1 container(app1-container_01/AM)
     // nm2 runs 1 container(app1-container_02)
-    Assert.assertEquals(1, sn1.getNumContainers());
-    Assert.assertEquals(1, sn2.getNumContainers());
+    Assert.assertEquals(1, sn1.getNumGuaranteedContainers());
+    Assert.assertEquals(1, sn2.getNumGuaranteedContainers());
 
     // kill app attempt1
     scheduler.handle(
@@ -325,8 +325,8 @@ public class TestCapacitySchedulerAsyncScheduling {
     // nm1 runs 3 containers(app1-container_01/AM, app1-container_02,
     //                       app2-container_01/AM)
     // nm2 runs 1 container(app1-container_03)
-    Assert.assertEquals(3, sn1.getNumContainers());
-    Assert.assertEquals(1, sn2.getNumContainers());
+    Assert.assertEquals(3, sn1.getNumGuaranteedContainers());
+    Assert.assertEquals(1, sn2.getNumGuaranteedContainers());
 
     // reserve 1 container(app1-container_04) for app1 on nm1
     ResourceRequest rr2 = ResourceRequest
@@ -639,7 +639,7 @@ public class TestCapacitySchedulerAsyncScheduling {
     // nm1 runs 2 container(container_01/AM, container_02)
     allocateAndLaunchContainers(am, nm1, rm, 1,
         Resources.createResource(6 * GB), 0, 2);
-    Assert.assertEquals(2, sn1.getNumContainers());
+    Assert.assertEquals(2, sn1.getNumGuaranteedContainers());
     Assert.assertEquals(1 * GB, sn1.getUnallocatedResource().getMemorySize());
 
     // app asks 5 * 2G container

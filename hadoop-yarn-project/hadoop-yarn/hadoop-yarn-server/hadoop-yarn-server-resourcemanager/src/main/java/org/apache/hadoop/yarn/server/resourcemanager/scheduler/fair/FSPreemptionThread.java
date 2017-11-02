@@ -193,7 +193,7 @@ class FSPreemptionThread extends Thread {
 
     // Figure out list of containers to consider
     List<RMContainer> containersToCheck =
-        node.getRunningContainersWithAMsAtTheEnd();
+        node.getRunningGuaranteedContainersWithAMsAtTheEnd();
     containersToCheck.removeAll(node.getContainersForPreemption());
 
     // Initialize potential with unallocated but not reserved resources

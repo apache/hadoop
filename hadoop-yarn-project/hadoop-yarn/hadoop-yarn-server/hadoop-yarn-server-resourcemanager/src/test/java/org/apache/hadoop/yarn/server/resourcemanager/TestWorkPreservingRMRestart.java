@@ -232,13 +232,14 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     Resource nmResource =
         Resource.newInstance(nm1.getMemory(), nm1.getvCores());
 
-    assertTrue(schedulerNode1.isValidContainer(amContainer.getContainerId()));
-    assertTrue(schedulerNode1.isValidContainer(runningContainer
-      .getContainerId()));
-    assertFalse(schedulerNode1.isValidContainer(completedContainer
-      .getContainerId()));
+    assertTrue(schedulerNode1.isValidGuaranteedContainer(
+        amContainer.getContainerId()));
+    assertTrue(schedulerNode1.isValidGuaranteedContainer(
+        runningContainer.getContainerId()));
+    assertFalse(schedulerNode1.isValidGuaranteedContainer(
+        completedContainer.getContainerId()));
     // 2 launched containers, 1 completed container
-    assertEquals(2, schedulerNode1.getNumContainers());
+    assertEquals(2, schedulerNode1.getNumGuaranteedContainers());
 
     assertEquals(Resources.subtract(nmResource, usedResources),
       schedulerNode1.getUnallocatedResource());
@@ -389,13 +390,14 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     Resource nmResource =
         Resource.newInstance(nm1.getMemory(), nm1.getvCores());
 
-    assertTrue(schedulerNode1.isValidContainer(amContainer.getContainerId()));
-    assertTrue(
-        schedulerNode1.isValidContainer(runningContainer.getContainerId()));
-    assertFalse(
-        schedulerNode1.isValidContainer(completedContainer.getContainerId()));
+    assertTrue(schedulerNode1.isValidGuaranteedContainer(
+        amContainer.getContainerId()));
+    assertTrue(schedulerNode1.isValidGuaranteedContainer(
+        runningContainer.getContainerId()));
+    assertFalse(schedulerNode1.isValidGuaranteedContainer(
+        completedContainer.getContainerId()));
     // 2 launched containers, 1 completed container
-    assertEquals(2, schedulerNode1.getNumContainers());
+    assertEquals(2, schedulerNode1.getNumGuaranteedContainers());
 
     assertEquals(Resources.subtract(nmResource, usedResources),
         schedulerNode1.getUnallocatedResource());
@@ -1700,13 +1702,14 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     Resource nmResource = Resource.newInstance(nm1.getMemory(),
         nm1.getvCores());
 
-    assertTrue(schedulerNode1.isValidContainer(amContainer.getContainerId()));
-    assertTrue(
-        schedulerNode1.isValidContainer(runningContainer.getContainerId()));
-    assertFalse(
-        schedulerNode1.isValidContainer(completedContainer.getContainerId()));
+    assertTrue(schedulerNode1.isValidGuaranteedContainer(
+        amContainer.getContainerId()));
+    assertTrue(schedulerNode1.isValidGuaranteedContainer(
+        runningContainer.getContainerId()));
+    assertFalse(schedulerNode1.isValidGuaranteedContainer(
+        completedContainer.getContainerId()));
     // 2 launched containers, 1 completed container
-    assertEquals(2, schedulerNode1.getNumContainers());
+    assertEquals(2, schedulerNode1.getNumGuaranteedContainers());
 
     assertEquals(Resources.subtract(nmResource, usedResources),
         schedulerNode1.getUnallocatedResource());

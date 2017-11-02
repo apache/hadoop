@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
@@ -112,6 +113,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final WriteLock writeLock;
 
   private final ConcurrentLinkedQueue<UpdatedContainerInfo> nodeUpdateQueue;
+  private final OverAllocationInfo overallocationInfo;
   private volatile boolean nextHeartBeat = true;
 
   private final NodeId nodeId;
@@ -367,12 +369,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       int cmPort, int httpPort, Node node, Resource capability,
       String nodeManagerVersion) {
     this(nodeId, context, hostName, cmPort, httpPort, node, capability,
-        nodeManagerVersion, null);
+        nodeManagerVersion, null, null);
   }
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
       int cmPort, int httpPort, Node node, Resource capability,
-      String nodeManagerVersion, Resource physResource) {
+      String nodeManagerVersion, Resource physResource,
+      OverAllocationInfo overAllocationInfo) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -387,6 +390,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.nodeManagerVersion = nodeManagerVersion;
     this.timeStamp = 0;
     this.physicalResource = physResource;
+    this.overallocationInfo = overAllocationInfo;
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -534,6 +538,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  @Override
+  public OverAllocationInfo getOverAllocationInfo() {
+    return this.overallocationInfo;
   }
 
   public void setNodeUtilization(ResourceUtilization nodeUtilization) {

@@ -237,17 +237,17 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     // Check host resources
     Assert.assertEquals(3, this.cs.getAllNodes().size());
     SchedulerNode node1 = cs.getSchedulerNode(NodeId.newInstance("n1", 1));
-    Assert.assertEquals(100, node1.getTotalResource().getMemorySize());
+    Assert.assertEquals(100, node1.getCapacity().getMemorySize());
     Assert.assertEquals(100, node1.getCopiedListOfRunningContainers().size());
     Assert.assertNull(node1.getReservedContainer());
 
     SchedulerNode node2 = cs.getSchedulerNode(NodeId.newInstance("n2", 1));
-    Assert.assertEquals(0, node2.getTotalResource().getMemorySize());
+    Assert.assertEquals(0, node2.getCapacity().getMemorySize());
     Assert.assertEquals(50, node2.getCopiedListOfRunningContainers().size());
     Assert.assertNotNull(node2.getReservedContainer());
 
     SchedulerNode node3 = cs.getSchedulerNode(NodeId.newInstance("n3", 1));
-    Assert.assertEquals(30, node3.getTotalResource().getMemorySize());
+    Assert.assertEquals(30, node3.getCapacity().getMemorySize());
     Assert.assertEquals(100, node3.getCopiedListOfRunningContainers().size());
     Assert.assertNull(node3.getReservedContainer());
   }

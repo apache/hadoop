@@ -563,7 +563,7 @@ public class TestNodeLabelContainerAllocation {
       int numContainers) {
     CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
     SchedulerNode node = cs.getSchedulerNode(nodeId);
-    Assert.assertEquals(numContainers, node.getNumContainers());
+    Assert.assertEquals(numContainers, node.getNumGuaranteedContainers());
   }
 
   /**
@@ -1065,7 +1065,7 @@ public class TestNodeLabelContainerAllocation {
     for (int i = 0; i < 50; i++) {
       cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
       cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
-      if (schedulerNode1.getNumContainers() == 0) {
+      if (schedulerNode1.getNumGuaranteedContainers() == 0) {
         cycleWaited++;
       }
     }
@@ -1131,7 +1131,7 @@ public class TestNodeLabelContainerAllocation {
             CSAMContainerLaunchDiagnosticsConstants.LAST_NODE_PROCESSED_MSG
                 + nodeIdStr + " ( Partition : [x]"));
     Assert.assertEquals(0, cs.getSchedulerNode(nm1.getNodeId())
-        .getNumContainers());
+        .getNumGuaranteedContainers());
     
     rm1.close();
   }
@@ -1215,7 +1215,7 @@ public class TestNodeLabelContainerAllocation {
     }
     
     // app1 gets all resource in partition=x
-    Assert.assertEquals(10, schedulerNode1.getNumContainers());
+    Assert.assertEquals(10, schedulerNode1.getNumGuaranteedContainers());
 
     // check non-exclusive containers of LeafQueue is correctly updated
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
@@ -1943,7 +1943,7 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x
-    Assert.assertEquals(5, schedulerNode1.getNumContainers());
+    Assert.assertEquals(5, schedulerNode1.getNumGuaranteedContainers());
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
@@ -2043,7 +2043,7 @@ public class TestNodeLabelContainerAllocation {
     }
 
     // app1 gets all resource in partition=x (non-exclusive)
-    Assert.assertEquals(3, schedulerNode1.getNumContainers());
+    Assert.assertEquals(3, schedulerNode1.getNumGuaranteedContainers());
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
@@ -2074,7 +2074,7 @@ public class TestNodeLabelContainerAllocation {
     cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
     // app1 gets all resource in default partition
-    Assert.assertEquals(2, schedulerNode2.getNumContainers());
+    Assert.assertEquals(2, schedulerNode2.getNumGuaranteedContainers());
 
     // 3GB is used from label x quota. 2GB used from default label.
     // So total 2.5 GB is remaining.

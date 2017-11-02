@@ -144,9 +144,9 @@ public class FiCaSchedulerNode extends SchedulerNode {
   }
 
   @Override
-  protected synchronized void updateResourceForReleasedContainer(
+  protected synchronized void guaranteedContainerReleased(
       Container container) {
-    super.updateResourceForReleasedContainer(container);
+    super.guaranteedContainerReleased(container);
     if (killableContainers.containsKey(container.getId())) {
       Resources.subtractFrom(totalKillableResources, container.getResource());
       killableContainers.remove(container.getId());
@@ -168,9 +168,10 @@ public class FiCaSchedulerNode extends SchedulerNode {
     final Container container = rmContainer.getContainer();
     LOG.info("Assigned container " + container.getId() + " of capacity "
           + container.getResource() + " on host " + getRMNode().getNodeAddress()
-          + ", which has " + getNumContainers() + " containers, "
-          + getAllocatedResource() + " used and " + getUnallocatedResource()
-          + " available after allocation");
+          + ", which has " + getNumGuaranteedContainers() + " guaranteed"
+          + " containers using " + getAllocatedResource() + ", "
+          + getNumOpportunisticContainers() + " opportunistic containers"
+          + " using " + getOpportunisticResourceAllocated());
   }
 
 }

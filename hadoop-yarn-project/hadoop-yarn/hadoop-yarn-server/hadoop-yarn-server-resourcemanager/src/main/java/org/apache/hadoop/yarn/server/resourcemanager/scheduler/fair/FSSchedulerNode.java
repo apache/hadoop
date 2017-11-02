@@ -242,11 +242,12 @@ public class FSSchedulerNode extends SchedulerNode {
     super.allocateContainer(rmContainer, launchedOnNode);
     if (LOG.isDebugEnabled()) {
       final Container container = rmContainer.getContainer();
-      LOG.debug("Assigned container " + container.getId() + " of capacity "
+      LOG.info("Assigned container " + container.getId() + " of capacity "
           + container.getResource() + " on host " + getRMNode().getNodeAddress()
-          + ", which has " + getNumContainers() + " containers, "
-          + getAllocatedResource() + " used and " + getUnallocatedResource()
-          + " available after allocation");
+          + ", which has " + getNumGuaranteedContainers() + " guaranteed "
+          + "containers using " + getAllocatedResource() + ", "
+          + getNumOpportunisticContainers() + " opportunistic containers "
+          + "using " + getOpportunisticResourceAllocated());
     }
 
     Resource allocated = rmContainer.getAllocatedResource();
