@@ -373,6 +373,8 @@ public class NodeManager extends CompositeService
     
     this.aclsManager = new ApplicationACLsManager(conf);
 
+    this.dirsHandler = new LocalDirsHandlerService(metrics);
+
     boolean isDistSchedulingEnabled =
         conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
             YarnConfiguration.DEFAULT_DIST_SCHEDULING_ENABLED);
@@ -396,7 +398,6 @@ public class NodeManager extends CompositeService
     // NodeManager level dispatcher
     this.dispatcher = createNMDispatcher();
 
-    dirsHandler = new LocalDirsHandlerService(metrics);
     nodeHealthChecker =
         new NodeHealthCheckerService(
             getNodeHealthScriptRunner(conf), dirsHandler);
