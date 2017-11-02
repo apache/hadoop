@@ -1356,8 +1356,8 @@ public abstract class AbstractYarnScheduler
 
   @Override
   public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
-    // -1 indicates, lifetime is not configured.
-    return -1;
+    // Lifetime is the application lifetime by default.
+    return lifetime;
   }
 
   @Override

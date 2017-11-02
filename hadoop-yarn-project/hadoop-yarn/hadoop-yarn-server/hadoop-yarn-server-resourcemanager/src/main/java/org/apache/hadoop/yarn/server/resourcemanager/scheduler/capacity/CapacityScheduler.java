@@ -2591,7 +2591,7 @@ public class CapacityScheduler extends
       long maximumApplicationLifetime =
           ((LeafQueue) queue).getMaximumApplicationLifetime();
 
-      // check only for maximum, that's enough because default cann't
+      // check only for maximum, that's enough because default can't
       // exceed maximum
       if (maximumApplicationLifetime <= 0) {
         return lifetimeRequestedByApp;
