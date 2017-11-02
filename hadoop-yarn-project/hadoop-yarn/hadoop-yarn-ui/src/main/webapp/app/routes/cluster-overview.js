@@ -28,7 +28,10 @@ export default AbstractRoute.extend({
         {
           state: "RUNNING"
         }),
-      queues: this.store.query('yarn-queue.yarn-queue', {}),
+      queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
+        let type = model.get('firstObject').get('type');
+        return this.store.query("yarn-queue." + type + "-queue", {});
+      }),
     });
   },
 
