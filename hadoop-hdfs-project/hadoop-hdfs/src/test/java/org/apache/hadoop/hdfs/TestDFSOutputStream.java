@@ -274,7 +274,7 @@ public class TestDFSOutputStream {
     when(client.getTracer()).thenReturn(FsTracer.get(new Configuration()));
     client.clientRunning = true;
     DataStreamer stream = new DataStreamer(
-        mock(HdfsFileStatus.class),
+        new HdfsFileStatus.Builder().build(),
         mock(ExtendedBlock.class),
         client,
         "foo", null, null, null, null, null, null);
