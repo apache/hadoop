@@ -348,7 +348,7 @@ public class TestTasks extends HadoopTestBase {
   /**
    * The Item which tasks process.
    */
-  private static class Item {
+  private static final class Item {
     private final int id;
 
     private boolean committed;
@@ -437,7 +437,7 @@ public class TestTasks extends HadoopTestBase {
       int count = counter.incrementAndGet();
       LOG.info("{}: processed({})", this, i);
       if (limit == count) {
-        throw new IOException(String.format("%s: Limit %d reached",
+        throw new IOException(String.format("%s: Limit %d reached for %s",
             this, limit, i));
       }
     }
@@ -462,11 +462,6 @@ public class TestTasks extends HadoopTestBase {
           expected <= actual);
     }
 
-    public void assertNotInvoked(String text) {
-      assertInvoked(text, 0);
-    }
-
-
     @Override
     public String toString() {
       final StringBuilder sb = new StringBuilder(
@@ -480,7 +475,7 @@ public class TestTasks extends HadoopTestBase {
     }
   }
 
-  private static class CounterTask
+  private static final class CounterTask
       extends BaseCounter implements Tasks.Task<Item, IOException> {
 
     private CounterTask(String name, int limit,
@@ -495,8 +490,7 @@ public class TestTasks extends HadoopTestBase {
 
   }
 
-
-  private static class FailureCounter
+  private static final class FailureCounter
       extends BaseCounter implements Tasks.FailureTask<Item, IOException> {
     private Exception exception;
 
@@ -511,7 +505,7 @@ public class TestTasks extends HadoopTestBase {
       this.exception = ex;
     }
 
-    Exception getException() {
+    private Exception getException() {
       return exception;
     }
 

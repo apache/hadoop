@@ -217,7 +217,8 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     maybeFail();
     for (DeleteObjectsRequest.KeyVersion keyVersion :
         deleteObjectsRequest.getKeys()) {
-      registerDeleteObject(keyVersion.getKey(), deleteObjectsRequest.getBucketName());
+      registerDeleteObject(keyVersion.getKey(),
+          deleteObjectsRequest.getBucketName());
     }
     return super.deleteObjects(deleteObjectsRequest);
   }

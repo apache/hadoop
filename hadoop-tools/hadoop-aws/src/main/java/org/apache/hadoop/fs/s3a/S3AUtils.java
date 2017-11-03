@@ -225,7 +225,11 @@ public final class S3AUtils {
         ioe.initCause(ase);
         break;
 
+      // this has surfaced as a "no response from server" message.
+      // so rare we haven't replicated it.
+      // Treating as an idempotent proxy error.
       case 443:
+      case 444:
         ioe = new AWSNoResponseException(message, ase);
         break;
 

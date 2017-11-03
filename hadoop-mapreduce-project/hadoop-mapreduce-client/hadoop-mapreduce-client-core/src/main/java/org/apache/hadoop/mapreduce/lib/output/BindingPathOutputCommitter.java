@@ -64,7 +64,6 @@ public class BindingPathOutputCommitter extends PathOutputCommitter {
 
   /**
    * The classname for use in configurations.
-   * Value: {@value}
    */
   public static final String NAME
       = BindingPathOutputCommitter.class.getCanonicalName();

@@ -89,7 +89,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
     // it doesn't matter that the partitions are already there, and for REPLACE,
     // deletion should be done during job commit.
     FileSystem fs = getDestFS();
-    if (getConflictResolutionMode(context, fs.getConf()) == ConflictResolution.FAIL) {
+    if (getConflictResolutionMode(context, fs.getConf())
+        == ConflictResolution.FAIL) {
       for (String partition : partitions) {
         // getFinalPath adds the UUID to the file name. this needs the parent.
         Path partitionPath = getFinalPath(partition + "/file",

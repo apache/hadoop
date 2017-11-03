@@ -1379,14 +1379,6 @@
 </property>
 
 <property>
-  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
-  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
-  <description>
-    The committer factory to use when writing data to S3A filesystems.
-  </description>
-</property>
-
-<property>
   <name>fs.s3a.committer.name</name>
   <value>file</value>
   <description>

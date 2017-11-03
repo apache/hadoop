@@ -100,7 +100,7 @@ public class TestPaths extends HadoopTestBase {
 
   @Test
   public void testRelativizeSelf() {
-    assertEquals("", getRelativePath(BASE, BASE) );
+    assertEquals("", getRelativePath(BASE, BASE));
   }
 
   @Test

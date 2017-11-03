@@ -466,7 +466,7 @@ public final class CommitUtils {
    * @param context job/task context
    * @param fsConf filesystem configuration. Get this from the FS to guarantee
    * per-bucket parameter propagation
-   * @param keykey to look for
+   * @param key key to look for
    * @param defVal default value
    * @return the configuration option.
    */

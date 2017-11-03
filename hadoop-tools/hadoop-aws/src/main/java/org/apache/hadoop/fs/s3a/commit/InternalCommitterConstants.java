@@ -42,9 +42,8 @@ public final class InternalCommitterConstants {
   /**
    * This is the staging committer base class; only used for testing.
    */
-  @InterfaceStability.Unstable
-  @InterfaceAudience.Private
   public static final String COMMITTER_NAME_STAGING = "staging";
+
   /**
    * A unique identifier to use for this work: {@value}.
    */
@@ -81,7 +80,7 @@ public final class InternalCommitterConstants {
    */
   public static final String E_DEST_EXISTS =
       "Destination path exists and committer conflict resolution mode is "
-          + ConflictResolution.FAIL;
+          + "\"fail\"";
 
   /** Error message for bad path: {@value}. */
   public static final String E_BAD_PATH

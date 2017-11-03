@@ -474,7 +474,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
           pending.addAll(PendingSet.load(
               fs,
               pendingCommitFile.getPath()).getCommits())
-        );
+      );
     return pending;
   }
 

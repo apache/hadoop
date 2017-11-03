@@ -398,8 +398,8 @@ public class TestInvoker extends Assert {
   public void testQuietlyVoid() {
     quietlyEval("", "",
         () -> {
-      throw HADOOP_CONNECTION_TIMEOUT_EX;
-    });
+        throw HADOOP_CONNECTION_TIMEOUT_EX;
+      });
   }
 
   @Test

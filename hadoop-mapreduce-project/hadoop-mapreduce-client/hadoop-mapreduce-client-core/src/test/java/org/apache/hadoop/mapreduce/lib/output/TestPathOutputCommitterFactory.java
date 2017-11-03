@@ -207,7 +207,7 @@ public class TestPathOutputCommitterFactory extends Assert {
    * @throws IOException failure to create
    */
   private <T extends PathOutputCommitterFactory, U extends PathOutputCommitter>
-  U createCommitter(Class<T> factoryClass,
+      U createCommitter(Class<T> factoryClass,
       Class<U> committerClass,
       Path path,
       Configuration conf) throws IOException {

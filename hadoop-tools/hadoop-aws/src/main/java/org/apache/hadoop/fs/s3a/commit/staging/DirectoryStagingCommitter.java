@@ -70,7 +70,7 @@ public class DirectoryStagingCommitter extends StagingCommitter {
         && fs.exists(outputPath)) {
       LOG.debug("Failing commit by task attempt {} to write"
               + " to existing output path {}",
-          context.getJobID(),getOutputPath());
+          context.getJobID(), getOutputPath());
       throw new PathExistsException(outputPath.toString(), E_DEST_EXISTS);
     }
   }

@@ -151,7 +151,7 @@ public final class Paths {
    * Get the task attempt temporary directory in the local filesystem.
    * @param conf configuration
    * @param uuid some UUID, such as a job UUID
-   * @param attempt attempt ID
+   * @param attemptID attempt ID
    * @return a local task attempt directory.
    * @throws IOException IO problem.
    */

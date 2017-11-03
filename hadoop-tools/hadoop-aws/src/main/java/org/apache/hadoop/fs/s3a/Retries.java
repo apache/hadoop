@@ -26,11 +26,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Declaration of retry policy.
+ * Declaration of retry policy for documentation only.
  * This is purely for visibility in source and is currently package-scoped.
- * {@see org.apache.hadoop.io.retry.Idempotent}
- * and {@see org.apache.hadoop.io.retry.AtMostOnce}; those are preserved to
- * runtime and have specific requirements on servers.
+ * Compare with {@link org.apache.hadoop.io.retry.AtMostOnce}
+ * and {@link org.apache.hadoop.io.retry.Idempotent}; these are real
+ * markers used by Hadoop RPC.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
