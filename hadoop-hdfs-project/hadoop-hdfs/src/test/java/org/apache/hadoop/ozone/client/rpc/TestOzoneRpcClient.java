@@ -38,7 +38,16 @@ import org.apache.hadoop.ozone.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
+import org.apache.hadoop.ozone.ksm.protocolPB.
+    KeySpaceManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.protocolPB.
+    StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -64,6 +73,10 @@ public class TestOzoneRpcClient {
   private static MiniOzoneCluster cluster = null;
   private static OzoneClient ozClient = null;
   private static ObjectStore store = null;
+  private static KeySpaceManagerProtocolClientSideTranslatorPB
+      keySpaceManagerClient;
+  private static StorageContainerLocationProtocolClientSideTranslatorPB
+      storageContainerLocationClient;
 
   /**
    * Create a MiniOzoneCluster for testing.
@@ -78,13 +91,16 @@ public class TestOzoneRpcClient {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(5)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     conf.set("ozone.client.protocol",
         "org.apache.hadoop.ozone.client.rpc.RpcClient");
     OzoneClientFactory.setConfiguration(conf);
     ozClient = OzoneClientFactory.getClient();
     store = ozClient.getObjectStore();
+    storageContainerLocationClient =
+        cluster.createStorageContainerLocationClient();
+    keySpaceManagerClient = cluster.createKeySpaceManagerClient();
   }
 
   @Test
@@ -360,6 +376,29 @@ public class TestOzoneRpcClient {
     volume.getBucket(bucketName);
   }
 
+  private boolean verifyRatisReplication(String volumeName, String bucketName,
+      String keyName, ReplicationType type, ReplicationFactor factor)
+      throws IOException {
+    KsmKeyArgs keyArgs = new KsmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+    OzoneProtos.ReplicationType replicationType =
+        OzoneProtos.ReplicationType.valueOf(type.toString());
+    OzoneProtos.ReplicationFactor replicationFactor =
+        OzoneProtos.ReplicationFactor.valueOf(factor.getValue());
+    KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
+    for (KsmKeyLocationInfo info: keyInfo.getKeyLocationList()) {
+      Pipeline pipeline =
+          storageContainerLocationClient.getContainer(info.getContainerName());
+      if ((pipeline.getFactor() != replicationFactor) ||
+          (pipeline.getType() != replicationType)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   @Test
   public void testPutKey()
@@ -387,6 +426,80 @@ public class TestOzoneRpcClient {
       OzoneInputStream is = bucket.readKey(keyName);
       byte[] fileContent = new byte[value.getBytes().length];
       is.read(fileContent);
+      Assert.assertTrue(verifyRatisReplication(volumeName, bucketName,
+          keyName, ReplicationType.STAND_ALONE,
+          ReplicationFactor.ONE));
+      Assert.assertEquals(value, new String(fileContent));
+      Assert.assertTrue(key.getCreationTime() >= currentTime);
+      Assert.assertTrue(key.getModificationTime() >= currentTime);
+    }
+  }
+
+  @Test
+  public void testPutKeyRatisOneNode()
+      throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    long currentTime = Time.now();
+
+    String value = "sample value";
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    for (int i = 0; i < 10; i++) {
+      String keyName = UUID.randomUUID().toString();
+
+      OzoneOutputStream out = bucket.createKey(keyName,
+          value.getBytes().length, ReplicationType.RATIS,
+          ReplicationFactor.ONE);
+      out.write(value.getBytes());
+      out.close();
+      OzoneKey key = bucket.getKey(keyName);
+      Assert.assertEquals(keyName, key.getName());
+      OzoneInputStream is = bucket.readKey(keyName);
+      byte[] fileContent = new byte[value.getBytes().length];
+      is.read(fileContent);
+      is.close();
+      Assert.assertTrue(verifyRatisReplication(volumeName, bucketName,
+          keyName, ReplicationType.RATIS, ReplicationFactor.ONE));
+      Assert.assertEquals(value, new String(fileContent));
+      Assert.assertTrue(key.getCreationTime() >= currentTime);
+      Assert.assertTrue(key.getModificationTime() >= currentTime);
+    }
+  }
+
+  @Test
+  public void testPutKeyRatisThreeNodes()
+      throws IOException, OzoneException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    long currentTime = Time.now();
+
+    String value = "sample value";
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+
+    for (int i = 0; i < 10; i++) {
+      String keyName = UUID.randomUUID().toString();
+
+      OzoneOutputStream out = bucket.createKey(keyName,
+          value.getBytes().length, ReplicationType.RATIS,
+          ReplicationFactor.THREE);
+      out.write(value.getBytes());
+      out.close();
+      OzoneKey key = bucket.getKey(keyName);
+      Assert.assertEquals(keyName, key.getName());
+      OzoneInputStream is = bucket.readKey(keyName);
+      byte[] fileContent = new byte[value.getBytes().length];
+      is.read(fileContent);
+      is.close();
+      Assert.assertTrue(verifyRatisReplication(volumeName, bucketName,
+          keyName, ReplicationType.RATIS,
+          ReplicationFactor.THREE));
       Assert.assertEquals(value, new String(fileContent));
       Assert.assertTrue(key.getCreationTime() >= currentTime);
       Assert.assertTrue(key.getModificationTime() >= currentTime);
@@ -691,6 +804,15 @@ public class TestOzoneRpcClient {
     if(ozClient != null) {
       ozClient.close();
     }
+
+    if (storageContainerLocationClient != null) {
+      storageContainerLocationClient.close();
+    }
+
+    if (keySpaceManagerClient != null) {
+      keySpaceManagerClient.close();
+    }
+
     if (cluster != null) {
       cluster.shutdown();
     }

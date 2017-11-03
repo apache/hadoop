@@ -416,6 +416,8 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setKsmClient(keySpaceManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(args.getRequestID())
+            .setType(xceiverClientManager.getType())
+            .setFactor(xceiverClientManager.getFactor())
             .build();
     return new OzoneOutputStream(groupOutputStream);
   }

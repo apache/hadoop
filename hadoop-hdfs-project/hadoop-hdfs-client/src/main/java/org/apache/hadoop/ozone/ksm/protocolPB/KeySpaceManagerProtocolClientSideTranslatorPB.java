@@ -520,6 +520,8 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
     KeyArgs.Builder keyArgs = KeyArgs.newBuilder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
+        .setFactor(args.getFactor())
+        .setType(args.getType())
         .setKeyName(args.getKeyName());
     if (args.getDataSize() > 0) {
       keyArgs.setDataSize(args.getDataSize());
@@ -547,6 +549,8 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .setFactor(args.getFactor())
+        .setType(args.getType())
         .setDataSize(args.getDataSize()).build();
     req.setKeyArgs(keyArgs);
     req.setClientID(clientID);

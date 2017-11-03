@@ -20,6 +20,7 @@ package org.apache.hadoop.scm.container.common.helpers;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.util.Time;
 
 import java.io.Serializable;
@@ -135,5 +136,12 @@ public class BlockContainerInfo extends ContainerInfo
   @Override
   public int compareTo(BlockContainerInfo o) {
     return this.compare(this, o);
+  }
+
+  public boolean canAllocate(long size, long containerSize) {
+    //TODO: move container size inside Container Info
+    return ((getState() == OzoneProtos.LifeCycleState.ALLOCATED ||
+        getState() == OzoneProtos.LifeCycleState.OPEN) &&
+        (getAllocated() + size <= containerSize));
   }
 }

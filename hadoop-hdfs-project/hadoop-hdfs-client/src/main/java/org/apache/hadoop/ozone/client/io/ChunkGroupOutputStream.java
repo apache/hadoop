@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.client.io;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
@@ -100,7 +102,8 @@ public class ChunkGroupOutputStream extends OutputStream {
       OpenKeySession handler, XceiverClientManager xceiverClientManager,
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
       KeySpaceManagerProtocolClientSideTranslatorPB ksmClient,
-      int chunkSize, String requestId) throws IOException {
+      int chunkSize, String requestId, ReplicationFactor factor,
+      ReplicationType type) throws IOException {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.byteOffset = 0;
@@ -111,6 +114,8 @@ public class ChunkGroupOutputStream extends OutputStream {
         .setVolumeName(info.getVolumeName())
         .setBucketName(info.getBucketName())
         .setKeyName(info.getKeyName())
+        .setType(type)
+        .setFactor(factor)
         .setDataSize(info.getDataSize()).build();
     this.openID = handler.getId();
     this.xceiverClientManager = xceiverClientManager;
@@ -292,6 +297,8 @@ public class ChunkGroupOutputStream extends OutputStream {
     private KeySpaceManagerProtocolClientSideTranslatorPB ksmClient;
     private int chunkSize;
     private String requestID;
+    private ReplicationType type;
+    private ReplicationFactor factor;
 
     public Builder setHandler(OpenKeySession handler) {
       this.openHandler = handler;
@@ -325,9 +332,19 @@ public class ChunkGroupOutputStream extends OutputStream {
       return this;
     }
 
+    public Builder setType(ReplicationType type) {
+      this.type = type;
+      return this;
+    }
+
+    public Builder setFactor(ReplicationFactor replicationFactor) {
+      this.factor = replicationFactor;
+      return this;
+    }
+
     public ChunkGroupOutputStream build() throws IOException {
       return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
-          ksmClient, chunkSize, requestID);
+          ksmClient, chunkSize, requestID, factor, type);
     }
   }
 

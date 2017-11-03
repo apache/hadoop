@@ -101,13 +101,13 @@ public final class KsmKeyArgs {
       return this;
     }
 
-    public Builder setType(ReplicationType type) {
-      this.type = type;
+    public Builder setType(ReplicationType replicationType) {
+      this.type = replicationType;
       return this;
     }
 
-    public Builder  setFactor(ReplicationFactor factor) {
-      this.factor = factor;
+    public Builder setFactor(ReplicationFactor replicationFactor) {
+      this.factor = replicationFactor;
       return this;
     }
 

@@ -117,22 +117,48 @@ public class TestCorona {
   }
 
   @Test
-  public void ratisTest() throws Exception {
+  public void multiThread() throws Exception {
     List<String> args = new ArrayList<>();
     args.add("-numOfVolumes");
+    args.add("10");
+    args.add("-numOfBuckets");
     args.add("1");
+    args.add("-numOfKeys");
+    args.add("10");
+    args.add("-numOfThread");
+    args.add("10");
+    args.add("-keySize");
+    args.add("10240");
+    Corona corona = new Corona(conf);
+    int res = ToolRunner.run(conf, corona,
+        args.toArray(new String[0]));
+    Assert.assertEquals(10, corona.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, corona.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, corona.getNumberOfKeysAdded());
+    Assert.assertEquals(0, res);
+  }
+
+  @Test
+  public void ratisTest3() throws Exception {
+    List<String> args = new ArrayList<>();
+    args.add("-numOfVolumes");
+    args.add("10");
     args.add("-numOfBuckets");
     args.add("1");
     args.add("-numOfKeys");
     args.add("10");
     args.add("-ratis");
     args.add("3");
+    args.add("-numOfThread");
+    args.add("10");
+    args.add("-keySize");
+    args.add("10240");
     Corona corona = new Corona(conf);
     int res = ToolRunner.run(conf, corona,
         args.toArray(new String[0]));
-    Assert.assertEquals(1, corona.getNumberOfVolumesCreated());
-    Assert.assertEquals(1, corona.getNumberOfBucketsCreated());
-    Assert.assertEquals(10, corona.getNumberOfKeysAdded());
+    Assert.assertEquals(10, corona.getNumberOfVolumesCreated());
+    Assert.assertEquals(10, corona.getNumberOfBucketsCreated());
+    Assert.assertEquals(100, corona.getNumberOfKeysAdded());
     Assert.assertEquals(0, res);
   }
 }
