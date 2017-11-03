@@ -870,7 +870,8 @@ public class TestFSImage {
           newPolicy, ecPolicy);
       assertEquals(
           "Newly added erasure coding policy should be of disabled state",
-          ErasureCodingPolicyState.DISABLED, ecPolicy.getState());
+          ErasureCodingPolicyState.DISABLED,
+          DFSTestUtil.getECPolicyState(ecPolicy));
 
       // Test enable/disable/remove user customized erasure coding policy
       testChangeErasureCodingPolicyState(cluster, blockSize, newPolicy);
@@ -880,14 +881,12 @@ public class TestFSImage {
     }
   }
 
-
   private void testChangeErasureCodingPolicyState(MiniDFSCluster cluster,
       int blockSize, ErasureCodingPolicy targetPolicy) throws IOException {
     DistributedFileSystem fs = cluster.getFileSystem();
 
     // 1. Enable an erasure coding policy
     fs.enableErasureCodingPolicy(targetPolicy.getName());
-    targetPolicy.setState(ErasureCodingPolicyState.ENABLED);
     // Create file, using the new policy
     final Path dirPath = new Path("/striped");
     final Path filePath = new Path(dirPath, "file");
@@ -910,13 +909,13 @@ public class TestFSImage {
     assertEquals("The erasure coding policy is not found",
         targetPolicy, ecPolicy);
     assertEquals("The erasure coding policy should be of enabled state",
-        ErasureCodingPolicyState.ENABLED, ecPolicy.getState());
+        ErasureCodingPolicyState.ENABLED,
+        DFSTestUtil.getECPolicyState(ecPolicy));
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
 
     // 2. Disable an erasure coding policy
     fs.disableErasureCodingPolicy(ecPolicy.getName());
-    targetPolicy.setState(ErasureCodingPolicyState.DISABLED);
     // Save namespace and restart NameNode
     fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     fs.saveNamespace();
@@ -929,7 +928,8 @@ public class TestFSImage {
     assertEquals("The erasure coding policy is not found",
         targetPolicy, ecPolicy);
     assertEquals("The erasure coding policy should be of disabled state",
-        ErasureCodingPolicyState.DISABLED, ecPolicy.getState());
+        ErasureCodingPolicyState.DISABLED,
+        DFSTestUtil.getECPolicyState(ecPolicy));
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
 
@@ -944,7 +944,7 @@ public class TestFSImage {
       return;
     }
 
-    targetPolicy.setState(ErasureCodingPolicyState.REMOVED);
+    fs.removeErasureCodingPolicy(ecPolicy.getName());
     // Save namespace and restart NameNode
     fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     fs.saveNamespace();
@@ -957,7 +957,8 @@ public class TestFSImage {
     assertEquals("The erasure coding policy saved into and loaded from " +
         "fsImage is bad", targetPolicy, ecPolicy);
     assertEquals("The erasure coding policy should be of removed state",
-        ErasureCodingPolicyState.REMOVED, ecPolicy.getState());
+        ErasureCodingPolicyState.REMOVED,
+        DFSTestUtil.getECPolicyState(ecPolicy));
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
     fs.delete(dirPath, true);

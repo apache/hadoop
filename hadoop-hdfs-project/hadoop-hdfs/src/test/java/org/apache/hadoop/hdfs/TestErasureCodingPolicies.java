@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -49,6 +50,7 @@ import org.junit.rules.Timeout;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -375,10 +377,16 @@ public class TestErasureCodingPolicies {
 
   @Test
   public void testGetAllErasureCodingPolicies() throws Exception {
-    Collection<ErasureCodingPolicy> allECPolicies = fs
+    Collection<ErasureCodingPolicyInfo> allECPolicies = fs
         .getAllErasureCodingPolicies();
-    assertTrue("All system policies should be enabled",
-        allECPolicies.containsAll(SystemErasureCodingPolicies.getPolicies()));
+    final List<ErasureCodingPolicy> sysPolicies =
+        new ArrayList<>(SystemErasureCodingPolicies.getPolicies());
+    for (ErasureCodingPolicyInfo ecpi : allECPolicies) {
+      if (ecpi.isEnabled()) {
+        sysPolicies.remove(ecpi.getPolicy());
+      }
+    }
+    assertTrue("All system policies should be enabled", sysPolicies.isEmpty());
 
     // Query after add a new policy
     ECSchema toAddSchema = new ECSchema("rs", 5, 2);
@@ -609,11 +617,11 @@ public class TestErasureCodingPolicies {
     fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
     String ecPolicyName = null;
-    Collection<ErasureCodingPolicy> allPolicies =
+    final Collection<ErasureCodingPolicyInfo> allPoliciesInfo =
         fs.getAllErasureCodingPolicies();
-    for (ErasureCodingPolicy policy : allPolicies) {
-      if (!ecPolicy.equals(policy)) {
-        ecPolicyName = policy.getName();
+    for (ErasureCodingPolicyInfo info : allPoliciesInfo) {
+      if (!ecPolicy.equals(info.getPolicy())) {
+        ecPolicyName = info.getPolicy().getName();
         break;
       }
     }
