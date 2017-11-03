@@ -44,6 +44,16 @@ Here is a short overview of the major features and improvements.
         [user documentation](./hadoop-yarn/hadoop-yarn-site/YarnUI2.html)
         for more details. 
 
+    *   Capacity Scheduler - Changing queue configuration via API. See the
+        [user documentation](./hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html)
+        under the **Changing Queue Configuration** section for more details. 
+
+    *   Capacity Scheduler - Update Resources and Execution Type of an 
+        allocated/running container. See the
+        [user documentation](./hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html)
+        under the **Updating a Container** section for more details.
+
+
 Getting Started
 ===============
 
