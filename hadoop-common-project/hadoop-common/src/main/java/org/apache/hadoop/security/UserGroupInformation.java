@@ -1990,18 +1990,49 @@ public class UserGroupInformation {
     }
   }
 
-  public static void logAllUserInfo(UserGroupInformation ugi) throws
-      IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("UGI: " + ugi);
-      if (ugi.getRealUser() != null) {
-        LOG.debug("+RealUGI: " + ugi.getRealUser());
-      }
-      LOG.debug("+LoginUGI: " + ugi.getLoginUser());
+  /**
+   * Log current UGI and token information into specified log.
+   * @param ugi - UGI
+   * @throws IOException
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "KMS"})
+  @InterfaceStability.Unstable
+  public static void logUserInfo(Logger log, String caption,
+      UserGroupInformation ugi) throws IOException {
+    if (log.isDebugEnabled()) {
+      log.debug(caption + " UGI: " + ugi);
       for (Token<?> token : ugi.getTokens()) {
-        LOG.debug("+UGI token:" + token);
+        log.debug("+token:" + token);
       }
     }
+  }
+
+  /**
+   * Log all (current, real, login) UGI and token info into specified log.
+   * @param ugi - UGI
+   * @throws IOException
+   */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "KMS"})
+  @InterfaceStability.Unstable
+  public static void logAllUserInfo(Logger log, UserGroupInformation ugi) throws
+      IOException {
+    if (log.isDebugEnabled()) {
+      logUserInfo(log, "Current", ugi.getCurrentUser());
+      if (ugi.getRealUser() != null) {
+        logUserInfo(log, "Real", ugi.getRealUser());
+      }
+      logUserInfo(log, "Login", ugi.getLoginUser());
+    }
+  }
+
+  /**
+   * Log all (current, real, login) UGI and token info into UGI debug log.
+   * @param ugi - UGI
+   * @throws IOException
+   */
+  public static void logAllUserInfo(UserGroupInformation ugi) throws
+      IOException {
+    logAllUserInfo(LOG, ugi);
   }
 
   private void print() throws IOException {
