@@ -96,9 +96,9 @@ public class TestAppJsonResolve extends Assert {
     props.put("k1", "overridden");
     props.put("k2", "v2");
     files.add(new ConfigFile().destFile("file1").type(ConfigFile.TypeEnum
-        .PROPERTIES).props(props));
+        .PROPERTIES).properties(props));
     files.add(new ConfigFile().destFile("file2").type(ConfigFile.TypeEnum
-        .XML).props(Collections.singletonMap("k3", "v3")));
+        .XML).properties(Collections.singletonMap("k3", "v3")));
     assertTrue(files.contains(simple.getFiles().get(0)));
     assertTrue(files.contains(simple.getFiles().get(1)));
 
@@ -113,9 +113,9 @@ public class TestAppJsonResolve extends Assert {
     props.put("k1", "v1");
     files.clear();
     files.add(new ConfigFile().destFile("file1").type(ConfigFile.TypeEnum
-        .PROPERTIES).props(props));
+        .PROPERTIES).properties(props));
     files.add(new ConfigFile().destFile("file2").type(ConfigFile.TypeEnum
-        .XML).props(Collections.singletonMap("k3", "v3")));
+        .XML).properties(Collections.singletonMap("k3", "v3")));
 
     assertTrue(files.contains(master.getFiles().get(0)));
     assertTrue(files.contains(master.getFiles().get(1)));

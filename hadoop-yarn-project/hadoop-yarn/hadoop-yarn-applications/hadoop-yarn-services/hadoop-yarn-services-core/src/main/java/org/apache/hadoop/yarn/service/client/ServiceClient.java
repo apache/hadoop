@@ -38,17 +38,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
-import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -99,7 +90,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.*;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_QUEUE;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.*;
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.jsonSerDeser;
 import static org.apache.hadoop.yarn.service.utils.SliderUtils.*;
 
@@ -553,8 +544,11 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       appTimeout.put(ApplicationTimeoutType.LIFETIME, app.getLifetime());
       submissionContext.setApplicationTimeouts(appTimeout);
     }
-    submissionContext.setMaxAppAttempts(conf.getInt(
-        YarnServiceConf.AM_RESTART_MAX, 2));
+    submissionContext.setMaxAppAttempts(YarnServiceConf
+        .getInt(YarnServiceConf.AM_RESTART_MAX, 20, app.getConfiguration(),
+            conf));
+
+    setLogAggregationContext(app, conf, submissionContext);
 
     Map<String, LocalResource> localResources = new HashMap<>();
 
@@ -568,14 +562,14 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (LOG.isDebugEnabled()) {
       printLocalResources(localResources);
     }
-    Map<String, String> env = addAMEnv(conf);
+    Map<String, String> env = addAMEnv();
 
     // create AM CLI
-    String cmdStr =
-        buildCommandLine(serviceName, conf, appRootDir, hasAMLog4j);
+    String cmdStr = buildCommandLine(serviceName, conf, appRootDir, hasAMLog4j);
     submissionContext.setResource(Resource.newInstance(YarnServiceConf
-        .getLong(YarnServiceConf.AM_RESOURCE_MEM, YarnServiceConf.DEFAULT_KEY_AM_RESOURCE_MEM,
-            app.getConfiguration(), conf), 1));
+        .getLong(YarnServiceConf.AM_RESOURCE_MEM,
+            YarnServiceConf.DEFAULT_KEY_AM_RESOURCE_MEM, app.getConfiguration(),
+            conf), 1));
     String queue = app.getQueue();
     if (StringUtils.isEmpty(queue)) {
       queue = conf.get(YARN_QUEUE, "default");
@@ -596,6 +590,33 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     submissionContext.setAMContainerSpec(amLaunchContext);
     yarnClient.submitApplication(submissionContext);
     return submissionContext.getApplicationId();
+  }
+
+  private void setLogAggregationContext(Service app, Configuration conf,
+      ApplicationSubmissionContext submissionContext) {
+    LogAggregationContext context = Records.newRecord(LogAggregationContext
+        .class);
+    String finalLogInclude = YarnServiceConf.get
+        (FINAL_LOG_INCLUSION_PATTERN, null, app.getConfiguration(), conf);
+    if (!StringUtils.isEmpty(finalLogInclude)) {
+      context.setIncludePattern(finalLogInclude);
+    }
+    String finalLogExclude = YarnServiceConf.get
+        (FINAL_LOG_EXCLUSION_PATTERN, null, app.getConfiguration(), conf);
+    if (!StringUtils.isEmpty(finalLogExclude)) {
+      context.setExcludePattern(finalLogExclude);
+    }
+    String rollingLogInclude = YarnServiceConf.get
+        (ROLLING_LOG_INCLUSION_PATTERN, null, app.getConfiguration(), conf);
+    if (!StringUtils.isEmpty(rollingLogInclude)) {
+      context.setRolledLogsIncludePattern(rollingLogInclude);
+    }
+    String rollingLogExclude = YarnServiceConf.get
+        (ROLLING_LOG_EXCLUSION_PATTERN, null, app.getConfiguration(), conf);
+    if (!StringUtils.isEmpty(rollingLogExclude)) {
+      context.setRolledLogsExcludePattern(rollingLogExclude);
+    }
+    submissionContext.setLogAggregationContext(context);
   }
 
   private void printLocalResources(Map<String, LocalResource> map) {
@@ -635,7 +656,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return cmdStr;
   }
 
-  private Map<String, String> addAMEnv(Configuration conf) throws IOException {
+  private Map<String, String> addAMEnv() throws IOException {
     Map<String, String> env = new HashMap<>();
     ClasspathConstructor classpath =
         buildClasspath(YarnServiceConstants.SUBMITTED_CONF_DIR, "lib", fs, getConfig()

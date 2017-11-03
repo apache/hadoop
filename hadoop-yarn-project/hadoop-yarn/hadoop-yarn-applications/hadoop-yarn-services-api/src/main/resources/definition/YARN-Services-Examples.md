@@ -176,14 +176,14 @@ POST URL - http://localhost:9191:/ws/v1/services/hbase-app-1
           {
             "type": "XML",
             "dest_file": "/etc/hadoop/conf/core-site.xml",
-            "props": {
+            "properties": {
               "fs.defaultFS": "${CLUSTER_FS_URI}"
             }
           },
           {
             "type": "XML",
             "dest_file": "/etc/hbase/conf/hbase-site.xml",
-            "props": {
+            "properties": {
               "hbase.cluster.distributed": "true",
               "hbase.zookeeper.quorum": "${CLUSTER_ZK_QUORUM}",
               "hbase.rootdir": "${SERVICE_HDFS_DIR}/hbase",
@@ -216,14 +216,14 @@ POST URL - http://localhost:9191:/ws/v1/services/hbase-app-1
           {
             "type": "XML",
             "dest_file": "/etc/hadoop/conf/core-site.xml",
-            "props": {
+            "properties": {
               "fs.defaultFS": "${CLUSTER_FS_URI}"
             }
           },
           {
             "type": "XML",
             "dest_file": "/etc/hbase/conf/hbase-site.xml",
-            "props": {
+            "properties": {
               "hbase.cluster.distributed": "true",
               "hbase.zookeeper.quorum": "${CLUSTER_ZK_QUORUM}",
               "hbase.rootdir": "${SERVICE_HDFS_DIR}/hbase",

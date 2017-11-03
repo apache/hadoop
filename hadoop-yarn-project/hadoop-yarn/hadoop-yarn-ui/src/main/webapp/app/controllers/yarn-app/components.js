@@ -49,7 +49,7 @@ export default Ember.Controller.extend({
       contentPath: 'memory'
     }, {
       id: 'instances',
-      headerTitle: 'Number Of Instances',
+      headerTitle: 'Number of Instances',
       contentPath: 'instances',
       observePath: true
     });

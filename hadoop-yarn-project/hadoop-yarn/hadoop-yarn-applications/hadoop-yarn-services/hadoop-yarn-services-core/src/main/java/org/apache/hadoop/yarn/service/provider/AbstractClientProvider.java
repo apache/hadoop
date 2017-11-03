@@ -27,9 +27,12 @@ import org.apache.hadoop.yarn.service.utils.SliderUtils;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants.CONTENT;
 
 public abstract class AbstractClientProvider {
 
@@ -84,11 +87,15 @@ public abstract class AbstractClientProvider {
         throw new IllegalArgumentException("File type is empty");
       }
 
-      if (file.getType().equals(ConfigFile.TypeEnum.TEMPLATE) && StringUtils
-          .isEmpty(file.getSrcFile())) {
-        throw new IllegalArgumentException(
-            "Src_file is empty for " + ConfigFile.TypeEnum.TEMPLATE);
-
+      if (file.getType().equals(ConfigFile.TypeEnum.TEMPLATE)) {
+        if (StringUtils.isEmpty(file.getSrcFile()) &&
+            !file.getProperties().containsKey(CONTENT)) {
+          throw new IllegalArgumentException(MessageFormat.format("For {0} " +
+                  "format, either src_file must be specified in ConfigFile," +
+                  " or the \"{1}\" key must be specified in " +
+                  "the 'properties' field of ConfigFile. ",
+              ConfigFile.TypeEnum.TEMPLATE, CONTENT));
+        }
       }
       if (!StringUtils.isEmpty(file.getSrcFile())) {
         Path p = new Path(file.getSrcFile());

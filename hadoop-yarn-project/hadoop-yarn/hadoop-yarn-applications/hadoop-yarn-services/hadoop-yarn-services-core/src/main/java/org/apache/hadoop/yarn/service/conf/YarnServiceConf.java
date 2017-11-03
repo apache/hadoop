@@ -28,7 +28,7 @@ public class YarnServiceConf {
 
   // Retry settings for container failures
   public static final String CONTAINER_RETRY_MAX = "yarn.service.container-failure.retry.max";
-  public static final String CONTAINER_RETRY_INTERVAL = "yarn.service.container-failure.retry-interval";
+  public static final String CONTAINER_RETRY_INTERVAL = "yarn.service.container-failure.retry-interval-ms";
 
   public static final String AM_RESTART_MAX = "yarn.service.am-restart.max-attempts";
   public static final String AM_RESOURCE_MEM = "yarn.service.am-resource.memory";
@@ -39,6 +39,13 @@ public class YarnServiceConf {
   public static final String API_SERVER_ADDRESS = "yarn.service.api-server.address";
   public static final String DEFAULT_API_SERVER_ADDRESS = "0.0.0.0:";
   public static final int DEFAULT_API_SERVER_PORT = 9191;
+
+  public static final String FINAL_LOG_INCLUSION_PATTERN = "yarn.service.log.include-pattern";
+  public static final String FINAL_LOG_EXCLUSION_PATTERN = "yarn.service.log.exclude-pattern";
+
+  public static final String ROLLING_LOG_INCLUSION_PATTERN = "yarn.service.rolling-log.include-pattern";
+  public static final String ROLLING_LOG_EXCLUSION_PATTERN = "yarn.service.rolling-log.exclude-pattern";
+
 
   /**
    * The yarn service base path:
@@ -97,5 +104,10 @@ public class YarnServiceConf {
   public static int getInt(String name, int defaultValue,
       Configuration userConf, org.apache.hadoop.conf.Configuration systemConf) {
     return userConf.getPropertyInt(name, systemConf.getInt(name, defaultValue));
+  }
+
+  public static String get(String name, String defaultVal,
+      Configuration userConf, org.apache.hadoop.conf.Configuration systemConf) {
+    return userConf.getProperty(name, systemConf.get(name, defaultVal));
   }
 }

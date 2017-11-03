@@ -160,7 +160,7 @@ public class TestServiceTimelinePublisher {
 
     // updated container state
     container.setState(ContainerState.READY);
-    serviceTimelinePublisher.componentInstanceUpdated(container);
+    serviceTimelinePublisher.componentInstanceIPHostUpdated(container);
     lastPublishedEntities =
         ((DummyTimelineClient) timelineClient).getLastPublishedEntities();
     assertEquals(1, lastPublishedEntities.size());
