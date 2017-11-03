@@ -54,8 +54,6 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  * Test ResourceEstimatorService.
  */
 public class TestResourceEstimatorService extends JerseyTest {
-  private static final Logger LOGGER =
-      LoggerFactory.getLogger(TestResourceEstimatorService.class);
   private final String parseLogCommand = "resourceestimator/translator/"
       + "src/test/resources/resourceEstimatorService.txt";
   private final String getHistorySkylineCommand =
