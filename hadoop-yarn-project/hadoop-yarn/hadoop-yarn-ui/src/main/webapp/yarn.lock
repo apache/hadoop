@@ -1730,6 +1730,14 @@ ember-export-application-global@1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/ember-export-application-global/-/ember-export-application-global-1.0.5.tgz#73bd641b19e3474190f717c9b504617511506bea"
 
+ember-lodash@0.0.10:
+  version "0.0.10"
+  resolved "https://registry.yarnpkg.com/ember-lodash/-/ember-lodash-0.0.10.tgz#edf132aa54a983a87543a093615df03892c9a15c"
+  dependencies:
+    broccoli-merge-trees "^1.1.1"
+    ember-cli-babel "^5.1.5"
+    lodash-es "^3.10.0"
+
 ember-qunit@^0.4.18:
   version "0.4.24"
   resolved "https://registry.yarnpkg.com/ember-qunit/-/ember-qunit-0.4.24.tgz#b54cf6688c442d07eacea47c3285879cdd7c2163"
@@ -2944,6 +2952,10 @@ loader.js@4.2.3:
 lockfile@~1.0.1:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/lockfile/-/lockfile-1.0.3.tgz#2638fc39a0331e9cac1a04b71799931c9c50df79"
+
+lodash-es@^3.10.0:
+  version "3.10.1"
+  resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-3.10.1.tgz#a1c85d9829c9009004339dc3846dbabb46cf4e19"
 
 lodash-node@^2.4.1:
   version "2.4.1"

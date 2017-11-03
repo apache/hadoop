@@ -418,3 +418,39 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
   width: 14px;
   display: inline-block;
 }
+
+.yarn-cluster-status i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 10px;
+  border: 1px solid;
+  margin: 3px;
+  vertical-align: bottom;
+}
+
+.yarn-cluster-status i.started {
+  border-color: #43b135;
+  background-color: #60cea5;
+}
+.yarn-cluster-status i.stopped {
+  border-color: #b04b4e;
+  background-color: #ef6162;
+}
+.yarn-cluster-status i.inited{
+  border-color: #1c95c0;
+  background-color: #26bbf0;
+}
+.yarn-cluster-status i.notinited {
+    border-color: #dca41b;
+    background-color: #ffbc0b;
+}
+.yarn-cluster-info {
+  display: flex;
+  margin-left: auto
+}
+
+.yarn-ui-footer {
+  display: flex;
+  padding: 10px 25px;
+}

@@ -16,33 +16,13 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import AbstractRoute from './abstract';
+import { lower } from '../../../helpers/lower';
+import { module, test } from 'qunit';
 
-export default AbstractRoute.extend({
-  model() {
-    return this.store.findAll('ClusterInfo', {reload: true});
-  },
+module('Unit | Helper | lower');
 
-  actions: {
-    /**
-     * Base error handler for the application.
-     * If specific routes do not handle the error, it will bubble up to
-     * this handler. Here we redirect to either 404 page or a generic
-     * error handler page.
-     */
-    error: function (error) {
-      Ember.Logger.log(error.stack);
-
-      if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
-        this.intermediateTransitionTo('/notfound');
-      } else {
-        this.intermediateTransitionTo('/error');
-      }
-    }
-  },
-
-  unloadAll: function() {
-    this.store.unloadAll('ClusterInfo');
-  },
+// Replace this with your real tests.
+test('it works', function(assert) {
+  let result = lower(42);
+  assert.ok(result);
 });
