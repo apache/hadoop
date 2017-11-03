@@ -35,9 +35,6 @@ public class ServiceMetrics implements MetricsSource {
   @Metric("containers requested")
   public MutableGaugeInt containersRequested;
 
-  @Metric("anti-affinity containers pending")
-  public MutableGaugeInt pendingAAContainers;
-
   @Metric("containers running")
   public MutableGaugeInt containersRunning;
 
@@ -86,7 +83,6 @@ public class ServiceMetrics implements MetricsSource {
   @Override public String toString() {
     return "ServiceMetrics{"
         + "containersRequested=" + containersRequested.value()
-        + ", pendingAAContainers=" + pendingAAContainers.value()
         + ", containersRunning=" + containersRunning.value()
         + ", containersDesired=" + containersDesired.value()
         + ", containersSucceeded=" + containersSucceeded.value()

@@ -10,7 +10,7 @@
       {
         "type": "PROPERTIES",
         "dest_file": "file1",
-        "props": {
+        "properties": {
           "k1": "v1",
           "k2": "v2"
         }
@@ -18,7 +18,7 @@
       {
         "type": "XML",
         "dest_file": "file2",
-        "props": {
+        "properties": {
           "k3": "v3"
         }
       }
@@ -38,7 +38,7 @@
           {
             "type": "PROPERTIES",
             "dest_file": "file1",
-            "props": {
+            "properties": {
               "k1": "overridden"
             }
           }

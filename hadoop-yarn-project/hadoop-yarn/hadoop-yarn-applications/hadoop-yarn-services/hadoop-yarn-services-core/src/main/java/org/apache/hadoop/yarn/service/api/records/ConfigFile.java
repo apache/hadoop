@@ -49,13 +49,13 @@ public class ConfigFile implements Serializable {
   private static final long serialVersionUID = -7009402089417704612L;
 
   /**
-   * Config Type.  XML, JSON, YAML, TEMPLATE, ENV and HADOOP_XML are supported.
+   * Config Type.  XML, JSON, YAML, TEMPLATE and HADOOP_XML are supported.
    **/
   @XmlType(name = "config_type")
   @XmlEnum
   public enum TypeEnum {
     XML("XML"), PROPERTIES("PROPERTIES"), JSON("JSON"), YAML("YAML"), TEMPLATE(
-        "TEMPLATE"), ENV("ENV"), HADOOP_XML("HADOOP_XML"),;
+        "TEMPLATE"), HADOOP_XML("HADOOP_XML"),;
 
     private String value;
 
@@ -73,15 +73,15 @@ public class ConfigFile implements Serializable {
   private TypeEnum type = null;
   private String destFile = null;
   private String srcFile = null;
-  private Map<String, String> props = new HashMap<>();
+  private Map<String, String> properties = new HashMap<>();
 
   public ConfigFile copy() {
     ConfigFile copy = new ConfigFile();
     copy.setType(this.getType());
     copy.setSrcFile(this.getSrcFile());
     copy.setDestFile(this.getDestFile());
-    if (this.getProps() != null && !this.getProps().isEmpty()) {
-      copy.getProps().putAll(this.getProps());
+    if (this.getProperties() != null && !this.getProperties().isEmpty()) {
+      copy.getProperties().putAll(this.getProperties());
     }
     return copy;
   }
@@ -156,28 +156,28 @@ public class ConfigFile implements Serializable {
    in the dest_file and these properties will overwrite, if any, existing
    properties in src_file or be added as new properties in src_file.
    **/
-  public ConfigFile props(Map<String, String> props) {
-    this.props = props;
+  public ConfigFile properties(Map<String, String> properties) {
+    this.properties = properties;
     return this;
   }
 
   @ApiModelProperty(example = "null", value = "A blob of key value pairs that will be dumped in the dest_file in the format as specified in type."
       + " If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any,"
       + " existing properties in src_file or be added as new properties in src_file.")
-  @JsonProperty("props")
-  public Map<String, String> getProps() {
-    return props;
+  @JsonProperty("properties")
+  public Map<String, String> getProperties() {
+    return properties;
   }
 
-  public void setProps(Map<String, String> props) {
-    this.props = props;
+  public void setProperties(Map<String, String> properties) {
+    this.properties = properties;
   }
 
   public long getLong(String name, long defaultValue) {
     if (name == null) {
       return defaultValue;
     }
-    String value = props.get(name.trim());
+    String value = properties.get(name.trim());
     return Long.parseLong(value);
   }
 
@@ -185,7 +185,7 @@ public class ConfigFile implements Serializable {
     if (name == null) {
       return defaultValue;
     }
-    return Boolean.valueOf(props.get(name.trim()));
+    return Boolean.valueOf(properties.get(name.trim()));
   }
 
   @Override
@@ -204,7 +204,7 @@ public class ConfigFile implements Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, destFile, srcFile, props);
+    return Objects.hash(type, destFile, srcFile, properties);
   }
 
   @Override
@@ -215,7 +215,7 @@ public class ConfigFile implements Serializable {
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
     sb.append("    destFile: ").append(toIndentedString(destFile)).append("\n");
     sb.append("    srcFile: ").append(toIndentedString(srcFile)).append("\n");
-    sb.append("    props: ").append(toIndentedString(props)).append("\n");
+    sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
     sb.append("}");
     return sb.toString();
   }

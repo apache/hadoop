@@ -87,4 +87,6 @@ public interface YarnServiceConstants {
 
   String OUT_FILE = "stdout.txt";
   String ERR_FILE = "stderr.txt";
+
+  String CONTENT = "content";
 }

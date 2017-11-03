@@ -69,7 +69,7 @@ public class ReadinessCheck implements Serializable {
   }
 
   private TypeEnum type = null;
-  private Map<String, String> props = new HashMap<String, String>();
+  private Map<String, String> properties = new HashMap<String, String>();
   private Artifact artifact = null;
 
   /**
@@ -91,27 +91,27 @@ public class ReadinessCheck implements Serializable {
     this.type = type;
   }
 
-  public ReadinessCheck props(Map<String, String> props) {
-    this.props = props;
+  public ReadinessCheck properties(Map<String, String> properties) {
+    this.properties = properties;
     return this;
   }
 
   public ReadinessCheck putPropsItem(String key, String propsItem) {
-    this.props.put(key, propsItem);
+    this.properties.put(key, propsItem);
     return this;
   }
 
   /**
    * A blob of key value pairs that will be used to configure the check.
-   * @return props
+   * @return properties
    **/
   @ApiModelProperty(example = "null", value = "A blob of key value pairs that will be used to configure the check.")
-  public Map<String, String> getProps() {
-    return props;
+  public Map<String, String> getProperties() {
+    return properties;
   }
 
-  public void setProps(Map<String, String> props) {
-    this.props = props;
+  public void setProperties(Map<String, String> properties) {
+    this.properties = properties;
   }
 
   /**
@@ -148,13 +148,13 @@ public class ReadinessCheck implements Serializable {
     }
     ReadinessCheck readinessCheck = (ReadinessCheck) o;
     return Objects.equals(this.type, readinessCheck.type) &&
-        Objects.equals(this.props, readinessCheck.props) &&
+        Objects.equals(this.properties, readinessCheck.properties) &&
         Objects.equals(this.artifact, readinessCheck.artifact);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, props, artifact);
+    return Objects.hash(type, properties, artifact);
   }
 
 
@@ -164,7 +164,7 @@ public class ReadinessCheck implements Serializable {
     sb.append("class ReadinessCheck {\n");
 
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("    props: ").append(toIndentedString(props)).append("\n");
+    sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
     sb.append("    artifact: ").append(toIndentedString(artifact)).append("\n");
     sb.append("}");
     return sb.toString();

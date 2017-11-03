@@ -272,8 +272,8 @@ public class ProviderUtils implements YarnServiceConstants {
             break;
           }
         } else {
-          // non-template
-          resolveNonTemplateConfigsAndSaveOnHdfs(fs, tokensForSubstitution,
+          // If src_file is not specified
+          resolvePropsInConfigFileAndSaveOnHdfs(fs, tokensForSubstitution,
               instance, configFile, fileName, remoteFile);
         }
       }
@@ -297,17 +297,17 @@ public class ProviderUtils implements YarnServiceConstants {
     }
   }
 
-  private static void resolveNonTemplateConfigsAndSaveOnHdfs(SliderFileSystem fs,
+  private static void resolvePropsInConfigFileAndSaveOnHdfs(SliderFileSystem fs,
       Map<String, String> tokensForSubstitution, ComponentInstance instance,
       ConfigFile configFile, String fileName, Path remoteFile)
       throws IOException {
     // substitute non-template configs
-    substituteMapWithTokens(configFile.getProps(), tokensForSubstitution);
+    substituteMapWithTokens(configFile.getProperties(), tokensForSubstitution);
 
     // write configs onto hdfs
     PublishedConfiguration publishedConfiguration =
         new PublishedConfiguration(fileName,
-            configFile.getProps().entrySet());
+            configFile.getProperties().entrySet());
     if (!fs.getFileSystem().exists(remoteFile)) {
       PublishedConfigurationOutputter configurationOutputter =
           PublishedConfigurationOutputter.createOutputter(
@@ -343,7 +343,7 @@ public class ProviderUtils implements YarnServiceConstants {
       confCopy.set(entry.getKey(), entry.getValue());
     }
     // substitute properties
-    for (Map.Entry<String, String> entry : configFile.getProps().entrySet()) {
+    for (Map.Entry<String, String> entry : configFile.getProperties().entrySet()) {
       confCopy.set(entry.getKey(), entry.getValue());
     }
     // substitute env variables

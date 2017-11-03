@@ -53,9 +53,9 @@ public interface ServiceApiConstants {
   String CONTAINER_ID = $("CONTAINER_ID");
 
   // Templates for component instance host/IP
-  String COMPONENT_HOST = $("%s_HOST");
+  String COMPONENT_INSTANCE_HOST = $("%s_HOST");
 
-  String COMPONENT_IP = $("%s_IP");
+  String COMPONENT_INSTANCE_IP = $("%s_IP");
 
   // Constants for default cluster ZK
   String CLUSTER_ZK_QUORUM = $("CLUSTER_ZK_QUORUM");

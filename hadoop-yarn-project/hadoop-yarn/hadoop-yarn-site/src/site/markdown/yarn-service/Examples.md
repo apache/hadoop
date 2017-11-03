@@ -45,7 +45,7 @@ Note this example requires registry DNS.
           {
             "type": "ENV",
             "dest_file": "/var/www/html/index.html",
-            "props": {
+            "properties": {
               "content": "<html><header><title>Title</title></header><body>Hello from ${COMPONENT_INSTANCE_NAME}!</body></html>"
             }
           }
@@ -122,7 +122,7 @@ A readiness check is added for the `httpd` component:
 ```
       "readiness_check": {
         "type": "HTTP",
-        "props": {
+        "properties": {
           "url": "http://${THIS_HOST}:8080"
         }
       },

@@ -70,9 +70,9 @@ public final class MonitorUtils {
     try {
       switch (readinessCheck.getType()) {
       case HTTP:
-        return HttpProbe.create(readinessCheck.getProps());
+        return HttpProbe.create(readinessCheck.getProperties());
       case PORT:
-        return PortProbe.create(readinessCheck.getProps());
+        return PortProbe.create(readinessCheck.getProperties());
       default:
         return null;
       }

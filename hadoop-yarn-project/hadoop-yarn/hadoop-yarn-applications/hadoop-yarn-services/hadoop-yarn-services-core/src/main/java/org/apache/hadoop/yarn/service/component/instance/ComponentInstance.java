@@ -148,7 +148,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
               new ContainerStatusRetriever(compInstance.scheduler,
                   compInstance.getContainerId(), compInstance), 0, 1,
               TimeUnit.SECONDS);
-
+      compInstance.component.incRunningContainers();
       long containerStartTime = System.currentTimeMillis();
       try {
         ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
@@ -186,6 +186,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         ComponentInstanceEvent event) {
       compInstance.component.incContainersReady();
       compInstance.containerSpec.setState(ContainerState.READY);
+      if (compInstance.timelineServiceEnabled) {
+        compInstance.serviceTimelinePublisher
+            .componentInstanceBecomeReady(compInstance.containerSpec);
+      }
     }
   }
 
@@ -225,6 +229,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
               .getDiagnostics();
       compInstance.diagnostics.append(containerDiag + System.lineSeparator());
 
+      if (compInstance.getState().equals(READY)) {
+        compInstance.component.decContainersReady();
+      }
+      compInstance.component.decRunningContainers();
       boolean shouldExit = false;
       // check if it exceeds the failure threshold
       if (comp.currentContainerFailure.get() > comp.maxContainerFailurePerComp) {
@@ -250,10 +258,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
             .submit(compInstance::cleanupRegistry);
         if (compInstance.timelineServiceEnabled) {
           // record in ATS
-          compInstance.serviceTimelinePublisher
-              .componentInstanceFinished(compInstance,
-                  event.getStatus().getExitStatus(), event.getStatus().getState(),
-                  containerDiag);
+          compInstance.serviceTimelinePublisher.componentInstanceFinished
+              (compInstance, event.getStatus().getExitStatus(), containerDiag);
         }
         compInstance.containerSpec.setState(ContainerState.STOPPED);
       }
@@ -336,7 +342,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       container.setIp(StringUtils.join(",", status.getIPs()));
       container.setHostname(status.getHost());
       if (timelineServiceEnabled) {
-        serviceTimelinePublisher.componentInstanceUpdated(container);
+        serviceTimelinePublisher.componentInstanceIPHostUpdated(container);
       }
     }
     updateServiceRecord(yarnRegistryOperations, status);
@@ -410,7 +416,10 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     }
   }
 
-  // Release the container , cleanup registry, hdfs dir, and record in ATS
+  // Called when user flexed down the container and ContainerStoppedTransition
+  // is not executed in this case.
+  // Release the container, dec running,
+  // cleanup registry, hdfs dir, and send record to ATS
   public void destroy() {
     LOG.info(getCompInstanceId() + ": Flexed down by user, destroying.");
     diagnostics.append(getCompInstanceId() + ": Flexed down by user");
@@ -420,10 +429,18 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
           .releaseAssignedContainer(container.getId());
       getCompSpec().removeContainer(containerSpec);
     }
+    // update metrics
+    if (getState() == STARTED) {
+      component.decRunningContainers();
+    }
+    if (getState() == READY) {
+      component.decContainersReady();
+      component.decRunningContainers();
+    }
+
     if (timelineServiceEnabled) {
-      serviceTimelinePublisher
-          .componentInstanceFinished(this, KILLED_BY_APPMASTER, COMPLETE,
-              diagnostics.toString());
+      serviceTimelinePublisher.componentInstanceFinished(this,
+          KILLED_BY_APPMASTER, diagnostics.toString());
     }
     scheduler.executorService.submit(this::cleanupRegistryAndCompHdfsDir);
   }

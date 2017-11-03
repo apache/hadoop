@@ -78,6 +78,12 @@ public class ServiceMaster extends CompositeService {
     fs.setAppDir(appDir);
     loadApplicationJson(context, fs);
 
+    // Take yarn config from YarnFile and merge them into YarnConfiguration
+    for (Map.Entry<String, String> entry : context.service
+        .getConfiguration().getProperties().entrySet()) {
+      conf.set(entry.getKey(), entry.getValue());
+    }
+
     ContainerId amContainerId = getAMContainerId();
 
     ApplicationAttemptId attemptId = amContainerId.getApplicationAttemptId();

@@ -212,8 +212,8 @@ public class Configuration implements Serializable {
     for (ConfigFile thisFile : files) {
       if(thatMap.containsKey(thisFile.getDestFile())) {
         ConfigFile thatFile = thatMap.get(thisFile.getDestFile());
-        SliderUtils.mergeMapsIgnoreDuplicateKeys(thisFile.getProps(),
-            thatFile.getProps());
+        SliderUtils.mergeMapsIgnoreDuplicateKeys(thisFile.getProperties(),
+            thatFile.getProperties());
         thatMap.remove(thisFile.getDestFile());
       }
     }

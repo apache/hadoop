@@ -397,10 +397,6 @@ public class ServiceScheduler extends CompositeService {
         PersistencePolicies.APPLICATION);
     serviceRecord.description = "YarnServiceMaster";
 
-    // set any provided attributes
-    setUserProvidedServiceRecordAttributes(service.getConfiguration(),
-        serviceRecord);
-
     executorService.submit(new Runnable() {
       @Override public void run() {
         try {
@@ -423,17 +419,6 @@ public class ServiceScheduler extends CompositeService {
     });
     if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
       serviceTimelinePublisher.serviceAttemptRegistered(app, getConfig());
-    }
-  }
-
-  private void setUserProvidedServiceRecordAttributes(
-      org.apache.hadoop.yarn.service.api.records.Configuration conf, ServiceRecord record) {
-    String prefix = "service.record.attribute";
-    for (Map.Entry<String, String> entry : conf.getProperties().entrySet()) {
-      if (entry.getKey().startsWith(prefix)) {
-        String key = entry.getKey().substring(prefix.length() + 1);
-        record.set(key, entry.getValue().trim());
-      }
     }
   }
 

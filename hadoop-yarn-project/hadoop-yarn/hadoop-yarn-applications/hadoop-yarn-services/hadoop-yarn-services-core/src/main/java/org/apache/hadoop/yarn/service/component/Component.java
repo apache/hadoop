@@ -116,7 +116,7 @@ public class Component implements EventHandler<ComponentEvent> {
           .addTransition(FLEXING, FLEXING, CONTAINER_COMPLETED,
               new ContainerCompletedTransition())
           // Flex while previous flex is still in progress
-          .addTransition(FLEXING, EnumSet.of(FLEXING), FLEX,
+          .addTransition(FLEXING, EnumSet.of(FLEXING, STABLE), FLEX,
               new FlexComponentTransition())
 
           // container failed while stable
@@ -214,14 +214,12 @@ public class Component implements EventHandler<ComponentEvent> {
             new ArrayList<>(component.getAllComponentInstances());
 
         // sort in Most recent -> oldest order, destroy most recent ones.
-        Collections.sort(list, Collections.reverseOrder());
+        list.sort(Collections.reverseOrder());
         for (int i = 0; i < delta; i++) {
           ComponentInstance instance = list.get(i);
           // remove the instance
           component.compInstances.remove(instance.getCompInstanceName());
           component.pendingInstances.remove(instance);
-          component.componentMetrics.containersFailed.incr();
-          component.componentMetrics.containersRunning.decr();
           // decrement id counter
           component.instanceIdCounter.decrementAndGet();
           instance.destroy();
@@ -282,7 +280,6 @@ public class Component implements EventHandler<ComponentEvent> {
       component.compInstanceDispatcher.getEventHandler().handle(
           new ComponentInstanceEvent(instance.getContainerId(),
               START));
-      component.incRunningContainers();
     }
   }
 
@@ -294,7 +291,6 @@ public class Component implements EventHandler<ComponentEvent> {
       component.compInstanceDispatcher.getEventHandler().handle(
           new ComponentInstanceEvent(event.getInstance().getContainerId(),
               START));
-      component.incRunningContainers();
       return checkIfStable(component);
     }
   }
@@ -413,9 +409,6 @@ public class Component implements EventHandler<ComponentEvent> {
     componentMetrics.containersFailed.incr();
     scheduler.getServiceMetrics().containersFailed.incr();
 
-    // dec running container
-    decRunningContainers();
-
     if (Apps.shouldCountTowardsNodeBlacklisting(status.getExitStatus())) {
       String host = scheduler.getLiveInstances().get(status.getContainerId())
           .getNodeId().getHost();
@@ -468,31 +461,33 @@ public class Component implements EventHandler<ComponentEvent> {
         }
         String ip = instance.getContainerStatus().getIPs().get(0);
         String host = instance.getContainerStatus().getHost();
-        tokens.put(String.format(COMPONENT_IP,
+        tokens.put(String.format(COMPONENT_INSTANCE_IP,
             instance.getCompInstanceName().toUpperCase()), ip);
-        tokens.put(String.format(COMPONENT_HOST,
+        tokens.put(String.format(COMPONENT_INSTANCE_HOST,
             instance.getCompInstanceName().toUpperCase()), host);
       }
     }
     return tokens;
   }
 
-  private void incRunningContainers() {
+  public void incRunningContainers() {
     componentMetrics.containersRunning.incr();
     scheduler.getServiceMetrics().containersRunning.incr();
   }
 
+  public void decRunningContainers() {
+    componentMetrics.containersRunning.decr();
+    scheduler.getServiceMetrics().containersRunning.decr();
+  }
+
   public void incContainersReady() {
     componentMetrics.containersReady.incr();
+    scheduler.getServiceMetrics().containersReady.incr();
   }
 
   public void decContainersReady() {
     componentMetrics.containersReady.decr();
-  }
-
-  private void decRunningContainers() {
-    componentMetrics.containersRunning.decr();
-    scheduler.getServiceMetrics().containersRunning.decr();
+    scheduler.getServiceMetrics().containersReady.decr();
   }
 
   public int getNumReadyInstances() {

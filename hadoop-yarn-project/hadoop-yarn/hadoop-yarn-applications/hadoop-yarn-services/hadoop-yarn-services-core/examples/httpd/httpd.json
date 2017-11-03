@@ -17,9 +17,9 @@
       "configuration": {
         "files": [
           {
-            "type": "ENV",
+            "type": "TEMPLATE",
             "dest_file": "/var/www/html/index.html",
-            "props": {
+            "properties": {
               "content": "<html><header><title>Title</title></header><body>Hello from ${COMPONENT_INSTANCE_NAME}!</body></html>"
             }
           }

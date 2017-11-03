@@ -251,7 +251,7 @@ A config file that needs to be created and made available as a volume in a servi
 |type|Config file in the standard format like xml, properties, json, yaml, template.|false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, ENV, HADOOP_XML)||
 |dest_file|The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf.|false|string||
 |src_file|This provides the source location of the configuration file, the content of which is dumped to dest_file post property substitutions, in the format as specified in type. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.|false|string||
-|props|A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.|false|object||
+|properties|A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.|false|object||
 
 
 ### Configuration
@@ -260,7 +260,7 @@ Set of configuration properties that can be injected into the service components
 
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
-|properties|A blob of key-value pairs of common service properties.|false|object||
+|properties|A blob of key-value pairs for configuring YARN service AM.|false|object||
 |env|A blob of key-value pairs which will be appended to the default system properties and handed off to the service at start time. All placeholder references to properties will be substituted before injection.|false|object||
 |files|Array of list of files that needs to be created and made available as volumes in the service component containers.|false|ConfigFile array||
 
@@ -308,7 +308,7 @@ A custom command or a pluggable helper container to determine the readiness of a
 |Name|Description|Required|Schema|Default|
 |----|----|----|----|----|
 |type|E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).|true|enum (HTTP, PORT)||
-|props|A blob of key value pairs that will be used to configure the check.|false|object||
+|properties|A blob of key value pairs that will be used to configure the check.|false|object||
 |artifact|Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits service owners who can run services without any packaging modifications. Note, artifacts of type docker only is supported for now. NOT IMPLEMENTED YET|false|Artifact||
 
 
@@ -529,14 +529,14 @@ POST URL - http://localhost:8088:/ws/v1/services/hbase-app-1
           {
             "type": "XML",
             "dest_file": "/etc/hadoop/conf/core-site.xml",
-            "props": {
+            "properties": {
               "fs.defaultFS": "${CLUSTER_FS_URI}"
             }
           },
           {
             "type": "XML",
             "dest_file": "/etc/hbase/conf/hbase-site.xml",
-            "props": {
+            "properties": {
               "hbase.cluster.distributed": "true",
               "hbase.zookeeper.quorum": "${CLUSTER_ZK_QUORUM}",
               "hbase.rootdir": "${SERVICE_HDFS_DIR}/hbase",
@@ -569,14 +569,14 @@ POST URL - http://localhost:8088:/ws/v1/services/hbase-app-1
           {
             "type": "XML",
             "dest_file": "/etc/hadoop/conf/core-site.xml",
-            "props": {
+            "properties": {
               "fs.defaultFS": "${CLUSTER_FS_URI}"
             }
           },
           {
             "type": "XML",
             "dest_file": "/etc/hbase/conf/hbase-site.xml",
-            "props": {
+            "properties": {
               "hbase.cluster.distributed": "true",
               "hbase.zookeeper.quorum": "${CLUSTER_ZK_QUORUM}",
               "hbase.rootdir": "${SERVICE_HDFS_DIR}/hbase",
