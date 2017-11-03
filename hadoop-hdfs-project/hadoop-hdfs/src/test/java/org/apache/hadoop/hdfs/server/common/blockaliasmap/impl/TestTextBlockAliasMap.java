@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.common;
+package org.apache.hadoop.hdfs.server.common.blockaliasmap.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,7 +25,8 @@ import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.common.TextFileRegionFormat.*;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap.*;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -36,13 +37,13 @@ import static org.junit.Assert.*;
 /**
  * Test for the text based block format for provided block maps.
  */
-public class TestTextBlockFormat {
+public class TestTextBlockAliasMap {
 
   static final Path OUTFILE = new Path("hdfs://dummyServer:0000/dummyFile.txt");
 
   void check(TextWriter.Options opts, final Path vp,
       final Class<? extends CompressionCodec> vc) throws IOException {
-    TextFileRegionFormat mFmt = new TextFileRegionFormat() {
+    TextFileRegionAliasMap mFmt = new TextFileRegionAliasMap() {
       @Override
       public TextWriter createWriter(Path file, CompressionCodec codec,
           String delim, Configuration conf) throws IOException {
@@ -63,7 +64,7 @@ public class TestTextBlockFormat {
     TextWriter.Options opts = TextWriter.defaults();
     assertTrue(opts instanceof WriterOptions);
     WriterOptions wopts = (WriterOptions) opts;
-    Path def = new Path(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_PATH_DEFAULT);
+    Path def = new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);
     assertEquals(def, wopts.getFile());
     assertNull(wopts.getCodec());
 

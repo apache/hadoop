@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.common;
+package org.apache.hadoop.hdfs.server.common.blockaliasmap.impl;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
@@ -52,15 +54,15 @@ import com.google.common.annotations.VisibleForTesting;
  * This class is used for block maps stored as text files,
  * with a specified delimiter.
  */
-public class TextFileRegionFormat
-    extends BlockFormat<FileRegion> implements Configurable {
+public class TextFileRegionAliasMap
+    extends BlockAliasMap<FileRegion> implements Configurable {
 
   private Configuration conf;
   private ReaderOptions readerOpts = TextReader.defaults();
   private WriterOptions writerOpts = TextWriter.defaults();
 
   public static final Logger LOG =
-      LoggerFactory.getLogger(TextFileRegionFormat.class);
+      LoggerFactory.getLogger(TextFileRegionAliasMap.class);
   @Override
   public void setConf(Configuration conf) {
     readerOpts.setConf(conf);
@@ -137,27 +139,28 @@ public class TextFileRegionFormat
   }
 
   /**
-   * Class specifying reader options for the {@link TextFileRegionFormat}.
+   * Class specifying reader options for the {@link TextFileRegionAliasMap}.
    */
   public static class ReaderOptions
       implements TextReader.Options, Configurable {
 
     private Configuration conf;
     private String delim =
-        DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_DELIMITER_DEFAULT;
+        DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT;
     private Path file = new Path(
-        new File(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_PATH_DEFAULT)
-        .toURI().toString());
+        new File(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT).toURI()
+            .toString());
 
     @Override
     public void setConf(Configuration conf) {
       this.conf = conf;
-      String tmpfile = conf.get(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_READ_PATH,
-          DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_PATH_DEFAULT);
+      String tmpfile =
+          conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_PATH,
+              DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);
       file = new Path(tmpfile);
-      delim = conf.get(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_DELIMITER,
-          DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_DELIMITER_DEFAULT);
-      LOG.info("TextFileRegionFormat: read path " + tmpfile.toString());
+      delim = conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER,
+          DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT);
+      LOG.info("TextFileRegionAliasMap: read path " + tmpfile.toString());
     }
 
     @Override
@@ -179,7 +182,7 @@ public class TextFileRegionFormat
   }
 
   /**
-   * Class specifying writer options for the {@link TextFileRegionFormat}.
+   * Class specifying writer options for the {@link TextFileRegionAliasMap}.
    */
   public static class WriterOptions
       implements TextWriter.Options, Configurable {
@@ -187,19 +190,19 @@ public class TextFileRegionFormat
     private Configuration conf;
     private String codec = null;
     private Path file =
-        new Path(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_PATH_DEFAULT);
+        new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);;
     private String delim =
-        DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_DELIMITER_DEFAULT;
+        DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT;
 
     @Override
     public void setConf(Configuration conf) {
       this.conf = conf;
       String tmpfile = conf.get(
-          DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_WRITE_PATH, file.toString());
+          DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_PATH, file.toString());
       file = new Path(tmpfile);
-      codec = conf.get(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_CODEC);
-      delim = conf.get(DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_DELIMITER,
-          DFSConfigKeys.DFS_PROVIDED_BLOCK_MAP_DELIMITER_DEFAULT);
+      codec = conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_CODEC);
+      delim = conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER,
+          DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT);
     }
 
     @Override

@@ -24,8 +24,8 @@ import com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.server.common.BlockFormat;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeFile;
@@ -70,7 +70,7 @@ public class TreePath {
   }
 
   public INode toINode(UGIResolver ugi, BlockResolver blk,
-      BlockFormat.Writer<FileRegion> out, String blockPoolID)
+                       BlockAliasMap.Writer<FileRegion> out, String blockPoolID)
           throws IOException {
     if (stat.isFile()) {
       return toFile(ugi, blk, out, blockPoolID);
@@ -101,14 +101,14 @@ public class TreePath {
 
   void writeBlock(long blockId, long offset, long length,
       long genStamp, String blockPoolID,
-      BlockFormat.Writer<FileRegion> out) throws IOException {
+      BlockAliasMap.Writer<FileRegion> out) throws IOException {
     FileStatus s = getFileStatus();
     out.store(new FileRegion(blockId, s.getPath(), offset, length,
         blockPoolID, genStamp));
   }
 
   INode toFile(UGIResolver ugi, BlockResolver blk,
-      BlockFormat.Writer<FileRegion> out, String blockPoolID)
+               BlockAliasMap.Writer<FileRegion> out, String blockPoolID)
           throws IOException {
     final FileStatus s = getFileStatus();
     // TODO should this store resolver's user/group?

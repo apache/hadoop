@@ -15,17 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.common;
+package org.apache.hadoop.hdfs.server.common.blockaliasmap;
 
 import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.BlockAlias;
 
 /**
  * An abstract class used to read and write block maps for provided blocks.
  */
-public abstract class BlockFormat<T extends BlockAlias>  {
+public abstract class BlockAliasMap<T extends BlockAlias> {
 
   /**
    * An abstract class that is used to read {@link BlockAlias}es
@@ -39,14 +40,19 @@ public abstract class BlockFormat<T extends BlockAlias>  {
      */
     public interface Options { }
 
+    /**
+     * @param ident block to resolve
+     * @return BlockAlias correspoding to the provided block.
+     * @throws IOException
+     */
     public abstract U resolve(Block ident) throws IOException;
 
   }
 
   /**
-   * Returns the reader for the provided block map.
+   * Returns a reader to the alias map.
    * @param opts reader options
-   * @return {@link Reader} to the block map.
+   * @return {@link Reader} to the alias map.
    * @throws IOException
    */
   public abstract Reader<T> getReader(Reader.Options opts) throws IOException;
@@ -66,15 +72,15 @@ public abstract class BlockFormat<T extends BlockAlias>  {
   }
 
   /**
-   * Returns the writer for the provided block map.
+   * Returns the writer for the alias map.
    * @param opts writer options.
-   * @return {@link Writer} to the block map.
+   * @return {@link Writer} to the alias map.
    * @throws IOException
    */
   public abstract Writer<T> getWriter(Writer.Options opts) throws IOException;
 
   /**
-   * Refresh based on the underlying block map.
+   * Refresh the alias map.
    * @throws IOException
    */
   public abstract void refresh() throws IOException;

@@ -44,8 +44,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.common.BlockFormat;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
@@ -88,7 +88,7 @@ public class ImageWriter implements Closeable {
   private final long startBlock;
   private final long startInode;
   private final UGIResolver ugis;
-  private final BlockFormat.Writer<FileRegion> blocks;
+  private final BlockAliasMap.Writer<FileRegion> blocks;
   private final BlockResolver blockIds;
   private final Map<Long, DirEntry.Builder> dircache;
   private final TrackedOutputStream<DigestOutputStream> raw;
@@ -155,8 +155,8 @@ public class ImageWriter implements Closeable {
     ugis = null == opts.ugis
         ? ReflectionUtils.newInstance(opts.ugisClass, opts.getConf())
         : opts.ugis;
-    BlockFormat<FileRegion> fmt = null == opts.blocks
-        ? ReflectionUtils.newInstance(opts.blockFormatClass, opts.getConf())
+    BlockAliasMap<FileRegion> fmt = null == opts.blocks
+        ? ReflectionUtils.newInstance(opts.aliasMap, opts.getConf())
         : opts.blocks;
     blocks = fmt.getWriter(null);
     blockIds = null == opts.blockIds
@@ -509,10 +509,10 @@ public class ImageWriter implements Closeable {
     private long startInode;
     private UGIResolver ugis;
     private Class<? extends UGIResolver> ugisClass;
-    private BlockFormat<FileRegion> blocks;
+    private BlockAliasMap<FileRegion> blocks;
 
     @SuppressWarnings("rawtypes")
-    private Class<? extends BlockFormat> blockFormatClass;
+    private Class<? extends BlockAliasMap> aliasMap;
     private BlockResolver blockIds;
     private Class<? extends BlockResolver> blockIdsClass;
     private FSImageCompression compress =
@@ -524,7 +524,6 @@ public class ImageWriter implements Closeable {
     @Override
     public void setConf(Configuration conf) {
       this.conf = conf;
-      //long lastTxn = conf.getLong(LAST_TXN, 0L);
       String def = new File("hdfs/name").toURI().toString();
       outdir = new Path(conf.get(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, def));
       startBlock = conf.getLong(FixedBlockResolver.START_BLOCK, (1L << 30) + 1);
@@ -532,9 +531,9 @@ public class ImageWriter implements Closeable {
       maxdircache = conf.getInt(CACHE_ENTRY, 100);
       ugisClass = conf.getClass(UGI_CLASS,
           SingleUGIResolver.class, UGIResolver.class);
-      blockFormatClass = conf.getClass(
-          DFSConfigKeys.DFS_PROVIDER_BLK_FORMAT_CLASS,
-          NullBlockFormat.class, BlockFormat.class);
+      aliasMap = conf.getClass(
+          DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+          NullBlockAliasMap.class, BlockAliasMap.class);
       blockIdsClass = conf.getClass(BLOCK_RESOLVER_CLASS,
           FixedBlockResolver.class, BlockResolver.class);
     }
@@ -584,14 +583,14 @@ public class ImageWriter implements Closeable {
       return this;
     }
 
-    public Options blocks(BlockFormat<FileRegion> blocks) {
+    public Options blocks(BlockAliasMap<FileRegion> blocks) {
       this.blocks = blocks;
       return this;
     }
 
     @SuppressWarnings("rawtypes")
-    public Options blocks(Class<? extends BlockFormat> blocksClass) {
-      this.blockFormatClass = blocksClass;
+    public Options blocks(Class<? extends BlockAliasMap> blocksClass) {
+      this.aliasMap = blocksClass;
       return this;
     }
 
