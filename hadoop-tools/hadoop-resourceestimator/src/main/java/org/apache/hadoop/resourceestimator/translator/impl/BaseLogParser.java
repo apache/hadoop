@@ -24,11 +24,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang.CharSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
 import org.apache.hadoop.resourceestimator.common.api.ResourceSkyline;
@@ -101,7 +103,8 @@ public class BaseLogParser implements LogParser {
         new HashMap<>();
     final Map<String, JobMetaData> jobMetas =
         new HashMap<String, JobMetaData>();
-    final BufferedReader bf = new BufferedReader(new InputStreamReader(logs));
+    final BufferedReader bf = new BufferedReader(
+        new InputStreamReader(logs, StandardCharsets.UTF_8));
     String line = null;
     while ((line = bf.readLine()) != null) {
       try {
