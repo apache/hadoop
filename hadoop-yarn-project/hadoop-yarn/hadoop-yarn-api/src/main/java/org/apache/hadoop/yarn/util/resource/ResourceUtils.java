@@ -267,6 +267,7 @@ public class ResourceUtils {
     updateKnownResources();
     updateResourceTypeIndex();
     initializedResources = true;
+    numKnownResourceTypes = resourceTypes.size();
   }
 
   private static void updateKnownResources() {
