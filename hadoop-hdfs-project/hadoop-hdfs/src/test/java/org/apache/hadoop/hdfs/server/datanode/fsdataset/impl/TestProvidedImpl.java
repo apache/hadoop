@@ -52,11 +52,12 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
-import org.apache.hadoop.hdfs.server.common.FileRegionProvider;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -168,49 +169,66 @@ public class TestProvidedImpl {
   }
 
   /**
-   * A simple FileRegion provider for tests.
+   * A simple FileRegion BlockAliasMap for tests.
    */
-  public static class TestFileRegionProvider
-      extends FileRegionProvider implements Configurable {
+  public static class TestFileRegionBlockAliasMap
+      extends BlockAliasMap<FileRegion> {
 
     private Configuration conf;
     private int minId;
     private int numBlocks;
     private Iterator<FileRegion> suppliedIterator;
 
-    TestFileRegionProvider() {
+    TestFileRegionBlockAliasMap() {
       this(null, MIN_BLK_ID, NUM_PROVIDED_BLKS);
     }
 
-    TestFileRegionProvider(Iterator<FileRegion> iterator, int minId,
-        int numBlocks) {
+    TestFileRegionBlockAliasMap(Iterator<FileRegion> iterator, int minId,
+                                int numBlocks) {
       this.suppliedIterator = iterator;
       this.minId = minId;
       this.numBlocks = numBlocks;
     }
 
     @Override
-    public Iterator<FileRegion> iterator() {
-      if (suppliedIterator == null) {
-        return new TestFileRegionIterator(providedBasePath, minId, numBlocks);
-      } else {
-        return suppliedIterator;
-      }
+    public Reader<FileRegion> getReader(Reader.Options opts)
+        throws IOException {
+
+      BlockAliasMap.Reader<FileRegion> reader =
+          new BlockAliasMap.Reader<FileRegion>() {
+            @Override
+            public Iterator<FileRegion> iterator() {
+              if (suppliedIterator == null) {
+                return new TestFileRegionIterator(providedBasePath, minId,
+                    numBlocks);
+              } else {
+                return suppliedIterator;
+              }
+            }
+
+            @Override
+            public void close() throws IOException {
+
+            }
+
+            @Override
+            public FileRegion resolve(Block ident) throws IOException {
+              return null;
+            }
+          };
+      return reader;
     }
 
     @Override
-    public void setConf(Configuration conf) {
-      this.conf = conf;
+    public Writer<FileRegion> getWriter(Writer.Options opts)
+        throws IOException {
+      // not implemented
+      return null;
     }
 
     @Override
-    public Configuration getConf() {
-      return conf;
-    }
-
-    @Override
-    public void refresh() {
-      //do nothing!
+    public void refresh() throws IOException {
+      // do nothing!
     }
 
     public void setMinBlkId(int minId) {
@@ -359,8 +377,8 @@ public class TestProvidedImpl {
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
 
-    conf.setClass(DFSConfigKeys.DFS_PROVIDER_CLASS,
-        TestFileRegionProvider.class, FileRegionProvider.class);
+    this.conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+        TestFileRegionBlockAliasMap.class, BlockAliasMap.class);
     conf.setClass(DFSConfigKeys.DFS_PROVIDER_DF_CLASS,
         TestProvidedVolumeDF.class, ProvidedVolumeDF.class);
 
@@ -496,12 +514,13 @@ public class TestProvidedImpl {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
     for (int i = 0; i < providedVolumes.size(); i++) {
       ProvidedVolumeImpl vol = (ProvidedVolumeImpl) providedVolumes.get(i);
-      TestFileRegionProvider provider = (TestFileRegionProvider)
-          vol.getFileRegionProvider(BLOCK_POOL_IDS[CHOSEN_BP_ID]);
+      TestFileRegionBlockAliasMap testBlockFormat =
+          (TestFileRegionBlockAliasMap) vol
+              .getBlockFormat(BLOCK_POOL_IDS[CHOSEN_BP_ID]);
       //equivalent to two new blocks appearing
-      provider.setBlockCount(NUM_PROVIDED_BLKS + 2);
+      testBlockFormat.setBlockCount(NUM_PROVIDED_BLKS + 2);
       //equivalent to deleting the first block
-      provider.setMinBlkId(MIN_BLK_ID + 1);
+      testBlockFormat.setMinBlkId(MIN_BLK_ID + 1);
 
       DirectoryScanner scanner = new DirectoryScanner(datanode, dataset, conf);
       scanner.reconcile();
@@ -525,7 +544,7 @@ public class TestProvidedImpl {
     for (int i = 0; i < providedVolumes.size(); i++) {
       ProvidedVolumeImpl vol = (ProvidedVolumeImpl) providedVolumes.get(i);
       vol.setFileRegionProvider(BLOCK_POOL_IDS[CHOSEN_BP_ID],
-          new TestFileRegionProvider(fileRegionIterator, minBlockId,
+          new TestFileRegionBlockAliasMap(fileRegionIterator, minBlockId,
               numBlocks));
       ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
       vol.getVolumeMap(BLOCK_POOL_IDS[CHOSEN_BP_ID], volumeMap, null);

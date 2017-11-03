@@ -22,17 +22,16 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.common.BlockFormat;
-import org.apache.hadoop.hdfs.server.common.BlockFormat.Reader.Options;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 
 /**
  * Null sink for region information emitted from FSImage.
  */
-public class NullBlockFormat extends BlockFormat<FileRegion> {
+public class NullBlockAliasMap extends BlockAliasMap<FileRegion> {
 
   @Override
-  public Reader<FileRegion> getReader(Options opts) throws IOException {
+  public Reader<FileRegion> getReader(Reader.Options opts) throws IOException {
     return new Reader<FileRegion>() {
       @Override
       public Iterator<FileRegion> iterator() {
