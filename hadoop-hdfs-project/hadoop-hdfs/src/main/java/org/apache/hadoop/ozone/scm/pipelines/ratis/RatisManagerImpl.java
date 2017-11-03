@@ -39,8 +39,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos
-    .LifeCycleState.ALLOCATED;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos
     .LifeCycleState.OPEN;
 
 
@@ -121,7 +119,12 @@ public class RatisManagerImpl implements PipelineManager {
             .createPipeline(pipeline.getPipelineName(), pipeline.getMachines());
       }
     } else {
-      pipeline = findOpenPipeline();
+      Pipeline openPipeline = findOpenPipeline(replicationFactor);
+      if (openPipeline != null) {
+        // if an open pipeline is found use the same machines
+        pipeline = allocateRatisPipeline(openPipeline.getMachines(),
+            containerName, replicationFactor);
+      }
     }
     if (pipeline == null) {
       LOG.error("Get pipeline call failed. We are not able to find free nodes" +
@@ -135,7 +138,7 @@ public class RatisManagerImpl implements PipelineManager {
    *
    * @return - Pipeline or null
    */
-  Pipeline findOpenPipeline() {
+  Pipeline findOpenPipeline(OzoneProtos.ReplicationFactor factor) {
     Pipeline pipeline = null;
     final int sentinal = -1;
     if (activePipelines.size() == 0) {
@@ -149,7 +152,7 @@ public class RatisManagerImpl implements PipelineManager {
       Pipeline temp =
           activePipelines.get(nextIndex != sentinal ? nextIndex : startIndex);
       // if we find an operational pipeline just return that.
-      if (temp.getLifeCycleState() == OPEN) {
+      if ((temp.getLifeCycleState() == OPEN) && (temp.getFactor() == factor)) {
         pipeline = temp;
         break;
       }
@@ -173,7 +176,7 @@ public class RatisManagerImpl implements PipelineManager {
       String pipelineName = PREFIX +
           UUID.randomUUID().toString().substring(PREFIX.length());
       pipeline.setType(OzoneProtos.ReplicationType.RATIS);
-      pipeline.setLifeCycleState(ALLOCATED);
+      pipeline.setLifeCycleState(OPEN);
       pipeline.setFactor(factor);
       pipeline.setPipelineName(pipelineName);
       pipeline.setContainerName(containerName);
@@ -210,10 +213,10 @@ public class RatisManagerImpl implements PipelineManager {
       Preconditions.checkNotNull(datanode);
       if (!ratisMembers.contains(datanode)) {
         newNodesList.add(datanode);
-        // once a datanode has been added to a pipeline, exclude it from
-        // further allocations
-        ratisMembers.add(datanode);
         if (newNodesList.size() == count) {
+          // once a datanode has been added to a pipeline, exclude it from
+          // further allocations
+          ratisMembers.addAll(newNodesList);
           LOG.info("Allocating a new pipeline of size: {}", count);
           return newNodesList;
         }

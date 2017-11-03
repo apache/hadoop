@@ -410,8 +410,7 @@ public class ContainerStateManager {
 
       while (iter.hasNext()) {
         BlockContainerInfo info = iter.next();
-        if (info.getAllocated() + size <= this.containerSize) {
-
+        if (info.canAllocate(size, this.containerSize)) {
           queue.remove(info);
           info.addAllocated(size);
           info.setLastUsed(Time.monotonicNow());
@@ -419,10 +418,14 @@ public class ContainerStateManager {
 
           return info;
         } else {
-          // We should close this container.
-          LOG.info("Moving {} to containerCloseQueue.", info.toString());
-          containerCloseQueue.add(info);
-          //TODO: Next JIRA will handle these containers to close.
+          if (info.getState() != LifeCycleState.CLOSED) {
+            // We should close this container.
+            LOG.info("Moving {} to containerCloseQueue.", info.toString());
+            info.setState(LifeCycleState.CLOSED);
+            containerCloseQueue.add(info);
+            //TODO: Next JIRA will handle these containers to close.
+            //TODO: move container to right queue
+          }
         }
       }
 

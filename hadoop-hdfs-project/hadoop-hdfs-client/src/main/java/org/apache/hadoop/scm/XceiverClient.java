@@ -21,7 +21,7 @@ package org.apache.hadoop.scm;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -39,7 +39,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.List;
 
 /**
@@ -49,7 +48,7 @@ public class XceiverClient extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClient.class);
   private final Pipeline pipeline;
   private final Configuration config;
-  private ChannelFuture channelFuture;
+  private Channel channel;
   private Bootstrap b;
   private EventLoopGroup group;
 
@@ -70,9 +69,7 @@ public class XceiverClient extends XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
-    if (channelFuture != null
-        && channelFuture.channel() != null
-        && channelFuture.channel().isActive()) {
+    if (channel != null && channel.isActive()) {
       throw new IOException("This client is already connected to a host.");
     }
 
@@ -92,7 +89,7 @@ public class XceiverClient extends XceiverClientSpi {
           OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
     }
     LOG.debug("Connecting to server Port : " + port);
-    channelFuture = b.connect(leader.getHostName(), port).sync();
+    channel = b.connect(leader.getHostName(), port).sync().channel();
   }
 
   /**
@@ -102,17 +99,13 @@ public class XceiverClient extends XceiverClientSpi {
    */
   @VisibleForTesting
   public boolean isConnected() {
-    return channelFuture.channel().isActive();
+    return channel.isActive();
   }
 
   @Override
   public void close() {
     if (group != null) {
-      group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
-    }
-
-    if (channelFuture != null) {
-      channelFuture.channel().close();
+      group.shutdownGracefully().awaitUninterruptibly();
     }
   }
 
@@ -126,11 +119,11 @@ public class XceiverClient extends XceiverClientSpi {
       ContainerProtos.ContainerCommandRequestProto request)
       throws IOException {
     try {
-      if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
+      if ((channel == null) || (!channel.isActive())) {
         throw new IOException("This channel is not connected.");
       }
       XceiverClientHandler handler =
-          channelFuture.channel().pipeline().get(XceiverClientHandler.class);
+          channel.pipeline().get(XceiverClientHandler.class);
 
       return handler.sendCommand(request);
     } catch (ExecutionException | InterruptedException e) {
@@ -149,11 +142,11 @@ public class XceiverClient extends XceiverClientSpi {
   public CompletableFuture<ContainerProtos.ContainerCommandResponseProto>
       sendCommandAsync(ContainerProtos.ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
-    if ((channelFuture == null) || (!channelFuture.channel().isActive())) {
+    if ((channel == null) || (!channel.isActive())) {
       throw new IOException("This channel is not connected.");
     }
     XceiverClientHandler handler =
-        channelFuture.channel().pipeline().get(XceiverClientHandler.class);
+        channel.pipeline().get(XceiverClientHandler.class);
     return handler.sendCommandAsync(request);
   }
 

@@ -28,6 +28,7 @@ import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.ratis.RatisHelper;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftClientReply;
+import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
@@ -37,13 +38,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * An abstract implementation of {@link XceiverClientSpi} using Ratis.
@@ -77,11 +76,10 @@ public final class XceiverClientRatis extends XceiverClientSpi {
    */
   public void createPipeline(String clusterId, List<DatanodeID> datanodes)
       throws IOException {
-    final List<RaftPeer> newPeers = datanodes.stream()
-        .map(RatisHelper::toRaftPeer)
-        .collect(Collectors.toList());
-    LOG.debug("initializing pipeline:{} with nodes:{}", clusterId, newPeers);
-    reinitialize(datanodes, newPeers);
+    RaftGroup group = RatisHelper.newRaftGroup(datanodes);
+    LOG.debug("initializing pipeline:{} with nodes:{}", clusterId,
+        group.getPeers());
+    reinitialize(datanodes, group);
   }
 
   /**
@@ -94,7 +92,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   }
 
   private void reinitialize(
-      List<DatanodeID> datanodes, Collection<RaftPeer> newPeers)
+      List<DatanodeID> datanodes, RaftGroup group)
       throws IOException {
     if (datanodes.isEmpty()) {
       return;
@@ -103,7 +101,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     IOException exception = null;
     for (DatanodeID d : datanodes) {
       try {
-        reinitialize(d, newPeers);
+        reinitialize(d, group);
       } catch (IOException ioe) {
         if (exception == null) {
           exception = new IOException(
@@ -121,14 +119,14 @@ public final class XceiverClientRatis extends XceiverClientSpi {
   /**
    * Adds a new peers to the Ratis Ring.
    * @param datanode - new datanode
-   * @param newPeers - Raft machines
+   * @param group - Raft group
    * @throws IOException - on Failure.
    */
-  private void reinitialize(DatanodeID datanode, Collection<RaftPeer> newPeers)
+  private void reinitialize(DatanodeID datanode, RaftGroup group)
       throws IOException {
     final RaftPeer p = RatisHelper.toRaftPeer(datanode);
     try (RaftClient client = RatisHelper.newRaftClient(rpcType, p)) {
-      client.reinitialize(RatisHelper.newRaftGroup(newPeers), p.getId());
+      client.reinitialize(group, p.getId());
     } catch (IOException ioe) {
       LOG.error("Failed to reinitialize RaftPeer:{} datanode: {}  ",
           p, datanode, ioe);

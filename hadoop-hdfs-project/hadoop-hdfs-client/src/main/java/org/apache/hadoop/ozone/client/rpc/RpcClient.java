@@ -461,6 +461,8 @@ public class RpcClient implements ClientProtocol {
             .setKsmClient(keySpaceManagerClient)
             .setChunkSize(chunkSize)
             .setRequestID(requestId)
+            .setType(OzoneProtos.ReplicationType.valueOf(type.toString()))
+            .setFactor(OzoneProtos.ReplicationFactor.valueOf(factor.getValue()))
             .build();
     return new OzoneOutputStream(groupOutputStream);
   }

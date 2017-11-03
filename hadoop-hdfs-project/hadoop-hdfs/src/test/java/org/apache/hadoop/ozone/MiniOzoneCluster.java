@@ -26,13 +26,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.container.common
     .statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
+import org.apache.hadoop.ozone.ksm.protocolPB
+    .KeySpaceManagerProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB
@@ -250,6 +255,30 @@ public final class MiniOzoneCluster extends MiniDFSCluster
             address, UserGroupInformation.getCurrentUser(), conf,
             NetUtils.getDefaultSocketFactory(conf),
             Client.getRpcTimeout(conf)));
+  }
+
+  /**
+   * Creates an RPC proxy connected to this cluster's KeySpaceManager
+   * for accessing Key Space Manager information. Callers take ownership of
+   * the proxy and must close it when done.
+   *
+   * @return RPC proxy for accessing Key Space Manager information
+   * @throws IOException if there is an I/O error
+   */
+  public KeySpaceManagerProtocolClientSideTranslatorPB
+      createKeySpaceManagerClient() throws IOException {
+    long ksmVersion = RPC.getProtocolVersion(KeySpaceManagerProtocolPB.class);
+    InetSocketAddress ksmAddress = OzoneClientUtils
+        .getKsmAddressForClients(conf);
+    LOG.info("Creating KeySpaceManager RPC client with address {}",
+        ksmAddress);
+    RPC.setProtocolEngine(conf, KeySpaceManagerProtocolPB.class,
+        ProtobufRpcEngine.class);
+    return new KeySpaceManagerProtocolClientSideTranslatorPB(
+            RPC.getProxy(KeySpaceManagerProtocolPB.class, ksmVersion,
+                ksmAddress, UserGroupInformation.getCurrentUser(), conf,
+                NetUtils.getDefaultSocketFactory(conf),
+                Client.getRpcTimeout(conf)));
   }
 
   /**

@@ -28,10 +28,15 @@ import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.protocol.RaftPeerId;
 import org.apache.ratis.rpc.RpcType;
+import org.apache.ratis.shaded.com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.List;
+import java.util.Collections;
+import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
@@ -68,13 +73,21 @@ public interface RatisHelper {
   /* TODO: use a dummy id for all groups for the moment.
    *       It should be changed to a unique id for each group.
    */
-  RaftGroupId DUMMY_GROUP_ID = RaftGroupId.randomId();
+  RaftGroupId DUMMY_GROUP_ID =
+      RaftGroupId.valueOf(ByteString.copyFromUtf8("AOZONERATISGROUP"));
 
   RaftGroup EMPTY_GROUP = new RaftGroup(DUMMY_GROUP_ID,
       Collections.emptyList());
 
   static RaftGroup emptyRaftGroup() {
     return EMPTY_GROUP;
+  }
+
+  static RaftGroup newRaftGroup(List<DatanodeID> datanodes) {
+    final List<RaftPeer> newPeers = datanodes.stream()
+        .map(RatisHelper::toRaftPeer)
+        .collect(Collectors.toList());
+    return RatisHelper.newRaftGroup(newPeers);
   }
 
   static RaftGroup newRaftGroup(Collection<RaftPeer> peers) {

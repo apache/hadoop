@@ -199,6 +199,7 @@ public class XceiverClientManager implements Closeable {
    */
   public OzoneProtos.ReplicationType getType() {
     // TODO : Fix me and make Ratis default before release.
+    // TODO: Remove this as replication factor and type are pipeline properties
     if(isUseRatis()) {
       return OzoneProtos.ReplicationType.RATIS;
     }
