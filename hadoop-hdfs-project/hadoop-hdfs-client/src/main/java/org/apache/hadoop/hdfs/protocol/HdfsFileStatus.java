@@ -26,15 +26,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 
-/** Interface that represents the over the wire information for a file.
+/**
+ * HDFS metadata for an entity in the filesystem.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HdfsFileStatus extends FileStatus {
+public final class HdfsFileStatus extends LocatedFileStatus {
 
   private static final long serialVersionUID = 0x126eb82a;
 
@@ -49,11 +51,12 @@ public class HdfsFileStatus extends FileStatus {
   private final int childrenNum;
   private final byte storagePolicy;
 
+  // BlockLocations[] is the user-facing type
+  private transient LocatedBlocks hdfsloc;
+
   public static final byte[] EMPTY_NAME = new byte[0];
 
-  /**
-   * Set of features potentially active on an instance.
-   */
+  /** Set of features potentially active on an instance. */
   public enum Flags {
     HAS_ACL,
     HAS_CRYPT,
@@ -81,18 +84,19 @@ public class HdfsFileStatus extends FileStatus {
    * @param storagePolicy ID which specifies storage policy
    * @param ecPolicy the erasure coding policy
    */
-  protected HdfsFileStatus(long length, boolean isdir, int replication,
+  private HdfsFileStatus(long length, boolean isdir, int replication,
                          long blocksize, long mtime, long atime,
                          FsPermission permission, EnumSet<Flags> flags,
                          String owner, String group,
                          byte[] symlink, byte[] path, long fileId,
                          int childrenNum, FileEncryptionInfo feInfo,
-                         byte storagePolicy, ErasureCodingPolicy ecPolicy) {
+                         byte storagePolicy, ErasureCodingPolicy ecPolicy,
+                         LocatedBlocks hdfsloc) {
     super(length, isdir, replication, blocksize, mtime,
         atime, convert(isdir, symlink != null, permission, flags),
         owner, group, null, null,
         flags.contains(Flags.HAS_ACL), flags.contains(Flags.HAS_CRYPT),
-        flags.contains(Flags.HAS_EC));
+        flags.contains(Flags.HAS_EC), null);
     this.flags = flags;
     this.uSymlink = symlink;
     this.uPath = path;
@@ -101,6 +105,7 @@ public class HdfsFileStatus extends FileStatus {
     this.feInfo = feInfo;
     this.storagePolicy = storagePolicy;
     this.ecPolicy = ecPolicy;
+    this.hdfsloc = hdfsloc;
   }
 
   /**
@@ -152,7 +157,7 @@ public class HdfsFileStatus extends FileStatus {
    * Check if the local name is empty.
    * @return true if the name is empty
    */
-  public final boolean isEmptyLocalName() {
+  public boolean isEmptyLocalName() {
     return uPath.length == 0;
   }
 
@@ -160,7 +165,7 @@ public class HdfsFileStatus extends FileStatus {
    * Get the string representation of the local name.
    * @return the local name in string
    */
-  public final String getLocalName() {
+  public String getLocalName() {
     return DFSUtilClient.bytes2String(uPath);
   }
 
@@ -168,7 +173,7 @@ public class HdfsFileStatus extends FileStatus {
    * Get the Java UTF8 representation of the local name.
    * @return the local name in java UTF8
    */
-  public final byte[] getLocalNameInBytes() {
+  public byte[] getLocalNameInBytes() {
     return uPath;
   }
 
@@ -177,7 +182,7 @@ public class HdfsFileStatus extends FileStatus {
    * @param parent the parent path
    * @return the full path in string
    */
-  public final String getFullName(final String parent) {
+  public String getFullName(String parent) {
     if (isEmptyLocalName()) {
       return parent;
     }
@@ -195,7 +200,7 @@ public class HdfsFileStatus extends FileStatus {
    * @param parent the parent path
    * @return the full path
    */
-  public final Path getFullPath(final Path parent) {
+  public Path getFullPath(Path parent) {
     if (isEmptyLocalName()) {
       return parent;
     }
@@ -219,15 +224,15 @@ public class HdfsFileStatus extends FileStatus {
   /**
    * Opaque referant for the symlink, to be resolved at the client.
    */
-  public final byte[] getSymlinkInBytes() {
+  public byte[] getSymlinkInBytes() {
     return uSymlink;
   }
 
-  public final long getFileId() {
+  public long getFileId() {
     return fileId;
   }
 
-  public final FileEncryptionInfo getFileEncryptionInfo() {
+  public FileEncryptionInfo getFileEncryptionInfo() {
     return feInfo;
   }
 
@@ -239,12 +244,12 @@ public class HdfsFileStatus extends FileStatus {
     return ecPolicy;
   }
 
-  public final int getChildrenNum() {
+  public int getChildrenNum() {
     return childrenNum;
   }
 
   /** @return the storage policy id */
-  public final byte getStoragePolicy() {
+  public byte getStoragePolicy() {
     return storagePolicy;
   }
 
@@ -255,6 +260,10 @@ public class HdfsFileStatus extends FileStatus {
    */
   public boolean isSnapshotEnabled() {
     return flags.contains(Flags.SNAPSHOT_ENABLED);
+  }
+
+  public LocatedBlocks getLocatedBlocks() {
+    return hdfsloc;
   }
 
   @Override
@@ -277,11 +286,30 @@ public class HdfsFileStatus extends FileStatus {
    * @param parent Parent path of this element.
    * @return Reference to this instance.
    */
-  public final FileStatus makeQualified(URI defaultUri, Path parent) {
+  public FileStatus makeQualified(URI defaultUri, Path parent) {
     // fully-qualify path
     setPath(getFullPath(parent).makeQualified(defaultUri, null));
     return this; // API compatibility
+  }
 
+  /**
+   * This function is used to transform the underlying HDFS LocatedBlocks to
+   * BlockLocations. This method must be invoked before
+   * {@link #getBlockLocations()}.
+   *
+   * The returned BlockLocation will have different formats for replicated
+   * and erasure coded file.
+   * Please refer to
+   * {@link org.apache.hadoop.fs.FileSystem#getFileBlockLocations
+   * (FileStatus, long, long)}
+   * for examples.
+   */
+  public LocatedFileStatus makeQualifiedLocated(URI defaultUri,
+                                                      Path path) {
+    makeQualified(defaultUri, path);
+    setBlockLocations(
+        DFSUtilClient.locatedBlocks2Locations(getLocatedBlocks()));
+    return this;
   }
 
   /**
@@ -311,6 +339,7 @@ public class HdfsFileStatus extends FileStatus {
     private byte storagePolicy             =
         HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
     private ErasureCodingPolicy ecPolicy   = null;
+    private LocatedBlocks locations        = null;
 
     /**
      * Set the length of the entity (default = 0).
@@ -490,12 +519,23 @@ public class HdfsFileStatus extends FileStatus {
     }
 
     /**
+     * Set the block locations for this entity (default = null).
+     * @param locations HDFS locations
+     *                  (see {@link #makeQualifiedLocated(URI, Path)})
+     * @return This Builder instance
+     */
+    public Builder locations(LocatedBlocks locations) {
+      this.locations = locations;
+      return this;
+    }
+
+    /**
      * @return An {@link HdfsFileStatus} instance from these parameters.
      */
     public HdfsFileStatus build() {
       return new HdfsFileStatus(length, isdir, replication, blocksize,
           mtime, atime, permission, flags, owner, group, symlink, path, fileId,
-          childrenNum, feInfo, storagePolicy, ecPolicy);
+          childrenNum, feInfo, storagePolicy, ecPolicy, locations);
     }
   }
 
