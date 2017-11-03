@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
@@ -1682,11 +1683,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetErasureCodingPoliciesResponseProto getErasureCodingPolicies(RpcController controller,
       GetErasureCodingPoliciesRequestProto request) throws ServiceException {
     try {
-      ErasureCodingPolicy[] ecPolicies = server.getErasureCodingPolicies();
+      ErasureCodingPolicyInfo[] ecpInfos = server.getErasureCodingPolicies();
       GetErasureCodingPoliciesResponseProto.Builder resBuilder = GetErasureCodingPoliciesResponseProto
           .newBuilder();
-      for (ErasureCodingPolicy ecPolicy : ecPolicies) {
-        resBuilder.addEcPolicies(PBHelperClient.convertErasureCodingPolicy(ecPolicy));
+      for (ErasureCodingPolicyInfo info : ecpInfos) {
+        resBuilder.addEcPolicies(
+            PBHelperClient.convertErasureCodingPolicy(info));
       }
       return resBuilder.build();
     } catch (IOException e) {

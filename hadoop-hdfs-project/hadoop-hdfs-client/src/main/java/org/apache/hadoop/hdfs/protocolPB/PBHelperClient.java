@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.inotify.Event;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
@@ -79,6 +80,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
@@ -2936,6 +2938,9 @@ public class PBHelperClient {
     return HdfsProtos.ErasureCodingPolicyState.valueOf(state.getValue());
   }
 
+  /**
+   * Convert the protobuf to a {@link ErasureCodingPolicy}.
+   */
   public static ErasureCodingPolicy convertErasureCodingPolicy(
       ErasureCodingPolicyProto proto) {
     final byte id = (byte) (proto.getId() & 0xFF);
@@ -2949,28 +2954,62 @@ public class PBHelperClient {
           "Missing schema field in ErasureCodingPolicy proto");
       Preconditions.checkArgument(proto.hasCellSize(),
           "Missing cellsize field in ErasureCodingPolicy proto");
-      Preconditions.checkArgument(proto.hasState(),
-          "Missing state field in ErasureCodingPolicy proto");
 
       return new ErasureCodingPolicy(proto.getName(),
           convertECSchema(proto.getSchema()),
-          proto.getCellSize(), id, convertECState(proto.getState()));
+          proto.getCellSize(), id);
     }
     return policy;
   }
 
-  public static ErasureCodingPolicyProto convertErasureCodingPolicy(
+  /**
+   * Convert the protobuf to a {@link ErasureCodingPolicyInfo}. This should only
+   * be needed when the caller is interested in the state of the policy.
+   */
+  public static ErasureCodingPolicyInfo convertErasureCodingPolicyInfo(
+      ErasureCodingPolicyProto proto) {
+    ErasureCodingPolicy policy = convertErasureCodingPolicy(proto);
+    ErasureCodingPolicyInfo info = new ErasureCodingPolicyInfo(policy);
+    Preconditions.checkArgument(proto.hasState(),
+        "Missing state field in ErasureCodingPolicy proto");
+    info.setState(convertECState(proto.getState()));
+    return info;
+  }
+
+  private static ErasureCodingPolicyProto.Builder createECPolicyProtoBuilder(
       ErasureCodingPolicy policy) {
-    ErasureCodingPolicyProto.Builder builder = ErasureCodingPolicyProto
-        .newBuilder()
-        .setId(policy.getId());
+    final ErasureCodingPolicyProto.Builder builder =
+        ErasureCodingPolicyProto.newBuilder().setId(policy.getId());
     // If it's not a built-in policy, need to set the optional fields.
     if (SystemErasureCodingPolicies.getByID(policy.getId()) == null) {
       builder.setName(policy.getName())
           .setSchema(convertECSchema(policy.getSchema()))
-          .setCellSize(policy.getCellSize())
-          .setState(convertECState(policy.getState()));
+          .setCellSize(policy.getCellSize());
     }
+    return builder;
+  }
+
+  /**
+   * Convert a {@link ErasureCodingPolicy} to protobuf.
+   * This means no state of the policy will be set on the protobuf.
+   */
+  public static ErasureCodingPolicyProto convertErasureCodingPolicy(
+      ErasureCodingPolicy policy) {
+    return createECPolicyProtoBuilder(policy).build();
+  }
+
+  /**
+   * Convert a {@link ErasureCodingPolicyInfo} to protobuf.
+   * The protobuf will have the policy, and state. State is relevant when:
+   * 1. Persisting a policy to fsimage
+   * 2. Returning the policy to the RPC call
+   * {@link DistributedFileSystem#getAllErasureCodingPolicies()}
+   */
+  public static ErasureCodingPolicyProto convertErasureCodingPolicy(
+      ErasureCodingPolicyInfo info) {
+    final ErasureCodingPolicyProto.Builder builder =
+        createECPolicyProtoBuilder(info.getPolicy());
+    builder.setState(convertECState(info.getState()));
     return builder.build();
   }
 

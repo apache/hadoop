@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
@@ -2622,7 +2623,7 @@ public class DistributedFileSystem extends FileSystem {
    * @return all erasure coding policies supported by this file system.
    * @throws IOException
    */
-  public Collection<ErasureCodingPolicy> getAllErasureCodingPolicies()
+  public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies()
       throws IOException {
     return Arrays.asList(dfs.getErasureCodingPolicies());
   }

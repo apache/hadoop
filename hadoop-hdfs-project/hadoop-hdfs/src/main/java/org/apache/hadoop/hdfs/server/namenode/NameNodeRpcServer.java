@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
@@ -2299,7 +2300,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+  public ErasureCodingPolicyInfo[] getErasureCodingPolicies()
+      throws IOException {
     checkNNStartup();
     return namesystem.getErasureCodingPolicies();
   }

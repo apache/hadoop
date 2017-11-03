@@ -1619,7 +1619,7 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException;
+  ErasureCodingPolicyInfo[] getErasureCodingPolicies() throws IOException;
 
   /**
    * Get the erasure coding codecs loaded in Namenode.

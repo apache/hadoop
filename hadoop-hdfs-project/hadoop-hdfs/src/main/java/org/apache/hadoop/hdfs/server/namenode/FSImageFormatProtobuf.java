@@ -41,7 +41,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.slf4j.Logger;
@@ -380,10 +380,10 @@ public final class FSImageFormatProtobuf {
     private void loadErasureCodingSection(InputStream in)
         throws IOException {
       ErasureCodingSection s = ErasureCodingSection.parseDelimitedFrom(in);
-      List<ErasureCodingPolicy> ecPolicies = Lists
+      List<ErasureCodingPolicyInfo> ecPolicies = Lists
           .newArrayListWithCapacity(s.getPoliciesCount());
       for (int i = 0; i < s.getPoliciesCount(); ++i) {
-        ecPolicies.add(PBHelperClient.convertErasureCodingPolicy(
+        ecPolicies.add(PBHelperClient.convertErasureCodingPolicyInfo(
             s.getPolicies(i)));
       }
       fsn.getErasureCodingPolicyManager().loadPolicies(ecPolicies);
@@ -586,11 +586,11 @@ public final class FSImageFormatProtobuf {
     private void saveErasureCodingSection(
         FileSummary.Builder summary) throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
-      ErasureCodingPolicy[] ecPolicies =
+      ErasureCodingPolicyInfo[] ecPolicies =
           fsn.getErasureCodingPolicyManager().getPolicies();
       ArrayList<ErasureCodingPolicyProto> ecPolicyProtoes =
           new ArrayList<ErasureCodingPolicyProto>();
-      for (ErasureCodingPolicy p : ecPolicies) {
+      for (ErasureCodingPolicyInfo p : ecPolicies) {
         ecPolicyProtoes.add(PBHelperClient.convertErasureCodingPolicy(p));
       }
 

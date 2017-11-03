@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.util.ECPolicyLoader;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.tools.TableListing;
@@ -111,16 +112,16 @@ public class ECAdmin extends Configured implements Tool {
 
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
-        Collection<ErasureCodingPolicy> policies =
+        final Collection<ErasureCodingPolicyInfo> policies =
             dfs.getAllErasureCodingPolicies();
         if (policies.isEmpty()) {
           System.out.println("There is no erasure coding policies in the " +
               "cluster.");
         } else {
           System.out.println("Erasure Coding Policies:");
-          for (ErasureCodingPolicy policy : policies) {
+          for (ErasureCodingPolicyInfo policy : policies) {
             if (policy != null) {
-              System.out.println(policy.toString());
+              System.out.println(policy);
             }
           }
         }
