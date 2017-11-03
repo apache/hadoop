@@ -102,7 +102,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
     // rejected the call entirely
-    RetryPolicy throttlePolicy = retryUpToMaximumCountWithProportionalSleep(
+    RetryPolicy throttlePolicy = exponentialBackoffRetry(
         conf.getInt(RETRY_THROTTLE_LIMIT, RETRY_THROTTLE_LIMIT_DEFAULT),
         conf.getTimeDuration(RETRY_THROTTLE_INTERVAL,
             RETRY_THROTTLE_INTERVAL_DEFAULT,
