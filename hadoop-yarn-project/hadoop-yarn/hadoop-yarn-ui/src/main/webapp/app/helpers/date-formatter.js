@@ -17,32 +17,13 @@
  */
 
 import Ember from 'ember';
-import AbstractRoute from './abstract';
 
-export default AbstractRoute.extend({
-  model() {
-    return this.store.findAll('ClusterInfo', {reload: true});
-  },
+import Converter from 'yarn-ui/utils/converter';
 
-  actions: {
-    /**
-     * Base error handler for the application.
-     * If specific routes do not handle the error, it will bubble up to
-     * this handler. Here we redirect to either 404 page or a generic
-     * error handler page.
-     */
-    error: function (error) {
-      Ember.Logger.log(error.stack);
+export function dateFormatter(params) {
+  const [timestamp, dateOnly] = params;
 
-      if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
-        this.intermediateTransitionTo('/notfound');
-      } else {
-        this.intermediateTransitionTo('/error');
-      }
-    }
-  },
+  return dateOnly ? Converter.timeStampToDateOnly(timestamp) : Converter.timeStampToDate(timestamp);
+}
 
-  unloadAll: function() {
-    this.store.unloadAll('ClusterInfo');
-  },
-});
+export default Ember.Helper.helper(dateFormatter);

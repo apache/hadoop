@@ -17,32 +17,19 @@
  */
 
 import Ember from 'ember';
-import AbstractRoute from './abstract';
 
-export default AbstractRoute.extend({
-  model() {
-    return this.store.findAll('ClusterInfo', {reload: true});
-  },
+export function initialize(/* application */) {
+  Ember.$(document).tooltip({
+    tooltipClass: 'generic-tooltip',
+    selector: ".yarn-tooltip"
+  });
 
-  actions: {
-    /**
-     * Base error handler for the application.
-     * If specific routes do not handle the error, it will bubble up to
-     * this handler. Here we redirect to either 404 page or a generic
-     * error handler page.
-     */
-    error: function (error) {
-      Ember.Logger.log(error.stack);
+  Ember.$.ajaxSetup({
+    cache: false
+  });
+}
 
-      if (error && error.errors[0] && parseInt(error.errors[0].status) === 404) {
-        this.intermediateTransitionTo('/notfound');
-      } else {
-        this.intermediateTransitionTo('/error');
-      }
-    }
-  },
-
-  unloadAll: function() {
-    this.store.unloadAll('ClusterInfo');
-  },
-});
+export default {
+  name: 'jquery',
+  initialize
+};
