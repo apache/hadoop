@@ -684,10 +684,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     CompletionService<AppsInfo> compSvc =
         new ExecutorCompletionService<>(this.threadpool);
 
+    // HttpServletRequest does not work with ExecutorCompletionService.
+    // Create a duplicate hsr.
+    final HttpServletRequest hsrCopy = clone(hsr);
     for (final SubClusterInfo info : subClustersActive.values()) {
-      // HttpServletRequest does not work with ExecutorCompletionService.
-      // Create a duplicate hsr.
-      final HttpServletRequest hsrCopy = clone(hsr);
       compSvc.submit(new Callable<AppsInfo>() {
         @Override
         public AppsInfo call() {
@@ -746,25 +746,33 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (hsr == null) {
       return null;
     }
+    @SuppressWarnings("unchecked")
+    final Map<String, String[]> parameterMap =
+        (Map<String, String[]>) hsr.getParameterMap();
+    final String pathInfo = hsr.getPathInfo();
+    final String user = hsr.getRemoteUser();
+    final Principal principal = hsr.getUserPrincipal();
+    final String mediaType =
+        RouterWebServiceUtil.getMediaTypeFromHttpServletRequest(
+            hsr, AppsInfo.class);
     return new HttpServletRequestWrapper(hsr) {
         @SuppressWarnings("unchecked")
         public Map<String, String[]> getParameterMap() {
-          return (Map<String, String[]>) hsr.getParameterMap();
+          return parameterMap;
         }
         public String getPathInfo() {
-          return hsr.getPathInfo();
+          return pathInfo;
         }
         public String getRemoteUser() {
-          return hsr.getRemoteUser();
+          return user;
         }
         public Principal getUserPrincipal() {
-          return hsr.getUserPrincipal();
+          return principal;
         }
         public String getHeader(String value) {
           // we override only Accept
           if (value.equals(HttpHeaders.ACCEPT)) {
-            return RouterWebServiceUtil.getMediaTypeFromHttpServletRequest(
-                hsr, AppsInfo.class);
+            return mediaType;
           }
           return null;
         }
