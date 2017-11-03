@@ -775,10 +775,11 @@ public class BlockManager implements BlockStatsMXBean {
           String storageId = storage.getStorageID();
           DatanodeStorageInfo storageInfo = node.getStorageInfo(storageId);
           State state = (storageInfo == null) ? null : storageInfo.getState();
-          out.println("Block=" + block.getBlockId() + "\tNode=" + node.getName()
-              + "\tStorageID=" + storageId + "\tStorageState=" + state
-              + "\tTotalReplicas=" +
-              blocksMap.numNodes(block)
+          out.println("Block=" + block.toString()
+              + "\tSize=" + block.getNumBytes()
+              + "\tNode=" + node.getName() + "\tStorageID=" + storageId
+              + "\tStorageState=" + state
+              + "\tTotalReplicas=" + blocksMap.numNodes(block)
               + "\tReason=" + corruptReplicas.getCorruptReason(block, node));
           numNodesToFind--;
           if (numNodesToFind == 0) {
