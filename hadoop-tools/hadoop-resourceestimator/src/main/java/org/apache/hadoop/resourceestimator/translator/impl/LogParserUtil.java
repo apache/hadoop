@@ -91,7 +91,14 @@ public class LogParserUtil {
       throw new ResourceEstimatorException("The log parser is not initialized,"
           + " please try again after initializing.");
     }
-    InputStream inputStream = new FileInputStream(logFile);
-    logParser.parseStream(inputStream);
+    InputStream inputStream = null;
+    try {
+      inputStream = new FileInputStream(logFile);
+      logParser.parseStream(inputStream);
+    } finally {
+      if (inputStream != null) {
+        inputStream.close();
+      }
+    }
   }
 }
