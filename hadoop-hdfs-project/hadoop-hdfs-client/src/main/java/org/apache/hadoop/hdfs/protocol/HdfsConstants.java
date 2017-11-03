@@ -128,6 +128,33 @@ public final class HdfsConstants {
     SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET, SAFEMODE_FORCE_EXIT
   }
 
+  /**
+   * Storage policy satisfy path status.
+   */
+  public enum StoragePolicySatisfyPathStatus {
+    /**
+     * Scheduled but not yet processed. This will come only in case of
+     * directory. Directory will be added first in "pendingWorkForDirectory"
+     * queue and then later it is processed recursively.
+     */
+    PENDING,
+
+    /**
+     * Satisfying the storage policy for path.
+     */
+    IN_PROGRESS,
+
+    /**
+     * Storage policy satisfied for the path.
+     */
+    SUCCESS,
+
+    /**
+     * Status not available.
+     */
+    NOT_AVAILABLE
+  }
+
   public enum RollingUpgradeAction {
     QUERY, PREPARE, FINALIZE;
 

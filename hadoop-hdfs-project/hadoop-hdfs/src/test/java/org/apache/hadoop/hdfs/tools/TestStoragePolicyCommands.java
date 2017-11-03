@@ -204,4 +204,22 @@ public class TestStoragePolicyCommands {
     DFSTestUtil.toolRun(admin, "-isSatisfierRunning status", 1,
         "Can't understand arguments: ");
   }
+
+  @Test(timeout = 90000)
+  public void testSatisfyStoragePolicyCommandWithWaitOption()
+      throws Exception {
+    final String file = "/testSatisfyStoragePolicyCommandWithWaitOption";
+    DFSTestUtil.createFile(fs, new Path(file), SIZE, REPL, 0);
+
+    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
+
+    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path " + file
+        + " -policy COLD", 0, "Set storage policy COLD on " + file.toString());
+
+    DFSTestUtil.toolRun(admin, "-satisfyStoragePolicy -w -path " + file, 0,
+        "Waiting for satisfy the policy");
+
+    DFSTestUtil
+        .waitExpectedStorageType(file, StorageType.ARCHIVE, 1, 30000, fs);
+  }
 }

@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -1458,6 +1459,72 @@ public class TestStoragePolicySatisfier {
         DFSTestUtil.waitExpectedStorageType(filePath.toString(),
             StorageType.SSD, 2, 30000, hdfsCluster.getFileSystem());
       }
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testStoragePolicySatisfyPathStatus() throws Exception {
+    try {
+      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+          true);
+      config.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+          "3000");
+      config.setBoolean(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_SHARE_EQUAL_REPLICA_MAX_STREAMS_KEY,
+          true);
+
+      StorageType[][] storagetypes = new StorageType[][] {
+          {StorageType.ARCHIVE, StorageType.DISK},
+          {StorageType.ARCHIVE, StorageType.DISK}};
+      hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(2)
+          .storageTypes(storagetypes).build();
+      hdfsCluster.waitActive();
+      BlockStorageMovementNeeded.setStatusClearanceElapsedTimeMs(20000);
+      dfs = hdfsCluster.getFileSystem();
+      Path filePath = new Path("/file");
+      DFSTestUtil.createFile(dfs, filePath, 1024, (short) 2,
+            0);
+      dfs.setStoragePolicy(filePath, "COLD");
+      dfs.satisfyStoragePolicy(filePath);
+      StoragePolicySatisfyPathStatus status = dfs.getClient()
+          .checkStoragePolicySatisfyPathStatus(filePath.toString());
+      Assert.assertTrue("Status should be IN_PROGRESS",
+          StoragePolicySatisfyPathStatus.IN_PROGRESS.equals(status));
+      DFSTestUtil.waitExpectedStorageType(filePath.toString(),
+          StorageType.ARCHIVE, 2, 30000, dfs);
+
+      // wait till status is SUCCESS
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            StoragePolicySatisfyPathStatus status = dfs.getClient()
+                .checkStoragePolicySatisfyPathStatus(filePath.toString());
+            return StoragePolicySatisfyPathStatus.SUCCESS.equals(status);
+          } catch (IOException e) {
+            Assert.fail("Fail to get path status for sps");
+          }
+          return false;
+        }
+      }, 100, 60000);
+
+      // wait till status is NOT_AVAILABLE
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            StoragePolicySatisfyPathStatus status = dfs.getClient()
+                .checkStoragePolicySatisfyPathStatus(filePath.toString());
+            return StoragePolicySatisfyPathStatus.NOT_AVAILABLE.equals(status);
+          } catch (IOException e) {
+            Assert.fail("Fail to get path status for sps");
+          }
+          return false;
+        }
+      }, 100, 60000);
     } finally {
       shutdownCluster();
     }

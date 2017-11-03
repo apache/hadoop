@@ -217,13 +217,14 @@ Schedule blocks to move based on file's/directory's current storage policy.
 
 * Command:
 
-        hdfs storagepolicies -satisfyStoragePolicy -path <path>
+        hdfs storagepolicies -satisfyStoragePolicy [-w] -path <path>
 
 * Arguments:
 
 | | |
 |:---- |:---- |
 | `-path <path>` | The path referring to either a directory or a file. |
+| `-w` | It requests that the command wait till all the files satisfy the policy in given path. This will print the current status of the path in each 10 sec and status are:<br/>PENDING - Path is in queue and not processed for satisfying the policy.<br/>IN_PROGRESS - Satisfying the storage policy for path.<br/>SUCCESS - Storage policy satisfied for the path.<br/>NOT_AVAILABLE - Status not available. |
 
 ### SPS Running Status
 

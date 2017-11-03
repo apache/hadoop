@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
@@ -1764,4 +1765,24 @@ public interface ClientProtocol {
    */
   @Idempotent
   boolean isStoragePolicySatisfierRunning() throws IOException;
+
+  /**
+   * Check the storage policy satisfy status of the path for which
+   * {@link ClientProtocol#satisfyStoragePolicy(String)} is called.
+   *
+   * @return Storage policy satisfy status.
+   *         <ul>
+   *         <li>PENDING if path is in queue and not processed for satisfying
+   *         the policy.</li>
+   *         <li>IN_PROGRESS if satisfying the storage policy for path.</li>
+   *         <li>SUCCESS if storage policy satisfied for the path.</li>
+   *         <li>NOT_AVAILABLE if
+   *         {@link ClientProtocol#satisfyStoragePolicy(String)} not called for
+   *         path or SPS work is already finished.</li>
+   *         </ul>
+   * @throws IOException
+   */
+  @Idempotent
+  StoragePolicySatisfyPathStatus checkStoragePolicySatisfyPathStatus(
+      String path) throws IOException;
 }

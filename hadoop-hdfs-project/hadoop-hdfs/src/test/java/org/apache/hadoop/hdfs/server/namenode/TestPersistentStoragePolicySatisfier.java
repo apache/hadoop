@@ -479,9 +479,9 @@ public class TestPersistentStoragePolicySatisfier {
       clusterSetUp();
       fs.setStoragePolicy(parentDir, "COLD");
       fs.satisfyStoragePolicy(childDir);
-      fs.satisfyStoragePolicy(parentDir);
       DFSTestUtil.waitExpectedStorageType(childFileName, StorageType.ARCHIVE,
           3, 30000, cluster.getFileSystem());
+      fs.satisfyStoragePolicy(parentDir);
       DFSTestUtil.waitExpectedStorageType(parentFileName, StorageType.ARCHIVE,
           3, 30000, cluster.getFileSystem());
     } finally {

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
@@ -258,7 +259,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " -path <path>]\n";
+      return "[" + getName() + " [-w] -path <path>]\n";
     }
 
     @Override
@@ -266,6 +267,14 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>", "The path of the file/directory to satisfy"
           + " storage policy");
+      listing.addRow("-w",
+          "It requests that the command wait till all the files satisfy"
+              + " the policy in given path. This will print the current"
+              + "status of the path in each 10 sec and status are:\n"
+              + "PENDING : Path is in queue and not processed for satisfying"
+              + " the policy.\nIN_PROGRESS : Satisfying the storage policy for"
+              + " path.\nSUCCESS : Storage policy satisfied for the path.\n"
+              + "NOT_AVAILABLE : Status not available.");
       return getShortUsage() + "\n" +
           "Schedule blocks to move based on file/directory policy.\n\n" +
           listing.toString();
@@ -285,11 +294,35 @@ public class StoragePolicyAdmin extends Configured implements Tool {
         dfs.satisfyStoragePolicy(new Path(path));
         System.out.println("Scheduled blocks to move based on the current"
             + " storage policy on " + path);
+        boolean waitOpt = StringUtils.popOption("-w", args);
+        if (waitOpt) {
+          waitForSatisfyPolicy(dfs, path);
+        }
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       return 0;
+    }
+
+
+    private void waitForSatisfyPolicy(DistributedFileSystem dfs, String path)
+        throws IOException {
+      System.out.println("Waiting for satisfy the policy ...");
+      while (true) {
+        StoragePolicySatisfyPathStatus status = dfs.getClient()
+            .checkStoragePolicySatisfyPathStatus(path);
+        if (StoragePolicySatisfyPathStatus.SUCCESS.equals(status)) {
+          System.out.println(status);
+          break;
+        }
+        System.out.println(status);
+        try {
+          Thread.sleep(10000);
+        } catch (InterruptedException e) {
+        }
+      }
+      System.out.println(" done");
     }
   }
 

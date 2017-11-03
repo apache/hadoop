@@ -26,13 +26,17 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser.TraverseInfo;
 import org.apache.hadoop.hdfs.server.namenode.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +66,9 @@ public class BlockStorageMovementNeeded {
   private final Map<Long, DirPendingWorkInfo> pendingWorkForDirectory =
       new HashMap<Long, DirPendingWorkInfo>();
 
+  private final Map<Long, StoragePolicySatisfyPathStatusInfo> spsStatus =
+      new ConcurrentHashMap<>();
+
   private final Namesystem namesystem;
 
   // List of pending dir to satisfy the policy
@@ -72,6 +79,10 @@ public class BlockStorageMovementNeeded {
   private Daemon inodeIdCollector;
 
   private final int maxQueuedItem;
+
+  // Amount of time to cache the SUCCESS status of path before turning it to
+  // NOT_AVAILABLE.
+  private static long statusClearanceElapsedTimeMs = 300000;
 
   public BlockStorageMovementNeeded(Namesystem namesystem,
       StoragePolicySatisfier sps, int queueLimit) {
@@ -88,6 +99,9 @@ public class BlockStorageMovementNeeded {
    *          - track info for satisfy the policy
    */
   public synchronized void add(ItemInfo trackInfo) {
+    spsStatus.put(trackInfo.getStartId(),
+        new StoragePolicySatisfyPathStatusInfo(
+            StoragePolicySatisfyPathStatus.IN_PROGRESS));
     storageMovementNeeded.add(trackInfo);
   }
 
@@ -125,6 +139,8 @@ public class BlockStorageMovementNeeded {
   }
 
   public synchronized void addToPendingDirQueue(long id) {
+    spsStatus.put(id, new StoragePolicySatisfyPathStatusInfo(
+        StoragePolicySatisfyPathStatus.PENDING));
     spsDirsToBeTraveresed.add(id);
     // Notify waiting FileInodeIdCollector thread about the newly
     // added SPS path.
@@ -172,6 +188,7 @@ public class BlockStorageMovementNeeded {
       if (inode == null) {
         // directory deleted just remove it.
         this.pendingWorkForDirectory.remove(startId);
+        markSuccess(startId);
       } else {
         DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startId);
         if (pendingWork != null) {
@@ -179,6 +196,7 @@ public class BlockStorageMovementNeeded {
           if (pendingWork.isDirWorkDone()) {
             namesystem.removeXattr(startId, XATTR_SATISFY_STORAGE_POLICY);
             pendingWorkForDirectory.remove(startId);
+            markSuccess(startId);
           }
         }
       }
@@ -187,6 +205,7 @@ public class BlockStorageMovementNeeded {
       // storageMovementAttemptedItems or file policy satisfied.
       namesystem.removeXattr(trackInfo.getTrackId(),
           XATTR_SATISFY_STORAGE_POLICY);
+      markSuccess(trackInfo.getStartId());
     }
   }
 
@@ -200,6 +219,19 @@ public class BlockStorageMovementNeeded {
       }
     }
     pendingWorkForDirectory.remove(trackId);
+  }
+
+  /**
+   * Mark inode status as SUCCESS in map.
+   */
+  private void markSuccess(long startId){
+    StoragePolicySatisfyPathStatusInfo spsStatusInfo =
+        spsStatus.get(startId);
+    if (spsStatusInfo == null) {
+      spsStatusInfo = new StoragePolicySatisfyPathStatusInfo();
+      spsStatus.put(startId, spsStatusInfo);
+    }
+    spsStatusInfo.setSuccess();
   }
 
   /**
@@ -256,6 +288,7 @@ public class BlockStorageMovementNeeded {
     @Override
     public void run() {
       LOG.info("Starting FileInodeIdCollector!.");
+      long lastStatusCleanTime = 0;
       while (namesystem.isRunning() && sps.isRunning()) {
         try {
           if (!namesystem.isInSafeMode()) {
@@ -271,6 +304,9 @@ public class BlockStorageMovementNeeded {
               if (startInode != null) {
                 try {
                   remainingCapacity = remainingCapacity();
+                  spsStatus.put(startINodeId,
+                      new StoragePolicySatisfyPathStatusInfo(
+                          StoragePolicySatisfyPathStatus.IN_PROGRESS));
                   readLock();
                   traverseDir(startInode.asDirectory(), startINodeId,
                       HdfsFileStatus.EMPTY_NAME,
@@ -289,12 +325,29 @@ public class BlockStorageMovementNeeded {
                   namesystem.removeXattr(startInode.getId(),
                       XATTR_SATISFY_STORAGE_POLICY);
                   pendingWorkForDirectory.remove(startInode.getId());
+                  markSuccess(startInode.getId());
                 }
               }
+            }
+            //Clear the SPS status if status is in SUCCESS more than 5 min.
+            if (Time.monotonicNow()
+                - lastStatusCleanTime > statusClearanceElapsedTimeMs) {
+              lastStatusCleanTime = Time.monotonicNow();
+              cleanSpsStatus();
             }
           }
         } catch (Throwable t) {
           LOG.warn("Exception while loading inodes to satisfy the policy", t);
+        }
+      }
+    }
+
+    private synchronized void cleanSpsStatus() {
+      for (Iterator<Entry<Long, StoragePolicySatisfyPathStatusInfo>> it =
+          spsStatus.entrySet().iterator(); it.hasNext();) {
+        Entry<Long, StoragePolicySatisfyPathStatusInfo> entry = it.next();
+        if (entry.getValue().canRemove()) {
+          it.remove();
         }
       }
     }
@@ -433,5 +486,61 @@ public class BlockStorageMovementNeeded {
     public long getStartId() {
       return startId;
     }
+  }
+
+  /**
+   * Represent the file/directory block movement status.
+   */
+  static class StoragePolicySatisfyPathStatusInfo {
+    private StoragePolicySatisfyPathStatus status =
+        StoragePolicySatisfyPathStatus.NOT_AVAILABLE;
+    private long lastStatusUpdateTime;
+
+    StoragePolicySatisfyPathStatusInfo() {
+      this.lastStatusUpdateTime = 0;
+    }
+
+    StoragePolicySatisfyPathStatusInfo(StoragePolicySatisfyPathStatus status) {
+      this.status = status;
+      this.lastStatusUpdateTime = 0;
+    }
+
+    private void setSuccess() {
+      this.status = StoragePolicySatisfyPathStatus.SUCCESS;
+      this.lastStatusUpdateTime = Time.monotonicNow();
+    }
+
+    private StoragePolicySatisfyPathStatus getStatus() {
+      return status;
+    }
+
+    /**
+     * Return true if SUCCESS status cached more then 5 min.
+     */
+    private boolean canRemove() {
+      return StoragePolicySatisfyPathStatus.SUCCESS == status
+          && (Time.monotonicNow()
+              - lastStatusUpdateTime) > statusClearanceElapsedTimeMs;
+    }
+  }
+
+  public StoragePolicySatisfyPathStatus getStatus(long id) {
+    StoragePolicySatisfyPathStatusInfo spsStatusInfo = spsStatus.get(id);
+    if(spsStatusInfo == null){
+      return StoragePolicySatisfyPathStatus.NOT_AVAILABLE;
+    }
+    return spsStatusInfo.getStatus();
+  }
+
+  @VisibleForTesting
+  public static void setStatusClearanceElapsedTimeMs(
+      long statusClearanceElapsedTimeMs) {
+    BlockStorageMovementNeeded.statusClearanceElapsedTimeMs =
+        statusClearanceElapsedTimeMs;
+  }
+
+  @VisibleForTesting
+  public static long getStatusClearanceElapsedTimeMs() {
+    return statusClearanceElapsedTimeMs;
   }
 }
