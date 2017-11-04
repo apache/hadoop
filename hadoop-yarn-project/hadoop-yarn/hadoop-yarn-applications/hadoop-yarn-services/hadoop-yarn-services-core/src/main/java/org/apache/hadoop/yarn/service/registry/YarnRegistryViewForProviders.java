@@ -29,7 +29,7 @@ import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,9 +70,9 @@ public class YarnRegistryViewForProviders {
     Preconditions.checkArgument(registryOperations != null,
         "null registry operations");
     Preconditions.checkArgument(user != null, "null user");
-    Preconditions.checkArgument(SliderUtils.isSet(serviceClass),
+    Preconditions.checkArgument(ServiceUtils.isSet(serviceClass),
         "unset service class");
-    Preconditions.checkArgument(SliderUtils.isSet(instanceName),
+    Preconditions.checkArgument(ServiceUtils.isSet(instanceName),
         "instanceName");
     Preconditions.checkArgument(applicationAttemptId != null,
         "null applicationAttemptId");

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.service.conf;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 

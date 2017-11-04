@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.utils.CoreFileSystem;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,7 +132,7 @@ public class AbstractLauncher {
    */
   public ContainerLaunchContext completeContainerLaunch() throws IOException {
     
-    String cmdStr = SliderUtils.join(commands, " ", false);
+    String cmdStr = ServiceUtils.join(commands, " ", false);
     log.debug("Completed setting up container command {}", cmdStr);
     containerLaunchContext.setCommands(commands);
 
@@ -205,7 +205,7 @@ public class AbstractLauncher {
 
         String key = entry.getKey();
         LocalResource val = entry.getValue();
-        log.debug(key + "=" + SliderUtils.stringify(val.getResource()));
+        log.debug(key + "=" + ServiceUtils.stringify(val.getResource()));
       }
     }
   }

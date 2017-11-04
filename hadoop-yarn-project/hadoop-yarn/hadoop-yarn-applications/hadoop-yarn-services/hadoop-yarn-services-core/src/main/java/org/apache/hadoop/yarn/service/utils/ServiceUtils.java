@@ -60,11 +60,11 @@ import java.util.zip.GZIPOutputStream;
 /**
  * These are slider-specific Util methods
  */
-public final class SliderUtils {
+public final class ServiceUtils {
 
-  private static final Logger log = LoggerFactory.getLogger(SliderUtils.class);
+  private static final Logger log = LoggerFactory.getLogger(ServiceUtils.class);
 
-  private SliderUtils() {
+  private ServiceUtils() {
   }
 
   /**
@@ -93,7 +93,7 @@ public final class SliderUtils {
    * @throws FileNotFoundException if the class did not resolve to a file
    */
   public static File findContainingJarOrFail(Class clazz) throws IOException {
-    File localFile = SliderUtils.findContainingJar(clazz);
+    File localFile = ServiceUtils.findContainingJar(clazz);
     if (null == localFile) {
       throw new FileNotFoundException("Could not find JAR containing " + clazz);
     }
@@ -397,8 +397,8 @@ public final class SliderUtils {
                                 Path tempPath,
                                 String libDir,
                                 String srcPath) throws IOException, SliderException {
-    log.info("Loading all dependencies from {}", srcPath);
-    if (SliderUtils.isSet(srcPath)) {
+    log.debug("Loading all dependencies from {}", srcPath);
+    if (ServiceUtils.isSet(srcPath)) {
       File srcFolder = new File(srcPath);
       FilenameFilter jarFilter = createJarFilter();
       File[] listOfJars = srcFolder.listFiles(jarFilter);
@@ -422,21 +422,6 @@ public final class SliderUtils {
         return name.toLowerCase(Locale.ENGLISH).endsWith(".jar");
       }
     };
-  }
-
-  /**
-   * Submit the AM tar.gz containing all dependencies and map it
-   * @param providerResources provider map to build up
-   * @param sliderFileSystem remote fs
-   */
-  public static void putAmTarGzipAndUpdate(
-      Map<String, LocalResource> providerResources,
-      SliderFileSystem sliderFileSystem
-  ) throws IOException, SliderException {
-    log.info("Loading all dependencies from {}{}",
-        YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME,
-        YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_EXT);
-    sliderFileSystem.submitTarGzipAndUpdate(providerResources);
   }
 
   /**
@@ -480,10 +465,6 @@ public final class SliderUtils {
       classpath.addLibDir(libdir);
       if (sliderFileSystem.isFile(sliderFileSystem.getDependencyTarGzip())) {
         classpath.addLibDir(YarnServiceConstants.DEPENDENCY_LOCALIZED_DIR_LINK);
-      } else {
-        log.info(
-            "For faster submission of apps, upload dependencies using cmd " +
-                "enableFastLaunch");
       }
       classpath.addRemoteClasspathEnvVar();
       classpath.append(ApplicationConstants.Environment.HADOOP_CONF_DIR.$$());

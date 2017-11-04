@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.service.monitor.probe;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +67,7 @@ public class PortProbe extends Probe {
   public ProbeStatus ping(ComponentInstance instance) {
     ProbeStatus status = new ProbeStatus();
 
-    if (instance.getContainerStatus() == null || SliderUtils
+    if (instance.getContainerStatus() == null || ServiceUtils
         .isEmpty(instance.getContainerStatus().getIPs())) {
       status.fail(this, new IOException(
           instance.getCompInstanceName() + ": IP is not available yet"));

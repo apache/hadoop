@@ -409,7 +409,7 @@ public class CoreFileSystem {
    */
   public LocalResource submitJarWithClass(Class clazz, Path tempPath, String subdir, String jarName)
           throws IOException, SliderException {
-    File localFile = SliderUtils.findContainingJarOrFail(clazz);
+    File localFile = ServiceUtils.findContainingJarOrFail(clazz);
     return submitFile(localFile, tempPath, subdir, jarName);
   }
 

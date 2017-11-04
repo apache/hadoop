@@ -69,7 +69,7 @@ import org.apache.hadoop.yarn.service.provider.ProviderUtils;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.service.utils.ZookeeperUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
@@ -80,19 +80,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.text.MessageFormat;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.yarn.api.records.YarnApplicationState.*;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.*;
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.jsonSerDeser;
-import static org.apache.hadoop.yarn.service.utils.SliderUtils.*;
+import static org.apache.hadoop.yarn.service.utils.ServiceUtils.*;
 
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -169,7 +163,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
           fileName);
     }
     Path filePath = new Path(file.getAbsolutePath());
-    LOG.info("Loading service definition from: " + filePath);
+    LOG.info("Loading service definition from local FS: " + filePath);
     Service service = jsonSerDeser
         .load(FileSystem.getLocal(getConfig()), filePath);
     if (!StringUtils.isEmpty(serviceName)) {
@@ -482,7 +476,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
         getConfig().get(RegistryConstants.KEY_REGISTRY_ZK_QUORUM);
 
     // though if neither is set: trouble
-    if (SliderUtils.isUnset(registryQuorum)) {
+    if (ServiceUtils.isUnset(registryQuorum)) {
       throw new BadConfigException(
           "No Zookeeper quorum provided in the" + " configuration property "
               + RegistryConstants.KEY_REGISTRY_ZK_QUORUM);
@@ -505,7 +499,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     types.add(YarnServiceConstants.APP_TYPE);
     Set<String> tags = null;
     if (serviceName != null) {
-      tags = Collections.singleton(SliderUtils.createNameTag(serviceName));
+      tags = Collections.singleton(ServiceUtils.createNameTag(serviceName));
     }
     GetApplicationsRequest request = GetApplicationsRequest.newInstance();
     request.setApplicationTypes(types);
@@ -652,7 +646,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     // write out the path output
     CLI.addOutAndErrFiles(STDOUT_AM, STDERR_AM);
     String cmdStr = CLI.build();
-    LOG.info("AM launch command: {}", cmdStr);
+    LOG.debug("AM launch command: {}", cmdStr);
     return cmdStr;
   }
 
@@ -671,12 +665,12 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     }
     if (!UserGroupInformation.isSecurityEnabled()) {
       String userName = UserGroupInformation.getCurrentUser().getUserName();
-      LOG.info("Run as user " + userName);
+      LOG.debug("Run as user " + userName);
       // HADOOP_USER_NAME env is used by UserGroupInformation when log in
       // This env makes AM run as this user
       env.put("HADOOP_USER_NAME", userName);
     }
-    LOG.info("AM env: \n{}", stringifyMap(env));
+    LOG.debug("AM env: \n{}", stringifyMap(env));
     return env;
   }
 
@@ -689,11 +683,14 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
             libPath, "lib", false);
     Path dependencyLibTarGzip = fs.getDependencyTarGzip();
     if (fs.isFile(dependencyLibTarGzip)) {
-      LOG.info("Loading lib tar from " + fs.getFileSystem().getScheme() + ":/"
+      LOG.debug("Loading lib tar from " + fs.getFileSystem().getScheme() + ":/"
           + dependencyLibTarGzip);
-      SliderUtils.putAmTarGzipAndUpdate(localResources, fs);
+      fs.submitTarGzipAndUpdate(localResources);
     } else {
-      String[] libs = SliderUtils.getLibDirs();
+      String[] libs = ServiceUtils.getLibDirs();
+      LOG.info("Uploading all dependency jars to HDFS. For faster submission of" +
+          " apps, pre-upload dependency jars to HDFS "
+          + "using command: yarn app -enableFastLaunch");
       for (String libDirProp : libs) {
         ProviderUtils.addAllDependencyJars(localResources, fs, libPath, "lib",
             libDirProp);
@@ -740,7 +737,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     ApplicationId appId = submitApp(service);
     service.setId(appId.toString());
     // write app definition on to hdfs
-    createDirAndPersistApp(appDir, service);
+    Path appJson = persistAppDef(appDir, service);
+    LOG.info("Persisted service " + service.getName() + " at " + appJson);
     return 0;
   }
 
@@ -763,16 +761,14 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       throws IOException, SliderException {
     FsPermission appDirPermission = new FsPermission("750");
     fs.createWithPermissions(appDir, appDirPermission);
-    persistAppDef(appDir, service);
+    Path appJson = persistAppDef(appDir, service);
+    LOG.info("Persisted service " + service.getName() + " at " + appJson);
   }
 
-  private void persistAppDef(Path appDir, Service service)
-      throws IOException {
+  private Path persistAppDef(Path appDir, Service service) throws IOException {
     Path appJson = new Path(appDir, service.getName() + ".json");
-    jsonSerDeser
-        .save(fs.getFileSystem(), appJson, service, true);
-    LOG.info(
-        "Persisted service " + service.getName() + " at " + appJson);
+    jsonSerDeser.save(fs.getFileSystem(), appJson, service, true);
+    return appJson;
   }
 
   private void addKeytabResourceIfSecure(SliderFileSystem fileSystem,
@@ -922,7 +918,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       return EXIT_SUCCESS;
     }
 
-    String[] libDirs = SliderUtils.getLibDirs();
+    String[] libDirs = ServiceUtils.getLibDirs();
     if (libDirs.length > 0) {
       File tempLibTarGzipFile = File.createTempFile(
           YarnServiceConstants.DEPENDENCY_TAR_GZ_FILE_NAME + "_",

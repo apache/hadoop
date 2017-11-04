@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -53,12 +53,12 @@ public abstract class AbstractClientProvider {
   public static final Set<String> createApplicationTags(String appName,
       String appVersion, String appDescription) {
     Set<String> tags = new HashSet<>();
-    tags.add(SliderUtils.createNameTag(appName));
+    tags.add(ServiceUtils.createNameTag(appName));
     if (appVersion != null) {
-      tags.add(SliderUtils.createVersionTag(appVersion));
+      tags.add(ServiceUtils.createVersionTag(appVersion));
     }
     if (appDescription != null) {
-      tags.add(SliderUtils.createDescriptionTag(appDescription));
+      tags.add(ServiceUtils.createDescriptionTag(appDescription));
     }
     return tags;
   }
