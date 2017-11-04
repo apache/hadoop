@@ -439,6 +439,7 @@ public class StandbyCheckpointer {
               namesystem.setNeedRollbackFsImage(false);
             }
             lastCheckpointTime = now;
+            LOG.info("Checkpoint finished successfully.");
           }
         } catch (SaveNamespaceCancelledException ce) {
           LOG.info("Checkpoint was cancelled: " + ce.getMessage());
