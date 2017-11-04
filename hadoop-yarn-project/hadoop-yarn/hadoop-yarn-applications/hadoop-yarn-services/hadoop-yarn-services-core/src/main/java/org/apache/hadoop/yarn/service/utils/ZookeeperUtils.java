@@ -32,7 +32,7 @@ public class ZookeeperUtils {
     String zkPort = Integer.toString(port);
     //parse the hosts
     String[] hostlist = zkHosts.split(",", 0);
-    String quorum = SliderUtils.join(hostlist, ":" + zkPort + ",", false);
+    String quorum = ServiceUtils.join(hostlist, ":" + zkPort + ",", false);
     return quorum;
   }
 
@@ -117,7 +117,7 @@ public class ZookeeperUtils {
     for (HostAndPort hostAndPort : hostAndPorts) {
       entries.add(buildQuorumEntry(hostAndPort, defaultPort));
     }
-    return SliderUtils.join(entries, ",", false);
+    return ServiceUtils.join(entries, ",", false);
   }
   
   public static String convertToHostsOnlyList(String quorum) throws

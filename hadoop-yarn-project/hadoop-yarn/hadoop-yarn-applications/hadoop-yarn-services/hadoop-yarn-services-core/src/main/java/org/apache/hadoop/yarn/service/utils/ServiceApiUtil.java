@@ -369,7 +369,7 @@ public class ServiceApiUtil {
         continue;
       }
       boolean dependenciesAlreadySorted = true;
-      if (!SliderUtils.isEmpty(component.getDependencies())) {
+      if (!ServiceUtils.isEmpty(component.getDependencies())) {
         for (String dependency : component.getDependencies()) {
           if (!sortedComponents.containsKey(dependency)) {
             dependenciesAlreadySorted = false;

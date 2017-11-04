@@ -24,7 +24,7 @@ import io.swagger.annotations.ApiModelProperty;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -201,9 +201,9 @@ public class Configuration implements Serializable {
    * this ConfigFile.
    */
   public synchronized void mergeFrom(Configuration that) {
-    SliderUtils.mergeMapsIgnoreDuplicateKeys(this.properties, that
+    ServiceUtils.mergeMapsIgnoreDuplicateKeys(this.properties, that
         .getProperties());
-    SliderUtils.mergeMapsIgnoreDuplicateKeys(this.env, that.getEnv());
+    ServiceUtils.mergeMapsIgnoreDuplicateKeys(this.env, that.getEnv());
 
     Map<String, ConfigFile> thatMap = new HashMap<>();
     for (ConfigFile file : that.getFiles()) {
@@ -212,7 +212,7 @@ public class Configuration implements Serializable {
     for (ConfigFile thisFile : files) {
       if(thatMap.containsKey(thisFile.getDestFile())) {
         ConfigFile thatFile = thatMap.get(thisFile.getDestFile());
-        SliderUtils.mergeMapsIgnoreDuplicateKeys(thisFile.getProperties(),
+        ServiceUtils.mergeMapsIgnoreDuplicateKeys(thisFile.getProperties(),
             thatFile.getProperties());
         thatMap.remove(thisFile.getDestFile());
       }

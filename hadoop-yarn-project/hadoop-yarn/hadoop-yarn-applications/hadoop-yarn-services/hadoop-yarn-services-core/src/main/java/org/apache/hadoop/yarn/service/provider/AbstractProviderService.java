@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.containerlaunch.CommandLineBuilder;
@@ -70,7 +70,7 @@ public abstract class AbstractProviderService implements ProviderService,
         .initCompTokensForSubstitute(instance);
     tokensForSubstitution.putAll(globalTokens);
     // Set the environment variables in launcher
-    launcher.putEnv(SliderUtils
+    launcher.putEnv(ServiceUtils
         .buildEnvMap(component.getConfiguration(), tokensForSubstitution));
     launcher.setEnv("WORK_DIR", ApplicationConstants.Environment.PWD.$());
     launcher.setEnv("LOG_DIR", ApplicationConstants.LOG_DIR_EXPANSION_VAR);

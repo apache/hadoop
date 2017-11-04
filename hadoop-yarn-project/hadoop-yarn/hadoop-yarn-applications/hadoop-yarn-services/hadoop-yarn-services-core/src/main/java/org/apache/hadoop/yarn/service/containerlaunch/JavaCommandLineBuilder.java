@@ -22,7 +22,7 @@ package org.apache.hadoop.yarn.service.containerlaunch;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
 
 import java.util.Map;
@@ -53,7 +53,7 @@ public class JavaCommandLineBuilder extends CommandLineBuilder {
    * trimmed.
    */
   public void setJVMHeap(String heap) {
-    if (SliderUtils.isSet(heap)) {
+    if (ServiceUtils.isSet(heap)) {
       add("-Xmx" + heap.trim());
     }
   }

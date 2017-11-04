@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.service.monitor.probe.MonitorUtils;
 import org.apache.hadoop.yarn.service.monitor.probe.Probe;
 import org.slf4j.Logger;
@@ -419,7 +419,7 @@ public class Component implements EventHandler<ComponentEvent> {
 
   public boolean areDependenciesReady() {
     List<String> dependencies = componentSpec.getDependencies();
-    if (SliderUtils.isEmpty(dependencies)) {
+    if (ServiceUtils.isEmpty(dependencies)) {
       return true;
     }
     for (String dependency : dependencies) {
@@ -445,7 +445,7 @@ public class Component implements EventHandler<ComponentEvent> {
   public Map<String, String> getDependencyHostIpTokens() {
     Map<String, String> tokens = new HashMap<>();
     List<String> dependencies = componentSpec.getDependencies();
-    if (SliderUtils.isEmpty(dependencies)) {
+    if (ServiceUtils.isEmpty(dependencies)) {
       return tokens;
     }
     for (String dependency : dependencies) {
@@ -455,8 +455,8 @@ public class Component implements EventHandler<ComponentEvent> {
         if (instance.getContainerStatus() == null) {
           continue;
         }
-        if (SliderUtils.isEmpty(instance.getContainerStatus().getIPs()) ||
-            SliderUtils.isUnset(instance.getContainerStatus().getHost())) {
+        if (ServiceUtils.isEmpty(instance.getContainerStatus().getIPs()) ||
+            ServiceUtils.isUnset(instance.getContainerStatus().getHost())) {
           continue;
         }
         String ip = instance.getContainerStatus().getIPs().get(0);

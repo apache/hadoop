@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.service.containerlaunch;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +81,6 @@ public class CommandLineBuilder {
    * @return the command line
    */
   public String build() {
-    return SliderUtils.join(argumentList, " ");
+    return ServiceUtils.join(argumentList, " ");
   }
 }

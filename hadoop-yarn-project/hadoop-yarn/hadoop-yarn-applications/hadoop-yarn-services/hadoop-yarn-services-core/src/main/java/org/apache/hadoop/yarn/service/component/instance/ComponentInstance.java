@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BoundedAppender;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
 import org.apache.hadoop.yarn.service.monitor.probe.ProbeStatus;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
@@ -503,7 +503,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
             + nodeId + ", will try again", e);
         return;
       }
-      if (SliderUtils.isEmpty(status.getIPs()) || SliderUtils
+      if (ServiceUtils.isEmpty(status.getIPs()) || ServiceUtils
           .isUnset(status.getHost())) {
         return;
       }

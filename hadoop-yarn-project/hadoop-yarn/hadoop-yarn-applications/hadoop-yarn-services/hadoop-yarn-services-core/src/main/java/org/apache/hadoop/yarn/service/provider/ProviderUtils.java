@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.PublishedConfiguration;
 import org.apache.hadoop.yarn.service.utils.PublishedConfigurationOutputter;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,7 +94,7 @@ public class ProviderUtils implements YarnServiceConstants {
       IOException,
       SliderException {
     try {
-      SliderUtils.putJar(providerResources,
+      ServiceUtils.putJar(providerResources,
           sliderFileSystem,
           providerClass,
           tempPath,
@@ -127,14 +127,14 @@ public class ProviderUtils implements YarnServiceConstants {
       String libDir,
       String libLocalSrcDir)
       throws IOException, SliderException {
-    if (SliderUtils.isSet(libLocalSrcDir)) {
+    if (ServiceUtils.isSet(libLocalSrcDir)) {
       File file = new File(libLocalSrcDir);
       if (!file.exists() || !file.isDirectory()) {
         throw new BadCommandArgumentsException(
             "Supplied lib src dir %s is not valid", libLocalSrcDir);
       }
     }
-    SliderUtils.putAllJars(providerResources, sliderFileSystem, tempPath,
+    ServiceUtils.putAllJars(providerResources, sliderFileSystem, tempPath,
         libDir, libLocalSrcDir);
   }
 
@@ -174,7 +174,7 @@ public class ProviderUtils implements YarnServiceConstants {
     Configuration conf = service.getConfiguration();
     String keytabPathOnHost =
         conf.getProperty(YarnServiceConf.KEY_AM_KEYTAB_LOCAL_PATH);
-    if (SliderUtils.isUnset(keytabPathOnHost)) {
+    if (ServiceUtils.isUnset(keytabPathOnHost)) {
       String amKeytabName =
           conf.getProperty(YarnServiceConf.KEY_AM_LOGIN_KEYTAB_NAME);
       String keytabDir =

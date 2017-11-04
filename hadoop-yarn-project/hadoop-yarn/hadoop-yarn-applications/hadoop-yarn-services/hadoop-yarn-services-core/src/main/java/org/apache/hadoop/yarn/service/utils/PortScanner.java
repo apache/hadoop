@@ -85,7 +85,7 @@ public class PortScanner {
     if (remainingPortsToCheck != null) {
       return getAvailablePortViaPortArray();
     } else {
-      return SliderUtils.getOpenPort();
+      return ServiceUtils.getOpenPort();
     }
   }
 
@@ -95,7 +95,7 @@ public class PortScanner {
     Iterator<Integer> portsToCheck = this.remainingPortsToCheck.iterator();
     while (portsToCheck.hasNext() && !found) {
       int portToCheck = portsToCheck.next();
-      found = SliderUtils.isPortAvailable(portToCheck);
+      found = ServiceUtils.isPortAvailable(portToCheck);
       if (found) {
         availablePort = portToCheck;
         portsToCheck.remove();

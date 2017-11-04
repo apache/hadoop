@@ -21,7 +21,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.utils.SliderUtils;
+import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +75,7 @@ public class HttpProbe extends Probe {
   public ProbeStatus ping(ComponentInstance instance) {
     ProbeStatus status = new ProbeStatus();
     ContainerStatus containerStatus = instance.getContainerStatus();
-    if (containerStatus == null || SliderUtils.isEmpty(containerStatus.getIPs())
+    if (containerStatus == null || ServiceUtils.isEmpty(containerStatus.getIPs())
         || StringUtils.isEmpty(containerStatus.getHost())) {
       status.fail(this, new IOException("IP is not available yet"));
       return status;
