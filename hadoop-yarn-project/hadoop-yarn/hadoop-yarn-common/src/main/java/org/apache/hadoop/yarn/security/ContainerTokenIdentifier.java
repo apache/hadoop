@@ -115,7 +115,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     this(containerID, 0, hostName, appSubmitter, r, expiryTimeStamp,
         masterKeyId, rmIdentifier, priority, creationTime,
         logAggregationContext, nodeLabelExpression, containerType,
-        ExecutionType.GUARANTEED);
+        ExecutionType.GUARANTEED, -1);
   }
 
   public ContainerTokenIdentifier(ContainerId containerID, int containerVersion,
@@ -123,6 +123,19 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       int masterKeyId, long rmIdentifier, Priority priority, long creationTime,
       LogAggregationContext logAggregationContext, String nodeLabelExpression,
       ContainerType containerType, ExecutionType executionType) {
+
+    this(containerID, containerVersion, hostName, appSubmitter, r,
+        expiryTimeStamp, masterKeyId, rmIdentifier, priority, creationTime,
+        logAggregationContext, nodeLabelExpression, containerType,
+        executionType, -1);
+  }
+
+  public ContainerTokenIdentifier(ContainerId containerID, int containerVersion,
+      String hostName, String appSubmitter, Resource r, long expiryTimeStamp,
+      int masterKeyId, long rmIdentifier, Priority priority, long creationTime,
+      LogAggregationContext logAggregationContext, String nodeLabelExpression,
+      ContainerType containerType, ExecutionType executionType,
+      long allocationRequestId) {
     ContainerTokenIdentifierProto.Builder builder =
         ContainerTokenIdentifierProto.newBuilder();
     if (containerID != null) {
@@ -152,6 +165,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     }
     builder.setContainerType(convertToProtoFormat(containerType));
     builder.setExecutionType(convertToProtoFormat(executionType));
+    builder.setAllocationRequestId(allocationRequestId);
 
     proto = builder.build();
   }
@@ -241,6 +255,10 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       return null;
     }
     return new LogAggregationContextPBImpl(proto.getLogAggregationContext());
+  }
+
+  public long getAllocationRequestId() {
+    return proto.getAllocationRequestId();
   }
 
   @Override

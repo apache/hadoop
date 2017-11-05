@@ -437,7 +437,7 @@ public class ContainerManagerImpl extends CompositeService implements
       throws IOException {
     StartContainerRequest req = rcs.getStartRequest();
     ContainerLaunchContext launchContext = req.getContainerLaunchContext();
-    ContainerTokenIdentifier token = null;
+    ContainerTokenIdentifier token;
     if(rcs.getCapability() != null) {
       ContainerTokenIdentifier originalToken =
           BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());
@@ -449,7 +449,8 @@ public class ContainerManagerImpl extends CompositeService implements
           originalToken.getCreationTime(),
           originalToken.getLogAggregationContext(),
           originalToken.getNodeLabelExpression(),
-          originalToken.getContainerType(), originalToken.getExecutionType());
+          originalToken.getContainerType(), originalToken.getExecutionType(),
+          originalToken.getAllocationRequestId());
 
     } else {
       token = BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());

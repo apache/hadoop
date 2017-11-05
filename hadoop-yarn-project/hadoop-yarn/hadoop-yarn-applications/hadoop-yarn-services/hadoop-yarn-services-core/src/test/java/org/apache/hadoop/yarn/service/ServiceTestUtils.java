@@ -131,12 +131,16 @@ public class ServiceTestUtils {
     return fs;
   }
 
+  protected MiniYARNCluster getYarnCluster() {
+    return yarnCluster;
+  }
+
   protected void setupInternal(int numNodeManager)
       throws Exception {
     LOG.info("Starting up YARN cluster");
-//    Logger rootLogger = LogManager.getRootLogger();
-//    rootLogger.setLevel(Level.DEBUG);
-    setConf(new YarnConfiguration());
+    if (conf == null) {
+      setConf(new YarnConfiguration());
+    }
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     // reduce the teardown waiting time
     conf.setLong(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT, 1000);

@@ -91,7 +91,8 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
         .append("Diagnostics: ").append(getDiagnostics()).append(", ")
         .append("ExitStatus: ").append(getContainerExitStatus()).append(", ")
         .append("NodeLabelExpression: ").append(getNodeLabelExpression())
-        .append("Priority: ").append(getPriority())
+        .append("Priority: ").append(getPriority()).append(", ")
+        .append("AllocationRequestId: ").append(getAllocationRequestId())
         .append("]");
     return sb.toString();
   }
@@ -268,6 +269,18 @@ public class NMContainerStatusPBImpl extends NMContainerStatus {
       return;
     }
     builder.setExecutionType(convertToProtoFormat(executionType));
+  }
+
+  @Override
+  public long getAllocationRequestId() {
+    NMContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getAllocationRequestId());
+  }
+
+  @Override
+  public void setAllocationRequestId(long allocationRequestId) {
+    maybeInitBuilder();
+    builder.setAllocationRequestId(allocationRequestId);
   }
 
   private void mergeLocalToBuilder() {
