@@ -2113,7 +2113,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         NMContainerStatus.newInstance(containerId, 0, containerState,
             Resource.newInstance(1024, 1), "recover container", 0,
             Priority.newInstance(0), 0, nodeLabelExpression,
-            ExecutionType.GUARANTEED);
+            ExecutionType.GUARANTEED, -1);
     return containerReport;
   }
 

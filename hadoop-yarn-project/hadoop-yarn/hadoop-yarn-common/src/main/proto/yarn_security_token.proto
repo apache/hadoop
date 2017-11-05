@@ -53,6 +53,7 @@ message ContainerTokenIdentifierProto {
   optional ContainerTypeProto containerType = 12;
   optional ExecutionTypeProto executionType = 13 [default = GUARANTEED];
   optional int32 version = 14 [default = 0];
+  optional int64 allocation_request_id = 15 [default = -1];
 }
 
 message ClientToAMTokenIdentifierProto {

@@ -176,6 +176,7 @@ message NMContainerStatusProto {
   optional string nodeLabelExpression = 8;
   optional int32 version = 9;
   optional ExecutionTypeProto executionType = 10 [default = GUARANTEED];
+  optional int64 allocation_request_id = 11 [default = -1];
 }
 
 message SCMUploaderNotifyRequestProto {
