@@ -66,7 +66,6 @@ public class ProvidedStorageMap {
   // limit to a single provider for now
   private RwLock lock;
   private BlockManager bm;
-  private boolean hasDNs = false;
   private BlockAliasMap aliasMap;
 
   private final String storageId;
@@ -123,6 +122,11 @@ public class ProvidedStorageMap {
       BlockReportContext context) throws IOException {
     if (providedEnabled && storageId.equals(s.getStorageID())) {
       if (StorageType.PROVIDED.equals(s.getStorageType())) {
+        if (providedStorageInfo.getState() == State.FAILED
+            && s.getState() == State.NORMAL) {
+          providedStorageInfo.setState(State.NORMAL);
+          LOG.info("Provided storage transitioning to state " + State.NORMAL);
+        }
         processProvidedStorageReport(context);
         dn.injectStorage(providedStorageInfo);
         return providedDescriptor.getProvidedStorage(dn, s);
@@ -135,21 +139,14 @@ public class ProvidedStorageMap {
   private void processProvidedStorageReport(BlockReportContext context)
       throws IOException {
     assert lock.hasWriteLock() : "Not holding write lock";
-    if (hasDNs) {
-      return;
-    }
-    if (providedStorageInfo.getBlockReportCount() == 0) {
+    if (providedStorageInfo.getBlockReportCount() == 0
+        || providedDescriptor.activeProvidedDatanodes() == 0) {
       LOG.info("Calling process first blk report from storage: "
           + providedStorageInfo);
       // first pass; periodic refresh should call bm.processReport
       bm.processFirstBlockReport(providedStorageInfo,
           new ProvidedBlockList(aliasMap.getReader(null).iterator()));
-    } else {
-      bm.processReport(providedStorageInfo,
-          new ProvidedBlockList(aliasMap.getReader(null).iterator()),
-          context);
     }
-    hasDNs = true;
   }
 
   @VisibleForTesting
@@ -167,9 +164,10 @@ public class ProvidedStorageMap {
   public void removeDatanode(DatanodeDescriptor dnToRemove) {
     if (providedEnabled) {
       assert lock.hasWriteLock() : "Not holding write lock";
-      int remainingDatanodes = providedDescriptor.remove(dnToRemove);
-      if (remainingDatanodes == 0) {
-        hasDNs = false;
+      providedDescriptor.remove(dnToRemove);
+      // if all datanodes fail, set the block report count to 0
+      if (providedDescriptor.activeProvidedDatanodes() == 0) {
+        providedStorageInfo.setBlockReportCount(0);
       }
     }
   }
@@ -464,6 +462,22 @@ public class ProvidedStorageMap {
         return super.removeBlock(b);
       } else {
         return false;
+      }
+    }
+
+    @Override
+    void setState(DatanodeStorage.State state) {
+      if (state == State.FAILED) {
+        // The state should change to FAILED only when there are no active
+        // datanodes with PROVIDED storage.
+        ProvidedDescriptor dn = (ProvidedDescriptor) getDatanodeDescriptor();
+        if (dn.activeProvidedDatanodes() == 0) {
+          LOG.info("Provided storage {} transitioning to state {}",
+              this, State.FAILED);
+          super.setState(state);
+        }
+      } else {
+        super.setState(state);
       }
     }
   }

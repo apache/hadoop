@@ -492,4 +492,44 @@ public class TestNameNodeProvidedImplementation {
           dnInfos[0].getXferAddr());
     }
   }
+
+  @Test(timeout=300000)
+  public void testTransientDeadDatanodes() throws Exception {
+    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+            FixedBlockResolver.class);
+    // 2 Datanodes, 1 PROVIDED and other DISK
+    startCluster(NNDIRPATH, 2, null,
+        new StorageType[][] {
+            {StorageType.PROVIDED},
+            {StorageType.DISK}},
+        false);
+
+    DataNode providedDatanode = cluster.getDataNodes().get(0);
+
+    DFSClient client = new DFSClient(new InetSocketAddress("localhost",
+            cluster.getNameNodePort()), cluster.getConfiguration(0));
+
+    for (int i= 0; i < numFiles; i++) {
+      String filename = "/" + filePrefix + i + fileSuffix;
+
+      DatanodeInfo[] dnInfos = getAndCheckBlockLocations(client, filename, 1);
+      // location should be the provided DN.
+      assertTrue(dnInfos[0].getDatanodeUuid()
+          .equals(providedDatanode.getDatanodeUuid()));
+
+      // NameNode thinks the datanode is down
+      BlockManagerTestUtil.noticeDeadDatanode(
+          cluster.getNameNode(),
+          providedDatanode.getDatanodeId().getXferAddr());
+      cluster.waitActive();
+      cluster.triggerHeartbeats();
+      Thread.sleep(1000);
+
+      // should find the block on the 2nd provided datanode.
+      dnInfos = getAndCheckBlockLocations(client, filename, 1);
+      assertTrue(
+          dnInfos[0].getDatanodeUuid()
+              .equals(providedDatanode.getDatanodeUuid()));
+    }
+  }
 }

@@ -455,8 +455,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
       totalDfsUsed += report.getDfsUsed();
       totalNonDfsUsed += report.getNonDfsUsed();
 
-      if (StorageType.PROVIDED.equals(
-          report.getStorage().getStorageType())) {
+      // for PROVIDED storages, do not call updateStorage() unless
+      // DatanodeStorageInfo already exists!
+      if (StorageType.PROVIDED.equals(report.getStorage().getStorageType())
+          && storageMap.get(report.getStorage().getStorageID()) == null) {
         continue;
       }
       DatanodeStorageInfo storage = updateStorage(report.getStorage());
