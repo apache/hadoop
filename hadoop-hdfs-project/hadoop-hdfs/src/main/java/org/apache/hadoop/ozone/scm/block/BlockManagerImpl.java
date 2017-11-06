@@ -31,7 +31,6 @@ import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.scm.container.common.helpers.BlockContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.util.StringUtils;
@@ -260,7 +259,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
                can use different kind of policies.
       */
 
-      BlockContainerInfo containerInfo = null;
+      ContainerInfo containerInfo;
 
       // Look for ALLOCATED container that matches all other parameters.
       containerInfo =
@@ -327,7 +326,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    * @return AllocatedBlock
    */
   private AllocatedBlock newBlock(
-      BlockContainerInfo containerInfo, OzoneProtos.LifeCycleState state)
+      ContainerInfo containerInfo, OzoneProtos.LifeCycleState state)
       throws IOException {
 
     // TODO : Replace this with Block ID.

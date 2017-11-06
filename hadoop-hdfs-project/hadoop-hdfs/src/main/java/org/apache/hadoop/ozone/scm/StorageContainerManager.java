@@ -787,8 +787,10 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       metrics.setLastContainerReportWriteCount(stat.getWriteCount().get());
     }
 
-    // TODO: handle the container reports either here or add container report
-    // handler.
+    // should we process container reports async?
+    scmContainerManager.processContainerReports(
+        DatanodeID.getFromProtoBuf(reports.getDatanodeID()),
+        reports.getType(), reports.getReportsList());
     return ContainerReportsResponseProto.newBuilder().build();
   }
 

@@ -23,10 +23,19 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.util.Time;
 
+import java.util.Comparator;
+
 /** Class wraps ozone container info. */
-public class ContainerInfo {
+public class ContainerInfo
+    implements Comparator<ContainerInfo>, Comparable<ContainerInfo> {
   private OzoneProtos.LifeCycleState state;
   private Pipeline pipeline;
+  // Bytes allocated by SCM for clients.
+  private long allocatedBytes;
+  // Actual container usage, updated through heartbeat.
+  private long usedBytes;
+  private long numberOfKeys;
+  private long lastUsed;
   // The wall-clock ms since the epoch at which the current state enters.
   private long stateEnterTime;
   private OzoneProtos.Owner owner;
@@ -36,21 +45,20 @@ public class ContainerInfo {
       final String containerName,
       OzoneProtos.LifeCycleState state,
       Pipeline pipeline,
+      long allocatedBytes,
+      long usedBytes,
+      long numberOfKeys,
       long stateEnterTime,
       OzoneProtos.Owner owner) {
     this.containerName = containerName;
     this.pipeline = pipeline;
+    this.allocatedBytes = allocatedBytes;
+    this.usedBytes = usedBytes;
+    this.numberOfKeys = numberOfKeys;
+    this.lastUsed = Time.monotonicNow();
     this.state = state;
     this.stateEnterTime = stateEnterTime;
     this.owner = owner;
-  }
-
-  public ContainerInfo(ContainerInfo container) {
-    this.pipeline = container.getPipeline();
-    this.state = container.getState();
-    this.containerName = container.getContainerName();
-    this.stateEnterTime = container.getStateEnterTime();
-    this.owner = container.getOwner();
   }
 
   /**
@@ -62,6 +70,9 @@ public class ContainerInfo {
   public static ContainerInfo fromProtobuf(OzoneProtos.SCMContainerInfo info) {
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
     builder.setPipeline(Pipeline.getFromProtoBuf(info.getPipeline()));
+    builder.setAllocatedBytes(info.getAllocatedBytes());
+    builder.setUsedBytes(info.getUsedBytes());
+    builder.setNumberOfKeys(info.getNumberOfKeys());
     builder.setState(info.getState());
     builder.setStateEnterTime(info.getStateEnterTime());
     builder.setOwner(info.getOwner());
@@ -73,22 +84,8 @@ public class ContainerInfo {
     return containerName;
   }
 
-  public void setContainerName(String containerName) {
-    this.containerName = containerName;
-  }
-
   public OzoneProtos.LifeCycleState getState() {
     return state;
-  }
-
-  /**
-   * Update the current container state and state enter time to now.
-   *
-   * @param state
-   */
-  public void setState(OzoneProtos.LifeCycleState state) {
-    this.state = state;
-    this.stateEnterTime = Time.monotonicNow();
   }
 
   public long getStateEnterTime() {
@@ -99,10 +96,43 @@ public class ContainerInfo {
     return pipeline;
   }
 
+  public long getAllocatedBytes() {
+    return allocatedBytes;
+  }
+
+  public long getUsedBytes() {
+    return usedBytes;
+  }
+
+  public long getNumberOfKeys() {
+    return numberOfKeys;
+  }
+
+  /**
+   * Gets the last used time from SCM's perspective.
+   * @return time in milliseconds.
+   */
+  public long getLastUsed() {
+    return lastUsed;
+  }
+
+  public void updateLastUsedTime() {
+    lastUsed = Time.monotonicNow();
+  }
+
+  public void allocate(long size) {
+    // should we also have total container size in ContainerInfo
+    // and check before allocating?
+    allocatedBytes += size;
+  }
+
   public OzoneProtos.SCMContainerInfo getProtobuf() {
     OzoneProtos.SCMContainerInfo.Builder builder =
         OzoneProtos.SCMContainerInfo.newBuilder();
     builder.setPipeline(getPipeline().getProtobufMessage());
+    builder.setAllocatedBytes(getAllocatedBytes());
+    builder.setUsedBytes(getUsedBytes());
+    builder.setNumberOfKeys(getNumberOfKeys());
     builder.setState(state);
     builder.setStateEnterTime(stateEnterTime);
 
@@ -145,7 +175,6 @@ public class ContainerInfo {
     ContainerInfo that = (ContainerInfo) o;
 
     return new EqualsBuilder()
-        .append(state, that.state)
         .append(pipeline.getContainerName(), that.pipeline.getContainerName())
 
         // TODO : Fix this later. If we add these factors some tests fail.
@@ -168,10 +197,49 @@ public class ContainerInfo {
         .toHashCode();
   }
 
+  /**
+   * Compares its two arguments for order.  Returns a negative integer, zero, or
+   * a positive integer as the first argument is less than, equal to, or greater
+   * than the second.<p>
+   *
+   * @param o1 the first object to be compared.
+   * @param o2 the second object to be compared.
+   * @return a negative integer, zero, or a positive integer as the first
+   * argument is less than, equal to, or greater than the second.
+   * @throws NullPointerException if an argument is null and this comparator
+   *                              does not permit null arguments
+   * @throws ClassCastException   if the arguments' types prevent them from
+   *                              being compared by this comparator.
+   */
+  @Override
+  public int compare(ContainerInfo o1, ContainerInfo o2) {
+    return Long.compare(o1.getLastUsed(), o2.getLastUsed());
+  }
+
+  /**
+   * Compares this object with the specified object for order.  Returns a
+   * negative integer, zero, or a positive integer as this object is less than,
+   * equal to, or greater than the specified object.
+   *
+   * @param o the object to be compared.
+   * @return a negative integer, zero, or a positive integer as this object is
+   * less than, equal to, or greater than the specified object.
+   * @throws NullPointerException if the specified object is null
+   * @throws ClassCastException   if the specified object's type prevents it
+   *                              from being compared to this object.
+   */
+  @Override
+  public int compareTo(ContainerInfo o) {
+    return this.compare(this, o);
+  }
+
   /** Builder class for ContainerInfo. */
   public static class Builder {
     private OzoneProtos.LifeCycleState state;
     private Pipeline pipeline;
+    private long allocated;
+    private long used;
+    private long keys;
     private long stateEnterTime;
     private OzoneProtos.Owner owner;
     private String containerName;
@@ -183,6 +251,21 @@ public class ContainerInfo {
 
     public Builder setPipeline(Pipeline pipeline) {
       this.pipeline = pipeline;
+      return this;
+    }
+
+    public Builder setAllocatedBytes(long bytesAllocated) {
+      this.allocated = bytesAllocated;
+      return this;
+    }
+
+    public Builder setUsedBytes(long bytesUsed) {
+      this.used = bytesUsed;
+      return this;
+    }
+
+    public Builder setNumberOfKeys(long keyCount) {
+      this.keys = keyCount;
       return this;
     }
 
@@ -203,7 +286,8 @@ public class ContainerInfo {
 
     public ContainerInfo build() {
       return new
-          ContainerInfo(containerName, state, pipeline, stateEnterTime, owner);
+          ContainerInfo(containerName, state, pipeline, allocated, used,
+          keys, stateEnterTime, owner);
     }
   }
 }
