@@ -21,16 +21,17 @@ to an S3 object store.
 
 These committers are designed to solve a fundamental problem which
 the standard committers of work cannot do to S3: consistent, high performance,
-reliable commitment of work done by individual workers into the final set of
-results of a job.
+and reliable commitment of output to S3.
 
 For details on their internal design, see
-[S3A Committers: Architecture and Implementation](s3a_committer_architecture.html).
+[S3A Committers: Architecture and Implementation](./committer_architecture.html).
 
 
 ## Introduction: The Commit Problem 
 
-**Using the "classic" `FileOutputCommmitter` to write to Amazon S3 is dangerous**
+
+Apache Hadoop MapReduce (and behind the scenes, Apache Spark) often write
+the output of their work to filesystems 
 
 Normally, Hadoop uses the `FileOutputFormatCommitter` to manage the
 promotion of files created in a single task attempt to the final output of
@@ -63,9 +64,11 @@ of failure.
 * If more than one process attempts to commit work simultaneously, the output
 directory may contain the results of both processes: it is no longer an exclusive
 operation.
-1. While S3Guard delivers the consistency, commit time is still
-proportional to the amount of data created. The bigger the job, the slower
-the commit.
+*. While S3Guard may deliver the listing consistency, commit time is still
+proportional to the amount of data created. It still can't handle task failure.
+
+**Using the "classic" `FileOutputCommmitter` to commit work to Amazon S3 risks loss or corruption of generated data**
+
 
 To address these problems there is now explicit support in the `hadop-aws`
 module for committing work to Amazon S3 via the S3A filesystem client,
@@ -73,10 +76,11 @@ module for committing work to Amazon S3 via the S3A filesystem client,
 
 
 For safe, as well as high-performance output of work to S3, 
-an S3A committer must be used.
+we need use "a committer" explicitly written to work with S3, treating it as
+an object store with special features.
 
 
-### Background : Hadoop's "commit protocol"
+### Background : Hadoop's "Commit Protocol"
 
 How exactly is work written to its final destination? That is accomplished by
 a "commit protocol" between the workers and the job manager.
@@ -94,6 +98,9 @@ input has been *partitioned* into units of work which can be executed independen
 1. The Job Manager directs workers to execute "tasks", usually trying to schedule
 the work close to the data (if the filesystem provides locality information).
 1. Workers can fail: the Job manager needs to detect this and reschedule their active tasks.
+1. Workers can also become separated from the Job Manager, a "network partition".
+It is (provably) impossible for the Job Manager to distinguish a running-but-unreachable
+worker from a failed one. 
 1. The output of a failed task must not be visible; this is to avoid its
 data getting into the final output.
 1. Multiple workers can be instructed to evaluate the same partition of the work;
@@ -101,9 +108,12 @@ this "speculation" delivers speedup as it can address the "straggler problem".
 When multiple workers are working on the same data, only one worker is allowed
 to write the final output.
 1. The entire job may fail (often from the failure of the Job Manager (MR Master, Spark Driver, ...)).
+1, The network may partition, with workers isolated from each other or
+the process managing the entire commit.
 1. Restarted jobs may recover from a failure by reusing the output of all
 completed tasks (MapReduce with the "v1" algorithm), or just by rerunning everything
 (The "v2" algorithm and Spark).
+
 
 What is "the commit protocol" then? It is the requirements on workers as to
 when their data is made visible, where, for a filesystem, "visible" means "can
@@ -128,6 +138,11 @@ final.
 * After a Job is aborted, all its intermediate data is lost.
 * Jobs may also fail. When restarted, the successor job must be able to clean up
 all the intermediate and committed work of its predecessor(s).
+* Task and Job processes measure the intervals between communications with their 
+Application Master and YARN respectively.
+When the interval has grown too large they must conclude
+that the network has partitioned and that they must abort their work.
+
 
 That's "essentially" it. When working with HDFS and similar filesystems, 
 directory `rename()` is the mechanism used to commit the work of tasks and
@@ -147,43 +162,44 @@ and restarting the job.
 whose output is in the job attempt directory, *and only rerunning all uncommitted tasks*.
 
 
-None of this algorithm works safely or swiftly when working with "raw" AWS S3
-* directory listing can be inconsistent: the tasks and jobs may not list all work to
+None of this algorithm works safely or swiftly when working with "raw" AWS S3 storage:
+* Directory listing can be inconsistent: the tasks and jobs may not list all work to
 be committed. 
-* renames go from being fast, atomic operations to slow operations which can fail partway through.
+* Renames go from being fast, atomic operations to slow operations which can fail partway through.
 
+This then is the problem which the S3A committers address: 
 
-This then is the problem which the S3A committers address: how to safely
-and reliably commit work to Amazon S3 or compatible object store.
+*How to safely and reliably commit work to Amazon S3 or compatible object store*
 
 
 ## Meet the S3A Commmitters
 
+Since Hadoop 3.1, the S3A FileSystem has been accompanied by classes
+designed to integrate with the Hadoop and Spark job commit protocols, classes
+which interact with the S3A filesystem to reliably commit work work to S3:
+*The S3A Committers*
 
-S3A supports two alternative algorithms for commiting data, *staging*
-and *magic*.
+The underlying architecture of this process is very complex, and
+covered in [the committer architecture documentation](./committer_architecture.html).
 
-The underlying architecture of these algorithms is quite complex, and
-covered in [the committer architecture documentation](./s3a_committer_architecture.html).
-
-The key concept to know of is S3's "Multipart upload mechanism", which allows
+The key concept to know of is S3's "Multipart Upload" mechanism. This allows
 an S3 client to write data to S3 in multiple HTTP POST requests, only completing
 the write operation with a final POST to complete the upload; this final POST
 consisting of a short list of the etags of the uploaded blocks.
 This multipart upload mechanism is already automatically used when writing large
 amounts of data to S3; an implementation detail of the S3A output stream.
 
-The S3Guard committers make explicit use of this multipart upload mechanism:
+The S3A committers make explicit use of this multipart upload ("MPU") mechanism:
 
 1. The individual *tasks* in a job write their data to S3 as POST operations
 within multipart uploads, yet do not issue the final POST to complete the upload.
 1. The multipart uploads are committed in the job commit process.
 
-The committers primarily vary in how data is written during task execution, how 
-the pending commit information is passed to the job manager, and, as a result,
-what requirements they have of the S3 filesystem.
+There are two different S3A committer types, *staging*
+and *magic*. The committers primarily vary in how data is written during task execution,
+how  the pending commit information is passed to the job manager, and in how
+conflict with existing files is resolved.
  
-
 
 | feature | staging | magic |
 |--------|---------|---|
@@ -219,7 +235,8 @@ The staging committer comes in two slightly different forms, with slightly
 diffrent conflict resolution policies:
 
 
-* **Directory**: the entire directory tree of data is written or overwritten. 
+* **Directory**: the entire directory tree of data is written or overwritten,
+as normal.
 
 * **Partitioned**: special handling of partitioned directory trees of the form
 `YEAR=2017/MONTH=09/DAY=19`: conflict resolution is limited to the partitions
@@ -228,7 +245,8 @@ being updated.
 
 The Partitioned Committer is intended to allow jobs updating a partitioned
 directory tree to restrict the conflict resolution to only those partition
-directories containing new data.
+directories containing new data. It is intended for use with Apache Spark
+only.
 
 
 ## Conflict Resolution in the Staging Committers
@@ -249,7 +267,6 @@ new data to an existing partitioned directory tree is a common operation.
 </property>
 ```
 
-
 **replace** : when the job is committed (and not before), delete files in
 directories into which new data will be written.
 
@@ -260,7 +277,7 @@ any with the same name. Reliable use requires unique names for generated files,
 which the committers generate
 by default.
 
-The difference between the two committers are as follows:
+The difference between the two staging ommitters are as follows:
 
 The Directory Committer uses the entire directory tree for conflict resolution.
 If any file exists at the destination it will fail in job setup; if the resolution
@@ -303,7 +320,6 @@ sourceDataset
   .format("orc")
   .save("s3a://examples/statistics")
 ```
-
 
 
 ### The Magic Committer
@@ -389,14 +405,13 @@ The staging commmitter needs a path in the cluster filesystem
 
 Temporary files are saved in HDFS (or other cluster filesystem) under the path
 `${fs.s3a.committer.tmp.path}/${user}` where `user` is the name of the user running the job.
-The default value of `fs.s3a.committer.tmp.path` is `/tmp`, so the temporary directory
-for any application attempt will be a path `/tmp/${user}`.
-In the special case in which the local `file:` filesystem is the cluster filesystem, the
-location of the temporary directory is that of the JVM system property
-`java.io.tmpdir`.
+The default value of `fs.s3a.committer.tmp.path` is `tmp/staging`,
+Which will be converted at run time to a path under the current user's home directory,
+essentially `~/tmp/staging`
+ so the temporary directory
 
 The application attempt ID is used to create a unique path under this directory,
-resulting in a path `/tmp/${user}/${application-attempt-id}/` under which
+resulting in a path `~/tmp/staging/${user}/${application-attempt-id}/` under which
 summary data of each task's pending commits are managed using the standard
 `FileOutputFormat` committer.
 
@@ -539,10 +554,9 @@ in configuration option fs.s3a.committer.magic.enabled
 ```
 
 The Job is configured to use the magic committer, but the S3A bucket has not been explicitly
-called out as supporting it,
+declared as supporting it.
 
 The destination bucket **must** be declared as supporting the magic committer.
-
 
 This can be done for those buckets which are known to be consistent, either
 because [S3Guard](s3guard.html) is used to provide consistency,
@@ -584,12 +598,13 @@ S3A Client
 ### `FileOutputCommitter` appears to be still used (from logs or delays in commits)
 
 The Staging committers use the original `FileOutputCommitter` to manage
-the propagation of commit informat
+the propagation of commit information: do not worry if it the logs show `FileOutputCommitter`
+work with data in the cluster filesystem (e.g. HDFS).
 
-One way to find out what is happening (i.e. get a stack trace of where the committer
-is being created is to set the option `mapreduce.fileoutputcommitter.algorithm.version`
+One way to make sure that the `FileOutputCommitter` is not being used to write
+the data to S3 is to set the option `mapreduce.fileoutputcommitter.algorithm.version`
 to a value such as "10". Because the only supported algorithms are "1" and "2",
-the newly created `FileOutputCommitter` will raise an exception in its constructor
+any erroneously created `FileOutputCommitter` will raise an exception in its constructor
 when instantiated:
 
 ```
@@ -609,14 +624,19 @@ at org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand.
 While that will not make the problem go away, it will at least make
 the failure happen at the start of a job.
 
+(Setting this option will not interfer with the Staging Committers' use of HDFS,
+as it explicitly sets the algorithm to "2" for that part of its work).
+
 ## Job/Task fails "Destination path exists and committer conflict resolution mode is FAIL" 
 
 This surfaces when either of two conditions are met.
 
-1. The Directory committer is used conflict resolution mode == "fail" and the output/destination directory exists.
+1. The Directory committer is used with `fs.s3a.committer.staging.conflict-mode` set to
+`fail` and the output/destination directory exists.
 The job will fail in the driver during job setup.
-1. the Partitioned Committer is used with conflict resolution mode == "fail" and one of the partitions.
-The specific task(s) generating conflicting data will fail during task commit.
+1. The Partitioned Committer is used with `fs.s3a.committer.staging.conflict-mode` set to
+`fail`  and one of the partitions. The specific task(s) generating conflicting data will fail
+during task commit, which will cause the entire job to fail.
 
 If you are trying to write data and want write conflicts to be rejected, this is the correct
 behavior: there was data at the destination so the job was aborted.

@@ -174,7 +174,7 @@ public class BindingPathOutputCommitter extends PathOutputCommitter {
   }
 
   /**
-   * Get the inner committer
+   * Get the inner committer.
    * @return the bonded committer.
    */
   public PathOutputCommitter getCommitter() {

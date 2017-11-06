@@ -329,7 +329,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   }
 
   public synchronized 
-     OutputCommitter getOutputCommitter(TaskAttemptContext context)
+    OutputCommitter getOutputCommitter(TaskAttemptContext context)
       throws IOException {
     if (committer == null) {
       Path output = getOutputPath(context);

@@ -28,6 +28,8 @@ See also:
 * [Encryption](./encryption.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
+* [Committing work to S3 with the "S3A Committers"](./committers.html)
+* [S3A Committers Architecture](./committer_architecture.html)
 * [Testing](./testing.html)
 
 ##<a name="overview"></a> Overview
@@ -82,7 +84,7 @@ the Hadoop project itself.
 1. Amazon EMR's `s3://` client. This is from the Amazon EMR team, who actively
 maintain it.
 1. Apache's Hadoop's [`s3n:` filesystem client](./s3n.html).
-   This connectore is no longer available: users must migrate to the newer `s3a:` client.
+   This connector is no longer available: users must migrate to the newer `s3a:` client.
 
 
 ##<a name="getting_started"></a> Getting Started
@@ -177,6 +179,7 @@ Parts of Hadoop relying on this can have unexpected behaviour. E.g. the
 `AggregatedLogDeletionService` of YARN will not remove the appropriate logfiles.
 * Directory listing can be slow. Use `listFiles(path, recursive)` for high
 performance recursive listings whenever possible.
+* It is possible to create files under files if the caller tries hard.
 * The time to rename a directory is proportional to the number of files
 underneath it (directory or indirectly) and the size of the files. (The copyis
 executed inside the S3 storage, so the time is independent of the bandwidth
@@ -184,8 +187,13 @@ from client to S3).
 * Directory renames are not atomic: they can fail partway through, and callers
 cannot safely rely on atomic renames as part of a commit algorithm.
 * Directory deletion is not atomic and can fail partway through.
-* It is possible to create files under files if the caller tries hard.
 
+The final three issues surface when using S3 as the immediate destination
+of work, as opposed to HDFS or other "real" filesystem. 
+
+The [S3A committers](./committers.html) are the sole mechanism available
+to safely save the output of queries directly into S3 object stores
+through the S3A filesystem.
 
 
 ### Warning #3: Object stores have differerent authorization models
@@ -223,18 +231,6 @@ Do not inadvertently share these credentials through means such as
 
 If you do any of these: change your credentials immediately!
 
-### Warning #5: The S3A client cannot be used on Amazon EMR
-
-On Amazon EMR `s3a://` URLs are not supported; Amazon provide
-their own filesystem client, `s3://`.
-If you are using Amazon EMR, follow their instructions for use —and be aware
-that all issues related to S3 integration in EMR can only be addressed by Amazon
-themselves: please raise your issues with them.
-
-Equally importantly: much of this document does not apply to the EMR `s3://` client.
-Pleae consult
-[the EMR storage documentation](http://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-file-systems.html)
-instead.
 
 ## <a name="authenticating"></a> Authenticating with S3
 
@@ -1393,18 +1389,7 @@ backward seeks.
 
 *"normal" (default)*
 
-The "Normal" policy starts off reading a file  in "sequential" mode,
-but if the caller seeks backwards in the stream, it switches from
-sequential to "random".
-
-This policy effectively recognizes the initial read pattern of columnar
-storage formats (e.g. Apache ORC and Apache Parquet), which seek to the end
-of a file, read in index data and then seek backwards to selectively read
-columns. The first seeks may be be expensive compared to the random policy,
-however the overall process is much less expensive than either sequentially
-reading through a file with the "random" policy, or reading columnar data
-with the "sequential" policy. When the exact format/recommended
-seek policy of data are known in advance, this policy
+This is currently the same as "sequential", though it may evolve in future.
 
 *"random"*
 

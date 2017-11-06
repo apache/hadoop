@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.commit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
-import org.apache.hadoop.fs.s3a.commit.staging.ConflictResolution;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;

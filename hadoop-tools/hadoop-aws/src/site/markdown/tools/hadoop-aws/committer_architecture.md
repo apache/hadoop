@@ -1831,9 +1831,56 @@ files.
 
 ### Security Risks of all committers
 
+
+#### Visibility
+
 * If S3Guard is used for storing metadata, then the metadata is visible to
 all users with read access. A malicious user with write access could delete
 entries of newly generated files, so they would not be visible.
+
+
+#### Malicious Serialized Data
+
+The internal metadata summary files (`.pending` and `.pendingset`)
+could be tampered by someone malicious, and, when parsed or interpreted by
+the trusted account, used to execute untrusted code, fail, etc.
+The formats are all JSON, parsed with Jackson; we expect invalid JSON
+to result in parse errors, and fail the job. Aborting the job triggers a
+best-effort attempt to load the pending files, ignoring those which cannot
+be loaded or parsed, and aborts all pending uploads identified by the loaded
+files. 
+
+* None of the strings in the parsed dataset are passed through any interpreter
+(e.g used in SQL queries, shell commands or similar). Therefore (SQL) injection
+attacks are not possible.
+
+* Some of the data *may* be printed in the log files generated during
+process execution. For example, commit Id, destination Key, etc. These
+are all treated as plain text, and should be served up as such in any browser-
+hosted view of the logs.
+
+* Some of the data is returned in the `toString()` values of the loaded
+classes. This may also be logged, observed in IDEs.
+
+* None of the content in the serialized data is displayed in any web UI.
+The vulnerability there is what if this happened in the future in some
+downstream application: would it be possible to inject Javascript into
+any of the text fields, script which could then be executed in some XSS
+attack. We may wish to consider sanitizing this data on load.
+
+* Paths in tampered data could be modified in an attempt to commit an upload across
+an existing file, or the MPU ID alterated to prematurely commit a different upload.
+These attempts will not going to succeed, because the destination
+path of the upload is declared on the initial POST to initiate the MPU, and
+operations associated with the MPU must also declare the path: if the path and
+ID are inconsistent, the operation will fail. If a valid (path, MPU) tuple
+were inserted in a tampered-with file, the commit or abort could complete or abort
+the upload prematurely. As the malicious party must already have enough access to the
+target S3 store to obtain this information, they are unlikely to need to
+tamper with the JSON files to perform such actions.
+
+
+#### Outstanding uncommitted data and its cost
 
 * Killed jobs will leak uncommitted uploads, which will run up bills.
 A restarted job will automatically purge
@@ -1842,7 +1889,7 @@ is rerun it will cancel the pending writes of the previous job attempt.
 
 We shall also provide a CLI tool to list and delete pending uploads under a path. 
 
-Finally, configuring a store to automatically clean pending uploads after a
+* configuring a store to automatically clean pending uploads after a
 time period such as 24h will guarantee that pending upload data will always
 be deleted, even without a rerun of the job or use of the CLI tool.
 
@@ -1854,12 +1901,17 @@ the permissions to list the upload, list hte parts and abort their own uploads.
 Bucket owner may grant/deny perms to either (this may permit a user to be
 able to initiate & complete MPU, but not delete and abort).
 
-
-### Proposed security settings & recommendations
+#### Proposed security settings & recommendations
 
 * Bucket access restricted to specific IAM roles.
 * `fs.s3a.buffer.dir` set to location under `/tmp` with read & write access
 restricted to the active user.
-* `fs.s3a.committer.staging.tmp.path` set to a location specific for
-each user. Proposed: make default an unqualified path for the FS
+* `fs.s3a.committer.staging.tmp.path` should be isolated to the active
+each user. Proposed: make the default an unqualified path, `tmp/staging`, 
+which will made absolute relative to the current user. In filesystems in
+which access under user's home directories are restricted, this final, absolute
+path, will not be visible to untrusted accounts.
 
+* Maybe: define the for valid characters in a text strings, and a regext for
+ validating, e,g, `[a-zA-Z0-9 \.\,\(\) \-\+]+` and then validate any free text
+ JSON fields on load and save.
