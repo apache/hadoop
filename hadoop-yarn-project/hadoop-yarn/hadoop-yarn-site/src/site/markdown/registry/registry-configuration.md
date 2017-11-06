@@ -90,7 +90,7 @@ and the ports on which the ZK services are listening.
 ```
   <property>
     <description>
-      List of hostname:port pairs defining the
+      A comma separated list of hostname:port pairs defining the
       zookeeper quorum binding for the registry
     </description>
     <name>hadoop.registry.zk.quorum</name>
@@ -339,7 +339,7 @@ concluding that the quorum is unreachable and failing.
 
   <property>
     <description>
-      List of hostname:port pairs defining the
+      A comma separated list of hostname:port pairs defining the
       zookeeper quorum binding for the registry
     </description>
     <name>hadoop.registry.zk.quorum</name>

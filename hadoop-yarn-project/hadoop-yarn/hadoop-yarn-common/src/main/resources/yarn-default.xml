@@ -212,6 +212,14 @@
   </property>
 
   <property>
+    <description>
+      Enable services rest api on ResourceManager.
+    </description>
+    <name>yarn.webapp.api-service.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <name>yarn.resourcemanager.resource-tracker.address</name>
     <value>${yarn.resourcemanager.hostname}:8031</value>
   </property>

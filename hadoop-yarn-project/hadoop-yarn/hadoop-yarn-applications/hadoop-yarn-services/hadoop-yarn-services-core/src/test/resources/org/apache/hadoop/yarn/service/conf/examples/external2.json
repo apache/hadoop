@@ -1,0 +1,22 @@
+{
+  "name": "external-2",
+  "lifetime": "3600",
+  "components": [
+    {
+      "name": "ext",
+      "artifact": {
+        "type": "SERVICE",
+        "id": "external-1"
+      }
+    },
+    {
+      "name": "another",
+      "launch_command": "sleep 3600",
+      "number_of_containers": 1,
+      "resource": {
+        "cpus": 1,
+        "memory": "512"
+      }
+    }
+  ]
+}
