@@ -1174,6 +1174,18 @@ abstract public class Task implements Writable, Configurable {
     sendLastUpdate(umbilical);
     //signal the tasktracker that we are done
     sendDone(umbilical);
+    LOG.info("Final Counters for " + taskId + ": " +
+              getCounters().toString());
+    /**
+     *   File System Counters
+     *           FILE: Number of bytes read=0
+     *           FILE: Number of bytes written=146972
+     *           ...
+     *   Map-Reduce Framework
+     *           Map output records=6
+     *           Map output records=6
+     *           ...
+     */
   }
 
   /**
