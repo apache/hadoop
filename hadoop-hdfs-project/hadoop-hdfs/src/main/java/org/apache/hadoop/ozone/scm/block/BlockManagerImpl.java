@@ -148,7 +148,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     blockDeletingService =
         new SCMBlockDeletingService(
             deletedBlockLog, containerManager, nodeManager, svcInterval,
-            serviceTimeout);
+            serviceTimeout, conf);
   }
 
   /**
@@ -524,5 +524,10 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     // We have to get open containers by Replication Type and Replication
     // factor. Hence returning 0 for now.
     // containers.get(OzoneProtos.LifeCycleState.OPEN).size();
+  }
+
+  @Override
+  public SCMBlockDeletingService getSCMBlockDeletingService() {
+    return this.blockDeletingService;
   }
 }
