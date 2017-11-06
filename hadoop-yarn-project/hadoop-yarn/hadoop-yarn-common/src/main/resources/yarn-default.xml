@@ -3433,4 +3433,13 @@
     to specify details about the individual resource types.
     </description>
   </property>
+
+  <property>
+    <description>
+      Provides an option for client to load supported resource types from RM
+      instead of depending on local resource-types.xml file.
+    </description>
+    <name>yarn.client.load.resource-types.from-server</name>
+    <value>false</value>
+  </property>
 </configuration>

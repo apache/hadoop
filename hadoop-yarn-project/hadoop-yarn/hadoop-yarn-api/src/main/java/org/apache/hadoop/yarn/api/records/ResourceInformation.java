@@ -204,6 +204,12 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
             Long.MAX_VALUE);
   }
 
+  public static ResourceInformation newInstance(String name, String units,
+      ResourceTypes resourceType) {
+    return ResourceInformation.newInstance(name, units, 0L, resourceType, 0L,
+        Long.MAX_VALUE);
+  }
+
   public static ResourceInformation newInstance(String name, long value) {
     return ResourceInformation
         .newInstance(name, "", value, ResourceTypes.COUNTABLE, 0L,

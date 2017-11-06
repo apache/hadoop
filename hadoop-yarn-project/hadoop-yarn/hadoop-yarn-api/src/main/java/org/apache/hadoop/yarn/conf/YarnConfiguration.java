@@ -953,6 +953,17 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
 
   /**
+   * Enable/disable loading resource-types.xml at client side.
+   */
+  @Public
+  @Unstable
+  public static final String YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER = YARN_PREFIX
+      + "client.load.resource-types.from-server";
+  @Public
+  @Unstable
+  public static final boolean DEFAULT_YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER = false;
+
+  /**
    * Timeout in seconds for YARN node graceful decommission.
    * This is the maximal time to wait for running containers and applications
    * to complete before transition a DECOMMISSIONING node into DECOMMISSIONED.

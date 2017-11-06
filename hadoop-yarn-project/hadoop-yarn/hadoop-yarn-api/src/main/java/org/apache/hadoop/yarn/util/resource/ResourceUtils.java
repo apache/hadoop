@@ -22,8 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -617,4 +615,25 @@ public class ResourceUtils {
     return result;
   }
 
+
+  /**
+   * Reinitialize all resource types from external source (in case of client,
+   * server will send the updated list and local resourceutils cache will be
+   * updated as per server's list of resources)
+   *
+   * @param resourceTypeInfo
+   *          List of resource types
+   */
+  public static void reinitializeResources(
+      List<ResourceTypeInfo> resourceTypeInfo) {
+    Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
+
+    for (ResourceTypeInfo resourceType : resourceTypeInfo) {
+      resourceInformationMap.put(resourceType.getName(),
+          ResourceInformation.newInstance(resourceType.getName(),
+              resourceType.getDefaultUnit(), resourceType.getResourceType()));
+    }
+    ResourceUtils
+        .initializeResourcesFromResourceInformationMap(resourceInformationMap);
+  }
 }
