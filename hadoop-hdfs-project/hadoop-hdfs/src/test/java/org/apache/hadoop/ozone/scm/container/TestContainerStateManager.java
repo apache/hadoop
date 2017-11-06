@@ -23,8 +23,12 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.scm.container.common.helpers.BlockContainerInfo;
-import org.junit.*;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
@@ -69,12 +73,12 @@ public class TestContainerStateManager {
     String container1 = "container" + RandomStringUtils.randomNumeric(5);
     scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container1);
-    BlockContainerInfo info = stateManager
+    ContainerInfo info = stateManager
         .getMatchingContainer(OzoneConsts.GB * 3, OzoneProtos.Owner.OZONE,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.ALLOCATED);
     Assert.assertEquals(container1, info.getContainerName());
-    Assert.assertEquals(OzoneConsts.GB * 3, info.getAllocated());
+    Assert.assertEquals(OzoneConsts.GB * 3, info.getAllocatedBytes());
     Assert.assertEquals(OzoneProtos.Owner.OZONE, info.getOwner());
     Assert.assertEquals(xceiverClientManager.getType(),
         info.getPipeline().getType());
@@ -136,7 +140,7 @@ public class TestContainerStateManager {
     scm.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), container2);
 
-    BlockContainerInfo info = stateManager
+    ContainerInfo info = stateManager
         .getMatchingContainer(OzoneConsts.GB * 3, OzoneProtos.Owner.OZONE,
             xceiverClientManager.getType(), xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.OPEN);

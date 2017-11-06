@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.scm.container;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.lease.Lease;
 import org.apache.hadoop.ozone.lease.LeaseException;
@@ -27,12 +28,14 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.Owner;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.container.common.helpers.BlockContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
@@ -69,6 +72,7 @@ public class ContainerMapping implements Mapping {
   private final PipelineSelector pipelineSelector;
   private final ContainerStateManager containerStateManager;
   private final LeaseManager<ContainerInfo> containerLeaseManager;
+  private final float containerCloseThreshold;
 
   /**
    * Constructs a mapping class that creates mapping between container names
@@ -108,6 +112,9 @@ public class ContainerMapping implements Mapping {
     this.pipelineSelector = new PipelineSelector(nodeManager, conf);
     this.containerStateManager =
         new ContainerStateManager(conf, this, this.cacheSize * OzoneConsts.MB);
+    this.containerCloseThreshold = conf.getFloat(
+        ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD,
+        ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
     LOG.trace("Container State Manager created.");
 
     long containerCreationLeaseTimeout = conf.getLong(
@@ -293,8 +300,7 @@ public class ContainerMapping implements Mapping {
             containerLeaseManager.acquire(containerInfo);
         // Register callback to be executed in case of timeout
         containerLease.registerCallBack(() -> {
-          containerStateManager.updateContainerState(
-              new BlockContainerInfo(containerInfo, 0),
+          updateContainerState(containerName,
               OzoneProtos.LifeCycleEvent.TIMEOUT);
           return null;
         });
@@ -302,12 +308,9 @@ public class ContainerMapping implements Mapping {
         // Release the lease on container
         containerLeaseManager.release(containerInfo);
       }
-      // TODO: Actual used will be updated via Container Reports later.
-      containerInfo.setState(
-          containerStateManager.updateContainerState(
-              new BlockContainerInfo(containerInfo, 0), event));
-
-      containerStore.put(dbKey, containerInfo.getProtobuf().toByteArray());
+      ContainerInfo updatedContainer = containerStateManager
+          .updateContainerState(containerInfo, event);
+      containerStore.put(dbKey, updatedContainer.getProtobuf().toByteArray());
       return containerInfo.getState();
     } catch (LeaseException e) {
       throw new IOException("Lease Exception.", e);
@@ -322,6 +325,85 @@ public class ContainerMapping implements Mapping {
   public ContainerStateManager getStateManager() {
     return containerStateManager;
   }
+
+  /**
+   * Process container report from Datanode.
+   *
+   * @param datanodeID Datanode ID
+   * @param reportType Type of report
+   * @param containerInfos container details
+   */
+  @Override
+  public void processContainerReports(
+      DatanodeID datanodeID,
+      ContainerReportsRequestProto.reportType reportType,
+      List<StorageContainerDatanodeProtocolProtos.ContainerInfo>
+          containerInfos) throws IOException {
+    for (StorageContainerDatanodeProtocolProtos.ContainerInfo containerInfo :
+        containerInfos) {
+      byte[] dbKey = containerInfo.getContainerNameBytes().toByteArray();
+      lock.lock();
+      try {
+        byte[] containerBytes = containerStore.get(dbKey);
+        if (containerBytes != null) {
+          OzoneProtos.SCMContainerInfo oldInfo =
+              OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
+
+          OzoneProtos.SCMContainerInfo.Builder builder =
+              OzoneProtos.SCMContainerInfo.newBuilder();
+          builder.setContainerName(oldInfo.getContainerName());
+          builder.setPipeline(oldInfo.getPipeline());
+          // If used size is greater than allocated size, we will be updating
+          // allocated size with used size. This update is done as a fallback
+          // mechanism in case SCM crashes without properly updating allocated
+          // size. Correct allocated value will be updated by
+          // ContainerStateManager during SCM shutdown.
+          long usedSize = containerInfo.getUsed();
+          long allocated = oldInfo.getAllocatedBytes() > usedSize ?
+              oldInfo.getAllocatedBytes() : usedSize;
+          builder.setAllocatedBytes(allocated);
+          builder.setUsedBytes(containerInfo.getUsed());
+          builder.setNumberOfKeys(containerInfo.getKeyCount());
+          builder.setState(oldInfo.getState());
+          builder.setStateEnterTime(oldInfo.getStateEnterTime());
+          if (oldInfo.getOwner() != null) {
+            builder.setOwner(oldInfo.getOwner());
+          }
+          OzoneProtos.SCMContainerInfo newContainerInfo = builder.build();
+          containerStore.put(dbKey, newContainerInfo.toByteArray());
+          float containerUsedPercentage = 1.0f *
+              containerInfo.getUsed() / containerInfo.getSize();
+          // TODO: Handling of containers which are already in close queue.
+          if (containerUsedPercentage >= containerCloseThreshold) {
+            // TODO: The container has to be moved to close container queue.
+            // For now, we are just updating the container state to CLOSED.
+            // Close container implementation can decide on how to maintain
+            // list of containers to be closed, this is the place where we
+            // have to add the containers to that list.
+            ContainerInfo updatedContainer =
+                containerStateManager.updateContainerState(
+                    ContainerInfo.fromProtobuf(newContainerInfo),
+                    OzoneProtos.LifeCycleEvent.CLOSE);
+            if (updatedContainer.getState() !=
+                OzoneProtos.LifeCycleState.CLOSED) {
+              LOG.error("Failed to close container {}, reason : Not able to " +
+                      "update container state, current container state: {}." +
+                      "in state {}", containerInfo.getContainerName(),
+                  updatedContainer.getState());
+            }
+          }
+        } else {
+          // Container not found in our container db.
+          LOG.error("Error while processing container report from datanode :" +
+              " {}, for container: {}, reason: container doesn't exist in" +
+              "container database.");
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+  }
+
 
   /**
    * Closes this stream and releases any system resources associated with it.

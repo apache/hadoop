@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.ReregisterCommand;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.commands.SendContainerCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
@@ -578,56 +579,64 @@ public class SCMNodeManager
   private void handleHeartbeat(HeartbeatQueueItem hbItem) {
     lastHBProcessedCount++;
 
-    String datanodeID = hbItem.getDatanodeID().getDatanodeUuid();
+    DatanodeID datanodeID = hbItem.getDatanodeID();
+    String datanodeUuid = datanodeID.getDatanodeUuid();
     SCMNodeReport nodeReport = hbItem.getNodeReport();
     long recvTimestamp = hbItem.getRecvTimestamp();
     long processTimestamp = Time.monotonicNow();
     if (LOG.isTraceEnabled()) {
       //TODO: add average queue time of heartbeat request as metrics
       LOG.trace("Processing Heartbeat from datanode {}: queueing time {}",
-          datanodeID, processTimestamp - recvTimestamp);
+          datanodeUuid, processTimestamp - recvTimestamp);
     }
 
     // If this node is already in the list of known and healthy nodes
     // just set the last timestamp and return.
-    if (healthyNodes.containsKey(datanodeID)) {
-      healthyNodes.put(datanodeID, processTimestamp);
-      updateNodeStat(datanodeID, nodeReport);
+    if (healthyNodes.containsKey(datanodeUuid)) {
+      healthyNodes.put(datanodeUuid, processTimestamp);
+      updateNodeStat(datanodeUuid, nodeReport);
+      updateCommandQueue(datanodeID,
+          hbItem.getContainerReportState().getState());
       return;
     }
 
     // A stale node has heartbeat us we need to remove the node from stale
     // list and move to healthy list.
-    if (staleNodes.containsKey(datanodeID)) {
-      staleNodes.remove(datanodeID);
-      healthyNodes.put(datanodeID, processTimestamp);
+    if (staleNodes.containsKey(datanodeUuid)) {
+      staleNodes.remove(datanodeUuid);
+      healthyNodes.put(datanodeUuid, processTimestamp);
       healthyNodeCount.incrementAndGet();
       staleNodeCount.decrementAndGet();
-      updateNodeStat(datanodeID, nodeReport);
+      updateNodeStat(datanodeUuid, nodeReport);
+      updateCommandQueue(datanodeID,
+          hbItem.getContainerReportState().getState());
       return;
     }
 
     // A dead node has heartbeat us, we need to remove that node from dead
     // node list and move it to the healthy list.
-    if (deadNodes.containsKey(datanodeID)) {
-      deadNodes.remove(datanodeID);
-      healthyNodes.put(datanodeID, processTimestamp);
+    if (deadNodes.containsKey(datanodeUuid)) {
+      deadNodes.remove(datanodeUuid);
+      healthyNodes.put(datanodeUuid, processTimestamp);
       deadNodeCount.decrementAndGet();
       healthyNodeCount.incrementAndGet();
-      updateNodeStat(datanodeID, nodeReport);
+      updateNodeStat(datanodeUuid, nodeReport);
+      updateCommandQueue(datanodeID,
+          hbItem.getContainerReportState().getState());
       return;
     }
 
-    LOG.warn("SCM receive heartbeat from unregistered datanode {}", datanodeID);
+    LOG.warn("SCM receive heartbeat from unregistered datanode {}",
+        datanodeUuid);
     this.commandQueue.addCommand(hbItem.getDatanodeID(),
         new ReregisterCommand());
   }
 
-  private void updateNodeStat(String datanodeID, SCMNodeReport nodeReport) {
-    SCMNodeStat stat = nodeStats.get(datanodeID);
+  private void updateNodeStat(String datanodeUuid, SCMNodeReport nodeReport) {
+    SCMNodeStat stat = nodeStats.get(datanodeUuid);
     if (stat == null) {
       LOG.debug("SCM updateNodeStat based on heartbeat from previous" +
-          "dead datanode {}", datanodeID);
+          "dead datanode {}", datanodeUuid);
       stat = new SCMNodeStat();
     }
 
@@ -643,8 +652,24 @@ public class SCMNodeManager
       }
       scmStat.subtract(stat);
       stat.set(totalCapacity, totalScmUsed, totalRemaining);
-      nodeStats.put(datanodeID, stat);
+      nodeStats.put(datanodeUuid, stat);
       scmStat.add(stat);
+    }
+  }
+
+  private void updateCommandQueue(DatanodeID datanodeID,
+                                  ReportState.states containerReportState) {
+    if (containerReportState != null) {
+      switch (containerReportState) {
+      case completeContinerReport:
+        commandQueue.addCommand(datanodeID,
+            SendContainerCommand.newBuilder().build());
+        return;
+      case deltaContainerReport:
+      case noContainerReports:
+      default:
+        // do nothing
+      }
     }
   }
 

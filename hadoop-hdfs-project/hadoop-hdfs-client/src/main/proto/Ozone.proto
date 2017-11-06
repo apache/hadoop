@@ -114,8 +114,13 @@ message SCMContainerInfo {
     required string containerName = 1;
     required LifeCycleState state = 2;
     required Pipeline pipeline = 3;
-    optional int64 stateEnterTime = 4;
-    optional Owner owner = 5 [default = OZONE];
+    // This is not total size of container, but space allocated by SCM for
+    // clients to write blocks
+    required uint64 allocatedBytes = 4;
+    required uint64 usedBytes = 5;
+    required uint64 numberOfKeys = 6;
+    optional int64 stateEnterTime = 7;
+    optional Owner owner = 8 [default = OZONE];
 }
 
 enum ReplicationType {

@@ -1126,4 +1126,15 @@
       nothing is specified. Supported values: RATIS, STAND_ALONE and CHAINED.
     </description>
   </property>
+  <property>
+    <name>ozone.scm.container.close.threshold</name>
+    <value>0.9f</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      This determines the threshold to be used for closing a container.
+      When the container used percentage reaches this threshold,
+      the container will be closed. Value should be a positive, non-zero
+      percentage in float notation (X.Yf), with 1.0f meaning 100%.
+    </description>
+  </property>
 </configuration>

@@ -30,13 +30,13 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.scm.ScmConfigKeys;
-import org.apache.hadoop.scm.container.common.helpers.BlockContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,7 +57,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.Owner;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleEvent;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 
-import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.FAILED_TO_CHANGE_CONTAINER_STATE;
+import static org.apache.hadoop.ozone.scm.exceptions
+    .SCMException.ResultCodes.FAILED_TO_CHANGE_CONTAINER_STATE;
 
 /**
  * A container state manager keeps track of container states and returns
@@ -116,7 +117,7 @@ import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.FA
  * TimeOut Delete Container State Machine - if the container creating times out,
  * then Container State manager decides to delete the container.
  */
-public class ContainerStateManager {
+public class ContainerStateManager implements Closeable {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerStateManager.class);
 
@@ -130,8 +131,8 @@ public class ContainerStateManager {
   // A map that maintains the ContainerKey to Containers of that type ordered
   // by last access time.
   private final ReadWriteLock lock;
-  private final Queue<BlockContainerInfo> containerCloseQueue;
-  private Map<ContainerKey, PriorityQueue<BlockContainerInfo>> containers;
+  private final Queue<ContainerInfo> containerCloseQueue;
+  private Map<ContainerKey, PriorityQueue<ContainerInfo>> containers;
 
   /**
    * Constructs a Container State Manager that tracks all containers owned by
@@ -167,7 +168,7 @@ public class ContainerStateManager {
     containers = new HashMap<>();
     initializeContainerMaps();
     loadExistingContainers(containerMapping);
-    containerCloseQueue = new ConcurrentLinkedQueue<BlockContainerInfo>();
+    containerCloseQueue = new ConcurrentLinkedQueue<>();
   }
 
   /**
@@ -191,7 +192,7 @@ public class ContainerStateManager {
         for (ReplicationFactor factor : ReplicationFactor.values()) {
           for (LifeCycleState state : LifeCycleState.values()) {
             ContainerKey key = new ContainerKey(owner, type, factor, state);
-            PriorityQueue<BlockContainerInfo> queue = new PriorityQueue<>();
+            PriorityQueue<ContainerInfo> queue = new PriorityQueue<>();
             containers.put(key, queue);
           }
         }
@@ -212,9 +213,7 @@ public class ContainerStateManager {
         ContainerKey key = new ContainerKey(container.getOwner(),
             container.getPipeline().getType(),
             container.getPipeline().getFactor(), container.getState());
-        BlockContainerInfo blockContainerInfo =
-            new BlockContainerInfo(container, 0);
-        ((PriorityQueue) containers.get(key)).add(blockContainerInfo);
+        containers.get(key).add(container);
       }
     } catch (IOException e) {
       if (!e.getMessage().equals("No container exists in current db")) {
@@ -289,28 +288,31 @@ public class ContainerStateManager {
 
     Pipeline pipeline = selector.getReplicationPipeline(type,
         replicationFactor, containerName);
-    ContainerInfo info = new ContainerInfo.Builder()
+    ContainerInfo containerInfo = new ContainerInfo.Builder()
         .setContainerName(containerName)
         .setState(OzoneProtos.LifeCycleState.ALLOCATED)
         .setPipeline(pipeline)
+        // This is bytes allocated for blocks inside container, not the
+        // container size
+        .setAllocatedBytes(0)
+        .setUsedBytes(0)
+        .setNumberOfKeys(0)
         .setStateEnterTime(Time.monotonicNow())
         .setOwner(owner)
         .build();
-    Preconditions.checkNotNull(info);
-    BlockContainerInfo blockInfo = new BlockContainerInfo(info, 0);
-    blockInfo.setLastUsed(Time.monotonicNow());
+    Preconditions.checkNotNull(containerInfo);
     lock.writeLock().lock();
     try {
       ContainerKey key = new ContainerKey(owner, type, replicationFactor,
-          blockInfo.getState());
-      PriorityQueue<BlockContainerInfo> queue = containers.get(key);
+          containerInfo.getState());
+      PriorityQueue<ContainerInfo> queue = containers.get(key);
       Preconditions.checkNotNull(queue);
-      queue.add(blockInfo);
-      LOG.trace("New container allocated: {}", blockInfo);
+      queue.add(containerInfo);
+      LOG.trace("New container allocated: {}", containerInfo);
     } finally {
       lock.writeLock().unlock();
     }
-    return info;
+    return containerInfo;
   }
 
   /**
@@ -318,20 +320,14 @@ public class ContainerStateManager {
    *
    * @param info - ContainerInfo
    * @param event - LifeCycle Event
-   * @return New state of the container.
+   * @return Updated ContainerInfo.
    * @throws SCMException
    */
-  public OzoneProtos.LifeCycleState updateContainerState(BlockContainerInfo
+  public ContainerInfo updateContainerState(ContainerInfo
       info, OzoneProtos.LifeCycleEvent event) throws SCMException {
-    LifeCycleState newState = null;
-    boolean shouldLease = false;
+    LifeCycleState newState;
     try {
       newState = this.stateMachine.getNextState(info.getState(), event);
-      if(newState == LifeCycleState.CREATING) {
-        // if we are moving into a Creating State, it is possible that clients
-        // could timeout therefore we need to use a lease.
-        shouldLease = true;
-      }
     } catch (InvalidStateTransitionException ex) {
       String error = String.format("Failed to update container state %s, " +
               "reason: invalid state transition from state: %s upon event: %s.",
@@ -352,7 +348,7 @@ public class ContainerStateManager {
     lock.writeLock().lock();
     try {
 
-      PriorityQueue<BlockContainerInfo> currentQueue = containers.get(oldKey);
+      PriorityQueue<ContainerInfo> currentQueue = containers.get(oldKey);
       // This should never happen, since we have initialized the map and
       // queues to all possible states. No harm in asserting that info.
       Preconditions.checkNotNull(currentQueue);
@@ -368,14 +364,23 @@ public class ContainerStateManager {
         currentQueue.remove(info);
       }
 
-      info.setState(newState);
-      PriorityQueue<BlockContainerInfo> nextQueue = containers.get(newKey);
+      PriorityQueue<ContainerInfo> nextQueue = containers.get(newKey);
       Preconditions.checkNotNull(nextQueue);
 
-      info.setLastUsed(Time.monotonicNow());
-      nextQueue.add(info);
+      ContainerInfo containerInfo = new ContainerInfo.Builder()
+          .setContainerName(info.getContainerName())
+          .setState(newState)
+          .setPipeline(info.getPipeline())
+          .setAllocatedBytes(info.getAllocatedBytes())
+          .setUsedBytes(info.getUsedBytes())
+          .setNumberOfKeys(info.getNumberOfKeys())
+          .setStateEnterTime(Time.monotonicNow())
+          .setOwner(info.getOwner())
+          .build();
+      Preconditions.checkNotNull(containerInfo);
+      nextQueue.add(containerInfo);
 
-      return newState;
+      return containerInfo;
     } finally {
       lock.writeLock().unlock();
     }
@@ -389,43 +394,34 @@ public class ContainerStateManager {
    * @param type - Replication Type {StandAlone, Ratis}
    * @param factor - Replication Factor {ONE, THREE}
    * @param state - State of the Container-- {Open, Allocated etc.}
-   * @return BlockContainerInfo
+   * @return ContainerInfo
    */
-  public BlockContainerInfo getMatchingContainer(final long size,
+  public ContainerInfo getMatchingContainer(final long size,
       Owner owner, ReplicationType type, ReplicationFactor factor,
       LifeCycleState state) {
     ContainerKey key = new ContainerKey(owner, type, factor, state);
     lock.writeLock().lock();
     try {
-      PriorityQueue<BlockContainerInfo> queue = containers.get(key);
+      PriorityQueue<ContainerInfo> queue = containers.get(key);
       if (queue.size() == 0) {
         // We don't have any Containers of this type.
         return null;
       }
-      Iterator<BlockContainerInfo> iter = queue.iterator();
+      Iterator<ContainerInfo> iter = queue.iterator();
       // Two assumptions here.
       // 1. The Iteration on the heap is in ordered by the last used time.
       // 2. We remove and add the node back to push the node to the end of
       // the queue.
 
       while (iter.hasNext()) {
-        BlockContainerInfo info = iter.next();
-        if (info.canAllocate(size, this.containerSize)) {
+        ContainerInfo info = iter.next();
+        if (info.getAllocatedBytes() + size <= this.containerSize) {
           queue.remove(info);
-          info.addAllocated(size);
-          info.setLastUsed(Time.monotonicNow());
+          info.allocate(size);
+          info.updateLastUsedTime();
           queue.add(info);
 
           return info;
-        } else {
-          if (info.getState() != LifeCycleState.CLOSED) {
-            // We should close this container.
-            LOG.info("Moving {} to containerCloseQueue.", info.toString());
-            info.setState(LifeCycleState.CLOSED);
-            containerCloseQueue.add(info);
-            //TODO: Next JIRA will handle these containers to close.
-            //TODO: move container to right queue
-          }
         }
       }
 
@@ -436,19 +432,24 @@ public class ContainerStateManager {
   }
 
   @VisibleForTesting
-  public List<BlockContainerInfo> getMatchingContainers(Owner owner,
+  public List<ContainerInfo> getMatchingContainers(Owner owner,
       ReplicationType type, ReplicationFactor factor, LifeCycleState state) {
     ContainerKey key = new ContainerKey(owner, type, factor, state);
     lock.readLock().lock();
     try {
-      return Arrays.asList((BlockContainerInfo[]) containers.get(key)
-          .toArray(new BlockContainerInfo[0]));
+      return Arrays.asList((ContainerInfo[]) containers.get(key)
+          .toArray(new ContainerInfo[0]));
     } catch (Exception e) {
       LOG.error("Could not get matching containers", e);
     } finally {
       lock.readLock().unlock();
     }
     return null;
+  }
+
+  @Override
+  public void close() throws IOException {
+    //TODO: update container metadata db with actual allocated bytes values.
   }
 
   /**
