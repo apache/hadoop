@@ -811,7 +811,8 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
                   + "success={}", result.getTxID(), result.getSuccess());
         }
         if (result.getSuccess()) {
-          LOG.info("Purging TXID={} from block deletion log", result.getTxID());
+          LOG.debug("Purging TXID={} from block deletion log",
+              result.getTxID());
           this.getScmBlockManager().getDeletedBlockLog()
               .commitTransactions(Collections.singletonList(result.getTxID()));
         } else {

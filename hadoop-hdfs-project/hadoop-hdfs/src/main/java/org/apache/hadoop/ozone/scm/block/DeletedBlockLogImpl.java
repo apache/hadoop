@@ -326,4 +326,26 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
       deletedStore.close();
     }
   }
+
+  @Override
+  public void getTransactions(DatanodeDeletedBlockTransactions transactions)
+      throws IOException {
+    lock.lock();
+    try {
+      deletedStore.iterate(null, (key, value) -> {
+        if (!Arrays.equals(LATEST_TXID, key)) {
+          DeletedBlocksTransaction block = DeletedBlocksTransaction
+              .parseFrom(value);
+
+          if (block.getCount() > -1 && block.getCount() <= maxRetry) {
+            transactions.addTransaction(block);
+          }
+          return !transactions.isFull();
+        }
+        return true;
+      });
+    } finally {
+      lock.unlock();
+    }
+  }
 }

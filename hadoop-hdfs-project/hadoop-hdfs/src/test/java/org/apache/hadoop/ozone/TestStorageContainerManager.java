@@ -22,9 +22,17 @@ import java.io.IOException;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.Type;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.scm.block.DeletedBlockLog;
+import org.apache.hadoop.ozone.scm.block.SCMBlockDeletingService;
+import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.junit.Rule;
@@ -166,11 +174,17 @@ public class TestStorageContainerManager {
 
   @Test
   public void testBlockDeletionTransactions() throws Exception {
+    int numKeys = 5;
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 5);
     conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 3000);
     conf.setInt(ScmConfigKeys.OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 5);
     conf.setInt(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS, 1000);
+    // Reset container provision size, otherwise only one container
+    // is created by default.
+    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
+        numKeys);
+
     MiniOzoneCluster cluster =
         new MiniOzoneCluster.Builder(conf).numDataNodes(1)
             .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
@@ -180,48 +194,14 @@ public class TestStorageContainerManager {
           .getScmBlockManager().getDeletedBlockLog();
       Assert.assertEquals(0, delLog.getNumOfValidTransactions());
 
-      // Create 20 random names keys.
+      // Create {numKeys} random names keys.
       TestStorageContainerManagerHelper helper =
           new TestStorageContainerManagerHelper(cluster, conf);
-      Map<String, KsmKeyInfo> keyLocations = helper.createKeys(20, 4096);
+      Map<String, KsmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
 
-      // These keys will be written into a bunch of containers,
-      // gets a set of container names, verify container containerBlocks
-      // on datanodes.
-      Set<String> containerNames = new HashSet<>();
-      for (Map.Entry<String, KsmKeyInfo> entry : keyLocations.entrySet()) {
-        entry.getValue().getKeyLocationList()
-            .forEach(loc -> containerNames.add(loc.getContainerName()));
-      }
-
-      // Total number of containerBlocks of these containers should be equal to
-      // total number of containerBlocks via creation call.
-      int totalCreatedBlocks = 0;
-      for (KsmKeyInfo info : keyLocations.values()) {
-        totalCreatedBlocks += info.getKeyLocationList().size();
-      }
-      Assert.assertTrue(totalCreatedBlocks > 0);
-      Assert.assertEquals(totalCreatedBlocks,
-          helper.getAllBlocks(containerNames).size());
-
-      // Create a deletion TX for each key.
-      Map<String, List<String>> containerBlocks = Maps.newHashMap();
-      for (KsmKeyInfo info : keyLocations.values()) {
-        List<KsmKeyLocationInfo> list = info.getKeyLocationList();
-        list.forEach(location -> {
-          if (containerBlocks.containsKey(location.getContainerName())) {
-            containerBlocks.get(location.getContainerName())
-                .add(location.getBlockID());
-          } else {
-            List<String> blks = Lists.newArrayList();
-            blks.add(location.getBlockID());
-            containerBlocks.put(location.getContainerName(), blks);
-          }
-        });
-      }
-      for (Map.Entry<String, List<String>> tx : containerBlocks.entrySet()) {
-        delLog.addTransaction(tx.getKey(), tx.getValue());
-      }
+      Map<String, List<String>> containerBlocks = createDeleteTXLog(delLog,
+          keyLocations, helper);
+      Set<String> containerNames = containerBlocks.keySet();
 
       // Verify a few TX gets created in the TX log.
       Assert.assertTrue(delLog.getNumOfValidTransactions() > 0);
@@ -267,5 +247,106 @@ public class TestStorageContainerManager {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testBlockDeletingThrottling() throws Exception {
+    int numKeys = 15;
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 5);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, 3000);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 5);
+    conf.setInt(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS, 1000);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
+        numKeys);
+
+    MiniOzoneCluster cluster = new MiniOzoneCluster.Builder(conf)
+        .numDataNodes(1).setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+        .build();
+
+    DeletedBlockLog delLog = cluster.getStorageContainerManager()
+        .getScmBlockManager().getDeletedBlockLog();
+    Assert.assertEquals(0, delLog.getNumOfValidTransactions());
+
+    int limitSize = 1;
+    // Reset limit value to 1, so that we only allow one TX is dealt per
+    // datanode.
+    SCMBlockDeletingService delService = cluster.getStorageContainerManager()
+        .getScmBlockManager().getSCMBlockDeletingService();
+    delService.setBlockDeleteTXNum(limitSize);
+
+    // Create {numKeys} random names keys.
+    TestStorageContainerManagerHelper helper =
+        new TestStorageContainerManagerHelper(cluster, conf);
+    Map<String, KsmKeyInfo> keyLocations = helper.createKeys(numKeys, 4096);
+
+    createDeleteTXLog(delLog, keyLocations, helper);
+    // Verify a few TX gets created in the TX log.
+    Assert.assertTrue(delLog.getNumOfValidTransactions() > 0);
+
+    // Verify the size in delete commands is expected.
+    GenericTestUtils.waitFor(() -> {
+      NodeManager nodeManager = cluster.getStorageContainerManager()
+          .getScmNodeManager();
+      ReportState reportState = ReportState.newBuilder()
+          .setState(ReportState.states.noContainerReports).setCount(0).build();
+      List<SCMCommand> commands = nodeManager.sendHeartbeat(
+          nodeManager.getNodes(NodeState.HEALTHY).get(0), null, reportState);
+
+      if (commands != null) {
+        for (SCMCommand cmd : commands) {
+          if (cmd.getType() == Type.deleteBlocksCommand) {
+            List<DeletedBlocksTransaction> deletedTXs =
+                ((DeleteBlocksCommand) cmd).blocksTobeDeleted();
+            return deletedTXs != null && deletedTXs.size() == limitSize;
+          }
+        }
+      }
+      return false;
+    }, 500, 10000);
+  }
+
+  private Map<String, List<String>> createDeleteTXLog(DeletedBlockLog delLog,
+      Map<String, KsmKeyInfo> keyLocations,
+      TestStorageContainerManagerHelper helper) throws IOException {
+    // These keys will be written into a bunch of containers,
+    // gets a set of container names, verify container containerBlocks
+    // on datanodes.
+    Set<String> containerNames = new HashSet<>();
+    for (Map.Entry<String, KsmKeyInfo> entry : keyLocations.entrySet()) {
+      entry.getValue().getKeyLocationList()
+          .forEach(loc -> containerNames.add(loc.getContainerName()));
+    }
+
+    // Total number of containerBlocks of these containers should be equal to
+    // total number of containerBlocks via creation call.
+    int totalCreatedBlocks = 0;
+    for (KsmKeyInfo info : keyLocations.values()) {
+      totalCreatedBlocks += info.getKeyLocationList().size();
+    }
+    Assert.assertTrue(totalCreatedBlocks > 0);
+    Assert.assertEquals(totalCreatedBlocks,
+        helper.getAllBlocks(containerNames).size());
+
+    // Create a deletion TX for each key.
+    Map<String, List<String>> containerBlocks = Maps.newHashMap();
+    for (KsmKeyInfo info : keyLocations.values()) {
+      List<KsmKeyLocationInfo> list = info.getKeyLocationList();
+      list.forEach(location -> {
+        if (containerBlocks.containsKey(location.getContainerName())) {
+          containerBlocks.get(location.getContainerName())
+              .add(location.getBlockID());
+        } else {
+          List<String> blks = Lists.newArrayList();
+          blks.add(location.getBlockID());
+          containerBlocks.put(location.getContainerName(), blks);
+        }
+      });
+    }
+    for (Map.Entry<String, List<String>> tx : containerBlocks.entrySet()) {
+      delLog.addTransaction(tx.getKey(), tx.getValue());
+    }
+
+    return containerBlocks;
   }
 }

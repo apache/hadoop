@@ -165,7 +165,7 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
         try {
           containerDB.writeBatch(batch);
           newDeletionBlocks++;
-          LOG.info("Transited Block {} to DELETING state in container {}",
+          LOG.debug("Transited Block {} to DELETING state in container {}",
               blk, containerId);
         } catch (IOException e) {
           // if some blocks failed to delete, we fail this TX,
@@ -175,7 +175,7 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
               "Failed to delete blocks for TXID = " + delTX.getTxID(), e);
         }
       } else {
-        LOG.info("Block {} not found or already under deletion in"
+        LOG.debug("Block {} not found or already under deletion in"
                 + " container {}, skip deleting it.", blk, containerId);
       }
     }

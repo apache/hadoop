@@ -78,4 +78,9 @@ public interface BlockManager extends Closeable {
    * @throws IOException
    */
   void stop() throws IOException;
+
+  /**
+   * @return the block deleting service executed in SCM.
+   */
+  SCMBlockDeletingService getSCMBlockDeletingService();
 }

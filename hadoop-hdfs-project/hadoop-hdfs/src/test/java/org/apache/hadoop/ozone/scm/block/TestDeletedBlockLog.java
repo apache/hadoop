@@ -19,9 +19,14 @@ package org.apache.hadoop.ozone.scm.block;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
+import org.apache.hadoop.ozone.scm.container.ContainerMapping;
+import org.apache.hadoop.ozone.scm.container.Mapping;
+import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataStore;
@@ -29,11 +34,14 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -42,6 +50,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
 import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_BLOCK_DELETION_MAX_RETRY;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for DeletedBlockLog.
@@ -236,5 +245,98 @@ public class TestDeletedBlockLog {
     deletedBlockLog.commitTransactions(txIDs);
     blocks = deletedBlockLog.getTransactions(10);
     Assert.assertEquals(10, blocks.size());
+  }
+
+  @Test
+  public void testDeletedBlockTransactions() throws IOException {
+    int txNum = 10;
+    int maximumAllowedTXNum = 5;
+    List<DeletedBlocksTransaction> blocks = null;
+    List<String> containerNames = new LinkedList<>();
+
+    int count = 0;
+    String containerName = null;
+    DatanodeID dnID1 = new DatanodeID(null, null, "node1", 0, 0, 0, 0);
+    DatanodeID dnID2 = new DatanodeID(null, null, "node2", 0, 0, 0, 0);
+    Mapping mappingService = mock(ContainerMapping.class);
+    // Creates {TXNum} TX in the log.
+    for (Map.Entry<String, List<String>> entry : generateData(txNum)
+        .entrySet()) {
+      count++;
+      containerName = entry.getKey();
+      containerNames.add(containerName);
+      deletedBlockLog.addTransaction(containerName, entry.getValue());
+
+      // make TX[1-6] for datanode1; TX[7-10] for datanode2
+      if (count <= (maximumAllowedTXNum + 1)) {
+        mockContainerInfo(mappingService, containerName, dnID1);
+      } else {
+        mockContainerInfo(mappingService, containerName, dnID2);
+      }
+    }
+
+    DatanodeDeletedBlockTransactions transactions =
+        new DatanodeDeletedBlockTransactions(mappingService,
+            maximumAllowedTXNum, 2);
+    deletedBlockLog.getTransactions(transactions);
+
+    List<Long> txIDs = new LinkedList<>();
+    for (DatanodeID dnID : transactions.getDatanodes()) {
+      List<DeletedBlocksTransaction> txs = transactions
+          .getDatanodeTransactions(dnID);
+      for (DeletedBlocksTransaction tx : txs) {
+        txIDs.add(tx.getTxID());
+      }
+    }
+
+    // delete TX ID
+    deletedBlockLog.commitTransactions(txIDs);
+    blocks = deletedBlockLog.getTransactions(txNum);
+    // There should be one block remained since dnID1 reaches
+    // the maximum value (5).
+    Assert.assertEquals(1, blocks.size());
+
+    Assert.assertFalse(transactions.isFull());
+    // The number of TX in dnID1 won't more than maximum value.
+    Assert.assertEquals(maximumAllowedTXNum,
+        transactions.getDatanodeTransactions(dnID1).size());
+
+    int size = transactions.getDatanodeTransactions(dnID2).size();
+    // add duplicated container in dnID2, this should be failed.
+    DeletedBlocksTransaction.Builder builder =
+        DeletedBlocksTransaction.newBuilder();
+    builder.setTxID(11);
+    builder.setContainerName(containerName);
+    builder.setCount(0);
+    transactions.addTransaction(builder.build());
+
+    // The number of TX in dnID2 should not be changed.
+    Assert.assertEquals(size,
+        transactions.getDatanodeTransactions(dnID2).size());
+
+    // Add new TX in dnID2, then dnID2 will reach maximum value.
+    containerName = "newContainer";
+    builder = DeletedBlocksTransaction.newBuilder();
+    builder.setTxID(12);
+    builder.setContainerName(containerName);
+    builder.setCount(0);
+    mockContainerInfo(mappingService, containerName, dnID2);
+    transactions.addTransaction(builder.build());
+    // Since all node are full, then transactions is full.
+    Assert.assertTrue(transactions.isFull());
+  }
+
+  private void mockContainerInfo(Mapping mappingService, String containerName,
+      DatanodeID dnID) throws IOException {
+    Pipeline pipeline = new Pipeline("fake");
+    pipeline.addMember(dnID);
+
+    ContainerInfo.Builder builder = new ContainerInfo.Builder();
+    builder.setPipeline(pipeline);
+    builder.setContainerName(containerName);
+
+    ContainerInfo conatinerInfo = builder.build();
+    Mockito.doReturn(conatinerInfo).when(mappingService)
+        .getContainer(containerName);
   }
 }

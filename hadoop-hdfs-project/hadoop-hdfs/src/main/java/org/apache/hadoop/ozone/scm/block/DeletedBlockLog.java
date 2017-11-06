@@ -46,6 +46,16 @@ public interface DeletedBlockLog extends Closeable {
       throws IOException;
 
   /**
+   * Scan entire log once and returns TXs to DatanodeDeletedBlockTransactions.
+   * Once DatanodeDeletedBlockTransactions is full, the scan behavior will
+   * stop.
+   * @param transactions a list of TXs will be set into.
+   * @throws IOException
+   */
+  void getTransactions(DatanodeDeletedBlockTransactions transactions)
+      throws IOException;
+
+  /**
    * Return all failed transactions in the log. A transaction is considered
    * to be failed if it has been sent more than MAX_RETRY limit and its
    * count is reset to -1.
