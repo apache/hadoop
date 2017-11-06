@@ -125,6 +125,65 @@ public class Resources {
       throw new RuntimeException(name + " cannot be modified!");
     }
 
+    /*
+     *  FixedValueResource cannot be updated when any resource types refresh
+     *  by using approach introduced by YARN-7307 and do operations like
+     *  Resources.compare(resource_x, Resources.none()) will throw exceptions.
+     *
+     *  That's why we do reinitialize resource maps for following methods.
+     */
+
+    @Override
+    public ResourceInformation getResourceInformation(int index)
+        throws ResourceNotFoundException {
+      ResourceInformation ri = null;
+      try {
+        ri = super.getResourceInformation(index);
+      } catch (ResourceNotFoundException e) {
+        // Retry once to reinitialize resource information.
+        initResourceMap();
+        try {
+          return super.getResourceInformation(index);
+        } catch (ResourceNotFoundException ee) {
+          throwExceptionWhenArrayOutOfBound(index);
+        }
+      }
+      return ri;
+    }
+
+    @Override
+    public ResourceInformation getResourceInformation(String resource)
+        throws ResourceNotFoundException {
+      ResourceInformation ri;
+      try {
+        ri = super.getResourceInformation(resource);
+      } catch (ResourceNotFoundException e) {
+        // Retry once to reinitialize resource information.
+        initResourceMap();
+        try {
+          return super.getResourceInformation(resource);
+        } catch (ResourceNotFoundException ee) {
+          throw ee;
+        }
+      }
+      return ri;
+    }
+
+    @Override
+    public ResourceInformation[] getResources() {
+      if (resources.length != ResourceUtils.getNumberOfKnownResourceTypes()) {
+        // Retry once to reinitialize resource information.
+        initResourceMap();
+        if (resources.length != ResourceUtils.getNumberOfKnownResourceTypes()) {
+          throw new ResourceNotFoundException("Failed to reinitialize "
+              + "FixedValueResource to get number of resource types same "
+              + "as configured");
+        }
+      }
+
+      return resources;
+    }
+
     private void initResourceMap() {
       ResourceInformation[] types = ResourceUtils.getResourceTypesArray();
       if (types != null) {

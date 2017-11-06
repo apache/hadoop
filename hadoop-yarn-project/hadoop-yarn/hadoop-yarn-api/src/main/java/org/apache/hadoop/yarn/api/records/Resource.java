@@ -364,7 +364,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
   }
 
-  private void throwExceptionWhenArrayOutOfBound(int index) {
+  protected void throwExceptionWhenArrayOutOfBound(int index) {
     String exceptionMsg = String.format(
         "Trying to access ResourceInformation for given index=%d. "
             + "Acceptable index range is [0,%d), please check double check "
