@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web;
 
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertEquals;

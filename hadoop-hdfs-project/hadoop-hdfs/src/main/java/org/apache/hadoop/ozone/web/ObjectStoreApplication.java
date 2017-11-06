@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.web;
 
-import org.apache.hadoop.ozone.web.exceptions.OzoneExceptionMapper;
+import org.apache.hadoop.ozone.client.rest.OzoneExceptionMapper;
 import org.apache.hadoop.ozone.web.handlers.BucketHandler;
 import org.apache.hadoop.ozone.web.handlers.KeyHandler;
 import org.apache.hadoop.ozone.web.handlers.ServiceFilter;

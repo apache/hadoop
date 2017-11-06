@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.hadoop.ozone.RatisTestHelper;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
