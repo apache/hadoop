@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 
 import static org.apache.hadoop.fs.ozone.Constants.BUFFER_TMP_KEY;
 import static org.apache.hadoop.fs.ozone.Constants.BUFFER_DIR_KEY;

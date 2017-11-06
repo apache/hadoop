@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.web.ozShell;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.ozone.web.client.OzoneRestClientException;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.io.IOException;

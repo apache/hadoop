@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.scm.cli.container.ContainerCommandHandler;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.client.ContainerOperationClient;
 import org.apache.hadoop.scm.client.ScmClient;

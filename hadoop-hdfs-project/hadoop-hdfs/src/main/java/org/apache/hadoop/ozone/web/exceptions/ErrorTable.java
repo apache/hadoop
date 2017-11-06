@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.web.exceptions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;

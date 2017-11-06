@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.exceptions;
+package org.apache.hadoop.ozone.client.rest;
 
 
 import javax.ws.rs.core.Response;

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.ozone.web.client;
 
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
 
 /**
  * This exception is thrown by the Ozone Clients.
