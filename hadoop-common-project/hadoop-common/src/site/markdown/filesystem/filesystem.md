@@ -1244,7 +1244,8 @@ problems were not considered during the implementation of these loops.
 ## <a name="StreamCapability"></a> interface `StreamCapabilities`
 
 The `StreamCapabilities` provides a way to programmatically query the
-capabilities that an `OutputStream` supports.
+capabilities that `OutputStream`, `InputStream`, or other FileSystem class
+supports.
 
 ```java
 public interface StreamCapabilities {
@@ -1254,12 +1255,16 @@ public interface StreamCapabilities {
 
 ### `boolean hasCapability(capability)`
 
-Return true if the `OutputStream` has the desired capability.
+Return true if the `OutputStream`, `InputStream`, or other FileSystem class
+has the desired capability.
 
 The caller can query the capabilities of a stream using a string value.
-It currently supports to query:
+Here is a table of possible string values:
 
- * `StreamCapabilties.HFLUSH` ("*hflush*"): the capability to flush out the data
- in client's buffer.
- * `StreamCapabilities.HSYNC` ("*hsync*"): capability to flush out the data in
- client's buffer and the disk device.
+String       | Constant   | Implements       | Description
+-------------|------------|------------------|-------------------------------
+hflush       | HFLUSH     | Syncable         | Flush out the data in client's user buffer. After the return of this call, new readers will see the data.
+hsync        | HSYNC      | Syncable         | Flush out the data in client's user buffer all the way to the disk device (but the disk may have it in its cache). Similar to POSIX fsync.
+in:readahead | READAHEAD  | CanSetReadahead  | Set the readahead on the input stream.
+dropbehind   | DROPBEHIND | CanSetDropBehind | Drop the cache.
+in:unbuffer  | UNBUFFER   | CanUnbuffer      | Reduce the buffering on the input stream.
