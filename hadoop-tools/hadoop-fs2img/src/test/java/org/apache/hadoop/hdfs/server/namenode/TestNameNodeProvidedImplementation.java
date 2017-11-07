@@ -507,16 +507,10 @@ public class TestNameNodeProvidedImplementation {
     DataNode providedDatanode = cluster.getDataNodes().get(0);
 
     DFSClient client = new DFSClient(new InetSocketAddress("localhost",
-            cluster.getNameNodePort()), cluster.getConfiguration(0));
+        cluster.getNameNodePort()), cluster.getConfiguration(0));
 
     for (int i= 0; i < numFiles; i++) {
-      String filename = "/" + filePrefix + i + fileSuffix;
-
-      DatanodeInfo[] dnInfos = getAndCheckBlockLocations(client, filename, 1);
-      // location should be the provided DN.
-      assertTrue(dnInfos[0].getDatanodeUuid()
-          .equals(providedDatanode.getDatanodeUuid()));
-
+      verifyFileLocation(i);
       // NameNode thinks the datanode is down
       BlockManagerTestUtil.noticeDeadDatanode(
           cluster.getNameNode(),
@@ -524,12 +518,44 @@ public class TestNameNodeProvidedImplementation {
       cluster.waitActive();
       cluster.triggerHeartbeats();
       Thread.sleep(1000);
+      verifyFileLocation(i);
+    }
+  }
 
-      // should find the block on the 2nd provided datanode.
-      dnInfos = getAndCheckBlockLocations(client, filename, 1);
-      assertTrue(
-          dnInfos[0].getDatanodeUuid()
-              .equals(providedDatanode.getDatanodeUuid()));
+  @Test(timeout=30000)
+  public void testNamenodeRestart() throws Exception {
+    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+        FixedBlockResolver.class);
+    // 2 Datanodes, 1 PROVIDED and other DISK
+    startCluster(NNDIRPATH, 2, null,
+        new StorageType[][] {
+            {StorageType.PROVIDED},
+            {StorageType.DISK}},
+        false);
+
+    verifyFileLocation(numFiles - 1);
+    cluster.restartNameNodes();
+    cluster.waitActive();
+    verifyFileLocation(numFiles - 1);
+  }
+
+  /**
+   * verify that the specified file has a valid provided location.
+   * @param fileIndex the index of the file to verify.
+   * @throws Exception
+   */
+  private void verifyFileLocation(int fileIndex)
+      throws Exception {
+    DataNode providedDatanode = cluster.getDataNodes().get(0);
+    DFSClient client = new DFSClient(
+        new InetSocketAddress("localhost", cluster.getNameNodePort()),
+        cluster.getConfiguration(0));
+    if (fileIndex <= numFiles && fileIndex >= 0) {
+      String filename = "/" + filePrefix + fileIndex + fileSuffix;
+      DatanodeInfo[] dnInfos = getAndCheckBlockLocations(client, filename, 1);
+      // location should be the provided DN
+      assertEquals(providedDatanode.getDatanodeUuid(),
+          dnInfos[0].getDatanodeUuid());
     }
   }
 }
