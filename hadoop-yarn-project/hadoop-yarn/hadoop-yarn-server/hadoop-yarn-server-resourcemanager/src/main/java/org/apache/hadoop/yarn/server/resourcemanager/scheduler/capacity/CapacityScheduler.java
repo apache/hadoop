@@ -1921,12 +1921,12 @@ public class CapacityScheduler extends
       writeLock.lock();
       LOG.info("Removing queue: " + queueName);
       CSQueue q = this.getQueue(queueName);
-      if (!(q instanceof ReservationQueue)) {
+      if (!(q instanceof AutoCreatedLeafQueue)) {
         throw new SchedulerDynamicEditException(
             "The queue that we are asked " + "to remove (" + queueName
-                + ") is not a ReservationQueue");
+                + ") is not a AutoCreatedLeafQueue");
       }
-      ReservationQueue disposableLeafQueue = (ReservationQueue) q;
+      AutoCreatedLeafQueue disposableLeafQueue = (AutoCreatedLeafQueue) q;
       // at this point we should have no more apps
       if (disposableLeafQueue.getNumApplications() > 0) {
         throw new SchedulerDynamicEditException(
@@ -1936,9 +1936,11 @@ public class CapacityScheduler extends
                 + " pending apps");
       }
 
-      ((PlanQueue) disposableLeafQueue.getParent()).removeChildQueue(q);
+      ((AbstractManagedParentQueue) disposableLeafQueue.getParent())
+          .removeChildQueue(q);
       this.queueManager.removeQueue(queueName);
-      LOG.info("Removal of ReservationQueue " + queueName + " has succeeded");
+      LOG.info("Removal of AutoCreatedLeafQueue "
+          + queueName + " has succeeded");
     } finally {
       writeLock.unlock();
     }
@@ -1949,25 +1951,28 @@ public class CapacityScheduler extends
       throws SchedulerDynamicEditException {
     try {
       writeLock.lock();
-      if (!(queue instanceof ReservationQueue)) {
+      if (!(queue instanceof AutoCreatedLeafQueue)) {
         throw new SchedulerDynamicEditException(
-            "Queue " + queue.getQueueName() + " is not a ReservationQueue");
+            "Queue " + queue.getQueueName() + " is not a AutoCreatedLeafQueue");
       }
 
-      ReservationQueue newQueue = (ReservationQueue) queue;
+      AutoCreatedLeafQueue newQueue = (AutoCreatedLeafQueue) queue;
 
-      if (newQueue.getParent() == null || !(newQueue
-          .getParent() instanceof PlanQueue)) {
+      if (newQueue.getParent() == null
+          || !(AbstractManagedParentQueue.class.
+          isAssignableFrom(newQueue.getParent().getClass()))) {
         throw new SchedulerDynamicEditException(
             "ParentQueue for " + newQueue.getQueueName()
-                + " is not properly set (should be set and be a PlanQueue)");
+                + " is not properly set"
+                + " (should be set and be a PlanQueue or ManagedParentQueue)");
       }
 
-      PlanQueue parentPlan = (PlanQueue) newQueue.getParent();
+      AbstractManagedParentQueue parentPlan =
+          (AbstractManagedParentQueue) newQueue.getParent();
       String queuename = newQueue.getQueueName();
       parentPlan.addChildQueue(newQueue);
       this.queueManager.addQueue(queuename, newQueue);
-      LOG.info("Creation of ReservationQueue " + newQueue + " succeeded");
+      LOG.info("Creation of AutoCreatedLeafQueue " + newQueue + " succeeded");
     } finally {
       writeLock.unlock();
     }
@@ -1981,21 +1986,22 @@ public class CapacityScheduler extends
       LeafQueue queue = this.queueManager.getAndCheckLeafQueue(inQueue);
       ParentQueue parent = (ParentQueue) queue.getParent();
 
-      if (!(queue instanceof ReservationQueue)) {
+      if (!(queue instanceof AutoCreatedLeafQueue)) {
         throw new SchedulerDynamicEditException(
             "Entitlement can not be" + " modified dynamically since queue "
-                + inQueue + " is not a ReservationQueue");
+                + inQueue + " is not a AutoCreatedLeafQueue");
       }
 
-      if (!(parent instanceof PlanQueue)) {
+      if (parent == null
+          || !(AbstractManagedParentQueue.class.isAssignableFrom(parent.getClass()))) {
         throw new SchedulerDynamicEditException(
-            "The parent of ReservationQueue " + inQueue
-                + " must be an PlanQueue");
+            "The parent of AutoCreatedLeafQueue " + inQueue
+                + " must be a PlanQueue/ManagedParentQueue");
       }
 
-      ReservationQueue newQueue = (ReservationQueue) queue;
+      AutoCreatedLeafQueue newQueue = (AutoCreatedLeafQueue) queue;
 
-      float sumChilds = ((PlanQueue) parent).sumOfChildCapacities();
+      float sumChilds = parent.sumOfChildCapacities();
       float newChildCap =
           sumChilds - queue.getCapacity() + entitlement.getCapacity();
 
@@ -2010,12 +2016,13 @@ public class CapacityScheduler extends
         newQueue.setEntitlement(entitlement);
       } else{
         throw new SchedulerDynamicEditException(
-            "Sum of child queues would exceed 100% for PlanQueue: " + parent
-                .getQueueName());
+            "Sum of child queues should exceed 100% for auto creating parent "
+                + "queue : " + parent.getQueueName());
       }
       LOG.info(
-          "Set entitlement for ReservationQueue " + inQueue + "  to " + queue
-              .getCapacity() + " request was (" + entitlement.getCapacity()
+          "Set entitlement for AutoCreatedLeafQueue " + inQueue
+              + "  to " + queue.getCapacity() +
+              " request was (" + entitlement.getCapacity()
               + ")");
     } finally {
       writeLock.unlock();

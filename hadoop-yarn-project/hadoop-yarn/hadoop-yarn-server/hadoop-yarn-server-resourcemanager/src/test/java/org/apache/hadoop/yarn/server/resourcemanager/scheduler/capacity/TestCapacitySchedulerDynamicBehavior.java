@@ -77,21 +77,21 @@ public class TestCapacitySchedulerDynamicBehavior {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     //set default queue capacity to zero
-    ((ReservationQueue) cs
+    ((AutoCreatedLeafQueue) cs
             .getQueue("a" + ReservationConstants.DEFAULT_QUEUE_SUFFIX))
             .setEntitlement(
                     new QueueEntitlement(0f, 1f));
 
     // Test add one reservation dynamically and manually modify capacity
-    ReservationQueue a1 =
-        new ReservationQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
+    AutoCreatedLeafQueue a1 =
+        new AutoCreatedLeafQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
     cs.addQueue(a1);
     a1.setEntitlement(new QueueEntitlement(A1_CAPACITY / 100, 1f));
 
     // Test add another reservation queue and use setEntitlement to modify
     // capacity
-    ReservationQueue a2 =
-        new ReservationQueue(cs, "a2", (PlanQueue) cs.getQueue("a"));
+    AutoCreatedLeafQueue a2 =
+        new AutoCreatedLeafQueue(cs, "a2", (PlanQueue) cs.getQueue("a"));
     cs.addQueue(a2);
     cs.setEntitlement("a2", new QueueEntitlement(A2_CAPACITY / 100, 1.0f));
 
@@ -113,8 +113,8 @@ public class TestCapacitySchedulerDynamicBehavior {
 
     try {
       // Test invalid addition (adding non-zero size queue)
-      ReservationQueue a1 =
-          new ReservationQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
+      AutoCreatedLeafQueue a1 =
+          new AutoCreatedLeafQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
       a1.setEntitlement(new QueueEntitlement(A1_CAPACITY / 100, 1f));
       cs.addQueue(a1);
       fail();
@@ -123,11 +123,11 @@ public class TestCapacitySchedulerDynamicBehavior {
     }
 
     // Test add one reservation dynamically and manually modify capacity
-    ReservationQueue a1 =
-        new ReservationQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
+    AutoCreatedLeafQueue a1 =
+        new AutoCreatedLeafQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
     cs.addQueue(a1);
     //set default queue capacity to zero
-    ((ReservationQueue) cs
+    ((AutoCreatedLeafQueue) cs
         .getQueue("a" + ReservationConstants.DEFAULT_QUEUE_SUFFIX))
             .setEntitlement(
                 new QueueEntitlement(0f, 1f));
@@ -135,8 +135,8 @@ public class TestCapacitySchedulerDynamicBehavior {
 
     // Test add another reservation queue and use setEntitlement to modify
     // capacity
-    ReservationQueue a2 =
-        new ReservationQueue(cs, "a2", (PlanQueue) cs.getQueue("a"));
+    AutoCreatedLeafQueue a2 =
+        new AutoCreatedLeafQueue(cs, "a2", (PlanQueue) cs.getQueue("a"));
 
     cs.addQueue(a2);
 
@@ -162,8 +162,8 @@ public class TestCapacitySchedulerDynamicBehavior {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     // Test add one reservation dynamically and manually modify capacity
-    ReservationQueue a1 =
-        new ReservationQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
+    AutoCreatedLeafQueue a1 =
+        new AutoCreatedLeafQueue(cs, "a1", (PlanQueue) cs.getQueue("a"));
     cs.addQueue(a1);
     a1.setEntitlement(new QueueEntitlement(A1_CAPACITY / 100, 1f));
 
@@ -230,8 +230,8 @@ public class TestCapacitySchedulerDynamicBehavior {
 
     // create the default reservation queue
     String defQName = "a" + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
-    ReservationQueue defQ =
-        new ReservationQueue(scheduler, defQName,
+    AutoCreatedLeafQueue defQ =
+        new AutoCreatedLeafQueue(scheduler, defQName,
             (PlanQueue) scheduler.getQueue("a"));
     scheduler.addQueue(defQ);
     defQ.setEntitlement(new QueueEntitlement(1f, 1f));

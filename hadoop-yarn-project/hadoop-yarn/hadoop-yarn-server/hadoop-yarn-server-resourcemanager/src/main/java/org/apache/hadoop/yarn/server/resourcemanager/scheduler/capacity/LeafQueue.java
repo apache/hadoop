@@ -1997,6 +1997,10 @@ public class LeafQueue extends AbstractCSQueue {
     queueCapacities.setAbsoluteCapacity(absoluteCapacity);
   }
 
+  public void setMaxApplicationsPerUser(int maxApplicationsPerUser) {
+    this.maxApplicationsPerUser = maxApplicationsPerUser;
+  }
+
   public void setMaxApplications(int maxApplications) {
     this.maxApplications = maxApplications;
   }
