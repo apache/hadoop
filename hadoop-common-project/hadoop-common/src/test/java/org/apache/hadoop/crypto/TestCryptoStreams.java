@@ -29,11 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
 import org.apache.hadoop.fs.HasFileDescriptor;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -164,16 +166,18 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
     }
   }
   
-  public static class FakeInputStream extends InputStream implements 
-      Seekable, PositionedReadable, ByteBufferReadable, HasFileDescriptor, 
-      CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess {
+  static class FakeInputStream extends InputStream
+      implements Seekable, PositionedReadable, ByteBufferReadable,
+                 HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
+                 HasEnhancedByteBufferAccess, CanUnbuffer,
+                 StreamCapabilities {
     private final byte[] oneByteBuf = new byte[1];
     private int pos = 0;
     private final byte[] data;
     private final int length;
     private boolean closed = false;
 
-    public FakeInputStream(DataInputBuffer in) {
+    FakeInputStream(DataInputBuffer in) {
       data = in.getData();
       length = in.getLength();
     }
@@ -352,6 +356,22 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
     @Override
     public void setDropBehind(Boolean dropCache) throws IOException,
         UnsupportedOperationException {
+    }
+
+    @Override
+    public void unbuffer() {
+    }
+
+    @Override
+    public boolean hasCapability(String capability) {
+      switch (capability.toLowerCase()) {
+      case StreamCapabilities.READAHEAD:
+      case StreamCapabilities.DROPBEHIND:
+      case StreamCapabilities.UNBUFFER:
+        return true;
+      default:
+        return false;
+      }
     }
 
     @Override
