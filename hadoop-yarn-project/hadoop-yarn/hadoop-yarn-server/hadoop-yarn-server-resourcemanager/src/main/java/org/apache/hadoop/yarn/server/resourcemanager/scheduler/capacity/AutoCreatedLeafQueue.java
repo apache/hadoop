@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,35 +18,35 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.io.IOException;
-
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 /**
- * This represents a dynamic {@link LeafQueue} managed by the
- * {@link ReservationSystem}
- *
+ * Leaf queues which are auto created by an underkying implementation of
+ * AbstractManagedParentQueue. Eg: PlanQueue for reservations or
+ * ManagedParentQueue for auto created dynamic queues
  */
-public class ReservationQueue extends LeafQueue {
+public class AutoCreatedLeafQueue extends LeafQueue {
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(ReservationQueue.class);
+      .getLogger(AutoCreatedLeafQueue.class);
 
-  private PlanQueue parent;
+  private AbstractManagedParentQueue parent;
 
-  public ReservationQueue(CapacitySchedulerContext cs, String queueName,
-      PlanQueue parent) throws IOException {
+  public AutoCreatedLeafQueue(CapacitySchedulerContext cs, String queueName,
+      AbstractManagedParentQueue parent) throws IOException {
     super(cs, queueName, parent, null);
-    // the following parameters are common to all reservation in the plan
-    updateQuotas(parent.getUserLimitForReservation(),
+
+    updateApplicationAndUserLimits(parent.getUserLimitForAutoCreatedQueues(),
         parent.getUserLimitFactor(),
-        parent.getMaxApplicationsForReservations(),
-        parent.getMaxApplicationsPerUserForReservation());
+        parent.getMaxApplicationsForAutoCreatedQueues(),
+        parent.getMaxApplicationsPerUserForAutoCreatedQueues());
+
     this.parent = parent;
   }
 
@@ -55,21 +55,18 @@ public class ReservationQueue extends LeafQueue {
       Resource clusterResource) throws IOException {
     try {
       writeLock.lock();
-      // Sanity check
-      if (!(newlyParsedQueue instanceof ReservationQueue) || !newlyParsedQueue
-          .getQueuePath().equals(getQueuePath())) {
-        throw new IOException(
-            "Trying to reinitialize " + getQueuePath() + " from "
-                + newlyParsedQueue.getQueuePath());
-      }
+
+      validate(newlyParsedQueue);
+
       super.reinitialize(newlyParsedQueue, clusterResource);
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
 
-      updateQuotas(parent.getUserLimitForReservation(),
+      updateApplicationAndUserLimits(parent.getUserLimitForAutoCreatedQueues(),
           parent.getUserLimitFactor(),
-          parent.getMaxApplicationsForReservations(),
-          parent.getMaxApplicationsPerUserForReservation());
+          parent.getMaxApplicationsForAutoCreatedQueues(),
+          parent.getMaxApplicationsPerUserForAutoCreatedQueues());
+
     } finally {
       writeLock.unlock();
     }
@@ -77,10 +74,10 @@ public class ReservationQueue extends LeafQueue {
 
   /**
    * This methods to change capacity for a queue and adjusts its
-   * absoluteCapacity
-   * 
+   * absoluteCapacity.
+   *
    * @param entitlement the new entitlement for the queue (capacity,
-   *          maxCapacity, etc..)
+   *                    maxCapacity)
    * @throws SchedulerDynamicEditException
    */
   public void setEntitlement(QueueEntitlement entitlement)
@@ -94,8 +91,6 @@ public class ReservationQueue extends LeafQueue {
       }
       setCapacity(capacity);
       setAbsoluteCapacity(getParent().getAbsoluteCapacity() * getCapacity());
-      // note: we currently set maxCapacity to capacity
-      // this might be revised later
       setMaxCapacity(entitlement.getMaxCapacity());
       if (LOG.isDebugEnabled()) {
         LOG.debug("successfully changed to " + capacity + " for queue " + this
@@ -106,17 +101,29 @@ public class ReservationQueue extends LeafQueue {
     }
   }
 
-  private void updateQuotas(int userLimit, float userLimitFactor,
-      int maxAppsForReservation, int maxAppsPerUserForReservation) {
-    setUserLimit(userLimit);
-    setUserLimitFactor(userLimitFactor);
-    setMaxApplications(maxAppsForReservation);
-    maxApplicationsPerUser = maxAppsPerUserForReservation;
+  private void validate(final CSQueue newlyParsedQueue) throws IOException {
+    if (!(newlyParsedQueue instanceof AutoCreatedLeafQueue) || !newlyParsedQueue
+        .getQueuePath().equals(getQueuePath())) {
+      throw new IOException(
+          "Error trying to reinitialize " + getQueuePath() + " from "
+              + newlyParsedQueue.getQueuePath());
+    }
+
   }
 
   @Override
   protected void setupConfigurableCapacities() {
     CSQueueUtils.updateAndCheckCapacitiesByLabel(getQueuePath(),
         queueCapacities, parent == null ? null : parent.getQueueCapacities());
+  }
+
+  private void updateApplicationAndUserLimits(int userLimit,
+      float userLimitFactor,
+      int maxAppsForAutoCreatedQueues,
+      int maxAppsPerUserForAutoCreatedQueues) {
+    setUserLimit(userLimit);
+    setUserLimitFactor(userLimitFactor);
+    setMaxApplications(maxAppsForAutoCreatedQueues);
+    setMaxApplicationsPerUser(maxAppsPerUserForAutoCreatedQueues);
   }
 }

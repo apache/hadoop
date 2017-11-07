@@ -238,7 +238,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
             queueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
 
         List<CSQueue> childQueues = new ArrayList<>();
-        ReservationQueue resQueue = new ReservationQueue(csContext,
+        AutoCreatedLeafQueue resQueue = new AutoCreatedLeafQueue(csContext,
             defReservationId, (PlanQueue) queue);
         try {
           resQueue.setEntitlement(new QueueEntitlement(1.0f, 1.0f));
@@ -303,7 +303,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       Map<String, CSQueue> newQueues) throws IOException {
     // check that all static queues are included in the newQueues list
     for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
-      if (!(e.getValue() instanceof ReservationQueue)) {
+      if (!(e.getValue() instanceof AutoCreatedLeafQueue)) {
         String queueName = e.getKey();
         CSQueue oldQueue = e.getValue();
         CSQueue newQueue = newQueues.get(queueName);
