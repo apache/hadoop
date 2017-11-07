@@ -328,8 +328,8 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
     job.getConfiguration().set(BASE_OUTPUT_NAME, name);
   }
 
-  public synchronized 
-    OutputCommitter getOutputCommitter(TaskAttemptContext context)
+  public synchronized
+      OutputCommitter getOutputCommitter(TaskAttemptContext context)
       throws IOException {
     if (committer == null) {
       Path output = getOutputPath(context);

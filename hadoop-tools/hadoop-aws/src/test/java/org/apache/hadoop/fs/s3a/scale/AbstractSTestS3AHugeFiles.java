@@ -75,12 +75,20 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   @Override
   public void setup() throws Exception {
     super.setup();
-    final Path testPath = getTestPath();
-    scaleTestDir = new Path(testPath, "scale");
+    scaleTestDir = new Path(getTestPath(), getTestSuiteName());
     hugefile = new Path(scaleTestDir, "hugefile");
     hugefileRenamed = new Path(scaleTestDir, "hugefileRenamed");
     filesize = getTestPropertyBytes(getConf(), KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
+  }
+
+  /**
+   * Get the name of this test suite, which is used in path generation.
+   * Base implementation uses {@link #getBlockOutputBufferName()} for this.
+   * @return the name of the suite.
+   */
+  public String getTestSuiteName() {
+    return getBlockOutputBufferName();
   }
 
   /**
@@ -318,10 +326,10 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   private void assumeFileExists(Path file) throws IOException {
     S3AFileSystem fs = getFileSystem();
     ContractTestUtils.assertPathExists(fs, "huge file not created",
-        hugefile);
-    FileStatus status = fs.getFileStatus(hugefile);
-    ContractTestUtils.assertIsFile(hugefile, status);
-    assertTrue("File " + hugefile + " is empty", status.getLen() > 0);
+        file);
+    FileStatus status = fs.getFileStatus(file);
+    ContractTestUtils.assertIsFile(file, status);
+    assertTrue("File " + file + " is empty", status.getLen() > 0);
   }
 
   private void logFSState() {
@@ -455,11 +463,27 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    * Cleanup: delete the files.
    */
   @Test
-  public void test_999_DeleteHugeFiles() throws IOException {
-    deleteHugeFile();
-    delete(hugefileRenamed, false);
-    ContractTestUtils.rm(getFileSystem(),
-        getTestPath(), true, true);
+  public void test_800_DeleteHugeFiles() throws IOException {
+    try {
+      deleteHugeFile();
+      delete(hugefileRenamed, false);
+    } finally {
+      ContractTestUtils.rm(getFileSystem(), getTestPath(), true, false);
+    }
+  }
+
+  /**
+   * After all the work, dump the statistics.
+   * @throws IOException failure
+   */
+  @Test
+  public void test_900_dumpStats() throws IOException {
+    StringBuilder sb = new StringBuilder();
+
+    getFileSystem().getStorageStatistics()
+        .forEach(kv -> sb.append(kv.toString()).append("\n"));
+
+    LOG.info("Statistics\n{}", sb);
   }
 
   protected void deleteHugeFile() throws IOException {

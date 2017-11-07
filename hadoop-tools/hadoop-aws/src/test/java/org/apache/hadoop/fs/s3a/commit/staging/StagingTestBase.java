@@ -533,7 +533,7 @@ public class StagingTestBase {
                   errors.failOnInit(-1);
                 }
                 throw new AmazonClientException(
-                    "Fail on init " + results.requests.size());
+                    "Mock Fail on init " + results.requests.size());
               }
               String uploadId = UUID.randomUUID().toString();
               results.requests.put(uploadId, invocation.getArgumentAt(
@@ -558,7 +558,7 @@ public class StagingTestBase {
                 }
                 LOG.info("Triggering upload failure");
                 throw new AmazonClientException(
-                    "Fail on upload " + results.parts.size());
+                    "Mock Fail on upload " + results.parts.size());
               }
               UploadPartRequest req = invocation.getArgumentAt(
                   0, UploadPartRequest.class);
@@ -589,7 +589,7 @@ public class StagingTestBase {
                   errors.failOnCommit(-1);
                 }
                 throw new AmazonClientException(
-                    "Fail on commit " + results.commits.size());
+                    "Mock Fail on commit " + results.commits.size());
               }
               CompleteMultipartUploadRequest req = invocation.getArgumentAt(
                   0, CompleteMultipartUploadRequest.class);
@@ -611,7 +611,7 @@ public class StagingTestBase {
                   errors.failOnAbort(-1);
                 }
                 throw new AmazonClientException(
-                    "Fail on abort " + results.aborts.size());
+                    "Mock Fail on abort " + results.aborts.size());
               }
               results.aborts.add(invocation.getArgumentAt(
                   0, AbortMultipartUploadRequest.class));

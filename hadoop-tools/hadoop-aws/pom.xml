@@ -193,7 +193,6 @@
                     <include>**/ITest*.java</include>
                   </includes>
                   <excludes>
-                    <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
                     <exclude>**/ITestS3AContractRootDir.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSEC*.java</exclude>
@@ -226,7 +225,6 @@
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
                   <includes>
-                    <include>**/ITestJets3tNativeS3FileSystemContract.java</include>
                     <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>

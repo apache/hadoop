@@ -313,4 +313,9 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public S3AInstrumentation.CommitterStatistics newCommitterStatistics() {
     return instrumentation.newCommitterStatistics();
   }
+
+  @Override
+  public void operationRetried(Exception ex) {
+    /** no-op */
+  }
 }

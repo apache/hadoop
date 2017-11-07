@@ -62,8 +62,21 @@ public class ITestHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   /** The file with the JSON data about the commit. */
   private Path pendingDataFile;
 
+  /**
+   * Use fast upload on disk.
+   * @return the upload buffer mechanism.
+   */
   protected String getBlockOutputBufferName() {
     return Constants.FAST_UPLOAD_BUFFER_DISK;
+  }
+
+  /**
+   * The suite name; required to be unique.
+   * @return the test suite name
+   */
+  @Override
+  public String getTestSuiteName() {
+    return "ITestHugeMagicCommits";
   }
 
   /**
@@ -135,6 +148,11 @@ public class ITestHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   }
 
   @Override
+  public void test_040_PositionedReadHugeFile() throws Throwable {
+    skipQuietly("test_040_PositionedReadHugeFile");
+  }
+
+  @Override
   public void test_050_readHugeFile() throws Throwable {
     skipQuietly("readHugeFile");
   }
@@ -145,7 +163,7 @@ public class ITestHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   }
 
   @Override
-  public void test_999_DeleteHugeFiles() throws IOException {
+  public void test_800_DeleteHugeFiles() throws IOException {
     if (getFileSystem() != null) {
       try {
         getFileSystem().abortOutstandingMultipartUploads(0);
@@ -153,7 +171,10 @@ public class ITestHugeMagicCommits extends AbstractSTestS3AHugeFiles {
         LOG.info("Exception while purging old uploads", e);
       }
     }
-    super.test_999_DeleteHugeFiles();
-    delete(magicDir, true);
+    try {
+      super.test_800_DeleteHugeFiles();
+    } finally {
+      ContractTestUtils.rm(getFileSystem(), magicDir, true, false);
+    }
   }
 }
