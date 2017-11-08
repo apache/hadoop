@@ -147,6 +147,15 @@ public final class OzoneConsts {
 
   public static final int INVALID_PORT = -1;
 
+  /**
+   * Type of the node.
+   */
+  public enum NodeType {
+    KSM,
+    SCM,
+    DATANODE
+  }
+
   private OzoneConsts() {
     // Never Constructed
   }

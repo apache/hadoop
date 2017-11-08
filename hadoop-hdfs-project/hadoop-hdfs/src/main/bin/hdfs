@@ -220,12 +220,11 @@ function hdfscmd_case
       HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
     ;;
     scm)
-      if [ "$#" -gt 0 ]; then
-        HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
-      else
-        HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-        HADOOP_CLASSNAME='org.apache.hadoop.ozone.scm.StorageContainerManager'
-      fi
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.scm.StorageContainerManager'
+    ;;
+    scmcli)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
     ;;
     secondarynamenode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
