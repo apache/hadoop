@@ -25,18 +25,18 @@ import java.io.RandomAccessFile;
 import java.nio.channels.WritableByteChannel;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFadvisedFileRegion {
   private final int FILE_SIZE = 16*1024*1024;
-  private static final Log LOG = 
-      LogFactory.getLog(TestFadvisedFileRegion.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFadvisedFileRegion.class);
   
   @Test(timeout = 100000)
   public void testCustomShuffleTransfer() throws IOException {
@@ -66,7 +66,7 @@ public class TestFadvisedFileRegion {
     try{
       out.write(initBuff);  
     } finally {
-      IOUtils.cleanup(LOG, out);
+      IOUtils.cleanupWithLogger(LOG, out);
     }
     
     
@@ -106,9 +106,9 @@ public class TestFadvisedFileRegion {
       if (fileRegion != null) {
         fileRegion.releaseExternalResources();
       }
-      IOUtils.cleanup(LOG, target);
-      IOUtils.cleanup(LOG, targetFile);
-      IOUtils.cleanup(LOG, inputFile);
+      IOUtils.cleanupWithLogger(LOG, target);
+      IOUtils.cleanupWithLogger(LOG, targetFile);
+      IOUtils.cleanupWithLogger(LOG, inputFile);
     }
     
     //Read the target file and verify that copy is done correctly
@@ -123,7 +123,7 @@ public class TestFadvisedFileRegion {
         Assert.assertEquals(initBuff[position+i], buff[i]);
       }
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     
     //delete files and folders
