@@ -279,8 +279,7 @@ public class WriteOperationHelper {
   public void abortMultipartUpload(String destKey, String uploadId,
       Retried retrying)
       throws IOException {
-    LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
-    invoker.retry("aborting multipart commit", destKey, true,
+    invoker.retry("Aborting multipart commit", destKey, true,
         retrying,
         () -> owner.abortMultipartUpload(
             destKey,

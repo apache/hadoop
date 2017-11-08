@@ -123,10 +123,11 @@ public class MagicCommitTracker extends PutTracker {
     commitData.setLength(bytesWritten);
     commitData.bindCommitData(parts);
     byte[] bytes = commitData.toBytes();
-    LOG.info("Closing file {}: {} byte(s) will be published when the job" +
-            " completes", path.toUri(), bytesWritten);
-    LOG.debug("{} — closing file and saving commit information to {}:\n{}",
-        this, path, commitData);
+    LOG.info("Uncommitted data pending to file {};"
+            + " commit metadata for {} parts in {}. sixe: {} byte(s)",
+        path.toUri(), parts.size(), pendingPartKey, bytesWritten);
+    LOG.debug("Closed MPU to {}, saved commit information to {}; data=:\n{}",
+        path, pendingPartKey, commitData);
     PutObjectRequest put = writer.createPutObjectRequest(
         pendingPartKey,
         new ByteArrayInputStream(bytes),

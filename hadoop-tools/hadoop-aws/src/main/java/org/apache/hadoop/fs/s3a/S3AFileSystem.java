@@ -3100,6 +3100,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    */
   @Retries.OnceRaw
   void abortMultipartUpload(String destKey, String uploadId) {
+    LOG.info("Aborting multipart upload {} to {}", uploadId, destKey);
     getAmazonS3Client().abortMultipartUpload(
         new AbortMultipartUploadRequest(getBucket(),
             destKey,
