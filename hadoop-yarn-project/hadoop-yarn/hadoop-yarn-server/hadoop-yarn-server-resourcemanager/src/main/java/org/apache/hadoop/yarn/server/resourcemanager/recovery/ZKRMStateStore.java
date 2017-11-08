@@ -358,7 +358,10 @@ public class ZKRMStateStore extends RMStateStore {
     amrmTokenSecretManagerRoot =
         getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = getNodePath(zkRootNodePath, RESERVATION_SYSTEM_ROOT);
-    zkManager = resourceManager.getAndStartZKManager(conf);
+    zkManager = resourceManager.getZKManager();
+    if(zkManager==null) {
+      zkManager = resourceManager.createAndStartZKManager(conf);
+    }
     delegationTokenNodeSplitIndex =
         conf.getInt(YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX,
             YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX);

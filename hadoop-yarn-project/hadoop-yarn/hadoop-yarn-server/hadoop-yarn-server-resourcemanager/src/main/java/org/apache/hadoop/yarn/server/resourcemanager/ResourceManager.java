@@ -342,7 +342,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         conf.getBoolean(YarnConfiguration.CURATOR_LEADER_ELECTOR,
             YarnConfiguration.DEFAULT_CURATOR_LEADER_ELECTOR_ENABLED);
     if (curatorEnabled) {
-      this.zkManager = getAndStartZKManager(conf);
+      this.zkManager = createAndStartZKManager(conf);
       elector = new CuratorBasedElectorService(this);
     } else {
       elector = new ActiveStandbyElectorBasedElectorService(this);
@@ -356,11 +356,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * @return ZooKeeper Curator manager.
    * @throws IOException If it cannot create the manager.
    */
-  public synchronized ZKCuratorManager getAndStartZKManager(Configuration
+  public ZKCuratorManager createAndStartZKManager(Configuration
       config) throws IOException {
-    if (this.zkManager != null) {
-      return zkManager;
-    }
     ZKCuratorManager manager = new ZKCuratorManager(config);
 
     // Get authentication
@@ -380,7 +377,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     manager.start(authInfos);
-    this.zkManager = manager;
+    return manager;
+  }
+
+  public ZKCuratorManager getZKManager() {
     return zkManager;
   }
 
