@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
@@ -41,10 +39,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
-  private static final Log LOG = LogFactory.getLog(PartialJob.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PartialJob.class);
 
   private JobIndexInfo jobIndexInfo = null;
   private JobId jobId = null;
