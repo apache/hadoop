@@ -29,7 +29,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.Type;
+import org.apache.hadoop.ozone.scm.SCMStorage;
 import org.apache.hadoop.ozone.scm.StorageContainerManager;
+import org.apache.hadoop.ozone.scm.StorageContainerManager.StartupOption;
 import org.apache.hadoop.ozone.scm.block.DeletedBlockLog;
 import org.apache.hadoop.ozone.scm.block.SCMBlockDeletingService;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
@@ -39,11 +41,15 @@ import org.junit.Rule;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Map;
 import java.util.Collections;
+import java.util.UUID;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -348,5 +354,46 @@ public class TestStorageContainerManager {
     }
 
     return containerBlocks;
+  }
+
+  @Test
+  public void testSCMInitialization() throws Exception {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    final String path = GenericTestUtils.getTempPath(
+        UUID.randomUUID().toString());
+    Path scmPath = Paths.get(path, "scm-meta");
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+
+    StartupOption.INIT.setClusterId("testClusterId");
+    // This will initialize SCM
+    StorageContainerManager.scmInit(conf);
+
+    SCMStorage scmStore = new SCMStorage(conf);
+    Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
+    Assert.assertEquals("testClusterId", scmStore.getClusterID());
+    StartupOption.INIT.setClusterId("testClusterIdNew");
+    StorageContainerManager.scmInit(conf);
+    Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
+    Assert.assertEquals("testClusterId", scmStore.getClusterID());
+
+  }
+
+  @Test
+  public void testSCMReinitialization() throws Exception {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    final String path = GenericTestUtils.getTempPath(
+        UUID.randomUUID().toString());
+    Path scmPath = Paths.get(path, "scm-meta");
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+    //This will set the cluster id in the version file
+    MiniOzoneCluster cluster =
+        new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+            .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+    StartupOption.INIT.setClusterId("testClusterId");
+    // This will initialize SCM
+    StorageContainerManager.scmInit(conf);
+    SCMStorage scmStore = new SCMStorage(conf);
+    Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
+    Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
   }
 }

@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.ksm.protocolPB
     .KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB;
+import org.apache.hadoop.ozone.scm.SCMStorage;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB
@@ -458,6 +459,7 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       configureTrace();
       configureSCMheartbeat();
       configScmMetadata();
+      configVersionFile();
 
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
@@ -475,7 +477,8 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
           randomContainerPort);
 
-      StorageContainerManager scm = new StorageContainerManager(conf);
+      StorageContainerManager scm =
+          StorageContainerManager.createSCM(null, conf);
       scm.start();
 
       KeySpaceManager ksm = new KeySpaceManager(conf);
@@ -526,6 +529,12 @@ public final class MiniOzoneCluster extends MiniDFSCluster
       // datanodes in the cluster.
       conf.setStrings(ScmConfigKeys.OZONE_SCM_DATANODE_ID,
           scmPath.toString() + "/datanode.id");
+    }
+
+    private void configVersionFile() throws IOException {
+      SCMStorage scmStore = new SCMStorage(conf);
+      scmStore.setClusterId(runID.toString());
+      scmStore.initialize();
     }
 
     private void configureHandler() {
