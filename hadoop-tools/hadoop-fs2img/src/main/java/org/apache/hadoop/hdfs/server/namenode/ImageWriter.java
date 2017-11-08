@@ -165,16 +165,23 @@ public class ImageWriter implements Closeable {
 
     // create directory and inode sections as side-files.
     // The details are written to files to avoid keeping them in memory.
-    dirsTmp = File.createTempFile("fsimg_dir", null);
-    dirsTmp.deleteOnExit();
-    dirs = beginSection(new FileOutputStream(dirsTmp));
+    FileOutputStream dirsTmpStream = null;
+    try {
+      dirsTmp = File.createTempFile("fsimg_dir", null);
+      dirsTmp.deleteOnExit();
+      dirsTmpStream = new FileOutputStream(dirsTmp);
+      dirs = beginSection(dirsTmpStream);
+    } catch (IOException e) {
+      IOUtils.cleanupWithLogger(null, raw, dirsTmpStream);
+      throw e;
+    }
+
     try {
       inodesTmp = File.createTempFile("fsimg_inode", null);
       inodesTmp.deleteOnExit();
       inodes = new FileOutputStream(inodesTmp);
     } catch (IOException e) {
-      // appropriate to close raw?
-      IOUtils.cleanup(null, raw, dirs);
+      IOUtils.cleanupWithLogger(null, raw, dirsTmpStream, dirs);
       throw e;
     }
 
