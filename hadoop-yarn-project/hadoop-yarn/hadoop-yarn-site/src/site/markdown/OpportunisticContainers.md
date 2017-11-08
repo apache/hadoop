@@ -52,6 +52,12 @@ By default, allocation of opportunistic containers is performed centrally throug
 |:-------- |:----- |:----- |
 | `yarn.nodemanager.distributed-scheduling.enabled` | Enables distributed scheduling. | `false` |
 
+In order to submit jobs to a cluster that has AMRMProxy turned on, one must create a separate set of configs for the client from which jobs will be submitted. In these, the **conf/yarn-site.xml** should have the following additional configurations:
+
+| Property | Value | Description |
+|:-------- |:----- |:----- |
+| `yarn.resourcemanger.scheduler.address` | `localhost:8049` | Redirects jobs to the Node Manager's AMRMProxy port.|
+
 
 ###<a name="Running_a_Sample_Job"></a>Running a Sample Job
 
