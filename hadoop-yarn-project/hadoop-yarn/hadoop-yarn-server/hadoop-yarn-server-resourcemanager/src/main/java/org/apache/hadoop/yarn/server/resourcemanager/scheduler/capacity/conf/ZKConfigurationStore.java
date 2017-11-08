@@ -81,7 +81,8 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
     this.znodeParentPath =
         conf.get(YarnConfiguration.RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
             YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
-    this.zkManager = rmContext.getResourceManager().getAndStartZKManager(conf);
+    this.zkManager =
+        rmContext.getResourceManager().createAndStartZKManager(conf);
     this.zkAcl = ZKCuratorManager.getZKAcls(conf);
 
     this.zkVersionPath = getNodePath(znodeParentPath, ZK_VERSION_PATH);
