@@ -166,8 +166,8 @@ public interface Bucket {
           true, paramType = "header")})
   Response listBucket(@PathParam("volume") String volume,
                       @PathParam("bucket") String bucket,
-                      @DefaultValue(Header.OZONE_LIST_QUERY_KEY)
-                      @QueryParam(Header.OZONE_LIST_QUERY_TAG)
+                      @DefaultValue(Header.OZONE_INFO_QUERY_KEY)
+                      @QueryParam(Header.OZONE_INFO_QUERY_TAG)
                       String info,
                       @QueryParam(Header.OZONE_LIST_QUERY_PREFIX)
                       String prefix,

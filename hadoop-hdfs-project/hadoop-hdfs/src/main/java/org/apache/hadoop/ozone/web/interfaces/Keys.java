@@ -110,7 +110,7 @@ public interface Keys {
           true, paramType = "header")})
   Response getKey(@PathParam("volume") String volume,
       @PathParam("bucket") String bucket, @PathParam("keys") String keys,
-      @QueryParam(Header.OZONE_LIST_QUERY_TAG) String info,
+      @QueryParam(Header.OZONE_INFO_QUERY_TAG) String info,
       @Context Request req, @Context UriInfo uriInfo,
       @Context HttpHeaders headers) throws OzoneException;
 

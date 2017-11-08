@@ -187,8 +187,8 @@ public class OzoneRestClient implements Closeable {
       OzoneUtils.verifyResourceName(volumeName);
       URIBuilder builder = new URIBuilder(endPointURI);
       builder.setPath("/" + volumeName)
-          .setParameter(Header.OZONE_LIST_QUERY_TAG,
-              Header.OZONE_LIST_QUERY_VOLUME)
+          .setParameter(Header.OZONE_INFO_QUERY_TAG,
+              Header.OZONE_INFO_QUERY_VOLUME)
           .build();
 
       httpGet = getHttpGet(builder.toString());

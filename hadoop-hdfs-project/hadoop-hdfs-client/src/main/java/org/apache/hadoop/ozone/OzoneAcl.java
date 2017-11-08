@@ -86,7 +86,7 @@ public class OzoneAcl {
 
   @Override
   public String toString() {
-    return type+":" + name + ":" + rights;
+    return type + ":" + name + ":" + OzoneACLRights.getACLRightsString(rights);
   }
 
   /**
@@ -207,5 +207,25 @@ public class OzoneAcl {
       }
 
     }
+
+    /**
+     * Returns String representation of ACL rights.
+     * @param acl OzoneACLRights
+     * @return String representation of acl
+     */
+    public static String getACLRightsString(OzoneACLRights acl) {
+      switch(acl) {
+      case READ:
+        return OzoneConsts.OZONE_ACL_READ;
+      case WRITE:
+        return OzoneConsts.OZONE_ACL_WRITE;
+      case READ_WRITE:
+        return OzoneConsts.OZONE_ACL_READ_WRITE;
+      default:
+        throw new IllegalArgumentException("ACL right is not recognized");
+      }
+    }
+
   }
+
 }

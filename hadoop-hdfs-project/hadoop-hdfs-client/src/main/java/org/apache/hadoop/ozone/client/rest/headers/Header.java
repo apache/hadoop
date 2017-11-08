@@ -40,9 +40,10 @@ public final class Header {
   public static final String OZONE_V1_VERSION_HEADER ="v1";
 
   public static final String OZONE_LIST_QUERY_SERVICE = "service";
-  public static final String OZONE_LIST_QUERY_VOLUME = "volume";
-  public static final String OZONE_LIST_QUERY_BUCKET = "bucket";
-  public static final String OZONE_LIST_QUERY_KEY = "key";
+
+  public static final String OZONE_INFO_QUERY_VOLUME = "volume";
+  public static final String OZONE_INFO_QUERY_BUCKET = "bucket";
+  public static final String OZONE_INFO_QUERY_KEY = "key";
 
   public static final String OZONE_REQUEST_ID = "x-ozone-request-id";
   public static final String OZONE_SERVER_NAME = "x-ozone-server-name";
@@ -56,7 +57,7 @@ public final class Header {
   public static final String OZONE_ACL_ADD = "ADD";
   public static final String OZONE_ACL_REMOVE = "REMOVE";
 
-  public static final String OZONE_LIST_QUERY_TAG ="info";
+  public static final String OZONE_INFO_QUERY_TAG ="info";
   public static final String OZONE_QUOTA_QUERY_TAG ="quota";
   public static final String CONTENT_MD5 = "Content-MD5";
   public static final String OZONE_LIST_QUERY_PREFIX="prefix";

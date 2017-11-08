@@ -26,14 +26,14 @@ import java.io.OutputStream;
  */
 public class OzoneOutputStream extends OutputStream {
 
-  private final ChunkGroupOutputStream outputStream;
+  private final OutputStream outputStream;
 
   /**
    * Constructs OzoneOutputStream with ChunkGroupOutputStream.
    *
    * @param outputStream
    */
-  public OzoneOutputStream(ChunkGroupOutputStream outputStream) {
+  public OzoneOutputStream(OutputStream outputStream) {
     this.outputStream = outputStream;
   }
 

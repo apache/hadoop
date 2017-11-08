@@ -169,8 +169,8 @@ public interface Volume {
       @ApiImplicitParam(name = "Authorization", example = "OZONE", required =
           true, paramType = "header")})
   Response getVolumeInfo(@PathParam("volume") String volume,
-      @DefaultValue(Header.OZONE_LIST_QUERY_BUCKET)
-      @QueryParam(Header.OZONE_LIST_QUERY_TAG) String info,
+      @DefaultValue(Header.OZONE_INFO_QUERY_BUCKET)
+      @QueryParam(Header.OZONE_INFO_QUERY_TAG) String info,
       @QueryParam(Header.OZONE_LIST_QUERY_PREFIX) String prefix,
       @DefaultValue(Header.OZONE_DEFAULT_LIST_SIZE)
       @QueryParam(Header.OZONE_LIST_QUERY_MAXKEYS) int keys,

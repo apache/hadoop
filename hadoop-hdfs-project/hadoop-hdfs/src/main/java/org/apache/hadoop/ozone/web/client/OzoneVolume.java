@@ -353,8 +353,8 @@ public class OzoneVolume {
       OzoneUtils.verifyResourceName(bucketName);
       URIBuilder builder = new URIBuilder(getClient().getEndPointURI());
       builder.setPath("/" + getVolumeName() + "/" + bucketName)
-        .setParameter(Header.OZONE_LIST_QUERY_TAG,
-            Header.OZONE_LIST_QUERY_BUCKET).build();
+        .setParameter(Header.OZONE_INFO_QUERY_TAG,
+            Header.OZONE_INFO_QUERY_BUCKET).build();
       getRequest = client.getHttpGet(builder.toString());
       return executeInfoBucket(getRequest, httpClient);
 

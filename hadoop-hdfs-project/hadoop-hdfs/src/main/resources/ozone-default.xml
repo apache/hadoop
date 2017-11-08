@@ -1137,4 +1137,22 @@
       percentage in float notation (X.Yf), with 1.0f meaning 100%.
     </description>
   </property>
+  <property>
+    <name>ozone.rest.client.http.connection.max</name>
+    <value>100</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      This defines the overall connection limit for the connection pool used in
+      RestClient.
+    </description>
+  </property>
+  <property>
+    <name>ozone.rest.client.http.connection.per-route.max</name>
+    <value>20</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      This defines the connection limit per one HTTP route/host. Total max
+      connection is limited by ozone.rest.client.http.connection.max property.
+    </description>
+  </property>
 </configuration>

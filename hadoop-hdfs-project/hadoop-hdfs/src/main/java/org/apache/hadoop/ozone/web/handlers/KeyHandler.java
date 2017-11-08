@@ -86,7 +86,7 @@ public class KeyHandler implements Keys {
           throws IOException, OzoneException, NoSuchAlgorithmException {
         if (info == null) {
           return getKey(args);
-        } else if (info.equals(Header.OZONE_LIST_QUERY_KEY)) {
+        } else if (info.equals(Header.OZONE_INFO_QUERY_KEY)) {
           return getKeyInfo(args);
         }
 

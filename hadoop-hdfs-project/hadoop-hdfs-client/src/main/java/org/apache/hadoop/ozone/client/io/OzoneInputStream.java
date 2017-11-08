@@ -28,14 +28,14 @@ import java.io.InputStream;
  */
 public class OzoneInputStream extends InputStream {
 
-  private final ChunkGroupInputStream inputStream;
+  private final InputStream inputStream;
 
   /**
    * Constructs OzoneInputStream with ChunkInputStream.
    *
    * @param inputStream
    */
-  public OzoneInputStream(ChunkGroupInputStream inputStream) {
+  public OzoneInputStream(InputStream inputStream) {
     this.inputStream = inputStream;
   }
 

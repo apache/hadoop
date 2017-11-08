@@ -33,7 +33,7 @@ public class OzoneQuota {
   public static final String OZONE_QUOTA_TB = "TB";
 
   private Units unit;
-  private int size;
+  private long size;
 
   /** Quota Units.*/
   public enum Units {UNDEFINED, BYTES, KB, MB, GB, TB}
@@ -41,9 +41,9 @@ public class OzoneQuota {
   /**
    * Returns size.
    *
-   * @return int
+   * @return long
    */
-  public int getSize() {
+  public long getSize() {
     return size;
   }
 
@@ -67,10 +67,10 @@ public class OzoneQuota {
   /**
    * Constructor for Ozone Quota.
    *
-   * @param size - Integer Size
+   * @param size Long Size
    * @param unit MB, GB  or TB
    */
-  public OzoneQuota(int size, Units unit) {
+  public OzoneQuota(long size, Units unit) {
     this.size = size;
     this.unit = unit;
   }
@@ -194,5 +194,10 @@ public class OzoneQuota {
       unit = Units.BYTES;
     }
     return new OzoneQuota((int)size, unit);
+  }
+
+  @Override
+  public String toString() {
+    return size + " " + unit;
   }
 }
