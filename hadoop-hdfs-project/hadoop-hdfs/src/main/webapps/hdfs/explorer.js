@@ -440,21 +440,28 @@
           }).complete(function(data) {
             numCompleted++;
             if(numCompleted == files.length) {
-              $('#modal-upload-file').modal('hide');
-              $('#modal-upload-file-button').button('reset');
+              reset_upload_button();
               browse_directory(current_directory);
             }
           }).error(function(jqXHR, textStatus, errorThrown) {
             numCompleted++;
+            reset_upload_button();
             show_err_msg("Couldn't upload the file " + file.file.name + ". "+ errorThrown);
           });
         }).error(function(jqXHR, textStatus, errorThrown) {
           numCompleted++;
+          reset_upload_button();
           show_err_msg("Couldn't find datanode to write file. " + errorThrown);
         });
       })();
     }
   });
+
+  //Reset the upload button
+  function reset_upload_button() {
+    $('#modal-upload-file').modal('hide');
+    $('#modal-upload-file-button').button('reset');
+  }
 
   //Store the list of files which have been checked into session storage
   function store_selected_files(current_directory) {
