@@ -116,6 +116,23 @@ public final class OzoneConfigKeys {
   public static final Class<? extends ClientProtocol>
       OZONE_CLIENT_PROTOCOL_REST = RestClient.class;
 
+  public static final String OZONE_REST_SERVERS = "ozone.rest.servers";
+  public static final String OZONE_REST_CLIENT_PORT = "ozone.rest.client.port";
+  public static final int OZONE_REST_CLIENT_PORT_DEFAULT = 9864;
+
+  // This defines the overall connection limit for the connection pool used in
+  // RestClient.
+  public static final String OZONE_REST_CLIENT_HTTP_CONNECTION_MAX =
+      "ozone.rest.client.http.connection.max";
+  public static final int OZONE_REST_CLIENT_HTTP_CONNECTION_DEFAULT = 100;
+
+  // This defines the connection limit per one HTTP route/host.
+  public static final String OZONE_REST_CLIENT_HTTP_CONNECTION_PER_ROUTE_MAX =
+      "ozone.rest.client.http.connection.per-route.max";
+
+  public static final int
+      OZONE_REST_CLIENT_HTTP_CONNECTION_PER_ROUTE_MAX_DEFAULT = 20;
+
   public static final String OZONE_CLIENT_SOCKET_TIMEOUT_MS =
       "ozone.client.socket.timeout.ms";
   public static final int OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT = 5000;

@@ -25,8 +25,10 @@ import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.client.rest.headers.Header;
 import org.apache.hadoop.ozone.web.interfaces.UserAuth;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import javax.ws.rs.core.HttpHeaders;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -104,11 +106,18 @@ public class Simple implements UserAuth {
   public boolean isAdmin(UserArgs userArgs) throws OzoneException {
     assert userArgs != null : "userArgs cannot be null";
 
-    String user = getUser(userArgs);
-
+    String user;
+    String currentUser;
+    try {
+      user = getUser(userArgs);
+      currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
+    } catch (IOException e) {
+      throw ErrorTable.newError(ErrorTable.BAD_AUTHORIZATION, userArgs);
+    }
     return
         (user.compareToIgnoreCase(OzoneConsts.OZONE_SIMPLE_ROOT_USER) == 0) ||
-            (user.compareToIgnoreCase(OzoneConsts.OZONE_SIMPLE_HDFS_USER) == 0);
+            (user.compareToIgnoreCase(OzoneConsts.OZONE_SIMPLE_HDFS_USER) == 0)
+            || (user.compareToIgnoreCase(currentUser) == 0);
   }
 
   /**

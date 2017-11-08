@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client;
 
 import com.google.common.base.Optional;
 
+import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -38,6 +39,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.text.ParseException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -96,6 +102,16 @@ public final class OzoneClientUtils {
   private static final Logger LOG = LoggerFactory.getLogger(
       OzoneClientUtils.class);
   private static final int NO_PORT = -1;
+
+  /**
+   * Date format that used in ozone. Here the format is thread safe to use.
+   */
+  private static final ThreadLocal<DateTimeFormatter> DATE_FORMAT =
+      ThreadLocal.withInitial(() -> {
+        DateTimeFormatter format =
+            DateTimeFormatter.ofPattern(OzoneConsts.OZONE_DATE_FORMAT);
+        return format.withZone(ZoneId.of(OzoneConsts.OZONE_TIME_ZONE));
+      });
 
   /**
    * The service ID of the solitary Ozone SCM service.
@@ -821,5 +837,25 @@ public final class OzoneClientUtils {
       throw new IllegalArgumentException(
           "Bucket or Volume name cannot be an IPv4 address or all numeric");
     }
+  }
+
+  /**
+   * Convert time in millisecond to a human readable format required in ozone.
+   * @return a human readable string for the input time
+   */
+  public static String formatDateTime(long millis) {
+    ZonedDateTime dateTime = ZonedDateTime.ofInstant(
+        Instant.ofEpochSecond(millis), DATE_FORMAT.get().getZone());
+    return  DATE_FORMAT.get().format(dateTime);
+  }
+
+  /**
+   * Convert time in ozone date format to millisecond.
+   * @return time in milliseconds
+   */
+  public static long formatDateTime(String date) throws ParseException {
+    Preconditions.checkNotNull(date, "Date string should not be null.");
+    return ZonedDateTime.parse(date, DATE_FORMAT.get())
+        .toInstant().getEpochSecond();
   }
 }

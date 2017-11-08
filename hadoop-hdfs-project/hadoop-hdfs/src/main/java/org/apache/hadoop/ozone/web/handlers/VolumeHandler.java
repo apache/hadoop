@@ -228,10 +228,10 @@ public class VolumeHandler implements Volume {
           throws IOException, OzoneException {
 
         switch (info) {
-        case Header.OZONE_LIST_QUERY_BUCKET:
+        case Header.OZONE_INFO_QUERY_BUCKET:
           MDC.put(OZONE_FUNCTION, "ListBucket");
           return getBucketsInVolume(args, prefix, maxKeys, prevKey);
-        case Header.OZONE_LIST_QUERY_VOLUME:
+        case Header.OZONE_INFO_QUERY_VOLUME:
           MDC.put(OZONE_FUNCTION, "InfoVolume");
           assertNoListParamPresent(uriInfo, args);
           return getVolumeInfoResponse(args); // Return volume info

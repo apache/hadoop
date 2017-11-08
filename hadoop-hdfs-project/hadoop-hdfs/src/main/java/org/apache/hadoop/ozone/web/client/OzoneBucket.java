@@ -594,8 +594,8 @@ public class OzoneBucket {
       builder
           .setPath("/" + getVolume().getVolumeName() + "/" + getBucketName()
               + "/" + keyName)
-          .setParameter(Header.OZONE_LIST_QUERY_TAG,
-              Header.OZONE_LIST_QUERY_KEY)
+          .setParameter(Header.OZONE_INFO_QUERY_TAG,
+              Header.OZONE_INFO_QUERY_KEY)
           .build();
 
       getRequest = client.getHttpGet(builder.toString());

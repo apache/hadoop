@@ -180,10 +180,10 @@ public class BucketHandler implements Bucket {
       public Response doProcess(BucketArgs args)
           throws OzoneException, IOException {
         switch (info) {
-        case Header.OZONE_LIST_QUERY_KEY:
+        case Header.OZONE_INFO_QUERY_KEY:
           ListArgs listArgs = new ListArgs(args, prefix, maxKeys, startPage);
           return getBucketKeysList(listArgs);
-        case Header.OZONE_LIST_QUERY_BUCKET:
+        case Header.OZONE_INFO_QUERY_BUCKET:
           return getBucketInfoResponse(args);
         default:
           OzoneException ozException =
