@@ -46,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -425,12 +426,12 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.systemClock = SystemClock.getInstance();
 
     this.applicationId = applicationId;
-    this.name = name;
+    this.name = StringInterner.weakIntern(name);
     this.rmContext = rmContext;
     this.dispatcher = rmContext.getDispatcher();
     this.handler = dispatcher.getEventHandler();
     this.conf = config;
-    this.user = user;
+    this.user = StringInterner.weakIntern(user);
     this.queue = queue;
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
@@ -441,7 +442,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     } else {
       this.startTime = startTime;
     }
-    this.applicationType = applicationType;
+    this.applicationType = StringInterner.weakIntern(applicationType);
     this.applicationTags = applicationTags;
     this.amReqs = amReqs;
     if (submissionContext.getPriority() != null) {
