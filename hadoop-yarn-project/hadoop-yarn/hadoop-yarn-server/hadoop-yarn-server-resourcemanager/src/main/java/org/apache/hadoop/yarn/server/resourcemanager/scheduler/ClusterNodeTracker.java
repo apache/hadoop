@@ -56,7 +56,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
   private Map<String, N> nodeNameToNodeMap = new HashMap<>();
   private Map<String, List<N>> nodesPerRack = new HashMap<>();
 
-  private Resource clusterCapacity = Resources.clone(Resources.none());
+  private Resource clusterCapacity = Resources.createResource(0, 0);
   private Resource staleClusterCapacity = null;
 
   // Max allocation
