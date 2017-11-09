@@ -37,18 +37,12 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.JerseyTest;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Test ResourceEstimatorService.
@@ -70,29 +64,12 @@ public class TestResourceEstimatorService extends JerseyTest {
   private long containerMemAlloc;
   private int containerCPUAlloc;
 
-  private static class WebServletModule extends ServletModule {
-    @Override protected void configureServlets() {
-      bind(ResourceEstimatorService.class);
-      serve("/*").with(GuiceContainer.class);
-    }
-  }
-
-  static {
-    GuiceServletConfig
-        .setInjector(Guice.createInjector(new WebServletModule()));
-  }
-
   public TestResourceEstimatorService() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.resourceestimator.service")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class).build());
+    super("org.apache.hadoop.resourceestimator.service");
   }
 
   @Before @Override public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig
-        .setInjector(Guice.createInjector(new WebServletModule()));
     containerMemAlloc = 1024;
     containerCPUAlloc = 1;
     containerSpec = Resource.newInstance(containerMemAlloc, containerCPUAlloc);
