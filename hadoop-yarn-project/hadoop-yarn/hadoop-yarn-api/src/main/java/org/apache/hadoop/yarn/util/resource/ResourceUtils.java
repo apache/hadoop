@@ -342,17 +342,14 @@ public class ResourceUtils {
     if (!initializedResources) {
       synchronized (ResourceUtils.class) {
         if (!initializedResources) {
-          if (conf == null) {
-            conf = new YarnConfiguration();
+          Configuration resConf = conf;
+
+          if (resConf == null) {
+            resConf = new YarnConfiguration();
           }
-          try {
-            addResourcesFileToConf(resourceFile, conf);
-          } catch (FileNotFoundException fe) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Unable to find '" + resourceFile + "'.");
-            }
-          }
-          initializeResourcesMap(conf);
+
+          addResourcesFileToConf(resourceFile, resConf);
+          initializeResourcesMap(resConf);
         }
       }
     }
@@ -389,7 +386,7 @@ public class ResourceUtils {
   }
 
   private static void addResourcesFileToConf(String resourceFile,
-      Configuration conf) throws FileNotFoundException {
+      Configuration conf) {
     try {
       InputStream ris = getConfInputStream(resourceFile, conf);
       if (LOG.isDebugEnabled()) {
@@ -397,15 +394,11 @@ public class ResourceUtils {
       }
       conf.addResource(ris);
     } catch (FileNotFoundException fe) {
-      throw fe;
-    } catch (IOException ie) {
+      LOG.info("Unable to find '" + resourceFile + "'.");
+    } catch (IOException | YarnException ex) {
       LOG.fatal("Exception trying to read resource types configuration '"
-          + resourceFile + "'.", ie);
-      throw new YarnRuntimeException(ie);
-    } catch (YarnException ye) {
-      LOG.fatal("YARN Exception trying to read resource types configuration '"
-          + resourceFile + "'.", ye);
-      throw new YarnRuntimeException(ye);
+          + resourceFile + "'.", ex);
+      throw new YarnRuntimeException(ex);
     }
   }
 
@@ -467,22 +460,19 @@ public class ResourceUtils {
   private static Map<String, ResourceInformation> initializeNodeResourceInformation(
       Configuration conf) {
     Map<String, ResourceInformation> nodeResources = new HashMap<>();
-    try {
-      addResourcesFileToConf(
-          YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE, conf);
-      for (Map.Entry<String, String> entry : conf) {
-        String key = entry.getKey();
-        String value = entry.getValue();
-        if (key.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
-          addResourceInformation(key, value, nodeResources);
-        }
-      }
-    } catch (FileNotFoundException fe) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Couldn't find node resources file: "
-            + YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE);
+
+    addResourcesFileToConf(YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE,
+        conf);
+
+    for (Map.Entry<String, String> entry : conf) {
+      String key = entry.getKey();
+      String value = entry.getValue();
+
+      if (key.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
+        addResourceInformation(key, value, nodeResources);
       }
     }
+
     return nodeResources;
   }
 
