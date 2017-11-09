@@ -73,26 +73,26 @@ public class SCMNodeStat implements NodeStat {
   /**
    * Set the capacity, used and remaining space on a datanode.
    *
-   * @param capacity in bytes
-   * @param used in bytes
-   * @param remaining in bytes
+   * @param newCapacity in bytes
+   * @param newUsed in bytes
+   * @param newRemaining in bytes
    */
   @VisibleForTesting
-  public void set(long capacity, long used, long remaining) {
-    Preconditions.checkNotNull(capacity, "Capacity cannot be null");
-    Preconditions.checkNotNull(used, "used cannot be null");
-    Preconditions.checkNotNull(remaining, "remaining cannot be null");
+  public void set(long newCapacity, long newUsed, long newRemaining) {
+    Preconditions.checkNotNull(newCapacity, "Capacity cannot be null");
+    Preconditions.checkNotNull(newUsed, "used cannot be null");
+    Preconditions.checkNotNull(newRemaining, "remaining cannot be null");
 
-    Preconditions.checkArgument(capacity >= 0, "Capacity cannot be " +
+    Preconditions.checkArgument(newCapacity >= 0, "Capacity cannot be " +
         "negative.");
-    Preconditions.checkArgument(used >= 0, "used space cannot be " +
+    Preconditions.checkArgument(newUsed >= 0, "used space cannot be " +
         "negative.");
-    Preconditions.checkArgument(remaining >= 0, "remaining cannot be " +
+    Preconditions.checkArgument(newRemaining >= 0, "remaining cannot be " +
         "negative");
 
-    this.capacity = new LongMetric(capacity);
-    this.scmUsed = new LongMetric(used);
-    this.remaining = new LongMetric(remaining);
+    this.capacity = new LongMetric(newCapacity);
+    this.scmUsed = new LongMetric(newUsed);
+    this.remaining = new LongMetric(newRemaining);
   }
 
   /**

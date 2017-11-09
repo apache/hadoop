@@ -92,32 +92,32 @@ public class LongMetric implements DatanodeMetric<Long, Long> {
   /**
    * Sets the value of this metric.
    *
-   * @param value - value of the metric.
+   * @param setValue - value of the metric.
    */
   @Override
-  public void set(Long value) {
-    this.value = value;
+  public void set(Long setValue) {
+    this.value = setValue;
 
   }
 
   /**
    * Adds a value of to the base.
    *
-   * @param value - value
+   * @param addValue - value
    */
   @Override
-  public void add(Long value) {
-    this.value += value;
+  public void add(Long addValue) {
+    this.value += addValue;
   }
 
   /**
    * subtract a value.
    *
-   * @param value value
+   * @param subValue value
    */
   @Override
-  public void subtract(Long value) {
-    this.value -= value;
+  public void subtract(Long subValue) {
+    this.value -= subValue;
   }
 
   /**

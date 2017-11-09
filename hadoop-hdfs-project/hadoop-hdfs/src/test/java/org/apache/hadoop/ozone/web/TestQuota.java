@@ -29,7 +29,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-
+/**
+ * Test Ozone Volume Quota.
+ */
 public class TestQuota {
   @Test
   public void testParseQuota() {

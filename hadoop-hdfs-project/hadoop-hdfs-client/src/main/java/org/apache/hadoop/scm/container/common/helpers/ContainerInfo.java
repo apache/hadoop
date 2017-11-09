@@ -249,8 +249,8 @@ public class ContainerInfo
       return this;
     }
 
-    public Builder setPipeline(Pipeline pipeline) {
-      this.pipeline = pipeline;
+    public Builder setPipeline(Pipeline containerPipeline) {
+      this.pipeline = containerPipeline;
       return this;
     }
 
@@ -269,18 +269,18 @@ public class ContainerInfo
       return this;
     }
 
-    public Builder setStateEnterTime(long stateEnterTime) {
-      this.stateEnterTime = stateEnterTime;
+    public Builder setStateEnterTime(long time) {
+      this.stateEnterTime = time;
       return this;
     }
 
-    public Builder setOwner(OzoneProtos.Owner owner) {
-      this.owner = owner;
+    public Builder setOwner(OzoneProtos.Owner containerOwner) {
+      this.owner = containerOwner;
       return this;
     }
 
-    public Builder setContainerName(String containerName) {
-      this.containerName = containerName;
+    public Builder setContainerName(String container) {
+      this.containerName = container;
       return this;
     }
 

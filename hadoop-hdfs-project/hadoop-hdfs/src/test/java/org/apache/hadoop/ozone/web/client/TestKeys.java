@@ -74,6 +74,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+/**
+ * Test Ozone Key Lifecycle.
+ */
 public class TestKeys {
   /**
    * Set the timeout for every test.

@@ -46,6 +46,9 @@ import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.apache.hadoop.ozone.web.utils.OzoneUtils.getRequestID;
 import static org.junit.Assert.assertEquals;
 
+/**
+ * Test Ozone Access through REST protocol.
+ */
 public class TestOzoneWebAccess {
   /**
    * Set the timeout for every test.

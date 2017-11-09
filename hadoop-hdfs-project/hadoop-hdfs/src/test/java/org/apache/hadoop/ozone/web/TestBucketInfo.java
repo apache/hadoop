@@ -29,6 +29,9 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Test Ozone Bucket Info operation.
+ */
 public class TestBucketInfo {
   @Test
   public void testBucketInfoJson() throws IOException {

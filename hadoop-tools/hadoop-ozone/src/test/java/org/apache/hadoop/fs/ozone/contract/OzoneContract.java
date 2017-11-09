@@ -48,7 +48,7 @@ class OzoneContract extends AbstractFSContract {
   private static StorageHandler storageHandler;
   private static final String CONTRACT_XML = "contract/ozone.xml";
 
-  public OzoneContract(Configuration conf) {
+  OzoneContract(Configuration conf) {
     super(conf);
     //insert the base features
     addConfResource(CONTRACT_XML);

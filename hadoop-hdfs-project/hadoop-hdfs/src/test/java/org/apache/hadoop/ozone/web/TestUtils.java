@@ -29,6 +29,9 @@ import static org.apache.hadoop.ozone.web.utils.OzoneUtils.verifyResourceName;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+/**
+ * Test Ozone Utility operations like verifying resource name.
+ */
 public class TestUtils {
 
   /**

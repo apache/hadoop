@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.ozone;
 /**
  * Constants for Ozone FileSystem implementation.
  */
-public class Constants {
+public final class Constants {
 
   public static final String OZONE_URI_SCHEME = "o3";
 

@@ -434,88 +434,88 @@ public class CBlockLocalCache implements CacheModule {
     /**
      * Sets the Config to be used by this cache.
      *
-     * @param configuration - Config
+     * @param conf - Config
      * @return Builder
      */
-    public Builder setConfiguration(Configuration configuration) {
-      this.configuration = configuration;
+    public Builder setConfiguration(Configuration conf) {
+      this.configuration = conf;
       return this;
     }
 
     /**
      * Sets the user name who is the owner of this volume.
      *
-     * @param userName - name of the owner, please note this is not the current
+     * @param user - name of the owner, please note this is not the current
      * user name.
      * @return - Builder
      */
-    public Builder setUserName(String userName) {
-      this.userName = userName;
+    public Builder setUserName(String user) {
+      this.userName = user;
       return this;
     }
 
     /**
      * Sets the VolumeName.
      *
-     * @param volumeName - Name of the volume
+     * @param volume - Name of the volume
      * @return Builder
      */
-    public Builder setVolumeName(String volumeName) {
-      this.volumeName = volumeName;
+    public Builder setVolumeName(String volume) {
+      this.volumeName = volume;
       return this;
     }
 
     /**
      * Sets the Pipelines that form this volume.
      *
-     * @param pipelines - list of pipelines
+     * @param pipelineList - list of pipelines
      * @return Builder
      */
-    public Builder setPipelines(List<Pipeline> pipelines) {
-      this.pipelines = pipelines;
+    public Builder setPipelines(List<Pipeline> pipelineList) {
+      this.pipelines = pipelineList;
       return this;
     }
 
     /**
      * Sets the Client Manager that manages the communication with containers.
      *
-     * @param clientManager - clientManager.
+     * @param xceiverClientManager - clientManager.
      * @return - Builder
      */
-    public Builder setClientManager(XceiverClientManager clientManager) {
-      this.clientManager = clientManager;
+    public Builder setClientManager(XceiverClientManager xceiverClientManager) {
+      this.clientManager = xceiverClientManager;
       return this;
     }
 
     /**
      * Sets the block size -- Typical sizes are 4KB, 8KB etc.
      *
-     * @param blockSize - BlockSize.
+     * @param size - BlockSize.
      * @return - Builder
      */
-    public Builder setBlockSize(int blockSize) {
-      this.blockSize = blockSize;
+    public Builder setBlockSize(int size) {
+      this.blockSize = size;
       return this;
     }
 
     /**
      * Sets the volumeSize.
      *
-     * @param volumeSize - VolumeSize
+     * @param size - VolumeSize
      * @return - Builder
      */
-    public Builder setVolumeSize(long volumeSize) {
-      this.volumeSize = volumeSize;
+    public Builder setVolumeSize(long size) {
+      this.volumeSize = size;
       return this;
     }
 
     /**
      * Set flusher.
-     * @param flusher - cache Flusher
+     * @param containerCacheFlusher - cache Flusher
      * @return Builder.
      */
-    public Builder setFlusher(ContainerCacheFlusher flusher) {
-      this.flusher = flusher;
+    public Builder setFlusher(ContainerCacheFlusher containerCacheFlusher) {
+      this.flusher = containerCacheFlusher;
       return this;
     }
 

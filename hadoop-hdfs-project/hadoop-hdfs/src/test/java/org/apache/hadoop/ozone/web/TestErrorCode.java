@@ -25,6 +25,9 @@ import org.junit.Test;
 import static junit.framework.TestCase.assertEquals;
 import static org.apache.hadoop.ozone.web.utils.OzoneUtils.getRequestID;
 
+/**
+ * Test Ozone Error Codes.
+ */
 public class TestErrorCode {
   /**
    * Test Error Generator functions.
