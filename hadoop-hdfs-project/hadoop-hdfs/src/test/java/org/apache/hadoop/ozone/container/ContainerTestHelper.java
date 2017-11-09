@@ -488,7 +488,7 @@ public final class ContainerTestHelper {
   public static void verifyGetKey(ContainerCommandRequestProto request,
       ContainerCommandResponseProto response) {
     Assert.assertEquals(request.getTraceID(), response.getTraceID());
-    Assert.assertEquals(response.getResult(), ContainerProtos.Result.SUCCESS);
+    Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
     ContainerProtos.PutKeyRequestProto putKey = request.getPutKey();
     ContainerProtos.GetKeyRequestProto getKey = request.getGetKey();
     Assert.assertEquals(putKey.getKeyData().getChunksCount(),

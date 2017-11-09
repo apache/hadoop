@@ -184,8 +184,8 @@ public class TestKeySpaceManager {
 
     VolumeArgs getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     VolumeInfo retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
-    Assert.assertEquals(retVolumeInfo.getQuota().sizeInBytes(),
-                                              createQuota.sizeInBytes());
+    Assert.assertEquals(createQuota.sizeInBytes(),
+        retVolumeInfo.getQuota().sizeInBytes());
 
     // Set a new quota and test it
     OzoneQuota setQuota =
@@ -194,15 +194,15 @@ public class TestKeySpaceManager {
     storageHandler.setVolumeQuota(createVolumeArgs, false);
     getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
-    Assert.assertEquals(retVolumeInfo.getQuota().sizeInBytes(),
-                                                setQuota.sizeInBytes());
+    Assert.assertEquals(setQuota.sizeInBytes(),
+        retVolumeInfo.getQuota().sizeInBytes());
 
     // Remove the quota and test it again
     storageHandler.setVolumeQuota(createVolumeArgs, true);
     getVolumeArgs = new VolumeArgs(volumeName, userArgs);
     retVolumeInfo = storageHandler.getVolumeInfo(getVolumeArgs);
-    Assert.assertEquals(retVolumeInfo.getQuota().sizeInBytes(),
-        OzoneConsts.MAX_QUOTA_IN_BYTES);
+    Assert.assertEquals(OzoneConsts.MAX_QUOTA_IN_BYTES,
+        retVolumeInfo.getQuota().sizeInBytes());
     Assert.assertEquals(numVolumeCreateFail,
         ksmMetrics.getNumVolumeCreateFails());
     Assert.assertEquals(numVolumeInfoFail,

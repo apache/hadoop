@@ -216,7 +216,7 @@ public class TestContainerServer {
           ContainerTestHelper.getCreateContainerRequest(containerName);
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
-      Assert.assertEquals(response.getResult(), ContainerProtos.Result.SUCCESS);
+      Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());
       Assert.assertTrue(dispatcher.
                           getContainerMetrics().
                             getContainerOpsMetrics(

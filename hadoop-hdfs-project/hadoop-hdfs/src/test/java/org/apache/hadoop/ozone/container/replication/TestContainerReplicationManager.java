@@ -165,7 +165,7 @@ public class TestContainerReplicationManager {
         .getValue() == 1);
     Assert.assertEquals(singleNodeContainer, containers.get(0).getKey());
     int count = containers.get(0).getValue();
-    Assert.assertEquals(count, 1L);
+    Assert.assertEquals(1L, count);
   }
 
   @Test

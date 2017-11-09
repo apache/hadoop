@@ -109,33 +109,33 @@ public class TestOzoneAcls {
   public void testAclValues() {
     OzoneAcl acl = OzoneAcl.parseAcl("user:bilbo:rw");
     assertEquals(acl.getName(), "bilbo");
-    assertEquals(acl.getRights(), OzoneAcl.OzoneACLRights.READ_WRITE);
-    assertEquals(acl.getType(), OzoneAcl.OzoneACLType.USER);
+    assertEquals(OzoneAcl.OzoneACLRights.READ_WRITE, acl.getRights());
+    assertEquals(OzoneAcl.OzoneACLType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("user:bilbo:wr");
-    assertEquals(acl.getName(), "bilbo");
-    assertEquals(acl.getRights(), OzoneAcl.OzoneACLRights.READ_WRITE);
-    assertEquals(acl.getType(), OzoneAcl.OzoneACLType.USER);
+    assertEquals("bilbo", acl.getName());
+    assertEquals(OzoneAcl.OzoneACLRights.READ_WRITE, acl.getRights());
+    assertEquals(OzoneAcl.OzoneACLType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("user:bilbo:r");
-    assertEquals(acl.getName(), "bilbo");
-    assertEquals(acl.getRights(), OzoneAcl.OzoneACLRights.READ);
-    assertEquals(acl.getType(), OzoneAcl.OzoneACLType.USER);
+    assertEquals("bilbo", acl.getName());
+    assertEquals(OzoneAcl.OzoneACLRights.READ, acl.getRights());
+    assertEquals(OzoneAcl.OzoneACLType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("user:bilbo:w");
-    assertEquals(acl.getName(), "bilbo");
-    assertEquals(acl.getRights(), OzoneAcl.OzoneACLRights.WRITE);
-    assertEquals(acl.getType(), OzoneAcl.OzoneACLType.USER);
+    assertEquals("bilbo", acl.getName());
+    assertEquals(OzoneAcl.OzoneACLRights.WRITE, acl.getRights());
+    assertEquals(OzoneAcl.OzoneACLType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("group:hobbit:wr");
     assertEquals(acl.getName(), "hobbit");
-    assertEquals(acl.getRights(), OzoneAcl.OzoneACLRights.READ_WRITE);
-    assertEquals(acl.getType(), OzoneAcl.OzoneACLType.GROUP);
+    assertEquals(OzoneAcl.OzoneACLRights.READ_WRITE, acl.getRights());
+    assertEquals(OzoneAcl.OzoneACLType.GROUP, acl.getType());
 
     acl = OzoneAcl.parseAcl("world::wr");
     assertEquals(acl.getName(), "");
-    assertEquals(acl.getRights(), OzoneAcl.OzoneACLRights.READ_WRITE);
-    assertEquals(acl.getType(), OzoneAcl.OzoneACLType.WORLD);
+    assertEquals(OzoneAcl.OzoneACLRights.READ_WRITE, acl.getRights());
+    assertEquals(OzoneAcl.OzoneACLType.WORLD, acl.getType());
   }
 
 }

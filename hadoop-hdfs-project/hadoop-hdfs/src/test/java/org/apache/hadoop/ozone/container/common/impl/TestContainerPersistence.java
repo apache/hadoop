@@ -773,10 +773,10 @@ public class TestContainerPersistence {
     // Verify in-memory map
     ContainerData actualNewData = containerManager.getContainerMap()
         .get(containerName).getContainer();
-    Assert.assertEquals(actualNewData.getAllMetadata().get("VOLUME"),
-        "shire_new");
-    Assert.assertEquals(actualNewData.getAllMetadata().get("owner"),
-        "bilbo_new");
+    Assert.assertEquals("shire_new",
+        actualNewData.getAllMetadata().get("VOLUME"));
+    Assert.assertEquals("bilbo_new",
+        actualNewData.getAllMetadata().get("owner"));
 
     // Verify container data on disk
     File newContainerFile = containerManager.getContainerFile(actualNewData);
@@ -791,10 +791,10 @@ public class TestContainerPersistence {
           ContainerProtos.ContainerData.parseDelimitedFrom(newIn);
       ContainerData actualContainerData = ContainerData
           .getFromProtBuf(actualContainerDataProto, conf);
-      Assert.assertEquals(actualContainerData.getAllMetadata().get("VOLUME"),
-          "shire_new");
-      Assert.assertEquals(actualContainerData.getAllMetadata().get("owner"),
-          "bilbo_new");
+      Assert.assertEquals("shire_new",
+          actualContainerData.getAllMetadata().get("VOLUME"));
+      Assert.assertEquals("bilbo_new",
+          actualContainerData.getAllMetadata().get("owner"));
     }
 
     // Test force update flag.
@@ -818,10 +818,10 @@ public class TestContainerPersistence {
     // Verify in-memory map
     actualNewData = containerManager.getContainerMap()
         .get(containerName).getContainer();
-    Assert.assertEquals(actualNewData.getAllMetadata().get("VOLUME"),
-        "shire_new_1");
-    Assert.assertEquals(actualNewData.getAllMetadata().get("owner"),
-        "bilbo_new_1");
+    Assert.assertEquals("shire_new_1",
+        actualNewData.getAllMetadata().get("VOLUME"));
+    Assert.assertEquals("bilbo_new_1",
+        actualNewData.getAllMetadata().get("owner"));
 
     // Update a non-existing container
     exception.expect(StorageContainerException.class);

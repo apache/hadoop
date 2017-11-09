@@ -236,14 +236,14 @@ public class TestKeys {
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());
     List<OzoneKey> keyList = helper.getBucket().listKeys("100", null, null);
-    Assert.assertEquals(keyList.size(), 1);
+    Assert.assertEquals(1, keyList.size());
 
     // test list key using a more efficient call
     String newkeyName = OzoneUtils.getRequestID().toLowerCase();
     client.putKey(helper.getVol().getVolumeName(),
         helper.getBucket().getBucketName(), newkeyName, helper.getFile());
     keyList = helper.getBucket().listKeys("100", null, null);
-    Assert.assertEquals(keyList.size(), 2);
+    Assert.assertEquals(2, keyList.size());
 
     // test new put key with invalid volume/bucket name
     try{
@@ -425,8 +425,8 @@ public class TestKeys {
     List<OzoneKey> keyList2 = client.listKeys(helper.getVol().getVolumeName(),
         helper.getBucket().getBucketName(), "100", null, null);
 
-    Assert.assertEquals(keyList1.size(), 11);
-    Assert.assertEquals(keyList2.size(), 11);
+    Assert.assertEquals(11, keyList1.size());
+    Assert.assertEquals(11, keyList2.size());
     // Verify the key creation/modification time. Here we compare the time in
     // second unit since the date string reparsed to millisecond will
     // lose precision.
@@ -448,15 +448,15 @@ public class TestKeys {
     keyList1 = helper.getBucket().listKeys("1", null, null);
     keyList2 = client.listKeys(helper.getVol().getVolumeName(),
         helper.getBucket().getBucketName(), "1", null, null);
-    Assert.assertEquals(keyList1.size(), 1);
-    Assert.assertEquals(keyList2.size(), 1);
+    Assert.assertEquals(1, keyList1.size());
+    Assert.assertEquals(1, keyList2.size());
 
     // test startKey parameter of list keys
     keyList1 = helper.getBucket().listKeys("100", "list-key4", "list-key");
     keyList2 = client.listKeys(helper.getVol().getVolumeName(),
         helper.getBucket().getBucketName(), "100", "list-key4", "list-key");
-    Assert.assertEquals(keyList1.size(), 5);
-    Assert.assertEquals(keyList2.size(), 5);
+    Assert.assertEquals(5, keyList1.size());
+    Assert.assertEquals(5, keyList2.size());
 
     // test prefix parameter of list keys
     keyList1 = helper.getBucket().listKeys("100", null, "list-key2");
