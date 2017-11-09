@@ -455,17 +455,26 @@ public abstract class ChecksumFs extends FilterFs {
   @Override
   public void renameInternal(Path src, Path dst) 
     throws IOException, UnresolvedLinkException {
+    renameInternal(src, dst, false);
+  }
+
+  /**
+   * Rename files/dirs with overwrite flag.
+   */
+  @Override
+  public void renameInternal(Path src, Path dst, boolean overwrite)
+    throws IOException, UnresolvedLinkException {
     if (isDirectory(src)) {
-      getMyFs().rename(src, dst);
+      getMyFs().renameInternal(src, dst, overwrite);
     } else {
-      getMyFs().rename(src, dst);
+      getMyFs().renameInternal(src, dst, overwrite);
 
       Path checkFile = getChecksumFile(src);
       if (exists(checkFile)) { //try to rename checksum
         if (isDirectory(dst)) {
-          getMyFs().rename(checkFile, dst);
+          getMyFs().renameInternal(checkFile, dst, overwrite);
         } else {
-          getMyFs().rename(checkFile, getChecksumFile(dst));
+          getMyFs().renameInternal(checkFile, getChecksumFile(dst), overwrite);
         }
       }
     }
