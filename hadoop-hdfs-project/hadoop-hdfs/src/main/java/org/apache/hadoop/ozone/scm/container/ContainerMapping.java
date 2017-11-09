@@ -311,7 +311,7 @@ public class ContainerMapping implements Mapping {
       ContainerInfo updatedContainer = containerStateManager
           .updateContainerState(containerInfo, event);
       containerStore.put(dbKey, updatedContainer.getProtobuf().toByteArray());
-      return containerInfo.getState();
+      return updatedContainer.getState();
     } catch (LeaseException e) {
       throw new IOException("Lease Exception.", e);
     } finally {
