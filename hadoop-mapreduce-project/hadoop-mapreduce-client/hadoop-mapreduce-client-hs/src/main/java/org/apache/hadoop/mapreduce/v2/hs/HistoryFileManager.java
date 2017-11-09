@@ -508,7 +508,7 @@ public class HistoryFileManager extends AbstractService {
     public synchronized Configuration loadConfFile() throws IOException {
       FileContext fc = FileContext.getFileContext(confFile.toUri(), conf);
       Configuration jobConf = new Configuration(false);
-      jobConf.addResource(fc.open(confFile), confFile.toString());
+      jobConf.addResource(fc.open(confFile), confFile.toString(), true);
       return jobConf;
     }
 
