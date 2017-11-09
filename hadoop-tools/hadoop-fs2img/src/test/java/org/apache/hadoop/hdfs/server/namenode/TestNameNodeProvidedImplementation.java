@@ -401,33 +401,37 @@ public class TestNameNodeProvidedImplementation {
   public void testSetReplicationForProvidedFiles() throws Exception {
     createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
         FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 2, null,
-        new StorageType[][]{
-            {StorageType.PROVIDED},
-            {StorageType.DISK}},
+    // 10 Datanodes with both DISK and PROVIDED storage
+    startCluster(NNDIRPATH, 10,
+        new StorageType[]{
+            StorageType.PROVIDED, StorageType.DISK},
+        null,
         false);
 
     String filename = "/" + filePrefix + (numFiles - 1) + fileSuffix;
     Path file = new Path(filename);
     FileSystem fs = cluster.getFileSystem();
 
-    //set the replication to 2, and test that the file has
-    //the required replication.
-    fs.setReplication(file, (short) 2);
+    // set the replication to 4, and test that the file has
+    // the required replication.
+    short newReplication = 4;
+    LOG.info("Setting replication of file {} to {}", filename, newReplication);
+    fs.setReplication(file, newReplication);
     DFSTestUtil.waitForReplication((DistributedFileSystem) fs,
-        file, (short) 2, 10000);
+        file, newReplication, 10000);
     DFSClient client = new DFSClient(new InetSocketAddress("localhost",
         cluster.getNameNodePort()), cluster.getConfiguration(0));
-    getAndCheckBlockLocations(client, filename, 2);
+    getAndCheckBlockLocations(client, filename, newReplication);
 
-    //set the replication back to 1
-    fs.setReplication(file, (short) 1);
+    // set the replication back to 1
+    newReplication = 1;
+    LOG.info("Setting replication of file {} back to {}",
+        filename, newReplication);
+    fs.setReplication(file, newReplication);
     DFSTestUtil.waitForReplication((DistributedFileSystem) fs,
-        file, (short) 1, 10000);
-    //the only replica left should be the PROVIDED datanode
-    DatanodeInfo[] infos = getAndCheckBlockLocations(client, filename, 1);
-    assertEquals(cluster.getDataNodes().get(0).getDatanodeUuid(),
-        infos[0].getDatanodeUuid());
+        file, newReplication, 10000);
+    // the only replica left should be the PROVIDED datanode
+    getAndCheckBlockLocations(client, filename, newReplication);
   }
 
   @Test
