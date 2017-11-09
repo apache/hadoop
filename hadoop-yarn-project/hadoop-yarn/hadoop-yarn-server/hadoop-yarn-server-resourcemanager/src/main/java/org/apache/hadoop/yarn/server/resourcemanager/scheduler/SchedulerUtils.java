@@ -99,6 +99,19 @@ public class SchedulerUtils {
         ContainerExitStatus.ABORTED, diagnostics);
   }
 
+
+  /**
+   * Utility to create a {@link ContainerStatus} for killed containers.
+   * @param containerId {@link ContainerId} of the killed container.
+   * @param diagnostics diagnostic message
+   * @return <code>ContainerStatus</code> for a killed container
+   */
+  public static ContainerStatus createKilledContainerStatus(
+      ContainerId containerId, String diagnostics) {
+    return createAbnormalContainerStatus(containerId,
+        ContainerExitStatus.KILLED_BY_RESOURCEMANAGER, diagnostics);
+  }
+
   /**
    * Utility to create a {@link ContainerStatus} during exceptional
    * circumstances.
