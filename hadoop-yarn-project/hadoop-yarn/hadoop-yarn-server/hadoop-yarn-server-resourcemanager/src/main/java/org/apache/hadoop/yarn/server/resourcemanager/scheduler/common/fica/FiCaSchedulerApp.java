@@ -76,8 +76,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -224,10 +224,10 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         return null;
       }
 
-      SchedulingPlacementSet<FiCaSchedulerNode> ps =
-          appSchedulingInfo.getSchedulingPlacementSet(schedulerKey);
+      AppPlacementAllocator<FiCaSchedulerNode> ps =
+          appSchedulingInfo.getAppPlacementAllocator(schedulerKey);
       if (null == ps) {
-        LOG.warn("Failed to get " + SchedulingPlacementSet.class.getName()
+        LOG.warn("Failed to get " + AppPlacementAllocator.class.getName()
             + " for application=" + getApplicationId() + " schedulerRequestKey="
             + schedulerKey);
         return null;
@@ -636,8 +636,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       Map<String, Resource> ret = new HashMap<>();
       for (SchedulerRequestKey schedulerKey : appSchedulingInfo
           .getSchedulerKeys()) {
-        SchedulingPlacementSet<FiCaSchedulerNode> ps =
-            appSchedulingInfo.getSchedulingPlacementSet(schedulerKey);
+        AppPlacementAllocator<FiCaSchedulerNode> ps =
+            appSchedulingInfo.getAppPlacementAllocator(schedulerKey);
 
         String nodePartition = ps.getPrimaryRequestedNodePartition();
         Resource res = ret.get(nodePartition);
@@ -844,8 +844,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   }
 
   public CSAssignment assignContainers(Resource clusterResource,
-      PlacementSet<FiCaSchedulerNode> ps, ResourceLimits currentResourceLimits,
-      SchedulingMode schedulingMode, RMContainer reservedContainer) {
+      CandidateNodeSet<FiCaSchedulerNode> ps,
+      ResourceLimits currentResourceLimits, SchedulingMode schedulingMode,
+      RMContainer reservedContainer) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("pre-assignContainers for application "
           + getApplicationId());
@@ -962,9 +963,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   @Override
   @SuppressWarnings("unchecked")
-  public SchedulingPlacementSet<FiCaSchedulerNode> getSchedulingPlacementSet(
+  public AppPlacementAllocator<FiCaSchedulerNode> getAppPlacementAllocator(
       SchedulerRequestKey schedulerRequestKey) {
-    return super.getSchedulingPlacementSet(schedulerRequestKey);
+    return super.getAppPlacementAllocator(schedulerRequestKey);
   }
 
   /**

@@ -34,8 +34,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
     .RMContainerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement
-    .SchedulingPlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -146,17 +145,17 @@ public class ContainerUpdateContext {
           createResourceRequests(rmContainer, schedulerNode,
               schedulerKey, resToIncrease);
       updateResReqs.put(schedulerKey, resMap);
-      appSchedulingInfo.addToPlacementSets(false, updateResReqs);
+      appSchedulingInfo.addRequestToAppPlacement(false, updateResReqs);
     }
     return true;
   }
 
   private void cancelPreviousRequest(SchedulerNode schedulerNode,
       SchedulerRequestKey schedulerKey) {
-    SchedulingPlacementSet<SchedulerNode> schedulingPlacementSet =
-        appSchedulingInfo.getSchedulingPlacementSet(schedulerKey);
-    if (schedulingPlacementSet != null) {
-      Map<String, ResourceRequest> resourceRequests = schedulingPlacementSet
+    AppPlacementAllocator<SchedulerNode> appPlacementAllocator =
+        appSchedulingInfo.getAppPlacementAllocator(schedulerKey);
+    if (appPlacementAllocator != null) {
+      Map<String, ResourceRequest> resourceRequests = appPlacementAllocator
           .getResourceRequests();
       ResourceRequest prevReq = resourceRequests.get(ResourceRequest.ANY);
       // Decrement the pending using a dummy RR with
@@ -290,7 +289,7 @@ public class ContainerUpdateContext {
           (rmContainer, node, schedulerKey,
           rmContainer.getContainer().getResource());
       reqsToUpdate.put(schedulerKey, resMap);
-      appSchedulingInfo.addToPlacementSets(true, reqsToUpdate);
+      appSchedulingInfo.addRequestToAppPlacement(true, reqsToUpdate);
       return UNDEFINED;
     }
     return retVal;

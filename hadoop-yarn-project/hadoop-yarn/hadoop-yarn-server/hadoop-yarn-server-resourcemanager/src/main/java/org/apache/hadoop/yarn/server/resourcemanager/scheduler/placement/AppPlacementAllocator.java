@@ -32,26 +32,29 @@ import java.util.Map;
 
 /**
  * <p>
- * Comparing to {@link PlacementSet}, this also maintains
- * pending ResourceRequests:
- * - When new ResourceRequest(s) added to scheduler, or,
- * - Or new container allocated, scheduler can notify corresponding
- * PlacementSet.
+ * This class has the following functionality:
+ * 1) Keeps track of pending resource requests when following events happen:
+ * - New ResourceRequests are added to scheduler.
+ * - New containers get allocated.
+ *
+ * 2) Determines the order that the nodes given in the {@link CandidateNodeSet}
+ * will be used for allocating containers.
  * </p>
  *
  * <p>
- * Different set of resource requests (E.g., resource requests with the
- * same schedulerKey) can have one instance of PlacementSet, each PlacementSet
- * can have different ways to order nodes depends on requests.
+ * And different set of resource requests (E.g., resource requests with the
+ * same schedulerKey) can have one instance of AppPlacementAllocator, each
+ * AppPlacementAllocator can have different ways to order nodes depends on
+ * requests.
  * </p>
  */
-public interface SchedulingPlacementSet<N extends SchedulerNode> {
+public interface AppPlacementAllocator<N extends SchedulerNode> {
   /**
    * Get iterator of preferred node depends on requirement and/or availability
-   * @param clusterPlacementSet input cluster PlacementSet
+   * @param candidateNodeSet input CandidateNodeSet
    * @return iterator of preferred node
    */
-  Iterator<N> getPreferredNodeIterator(PlacementSet<N> clusterPlacementSet);
+  Iterator<N> getPreferredNodeIterator(CandidateNodeSet<N> candidateNodeSet);
 
   /**
    * Replace existing ResourceRequest by the new requests
@@ -115,8 +118,9 @@ public interface SchedulingPlacementSet<N extends SchedulerNode> {
 
   /**
    * Can delay to give locality?
-   * TODO (wangda): This should be moved out of SchedulingPlacementSet
+   * TODO: This should be moved out of AppPlacementAllocator
    * and should belong to specific delay scheduling policy impl.
+   * See YARN-7457 for more details.
    *
    * @param resourceName resourceName
    * @return can/cannot
@@ -124,7 +128,7 @@ public interface SchedulingPlacementSet<N extends SchedulerNode> {
   boolean canDelayTo(String resourceName);
 
   /**
-   * Does this {@link SchedulingPlacementSet} accept resources on nodePartition?
+   * Does this {@link AppPlacementAllocator} accept resources on nodePartition?
    *
    * @param nodePartition nodePartition
    * @param schedulingMode schedulingMode
@@ -146,8 +150,9 @@ public interface SchedulingPlacementSet<N extends SchedulerNode> {
    * @return number of unique location asks with #pending greater than 0,
    * (like /rack1, host1, etc.).
    *
-   * TODO (wangda): This should be moved out of SchedulingPlacementSet
+   * TODO: This should be moved out of AppPlacementAllocator
    * and should belong to specific delay scheduling policy impl.
+   * See YARN-7457 for more details.
    */
   int getUniqueLocationAsks();
 

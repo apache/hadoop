@@ -18,48 +18,51 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.Map;
 
 /**
- * <p>
- * PlacementSet is the central place that decide the order of node to fit
- * asks by application.
- * </p>
- *
- * <p>
- * Also, PlacementSet can cache results (for example, ordered list) for
- * better performance.
- * </p>
- *
- * <p>
- * PlacementSet can depend on one or more other PlacementSets.
- * </p>
+ * A simple CandidateNodeSet which keeps an unordered map
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public interface PlacementSet<N extends SchedulerNode> {
-  /**
-   * Get all nodes for this PlacementSet
-   * @return all nodes for this PlacementSet
-   */
-  Map<NodeId, N> getAllNodes();
+public class SimpleCandidateNodeSet<N extends SchedulerNode>
+    implements CandidateNodeSet<N> {
 
-  /**
-   * Version of the PlacementSet, can help other PlacementSet with dependencies
-   * deciding if update is required
-   * @return version
-   */
-  long getVersion();
+  private Map<NodeId, N> map;
+  private String partition;
 
-  /**
-   * Partition of the PlacementSet.
-   * @return node partition
-   */
-  String getPartition();
+  public SimpleCandidateNodeSet(N node) {
+    if (null != node) {
+      // Only one node in the initial CandidateNodeSet
+      this.map = ImmutableMap.of(node.getNodeID(), node);
+      this.partition = node.getPartition();
+    } else {
+      this.map = Collections.emptyMap();
+      this.partition = NodeLabel.DEFAULT_NODE_LABEL_PARTITION;
+    }
+  }
+
+  public SimpleCandidateNodeSet(Map<NodeId, N> map, String partition) {
+    this.map = map;
+    this.partition = partition;
+  }
+
+  @Override
+  public Map<NodeId, N> getAllNodes() {
+    return map;
+  }
+
+  @Override
+  public long getVersion() {
+    return 0L;
+  }
+
+  @Override
+  public String getPartition() {
+    return partition;
+  }
 }

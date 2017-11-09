@@ -39,10 +39,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
-    implements SchedulingPlacementSet<N> {
+/**
+ * This is an implementation of the {@link AppPlacementAllocator} that takes
+ * into account locality preferences (node, rack, any) when allocating
+ * containers.
+ */
+public class LocalityAppPlacementAllocator<N extends SchedulerNode>
+    implements AppPlacementAllocator<N> {
   private static final Log LOG =
-      LogFactory.getLog(LocalitySchedulingPlacementSet.class);
+      LogFactory.getLog(LocalityAppPlacementAllocator.class);
 
   private final Map<String, ResourceRequest> resourceRequestMap =
       new ConcurrentHashMap<>();
@@ -53,7 +58,7 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
   private final ReentrantReadWriteLock.ReadLock readLock;
   private final ReentrantReadWriteLock.WriteLock writeLock;
 
-  public LocalitySchedulingPlacementSet(AppSchedulingInfo info) {
+  public LocalityAppPlacementAllocator(AppSchedulingInfo info) {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -63,11 +68,12 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
   @Override
   @SuppressWarnings("unchecked")
   public Iterator<N> getPreferredNodeIterator(
-      PlacementSet<N> clusterPlacementSet) {
-    // Now only handle the case that single node in placementSet
-    // TODO, Add support to multi-hosts inside placement-set which is passed in.
+      CandidateNodeSet<N> candidateNodeSet) {
+    // Now only handle the case that single node in the candidateNodeSet
+    // TODO, Add support to multi-hosts inside candidateNodeSet which is passed
+    // in.
 
-    N singleNode = PlacementSetUtils.getSingleNode(clusterPlacementSet);
+    N singleNode = CandidateNodeSetUtils.getSingleNode(candidateNodeSet);
     if (null != singleNode) {
       return IteratorUtils.singletonIterator(singleNode);
     }
@@ -213,7 +219,7 @@ public class LocalitySchedulingPlacementSet<N extends SchedulerNode>
       appSchedulingInfo.checkForDeactivation();
       resourceRequestMap.remove(ResourceRequest.ANY);
       if (resourceRequestMap.isEmpty()) {
-        appSchedulingInfo.removePlacementSets(schedulerRequestKey);
+        appSchedulingInfo.removeAppPlacement(schedulerRequestKey);
       }
     }
 
