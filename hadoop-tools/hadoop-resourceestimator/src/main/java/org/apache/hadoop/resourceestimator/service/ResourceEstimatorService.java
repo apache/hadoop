@@ -34,6 +34,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import com.sun.jersey.spi.resource.Singleton;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
 import org.apache.hadoop.resourceestimator.common.api.ResourceSkyline;
@@ -56,13 +57,13 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import com.google.inject.Singleton;
 
 /**
  * Resource Estimator Service which provides a set of REST APIs for users to
  * use the estimation service.
  */
-@Singleton @Path("/resourceestimator") public class ResourceEstimatorService {
+@Singleton
+@Path("/resourceestimator") public class ResourceEstimatorService {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ResourceEstimatorService.class);
   private final SkylineStore skylineStore;
