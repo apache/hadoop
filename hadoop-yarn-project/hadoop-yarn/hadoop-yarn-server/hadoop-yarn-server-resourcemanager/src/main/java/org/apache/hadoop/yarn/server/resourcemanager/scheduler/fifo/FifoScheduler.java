@@ -975,6 +975,16 @@ public class FifoScheduler extends
     updateAvailableResourcesMetrics();
   }
 
+  @VisibleForTesting
+  @Override
+  public void killContainer(RMContainer container) {
+    ContainerStatus status = SchedulerUtils.createKilledContainerStatus(
+        container.getContainerId(),
+        "Killed by RM to simulate an AM container failure");
+    LOG.info("Killing container " + container);
+    completedContainer(container, status, RMContainerEventType.KILL);
+  }
+
   @Override
   public synchronized void recoverContainersOnNode(
       List<NMContainerStatus> containerReports, RMNode nm) {

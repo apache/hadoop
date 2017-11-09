@@ -1759,6 +1759,12 @@ public class CapacityScheduler extends
     }
   }
 
+  @VisibleForTesting
+  @Override
+  public void killContainer(RMContainer container) {
+    markContainerForKillable(container);
+  }
+
   public void markContainerForKillable(
       RMContainer killableContainer) {
     try {

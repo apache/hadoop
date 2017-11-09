@@ -1366,6 +1366,14 @@ public abstract class AbstractYarnScheduler
   }
 
   /**
+   * Kill a RMContainer. This is meant to be called in tests only to simulate
+   * AM container failures.
+   * @param container the container to kill
+   */
+  @VisibleForTesting
+  public abstract void killContainer(RMContainer container);
+
+  /**
    * Update internal state of the scheduler.  This can be useful for scheduler
    * implementations that maintain some state that needs to be periodically
    * updated; for example, metrics or queue resources.  It will be called by the
