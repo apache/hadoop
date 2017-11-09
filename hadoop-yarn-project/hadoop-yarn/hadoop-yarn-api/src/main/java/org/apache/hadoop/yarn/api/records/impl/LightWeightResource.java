@@ -23,14 +23,13 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
-import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_MB;
-import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
-import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.*;
 
 /**
  * <p>
- * <code>LightResource</code> extends Resource to handle base resources such
+ * <code>LightWeightResource</code> extends Resource to handle base resources such
  * as memory and CPU.
  * TODO: We have a long term plan to use AbstractResource when additional
  * resource types are to be handled as well.
@@ -66,27 +65,42 @@ public class LightWeightResource extends Resource {
   private ResourceInformation memoryResInfo;
   private ResourceInformation vcoresResInfo;
 
-  public LightWeightResource(long memory, long vcores) {
-    this.memoryResInfo = LightWeightResource.newDefaultInformation(MEMORY_URI,
-        MEMORY_MB.getUnits(), memory);
-    this.vcoresResInfo = LightWeightResource.newDefaultInformation(VCORES_URI,
-        "", vcores);
+  public LightWeightResource(long memory, int vcores) {
+    int numberOfKnownResourceTypes = ResourceUtils
+        .getNumberOfKnownResourceTypes();
+    initResourceInformations(memory, vcores, numberOfKnownResourceTypes);
 
-    resources = new ResourceInformation[NUM_MANDATORY_RESOURCES];
-    resources[MEMORY_INDEX] = memoryResInfo;
-    resources[VCORES_INDEX] = vcoresResInfo;
+    if (numberOfKnownResourceTypes > 2) {
+      ResourceInformation[] types = ResourceUtils.getResourceTypesArray();
+      for (int i = 2; i < numberOfKnownResourceTypes; i++) {
+        resources[i] = new ResourceInformation();
+        ResourceInformation.copy(types[i], resources[i]);
+      }
+    }
   }
 
-  private static ResourceInformation newDefaultInformation(String name,
-      String unit, long value) {
-    ResourceInformation ri = new ResourceInformation();
-    ri.setName(name);
-    ri.setValue(value);
-    ri.setResourceType(ResourceTypes.COUNTABLE);
-    ri.setUnitsWithoutValidation(unit);
-    ri.setMinimumAllocation(0);
-    ri.setMaximumAllocation(Long.MAX_VALUE);
-    return ri;
+  public LightWeightResource(long memory, int vcores,
+      ResourceInformation[] source) {
+    int numberOfKnownResourceTypes = ResourceUtils
+        .getNumberOfKnownResourceTypes();
+    initResourceInformations(memory, vcores, numberOfKnownResourceTypes);
+
+    for (int i = 2; i < numberOfKnownResourceTypes; i++) {
+      resources[i] = new ResourceInformation();
+      ResourceInformation.copy(source[i], resources[i]);
+    }
+  }
+
+  private void initResourceInformations(long memory, int vcores,
+      int numberOfKnownResourceTypes) {
+    this.memoryResInfo = newDefaultInformation(MEMORY_URI, MEMORY_MB.getUnits(),
+        memory);
+    this.vcoresResInfo = newDefaultInformation(VCORES_URI, VCORES.getUnits(),
+        vcores);
+
+    resources = new ResourceInformation[numberOfKnownResourceTypes];
+    resources[MEMORY_INDEX] = memoryResInfo;
+    resources[VCORES_INDEX] = vcoresResInfo;
   }
 
   @Override
@@ -135,21 +149,41 @@ public class LightWeightResource extends Resource {
       return false;
     }
 
+    if (resources.length > 2) {
+      ResourceInformation[] otherVectors = other.getResources();
+
+      if (resources.length != otherVectors.length) {
+        return false;
+      }
+
+      for (int i = 2; i < resources.length; i++) {
+        ResourceInformation a = resources[i];
+        ResourceInformation b = otherVectors[i];
+        if ((a != b) && ((a == null) || !a.equals(b))) {
+          return false;
+        }
+      }
+    }
+
     return true;
   }
 
   @Override
   public int compareTo(Resource other) {
     // compare memory and vcores first(in that order) to preserve
-    // existing behaviour
-    long diff = this.getMemorySize() - other.getMemorySize();
-    if (diff == 0) {
-      return this.getVirtualCores() - other.getVirtualCores();
-    } else if (diff > 0){
-      return 1;
-    } else {
-      return -1;
+    // existing behavior.
+    if (resources.length <= 2) {
+      long diff = this.getMemorySize() - other.getMemorySize();
+      if (diff == 0) {
+        return this.getVirtualCores() - other.getVirtualCores();
+      } else if (diff > 0) {
+        return 1;
+      } else {
+        return -1;
+      }
     }
+
+    return super.compareTo(other);
   }
 
   @Override
