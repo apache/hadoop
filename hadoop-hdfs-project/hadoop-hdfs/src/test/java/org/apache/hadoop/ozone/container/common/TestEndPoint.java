@@ -119,10 +119,10 @@ public class TestEndPoint {
       SCMVersionResponseProto responseProto = rpcEndPoint.getEndPoint()
           .getVersion(null);
       Assert.assertNotNull(responseProto);
-      Assert.assertEquals(responseProto.getKeys(0).getKey(),
-          VersionInfo.DESCRIPTION_KEY);
-      Assert.assertEquals(responseProto.getKeys(0).getValue(),
-          VersionInfo.getLatestVersion().getDescription());
+      Assert.assertEquals(VersionInfo.DESCRIPTION_KEY,
+          responseProto.getKeys(0).getKey());
+      Assert.assertEquals(VersionInfo.getLatestVersion().getDescription(),
+          responseProto.getKeys(0).getValue());
     }
   }
 
@@ -212,8 +212,8 @@ public class TestEndPoint {
       SCMRegisteredCmdResponseProto responseProto = rpcEndPoint.getEndPoint()
           .register(nodeToRegister, scmAddressArray);
       Assert.assertNotNull(responseProto);
-      Assert.assertEquals(responseProto.getDatanodeUUID(),
-          nodeToRegister.getDatanodeUuid());
+      Assert.assertEquals(nodeToRegister.getDatanodeUuid(),
+          responseProto.getDatanodeUUID());
       Assert.assertNotNull(responseProto.getClusterID());
     }
   }

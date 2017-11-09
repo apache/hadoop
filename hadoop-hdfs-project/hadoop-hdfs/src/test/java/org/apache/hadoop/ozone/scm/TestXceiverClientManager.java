@@ -79,7 +79,7 @@ public class TestXceiverClientManager {
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(), clientManager.getFactor(), containerName1);
     XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
-    Assert.assertEquals(client1.getRefcount(), 1);
+    Assert.assertEquals(1, client1.getRefcount());
     Assert.assertEquals(containerName1,
         client1.getPipeline().getContainerName());
 
@@ -88,13 +88,13 @@ public class TestXceiverClientManager {
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(), clientManager.getFactor(), containerName2);
     XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
-    Assert.assertEquals(client2.getRefcount(), 1);
+    Assert.assertEquals(1, client2.getRefcount());
     Assert.assertEquals(containerName2,
         client2.getPipeline().getContainerName());
 
     XceiverClientSpi client3 = clientManager.acquireClient(pipeline1);
-    Assert.assertEquals(client3.getRefcount(), 2);
-    Assert.assertEquals(client1.getRefcount(), 2);
+    Assert.assertEquals(2, client3.getRefcount());
+    Assert.assertEquals(2, client1.getRefcount());
     Assert.assertEquals(containerName1,
         client3.getPipeline().getContainerName());
     Assert.assertEquals(client1, client3);
@@ -117,7 +117,7 @@ public class TestXceiverClientManager {
             clientManager.getType(), OzoneProtos.ReplicationFactor.ONE,
             containerName1);
     XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
-    Assert.assertEquals(client1.getRefcount(), 1);
+    Assert.assertEquals(1, client1.getRefcount());
     Assert.assertEquals(containerName1,
         client1.getPipeline().getContainerName());
 
@@ -127,14 +127,14 @@ public class TestXceiverClientManager {
             clientManager.getType(),
             OzoneProtos.ReplicationFactor.ONE, containerName2);
     XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
-    Assert.assertEquals(client2.getRefcount(), 1);
+    Assert.assertEquals(1, client2.getRefcount());
     Assert.assertEquals(containerName2,
         client2.getPipeline().getContainerName());
     Assert.assertNotEquals(client1, client2);
 
     // least recent container (i.e containerName1) is evicted
     XceiverClientSpi nonExistent1 = cache.getIfPresent(containerName1);
-    Assert.assertEquals(nonExistent1, null);
+    Assert.assertEquals(null, nonExistent1);
     // However container call should succeed because of refcount on the client.
     String traceID1 = "trace" + RandomStringUtils.randomNumeric(4);
     ContainerProtocolCalls.createContainer(client1,  traceID1);
@@ -162,19 +162,19 @@ public class TestXceiverClientManager {
             clientManager.getType(),
             clientManager.getFactor(), containerName1);
     XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
-    Assert.assertEquals(client1.getRefcount(), 1);
+    Assert.assertEquals(1, client1.getRefcount());
     Assert.assertEquals(containerName1,
         client1.getPipeline().getContainerName());
 
     clientManager.releaseClient(client1);
-    Assert.assertEquals(client1.getRefcount(), 0);
+    Assert.assertEquals(0, client1.getRefcount());
 
     String containerName2 = "container" + RandomStringUtils.randomNumeric(10);
     Pipeline pipeline2 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(), clientManager.getFactor(), containerName2);
     XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
-    Assert.assertEquals(client2.getRefcount(), 1);
+    Assert.assertEquals(1, client2.getRefcount());
     Assert.assertEquals(containerName2,
         client2.getPipeline().getContainerName());
     Assert.assertNotEquals(client1, client2);
@@ -182,7 +182,7 @@ public class TestXceiverClientManager {
 
     // now client 1 should be evicted
     XceiverClientSpi nonExistent = cache.getIfPresent(containerName1);
-    Assert.assertEquals(nonExistent, null);
+    Assert.assertEquals(null, nonExistent);
 
     // Any container operation should now fail
     String traceID2 = "trace" + RandomStringUtils.randomNumeric(4);

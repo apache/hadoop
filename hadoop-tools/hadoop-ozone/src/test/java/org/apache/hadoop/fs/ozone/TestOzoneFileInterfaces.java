@@ -99,7 +99,7 @@ public class TestOzoneFileInterfaces {
   @Test
   public void testFileSystemInit() throws IOException {
     Assert.assertTrue(fs instanceof OzoneFileSystem);
-    Assert.assertEquals(fs.getUri().getScheme(), Constants.OZONE_URI_SCHEME);
+    Assert.assertEquals(Constants.OZONE_URI_SCHEME, fs.getUri().getScheme());
   }
 
   @Test
@@ -120,7 +120,7 @@ public class TestOzoneFileInterfaces {
       byte[] buffer = new byte[stringLen];
       inputStream.readFully(0, buffer);
       String out = new String(buffer, 0, buffer.length);
-      Assert.assertEquals(out, data);
+      Assert.assertEquals(data, out);
     }
   }
 
@@ -132,10 +132,10 @@ public class TestOzoneFileInterfaces {
 
     FileStatus status = fs.getFileStatus(path);
     Assert.assertTrue(status.isDirectory());
-    Assert.assertEquals(status.getLen(), 0);
+    Assert.assertEquals(0, status.getLen());
 
     FileStatus[] statusList = fs.listStatus(new Path("/"));
-    Assert.assertEquals(statusList.length, 1);
-    Assert.assertEquals(statusList[0], status);
+    Assert.assertEquals(1, statusList.length);
+    Assert.assertEquals(status, statusList[0]);
   }
 }
