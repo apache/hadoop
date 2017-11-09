@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.collect.ConcurrentHashMultiset;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang.time.FastDateFormat;
@@ -75,14 +74,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRese
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerUpdatesAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
-
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -91,6 +87,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ConcurrentHashMultiset;
 
 /**
  * Represents an application attempt from the viewpoint of the scheduler.
@@ -316,9 +313,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       String resourceName) {
     try {
       readLock.lock();
-      SchedulingPlacementSet ps = appSchedulingInfo.getSchedulingPlacementSet(
+      AppPlacementAllocator ap = appSchedulingInfo.getAppPlacementAllocator(
           schedulerKey);
-      return ps == null ? 0 : ps.getOutstandingAsksCount(resourceName);
+      return ap == null ? 0 : ap.getOutstandingAsksCount(resourceName);
     } finally {
       readLock.unlock();
     }
@@ -617,13 +614,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       try {
         readLock.lock();
         for (SchedulerRequestKey schedulerKey : getSchedulerKeys()) {
-          SchedulingPlacementSet ps = getSchedulingPlacementSet(schedulerKey);
-          if (ps != null &&
-              ps.getOutstandingAsksCount(ResourceRequest.ANY) > 0) {
+          AppPlacementAllocator ap = getAppPlacementAllocator(schedulerKey);
+          if (ap != null &&
+              ap.getOutstandingAsksCount(ResourceRequest.ANY) > 0) {
             LOG.debug("showRequests:" + " application=" + getApplicationId()
                 + " headRoom=" + getHeadroom() + " currentConsumption="
                 + attemptResourceUsage.getUsed().getMemorySize());
-            ps.showRequests();
+            ap.showRequests();
           }
         }
       } finally {
@@ -1333,14 +1330,14 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     this.isAttemptRecovering = isRecovering;
   }
 
-  public <N extends SchedulerNode> SchedulingPlacementSet<N> getSchedulingPlacementSet(
+  public <N extends SchedulerNode> AppPlacementAllocator<N> getAppPlacementAllocator(
       SchedulerRequestKey schedulerRequestKey) {
-    return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey);
+    return appSchedulingInfo.getAppPlacementAllocator(schedulerRequestKey);
   }
 
   public Map<String, ResourceRequest> getResourceRequests(
       SchedulerRequestKey schedulerRequestKey) {
-    return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey)
+    return appSchedulingInfo.getAppPlacementAllocator(schedulerRequestKey)
         .getResourceRequests();
   }
 

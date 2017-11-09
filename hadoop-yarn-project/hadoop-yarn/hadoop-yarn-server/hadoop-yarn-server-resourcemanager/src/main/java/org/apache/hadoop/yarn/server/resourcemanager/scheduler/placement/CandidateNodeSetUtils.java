@@ -20,15 +20,23 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
-public class PlacementSetUtils {
+/**
+ * Utility methods for {@link CandidateNodeSet}.
+ */
+public final class CandidateNodeSetUtils {
+
+  private CandidateNodeSetUtils() {
+  }
+
   /*
-   * If the {@link PlacementSet} only has one entry, return it. otherwise
-   * return null
+   * If the {@link CandidateNodeSet} only has one entry, return it. Otherwise,
+   * return null.
    */
-  public static <N extends SchedulerNode> N getSingleNode(PlacementSet<N> ps) {
+  public static <N extends SchedulerNode> N getSingleNode(
+      CandidateNodeSet<N> candidates) {
     N node = null;
-    if (1 == ps.getAllNodes().size()) {
-      node = ps.getAllNodes().values().iterator().next();
+    if (1 == candidates.getAllNodes().size()) {
+      node = candidates.getAllNodes().values().iterator().next();
     }
 
     return node;

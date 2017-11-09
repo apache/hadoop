@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 /**
  * Utility for logging scheduler activities
  */
-// FIXME: make sure PlacementSet works with this class
+// FIXME: make sure CandidateNodeSet works with this class
 public class ActivitiesLogger {
   private static final Log LOG = LogFactory.getLog(ActivitiesLogger.class);
 

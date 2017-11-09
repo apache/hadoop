@@ -1019,7 +1019,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         }
 
         if (offswitchAsk.getCount() > 0) {
-          if (getSchedulingPlacementSet(schedulerKey).getUniqueLocationAsks()
+          if (getAppPlacementAllocator(schedulerKey).getUniqueLocationAsks()
               <= 1 || allowedLocality.equals(NodeType.OFF_SWITCH)) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Assign container on " + node.getNodeName()
