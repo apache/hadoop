@@ -272,6 +272,11 @@ public class DFSInputStream extends FSInputStream
     openInfo(false);
   }
 
+  @VisibleForTesting
+  public long getlastBlockBeingWrittenLengthForTesting() {
+    return lastBlockBeingWrittenLength;
+  }
+
   /**
    * Grab the open-file info from namenode
    * @param refreshLocatedBlocks whether to re-fetch locatedblocks
@@ -299,7 +304,8 @@ public class DFSInputStream extends FSInputStream
         }
         retriesForLastBlockLength--;
       }
-      if (retriesForLastBlockLength == 0) {
+      if (lastBlockBeingWrittenLength == -1
+          && retriesForLastBlockLength == 0) {
         throw new IOException("Could not obtain the last block locations.");
       }
     }
