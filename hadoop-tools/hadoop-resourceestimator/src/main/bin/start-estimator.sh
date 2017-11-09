@@ -13,30 +13,8 @@
 #  limitations under the License. See accompanying LICENSE file.
 #
 
-# let's locate libexec...
-if [[ -n "${HADOOP_HOME}" ]]; then
-  HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
-else
-  this="${BASH_SOURCE-$0}"
-  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
-  HADOOP_DEFAULT_LIBEXEC_DIR="${bin}/../../../../../libexec"
-fi
+echo "starting resource estimator service"
 
-HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
-# shellcheck disable=SC2034
-HADOOP_NEW_CONFIG=true
-if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
-  # shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
-  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
-else
-  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
-  exit 1
-fi
-
-# start resource estimator
-echo "Starting resource estimator"
-hadoop_uservar_su estimator resourceestimator "bin/estimator.sh" \
-    --config "${HADOOP_CONF_DIR}" \
-    --daemon start \
-    resourceestimator
-(( HADOOP_JUMBO_RETCOUNTER=HADOOP_JUMBO_RETCOUNTER + $? ))
+bin=$(dirname "${BASH_SOURCE-$0}")
+bin=$(cd "$bin" || exit; pwd)
+"$bin"/estimator-daemon.sh start estimator

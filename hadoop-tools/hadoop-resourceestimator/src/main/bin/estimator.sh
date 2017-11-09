@@ -13,32 +13,21 @@
 #  limitations under the License. See accompanying LICENSE file.
 #
 
-## @audience     public
-## @stability    stable
-function hadoop_usage()
-{
-  echo "Usage: estimator.sh"
- #hadoop-daemon.sh. need both start and stop, status (query the status). run as background process.
-}
+bin=$(dirname "${BASH_SOURCE-$0}")
+bin=$(cd "$bin" || exit; pwd)
 
-## @audience     public
-## @stability    stable
-function calculate_classpath
-{
-  hadoop_add_client_opts
-  hadoop_add_to_classpath_tools hadoop-resourceestimator
-}
+# some Java parameters
+if [ "$JAVA_HOME" != "" ]; then
+  #echo "run java in $JAVA_HOME"
+  JAVA_HOME=$JAVA_HOME
+fi
 
-## @audience     public
-## @stability    stable
-function resourceestimatorcmd_case
-{
-  # shellcheck disable=SC2034
-  HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-  # shellcheck disable=SC2034
-  HADOOP_CLASSNAME='org.apache.hadoop.resourceestimator.service.ResourceEstimatorServer'
-}
+if [ "$JAVA_HOME" = "" ]; then
+  echo "Error: JAVA_HOME is not set."
+  exit 1
+fi
 
+JAVA=$JAVA_HOME/bin/java
 # let's locate libexec...
 if [[ -n "${HADOOP_HOME}" ]]; then
   HADOOP_DEFAULT_LIBEXEC_DIR="${HADOOP_HOME}/libexec"
@@ -49,8 +38,6 @@ else
 fi
 
 HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$HADOOP_DEFAULT_LIBEXEC_DIR}"
-# shellcheck disable=SC2034
-HADOOP_NEW_CONFIG=true
 if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
   # shellcheck source=./hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh
   . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
@@ -58,14 +45,9 @@ else
   echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
   exit 1
 fi
+# shellcheck disable=SC2125
+CLASSPATH=${CLASSPATH}:$bin/../../lib/*
 
-# get arguments
-HADOOP_SUBCMD=$1
-shift
-
-HADOOP_SUBCMD_ARGS=("$@")
-
-resourceestimatorcmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
-
-calculate_classpath
-hadoop_generic_java_subcmd_handler
+CLASS=org.apache.hadoop.resourceestimator.service.ResourceEstimatorServer
+# shellcheck disable=SC2086
+exec "$JAVA" -Dproc_$COMMAND -classpath "$CLASSPATH" $CLASS "$@"
