@@ -126,13 +126,16 @@ public class ImageWriter implements Closeable {
           throw new IllegalStateException("Incompatible layout " +
               info.getLayoutVersion() + " (expected " + LAYOUT_VERSION);
         }
+        // set the cluster id, if given
+        if (opts.clusterID.length() > 0) {
+          info.setClusterID(opts.clusterID);
+        }
         stor.format(info);
         blockPoolID = info.getBlockPoolID();
       }
       outdir = new Path(tmp, "current");
       out = outfs.create(new Path(outdir, "fsimage_0000000000000000000"));
     } else {
-      // XXX necessary? writing a NNStorage now...
       outdir = null;
       outfs = null;
       out = opts.outStream;
@@ -517,6 +520,7 @@ public class ImageWriter implements Closeable {
     private UGIResolver ugis;
     private Class<? extends UGIResolver> ugisClass;
     private BlockAliasMap<FileRegion> blocks;
+    private String clusterID;
 
     @SuppressWarnings("rawtypes")
     private Class<? extends BlockAliasMap> aliasMap;
@@ -543,6 +547,7 @@ public class ImageWriter implements Closeable {
           NullBlockAliasMap.class, BlockAliasMap.class);
       blockIdsClass = conf.getClass(BLOCK_RESOLVER_CLASS,
           FixedBlockResolver.class, BlockResolver.class);
+      clusterID = "";
     }
 
     @Override
@@ -601,6 +606,10 @@ public class ImageWriter implements Closeable {
       return this;
     }
 
+    public Options clusterID(String clusterID) {
+      this.clusterID = clusterID;
+      return this;
+    }
   }
 
 }

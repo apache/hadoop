@@ -155,11 +155,18 @@ public class TestNameNodeProvidedImplementation {
 
   void createImage(TreeWalk t, Path out,
       Class<? extends BlockResolver> blockIdsClass) throws Exception {
+    createImage(t, out, blockIdsClass, "");
+  }
+
+  void createImage(TreeWalk t, Path out,
+      Class<? extends BlockResolver> blockIdsClass, String clusterID)
+      throws Exception {
     ImageWriter.Options opts = ImageWriter.defaults();
     opts.setConf(conf);
     opts.output(out.toString())
         .blocks(TextFileRegionAliasMap.class)
-        .blockIds(blockIdsClass);
+        .blockIds(blockIdsClass)
+        .clusterID(clusterID);
     try (ImageWriter w = new ImageWriter(opts)) {
       for (TreePath e : t) {
         w.accept(e);
@@ -561,5 +568,20 @@ public class TestNameNodeProvidedImplementation {
       assertEquals(providedDatanode.getDatanodeUuid(),
           dnInfos[0].getDatanodeUuid());
     }
+  }
+
+  @Test
+  public void testSetClusterID() throws Exception {
+    String clusterID = "PROVIDED-CLUSTER";
+    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+        FixedBlockResolver.class, clusterID);
+    // 2 Datanodes, 1 PROVIDED and other DISK
+    startCluster(NNDIRPATH, 2, null,
+        new StorageType[][] {
+            {StorageType.PROVIDED},
+            {StorageType.DISK}},
+        false);
+    NameNode nn = cluster.getNameNode();
+    assertEquals(clusterID, nn.getNamesystem().getClusterId());
   }
 }
