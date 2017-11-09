@@ -75,7 +75,8 @@ public class TestNMSimulator {
   public void testNMSimulator() throws Exception {
     // Register one node
     NMSimulator node1 = new NMSimulator();
-    node1.init("/rack1/node1", GB * 10, 10, 0, 1000, rm);
+    node1.init("/rack1/node1", Resources.createResource(GB * 10, 10), 0, 1000,
+        rm);
     node1.middleStep();
 
     int numClusterNodes = rm.getResourceScheduler().getNumClusterNodes();
