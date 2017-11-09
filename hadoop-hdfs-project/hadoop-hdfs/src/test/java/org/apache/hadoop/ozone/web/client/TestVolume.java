@@ -58,6 +58,9 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Test Ozone Volumes Lifecycle.
+ */
 public class TestVolume {
   private static MiniOzoneCluster cluster = null;
   private static OzoneRestClient ozoneRestClient = null;

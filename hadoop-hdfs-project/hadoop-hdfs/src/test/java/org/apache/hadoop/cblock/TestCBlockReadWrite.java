@@ -90,7 +90,7 @@ public class TestCBlockReadWrite {
     if (cluster != null) {
       cluster.shutdown();
     }
-    IOUtils.cleanup(null, storageContainerLocationClient, cluster);
+    IOUtils.cleanupWithLogger(null, storageContainerLocationClient, cluster);
   }
 
   /**

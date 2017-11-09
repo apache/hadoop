@@ -26,9 +26,12 @@ import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Test MXBean addition of key/value pairs to registered MBeans.
+ */
 public class TestMBeans implements DummyMXBean {
 
-  public int counter = 1;
+  private int counter = 1;
 
   @Test
   public void testRegister() throws Exception {
@@ -60,10 +63,13 @@ public class TestMBeans implements DummyMXBean {
 
       Map<String, String> properties = new HashMap<String, String>();
       properties.put("flavour", "server");
-      objectName = MBeans.register("UnitTest", "RegisterTest", properties, this);
+      objectName = MBeans.register("UnitTest", "RegisterTest",
+          properties, this);
 
-      MBeanServer platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
-      int jmxCounter = (int) platformMBeanServer.getAttribute(objectName, "Counter");
+      MBeanServer platformMBeanServer =
+          ManagementFactory.getPlatformMBeanServer();
+      int jmxCounter =
+          (int) platformMBeanServer.getAttribute(objectName, "Counter");
       Assert.assertEquals(counter, jmxCounter);
     } finally {
       if (objectName != null) {

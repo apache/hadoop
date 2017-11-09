@@ -148,8 +148,8 @@ public class OzoneConfiguration extends Configuration {
 
     @Override
     public boolean equals(Object obj) {
-      return (obj instanceof Property) && (((Property) obj).getName()).equals
-          (this.getName());
+      return (obj instanceof Property) && (((Property) obj).getName())
+          .equals(this.getName());
     }
   }
 }

@@ -1267,7 +1267,7 @@ public class DataNode extends ReconfigurableBase
   public void reportBadBlocks(ExtendedBlock block, FsVolumeSpi volume)
       throws IOException {
     BPOfferService bpos = getBPOSForBlock(block);
-     bpos.reportBadBlocks(
+    bpos.reportBadBlocks(
         block, volume.getStorageID(), volume.getStorageType());
   }
 

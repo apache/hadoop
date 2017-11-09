@@ -17,7 +17,10 @@
 
 # Stop hdfs and ozone daemons.
 # Run this on master node.
-
+## @description  usage info
+## @audience     private
+## @stability    evolving
+## @replaceable  no
 function hadoop_usage
 {
   echo "Usage: stop-ozone.sh"

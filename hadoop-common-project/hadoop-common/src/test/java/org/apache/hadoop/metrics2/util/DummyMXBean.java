@@ -17,6 +17,9 @@
 
 package org.apache.hadoop.metrics2.util;
 
+/**
+ * Dummy MXBean class to test arbitrary key/values with MXBeans.
+ */
 public interface DummyMXBean {
 
   int getCounter();

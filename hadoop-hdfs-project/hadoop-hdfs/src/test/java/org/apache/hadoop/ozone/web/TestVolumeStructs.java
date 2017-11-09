@@ -28,6 +28,9 @@ import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * Test Ozone Volume info structure.
+ */
 public class TestVolumeStructs {
 
   @Test

@@ -169,10 +169,10 @@ public class ScmTestMock implements StorageContainerDatanodeProtocol {
   @Override
   public StorageContainerDatanodeProtocolProtos.SCMHeartbeatResponseProto
       sendHeartbeat(DatanodeID datanodeID, SCMNodeReport nodeReport,
-      ReportState reportState) throws IOException {
+      ReportState scmReportState) throws IOException {
     rpcCount.incrementAndGet();
     heartbeatCount.incrementAndGet();
-    this.reportState = reportState;
+    this.reportState = scmReportState;
     sleepIfNeeded();
     List<SCMCommandResponseProto>
         cmdResponses = new LinkedList<>();

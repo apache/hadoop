@@ -44,7 +44,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-
+/**
+ * Test Ozone Bucket Lifecycle.
+ */
 public class TestBuckets {
   /**
    * Set the timeout for every test.

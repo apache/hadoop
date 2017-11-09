@@ -125,37 +125,37 @@ public final class CommandDispatcher {
     /**
      * Add the OzoneContainer.
      *
-     * @param container - ozone container.
+     * @param ozoneContainer - ozone container.
      * @return Builder
      */
-    public Builder setContainer(OzoneContainer container) {
-      Preconditions.checkNotNull(container);
-      this.container = container;
+    public Builder setContainer(OzoneContainer ozoneContainer) {
+      Preconditions.checkNotNull(ozoneContainer);
+      this.container = ozoneContainer;
       return this;
     }
 
     /**
      * Set the Connection Manager.
      *
-     * @param connectionManager
+     * @param scmConnectionManager
      * @return this
      */
     public Builder setConnectionManager(SCMConnectionManager
-        connectionManager) {
-      Preconditions.checkNotNull(connectionManager);
-      this.connectionManager = connectionManager;
+        scmConnectionManager) {
+      Preconditions.checkNotNull(scmConnectionManager);
+      this.connectionManager = scmConnectionManager;
       return this;
     }
 
     /**
      * Sets the Context.
      *
-     * @param context - StateContext
+     * @param stateContext - StateContext
      * @return this
      */
-    public Builder setContext(StateContext context) {
-      Preconditions.checkNotNull(context);
-      this.context = context;
+    public Builder setContext(StateContext stateContext) {
+      Preconditions.checkNotNull(stateContext);
+      this.context = stateContext;
       return this;
     }
 

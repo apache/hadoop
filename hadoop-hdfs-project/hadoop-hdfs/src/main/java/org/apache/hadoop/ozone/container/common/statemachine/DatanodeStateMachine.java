@@ -321,9 +321,9 @@ public class DatanodeStateMachine implements Closeable {
   /**
    * Create a command handler thread.
    *
-   * @param conf
+   * @param config
    */
-  private void initCommandHandlerThread(Configuration conf) {
+  private void initCommandHandlerThread(Configuration config) {
 
     /**
      * Task that periodically checks if we have any outstanding commands.

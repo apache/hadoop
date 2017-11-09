@@ -157,7 +157,8 @@ public class DatanodeHttpServer implements Closeable {
           }
           p.addLast(
               new ChunkedWriteHandler(),
-              new URLDispatcher(jettyAddr, conf, confForCreate, finalContainer));
+              new URLDispatcher(jettyAddr, conf, confForCreate,
+                  finalContainer));
         }
       });
 

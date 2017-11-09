@@ -41,14 +41,14 @@ public interface ServiceRuntimeInfo {
   String getVersion();
 
   /**
-   * Get the version of software running on the Namenode
+   * Get the version of software running on the Namenode.
    *
    * @return a string representing the version
    */
   String getSoftwareVersion();
 
   /**
-   * Get the compilation information which contains date, user and branch
+   * Get the compilation information which contains date, user and branch.
    *
    * @return the compilation information, as a JSON string.
    */

@@ -332,8 +332,8 @@ public class ChunkGroupOutputStream extends OutputStream {
       return this;
     }
 
-    public Builder setType(ReplicationType type) {
-      this.type = type;
+    public Builder setType(ReplicationType replicationType) {
+      this.type = replicationType;
       return this;
     }
 

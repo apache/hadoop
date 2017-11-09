@@ -64,17 +64,19 @@ public class MBeans {
    */
   static public ObjectName register(String serviceName, String nameName,
                                     Object theMbean) {
-    return register(serviceName, nameName, new HashMap<String, String>(), theMbean);
+    return register(serviceName, nameName, new HashMap<String, String>(),
+        theMbean);
   }
 
   /**
    * Register the MBean using our standard MBeanName format
    * "hadoop:service=<serviceName>,name=<nameName>"
-   * Where the <serviceName> and <nameName> are the supplied parameters
+   * Where the <serviceName> and <nameName> are the supplied parameters.
    *
    * @param serviceName
    * @param nameName
-   * @param properties - Key value pairs to define additional JMX ObjectName properties.
+   * @param properties - Key value pairs to define additional JMX ObjectName
+   *                     properties.
    * @param theMbean    - the MBean to register
    * @return the named used to register the MBean
    */
@@ -139,7 +141,7 @@ public class MBeans {
 
   @VisibleForTesting
   static ObjectName getMBeanName(String serviceName, String nameName,
-                                         Map<String, String> additionalParameters) {
+      Map<String, String> additionalParameters) {
 
     String additionalKeys = additionalParameters.entrySet()
         .stream()
@@ -147,7 +149,8 @@ public class MBeans {
         .collect(Collectors.joining(","));
 
     String nameStr = DOMAIN_PREFIX + SERVICE_PREFIX + serviceName + "," +
-        NAME_PREFIX + nameName + (additionalKeys.isEmpty() ? "" : "," + additionalKeys);
+        NAME_PREFIX + nameName +
+        (additionalKeys.isEmpty() ? "" : "," + additionalKeys);
     try {
       return DefaultMetricsSystem.newMBeanName(nameStr);
     } catch (Exception e) {

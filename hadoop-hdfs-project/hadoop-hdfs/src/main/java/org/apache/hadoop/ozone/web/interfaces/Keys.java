@@ -65,9 +65,9 @@ public interface Keys {
    */
   @PUT
   @Consumes(MediaType.WILDCARD)
-  @ApiOperation(value = "Adds a key to an existing bucket.",notes = "If the "
-      + "object already exists this call will overwrite or add with new version "
-      + "number if the bucket versioning is turned on.")
+  @ApiOperation(value = "Adds a key to an existing bucket.", notes = "If the "
+      + "object already exists this call will overwrite or add with new version"
+      + " number if the bucket versioning is turned on.")
   @ApiImplicitParams({
       @ApiImplicitParam(name = "x-ozone-version", example = "v1", required =
           true, paramType = "header"),

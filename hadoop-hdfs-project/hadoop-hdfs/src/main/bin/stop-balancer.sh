@@ -17,6 +17,10 @@
 
 MYNAME="${BASH_SOURCE-$0}"
 
+## @description  usage info
+## @audience     private
+## @stability    evolving
+## @replaceable  no
 function hadoop_usage
 {
   hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
