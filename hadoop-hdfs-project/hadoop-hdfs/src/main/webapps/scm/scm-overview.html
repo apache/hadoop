@@ -18,7 +18,7 @@
 
 <table class="table table-bordered table-striped" class="col-md-6">
     <tbody>
-    <tr ng-repeat="typestat in $ctrl.overview.jmx.NodeCount | orderBy:'key':false:$ctrl.nodeOrder">
+    <tr ng-repeat="typestat in $ctrl.nodemanagermetrics.NodeCount | orderBy:'key':false:$ctrl.nodeOrder">
         <td>{{typestat.key}}</td>
         <td>{{typestat.value}}</td>
     </tr>
