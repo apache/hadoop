@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -58,7 +58,7 @@ import static org.junit.Assert.assertFalse;
 public class TestSCMCli {
   private static SCMCLI cli;
 
-  private static MiniOzoneCluster cluster;
+  private static MiniOzoneClassicCluster cluster;
   private static OzoneConfiguration conf;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
@@ -78,7 +78,7 @@ public class TestSCMCli {
   @BeforeClass
   public static void setup() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(3)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     xceiverClientManager = new XceiverClientManager(conf);
     storageContainerLocationClient =

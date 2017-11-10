@@ -28,7 +28,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -84,7 +84,7 @@ public class TestKeys {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static MiniOzoneCluster ozoneCluster = null;
+  private static MiniOzoneClassicCluster ozoneCluster = null;
   private static String path;
   private static OzoneRestClient ozoneRestClient = null;
   private static long currentTime;
@@ -103,7 +103,7 @@ public class TestKeys {
     path = GenericTestUtils.getTempPath(TestKeys.class.getSimpleName());
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
-    ozoneCluster = new MiniOzoneCluster.Builder(conf)
+    ozoneCluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = ozoneCluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();
@@ -271,7 +271,7 @@ public class TestKeys {
   }
 
   private static void restartDatanode(
-      MiniOzoneCluster cluster, int datanodeIdx, OzoneRestClient client)
+      MiniOzoneClassicCluster cluster, int datanodeIdx, OzoneRestClient client)
       throws IOException, OzoneException, URISyntaxException {
     cluster.restartDataNode(datanodeIdx);
     // refresh the datanode endpoint uri after datanode restart
@@ -291,7 +291,7 @@ public class TestKeys {
   }
 
   static void runTestPutAndGetKeyWithDnRestart(
-      PutHelper helper, MiniOzoneCluster cluster) throws Exception {
+      PutHelper helper, MiniOzoneClassicCluster cluster) throws Exception {
     String keyName = helper.putKey().getKeyName();
     assertNotNull(helper.getBucket());
     assertNotNull(helper.getFile());

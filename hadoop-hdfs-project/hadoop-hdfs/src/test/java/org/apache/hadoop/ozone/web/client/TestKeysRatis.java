@@ -18,9 +18,9 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -50,7 +50,7 @@ public class TestKeysRatis {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
   private static RatisTestHelper.RatisTestSuite suite;
-  private static MiniOzoneCluster ozoneCluster = null;
+  private static MiniOzoneClassicCluster ozoneCluster = null;
   static private String path;
   private static OzoneRestClient ozoneRestClient = null;
 

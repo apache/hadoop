@@ -231,6 +231,7 @@ message SCMCommandResponseProto {
   optional SendContainerReportProto sendReport = 5;
   optional SCMReregisterCmdResponseProto reregisterProto = 6;
   optional SCMDeleteBlocksCmdResponseProto deleteBlocksProto = 7;
+  required string datanodeUUID = 8;
 }
 
 

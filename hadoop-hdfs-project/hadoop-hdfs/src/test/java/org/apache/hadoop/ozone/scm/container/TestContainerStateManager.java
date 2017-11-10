@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.scm.container;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
@@ -51,7 +52,7 @@ public class TestContainerStateManager {
   @Before
   public void setup() throws IOException {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     xceiverClientManager = new XceiverClientManager(conf);
     scm = cluster.getStorageContainerManager();

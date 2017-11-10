@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.scm;
 import com.google.common.cache.Cache;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -57,7 +58,7 @@ public class TestXceiverClientManager {
   @BeforeClass
   public static void init() throws IOException {
     config = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(config)
+    cluster = new MiniOzoneClassicCluster.Builder(config)
         .numDataNodes(3)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient = cluster

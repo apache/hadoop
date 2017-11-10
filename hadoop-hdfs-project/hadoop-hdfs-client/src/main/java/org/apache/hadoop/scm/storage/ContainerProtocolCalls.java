@@ -82,10 +82,12 @@ public final class ContainerProtocolCalls  {
         .newBuilder()
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
         .setKeyData(containerKeyData);
+    String id = xceiverClient.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.GetKey)
         .setTraceID(traceID)
+        .setDatanodeID(id)
         .setGetKey(readKeyRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
@@ -107,10 +109,12 @@ public final class ContainerProtocolCalls  {
         .newBuilder()
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
         .setKeyData(containerKeyData);
+    String id = xceiverClient.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.PutKey)
         .setTraceID(traceID)
+        .setDatanodeID(id)
         .setPutKey(createKeyRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
@@ -135,10 +139,12 @@ public final class ContainerProtocolCalls  {
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
         .setKeyName(key)
         .setChunkData(chunk);
+    String id = xceiverClient.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.ReadChunk)
         .setTraceID(traceID)
+        .setDatanodeID(id)
         .setReadChunk(readChunkRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
@@ -165,10 +171,12 @@ public final class ContainerProtocolCalls  {
         .setKeyName(key)
         .setChunkData(chunk)
         .setData(data);
+    String id = xceiverClient.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.WriteChunk)
         .setTraceID(traceID)
+        .setDatanodeID(id)
         .setWriteChunk(writeChunkRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
@@ -212,9 +220,14 @@ public final class ContainerProtocolCalls  {
             .setKey(createKeyRequest).setData(ByteString.copyFrom(data))
             .build();
 
+    String id = client.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto request =
-        ContainerCommandRequestProto.newBuilder().setCmdType(Type.PutSmallFile)
-            .setTraceID(traceID).setPutSmallFile(putSmallFileRequest).build();
+        ContainerCommandRequestProto.newBuilder()
+            .setCmdType(Type.PutSmallFile)
+            .setTraceID(traceID)
+            .setDatanodeID(id)
+            .setPutSmallFile(putSmallFileRequest)
+            .build();
     ContainerCommandResponseProto response = client.sendCommand(request);
     validateContainerResponse(response);
   }
@@ -236,10 +249,12 @@ public final class ContainerProtocolCalls  {
     createRequest.setPipeline(client.getPipeline().getProtobufMessage());
     createRequest.setContainerData(containerData.build());
 
+    String id = client.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.CreateContainer);
     request.setCreateContainer(createRequest);
+    request.setDatanodeID(id);
     request.setTraceID(traceID);
     ContainerCommandResponseProto response = client.sendCommand(
         request.build());
@@ -261,12 +276,13 @@ public final class ContainerProtocolCalls  {
     deleteRequest.setName(client.getPipeline().getContainerName());
     deleteRequest.setPipeline(client.getPipeline().getProtobufMessage());
     deleteRequest.setForceDelete(force);
-
+    String id = client.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(ContainerProtos.Type.DeleteContainer);
     request.setDeleteContainer(deleteRequest);
     request.setTraceID(traceID);
+    request.setDatanodeID(id);
     ContainerCommandResponseProto response =
         client.sendCommand(request.build());
     validateContainerResponse(response);
@@ -285,11 +301,13 @@ public final class ContainerProtocolCalls  {
         ContainerProtos.CloseContainerRequestProto.newBuilder();
     closeRequest.setPipeline(client.getPipeline().getProtobufMessage());
 
+    String id = client.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(Type.CloseContainer);
     request.setCloseContainer(closeRequest);
     request.setTraceID(traceID);
+    request.setDatanodeID(id);
     ContainerCommandResponseProto response =
         client.sendCommand(request.build());
     validateContainerResponse(response);
@@ -309,11 +327,12 @@ public final class ContainerProtocolCalls  {
         ReadContainerRequestProto.newBuilder();
     readRequest.setName(containerName);
     readRequest.setPipeline(client.getPipeline().getProtobufMessage());
-
+    String id = client.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto.Builder request =
         ContainerCommandRequestProto.newBuilder();
     request.setCmdType(Type.ReadContainer);
     request.setReadContainer(readRequest);
+    request.setDatanodeID(id);
     request.setTraceID(traceID);
     ContainerCommandResponseProto response =
         client.sendCommand(request.build());
@@ -346,10 +365,12 @@ public final class ContainerProtocolCalls  {
         GetSmallFileRequestProto
             .newBuilder().setKey(getKey)
             .build();
+    String id = client.getPipeline().getLeader().getDatanodeUuid();
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.GetSmallFile)
         .setTraceID(traceID)
+        .setDatanodeID(id)
         .setGetSmallFile(getSmallFileRequest)
         .build();
     ContainerCommandResponseProto response = client.sendCommand(request);

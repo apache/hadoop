@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
@@ -58,7 +59,7 @@ public class TestOzoneContainer {
     OzoneContainer container = null;
     MiniOzoneCluster cluster = null;
     try {
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
       // We don't start Ozone Container via data node, we will do it
       // independently in our test path.
@@ -105,7 +106,7 @@ public class TestOzoneContainer {
       conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
           pipeline.getLeader().getContainerPort());
 
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
           .setRandomContainerPort(false)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
 
@@ -208,7 +209,7 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
           .setRandomContainerPort(false)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
       String containerName = client.getPipeline().getContainerName();
@@ -266,7 +267,7 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
           .setRandomContainerPort(false)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
       client.connect();
@@ -356,7 +357,7 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
           .setRandomContainerPort(false)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
       client.connect();
@@ -471,7 +472,7 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
           .setRandomContainerPort(false)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
       String containerName = client.getPipeline().getContainerName();
@@ -492,7 +493,7 @@ public class TestOzoneContainer {
       OzoneConfiguration conf = newOzoneConfiguration();
 
       client = createClientForTesting(conf);
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
               .setRandomContainerPort(false)
               .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
       client.connect();
@@ -529,7 +530,8 @@ public class TestOzoneContainer {
       String containerName) throws Exception {
     // Create container
     ContainerProtos.ContainerCommandRequestProto request =
-        ContainerTestHelper.getCreateContainerRequest(containerName);
+        ContainerTestHelper.getCreateContainerRequest(containerName,
+            client.getPipeline());
     ContainerProtos.ContainerCommandResponseProto response =
         client.sendCommand(request);
     Assert.assertNotNull(response);

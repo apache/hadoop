@@ -75,7 +75,8 @@ public class TestContainerServer {
       channel = new EmbeddedChannel(new XceiverServerHandler(
           new TestContainerDispatcher()));
       ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest(containerName);
+          ContainerTestHelper.getCreateContainerRequest(containerName,
+              ContainerTestHelper.createSingleNodePipeline(containerName));
       channel.writeInbound(request);
       Assert.assertTrue(channel.finish());
 
@@ -177,7 +178,8 @@ public class TestContainerServer {
       client.connect();
 
       final ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest(containerName);
+          ContainerTestHelper
+              .getCreateContainerRequest(containerName, pipeline);
       Assert.assertNotNull(request.getTraceID());
 
       ContainerCommandResponseProto response = client.sendCommand(request);
@@ -213,7 +215,8 @@ public class TestContainerServer {
       client.connect();
 
       ContainerCommandRequestProto request =
-          ContainerTestHelper.getCreateContainerRequest(containerName);
+          ContainerTestHelper.getCreateContainerRequest(containerName,
+              pipeline);
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS, response.getResult());

@@ -24,6 +24,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.CHUNK_SIZE;
 import static org.junit.Assert.*;
 
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.junit.AfterClass;
@@ -60,7 +61,7 @@ public class TestOzoneRestWithMiniCluster {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     cluster.waitOzoneReady();
     ozoneClient = cluster.createOzoneRestClient();

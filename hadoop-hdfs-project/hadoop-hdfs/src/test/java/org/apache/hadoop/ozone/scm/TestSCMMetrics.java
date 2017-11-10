@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
@@ -56,7 +57,7 @@ public class TestSCMMetrics {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     try {
-      cluster = new MiniOzoneCluster.Builder(conf)
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
           .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
           .numDataNodes(nodeCount).build();
 

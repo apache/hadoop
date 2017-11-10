@@ -26,6 +26,7 @@ import org.apache.hadoop.cblock.jscsiHelper.ContainerCacheFlusher;
 import org.apache.hadoop.cblock.jscsiHelper.cache.LogicalBlock;
 import org.apache.hadoop.cblock.jscsiHelper.cache.impl.CBlockLocalCache;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -83,7 +84,7 @@ public class TestLocalBlockCache {
     config.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     config.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     config.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
-    cluster = new MiniOzoneCluster.Builder(config)
+    cluster = new MiniOzoneClassicCluster.Builder(config)
         .numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient = cluster

@@ -226,8 +226,9 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     StorageContainerManager.initMetrics();
     scmStorage = new SCMStorage(conf);
-    if (scmStorage.getState() != StorageState.INITIALIZED) {
-      throw new SCMException("SCM not initialized.",
+    String clusterId = scmStorage.getClusterID();
+    if (clusterId == null) {
+      throw new SCMException("clusterId not found",
           ResultCodes.SCM_NOT_INITIALIZED);
     }
     scmNodeManager = new SCMNodeManager(conf, scmStorage.getClusterID());
@@ -492,11 +493,13 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @throws InvalidProtocolBufferException
    */
   @VisibleForTesting
-  public SCMCommandResponseProto getCommandResponse(SCMCommand cmd)
+  public SCMCommandResponseProto getCommandResponse(SCMCommand cmd,
+      final String datanodID)
       throws IOException {
     Type type = cmd.getType();
     SCMCommandResponseProto.Builder builder =
-        SCMCommandResponseProto.newBuilder();
+        SCMCommandResponseProto.newBuilder()
+        .setDatanodeUUID(datanodID);
     switch (type) {
     case registeredCommand:
       return builder.setCmdType(Type.registeredCommand)
@@ -881,7 +884,8 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
         getScmNodeManager().sendHeartbeat(datanodeID, nodeReport, reportState);
     List<SCMCommandResponseProto> cmdResponses = new LinkedList<>();
     for (SCMCommand cmd : commands) {
-      cmdResponses.add(getCommandResponse(cmd));
+      cmdResponses.add(getCommandResponse(cmd, datanodeID.getDatanodeUuid()
+          .toString()));
     }
     return SCMHeartbeatResponseProto.newBuilder().addAllCommands(cmdResponses)
         .build();

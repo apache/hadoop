@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -51,7 +52,7 @@ public class TestAllocateContainer {
   public static void init() throws Exception {
     long datanodeCapacities = 3 * OzoneConsts.TB;
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(3)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =

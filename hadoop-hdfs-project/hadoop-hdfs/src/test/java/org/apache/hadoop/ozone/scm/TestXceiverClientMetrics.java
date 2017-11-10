@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -63,7 +64,7 @@ public class TestXceiverClientMetrics {
   @BeforeClass
   public static void init() throws IOException {
     config = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(config)
+    cluster = new MiniOzoneClassicCluster.Builder(config)
         .numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient = cluster
@@ -86,7 +87,7 @@ public class TestXceiverClientMetrics {
     XceiverClientSpi client = clientManager.acquireClient(pipeline);
 
     ContainerCommandRequestProto request = ContainerTestHelper
-        .getCreateContainerRequest(containerName);
+        .getCreateContainerRequest(containerName, pipeline);
     client.sendCommand(request);
 
     MetricsRecordBuilder containerMetrics = getMetrics(

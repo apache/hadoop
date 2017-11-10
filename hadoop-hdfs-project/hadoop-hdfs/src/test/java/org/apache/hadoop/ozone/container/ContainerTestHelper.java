@@ -207,6 +207,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.WriteChunk);
     request.setWriteChunk(writeRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid().toString());
 
     return request.build();
   }
@@ -251,6 +252,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.PutSmallFile);
     request.setPutSmallFile(smallFileRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
 
@@ -260,7 +262,7 @@ public final class ContainerTestHelper {
       throws Exception {
     ContainerProtos.GetSmallFileRequestProto.Builder smallFileRequest =
         ContainerProtos.GetSmallFileRequestProto.newBuilder();
-
+    Pipeline pipeline = Pipeline.getFromProtoBuf(putKey.getPipeline());
     ContainerCommandRequestProto getKey = getKeyRequest(putKey);
     smallFileRequest.setKey(getKey.getGetKey());
 
@@ -269,6 +271,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.GetSmallFile);
     request.setGetSmallFile(smallFileRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
 
@@ -288,7 +291,7 @@ public final class ContainerTestHelper {
 
     ContainerProtos.ReadChunkRequestProto.Builder readRequest =
         ContainerProtos.ReadChunkRequestProto.newBuilder();
-
+    Pipeline pipeline = Pipeline.getFromProtoBuf(request.getPipeline());
     readRequest.setPipeline(request.getPipeline());
 
     readRequest.setKeyName(request.getKeyName());
@@ -299,6 +302,7 @@ public final class ContainerTestHelper {
     newRequest.setCmdType(ContainerProtos.Type.ReadChunk);
     newRequest.setReadChunk(readRequest);
     newRequest.setTraceID(UUID.randomUUID().toString());
+    newRequest.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return newRequest.build();
   }
 
@@ -316,7 +320,7 @@ public final class ContainerTestHelper {
       IOException, NoSuchAlgorithmException {
     LOG.trace("deleteChunk key={} from pipeline={}",
         writeRequest.getKeyName(), writeRequest.getPipeline());
-
+    Pipeline pipeline = Pipeline.getFromProtoBuf(writeRequest.getPipeline());
     ContainerProtos.DeleteChunkRequestProto.Builder deleteRequest =
         ContainerProtos.DeleteChunkRequestProto
             .newBuilder();
@@ -330,6 +334,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.DeleteChunk);
     request.setDeleteChunk(deleteRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
 
@@ -340,7 +345,7 @@ public final class ContainerTestHelper {
    * @return ContainerCommandRequestProto.
    */
   public static ContainerCommandRequestProto getCreateContainerRequest(
-      String containerName) throws IOException {
+      String containerName, Pipeline pipeline) throws IOException {
     LOG.trace("createContainer: {}", containerName);
 
     ContainerProtos.CreateContainerRequestProto.Builder createRequest =
@@ -359,6 +364,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.CreateContainer);
     request.setCreateContainer(createRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid().toString());
 
     return request.build();
   }
@@ -388,10 +394,9 @@ public final class ContainerTestHelper {
       kvBuilder.setValue(metaData.get(keys[i]));
       containerData.addMetadata(i, kvBuilder.build());
     }
-
-    updateRequestBuilder.setPipeline(
-        ContainerTestHelper.createSingleNodePipeline(containerName)
-            .getProtobufMessage());
+    Pipeline pipeline =
+        ContainerTestHelper.createSingleNodePipeline(containerName);
+    updateRequestBuilder.setPipeline(pipeline.getProtobufMessage());
     updateRequestBuilder.setContainerData(containerData.build());
 
     ContainerCommandRequestProto.Builder request =
@@ -399,6 +404,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.UpdateContainer);
     request.setUpdateContainer(updateRequestBuilder.build());
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
   /**
@@ -432,6 +438,7 @@ public final class ContainerTestHelper {
     LOG.trace("putKey: {} to pipeline={}",
         writeRequest.getKeyName(), writeRequest.getPipeline());
 
+    Pipeline pipeline = Pipeline.getFromProtoBuf(writeRequest.getPipeline());
     ContainerProtos.PutKeyRequestProto.Builder putRequest =
         ContainerProtos.PutKeyRequestProto.newBuilder();
 
@@ -448,6 +455,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.PutKey);
     request.setPutKey(putRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
 
@@ -461,6 +469,7 @@ public final class ContainerTestHelper {
       ContainerProtos.PutKeyRequestProto putKeyRequest) {
     LOG.trace("getKey: name={} from pipeline={}",
         putKeyRequest.getKeyData().getName(), putKeyRequest.getPipeline());
+    Pipeline pipeline = Pipeline.getFromProtoBuf(putKeyRequest.getPipeline());
 
     ContainerProtos.GetKeyRequestProto.Builder getRequest =
         ContainerProtos.GetKeyRequestProto.newBuilder();
@@ -476,6 +485,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.GetKey);
     request.setGetKey(getRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
 
@@ -503,7 +513,7 @@ public final class ContainerTestHelper {
       ContainerProtos.PutKeyRequestProto putKeyRequest) {
     LOG.trace("deleteKey: name={} from pipeline={}",
         putKeyRequest.getKeyData().getName(), putKeyRequest.getPipeline());
-
+    Pipeline pipeline = Pipeline.getFromProtoBuf(putKeyRequest.getPipeline());
     ContainerProtos.DeleteKeyRequestProto.Builder delRequest =
         ContainerProtos.DeleteKeyRequestProto.newBuilder();
     delRequest.setPipeline(putKeyRequest.getPipeline());
@@ -513,6 +523,7 @@ public final class ContainerTestHelper {
     request.setCmdType(ContainerProtos.Type.DeleteKey);
     request.setDeleteKey(delRequest);
     request.setTraceID(UUID.randomUUID().toString());
+    request.setDatanodeID(pipeline.getLeader().getDatanodeUuid());
     return request.build();
   }
 
@@ -531,6 +542,7 @@ public final class ContainerTestHelper {
         ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
             .Type.CloseContainer).setCloseContainer(closeRequest)
             .setTraceID(UUID.randomUUID().toString())
+            .setDatanodeID(pipeline.getLeader().getDatanodeUuid())
             .build();
 
     return cmd;
@@ -550,6 +562,7 @@ public final class ContainerTestHelper {
     ContainerProtos.ContainerCommandRequestProto cmd =
             ContainerCommandRequestProto.newBuilder().setCmdType(ContainerProtos
                     .Type.CloseContainer).setCloseContainer(closeRequest)
+                    .setDatanodeID(pipeline.getLeader().getDatanodeUuid())
                     .build();
     return cmd;
   }
@@ -570,6 +583,7 @@ public final class ContainerTestHelper {
         .setCmdType(ContainerProtos.Type.DeleteContainer)
         .setDeleteContainer(deleteRequest)
         .setTraceID(UUID.randomUUID().toString())
+        .setDatanodeID(pipeline.getLeader().getDatanodeUuid())
         .build();
   }
 }

@@ -86,7 +86,7 @@ public class TestContainerMetrics {
 
       // Create container
       ContainerCommandRequestProto request = ContainerTestHelper
-          .getCreateContainerRequest(containerName);
+          .getCreateContainerRequest(containerName, pipeline);
       ContainerCommandResponseProto response = client.sendCommand(request);
       Assert.assertTrue(request.getTraceID().equals(response.getTraceID()));
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,

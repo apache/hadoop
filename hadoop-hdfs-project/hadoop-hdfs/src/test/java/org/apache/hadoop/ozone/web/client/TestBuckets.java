@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.web.client;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -54,7 +54,7 @@ public class TestBuckets {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static MiniOzoneCluster cluster = null;
+  private static MiniOzoneClassicCluster cluster = null;
   private static OzoneRestClient ozoneRestClient = null;
 
   /**
@@ -77,7 +77,7 @@ public class TestBuckets {
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
 
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();

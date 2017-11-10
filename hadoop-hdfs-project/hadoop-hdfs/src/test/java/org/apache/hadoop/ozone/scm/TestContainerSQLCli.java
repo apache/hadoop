@@ -19,7 +19,7 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -82,7 +82,7 @@ public class TestContainerSQLCli {
 
   private static SQLCLI cli;
 
-  private MiniOzoneCluster cluster;
+  private MiniOzoneClassicCluster cluster;
   private OzoneConfiguration conf;
   private StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
@@ -118,7 +118,7 @@ public class TestContainerSQLCli {
       factor = OzoneProtos.ReplicationFactor.ONE;
       type = OzoneProtos.ReplicationType.STAND_ALONE;
     }
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(2)
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(2)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient =

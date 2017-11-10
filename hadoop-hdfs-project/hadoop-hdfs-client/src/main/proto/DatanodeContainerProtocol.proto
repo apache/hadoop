@@ -164,6 +164,7 @@ message ContainerCommandRequestProto {
   optional   PutSmallFileRequestProto putSmallFile = 16;
   optional   GetSmallFileRequestProto getSmallFile = 17;
   optional   CloseContainerRequestProto closeContainer = 18;
+  required   string datanodeID = 19;
 }
 
 message ContainerCommandResponseProto {
