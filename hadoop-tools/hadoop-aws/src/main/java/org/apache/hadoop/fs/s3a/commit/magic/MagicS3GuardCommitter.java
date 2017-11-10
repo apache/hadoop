@@ -29,11 +29,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -144,8 +143,9 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       JobContext context)
       throws IOException {
     FileSystem fs = getDestFS();
-    return loadMultiplePendingCommitFiles(context, false, fs,
-        fs.listStatus(getJobAttemptPath(context), PENDINGSET_FILTER));
+    return loadPendingsetFiles(context, true, fs,
+        listAndFilter(fs, getJobAttemptPath(context), false,
+            CommitOperations.PENDINGSET_FILTER));
   }
 
   /**
@@ -161,12 +161,12 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       JobContext context)
       throws IOException {
     FileSystem fs = getDestFS();
-    FileStatus[] pendingCommitFiles;
+    List<LocatedFileStatus> pendingCommitFiles;
     Path jobAttemptPath = null;
     try {
       jobAttemptPath = getJobAttemptPath(context);
-      pendingCommitFiles = fs.listStatus(jobAttemptPath,
-          PENDINGSET_FILTER);
+      pendingCommitFiles = listAndFilter(fs,
+          jobAttemptPath, true, CommitOperations.PENDINGSET_FILTER);
     } catch (IOException e) {
       // listing failure
       LOG.info("Failed to list contents of {}: {}",
@@ -174,36 +174,46 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       return new ArrayList<>(0);
 
     }
-    return loadMultiplePendingCommitFiles(context, true, fs,
-        pendingCommitFiles);
+    LOG.debug("Found {} pendingset files to abort", pendingCommitFiles.size());
+
+    List<SinglePendingCommit> pendingCommits
+        = loadPendingsetFiles(context, true, fs, pendingCommitFiles);
+    // now load in any outstanding single commits in the tree
+    LOG.debug("Found {} commits from .pendingset files; looking for .pending",
+        pendingCommits.size());
+    List<SinglePendingCommit> singles = getCommitOperations()
+        .loadSinglePendingCommits(jobAttemptPath, true)
+        .getKey()
+        .getCommits();
+    LOG.debug("Added {} single pending commit files", singles.size());
+    pendingCommits.addAll(singles);
+    return pendingCommits;
   }
 
   /**
    * Delete the magic directory.
-   * @throws IOException IO problems
    */
-  public void cleanupStagingDirs() throws IOException {
-    deleteQuietly(getDestFS(), magicSubdir(getOutputPath()), true);
+  public void cleanupStagingDirs() {
+    Path path = magicSubdir(getOutputPath());
+    Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
+        () -> deleteQuietly(getDestFS(), path, true));
   }
 
   /**
-   * Cleanup job: abort uploads, delete directories.
+   * Cleanup job by aborting pending uploads and
+   * deleting directories.
+   * This does not attempt to read and parse the pending jobs, just lists
+   * all pending uploads and aborts them.
    * @param context Job context
+   * @param inAbortOperation is this in an abort operation?
    * @throws IOException IO failure
    */
   @Override
-  protected void cleanup(JobContext context, boolean suppressExceptions)
+  protected void cleanup(JobContext context,
+      boolean inAbortOperation,
+      boolean suppressExceptions)
       throws IOException {
-    CommitOperations.MaybeIOE outcome = CommitOperations.MaybeIOE.NONE;
-    try (DurationInfo d = new DurationInfo(LOG,
-        "Cleanup: aborting pending uploads for Job %s",
-        jobIdString(context))) {
-      if (getCommitOperations() != null) {
-        Path pending = getJobAttemptPath(context);
-        outcome = getCommitOperations()
-            .abortAllSinglePendingCommits(pending, true);
-      }
-    }
+    CommitOperations.MaybeIOE outcome = abortPendingUploadsToDestination();
     try (DurationInfo d = new DurationInfo(LOG,
         "Cleanup job %s", jobIdString(context))) {
       deleteWithWarning(getDestFS(),
@@ -377,13 +387,4 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     return CommitUtils.getTempTaskAttemptPath(context, getOutputPath());
   }
 
-  /**
-   * Filter to find all {code .pendingset} files.
-   */
-  private static final PathFilter PENDINGSET_FILTER = new PathFilter() {
-    @Override
-    public boolean accept(Path path) {
-      return path.toString().endsWith(CommitConstants.PENDINGSET_SUFFIX);
-    }
-  };
 }

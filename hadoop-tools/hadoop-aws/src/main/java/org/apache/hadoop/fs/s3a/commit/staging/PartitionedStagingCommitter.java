@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.commit.staging;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
@@ -81,7 +82,7 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
   @Override
   protected int commitTaskInternal(TaskAttemptContext context,
-      List<FileStatus> taskOutput) throws IOException {
+      List<? extends FileStatus> taskOutput) throws IOException {
     Path attemptPath = getTaskAttemptPath(context);
     Set<String> partitions = Paths.getPartitions(attemptPath, taskOutput);
 
@@ -124,11 +125,6 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       List<SinglePendingCommit> pending) throws IOException {
 
     FileSystem fs = getDestFS();
-    Set<Path> partitions = Sets.newLinkedHashSet();
-    for (SinglePendingCommit commit : pending) {
-      Path filePath = commit.destinationPath();
-      partitions.add(filePath.getParent());
-    }
 
     // enforce conflict resolution
     Configuration fsConf = fs.getConf();
@@ -140,6 +136,10 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       // no check is needed because the output may exist for appending
       break;
     case REPLACE:
+      Set<Path> partitions = pending.stream()
+          .map(SinglePendingCommit::destinationPath)
+          .map(Path::getParent)
+          .collect(Collectors.toCollection(Sets::newLinkedHashSet));
       for (Path partitionPath : partitions) {
         LOG.debug("{}: removing partition path to be replaced: " +
             getRole(), partitionPath);

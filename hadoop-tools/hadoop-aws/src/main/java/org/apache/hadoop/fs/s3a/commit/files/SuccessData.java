@@ -71,6 +71,9 @@ public class SuccessData extends PersistentCommitData {
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/1";
 
+  /**
+   * Name of file; includes version marker.
+   */
   private String name;
 
   /** Timestamp of creation. */

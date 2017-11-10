@@ -67,7 +67,8 @@ operation.
 *. While S3Guard may deliver the listing consistency, commit time is still
 proportional to the amount of data created. It still can't handle task failure.
 
-**Using the "classic" `FileOutputCommmitter` to commit work to Amazon S3 risks loss or corruption of generated data**
+**Using the "classic" `FileOutputCommmitter` to commit work to Amazon S3 risks
+loss or corruption of generated data**
 
 
 To address these problems there is now explicit support in the `hadop-aws`
@@ -626,6 +627,11 @@ the failure happen at the start of a job.
 
 (Setting this option will not interfer with the Staging Committers' use of HDFS,
 as it explicitly sets the algorithm to "2" for that part of its work).
+
+The other way to check which committer to use is to examine the `_SUCCESS` file.
+If it is 0-bytes long, the classic `FileOutputCommitter` committed the job.
+The S3A committers all write a non-empty JSON file; the `committer` field lists
+the committer used.
 
 ## Job/Task fails "Destination path exists and committer conflict resolution mode is FAIL" 
 

@@ -89,13 +89,12 @@ public class TestStagingPartitionedFileListing
         }
       }
 
-      List<FileStatus> attemptFiles = committer.getTaskOutput(getTAC());
-      List<String> actualFiles = Lists.newArrayList();
-      for (FileStatus stat : attemptFiles) {
-        String relative = Paths.getRelativePath(attemptPath, stat.getPath());
-        actualFiles.add(relative);
-      }
-      Collections.sort(attemptFiles);
+      List<String> actualFiles = committer.getTaskOutput(getTAC())
+          .stream()
+          .map(stat -> Paths.getRelativePath(attemptPath,
+              stat.getPath()))
+          .collect(Collectors.toList());
+      Collections.sort(expectedFiles);
       Collections.sort(actualFiles);
       assertEquals("File sets should match", expectedFiles, actualFiles);
     } finally {
@@ -132,11 +131,10 @@ public class TestStagingPartitionedFileListing
         }
       }
 
-      List<FileStatus> attemptFiles = committer.getTaskOutput(getTAC());
-      List<String> actualFiles = attemptFiles.stream()
+      List<String> actualFiles = committer.getTaskOutput(getTAC()).stream()
           .map(stat -> Paths.getRelativePath(attemptPath, stat.getPath()))
           .collect(Collectors.toList());
-      Collections.sort(attemptFiles);
+      Collections.sort(expectedFiles);
       Collections.sort(actualFiles);
       assertEquals("File sets should match", expectedFiles, actualFiles);
     } finally {

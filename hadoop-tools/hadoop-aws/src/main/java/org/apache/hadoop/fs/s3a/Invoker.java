@@ -129,6 +129,45 @@ public class Invoker {
   }
 
   /**
+   * Execute an operation and ignore all raised IOExceptions; log at INFO.
+   * @param log log to log at info.
+   * @param action action to include in log
+   * @param path optional path to include in log
+   * @param operation operation to execute
+   * @param <T> type of operation
+   */
+  public static <T> void ignoreIOExceptions(
+      Logger log,
+      String action,
+      String path,
+      Operation<T> operation) {
+    try {
+      once(action, path, operation);
+    } catch (IOException e) {
+      log.info("{}: {}", toDescription(action, path), e.toString(), e);
+    }
+  }
+
+  /**
+   * Execute an operation and ignore all raised IOExceptions; log at INFO.
+   * @param log log to log at info.
+   * @param action action to include in log
+   * @param path optional path to include in log
+   * @param operation operation to execute
+   */
+  public static void ignoreIOExceptions(
+      Logger log,
+      String action,
+      String path,
+      VoidOperation operation) {
+    ignoreIOExceptions(log, action, path,
+        () -> {
+          operation.execute();
+          return null;
+        });
+  }
+
+  /**
    * Execute a void operation with retry processing.
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
@@ -149,8 +188,7 @@ public class Invoker {
         () -> {
           operation.execute();
           return null;
-        }
-    );
+        });
   }
 
   /**

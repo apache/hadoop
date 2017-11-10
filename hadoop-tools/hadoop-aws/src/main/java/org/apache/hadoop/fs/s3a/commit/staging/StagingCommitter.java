@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
@@ -52,6 +53,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import static com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
@@ -367,7 +369,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @return the output files produced by this task in the task attempt path
    * @throws IOException on a failure
    */
-  protected List<FileStatus> getTaskOutput(TaskAttemptContext context)
+  protected List<LocatedFileStatus> getTaskOutput(TaskAttemptContext context)
       throws IOException {
 
     // get files on the local FS in the attempt path
@@ -377,10 +379,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
 
     LOG.debug("Scanning {} for files to commit", attemptPath);
 
-    return flatmapLocatedFiles(
-        getTaskAttemptFilesystem(context)
-            .listFiles(attemptPath, true),
-        s -> maybe(HIDDEN_FILE_FILTER.accept(s.getPath()), s));
+    return listAndFilter(getTaskAttemptFilesystem(context),
+        attemptPath, true, HIDDEN_FILE_FILTER);
   }
 
   /**
@@ -492,13 +492,13 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   protected List<SinglePendingCommit> listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
-    Path jobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
-    final FileSystem attemptFS = jobAttemptPath.getFileSystem(
+    Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
+    final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
         context.getConfiguration());
-    FileStatus[] pendingCommitFiles;
+    List<LocatedFileStatus> pendingCommitFiles;
     try {
-      pendingCommitFiles = attemptFS.listStatus(
-          jobAttemptPath, HIDDEN_FILE_FILTER);
+      pendingCommitFiles = listAndFilter(attemptFS,
+          wrappedJobAttemptPath, false, HIDDEN_FILE_FILTER);
     } catch (FileNotFoundException e) {
       // file is not present, raise without bothering to report
       throw e;
@@ -511,7 +511,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
         throw e;
       }
     }
-    return loadMultiplePendingCommitFiles(context,
+    return loadPendingsetFiles(context,
         suppressExceptions, attemptFS, pendingCommitFiles);
   }
 
@@ -565,12 +565,13 @@ public class StagingCommitter extends AbstractS3ACommitter {
   }
 
   @Override
-  public void cleanupStagingDirs() throws IOException {
+  public void cleanupStagingDirs() {
     Path workPath = getWorkPath();
     if (workPath != null) {
       LOG.debug("Cleaning up work path {}", workPath);
-      deleteQuietly(workPath.getFileSystem(getConf()),
-          workPath, true);
+      ignoreIOExceptions(LOG, "cleaning up", workPath.toString(),
+          () -> deleteQuietly(workPath.getFileSystem(getConf()),
+              workPath, true));
     }
   }
 
@@ -578,38 +579,42 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * Cleanup includes: deleting job attempt pending paths,
    * local staging directories, and the directory of the wrapped committer.
    * @param context job context
+   * @param inAbortOperation is this an abort operation?
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException IO failure.
    */
   @Override
   @SuppressWarnings("deprecation")
-  protected void cleanup(JobContext context, boolean suppressExceptions)
+  protected void cleanup(JobContext context,
+      boolean inAbortOperation,
+      boolean suppressExceptions)
       throws IOException {
-    try {
-      wrappedCommitter.cleanupJob(context);
-      deleteDestinationPaths(context);
-      cleanupStagingDirs();
-    } catch (IOException e) {
-      if (suppressExceptions) {
-        LOG.error("{}: failed while cleaning up job", getRole(), e);
-      } else {
-        throw e;
-      }
-    }
+    maybeIgnore(suppressExceptions, "Cleanup wrapped committer",
+        () -> wrappedCommitter.cleanupJob(context));
+    maybeIgnore(suppressExceptions, "Delete destination paths",
+        () -> deleteDestinationPaths(context));
+    cleanupStagingDirs();
   }
 
   /**
-   * Delete the destination paths of a job.
+   * Delete the working paths of a job. Does not attempt to clean up
+   * the work of the wrapped committer.
+   * <ol>
+   *   <li>The job attempt path</li>
+   *   <li>$dest/__temporary</li>
+   *   <li>the local working directory for staged files</li>
+   * </ol>
    * @param context job context
    * @throws IOException IO failure
    */
   protected void deleteDestinationPaths(JobContext context) throws IOException {
-    try {
-      deleteWithWarning(getJobAttemptFileSystem(context),
-          getJobAttemptPath(context), true);
-    } catch (IOException e) {
-      LOG.debug("{}: delete failure", getRole(), e);
-    }
+    Path attemptPath = getJobAttemptPath(context);
+    ignoreIOExceptions(LOG,
+        "Deleting Job attempt Path", attemptPath.toString(),
+        () -> deleteWithWarning(
+            getJobAttemptFileSystem(context),
+            attemptPath,
+            true));
 
     // delete the __temporary directory. This will cause problems
     // if there is >1 task targeting the same dest dir
@@ -679,7 +684,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @throws IOException IO Failures.
    */
   protected int commitTaskInternal(final TaskAttemptContext context,
-      List<FileStatus> taskOutput)
+      List<? extends FileStatus> taskOutput)
       throws IOException {
     LOG.debug("{}: commitTaskInternal", getRole());
     Configuration conf = context.getConfiguration();
@@ -818,15 +823,13 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @param context job/task context
    */
   protected void deleteTaskWorkingPathQuietly(JobContext context) {
-    try {
-      Path path = buildWorkPath(context, getUUID());
-      if (path != null) {
-        deleteQuietly(path.getFileSystem(getConf()), path, true);
-      }
-    } catch (IOException e) {
-      // the attempt to build the working path failed
-      LOG.debug("{}: Failed to delete working path", getRole(), e);
-    }
+    ignoreIOExceptions(LOG, "Delete working path", "",
+        () -> {
+          Path path = buildWorkPath(context, getUUID());
+          if (path != null) {
+            deleteQuietly(path.getFileSystem(getConf()), path, true);
+          }
+        });
   }
 
   /**

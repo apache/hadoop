@@ -979,6 +979,22 @@ public final class S3AUtils {
   }
 
   /**
+   * List located files and filter them as a classic listFiles(path, filter)
+   * would do.
+   * @param fileSystem filesystem
+   * @param path path to list
+   * @param recursive recursive listing?
+   * @param filter filter for the filename
+   * @return the filtered list of entries
+   * @throws IOException IO failure.
+   */
+  public static List<LocatedFileStatus> listAndFilter(FileSystem fileSystem,
+      Path path, boolean recursive, PathFilter filter) throws IOException {
+    return flatmapLocatedFiles(fileSystem.listFiles(path, recursive),
+        status -> maybe(filter.accept(status.getPath()), status));
+  }
+
+  /**
    * Convert a value into a non-empty Optional instance if
    * the value of {@code include} is true.
    * @param include flag to indicate the value is to be included.

@@ -25,6 +25,8 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -291,8 +293,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
       verifyBucketExists();
 
-      initMultipartUploads(conf);
-
       serverSideEncryptionAlgorithm = getEncryptionAlgorithm(conf);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
@@ -327,6 +327,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         LOG.debug("Using metadata store {}, authoritative={}",
             getMetadataStore(), allowAuthoritative);
       }
+      initMultipartUploads(conf);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -415,7 +416,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Retries.RetryTranslated
   public void abortOutstandingMultipartUploads(long seconds)
       throws IOException {
-    Preconditions.checkArgument(seconds >=0);
+    Preconditions.checkArgument(seconds >= 0);
     Date purgeBefore =
         new Date(new Date().getTime() - seconds * 1000);
     LOG.debug("Purging outstanding multipart uploads older than {}",
@@ -3085,10 +3086,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(
         bucket);
     if (!prefix.isEmpty()) {
+      if (!prefix.endsWith("/")) {
+        prefix = prefix + "/";
+      }
       request.setPrefix(prefix);
     }
 
-    return invoker.retry("listMultipartUpoloads", prefix, true,
+    return invoker.retry("listMultipartUploads", prefix, true,
         () -> s3.listMultipartUploads(request).getMultipartUploads());
   }
 
@@ -3101,6 +3105,29 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Retries.OnceRaw
   void abortMultipartUpload(String destKey, String uploadId) {
     LOG.info("Aborting multipart upload {} to {}", uploadId, destKey);
+    getAmazonS3Client().abortMultipartUpload(
+        new AbortMultipartUploadRequest(getBucket(),
+            destKey,
+            uploadId));
+  }
+
+  /**
+   * Abort a multipart upload.
+   * Retry policy: none.
+   * @param upload the listed upload to abort.
+   */
+  @Retries.OnceRaw
+  void abortMultipartUpload(MultipartUpload upload) {
+    String destKey;
+    String uploadId;
+    destKey = upload.getKey();
+    uploadId = upload.getUploadId();
+    if (LOG.isInfoEnabled()) {
+      DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+      LOG.info("Aborting multipart upload {} to {} initiated by {} on {}",
+          uploadId, destKey, upload.getInitiator(),
+          df.format(upload.getInitiated()));
+    }
     getAmazonS3Client().abortMultipartUpload(
         new AbortMultipartUploadRequest(getBucket(),
             destKey,

@@ -48,9 +48,9 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
  *
  * This is a scale test.
  */
-public class ITestHugeMagicCommits extends AbstractSTestS3AHugeFiles {
+public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   private static final Logger LOG = LoggerFactory.getLogger(
-      ITestHugeMagicCommits.class);
+      ITestS3AHugeMagicCommits.class);
 
   private Path magicDir;
   private Path jobDir;
@@ -76,7 +76,7 @@ public class ITestHugeMagicCommits extends AbstractSTestS3AHugeFiles {
    */
   @Override
   public String getTestSuiteName() {
-    return "ITestHugeMagicCommits";
+    return "ITestS3AHugeMagicCommits";
   }
 
   /**

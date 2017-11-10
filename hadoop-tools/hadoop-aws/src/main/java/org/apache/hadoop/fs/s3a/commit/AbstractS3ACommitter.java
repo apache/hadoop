@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -48,7 +49,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.net.NetUtils;
 
-import static org.apache.hadoop.fs.s3a.S3AUtils.deleteQuietly;
+import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 
@@ -289,7 +291,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     final StringBuilder sb = new StringBuilder(
         "AbstractS3ACommitter{");
     sb.append("role=").append(role);
-    sb.append("name").append(getName());
+    sb.append(", name").append(getName());
     sb.append(", outputPath=").append(getOutputPath());
     sb.append(", workPath=").append(workPath);
     sb.append('}');
@@ -449,8 +451,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Try to read every pending file and add all results to pending.
-   * in the case of a failure to read the file, exceptions are held until all
+   * Try to read every pendingset file and build a list of them/
+   * In the case of a failure to read the file, exceptions are held until all
    * reads have been attempted.
    * @param context job context
    * @param suppressExceptions whether to suppress exceptions.
@@ -459,11 +461,11 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * @return the list of commits
    * @throws IOException on a failure when suppressExceptions is false.
    */
-  protected List<SinglePendingCommit> loadMultiplePendingCommitFiles(
+  protected List<SinglePendingCommit> loadPendingsetFiles(
       JobContext context,
       boolean suppressExceptions,
       FileSystem fs,
-      FileStatus[] pendingCommitFiles) throws IOException {
+      Iterable<? extends FileStatus> pendingCommitFiles) throws IOException {
 
     final List<SinglePendingCommit> pending = Collections.synchronizedList(
         Lists.newArrayList());
@@ -494,14 +496,14 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       commitPendingUploads(context, pending);
       threw = false;
     } finally {
-      cleanup(context, threw);
+      cleanup(context, false, threw);
     }
   }
 
   @Override
   public void abortJob(JobContext context, JobStatus.State state)
       throws IOException {
-    IOException ex = null;
+    CommitOperations.MaybeIOE ex = CommitOperations.MaybeIOE.NONE;
     String r = getRole();
     try (DurationInfo d = new DurationInfo(LOG,
         "%s: aborting job in state %s ", r, CommitUtils.jobIdString(context),
@@ -516,31 +518,45 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     } catch (IOException e) {
       LOG.error("{}: exception when aborting job {} in state {}",
           r, jobIdString(context), state, e);
+      ex = CommitOperations.MaybeIOE.of(e);
+    }
+
+
+    CommitOperations.MaybeIOE e = abortPendingUploadsToDestination();
+    if (!ex.hasException()) {
       ex = e;
     }
 
-    try (DurationInfo d =
-             new DurationInfo(LOG, "%s: aborting all pending commits", r)) {
-      int count = getCommitOperations()
-          .abortPendingUploadsUnderPath(getOutputPath());
-      if (count > 0) {
-        LOG.warn("{}: deleted {} extra pending upload(s)", r, count);
-      }
-    } catch (IOException e) {
-      ex = ex == null ? e : ex;
-    }
     // final cleanup operations
-    cleanup(context, ex != null);
-    if (ex != null) {
-      throw ex;
+    cleanup(context, true, !ex.hasException());
+    ex.maybeRethrow();
+  }
+
+  /**
+   * Abort all pending uploads to the destination directory.
+   * @return any exception raised.
+   */
+  protected CommitOperations.MaybeIOE abortPendingUploadsToDestination()  {
+    Path dest = getOutputPath();
+    try (DurationInfo d =
+             new DurationInfo(LOG, "Aborting all pending commits under %s",
+                 dest)) {
+      int count = getCommitOperations()
+          .abortPendingUploadsUnderPath(dest);
+      if (count > 0) {
+        LOG.warn("Deleted {} uncommitted file(s)", count);
+      }
+      return CommitOperations.MaybeIOE.NONE;
+    } catch(IOException e){
+      return CommitOperations.MaybeIOE.of(e);
     }
   }
 
   /**
    * Clean up any staging directories.
-   * @throws IOException IO problem
+   * IOEs must be caught and swallowed.
    */
-  public abstract void cleanupStagingDirs() throws IOException;
+  public abstract void cleanupStagingDirs();
 
   /**
    * Get the list of pending uploads for this job attempt, swallowing
@@ -557,10 +573,12 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   /**
    * Cleanup the job context, including aborting anything pending.
    * @param context job context
+   * @param inAbortOperation is this an abort operation?
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException any failure if exceptions were not suppressed.
    */
   protected abstract void cleanup(JobContext context,
+      boolean inAbortOperation,
       boolean suppressExceptions) throws IOException;
 
   @Override
@@ -570,7 +588,25 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     String id = jobIdString(context);
     LOG.warn("{}: using deprecated cleanupJob call for {}", r, id);
     try (DurationInfo d = new DurationInfo(LOG, "%s: cleanup Job %s", r, id)) {
-      cleanup(context, true);
+      cleanup(context, true , true);
+    }
+  }
+
+  /**
+   * Execute an operation; maybe suppress any raised IOException.
+   * @param suppress should raised IOEs be suppressed?
+   * @param action action (for logging when the IOE is supressed.
+   * @param operation operation
+   * @throws IOException if operation raised an IOE and suppress == false
+   */
+  protected void maybeIgnore(
+      boolean suppress,
+      String action,
+      Invoker.VoidOperation operation) throws IOException {
+    if (suppress) {
+      ignoreIOExceptions(LOG, action, "", operation);
+    } else {
+      operation.execute();
     }
   }
 
@@ -626,13 +662,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    */
   protected void deleteTaskAttemptPathQuietly(TaskAttemptContext context) {
     Path attemptPath = getBaseTaskAttemptPath(context);
-    try {
-      FileSystem taskFS = getTaskAttemptFilesystem(context);
-      deleteQuietly(taskFS, attemptPath, true);
-    } catch (IOException e) {
-      LOG.debug("{}: failed to delete task attempt path {}",
-          getRole(), attemptPath, e);
-    }
+    ignoreIOExceptions(LOG, "Delete task attempt path", attemptPath.toString(),
+        () -> deleteQuietly(
+            getTaskAttemptFilesystem(context), attemptPath, true));
   }
 
   /**
@@ -654,7 +686,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       // at this point, no exceptions were raised
       threw = false;
     } finally {
-      cleanup(context, threw || suppressExceptions);
+      cleanup(context, true, threw || suppressExceptions);
     }
   }
 

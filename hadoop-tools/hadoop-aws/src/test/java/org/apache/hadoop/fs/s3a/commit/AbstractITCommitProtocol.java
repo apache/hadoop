@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +43,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
@@ -105,7 +108,10 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   private static final Text VAL_2 = new Text("val2");
 
   /** A job to abort in test case teardown. */
-  private JobData abortInTeardown;
+  private List<JobData> abortInTeardown = new ArrayList<>(1);
+
+  private final StandardCommitterFactory
+      standardCommitterFactory = new StandardCommitterFactory();
 
   private void cleanupDestDir() throws IOException {
     rmdir(this.outDir, getConfiguration());
@@ -126,6 +132,12 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     return LOG;
   }
 
+  /**
+   * Overridden method returns the suitename as well as the method name,
+   * so if more than one committer test is run in parallel, paths are
+   * isolated.
+   * @return a name for a method, unique across the suites and test cases.
+   */
   @Override
   protected String getMethodName() {
     return suitename() + "-" + super.getMethodName();
@@ -134,21 +146,11 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    String testUniqueForkId = System.getProperty(TEST_UNIQUE_FORK_ID, "0001");
-    int l = testUniqueForkId.length();
-    String trailingDigits = testUniqueForkId.substring(l - 4, l);
-    try {
-      int digitValue = Integer.valueOf(trailingDigits);
-      jobId = String.format("20070712%04d_%04d",
-          (long)(Math.random() * 1000),
-          digitValue);
-      attempt0 = "attempt_" + jobId + "_m_000000_0";
-      taskAttempt0 = TaskAttemptID.forName(attempt0);
-      attempt1 = "attempt_" + jobId + "_m_000001_0";
-      taskAttempt1 = TaskAttemptID.forName(attempt1);
-    } catch (NumberFormatException e) {
-      throw new Exception("Failed to parse " + trailingDigits, e);
-    }
+    jobId = randomJobId();
+    attempt0 = "attempt_" + jobId + "_m_000000_0";
+    taskAttempt0 = TaskAttemptID.forName(attempt0);
+    attempt1 = "attempt_" + jobId + "_m_000001_0";
+    taskAttempt1 = TaskAttemptID.forName(attempt1);
 
     outDir = path(getMethodName());
     S3AFileSystem fileSystem = getFileSystem();
@@ -157,12 +159,29 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     cleanupDestDir();
   }
 
+  /**
+   * Create a random Job ID using the fork ID as part of the number.
+   * @return fork ID string in a format parseable by Jobs
+   * @throws Exception failure
+   */
+  private String randomJobId() throws Exception {
+    String testUniqueForkId = System.getProperty(TEST_UNIQUE_FORK_ID, "0001");
+    int l = testUniqueForkId.length();
+    String trailingDigits = testUniqueForkId.substring(l - 4, l);
+    try {
+      int digitValue = Integer.valueOf(trailingDigits);
+      return String.format("20070712%04d_%04d",
+          (long)(Math.random() * 1000),
+          digitValue);
+    } catch (NumberFormatException e) {
+      throw new Exception("Failed to parse " + trailingDigits, e);
+    }
+  }
+
   @Override
   public void teardown() throws Exception {
     describe("teardown");
-    if (abortInTeardown != null) {
-      abortJobQuietly(abortInTeardown);
-    }
+    abortInTeardown.forEach(this::abortJobQuietly);
     if (outDir != null) {
       try {
         abortMultipartUploadsUnderPath(outDir);
@@ -180,8 +199,12 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     super.teardown();
   }
 
+  /**
+   * Add the specified job to the current list of jobs to abort in teardown
+   * @param jobData job data.
+   */
   protected void abortInTeardown(JobData jobData) {
-    abortInTeardown = jobData;
+    abortInTeardown.add(jobData);
   }
 
   @Override
@@ -379,16 +402,31 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
-   * Create a a new job. Sets the task attempt ID.
+   * Create a new job. Sets the task attempt ID,
+   * and output dir; asks for a success marker.
    * @return the new job
    * @throws IOException failure
    */
   public Job newJob() throws IOException {
-    Job job = Job.getInstance(getConfiguration());
+    return newJob(outDir, getConfiguration(), attempt0);
+  }
+
+  /**
+   * Create a new job. Sets the task attempt ID,
+   * and output dir; asks for a success marker.
+   * @param dir dest dir
+   * @param configuration config to get the job from
+   * @param taskAttemptId task attempt
+   * @return the new job
+   * @throws IOException failure
+   */
+  private Job newJob(Path dir, Configuration configuration,
+      String taskAttemptId) throws IOException {
+    Job job = Job.getInstance(configuration);
     Configuration conf = job.getConfiguration();
-    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt0);
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskAttemptId);
     conf.setBoolean(CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, true);
-    FileOutputFormat.setOutputPath(job, outDir);
+    FileOutputFormat.setOutputPath(job, dir);
     return job;
   }
 
@@ -406,7 +444,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    */
   protected JobData startJob(boolean writeText)
       throws IOException, InterruptedException {
-    return startJob(new StandardCommitterFactory(), writeText);
+    return startJob(standardCommitterFactory, writeText);
   }
 
   /**
@@ -434,8 +472,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     AbstractS3ACommitter committer = factory.createCommitter(tContext);
 
     // setup
-    setup(committer, jContext, tContext);
     JobData jobData = new JobData(job, jContext, tContext, committer);
+    setup(jobData);
     abortInTeardown(jobData);
 
     if (writeText) {
@@ -447,14 +485,13 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
   /**
    * Set up the job and task.
-   * @param committer committer
-   * @param jContext job context
-   * @param tContext task context
+   * @param jobData job data
    * @throws IOException problems
    */
-  protected void setup(AbstractS3ACommitter committer,
-      JobContext jContext,
-      TaskAttemptContext tContext) throws IOException {
+  protected void setup(JobData jobData) throws IOException {
+    AbstractS3ACommitter committer = jobData.committer;
+    JobContext jContext = jobData.jContext;
+    TaskAttemptContext tContext = jobData.tContext;
     describe("\nsetup job");
     try (DurationInfo d = new DurationInfo(LOG,
         "setup job %s", jContext.getJobID())) {
@@ -569,7 +606,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertNotNull("null outputPath in committer " + committer,
         committer.getOutputPath());
 
-    // do commit. Here there will be pending data
+    // Commit the task. This will promote data and metadata to where
+    // job commits will pick it up on commit or abort.
     committer.commitTask(tContext);
     assertTaskAttemptPathDoesNotExist(committer, tContext);
 
@@ -588,8 +626,11 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         () -> committer2.recoverTask(tContext2));
 
     // at this point, task attempt 0 has failed to recover
-    // it should be abortable though.
+    // it should be abortable though. This will be a no-op as it already
+    // committed
+    describe("aborting task attempt 2; expect nothing to clean up");
     committer2.abortTask(tContext2);
+    describe("Aborting job 2; expect pending commits to be aborted");
     committer2.abortJob(jContext2, JobStatus.State.KILLED);
     // now, state of system may still have pending data
     assertNoMultipartUploadsPending(outDir);
@@ -1059,13 +1100,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   public void assertPart0000DoesNotExist(Path dir) throws Exception {
-    try {
-      Path p = getPart0000(dir);
-      // bad
-      fail("Unexpectedly found generated part-0000 output file " + p);
-    } catch (FileNotFoundException e) {
-      // good
-    }
+    intercept(FileNotFoundException.class,
+        () -> getPart0000(dir));
     assertPathDoesNotExist("expected output file", new Path(dir, PART_00000));
   }
 
@@ -1206,8 +1242,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         outputFormat.getOutputCommitter(tContext);
 
     // setup
-    setup(committer, jContext, tContext);
     JobData jobData = new JobData(job, jContext, tContext, committer);
+    setup(jobData);
     abortInTeardown(jobData);
     LoggingTextOutputFormat.LoggingLineRecordWriter recordWriter
         = outputFormat.getRecordWriter(tContext);
@@ -1255,6 +1291,74 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         outputFormat.getOutputCommitter(newAttempt);
     committer2.abortTask(tContext);
     assertNoMultipartUploadsPending(getOutDir());
+  }
+
+
+  @Test
+  public void testParallelJobsToAdjacentPaths() throws Throwable {
+
+    describe("Run two jobs in parallel, assert they both complete");
+    JobData jobData = startJob(true);
+    Job job1 = jobData.job;
+    AbstractS3ACommitter committer1 = jobData.committer;
+    JobContext jContext1 = jobData.jContext;
+    TaskAttemptContext tContext1 = jobData.tContext;
+
+    // now build up a second job
+    String jobId2 = randomJobId();
+    String attempt20 = "attempt_" + jobId2 + "_m_000000_0";
+    TaskAttemptID taskAttempt20 = TaskAttemptID.forName(attempt20);
+    String attempt21 = "attempt_" + jobId2 + "_m_000001_0";
+    TaskAttemptID taskAttempt21 = TaskAttemptID.forName(attempt21);
+
+    Path job1Dest = outDir;
+    Path job2Dest = new Path(getOutDir().getParent(),
+        getMethodName() + "job2Dest");
+    // little safety check
+    assertNotEquals(job1Dest, job2Dest);
+
+    // create the second job
+    Job job2 = newJob(job2Dest, new JobConf(getConfiguration()), attempt20);
+    Configuration conf2 = job2.getConfiguration();
+    conf2.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
+    try {
+      JobContext jContext2 = new JobContextImpl(conf2,
+          taskAttempt20.getJobID());
+      TaskAttemptContext tContext2 =
+          new TaskAttemptContextImpl(conf2, taskAttempt20);
+      AbstractS3ACommitter committer2 = createCommitter(job2Dest, tContext2);
+      JobData jobData2 = new JobData(job2, jContext2, tContext2, committer2);
+      setup(jobData2);
+      abortInTeardown(jobData2);
+      // make sure the directories are different
+      assertEquals(job2Dest, committer2.getOutputPath());
+
+      // job2 setup, write some data there
+      writeTextOutput(tContext2);
+
+      // at this point, job1 and job2 both have uncommitted tasks
+
+      // commit tasks in order task 2, task 1.
+      committer2.commitTask(tContext2);
+      committer1.commitTask(tContext1);
+
+      assertMultipartUploadsPending(job1Dest);
+      assertMultipartUploadsPending(job2Dest);
+
+      // commit jobs in order job 1, job 2
+      committer1.commitJob(jContext1);
+      assertNoMultipartUploadsPending(job1Dest);
+      getPart0000(job1Dest);
+      assertMultipartUploadsPending(job2Dest);
+
+      committer2.commitJob(jContext2);
+      getPart0000(job2Dest);
+      assertNoMultipartUploadsPending(job2Dest);
+    } finally {
+      // uncommitted files to this path need to be deleted in tests which fail
+      abortMultipartUploadsUnderPath(job2Dest);
+    }
+
   }
 
   protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {

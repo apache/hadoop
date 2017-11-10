@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.MultipartUpload;
@@ -278,10 +280,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   protected void assertNoMultipartUploadsPending(Path path) throws IOException {
     List<String> uploads = listMultipartUploads(pathToPrefix(path));
     if (!uploads.isEmpty()) {
-      StringBuilder result = new StringBuilder();
-      for (String upload : uploads) {
-        result.append(upload).append("; ");
-      }
+      String result = uploads.stream().collect(Collectors.joining("\n"));
       fail("Multipart uploads in progress under " + path + " \n" + result);
     }
   }
@@ -297,19 +296,18 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
-   * Count the number of MPUs under a prefix.
+   * Count the number of MPUs under a prefix; also logs them.
    * @param prefix prefix to scan
    * @return count
    * @throws IOException IO failure
    */
   protected int countMultipartUploads(String prefix) throws IOException {
-    int count = 0;
+    List<String> uploads = listMultipartUploads(prefix);
     for (MultipartUpload upload : getFileSystem().listMultipartUploads(
         prefix)) {
-      count++;
       log().info("Upload {} to {}", upload.getUploadId(), upload.getKey());
     }
-    return count;
+    return uploads.size();
   }
 
   /**
@@ -323,6 +321,12 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
+   * Date format used for mapping upload initiation time to human string.
+   */
+  private static final DateFormat df = new SimpleDateFormat(
+      "yyyy-MM-dd HH:mm:ss");
+
+  /**
    * Get a list of all pending uploads under a prefix, one which can be printed.
    * @param prefix prefix to look under
    * @return possibly empty list
@@ -330,15 +334,14 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    */
   protected List<String> listMultipartUploads(String prefix)
       throws IOException {
-    List<MultipartUpload> uploads = getFileSystem().listMultipartUploads(
-        prefix);
-    List<String> result = new ArrayList<>(uploads.size());
 
-    for (MultipartUpload upload : uploads) {
-      result.add(String.format("Upload to %s with ID %s",
-          upload.getKey(), upload.getUploadId()));
-    }
-    return result;
+    return getFileSystem()
+        .listMultipartUploads(prefix).stream()
+        .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
+            upload.getKey(),
+            upload.getUploadId(),
+            df.format(upload.getInitiated())))
+        .collect(Collectors.toList());
   }
 
   /**
@@ -433,9 +436,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
             org.apache.hadoop.mapreduce.v2.api.records.TaskType.MAP);
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         MRBuilderUtils.newTaskAttemptId(taskID, 0);
-    Configuration conf = jContext.getConfiguration();
     return new TaskAttemptContextImpl(
-        conf,
+        jContext.getConfiguration(),
         TypeConverter.fromYarn(attemptID));
   }
 }

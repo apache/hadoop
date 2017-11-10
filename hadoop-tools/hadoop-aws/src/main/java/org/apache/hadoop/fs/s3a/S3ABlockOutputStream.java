@@ -379,7 +379,7 @@ class S3ABlockOutputStream extends OutputStream implements
             bytes)) {
           multiPartUpload.complete(partETags);
         } else {
-          LOG.info("upload completion delayed until job commit");
+          LOG.info("File {} will be visible when the job is committed");
         }
       }
       if (!putTracker.outputImmediatelyVisible()) {

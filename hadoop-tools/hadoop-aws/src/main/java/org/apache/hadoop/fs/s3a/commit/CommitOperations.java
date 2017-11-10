@@ -35,9 +35,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
@@ -76,6 +77,18 @@ public class CommitOperations {
    * Write operations for the destination fs.
    */
   private final WriteOperationHelper writeOperations;
+
+  /**
+   * Filter to find all {code .pendingset} files.
+   */
+  public static final PathFilter PENDINGSET_FILTER =
+      path -> path.toString().endsWith(CommitConstants.PENDINGSET_SUFFIX);
+
+  /**
+   * Filter to find all {code .pending} files.
+   */
+  public static final PathFilter PENDING_FILTER =
+      path -> path.toString().endsWith(CommitConstants.PENDING_SUFFIX);
 
   /**
    * Instantiate.
@@ -168,24 +181,7 @@ public class CommitOperations {
   public List<LocatedFileStatus> locateAllSinglePendingCommits(
       Path pendingDir,
       boolean recursive) throws IOException {
-    final List<LocatedFileStatus> result = new ArrayList<>();
-    FileStatus fileStatus = fs.getFileStatus(pendingDir);
-    if (!fileStatus.isDirectory()) {
-      throw new PathCommitException(pendingDir,
-          "Not a directory : " + fileStatus);
-    }
-    RemoteIterator<LocatedFileStatus> pendingFiles = ls(pendingDir, recursive);
-    if (!pendingFiles.hasNext()) {
-      LOG.info("No files to commit under {}", pendingDir);
-    }
-    while (pendingFiles.hasNext()) {
-      LocatedFileStatus next = pendingFiles.next();
-      if (next.getPath().getName().endsWith(
-          CommitConstants.PENDING_SUFFIX) && next.isFile()) {
-        result.add(next);
-      }
-    }
-    return result;
+    return listAndFilter(fs, pendingDir, recursive, PENDING_FILTER);
   }
 
   /**
@@ -276,6 +272,8 @@ public class CommitOperations {
       boolean recursive)
       throws IOException {
     Preconditions.checkArgument(pendingDir != null, "null pendingDir");
+    LOG.debug("Aborting all pending commit filess under {}"
+            + " (recursive={}", pendingDir, recursive);
     RemoteIterator<LocatedFileStatus> pendingFiles;
     try {
       pendingFiles = ls(pendingDir, recursive);
@@ -326,7 +324,9 @@ public class CommitOperations {
    * @throws IOException IO failure
    */
   public int abortPendingUploadsUnderPath(Path dest) throws IOException {
-    return writeOperations.abortMultipartUploadsUnderPath(fs.pathToKey(dest));
+    // TODO: Repair
+    return 0;
+//    return writeOperations.abortMultipartUploadsUnderPath(fs.pathToKey(dest));
   }
 
 
@@ -556,6 +556,17 @@ public class CommitOperations {
       sb.append('}');
       return sb.toString();
     }
+
+    /**
+     * Get an instance based on the exception: either a value
+     * or a reference to {@link #NONE}.
+     * @param ex exception
+     * @return an instance.
+     */
+    public static MaybeIOE of(IOException ex) {
+      return ex != null ? new MaybeIOE(ex) : NONE;
+    }
   }
+
 
 }

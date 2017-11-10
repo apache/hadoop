@@ -279,7 +279,7 @@ public class WriteOperationHelper {
   public void abortMultipartUpload(String destKey, String uploadId,
       Retried retrying)
       throws IOException {
-    invoker.retry("Aborting multipart commit", destKey, true,
+    invoker.retry("Aborting multipart upload", destKey, true,
         retrying,
         () -> owner.abortMultipartUpload(
             destKey,
@@ -287,7 +287,22 @@ public class WriteOperationHelper {
   }
 
   /**
-   * Abort all multipart uploads under a path.
+   * Abort a multipart commit operation.
+   * @param destKey destination key of ongoing operation
+   * @param uploadId multipart operation Id
+   * @throws IOException on problems.
+   */
+  @Retries.RetryTranslated
+  public void abortMultipartUpload(MultipartUpload upload)
+      throws IOException {
+    invoker.retry("Aborting multipart commit", upload.getKey(), true,
+        () -> owner.abortMultipartUpload(upload));
+  }
+
+
+  /**
+   * Abort multipart uploads under a path: limited to the first
+   * few hundred.
    * @param prefix prefix for uploads to abort
    * @return a count of aborts
    * @throws IOException trouble; FileNotFoundExceptions are swallowed.
@@ -301,7 +316,7 @@ public class WriteOperationHelper {
     LOG.debug("Number of outstanding uploads: {}", multipartUploads.size());
     for (MultipartUpload upload: multipartUploads) {
       try {
-        abortMultipartCommit(upload.getKey(), upload.getUploadId());
+        abortMultipartUpload(upload);
         count++;
       } catch (FileNotFoundException e) {
         LOG.debug("Already aborted: {}", upload.getKey(), e);

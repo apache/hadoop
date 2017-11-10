@@ -279,7 +279,7 @@ public final class Paths {
    * @throws IOException IO failure
    */
   public static Set<String> getPartitions(Path attemptPath,
-      List<FileStatus> taskOutput)
+      List<? extends FileStatus> taskOutput)
       throws IOException {
     // get a list of partition directories
     Set<String> partitions = Sets.newLinkedHashSet();
