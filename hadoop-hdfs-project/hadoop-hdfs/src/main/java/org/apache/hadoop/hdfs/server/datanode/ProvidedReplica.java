@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -51,18 +52,23 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   static final byte[] NULL_CHECKSUM_ARRAY =
       FsDatasetUtil.createNullChecksumByteArray();
   private URI fileURI;
+  private Path pathPrefix;
+  private String pathSuffix;
   private long fileOffset;
   private Configuration conf;
   private FileSystem remoteFS;
 
   /**
    * Constructor.
+   *
    * @param blockId block id
    * @param fileURI remote URI this block is to be read from
    * @param fileOffset the offset in the remote URI
    * @param blockLen the length of the block
    * @param genStamp the generation stamp of the block
    * @param volume the volume this block belongs to
+   * @param conf the configuration
+   * @param remoteFS reference to the remote filesystem to use for this replica.
    */
   public ProvidedReplica(long blockId, URI fileURI, long fileOffset,
       long blockLen, long genStamp, FsVolumeSpi volume, Configuration conf,
@@ -85,23 +91,86 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     }
   }
 
+  /**
+   * Constructor.
+   *
+   * @param blockId block id
+   * @param pathPrefix A prefix of the {@link Path} associated with this replica
+   *          on the remote {@link FileSystem}.
+   * @param pathSuffix A suffix of the {@link Path} associated with this replica
+   *          on the remote {@link FileSystem}. Resolving the {@code pathSuffix}
+   *          against the {@code pathPrefix} should provide the exact
+   *          {@link Path} of the data associated with this replica on the
+   *          remote {@link FileSystem}.
+   * @param fileOffset the offset in the remote URI
+   * @param blockLen the length of the block
+   * @param genStamp the generation stamp of the block
+   * @param volume the volume this block belongs to
+   * @param conf the configuration
+   * @param remoteFS reference to the remote filesystem to use for this replica.
+   */
+  public ProvidedReplica(long blockId, Path pathPrefix, String pathSuffix,
+      long fileOffset, long blockLen, long genStamp, FsVolumeSpi volume,
+      Configuration conf, FileSystem remoteFS) {
+    super(volume, blockId, blockLen, genStamp);
+    this.fileURI = null;
+    this.pathPrefix = pathPrefix;
+    this.pathSuffix = pathSuffix;
+    this.fileOffset = fileOffset;
+    this.conf = conf;
+    if (remoteFS != null) {
+      this.remoteFS = remoteFS;
+    } else {
+      LOG.warn(
+          "Creating an reference to the remote FS for provided block " + this);
+      try {
+        this.remoteFS = FileSystem.get(pathPrefix.toUri(), this.conf);
+      } catch (IOException e) {
+        LOG.warn("Failed to obtain filesystem for " + pathPrefix);
+        this.remoteFS = null;
+      }
+    }
+  }
+
   public ProvidedReplica(ProvidedReplica r) {
     super(r);
     this.fileURI = r.fileURI;
     this.fileOffset = r.fileOffset;
     this.conf = r.conf;
     this.remoteFS = r.remoteFS;
+    this.pathPrefix = r.pathPrefix;
+    this.pathSuffix = r.pathSuffix;
   }
 
   @Override
   public URI getBlockURI() {
-    return this.fileURI;
+    return getRemoteURI();
+  }
+
+  @VisibleForTesting
+  public String getPathSuffix() {
+    return pathSuffix;
+  }
+
+  @VisibleForTesting
+  public Path getPathPrefix() {
+    return pathPrefix;
+  }
+
+  private URI getRemoteURI() {
+    if (fileURI != null) {
+      return fileURI;
+    } else if (pathPrefix == null) {
+      return new Path(pathSuffix).toUri();
+    } else {
+      return new Path(pathPrefix, pathSuffix).toUri();
+    }
   }
 
   @Override
   public InputStream getDataInputStream(long seekOffset) throws IOException {
     if (remoteFS != null) {
-      FSDataInputStream ins = remoteFS.open(new Path(fileURI));
+      FSDataInputStream ins = remoteFS.open(new Path(getRemoteURI()));
       ins.seek(fileOffset + seekOffset);
       return new BoundedInputStream(
           new FSDataInputStream(ins), getBlockDataLength());
@@ -132,7 +201,7 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   public boolean blockDataExists() {
     if(remoteFS != null) {
       try {
-        return remoteFS.exists(new Path(fileURI));
+        return remoteFS.exists(new Path(getRemoteURI()));
       } catch (IOException e) {
         return false;
       }
@@ -220,7 +289,7 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   public int compareWith(ScanInfo info) {
     //local scanning cannot find any provided blocks.
     if (info.getFileRegion().equals(
-        new FileRegion(this.getBlockId(), new Path(fileURI),
+        new FileRegion(this.getBlockId(), new Path(getRemoteURI()),
             fileOffset, this.getNumBytes(), this.getGenerationStamp()))) {
       return 0;
     } else {

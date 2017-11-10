@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -64,6 +65,29 @@ import org.apache.hadoop.util.Time;
  * This class is used to create provided volumes.
  */
 public class ProvidedVolumeImpl extends FsVolumeImpl {
+
+  /**
+   * Get a suffix of the full path, excluding the given prefix.
+   *
+   * @param prefix a prefix of the path.
+   * @param fullPath the full path whose suffix is needed.
+   * @return the suffix of the path, which when resolved against {@code prefix}
+   *         gets back the {@code fullPath}.
+   */
+  @VisibleForTesting
+  protected static String getSuffix(final Path prefix, final Path fullPath) {
+    String prefixStr = prefix.toString();
+    String pathStr = fullPath.toString();
+    if (!pathStr.startsWith(prefixStr)) {
+      LOG.debug("Path {} is not a prefix of the path {}", prefix, fullPath);
+      return pathStr;
+    }
+    String suffix = pathStr.replaceFirst("^" + prefixStr, "");
+    if (suffix.startsWith("/")) {
+      suffix = suffix.substring(1);
+    }
+    return suffix;
+  }
 
   static class ProvidedBlockPoolSlice {
     private ProvidedVolumeImpl providedVolume;
@@ -106,15 +130,19 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
         return;
       }
       Iterator<FileRegion> iter = reader.iterator();
+      Path blockPrefixPath = new Path(providedVolume.getBaseURI());
       while (iter.hasNext()) {
         FileRegion region = iter.next();
         if (region.getBlockPoolId() != null
             && region.getBlockPoolId().equals(bpid)
             && containsBlock(providedVolume.baseURI,
                 region.getPath().toUri())) {
+          String blockSuffix =
+              getSuffix(blockPrefixPath, new Path(region.getPath().toUri()));
           ReplicaInfo newReplica = new ReplicaBuilder(ReplicaState.FINALIZED)
               .setBlockId(region.getBlock().getBlockId())
-              .setURI(region.getPath().toUri())
+              .setPathPrefix(blockPrefixPath)
+              .setPathSuffix(blockSuffix)
               .setOffset(region.getOffset())
               .setLength(region.getBlock().getNumBytes())
               .setGenerationStamp(region.getBlock().getGenerationStamp())

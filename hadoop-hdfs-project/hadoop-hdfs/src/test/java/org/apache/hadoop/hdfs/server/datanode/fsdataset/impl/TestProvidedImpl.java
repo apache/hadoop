@@ -62,7 +62,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
-import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
+import org.apache.hadoop.hdfs.server.datanode.ProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
@@ -509,33 +509,6 @@ public class TestProvidedImpl {
     }
   }
 
-  @Test
-  public void testRefresh() throws IOException {
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
-    for (int i = 0; i < providedVolumes.size(); i++) {
-      ProvidedVolumeImpl vol = (ProvidedVolumeImpl) providedVolumes.get(i);
-      TestFileRegionBlockAliasMap testBlockFormat =
-          (TestFileRegionBlockAliasMap) vol
-              .getBlockFormat(BLOCK_POOL_IDS[CHOSEN_BP_ID]);
-      //equivalent to two new blocks appearing
-      testBlockFormat.setBlockCount(NUM_PROVIDED_BLKS + 2);
-      //equivalent to deleting the first block
-      testBlockFormat.setMinBlkId(MIN_BLK_ID + 1);
-
-      DirectoryScanner scanner = new DirectoryScanner(datanode, dataset, conf);
-      scanner.reconcile();
-      ReplicaInfo info = dataset.getBlockReplica(
-          BLOCK_POOL_IDS[CHOSEN_BP_ID], NUM_PROVIDED_BLKS + 1);
-      //new replica should be added to the dataset
-      assertTrue(info != null);
-      try {
-        info = dataset.getBlockReplica(BLOCK_POOL_IDS[CHOSEN_BP_ID], 0);
-      } catch(Exception ex) {
-        LOG.info("Exception expected: " + ex);
-      }
-    }
-  }
-
   private int getBlocksInProvidedVolumes(String basePath, int numBlocks,
       int minBlockId) throws IOException {
     TestFileRegionIterator fileRegionIterator =
@@ -620,5 +593,52 @@ public class TestProvidedImpl {
     assertEquals(false,
         ProvidedVolumeImpl.containsBlock(new URI("/bucket1/dir1/"),
             new URI("s3a:/bucket1/dir1/temp.txt")));
+  }
+
+  @Test
+  public void testProvidedReplicaSuffixExtraction() {
+    assertEquals("B.txt", ProvidedVolumeImpl.getSuffix(
+        new Path("file:///A/"), new Path("file:///A/B.txt")));
+    assertEquals("B/C.txt", ProvidedVolumeImpl.getSuffix(
+        new Path("file:///A/"), new Path("file:///A/B/C.txt")));
+    assertEquals("B/C/D.txt", ProvidedVolumeImpl.getSuffix(
+        new Path("file:///A/"), new Path("file:///A/B/C/D.txt")));
+    assertEquals("D.txt", ProvidedVolumeImpl.getSuffix(
+        new Path("file:///A/B/C/"), new Path("file:///A/B/C/D.txt")));
+    assertEquals("file:/A/B/C/D.txt", ProvidedVolumeImpl.getSuffix(
+        new Path("file:///X/B/C/"), new Path("file:///A/B/C/D.txt")));
+    assertEquals("D.txt", ProvidedVolumeImpl.getSuffix(
+        new Path("/A/B/C"), new Path("/A/B/C/D.txt")));
+    assertEquals("D.txt", ProvidedVolumeImpl.getSuffix(
+        new Path("/A/B/C/"), new Path("/A/B/C/D.txt")));
+
+    assertEquals("data/current.csv", ProvidedVolumeImpl.getSuffix(
+        new Path("wasb:///users/alice/"),
+        new Path("wasb:///users/alice/data/current.csv")));
+    assertEquals("current.csv", ProvidedVolumeImpl.getSuffix(
+        new Path("wasb:///users/alice/data"),
+        new Path("wasb:///users/alice/data/current.csv")));
+
+    assertEquals("wasb:/users/alice/data/current.csv",
+        ProvidedVolumeImpl.getSuffix(
+            new Path("wasb:///users/bob/"),
+            new Path("wasb:///users/alice/data/current.csv")));
+  }
+
+  @Test
+  public void testProvidedReplicaPrefix() throws Exception {
+    for (int i = 0; i < providedVolumes.size(); i++) {
+      FsVolumeImpl vol = providedVolumes.get(i);
+      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
+      vol.getVolumeMap(volumeMap, null);
+
+      Path expectedPrefix = new Path(
+          StorageLocation.normalizeFileURI(new File(providedBasePath).toURI()));
+      for (ReplicaInfo info : volumeMap
+          .replicas(BLOCK_POOL_IDS[CHOSEN_BP_ID])) {
+        ProvidedReplica pInfo = (ProvidedReplica) info;
+        assertEquals(expectedPrefix, pInfo.getPathPrefix());
+      }
+    }
   }
 }

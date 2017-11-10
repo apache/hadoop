@@ -21,6 +21,7 @@ import java.io.File;
 import java.net.URI;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -52,6 +53,8 @@ public class ReplicaBuilder {
   private Configuration conf;
   private FileRegion fileRegion;
   private FileSystem remoteFS;
+  private String pathSuffix;
+  private Path pathPrefix;
 
   public ReplicaBuilder(ReplicaState state) {
     volume = null;
@@ -142,6 +145,28 @@ public class ReplicaBuilder {
 
   public ReplicaBuilder setRemoteFS(FileSystem remoteFS) {
     this.remoteFS = remoteFS;
+    return this;
+  }
+
+  /**
+   * Set the suffix of the {@link Path} associated with the replica.
+   * Intended to be use only for {@link ProvidedReplica}s.
+   * @param suffix the path suffix.
+   * @return the builder with the path suffix set.
+   */
+  public ReplicaBuilder setPathSuffix(String suffix) {
+    this.pathSuffix = suffix;
+    return this;
+  }
+
+  /**
+   * Set the prefix of the {@link Path} associated with the replica.
+   * Intended to be use only for {@link ProvidedReplica}s.
+   * @param prefix the path prefix.
+   * @return the builder with the path prefix set.
+   */
+  public ReplicaBuilder setPathPrefix(Path prefix) {
+    this.pathPrefix = prefix;
     return this;
   }
 
@@ -275,14 +300,20 @@ public class ReplicaBuilder {
       throw new IllegalArgumentException("Finalized PROVIDED replica " +
           "cannot be constructed from another replica");
     }
-    if (fileRegion == null && uri == null) {
+    if (fileRegion == null && uri == null &&
+        (pathPrefix == null || pathSuffix == null)) {
       throw new IllegalArgumentException(
           "Trying to construct a provided replica on " + volume +
           " without enough information");
     }
     if (fileRegion == null) {
-      info = new FinalizedProvidedReplica(blockId, uri, offset,
-          length, genStamp, volume, conf, remoteFS);
+      if (uri != null) {
+        info = new FinalizedProvidedReplica(blockId, uri, offset,
+            length, genStamp, volume, conf, remoteFS);
+      } else {
+        info = new FinalizedProvidedReplica(blockId, pathPrefix, pathSuffix,
+            offset, length, genStamp, volume, conf, remoteFS);
+      }
     } else {
       info = new FinalizedProvidedReplica(fileRegion.getBlock().getBlockId(),
           fileRegion.getPath().toUri(),
