@@ -105,8 +105,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
     final Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         true);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     initConfWithStripe(conf, defaultStripeBlockSize);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
@@ -128,6 +126,9 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // set "/bar" directory with HOT storage policy.
       ClientProtocol client = NameNodeProxies.createProxy(conf,
@@ -215,8 +216,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
     }
 
     final Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         true);
     initConfWithStripe(conf, defaultStripeBlockSize);
@@ -240,7 +239,9 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
-
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       // set "/bar" directory with HOT storage policy.
       ClientProtocol client = NameNodeProxies.createProxy(conf,
           cluster.getFileSystem(0).getUri(), ClientProtocol.class).getProxy();
@@ -327,8 +328,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
     conf.set(DFSConfigKeys
         .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
         "3000");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         true);
     initConfWithStripe(conf, defaultStripeBlockSize);
@@ -350,6 +349,8 @@ public class TestStoragePolicySatisfierWithStripedFile {
     try {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
+      fs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       Path barDir = new Path("/bar");
       fs.mkdirs(barDir);
       // set an EC policy on "/bar" directory
@@ -419,8 +420,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
     }
 
     final Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
         true);
     initConfWithStripe(conf, defaultStripeBlockSize);
@@ -444,7 +443,9 @@ public class TestStoragePolicySatisfierWithStripedFile {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
     try {
       cluster.waitActive();
-
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       // set "/bar" directory with HOT storage policy.
       ClientProtocol client = NameNodeProxies.createProxy(conf,
           cluster.getFileSystem(0).getUri(), ClientProtocol.class).getProxy();

@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.Assert;
@@ -912,8 +913,6 @@ public class TestStoragePolicySatisfier {
 
     int defaultStripedBlockSize =
         StripedFileTestUtil.getDefaultECPolicy().getCellSize() * 4;
-    config.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultStripedBlockSize);
     config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
@@ -925,6 +924,9 @@ public class TestStoragePolicySatisfier {
     try {
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
           storagesPerDatanode, capacity);
+      dfs = hdfsCluster.getFileSystem();
+      dfs.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // set "/foo" directory with ONE_SSD storage policy.
       ClientProtocol client = NameNodeProxies.createProxy(config,
@@ -939,7 +941,6 @@ public class TestStoragePolicySatisfier {
       // write file to fooDir
       final String testFile = "/foo/bar";
       long fileLen = 20 * defaultStripedBlockSize;
-      dfs = hdfsCluster.getFileSystem();
       DFSTestUtil.createFile(dfs, new Path(testFile), fileLen, (short) 3, 0);
 
       // ONESSD is unsuitable storage policy on EC files
@@ -1632,7 +1633,7 @@ public class TestStoragePolicySatisfier {
       LOG.info("Simulate block pinning in datanode {}",
           locations[favoredNodesCount]);
       DataNode dn = hdfsCluster.getDataNode(dnInfo.getIpcPort());
-      DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+      InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
       favoredNodesCount--;
       if (favoredNodesCount <= 0) {
         break; // marked favoredNodesCount number of pinned block location
