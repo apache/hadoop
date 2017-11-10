@@ -471,6 +471,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   void check(String parent, HdfsFileStatus file, Result replRes, Result ecRes)
       throws IOException {
     String path = file.getFullName(parent);
+    if (showprogress &&
+        (totalDirs + totalSymlinks + replRes.totalFiles + ecRes.totalFiles)
+            % 100 == 0) {
+      out.println();
+      out.flush();
+    }
+
     if (file.isDirectory()) {
       checkDir(path, replRes, ecRes);
       return;
@@ -489,10 +496,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
     final Result r = file.getErasureCodingPolicy() != null ? ecRes: replRes;
     collectFileSummary(path, file, r, blocks);
-    if (showprogress && (replRes.totalFiles + ecRes.totalFiles) % 100 == 0) {
-      out.println();
-      out.flush();
-    }
     collectBlocksSummary(parent, file, r, blocks);
   }
 
