@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
@@ -40,6 +39,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.CommitOperations;
+import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.Tasks;
@@ -283,8 +284,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @return the path where the output of pending task attempts are stored.
    */
   private static Path getPendingTaskAttemptsPath(JobContext context, Path out) {
-    return new Path(getJobAttemptPath(context, out),
-        TEMPORARY);
+    return new Path(getJobAttemptPath(context, out), TEMPORARY);
   }
 
   /**
@@ -463,7 +463,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @return a list of pending uploads.
    * @throws IOException Any IO failure
    */
-  protected List<SinglePendingCommit> getPendingUploadsToCommit(
+  @Override
+  protected List<SinglePendingCommit> listPendingUploadsToCommit(
       JobContext context)
       throws IOException {
     return listPendingUploads(context, false);
@@ -492,76 +493,20 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   protected List<SinglePendingCommit> listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
-    Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
-    final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
-        context.getConfiguration());
-    List<LocatedFileStatus> pendingCommitFiles;
     try {
-      pendingCommitFiles = listAndFilter(attemptFS,
-          wrappedJobAttemptPath, false, HIDDEN_FILE_FILTER);
-    } catch (FileNotFoundException e) {
-      // file is not present, raise without bothering to report
-      throw e;
+      Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
+      final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
+          context.getConfiguration());
+      return loadPendingsetFiles(context, suppressExceptions, attemptFS,
+          listAndFilter(attemptFS,
+              wrappedJobAttemptPath, false,
+              HIDDEN_FILE_FILTER));
     } catch (IOException e) {
       // unable to work with endpoint, if suppressing errors decide our actions
-      if (suppressExceptions) {
-        LOG.info("{} failed to list pending upload dir", getRole(), e);
-        return new ArrayList<>(0);
-      } else {
-        throw e;
-      }
+      maybeIgnore(suppressExceptions, "Listing pending uploads", e);
     }
-    return loadPendingsetFiles(context,
-        suppressExceptions, attemptFS, pendingCommitFiles);
-  }
-
-  /**
-   * Commit work.
-   * This consists of two stages: precommit and commit.
-   * <p>
-   * Precommit: identify pending uploads, then allow subclasses
-   * to validate the state of the destination and the pending uploads.
-   * Any failure here triggers an abort of all pending uploads.
-   * <p>
-   * Commit internal: do the final commit sequence.
-   * <p>
-   * The final commit action is to build the {@code __SUCCESS} file entry.
-   * </p>
-   * @param context job context
-   * @throws IOException any failure
-   */
-  @Override
-  public void commitJob(JobContext context) throws IOException {
-    List<SinglePendingCommit> pending = Collections.emptyList();
-    try (DurationInfo d = new DurationInfo(LOG,
-        "%s: preparing to commit Job", getRole())) {
-      pending = getPendingUploadsToCommit(context);
-      preCommitJob(context, pending);
-    } catch (IOException e) {
-      LOG.warn("Precommit failure for job {}", jobIdString(context), e);
-      abortJobInternal(context, pending, true);
-      getCommitOperations().jobCompleted(false);
-      throw e;
-    }
-    try (DurationInfo d = new DurationInfo(LOG,
-        "%s: committing Job %s", getRole(), jobIdString(context))) {
-      commitJobInternal(context, pending);
-    } catch (IOException e) {
-      getCommitOperations().jobCompleted(false);
-      throw e;
-    }
-    getCommitOperations().jobCompleted(true);
-    maybeCreateSuccessMarkerFromCommits(context, pending);
-  }
-
-  /**
-   * Subclass-specific pre commit actions.
-   * @param context job context
-   * @param pending the pending operations
-   * @throws IOException any failure
-   */
-  protected void preCommitJob(JobContext context,
-      List<SinglePendingCommit> pending) throws IOException {
+    // reached iff an IOE was caught and swallowed
+    return new ArrayList<>(0);
   }
 
   @Override
@@ -575,25 +520,36 @@ public class StagingCommitter extends AbstractS3ACommitter {
     }
   }
 
-  /**
-   * Cleanup includes: deleting job attempt pending paths,
-   * local staging directories, and the directory of the wrapped committer.
-   * @param context job context
-   * @param inAbortOperation is this an abort operation?
-   * @param suppressExceptions should exceptions be suppressed?
-   * @throws IOException IO failure.
-   */
   @Override
   @SuppressWarnings("deprecation")
   protected void cleanup(JobContext context,
-      boolean inAbortOperation,
       boolean suppressExceptions)
       throws IOException {
     maybeIgnore(suppressExceptions, "Cleanup wrapped committer",
         () -> wrappedCommitter.cleanupJob(context));
     maybeIgnore(suppressExceptions, "Delete destination paths",
         () -> deleteDestinationPaths(context));
-    cleanupStagingDirs();
+    super.cleanup(context, suppressExceptions);
+  }
+
+  @Override
+  protected void abortJobInternal(JobContext context,
+      boolean suppressExceptions) throws IOException {
+    String r = getRole();
+    boolean failed = false;
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: aborting job in state %s ", r, CommitUtils.jobIdString(context))) {
+      List<SinglePendingCommit> pending = listPendingUploadsToAbort(context);
+      abortPendingUploads(context, pending, suppressExceptions);
+    } catch (FileNotFoundException e) {
+      // nothing to list
+      LOG.debug("No job directory to read uploads from");
+    } catch (IOException e) {
+      failed = true;
+      maybeIgnore(suppressExceptions, "aborting job", e);
+    } finally {
+      super.abortJobInternal(context, failed || suppressExceptions);
+    }
   }
 
   /**

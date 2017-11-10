@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.amazonaws.services.s3.model.MultipartUpload;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -473,9 +473,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         .suppressExceptions(suppressExceptions)
         .executeWith(buildThreadPool(context))
         .run(pendingCommitFile ->
-          pending.addAll(PendingSet.load(
-              fs,
-              pendingCommitFile.getPath()).getCommits())
+          pending.addAll(
+              PendingSet.load(fs, pendingCommitFile.getPath()).getCommits())
       );
     return pending;
   }
@@ -491,65 +490,105 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       List<SinglePendingCommit> pending)
       throws IOException {
 
-    boolean threw = true;
-    try {
-      commitPendingUploads(context, pending);
-      threw = false;
-    } finally {
-      cleanup(context, false, threw);
-    }
+    commitPendingUploads(context, pending);
   }
 
   @Override
   public void abortJob(JobContext context, JobStatus.State state)
       throws IOException {
-    CommitOperations.MaybeIOE ex = CommitOperations.MaybeIOE.NONE;
-    String r = getRole();
-    try (DurationInfo d = new DurationInfo(LOG,
-        "%s: aborting job in state %s ", r, CommitUtils.jobIdString(context),
-        state)) {
-      List<SinglePendingCommit> pending = listPendingUploadsToAbort(context);
-      if (!pending.isEmpty()) {
-        abortJobInternal(context, pending, false);
-      }
-    } catch (FileNotFoundException e) {
-      // nothing to list
-      LOG.debug("No job directory to read uploads from");
-    } catch (IOException e) {
-      LOG.error("{}: exception when aborting job {} in state {}",
-          r, jobIdString(context), state, e);
-      ex = CommitOperations.MaybeIOE.of(e);
-    }
-
-
-    CommitOperations.MaybeIOE e = abortPendingUploadsToDestination();
-    if (!ex.hasException()) {
-      ex = e;
-    }
-
+    LOG.info("{}: aborting job {} in state {}",
+        getRole(), CommitUtils.jobIdString(context),state);
     // final cleanup operations
-    cleanup(context, true, !ex.hasException());
-    ex.maybeRethrow();
+    abortJobInternal(context, false);
+  }
+
+
+  /**
+   * The internal job abort operation; can be overridden in tests.
+   * This must clean up operations; it is called when a commit fails, as
+   * well as in an {@link #abortJob(JobContext, JobStatus.State)} call.
+   * The base implementation calls {@link #cleanup(JobContext, boolean)}
+   * @param context job context
+   * @param suppressExceptions should exceptions be suppressed?
+   * @throws IOException any IO problem raised when suppressExceptions is false.
+   */
+  protected void abortJobInternal(JobContext context,
+      boolean suppressExceptions)
+      throws IOException {
+    cleanup(context, suppressExceptions);
   }
 
   /**
    * Abort all pending uploads to the destination directory.
-   * @return any exception raised.
+   * @param suppressExceptions should exceptions be supressed
    */
-  protected CommitOperations.MaybeIOE abortPendingUploadsToDestination()  {
+  protected void abortPendingUploadsToDestination(
+      boolean suppressExceptions) throws IOException {
     Path dest = getOutputPath();
     try (DurationInfo d =
              new DurationInfo(LOG, "Aborting all pending commits under %s",
                  dest)) {
-      int count = getCommitOperations()
-          .abortPendingUploadsUnderPath(dest);
-      if (count > 0) {
-        LOG.warn("Deleted {} uncommitted file(s)", count);
-      }
-      return CommitOperations.MaybeIOE.NONE;
-    } catch(IOException e){
-      return CommitOperations.MaybeIOE.of(e);
+      CommitOperations ops = getCommitOperations();
+      List<MultipartUpload> pending = ops
+          .listPendingUploadsUnderPath(dest);
+      Tasks.foreach(pending)
+          .executeWith(buildThreadPool(getJobContext()))
+          .suppressExceptions(suppressExceptions)
+          .run(u -> ops.abortMultipartCommit(u.getKey(), u.getUploadId()));
     }
+  }
+
+  /**
+   * Subclass-specific pre commit actions.
+   * @param context job context
+   * @param pending the pending operations
+   * @throws IOException any failure
+   */
+  protected void preCommitJob(JobContext context,
+      List<SinglePendingCommit> pending) throws IOException {
+  }
+
+  /**
+   * Commit work.
+   * This consists of two stages: precommit and commit.
+   * <p>
+   * Precommit: identify pending uploads, then allow subclasses
+   * to validate the state of the destination and the pending uploads.
+   * Any failure here triggers an abort of all pending uploads.
+   * <p>
+   * Commit internal: do the final commit sequence.
+   * <p>
+   * The final commit action is to build the {@code __SUCCESS} file entry.
+   * </p>
+   * @param context job context
+   * @throws IOException any failure
+   */
+  @Override
+  public void commitJob(JobContext context) throws IOException {
+    String id = jobIdString(context);
+    try (DurationInfo d = new DurationInfo(LOG,
+        "%s: commitJob(%s)", getRole(), id)) {
+      List<SinglePendingCommit> pending
+          = listPendingUploadsToCommit(context);
+      preCommitJob(context, pending);
+      commitJobInternal(context, pending);
+      jobCompleted(true);
+      maybeCreateSuccessMarkerFromCommits(context, pending);
+      cleanup(context, false);
+    } catch (IOException e) {
+      LOG.warn("Commit failure for job {}", id, e);
+      jobCompleted(false);
+      abortJobInternal(context, true);
+      throw e;
+    }
+  }
+
+  /**
+   * Job completion outcome; this may be subclassed in tests.
+   * @param success did the job succeed.
+   */
+  protected void jobCompleted(boolean success) {
+    getCommitOperations().jobCompleted(success);
   }
 
   /**
@@ -559,27 +598,30 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   public abstract void cleanupStagingDirs();
 
   /**
-   * Get the list of pending uploads for this job attempt, swallowing
-   * exceptions.
+   * Get the list of pending uploads for this job attempt.
    * @param context job context
-   * @return a list of pending uploads. If an exception was swallowed,
-   * then this may not match the actual set of pending operations
-   * @throws IOException shouldn't be raised, but retained for compiler
+   * @return a list of pending uploads.
+   * @throws IOException Any IO failure
    */
-  protected abstract List<SinglePendingCommit> listPendingUploadsToAbort(
+  protected abstract List<SinglePendingCommit> listPendingUploadsToCommit(
       JobContext context)
       throws IOException;
 
   /**
    * Cleanup the job context, including aborting anything pending.
    * @param context job context
-   * @param inAbortOperation is this an abort operation?
    * @param suppressExceptions should exceptions be suppressed?
    * @throws IOException any failure if exceptions were not suppressed.
    */
-  protected abstract void cleanup(JobContext context,
-      boolean inAbortOperation,
-      boolean suppressExceptions) throws IOException;
+  protected void cleanup(JobContext context,
+      boolean suppressExceptions) throws IOException {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Cleanup job %s", jobIdString(context))) {
+      abortPendingUploadsToDestination(suppressExceptions);
+    } finally {
+      cleanupStagingDirs();
+    }
+  }
 
   @Override
   @SuppressWarnings("deprecation")
@@ -588,7 +630,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     String id = jobIdString(context);
     LOG.warn("{}: using deprecated cleanupJob call for {}", r, id);
     try (DurationInfo d = new DurationInfo(LOG, "%s: cleanup Job %s", r, id)) {
-      cleanup(context, true , true);
+      cleanup(context, true);
     }
   }
 
@@ -607,6 +649,24 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       ignoreIOExceptions(LOG, action, "", operation);
     } else {
       operation.execute();
+    }
+  }
+
+  /**
+   * Execute an operation; maybe suppress any raised IOException.
+   * @param suppress should raised IOEs be suppressed?
+   * @param action action (for logging when the IOE is suppressed.
+   * @param ex  exception
+   * @throws IOException if suppress == false
+   */
+  protected void maybeIgnore(
+      boolean suppress,
+      String action,
+      IOException ex) throws IOException {
+    if (suppress) {
+      LOG.info(action, ex);
+    } else {
+      throw ex;
     }
   }
 
@@ -668,29 +728,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * The internal job abort operation.
-   * @param context job context
-   * @param pending list of pending commits
-   * @param suppressExceptions should exceptions be suppressed?
-   * @throws IOException any IO problem raised when suppressExceptions is false.
-   */
-  protected void abortJobInternal(JobContext context,
-      List<SinglePendingCommit> pending,
-      boolean suppressExceptions)
-      throws IOException {
-    LOG.warn("{}: aborting Job with {} files", getRole(),
-        pending == null ? 0 : pending.size());
-    boolean threw = true;
-    try {
-      abortPendingUploads(context, pending, suppressExceptions);
-      // at this point, no exceptions were raised
-      threw = false;
-    } finally {
-      cleanup(context, true, threw || suppressExceptions);
-    }
-  }
-
-  /**
    * Abort all pending uploads in the list.
    * @param context job context
    * @param pending pending uploads
@@ -704,10 +741,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     if (pending == null || pending.isEmpty()) {
       LOG.info("{}: no pending commits to abort", getRole());
     } else {
-      Tasks.foreach(pending)
-          .executeWith(buildThreadPool(context))
-          .suppressExceptions(suppressExceptions)
-          .run(commit -> getCommitOperations().abortSingleCommit(commit));
+      try (DurationInfo d = new DurationInfo(LOG,
+          "Aborting %s uploads", pending.size())) {
+        Tasks.foreach(pending)
+            .executeWith(buildThreadPool(context))
+            .suppressExceptions(suppressExceptions)
+            .run(commit -> getCommitOperations().abortSingleCommit(commit));
+      }
     }
   }
 

@@ -552,7 +552,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Committed and deleted objects should match",
         commits, deletes);
 
-    assertEquals("Should have aborted the remaining uploads",
+    assertEquals("Mismatch in aborted upload count",
         7, results.getAborts().size());
 
     Set<String> uploadIds = getCommittedIds(results.getCommits());
@@ -660,12 +660,10 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should commit the correct number of file parts",
         tags.size(), commit.getPartCount());
 
-/*
     for (int i = 0; i < tags.size(); i += 1) {
       assertEquals("Should commit the correct part tags",
-          tags.get(i), commit.getParts().get(i + 1));
+          tags.get(i), commit.getEtags().get(i));
     }
-*/
   }
 
   private static Path writeOutputFile(TaskAttemptID id, Path dest,

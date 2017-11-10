@@ -26,16 +26,21 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
+import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
+import com.amazonaws.services.s3.model.MultipartUpload;
+import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.google.common.collect.Lists;
@@ -44,8 +49,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -383,6 +386,8 @@ public class StagingTestBase {
         Lists.newArrayList();
     private final List<AbortMultipartUploadRequest> aborts
         = Lists.newArrayList();
+    private final Map<String, String> activeUploads =
+        Maps.newHashMap();
     private final List<DeleteObjectRequest> deletes = Lists.newArrayList();
 
     public Map<String, InitiateMultipartUploadRequest> getRequests() {
@@ -419,6 +424,7 @@ public class StagingTestBase {
 
     public void resetUploads() {
       uploads.clear();
+      activeUploads.clear();
     }
 
     public void resetCommits() {
@@ -522,144 +528,143 @@ public class StagingTestBase {
     // initiateMultipartUpload
     when(mockClient
         .initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
-        .thenAnswer(new Answer<InitiateMultipartUploadResult>() {
-          @Override
-          public InitiateMultipartUploadResult answer(
-              InvocationOnMock invocation) throws Throwable {
-            LOG.debug("initiateMultipartUpload for {}", mockClient);
-            synchronized (lock) {
-              if (results.requests.size() == errors.failOnInit) {
-                if (errors.recover) {
-                  errors.failOnInit(-1);
-                }
-                throw new AmazonClientException(
-                    "Mock Fail on init " + results.requests.size());
+        .thenAnswer(invocation -> {
+          LOG.debug("initiateMultipartUpload for {}", mockClient);
+          synchronized (lock) {
+            if (results.requests.size() == errors.failOnInit) {
+              if (errors.recover) {
+                errors.failOnInit(-1);
               }
-              String uploadId = UUID.randomUUID().toString();
-              results.requests.put(uploadId, invocation.getArgumentAt(
-                  0, InitiateMultipartUploadRequest.class));
-              results.uploads.add(uploadId);
-              return newResult(results.requests.get(uploadId), uploadId);
+              throw new AmazonClientException(
+                  "Mock Fail on init " + results.requests.size());
             }
+            String uploadId = UUID.randomUUID().toString();
+            InitiateMultipartUploadRequest req = invocation.getArgumentAt(
+                0, InitiateMultipartUploadRequest.class);
+            results.requests.put(uploadId, req);
+            results.activeUploads.put(uploadId, req.getKey());
+            results.uploads.add(uploadId);
+            return newResult(results.requests.get(uploadId), uploadId);
           }
         });
 
     // uploadPart
     when(mockClient.uploadPart(any(UploadPartRequest.class)))
-        .thenAnswer(new Answer<UploadPartResult>() {
-          @Override
-          public UploadPartResult answer(InvocationOnMock invocation)
-              throws Throwable {
-            LOG.debug("uploadPart for {}", mockClient);
-            synchronized (lock) {
-              if (results.parts.size() == errors.failOnUpload) {
-                if (errors.recover) {
-                  errors.failOnUpload(-1);
-                }
-                LOG.info("Triggering upload failure");
-                throw new AmazonClientException(
-                    "Mock Fail on upload " + results.parts.size());
+        .thenAnswer(invocation -> {
+          LOG.debug("uploadPart for {}", mockClient);
+          synchronized (lock) {
+            if (results.parts.size() == errors.failOnUpload) {
+              if (errors.recover) {
+                errors.failOnUpload(-1);
               }
-              UploadPartRequest req = invocation.getArgumentAt(
-                  0, UploadPartRequest.class);
-              results.parts.add(req);
-              String etag = UUID.randomUUID().toString();
-              List<String> etags = results.tagsByUpload.get(req.getUploadId());
-              if (etags == null) {
-                etags = Lists.newArrayList();
-                results.tagsByUpload.put(req.getUploadId(), etags);
-              }
-              etags.add(etag);
-              return newResult(req, etag);
+              LOG.info("Triggering upload failure");
+              throw new AmazonClientException(
+                  "Mock Fail on upload " + results.parts.size());
             }
+            UploadPartRequest req = invocation.getArgumentAt(
+                0, UploadPartRequest.class);
+            results.parts.add(req);
+            String etag = UUID.randomUUID().toString();
+            List<String> etags = results.tagsByUpload.get(req.getUploadId());
+            if (etags == null) {
+              etags = Lists.newArrayList();
+              results.tagsByUpload.put(req.getUploadId(), etags);
+            }
+            etags.add(etag);
+            return newResult(req, etag);
           }
         });
 
     // completeMultipartUpload
     when(mockClient
         .completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
-        .thenAnswer(new Answer<CompleteMultipartUploadResult>() {
-          @Override
-          public CompleteMultipartUploadResult answer(
-              InvocationOnMock invocation) throws Throwable {
-            LOG.debug("completeMultipartUpload for {}", mockClient);
-            synchronized (lock) {
-              if (results.commits.size() == errors.failOnCommit) {
-                if (errors.recover) {
-                  errors.failOnCommit(-1);
-                }
-                throw new AmazonClientException(
-                    "Mock Fail on commit " + results.commits.size());
+        .thenAnswer(invocation -> {
+          LOG.debug("completeMultipartUpload for {}", mockClient);
+          synchronized (lock) {
+            if (results.commits.size() == errors.failOnCommit) {
+              if (errors.recover) {
+                errors.failOnCommit(-1);
               }
-              CompleteMultipartUploadRequest req = invocation.getArgumentAt(
-                  0, CompleteMultipartUploadRequest.class);
-              results.commits.add(req);
-              return newResult(req);
+              throw new AmazonClientException(
+                  "Mock Fail on commit " + results.commits.size());
             }
+            CompleteMultipartUploadRequest req = invocation.getArgumentAt(
+                0, CompleteMultipartUploadRequest.class);
+            results.commits.add(req);
+            results.activeUploads.remove(req.getUploadId());
+
+            return newResult(req);
           }
         });
 
     // abortMultipartUpload mocking
-    doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            LOG.debug("abortMultipartUpload for {}", mockClient);
-            synchronized (lock) {
-              if (results.aborts.size() == errors.failOnAbort) {
-                if (errors.recover) {
-                  errors.failOnAbort(-1);
-                }
-                throw new AmazonClientException(
-                    "Mock Fail on abort " + results.aborts.size());
+    doAnswer(invocation -> {
+          LOG.debug("abortMultipartUpload for {}", mockClient);
+          synchronized (lock) {
+            if (results.aborts.size() == errors.failOnAbort) {
+              if (errors.recover) {
+                errors.failOnAbort(-1);
               }
-              results.aborts.add(invocation.getArgumentAt(
-                  0, AbortMultipartUploadRequest.class));
-              return null;
+              throw new AmazonClientException(
+                  "Mock Fail on abort " + results.aborts.size());
             }
+            AbortMultipartUploadRequest req = invocation.getArgumentAt(
+                0, AbortMultipartUploadRequest.class);
+            String id = req.getUploadId();
+            String p = results.activeUploads.remove(id);
+            if (p == null) {
+              // upload doesn't exist
+              AmazonS3Exception ex = new AmazonS3Exception(
+                  "not found " + id);
+              ex.setStatusCode(404);
+              throw ex;
+            }
+            results.aborts.add(req);
+            return null;
           }
         })
         .when(mockClient)
         .abortMultipartUpload(any(AbortMultipartUploadRequest.class));
 
     // deleteObject mocking
-    doAnswer(new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            LOG.debug("deleteObject for {}", mockClient);
-            synchronized (lock) {
-              results.deletes.add(invocation.getArgumentAt(
-                  0, DeleteObjectRequest.class));
-              return null;
-            }
-          }
-        })
+    doAnswer(invocation -> {
+      LOG.debug("deleteObject for {}", mockClient);
+      synchronized (lock) {
+        results.deletes.add(invocation.getArgumentAt(
+            0, DeleteObjectRequest.class));
+        return null;
+      }
+    })
         .when(mockClient)
         .deleteObject(any(DeleteObjectRequest.class));
 
     // deleteObject mocking
-    doAnswer(new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            LOG.debug("deleteObject for {}", mockClient);
-            synchronized (lock) {
-              results.deletes.add(new DeleteObjectRequest(
-                  invocation.getArgumentAt(0, String.class),
-                  invocation.getArgumentAt(1, String.class)
-              ));
-              return null;
-            }
-          }
-        })
-        .when(mockClient)
+    doAnswer(invocation -> {
+      LOG.debug("deleteObject for {}", mockClient);
+      synchronized (lock) {
+        results.deletes.add(new DeleteObjectRequest(
+            invocation.getArgumentAt(0, String.class),
+            invocation.getArgumentAt(1, String.class)
+        ));
+        return null;
+      }
+    }).when(mockClient)
         .deleteObject(any(String.class), any(String.class));
 
     // to String returns the debug information
     when(mockClient.toString()).thenAnswer(
-        new Answer<String>() {
-          @Override
-          public String answer(InvocationOnMock invocation) throws Throwable {
-            return "Mock3AClient " + results + " " + errors;
+        invocation -> "Mock3AClient " + results + " " + errors);
+
+    when(mockClient
+        .listMultipartUploads(any(ListMultipartUploadsRequest.class)))
+        .thenAnswer(invocation -> {
+          synchronized (lock) {
+            MultipartUploadListing l = new MultipartUploadListing();
+            l.setMultipartUploads(
+                results.activeUploads.entrySet().stream()
+                    .map(e -> newMPU(e.getKey(), e.getValue()))
+                    .collect(Collectors.toList()));
+            return l;
           }
         });
 
@@ -669,6 +674,14 @@ public class StagingTestBase {
   private static CompleteMultipartUploadResult newResult(
       CompleteMultipartUploadRequest req) {
     return new CompleteMultipartUploadResult();
+  }
+
+
+  private static MultipartUpload newMPU(String id, String path) {
+    MultipartUpload up = new MultipartUpload();
+    up.setUploadId(id);
+    up.setKey(path);
+    return up;
   }
 
   private static UploadPartResult newResult(UploadPartRequest request,

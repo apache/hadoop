@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.commit.PathCommitException;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -147,7 +148,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
       }
       break;
     default:
-      throw new IOException(getRole() + ": unknown conflict resolution mode: "
+      throw new PathCommitException("",
+          getRole() + ": unknown conflict resolution mode: "
           + getConflictResolutionMode(context, fsConf));
     }
   }

@@ -274,6 +274,7 @@ public class WriteOperationHelper {
    * @param uploadId multipart operation Id
    * @param retrying callback invoked on every retry
    * @throws IOException failure to abort
+   * @throws FileNotFoundException if the abort ID is unknown
    */
   @Retries.RetryTranslated
   public void abortMultipartUpload(String destKey, String uploadId,
@@ -330,6 +331,7 @@ public class WriteOperationHelper {
    * @param destKey destination key of ongoing operation
    * @param uploadId multipart operation Id
    * @throws IOException on problems.
+   * @throws FileNotFoundException if the abort ID is unknown
    */
   @Retries.RetryTranslated
   public void abortMultipartCommit(String destKey, String uploadId)

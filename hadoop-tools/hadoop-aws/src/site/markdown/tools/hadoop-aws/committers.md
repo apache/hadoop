@@ -533,16 +533,21 @@ Conflict management is left to the execution engine itself.
 ## Committer Configuration Options
 
 
-| Option | Magic | Directory | Partitioned | Meaning |
-|--------|-------|-----------|-------------|---------|
-| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | X | X | X | Write a `_SUCCESS` file  at the end of each job |
-| `fs.s3a.buffer.dir` | X | X | X | Local filesystem directory for data being written and/or staged. |
-| `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. |
-| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `abort` or `overwrite`|
-| `fs.s3a.committer.staging.tmp.path` |  | X | X | Path in the cluster filesystem for temporary data |
-| `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames |
-| `fs.s3a.committer.staging.uuid` |  | X | X | Unique ID string for unique filenames |
-| `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem |
+| Option | Magic | Directory | Partitioned | Meaning | Default |
+|--------|-------|-----------|-------------|---------|---------|
+| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | X | X | X | Write a `_SUCCESS` file  at the end of each job | `true` |
+| `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. | 8 |
+| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `abort` or `overwrite`| `fail` |
+| `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames | `true` |
+| `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem | `false` |
+
+
+
+
+| Option | Magic | Directory | Partitioned | Meaning | Default |
+|--------|-------|-----------|-------------|---------|---------|
+| `fs.s3a.buffer.dir` | X | X | X | Local filesystem directory for data being written and/or staged. | |
+| `fs.s3a.committer.staging.tmp.path` |  | X | X | Path in the cluster filesystem for temporary data | `tmp/staging` |
 
 
 ## Troubleshooting

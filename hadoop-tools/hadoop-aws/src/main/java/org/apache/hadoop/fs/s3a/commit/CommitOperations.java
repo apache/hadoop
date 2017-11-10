@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
@@ -232,6 +233,7 @@ public class CommitOperations {
    * Abort the multipart commit supplied. This is the lower level operation
    * which doesn't generate an outcome, instead raising an exception.
    * @param commit pending commit to abort
+   * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
   public void abortSingleCommit(SinglePendingCommit commit)
@@ -250,6 +252,7 @@ public class CommitOperations {
    * incrementing statistics afterwards.
    * @param destKey destination key
    * @param uploadId upload to cancel
+   * @throws FileNotFoundException if the abort ID is unknown
    * @throws IOException on any failure
    */
   public void abortMultipartCommit(String destKey, String uploadId)
@@ -318,17 +321,25 @@ public class CommitOperations {
   }
 
   /**
+   * List all pending uploads to the destination FS under a path.
+   * @param dest destination path
+   * @return A list of the pending uploads to any directory under that path.
+   * @throws IOException IO failure
+   */
+  public List<MultipartUpload> listPendingUploadsUnderPath(Path dest)
+      throws IOException {
+    return fs.listMultipartUploads(fs.pathToKey(dest));
+  }
+
+  /**
    * Abort all pending uploads to the destination FS under a path.
    * @param dest destination path
    * @return a count of the number of uploads aborted.
    * @throws IOException IO failure
    */
   public int abortPendingUploadsUnderPath(Path dest) throws IOException {
-    // TODO: Repair
-    return 0;
-//    return writeOperations.abortMultipartUploadsUnderPath(fs.pathToKey(dest));
+    return writeOperations.abortMultipartUploadsUnderPath(fs.pathToKey(dest));
   }
-
 
   /**
    * Delete any existing {@code _SUCCESS} file.

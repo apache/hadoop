@@ -1944,7 +1944,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * Existence of the directory hierarchy is not an error.
    * @param path path to create
    * @param permission to apply to f
-   * @return true if a directory was created
+   * @return true if a directory was created or already existed
    * @throws FileAlreadyExistsException there is a file at the path specified
    * @throws IOException other IO problems
    */

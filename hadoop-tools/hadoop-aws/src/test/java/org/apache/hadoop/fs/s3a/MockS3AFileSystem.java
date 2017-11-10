@@ -20,13 +20,10 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collections;
-import java.util.List;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.MultipartUpload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,9 +60,20 @@ public class MockS3AFileSystem extends S3AFileSystem {
   private final S3AFileSystem mock;
   private final Pair<StagingTestBase.ClientResults,
       StagingTestBase.ClientErrors> outcome;
+
+  /** Log nothing: {@value}. */
   public static final int LOG_NONE = 0;
+
+  /** Log the name of the operation any arguments: {@value}.  */
   public static final int LOG_NAME = 1;
+
+  /** Log the entire stack of where operations are called: {@value}.  */
   public static final int LOG_STACK = 2;
+
+  /**
+   * This can be edited to set the log level of events through the
+   * mock FS.
+   */
   private int logEvents = LOG_NAME;
   private final S3AInstrumentation instrumentation =
       new S3AInstrumentation(FS_URI);
@@ -200,13 +208,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
       throws IOException {
     event("listFiles(%s, %s)", f, recursive);
     return new EmptyIterator();
-  }
-
-  @Override
-  public List<MultipartUpload> listMultipartUploads(String prefix)
-      throws IOException {
-    event("listMultipartUploads(%s)", prefix);
-    return Collections.emptyList();
   }
 
   @Override

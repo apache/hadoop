@@ -203,7 +203,7 @@ public final class CommitUtils {
    * @return a new path.
    */
   public static Path magicSubdir(Path destDir) {
-    return new Path(destDir.getParent(), MAGIC);
+    return new Path(destDir, MAGIC);
   }
 
   /**

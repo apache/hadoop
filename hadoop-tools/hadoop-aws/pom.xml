@@ -196,7 +196,7 @@
                     <exclude>**/ITestS3AContractRootDir.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <exclude>**/ITestS3AEncryptionSSEC*.java</exclude>
-                    <exclude>**/ITestHuge*.java</exclude>
+                    <exclude>**/ITestS3AHuge*.java</exclude>
                   </excludes>
                 </configuration>
               </execution>

@@ -65,6 +65,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
   private static final byte[] DATASET = dataset(1000, 'a', 32);
   private static final String S3A_FACTORY_KEY = String.format(
       COMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
+
   /**
    * A compile time flag which allows you to disable failure reset before
    * assertions and teardown.
@@ -73,6 +74,12 @@ public class ITestCommitOperations extends AbstractCommitITest {
    * the resilience codepaths.
    */
   private static final boolean RESET_FAILURES_ENABLED = false;
+
+  private static final float HIGH_THROTTLE = 0.25f;
+
+  private static final float FULL_THROTTLE = 1.0f;
+
+  private static final int STANDARD_FAILURE_LIMIT = 2;
 
   @Override
   protected Configuration createConfiguration() {
@@ -93,7 +100,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     super.setup();
     verifyIsMagicCommitFS(getFileSystem());
     // abort,; rethrow on failure
-    setThrottling(0.5f, 2);
+    setThrottling(HIGH_THROTTLE, STANDARD_FAILURE_LIMIT);
   }
 
   @Test
@@ -165,13 +172,17 @@ public class ITestCommitOperations extends AbstractCommitITest {
 
     CommitOperations actions = newCommitOperations();
     // abort,; rethrow on failure
-    setThrottling(1.0f, 2);
+    fullThrottle();
     LOG.info("Abort call");
     actions.abortAllSinglePendingCommits(pendingDataPath.getParent(), true)
         .maybeRethrow();
     resetFailures();
     assertPathDoesNotExist("pending file not deleted", pendingDataPath);
     assertPathDoesNotExist("dest file was created", destFile);
+  }
+
+  private void fullThrottle() {
+    setThrottling(FULL_THROTTLE, STANDARD_FAILURE_LIMIT);
   }
 
   private CommitOperations newCommitOperations() {
@@ -281,7 +292,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
         CONSISTENCY_WAIT);
     assertEquals("Non empty marker file: " + status, 0, status.getLen());
 
-    commit(filename, destFile, 0.5f, 0);
+    commit(filename, destFile, HIGH_THROTTLE, 0);
     verifyFileContents(fs, destFile, data);
   }
 
@@ -418,7 +429,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     Path dest = methodPath("testUploadEmptyFile");
     S3AFileSystem fs = getFileSystem();
     fs.delete(dest, false);
-    setThrottling(1.0f, 2);
+    fullThrottle();
 
     SinglePendingCommit pendingCommit =
         actions.uploadFileToPendingCommit(tempFile,
@@ -426,7 +437,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
             DEFAULT_MULTIPART_SIZE);
     resetFailures();
     assertPathDoesNotExist("pending commit", dest);
-    setThrottling(1.0f, 2);
+    fullThrottle();
     actions.commitOrFail(pendingCommit);
     resetFailures();
     FileStatus status = verifyPathExists(fs,
@@ -442,14 +453,14 @@ public class ITestCommitOperations extends AbstractCommitITest {
     CommitOperations actions = newCommitOperations();
     Path dest = methodPath("testUploadSmallFile");
     S3AFileSystem fs = getFileSystem();
-    setThrottling(1.0f, 2);
+    fullThrottle();
     SinglePendingCommit pendingCommit =
         actions.uploadFileToPendingCommit(tempFile,
             dest, null,
             DEFAULT_MULTIPART_SIZE);
     resetFailures();
     assertPathDoesNotExist("pending commit", dest);
-    setThrottling(1.0f, 2);
+    fullThrottle();
     actions.commitOrFail(pendingCommit);
     resetFailures();
     String s = readUTF8(fs, dest, -1);
@@ -462,7 +473,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     tempFile.delete();
     CommitOperations actions = newCommitOperations();
     Path dest = methodPath("testUploadMissingile");
-    setThrottling(1.0f, 2);
+    fullThrottle();
     actions.uploadFileToPendingCommit(tempFile, dest, null,
         DEFAULT_MULTIPART_SIZE);
   }
@@ -475,7 +486,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     CommitOperations actions = newCommitOperations();
     SinglePendingCommit commit = new SinglePendingCommit();
     commit.setDestinationKey(fs.pathToKey(destFile));
-    setThrottling(1.0f, 2);
+    fullThrottle();
     actions.revertCommit(commit);
     resetFailures();
     assertPathExists("parent of reverted commit", destFile.getParent());
@@ -489,7 +500,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     CommitOperations actions = newCommitOperations();
     SinglePendingCommit commit = new SinglePendingCommit();
     commit.setDestinationKey(fs.pathToKey(destFile));
-    setThrottling(1.0f, 2);
+    fullThrottle();
     actions.revertCommit(commit);
     assertPathExists("parent of reverted (nonexistent) commit",
         destFile.getParent());
@@ -500,7 +511,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     CommitOperations actions = newCommitOperations();
     Path path = path("testFailuresInAbort");
     getFileSystem().mkdirs(path);
-    setThrottling(0.5f);
+    setThrottling(HIGH_THROTTLE);
     LOG.info("Aborting");
     actions.abortPendingUploadsUnderPath(path);
     LOG.info("Abort completed");

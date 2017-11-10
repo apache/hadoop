@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.commit.PathCommitException;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -69,7 +70,7 @@ public class TestStagingPartitionedJobCommit
     }
 
     @Override
-    protected List<SinglePendingCommit> getPendingUploadsToCommit(
+    protected List<SinglePendingCommit> listPendingUploadsToCommit(
         JobContext context) throws IOException {
       List<SinglePendingCommit> pending = Lists.newArrayList();
 
@@ -91,10 +92,9 @@ public class TestStagingPartitionedJobCommit
 
     @Override
     protected void abortJobInternal(JobContext context,
-        List<SinglePendingCommit> pending,
         boolean suppressExceptions) throws IOException {
       this.aborted = true;
-      super.abortJobInternal(context, pending, suppressExceptions);
+      super.abortJobInternal(context, suppressExceptions);
     }
   }
 
@@ -219,9 +219,10 @@ public class TestStagingPartitionedJobCommit
         .delete(
             new Path(OUTPUT_PATH, "dateint=20161116/hour=14"),
             true))
-        .thenThrow(new IOException("Fake IOException for delete"));
+        .thenThrow(new PathCommitException("fake",
+            "Fake IOException for delete"));
 
-    intercept(IOException.class, "",
+    intercept(PathCommitException.class, "Fake IOException for delete",
         "Should throw the fake IOException",
         () -> committer.commitJob(getJob()));
 
