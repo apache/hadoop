@@ -21,6 +21,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
@@ -35,6 +36,13 @@ public class FinalizedProvidedReplica extends ProvidedReplica {
       FsVolumeSpi volume, Configuration conf, FileSystem remoteFS) {
     super(blockId, fileURI, fileOffset, blockLen, genStamp, volume, conf,
         remoteFS);
+  }
+
+  public FinalizedProvidedReplica(long blockId, Path pathPrefix,
+      String pathSuffix, long fileOffset, long blockLen, long genStamp,
+      FsVolumeSpi volume, Configuration conf, FileSystem remoteFS) {
+    super(blockId, pathPrefix, pathSuffix, fileOffset, blockLen,
+        genStamp, volume, conf, remoteFS);
   }
 
   @Override
