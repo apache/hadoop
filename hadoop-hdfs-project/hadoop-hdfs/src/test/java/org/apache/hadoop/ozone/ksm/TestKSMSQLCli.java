@@ -17,7 +17,7 @@
 package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -59,7 +59,7 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(Parameterized.class)
 public class TestKSMSQLCli {
-  private MiniOzoneCluster cluster = null;
+  private MiniOzoneClassicCluster cluster = null;
   private StorageHandler storageHandler;
   private UserArgs userArgs;
   private OzoneConfiguration conf;
@@ -104,7 +104,7 @@ public class TestKSMSQLCli {
     conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
     userArgs = new UserArgs(null, OzoneUtils.getRequestID(),

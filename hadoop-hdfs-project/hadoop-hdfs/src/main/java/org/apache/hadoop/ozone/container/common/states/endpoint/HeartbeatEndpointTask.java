@@ -103,7 +103,7 @@ public class HeartbeatEndpointTask
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
           .sendHeartbeat(datanodeID, this.context.getNodeReport(),
               this.context.getContainerReportState());
-      processResponse(reponse);
+      processResponse(reponse, datanodeID);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
@@ -127,9 +127,14 @@ public class HeartbeatEndpointTask
    *
    * @param response - SCMHeartbeat response.
    */
-  private void processResponse(SCMHeartbeatResponseProto response) {
+  private void processResponse(SCMHeartbeatResponseProto response,
+      final DatanodeID datanodeID) {
     for (SCMCommandResponseProto commandResponseProto : response
         .getCommandsList()) {
+      // Verify the response is indeed for this datanode.
+      Preconditions.checkState(commandResponseProto.getDatanodeUUID()
+          .equalsIgnoreCase(datanodeID.getDatanodeUuid().toString()),
+          "Unexpected datanode ID in the response.");
       switch (commandResponseProto.getCmdType()) {
       case sendContainerReport:
         this.context.addCommand(SendContainerCommand.getFromProtobuf(

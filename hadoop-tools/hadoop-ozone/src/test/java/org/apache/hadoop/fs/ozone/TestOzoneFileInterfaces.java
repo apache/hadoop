@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
@@ -51,14 +51,14 @@ import java.io.IOException;
  * create, read, write, getFileStatus
  */
 public class TestOzoneFileInterfaces {
-  private static MiniOzoneCluster cluster = null;
+  private static MiniOzoneClassicCluster cluster = null;
   private static FileSystem fs;
   private static StorageHandler storageHandler;
 
   @BeforeClass
   public static void init() throws IOException, OzoneException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageHandler =
         new ObjectStoreHandler(conf).getStorageHandler();

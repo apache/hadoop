@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.client.rest;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -58,7 +58,7 @@ public class TestOzoneRestClient {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  private static MiniOzoneCluster cluster = null;
+  private static MiniOzoneClassicCluster cluster = null;
   private static OzoneClient ozClient = null;
   private static ObjectStore store = null;
 
@@ -75,7 +75,7 @@ public class TestOzoneRestClient {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(1)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode datanode = cluster.getDataNodes().get(0);
     conf.set(OzoneConfigKeys.OZONE_CLIENT_PROTOCOL,

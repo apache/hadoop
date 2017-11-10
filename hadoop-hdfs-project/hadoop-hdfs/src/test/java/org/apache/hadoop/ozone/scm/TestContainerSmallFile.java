@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -61,7 +62,7 @@ public class TestContainerSmallFile {
     ozoneConfig = new OzoneConfiguration();
     ozoneConfig.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
-    cluster = new MiniOzoneCluster.Builder(ozoneConfig).numDataNodes(1)
+    cluster = new MiniOzoneClassicCluster.Builder(ozoneConfig).numDataNodes(1)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     storageContainerLocationClient = cluster

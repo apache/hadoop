@@ -39,7 +39,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLRights;
 import org.apache.hadoop.ozone.OzoneAcl.OzoneACLType;
@@ -81,7 +81,7 @@ public class TestOzoneShell {
   private static String url;
   private static File baseDir;
   private static OzoneConfiguration conf = null;
-  private static MiniOzoneCluster cluster = null;
+  private static MiniOzoneClassicCluster cluster = null;
   private static OzoneRestClient client = null;
   private static Shell shell = null;
 
@@ -114,7 +114,7 @@ public class TestOzoneShell {
     shell = new Shell();
     shell.setConf(conf);
 
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     final int port = dataNode.getInfoPort();

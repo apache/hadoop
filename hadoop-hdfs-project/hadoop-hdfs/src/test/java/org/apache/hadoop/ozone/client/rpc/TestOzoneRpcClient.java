@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client.rpc;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -38,11 +39,10 @@ import org.apache.hadoop.ozone.client.ReplicationType;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
-import org.apache.hadoop.ozone.ksm.protocolPB.
-    KeySpaceManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -70,11 +70,10 @@ public class TestOzoneRpcClient {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  private static MiniOzoneCluster cluster = null;
+  private static MiniOzoneClassicCluster cluster = null;
   private static OzoneClient ozClient = null;
   private static ObjectStore store = null;
-  private static KeySpaceManagerProtocolClientSideTranslatorPB
-      keySpaceManagerClient;
+  private static KeySpaceManager keySpaceManager;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
 
@@ -91,7 +90,7 @@ public class TestOzoneRpcClient {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(5)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     conf.set("ozone.client.protocol",
         "org.apache.hadoop.ozone.client.rpc.RpcClient");
@@ -100,7 +99,7 @@ public class TestOzoneRpcClient {
     store = ozClient.getObjectStore();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
-    keySpaceManagerClient = cluster.createKeySpaceManagerClient();
+    keySpaceManager = cluster.getKeySpaceManager();
   }
 
   @Test
@@ -388,7 +387,7 @@ public class TestOzoneRpcClient {
         OzoneProtos.ReplicationType.valueOf(type.toString());
     OzoneProtos.ReplicationFactor replicationFactor =
         OzoneProtos.ReplicationFactor.valueOf(factor.getValue());
-    KsmKeyInfo keyInfo = keySpaceManagerClient.lookupKey(keyArgs);
+    KsmKeyInfo keyInfo = keySpaceManager.lookupKey(keyArgs);
     for (KsmKeyLocationInfo info: keyInfo.getKeyLocationList()) {
       Pipeline pipeline =
           storageContainerLocationClient.getContainer(info.getContainerName());
@@ -807,10 +806,6 @@ public class TestOzoneRpcClient {
 
     if (storageContainerLocationClient != null) {
       storageContainerLocationClient.close();
-    }
-
-    if (keySpaceManagerClient != null) {
-      keySpaceManagerClient.close();
     }
 
     if (cluster != null) {

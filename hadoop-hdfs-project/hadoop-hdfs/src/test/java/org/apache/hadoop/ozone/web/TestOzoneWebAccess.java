@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.web;
 
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -56,7 +56,7 @@ public class TestOzoneWebAccess {
   @Rule
   public Timeout testTimeout = new Timeout(300000);
 
-  private static MiniOzoneCluster cluster;
+  private static MiniOzoneClassicCluster cluster;
   private static int port;
 
   /**
@@ -76,7 +76,7 @@ public class TestOzoneWebAccess {
         .getTempPath(TestOzoneWebAccess.class.getSimpleName());
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
 
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_LOCAL).build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     port = dataNode.getInfoPort();

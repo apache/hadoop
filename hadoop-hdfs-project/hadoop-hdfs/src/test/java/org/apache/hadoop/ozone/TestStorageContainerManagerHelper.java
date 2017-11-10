@@ -55,11 +55,11 @@ import java.util.Set;
  */
 public class TestStorageContainerManagerHelper {
 
-  private final MiniOzoneCluster cluster;
+  private final MiniOzoneClassicCluster cluster;
   private final Configuration conf;
   private final StorageHandler storageHandler;
 
-  public TestStorageContainerManagerHelper(MiniOzoneCluster cluster,
+  public TestStorageContainerManagerHelper(MiniOzoneClassicCluster cluster,
       Configuration conf) throws IOException {
     this.cluster = cluster;
     this.conf = conf;

@@ -50,7 +50,6 @@ public class XceiverClientHandler extends
 
   private final Pipeline pipeline;
   private volatile Channel channel;
-
   private XceiverClientMetrics metrics;
 
   /**
@@ -58,6 +57,7 @@ public class XceiverClientHandler extends
    */
   public XceiverClientHandler(Pipeline pipeline) {
     super(false);
+    Preconditions.checkNotNull(pipeline);
     this.pipeline = pipeline;
     this.metrics = XceiverClientManager.getXceiverClientMetrics();
   }
@@ -139,6 +139,13 @@ public class XceiverClientHandler extends
     if (StringUtils.isEmpty(request.getTraceID())) {
       throw new IllegalArgumentException("Invalid trace ID");
     }
+
+    // Setting the datanode ID in the commands, so that we can distinguish
+    // commands when the cluster simulator is running.
+    if(!request.hasDatanodeID()) {
+      throw new IllegalArgumentException("Invalid Datanode ID");
+    }
+
     metrics.incrPendingContainerOpsMetrics(request.getCmdType());
 
     CompletableFuture<ContainerCommandResponseProto> future

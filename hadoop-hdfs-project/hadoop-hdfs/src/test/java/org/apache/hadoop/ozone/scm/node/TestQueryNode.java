@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.ozone.scm.node;
 
-import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
@@ -50,7 +50,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestQueryNode {
   private static int numOfDatanodes = 5;
-  private MiniOzoneCluster cluster;
+  private MiniOzoneClassicCluster cluster;
 
   private ContainerOperationClient scmClient;
 
@@ -64,7 +64,7 @@ public class TestQueryNode {
     conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
     conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
 
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .build();

@@ -55,7 +55,7 @@ public class TestContainerOperations {
     ozoneConf = new OzoneConfiguration();
     ozoneConf.setClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
         SCMContainerPlacementCapacity.class, ContainerPlacementPolicy.class);
-    cluster = new MiniOzoneCluster.Builder(ozoneConf).numDataNodes(1)
+    cluster = new MiniOzoneClassicCluster.Builder(ozoneConf).numDataNodes(1)
         .storageCapacities(new long[] {datanodeCapacities, datanodeCapacities})
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     StorageContainerLocationProtocolClientSideTranslatorPB client =

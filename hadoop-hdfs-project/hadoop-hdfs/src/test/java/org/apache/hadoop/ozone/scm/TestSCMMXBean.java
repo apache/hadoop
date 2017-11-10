@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.scm;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -61,7 +62,7 @@ public class TestSCMMXBean {
   public static void init() throws IOException, TimeoutException,
       InterruptedException {
     conf = new OzoneConfiguration();
-    cluster = new MiniOzoneCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .build();
