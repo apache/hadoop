@@ -493,7 +493,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   private RMTimelineCollectorManager createRMTimelineCollectorManager() {
-    return new RMTimelineCollectorManager(rmContext);
+    return new RMTimelineCollectorManager(this);
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
@@ -504,7 +504,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
         // we're dealing with the v.2.x publisher
         LOG.info("system metrics publisher with the timeline service V2 is " +
             "configured");
-        publisher = new TimelineServiceV2Publisher(rmContext);
+        publisher = new TimelineServiceV2Publisher(
+            rmContext.getRMTimelineCollectorManager());
       } else {
         // we're dealing with the v.1.x publisher
         LOG.info("system metrics publisher with the timeline service V1 is " +
