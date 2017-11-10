@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
@@ -76,9 +75,10 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   private RMTimelineCollectorManager rmTimelineCollectorManager;
   private boolean publishContainerEvents;
 
-  public TimelineServiceV2Publisher(RMContext rmContext) {
+  public TimelineServiceV2Publisher(
+      RMTimelineCollectorManager timelineCollectorManager) {
     super("TimelineserviceV2Publisher");
-    rmTimelineCollectorManager = rmContext.getRMTimelineCollectorManager();
+    rmTimelineCollectorManager = timelineCollectorManager;
   }
 
   @Override
