@@ -106,6 +106,24 @@ public class TestJournalNode {
         "testJournalNodeSyncerNotStartWhenSyncEnabled")) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
           "qjournal://jn0:9900;jn1:9901");
+    } else if (testName.getMethodName().equals(
+        "testJournalNodeSyncwithFederationTypeConfigWithNameServiceId")) {
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1",
+          "qjournal://journalnode0:9900;journalnode0:9901");
+    } else if (testName.getMethodName().equals(
+        "testJournalNodeSyncwithFederationTypeConfigWithNamenodeId")) {
+      conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + ".ns1", "nn1,nn2");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn1",
+          "qjournal://journalnode0:9900;journalnode1:9901");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn2",
+          "qjournal://journalnode0:9900;journalnode1:9901");
+    } else if (testName.getMethodName().equals(
+        "testJournalNodeSyncwithFederationTypeIncorrectConfigWithNamenodeId")) {
+      conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + ".ns1", "nn1,nn2");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn1",
+          "qjournal://journalnode0:9900;journalnode1:9901");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn2",
+          "qjournal://journalnode0:9902;journalnode1:9903");
     }
     jn = new JournalNode();
     jn.setConf(conf);
@@ -387,7 +405,7 @@ public class TestJournalNode {
 
   @Test
   public void testJournalNodeSyncerNotStartWhenSyncDisabled()
-      throws IOException{
+      throws IOException {
     //JournalSyncer will not be started, as journalsync is not enabled
     conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY, false);
     jn.getOrCreateJournal(journalId);
@@ -408,7 +426,7 @@ public class TestJournalNode {
 
   @Test
   public void testJournalNodeSyncerNotStartWhenSyncEnabledIncorrectURI()
-      throws IOException{
+      throws IOException {
     //JournalSyncer will not be started,
     // as shared edits hostnames are not resolved
     jn.getOrCreateJournal(journalId);
@@ -431,7 +449,7 @@ public class TestJournalNode {
 
   @Test
   public void testJournalNodeSyncerNotStartWhenSyncEnabled()
-      throws IOException{
+      throws IOException {
     //JournalSyncer will not be started,
     // as shared edits hostnames are not resolved
     jn.getOrCreateJournal(journalId);
@@ -452,9 +470,84 @@ public class TestJournalNode {
 
   }
 
-  private void setupStaticHostResolution(int nameServiceIdCount,
+
+  @Test
+  public void testJournalNodeSyncwithFederationTypeConfigWithNameServiceId()
+      throws IOException {
+    //JournalSyncer will not be started, as nameserviceId passed is null,
+    // but configured shared edits dir is appended with nameserviceId
+    setupStaticHostResolution(2, "journalnode");
+    jn.getOrCreateJournal(journalId);
+    Assert.assertEquals(false,
+        jn.getJournalSyncerStatus(journalId));
+    Assert.assertEquals(false,
+        jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
+
+    //Trying by passing nameserviceId and resolve hostnames
+    // now IstriedJournalSyncerStartWithnsId should be set
+    // and also journalnode syncer will also be started
+
+    jn.getOrCreateJournal(journalId, "ns1");
+    Assert.assertEquals(true,
+        jn.getJournalSyncerStatus(journalId));
+    Assert.assertEquals(true,
+        jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
+  }
+
+  @Test
+  public void testJournalNodeSyncwithFederationTypeConfigWithNamenodeId()
+      throws IOException {
+    //JournalSyncer will not be started, as nameserviceId passed is null,
+    // but configured shared edits dir is appended with nameserviceId +
+    // namenodeId
+    setupStaticHostResolution(2, "journalnode");
+    jn.getOrCreateJournal(journalId);
+    Assert.assertEquals(false,
+        jn.getJournalSyncerStatus(journalId));
+    Assert.assertEquals(false,
+        jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
+
+    //Trying by passing nameserviceId and resolve hostnames
+    // now IstriedJournalSyncerStartWithnsId should be set
+    // and also journalnode syncer will also be started
+
+    jn.getOrCreateJournal(journalId, "ns1");
+    Assert.assertEquals(true,
+        jn.getJournalSyncerStatus(journalId));
+    Assert.assertEquals(true,
+        jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
+  }
+
+  @Test
+  public void
+      testJournalNodeSyncwithFederationTypeIncorrectConfigWithNamenodeId()
+      throws IOException {
+    //JournalSyncer will not be started, as nameserviceId passed is null,
+    // but configured shared edits dir is appended with nameserviceId +
+    // namenodeId
+    setupStaticHostResolution(2, "journalnode");
+    jn.getOrCreateJournal(journalId);
+    Assert.assertEquals(false,
+        jn.getJournalSyncerStatus(journalId));
+    Assert.assertEquals(false,
+        jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
+
+    //Trying by passing nameserviceId and resolve hostnames
+    // now IstriedJournalSyncerStartWithnsId should  be set
+    // and  journalnode syncer will not  be started
+    // as for each nnId, different shared Edits dir value is configured
+
+    jn.getOrCreateJournal(journalId, "ns1");
+    Assert.assertEquals(false,
+        jn.getJournalSyncerStatus(journalId));
+    Assert.assertEquals(true,
+        jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
+  }
+
+
+  private void setupStaticHostResolution(int journalNodeCount,
                                          String hostname) {
-    for (int i = 0; i < nameServiceIdCount; i++) {
+    for (int i = 0; i < journalNodeCount; i++) {
       NetUtils.addStaticResolution(hostname + i,
           "localhost");
     }
