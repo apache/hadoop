@@ -195,7 +195,7 @@
     </fileSet>
     <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-ui/target/hadoop-yarn-ui-${project.version}</directory>
-      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/rm</outputDirectory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/ui2</outputDirectory>
       <includes>
         <include>**/*</include>
       </includes>
@@ -207,6 +207,9 @@
         <include>org.apache.hadoop:hadoop-yarn-server-timelineservice</include>
         <include>org.apache.hadoop:hadoop-yarn-server-timelineservice-hbase</include>
       </includes>
+      <excludes>
+        <exclude>org.apache.hadoop:hadoop-yarn-ui</exclude>
+      </excludes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}/timelineservice</outputDirectory>
         <includeDependencies>false</includeDependencies>
