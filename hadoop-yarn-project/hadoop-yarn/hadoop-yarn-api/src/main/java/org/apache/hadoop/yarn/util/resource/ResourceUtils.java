@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.util.resource;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -32,6 +30,8 @@ import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -71,7 +71,7 @@ public class ResourceUtils {
   private static volatile Map<String, ResourceInformation> readOnlyNodeResources;
   private static volatile int numKnownResourceTypes = -1;
 
-  static final Log LOG = LogFactory.getLog(ResourceUtils.class);
+  static final Logger LOG = LoggerFactory.getLogger(ResourceUtils.class);
 
   private ResourceUtils() {
   }
@@ -396,7 +396,7 @@ public class ResourceUtils {
     } catch (FileNotFoundException fe) {
       LOG.info("Unable to find '" + resourceFile + "'.");
     } catch (IOException | YarnException ex) {
-      LOG.fatal("Exception trying to read resource types configuration '"
+      LOG.error("Exception trying to read resource types configuration '"
           + resourceFile + "'.", ex);
       throw new YarnRuntimeException(ex);
     }
