@@ -465,20 +465,13 @@ public class ContainerManagerImpl extends CompositeService implements
 
     Application app = context.getApplications().get(appId);
     if (app != null) {
-      Credentials credentials =
-          YarnServerSecurityUtils.parseCredentials(launchContext);
-      Container container = new ContainerImpl(getConfig(), dispatcher,
-          req.getContainerLaunchContext(),
-          credentials, metrics, token, context, rcs);
-      context.getContainers().put(containerId, container);
-      app.handle(new ApplicationContainerInitEvent(container));
+      recoverActiveContainer(launchContext, token, rcs);
       if (rcs.getRecoveryType() == RecoveredContainerType.KILL) {
         dispatcher.getEventHandler().handle(
             new ContainerKillEvent(containerId, ContainerExitStatus.ABORTED,
                 "Due to invalid StateStore info container was killed"
                     + " during recovery"));
       }
-      recoverActiveContainer(launchContext, token, rcs);
     } else {
       if (rcs.getStatus() != RecoveredContainerStatus.COMPLETED) {
         LOG.warn(containerId + " has no corresponding application!");
