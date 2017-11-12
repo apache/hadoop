@@ -274,7 +274,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     eventInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO,
         app.getQueue());
     eventInfo.put(ApplicationMetricsConstants.APPLICATION_PRIORITY_INFO,
-        app.getApplicationSubmissionContext().getPriority().getPriority());
+        app.getApplicationPriority().getPriority());
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(ApplicationMetricsConstants.UPDATED_EVENT_TYPE);
     tEvent.setTimestamp(currentTimeMillis);
