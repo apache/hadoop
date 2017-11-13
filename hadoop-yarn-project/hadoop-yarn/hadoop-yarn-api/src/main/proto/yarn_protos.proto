@@ -388,7 +388,7 @@ message ResourceRequestProto {
   optional bool relax_locality = 5 [default = true];
   optional string node_label_expression = 6;
   optional ExecutionTypeRequestProto execution_type_request = 7;
-  optional int64 allocation_request_id = 8 [default = 0];
+  optional int64 allocation_request_id = 8 [default = -1];
   optional ProfileCapabilityProto profile = 9;
 }
 
