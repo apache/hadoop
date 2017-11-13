@@ -48,6 +48,8 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
 public class DirectoryStagingCommitter extends StagingCommitter {
   private static final Logger LOG = LoggerFactory.getLogger(
       DirectoryStagingCommitter.class);
+
+  /** Name: {@value}. */
   public static final String NAME = COMMITTER_NAME_DIRECTORY;
 
   public DirectoryStagingCommitter(Path outputPath, TaskAttemptContext context)

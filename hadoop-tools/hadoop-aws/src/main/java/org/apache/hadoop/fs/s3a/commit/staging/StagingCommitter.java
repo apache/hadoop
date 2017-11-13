@@ -89,6 +89,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       StagingCommitter.class);
+
+  /** Name: {@value}. */
   public static final String NAME = "staging";
   private final Path constructorOutputPath;
   private final long uploadPartSize;
@@ -530,6 +532,19 @@ public class StagingCommitter extends AbstractS3ACommitter {
     maybeIgnore(suppressExceptions, "Delete destination paths",
         () -> deleteDestinationPaths(context));
     super.cleanup(context, suppressExceptions);
+  }
+
+  @Override
+  protected void abortPendingUploadsInCleanup(boolean suppressExceptions)
+      throws IOException {
+    if (getConf()
+        .getBoolean(FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS, true)) {
+      super.abortPendingUploadsInCleanup(suppressExceptions);
+    } else {
+      LOG.info("Not cleanup up pending uploads to {} as {} is false ",
+          getOutputPath(),
+          FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS);
+    }
   }
 
   @Override

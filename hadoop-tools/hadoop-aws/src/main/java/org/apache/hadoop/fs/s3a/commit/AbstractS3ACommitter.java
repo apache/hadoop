@@ -519,10 +519,11 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Abort all pending uploads to the destination directory.
-   * @param suppressExceptions should exceptions be supressed
+   * Abort all pending uploads to the destination directory during
+   * job cleanup operations.
+   * @param suppressExceptions should exceptions be suppressed
    */
-  protected void abortPendingUploadsToDestination(
+  protected void abortPendingUploadsInCleanup(
       boolean suppressExceptions) throws IOException {
     Path dest = getOutputPath();
     try (DurationInfo d =
@@ -617,7 +618,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       boolean suppressExceptions) throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
         "Cleanup job %s", jobIdString(context))) {
-      abortPendingUploadsToDestination(suppressExceptions);
+      abortPendingUploadsInCleanup(suppressExceptions);
     } finally {
       cleanupStagingDirs();
     }

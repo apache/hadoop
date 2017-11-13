@@ -41,7 +41,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
@@ -813,6 +816,30 @@ public final class S3ATestUtils {
   public static void skipDuringFaultInjection(S3AFileSystem fs) {
     Assume.assumeFalse("Skipping as filesystem has fault injection",
         isFaultInjecting(fs));
+  }
+
+  /**
+   * Date format used for mapping upload initiation time to human string.
+   */
+  private static final DateFormat df = new SimpleDateFormat(
+      "yyyy-MM-dd HH:mm:ss");
+
+  /**
+   * Get a list of all pending uploads under a prefix, one which can be printed.
+   * @param prefix prefix to look under
+   * @return possibly empty list
+   * @throws IOException IO failure.
+   */
+  public static List<String> listMultipartUploads(S3AFileSystem fs, String prefix)
+      throws IOException {
+
+    return fs
+        .listMultipartUploads(prefix).stream()
+        .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
+            upload.getKey(),
+            upload.getUploadId(),
+            df.format(upload.getInitiated())))
+        .collect(Collectors.toList());
   }
 
 }

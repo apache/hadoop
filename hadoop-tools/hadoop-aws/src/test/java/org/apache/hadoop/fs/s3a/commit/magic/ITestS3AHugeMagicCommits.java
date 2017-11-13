@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +33,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 
 
 /**
@@ -131,15 +134,29 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     assertEquals("Non empty marker file " + status,
         0, status.getLen());
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    CommitOperations actions = new CommitOperations(fs);
+    CommitOperations operations = new CommitOperations(fs);
+    Path destDir = hugefile.getParent();
+    assertPathExists("Magic dir", new Path(destDir, CommitConstants.MAGIC));
+    String destDirKey = fs.pathToKey(destDir);
+    List<String> uploads = listMultipartUploads(fs, destDirKey);
+
+    assertEquals("Pending uploads: "
+        + uploads.stream().collect(Collectors.joining("\n")), 1, uploads.size());
     assertNotNull("jobDir", jobDir);
     Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
-        results = actions.loadSinglePendingCommits(jobDir, false);
+        results = operations.loadSinglePendingCommits(jobDir, false);
     for (SinglePendingCommit singlePendingCommit :
         results.getKey().getCommits()) {
-      actions.commitOrFail(singlePendingCommit);
+      operations.commitOrFail(singlePendingCommit);
     }
     timer.end("time to commit %s", pendingDataFile);
+    // upload is no longer pending
+    uploads = listMultipartUploads(fs, destDirKey);
+    assertEquals("Pending uploads"
+            + uploads.stream().collect(Collectors.joining("\n")),
+        0, operations.listPendingUploadsUnderPath(destDir).size());
+    // at this point, the huge file exists, so the normal assertions
+    // on that file must be valid. Verify.
     super.test_030_postCreationAssertions();
   }
 

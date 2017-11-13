@@ -58,6 +58,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   private static final Logger LOG =
       LoggerFactory.getLogger(MagicS3GuardCommitter.class);
 
+  /** Name: {@value}. */
   public static final String NAME = CommitConstants.COMMITTER_NAME_MAGIC;
 
   /**

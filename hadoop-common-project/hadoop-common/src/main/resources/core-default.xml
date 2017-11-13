@@ -1123,7 +1123,8 @@
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge.
+  <description>Minimum age in seconds of multipart uploads to purge
+    on startup if "fs.s3a.multipart.purge" is true
   </description>
 </property>
 
@@ -1382,7 +1383,8 @@
   <name>fs.s3a.committer.name</name>
   <value>file</value>
   <description>
-    Committer to create for S3A output, one of: file, directory, partitioned, magic.
+    Committer to create for output to S3A, one of:
+    "file", "directory", "partitioned", "magic".
   </description>
 </property>
 
@@ -1390,7 +1392,9 @@
   <name>fs.s3a.committer.magic.enabled</name>
   <value>false</value>
   <description>
-    Enable support in the filesystem for the S3 "Magic" committter.
+    Enable support in the filesystem for the S3 "Magic" committer.
+    When working with AWS S3, S3Guard must be enabled for the destination
+    bucket, as consistent metadata listings are required.
   </description>
 </property>
 
@@ -1432,8 +1436,26 @@
   <name>fs.s3a.committer.staging.conflict-mode</name>
   <value>fail</value>
   <description>
-    Staging committer conflict resolution policy: {@value}.
-    Supported: fail, append, replace.
+    Staging committer conflict resolution policy.
+    Supported: "fail", "append", "replace".
+  </description>
+</property>
+
+<property>
+  <name>s.s3a.committer.staging.abort.pending.uploads</name>
+  <value>true</value>
+  <description>
+    Should the staging committers abort all pending uploads to the destination
+    directory?
+
+    Changing this if more than one partitioned committer is
+    writing to the same destination tree simultaneously; otherwise
+    the first job to complete will cancel all outstanding uploads from the
+    others. However, it may lead to leaked outstanding uploads from failed
+    tasks. If disabled, configure the bucket lifecycle to remove uploads
+    after a time period, and/or set up a workflow to explicitly delete
+    entries. Otherwise there is a risk that uncommitted uploads may run up
+    bills.
   </description>
 </property>
 

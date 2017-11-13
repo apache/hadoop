@@ -59,6 +59,8 @@ public class PartitionedStagingCommitter extends StagingCommitter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       PartitionedStagingCommitter.class);
+
+  /** Name: {@value}. */
   public static final String NAME = COMMITTER_NAME_PARTITIONED;
 
   public PartitionedStagingCommitter(Path outputPath,

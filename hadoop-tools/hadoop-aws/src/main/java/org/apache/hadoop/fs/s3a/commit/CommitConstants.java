@@ -220,4 +220,21 @@ public final class CommitConstants {
   public static final String FS_S3A_COMMITTER_STAGING_TMP_PATH =
       "fs.s3a.committer.staging.tmp.path";
 
+
+  /**
+   * Should the staging committers abort all pending uploads to the destination
+   * directory? Default: true.
+   *
+   * Changing this is if more than one partitioned committer is
+   * writing to the same destination tree simultaneously; otherwise
+   * the first job to complete will cancel all outstanding uploads from the
+   * others. However, it may lead to leaked outstanding uploads from failed
+   * tasks. If disabled, configure the bucket lifecycle to remove uploads
+   * after a time period, and/or set up a workflow to explicitly delete
+   * entries. Otherwise there is a risk that uncommitted uploads may run up
+   * bills.
+   */
+  public static final String FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS =
+      "fs.s3a.committer.staging.abort.pending.uploads";
+
 }

@@ -20,13 +20,10 @@ package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.MultipartUpload;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +47,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.enableInconsistentS3Client;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
 /**
@@ -278,7 +275,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @throws IOException IO failure
    */
   protected void assertNoMultipartUploadsPending(Path path) throws IOException {
-    List<String> uploads = listMultipartUploads(pathToPrefix(path));
+    List<String> uploads = listMultipartUploads(getFileSystem(), pathToPrefix(path));
     if (!uploads.isEmpty()) {
       String result = uploads.stream().collect(Collectors.joining("\n"));
       fail("Multipart uploads in progress under " + path + " \n" + result);
@@ -302,12 +299,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @throws IOException IO failure
    */
   protected int countMultipartUploads(String prefix) throws IOException {
-    List<String> uploads = listMultipartUploads(prefix);
-    for (MultipartUpload upload : getFileSystem().listMultipartUploads(
-        prefix)) {
-      log().info("Upload {} to {}", upload.getUploadId(), upload.getKey());
-    }
-    return uploads.size();
+    return listMultipartUploads(getFileSystem(), prefix).size();
   }
 
   /**
@@ -318,30 +310,6 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   private String pathToPrefix(Path path) {
     return path == null ? "" :
         getFileSystem().pathToKey(path);
-  }
-
-  /**
-   * Date format used for mapping upload initiation time to human string.
-   */
-  private static final DateFormat df = new SimpleDateFormat(
-      "yyyy-MM-dd HH:mm:ss");
-
-  /**
-   * Get a list of all pending uploads under a prefix, one which can be printed.
-   * @param prefix prefix to look under
-   * @return possibly empty list
-   * @throws IOException IO failure.
-   */
-  protected List<String> listMultipartUploads(String prefix)
-      throws IOException {
-
-    return getFileSystem()
-        .listMultipartUploads(prefix).stream()
-        .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
-            upload.getKey(),
-            upload.getUploadId(),
-            df.format(upload.getInitiated())))
-        .collect(Collectors.toList());
   }
 
   /**
