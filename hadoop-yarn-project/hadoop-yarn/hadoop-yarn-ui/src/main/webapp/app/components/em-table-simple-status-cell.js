@@ -17,18 +17,15 @@
  */
 
 import Ember from 'ember';
-import TableDefinition from 'em-table/utils/table-definition';
-import AppTableController from '../app-table-columns';
 
-export default AppTableController.extend({
-  queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
-  tableDefinition: TableDefinition.create({
-    enableFaceting: true,
-    rowCount: 25
+export default Ember.Component.extend({
+  content: null,
+
+  classNames: ["em-table-simple-status-cell"],
+
+  statusName: Ember.computed("content", function () {
+    var status = this.get("content");
+
+    return status.toLowerCase().capitalize();
   }),
-  searchText: Ember.computed.alias('tableDefinition.searchText'),
-  sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),
-  sortOrder: Ember.computed.alias('tableDefinition.sortOrder'),
-  pageNum: Ember.computed.alias('tableDefinition.pageNum'),
-  rowCount: Ember.computed.alias('tableDefinition.rowCount')
 });
