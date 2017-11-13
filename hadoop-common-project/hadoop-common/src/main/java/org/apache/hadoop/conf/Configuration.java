@@ -2936,7 +2936,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             // xi:include are treated as inline and retain current source
             URL include = getResource(confInclude);
             if (include != null) {
-              Resource classpathResource = new Resource(include, name);
+              Resource classpathResource = new Resource(include, name,
+                  wrapper.isParserRestricted());
               loadResource(properties, classpathResource, quiet);
             } else {
               URL url;
@@ -2957,7 +2958,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                 }
                 url = href.toURI().toURL();
               }
-              Resource uriResource = new Resource(url, name);
+              Resource uriResource = new Resource(url, name,
+                  wrapper.isParserRestricted());
               loadResource(properties, uriResource, quiet);
             }
             break;
