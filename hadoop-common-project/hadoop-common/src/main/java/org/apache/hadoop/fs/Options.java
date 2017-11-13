@@ -338,8 +338,7 @@ public final class Options {
     }
 
     /**
-     * Utility function for mapping
-     * {@link FileSystem#getPathHandle(FileStatus, HandleOpt[])} to a
+     * Utility function for mapping {@link FileSystem#getPathHandle} to a
      * fixed set of handle options.
      * @param fs Target filesystem
      * @param opt Options to bind in partially evaluated function
