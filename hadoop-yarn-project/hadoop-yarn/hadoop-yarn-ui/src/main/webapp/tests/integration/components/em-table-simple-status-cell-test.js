@@ -16,19 +16,28 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import TableDefinition from 'em-table/utils/table-definition';
-import AppTableController from '../app-table-columns';
+import { moduleForComponent, test } from 'ember-qunit';
+import hbs from 'htmlbars-inline-precompile';
 
-export default AppTableController.extend({
-  queryParams: ['searchText', 'sortColumnId', 'sortOrder', 'pageNum', 'rowCount'],
-  tableDefinition: TableDefinition.create({
-    enableFaceting: true,
-    rowCount: 25
-  }),
-  searchText: Ember.computed.alias('tableDefinition.searchText'),
-  sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),
-  sortOrder: Ember.computed.alias('tableDefinition.sortOrder'),
-  pageNum: Ember.computed.alias('tableDefinition.pageNum'),
-  rowCount: Ember.computed.alias('tableDefinition.rowCount')
+moduleForComponent('em-table-simple-status-cell', 'Integration | Component | em table simple status cell', {
+  integration: true
+});
+
+test('it renders', function(assert) {
+
+  // Set any properties with this.set('myProperty', 'value');
+  // Handle any actions with this.on('myAction', function(val) { ... });" + EOL + EOL +
+
+  this.render(hbs`{{em-table-simple-status-cell}}`);
+
+  assert.equal(this.$().text().trim(), '');
+
+  // Template block usage:" + EOL +
+  this.render(hbs`
+    {{#em-table-simple-status-cell}}
+      template block text
+    {{/em-table-simple-status-cell}}
+  `);
+
+  assert.equal(this.$().text().trim(), 'template block text');
 });
