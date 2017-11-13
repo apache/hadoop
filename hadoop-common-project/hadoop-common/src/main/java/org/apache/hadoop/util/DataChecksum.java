@@ -29,6 +29,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+
 /**
  * This class provides interface and utilities for processing checksums for
  * DFS data transfers.
@@ -70,12 +74,35 @@ public class DataChecksum implements Checksum {
     }
   }
 
+  private static final MethodHandle NEW_CRC32C_MH;
+  static {
+    MethodHandle newCRC32C = null;
+    if (Shell.isJava9OrAbove()) {
+      try {
+        newCRC32C = MethodHandles.publicLookup().findConstructor(Class.forName("java.util.zip.CRC32C"), MethodType.methodType(void.class));
+      } catch (Exception e) {
+        // Should not reach here.
+        throw new RuntimeException(e);
+      }
+    }
+    NEW_CRC32C_MH = newCRC32C;
+  }
+
   /**
    * Create a Crc32 Checksum object. The implementation of the Crc32 algorithm
    * is chosen depending on the platform.
    */
   public static Checksum newCrc32() {
     return new CRC32();
+  }
+
+  public static Checksum newCrc32C() {
+    try {
+      return Shell.isJava9OrAbove() ? (Checksum) NEW_CRC32C_MH.invoke() : new PureJavaCrc32C();
+    } catch (Throwable e) {
+      // Should not reach here.
+      throw new RuntimeException(e);
+    }
   }
 
   public static DataChecksum newDataChecksum(Type type, int bytesPerChecksum ) {
@@ -89,7 +116,7 @@ public class DataChecksum implements Checksum {
     case CRC32 :
       return new DataChecksum(type, newCrc32(), bytesPerChecksum );
     case CRC32C:
-      return new DataChecksum(type, new PureJavaCrc32C(), bytesPerChecksum);
+      return new DataChecksum(type, newCrc32C(), bytesPerChecksum);
     default:
       return null;  
     }

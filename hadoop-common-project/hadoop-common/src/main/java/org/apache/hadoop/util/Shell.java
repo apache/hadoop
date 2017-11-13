@@ -89,6 +89,21 @@ public abstract class Shell {
     return true;
   }
 
+  private static final boolean IS_JAVA9_OR_ABOVE;
+  static {
+    int major = 0;
+    try {
+      // 1.8.0 -> 1, 10-ea+30 -> 10, 18.03 -> 18, 11 -> 11 etc.
+      major = Integer.parseInt(System.getProperty("java.version").split("\\.")[0].split("-")[0]);
+    } catch (NumberFormatException ignored) {
+    }
+    IS_JAVA9_OR_ABOVE = major >= 9;
+  }
+
+  public static boolean isJava9OrAbove() {
+    return IS_JAVA9_OR_ABOVE;
+  }
+
   /**
    * Maximum command line length in Windows
    * KB830473 documents this as 8191
