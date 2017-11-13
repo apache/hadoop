@@ -62,6 +62,10 @@ public class ResourceUtils {
   private static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
       Pattern.compile("^([0-9]+) ?([a-zA-Z]*)$");
 
+  private static final Pattern RESOURCE_NAME_PATTERN = Pattern.compile(
+      "^(((\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?\\.)*"
+          + "\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?)/)?\\p{Alpha}([\\w.-]*)$");
+
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
       new ConcurrentHashMap<String, Integer>();
@@ -209,6 +213,23 @@ public class ResourceUtils {
   }
 
   @VisibleForTesting
+  static void validateNameOfResourceNameAndThrowException(String resourceName)
+      throws YarnRuntimeException {
+    Matcher matcher = RESOURCE_NAME_PATTERN.matcher(resourceName);
+    if (!matcher.matches()) {
+      String message = String.format(
+          "'%s' is not a valid resource name. A valid resource name must"
+              + " begin with a letter and contain only letters, numbers, "
+              + "and any of: '.', '_', or '-'. A valid resource name may also"
+              + " be optionally preceded by a name space followed by a slash."
+              + " A valid name space consists of period-separated groups of"
+              + " letters, numbers, and dashes.",
+          resourceName);
+      throw new YarnRuntimeException(message);
+    }
+  }
+
+  @VisibleForTesting
   static void initializeResourcesMap(Configuration conf) {
 
     Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
@@ -244,6 +265,11 @@ public class ResourceUtils {
             .newInstance(resourceName, resourceUnits, 0L, resourceType,
                 minimumAllocation, maximumAllocation));
       }
+    }
+
+    // Validate names of resource information map.
+    for (String name : resourceInformationMap.keySet()) {
+      validateNameOfResourceNameAndThrowException(name);
     }
 
     checkMandatoryResources(resourceInformationMap);
