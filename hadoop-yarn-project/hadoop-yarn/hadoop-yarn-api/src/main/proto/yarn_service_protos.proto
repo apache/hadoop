@@ -38,6 +38,7 @@ message RegisterApplicationMasterRequestProto {
   optional string host = 1;
   optional int32 rpc_port = 2;
   optional string tracking_url = 3;
+  repeated PlacementConstraintMapEntryProto placement_constraints = 4;
 }
 
 message RegisterApplicationMasterResponseProto {

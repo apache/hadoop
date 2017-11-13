@@ -54,6 +54,26 @@ public class PlacementConstraint {
     return constraintExpr;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof PlacementConstraint)) {
+      return false;
+    }
+
+    PlacementConstraint that = (PlacementConstraint) o;
+
+    return getConstraintExpr() != null ? getConstraintExpr().equals(that
+        .getConstraintExpr()) : that.getConstraintExpr() == null;
+  }
+
+  @Override
+  public int hashCode() {
+    return getConstraintExpr() != null ? getConstraintExpr().hashCode() : 0;
+  }
+
   /**
    * Interface used to enable the elements of the constraint tree to be visited.
    */
@@ -171,6 +191,38 @@ public class PlacementConstraint {
      */
     public Set<TargetExpression> getTargetExpressions() {
       return targetExpressions;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof SingleConstraint)) {
+        return false;
+      }
+
+      SingleConstraint that = (SingleConstraint) o;
+
+      if (getMinCardinality() != that.getMinCardinality()) {
+        return false;
+      }
+      if (getMaxCardinality() != that.getMaxCardinality()) {
+        return false;
+      }
+      if (!getScope().equals(that.getScope())) {
+        return false;
+      }
+      return getTargetExpressions().equals(that.getTargetExpressions());
+    }
+
+    @Override
+    public int hashCode() {
+      int result = getScope().hashCode();
+      result = 31 * result + getMinCardinality();
+      result = 31 * result + getMaxCardinality();
+      result = 31 * result + getTargetExpressions().hashCode();
+      return result;
     }
 
     @Override
@@ -332,6 +384,34 @@ public class PlacementConstraint {
     }
 
     @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof TargetConstraint)) {
+        return false;
+      }
+
+      TargetConstraint that = (TargetConstraint) o;
+
+      if (getOp() != that.getOp()) {
+        return false;
+      }
+      if (!getScope().equals(that.getScope())) {
+        return false;
+      }
+      return getTargetExpressions().equals(that.getTargetExpressions());
+    }
+
+    @Override
+    public int hashCode() {
+      int result = getOp().hashCode();
+      result = 31 * result + getScope().hashCode();
+      result = 31 * result + getTargetExpressions().hashCode();
+      return result;
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
     }
@@ -388,6 +468,34 @@ public class PlacementConstraint {
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
     }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      CardinalityConstraint that = (CardinalityConstraint) o;
+
+      if (minCardinality != that.minCardinality) {
+        return false;
+      }
+      if (maxCardinality != that.maxCardinality) {
+        return false;
+      }
+      return scope != null ? scope.equals(that.scope) : that.scope == null;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = scope != null ? scope.hashCode() : 0;
+      result = 31 * result + minCardinality;
+      result = 31 * result + maxCardinality;
+      return result;
+    }
   }
 
   /**
@@ -406,6 +514,25 @@ public class PlacementConstraint {
      * @return the children of the composite constraint
      */
     public abstract List<R> getChildren();
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      return getChildren() != null ? getChildren().equals(
+          ((CompositeConstraint)o).getChildren()) :
+          ((CompositeConstraint)o).getChildren() == null;
+    }
+
+    @Override
+    public int hashCode() {
+      return getChildren() != null ? getChildren().hashCode() : 0;
+    }
   }
 
   /**
@@ -562,6 +689,35 @@ public class PlacementConstraint {
     @Override
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      TimedPlacementConstraint that = (TimedPlacementConstraint) o;
+
+      if (schedulingDelay != that.schedulingDelay) {
+        return false;
+      }
+      if (constraint != null ? !constraint.equals(that.constraint) :
+          that.constraint != null) {
+        return false;
+      }
+      return delayUnit == that.delayUnit;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = constraint != null ? constraint.hashCode() : 0;
+      result = 31 * result + (int) (schedulingDelay ^ (schedulingDelay >>> 32));
+      result = 31 * result + (delayUnit != null ? delayUnit.hashCode() : 0);
+      return result;
     }
   }
 }

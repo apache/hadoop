@@ -649,6 +649,12 @@ message CompositePlacementConstraintProto {
   repeated TimedPlacementConstraintProto timedChildConstraints = 3;
 }
 
+// This associates a set of allocation tags to a Placement Constraint.
+message PlacementConstraintMapEntryProto {
+  repeated string allocation_tags = 1;
+  optional PlacementConstraintProto placement_constraint = 2;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From reservation_protocol /////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
