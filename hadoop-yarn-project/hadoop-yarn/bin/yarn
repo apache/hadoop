@@ -149,6 +149,14 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
         HADOOP_HEAPSIZE_MAX="${YARN_RESOURCEMANAGER_HEAPSIZE}"
       fi
+      local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+      hadoop_translate_cygwin_path sld
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     rmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
