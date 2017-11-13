@@ -79,6 +79,20 @@ public class DataChecksum implements Checksum {
     }
   }
 
+  private static final MethodHandle NEW_CRC32C_MH;
+  static {
+    MethodHandle newCRC32C = null;
+    if (Shell.isJava9OrAbove()) {
+      try {
+        newCRC32C = MethodHandles.publicLookup().findConstructor(Class.forName("java.util.zip.CRC32C"), MethodType.methodType(void.class));
+      } catch (Exception e) {
+        // Should not reach here.
+        throw new RuntimeException(e);
+      }
+    }
+    NEW_CRC32C_MH = newCRC32C;
+  }
+
   /**
    * Create a Crc32 Checksum object. The implementation of the Crc32 algorithm
    * is chosen depending on the platform.
