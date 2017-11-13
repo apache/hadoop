@@ -39,10 +39,12 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.test.MoreAsserts.*;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -78,14 +80,21 @@ public class TestMetricsSystemImpl {
 
   public static class TestSink implements MetricsSink {
 
+    private List<Iterable<AbstractMetric>> metricValues = new ArrayList<>();
+
     @Override public void putMetrics(MetricsRecord record) {
       LOG.debug(record.toString());
+      metricValues.add(record.metrics());
     }
 
     @Override public void flush() {}
 
     @Override public void init(SubsetConfiguration conf) {
       LOG.debug(MetricsConfig.toString(conf));
+    }
+
+    List<Iterable<AbstractMetric>> getMetricValues() {
+      return metricValues;
     }
   }
 
@@ -557,6 +566,46 @@ public class TestMetricsSystemImpl {
     assertEquals(MetricsConfig.PERIOD_DEFAULT * 1000 + 1,
         sa.getJmxCacheTTL());
     ms.shutdown();
+  }
+
+  @Test
+  public void testRegisterSinksMultiplePeriods() throws Exception {
+    new ConfigBuilder().add("test.sink.test1.period", 100000)
+        .add("test.sink.test1.class", TestSink.class.getName())
+        .add("test.sink.test2.period", 200000)
+        .add("test.sink.test2.class", TestSink.class.getName())
+        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
+    MetricsSystemImpl ms = new MetricsSystemImpl();
+    try {
+      ms.init("test");
+      TestSink sink1 = (TestSink) ms.getSinkAdapter("test1").sink();
+      TestSink sink2 = (TestSink) ms.getSinkAdapter("test2").sink();
+      assertEquals(0, sink1.getMetricValues().size());
+      assertEquals(0, sink2.getMetricValues().size());
+      ms.onTimerEvent();
+      // Give some time for the publish event to go through
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return sink1.getMetricValues().size() > 0;
+        }
+      }, 10, 10000);
+      assertEquals(1, sink1.getMetricValues().size());
+      assertEquals(0, sink2.getMetricValues().size());
+      ms.onTimerEvent();
+      // Give some time for the publish event to go through
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return sink1.getMetricValues().size() > 1 &&
+              sink2.getMetricValues().size() > 0;
+        }
+      }, 10, 10000);
+      assertEquals(2, sink1.getMetricValues().size());
+      assertEquals(1, sink2.getMetricValues().size());
+    } finally {
+      ms.shutdown();
+    }
   }
 
   @Metrics(context="test")
