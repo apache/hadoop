@@ -259,6 +259,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceRaw
   public void initialize(FileSystem fs) throws IOException {
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
         "DynamoDBMetadataStore only supports S3A filesystem.");
@@ -315,6 +316,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @throws IllegalArgumentException if the configuration is incomplete
    */
   @Override
+  @Retries.OnceRaw
   public void initialize(Configuration config) throws IOException {
     conf = config;
     // use the bucket as the DynamoDB table name if not specified in config
@@ -348,11 +350,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.RetryTranslated
   public void delete(Path path) throws IOException {
     innerDelete(path, true);
   }
 
   @Override
+  @Retries.RetryTranslated
   public void forgetMetadata(Path path) throws IOException {
     innerDelete(path, false);
   }
@@ -365,6 +369,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param tombstone flag to create a tombstone marker
    * @throws IOException I/O error.
    */
+  @Retries.RetryTranslated
   private void innerDelete(final Path path, boolean tombstone)
       throws IOException {
     checkPath(path);
@@ -376,19 +381,23 @@ public class DynamoDBMetadataStore implements MetadataStore {
       LOG.debug("Skip deleting root directory as it does not exist in table");
       return;
     }
+    // the policy on whether repeating delete operations is based
+    // on that of S3A itself
+    boolean idempotent = S3AFileSystem.DELETE_CONSIDERED_IDEMPOTENT;
     if (tombstone) {
       Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
           PathMetadata.tombstone(path));
-      invoker.retry("put tombstone", path.toString(), true,
+      invoker.retry("Put tombstone", path.toString(), idempotent,
           () -> table.putItem(item));
     } else {
       PrimaryKey key = pathToKey(path);
-      invoker.retry("delete key", path.toString(), true,
+      invoker.retry("Delete key", path.toString(), idempotent,
           () -> table.deleteItem(key));
     }
   }
 
   @Override
+  @Retries.RetryTranslated
   public void deleteSubtree(Path path) throws IOException {
     checkPath(path);
     LOG.debug("Deleting subtree from table {} in region {}: {}",
@@ -406,6 +415,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     }
   }
 
+  @Retries.OnceRaw
   private Item getConsistentItem(PrimaryKey key) {
     final GetItemSpec spec = new GetItemSpec()
         .withPrimaryKey(key)
@@ -414,11 +424,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceTranslated
   public PathMetadata get(Path path) throws IOException {
     return get(path, false);
   }
 
   @Override
+  @Retries.OnceTranslated
   public PathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
       throws IOException {
     checkPath(path);
@@ -436,6 +448,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @throws IOException IO problem
    * @throws AmazonClientException dynamo DB level problem
    */
+  @Retries.OnceRaw
   private PathMetadata innerGet(Path path, boolean wantEmptyDirectoryFlag)
       throws IOException {
     final PathMetadata meta;
@@ -515,7 +528,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
   /**
    * build the list of all parent entries.
-   * @param pathsToCreate
+   * @param pathsToCreate paths to create
    * @return the full ancestry paths
    */
   Collection<PathMetadata> completeAncestry(
@@ -543,6 +556,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceTranslated
   public void move(Collection<Path> pathsToDelete,
       Collection<PathMetadata> pathsToCreate) throws IOException {
     if (pathsToDelete == null && pathsToCreate == null) {
@@ -578,11 +592,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /**
    * Helper method to issue a batch write request to DynamoDB.
    *
-   * Callers of this method should catch the {@link AmazonClientException} and
-   * translate it for better error report and easier debugging.
+   * The retry logic here is limited to repeating the write operations
+   * until all items have been written; there is no other attempt
+   * at recovery/retry. Throttling is handled internally.
    * @param keysToDelete primary keys to be deleted; can be null
    * @param itemsToPut new items to be put; can be null
    */
+  @Retries.OnceRaw("Outstanding batch items are updated with backoff")
   private void processBatchWriteRequest(PrimaryKey[] keysToDelete,
       Item[] itemsToPut) throws IOException {
     final int totalToDelete = (keysToDelete == null ? 0 : keysToDelete.length);
@@ -644,12 +660,17 @@ public class DynamoDBMetadataStore implements MetadataStore {
         LOG.debug("Sleeping {} msec before next retry", action.delayMillis);
         Thread.sleep(action.delayMillis);
       }
+    } catch (InterruptedException e) {
+      throw (IOException)new InterruptedIOException(e.toString()).initCause(e);
+    } catch (IOException e) {
+      throw e;
     } catch (Exception e) {
       throw new IOException("Unexpected exception", e);
     }
   }
 
   @Override
+  @Retries.OnceRaw
   public void put(PathMetadata meta) throws IOException {
     // For a deeply nested path, this method will automatically create the full
     // ancestry and save respective item in DynamoDB table.
@@ -665,6 +686,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceRaw
   public void put(Collection<PathMetadata> metas) throws IOException {
     LOG.debug("Saving batch to table {} in region {}", tableName, region);
 
@@ -674,6 +696,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /**
    * Helper method to get full path of ancestors that are nonexistent in table.
    */
+  @Retries.OnceRaw
   private Collection<PathMetadata> fullPathsToPut(PathMetadata meta)
       throws IOException {
     checkPathMetadata(meta);
@@ -716,7 +739,16 @@ public class DynamoDBMetadataStore implements MetadataStore {
         null, owner, owner, f);
   }
 
+  /**
+   * {@inheritDoc}.
+   * There is retry around building the list of paths to update, but
+   * the call to {@link #processBatchWriteRequest(PrimaryKey[], Item[])}
+   * is only tried once.
+   * @param meta Directory listing metadata.
+   * @throws IOException
+   */
   @Override
+  @Retries.OnceTranslated("retry(listFullPaths); once(batchWrite)")
   public void put(DirListingMetadata meta) throws IOException {
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
 
@@ -750,6 +782,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceTranslated
   public void destroy() throws IOException {
     if (table == null) {
       LOG.info("In destroy(): no table to delete");
@@ -776,6 +809,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     }
   }
 
+  @Retries.OnceRaw
   private ItemCollection<ScanOutcome> expiredFiles(long modTime) {
     String filterExpression = "mod_time < :mod_time";
     String projectionExpression = "parent,child";
@@ -784,6 +818,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceRaw("once(batchWrite)")
   public void prune(long modTime) throws IOException {
     int itemCount = 0;
     try {
@@ -838,6 +873,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * or table is being deleted, or any other I/O exception occurred.
    */
   @VisibleForTesting
+  @Retries.OnceRaw
   void initTable() throws IOException {
     table = dynamoDB.getTable(tableName);
     try {
@@ -897,8 +933,11 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * Get the version mark item in the existing DynamoDB table.
    *
    * As the version marker item may be created by another concurrent thread or
-   * process, we retry a limited times before we fail to get it.
+   * process, we sleep and retry a limited times before we fail to get it.
+   * This does not include handling any failure other than "item not found",
+   * so this method is tagged as "OnceRaw"
    */
+  @Retries.OnceRaw
   private Item getVersionMarkerItem() throws IOException {
     final PrimaryKey versionMarkerKey =
         createVersionMarkerPrimaryKey(VERSION_MARKER);
@@ -956,6 +995,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @throws InterruptedIOException if the wait was interrupted
    * @throws IllegalArgumentException if an exception was raised in the waiter
    */
+  @Retries.OnceRaw
   private void waitForTableActive(Table t) throws InterruptedIOException {
     try {
       t.waitForActive();
@@ -977,6 +1017,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @throws IOException on any failure.
    * @throws InterruptedIOException if the wait was interrupted
    */
+  @Retries.OnceRaw
   private void createTable(ProvisionedThroughput capacity) throws IOException {
     try {
       LOG.info("Creating non-existent DynamoDB table {} in region {}",
@@ -1004,6 +1045,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param item item to put
    * @return the outcome.
    */
+  @Retries.OnceRaw
   PutItemOutcome putItem(Item item) {
     LOG.debug("Putting item {}", item);
     return table.putItem(item);
@@ -1017,12 +1059,13 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * @param writeCapacity write units
    * @throws IOException on a failure
    */
+  @Retries.RetryTranslated
   void provisionTable(Long readCapacity, Long writeCapacity)
       throws IOException {
     final ProvisionedThroughput toProvision = new ProvisionedThroughput()
         .withReadCapacityUnits(readCapacity)
         .withWriteCapacityUnits(writeCapacity);
-    invoker.retry("provisionTable", tableName, true,
+    invoker.retry("ProvisionTable", tableName, true,
         () -> {
           final ProvisionedThroughputDescription p =
               table.updateTable(toProvision).getProvisionedThroughput();
@@ -1075,6 +1118,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceRaw
   public Map<String, String> getDiagnostics() throws IOException {
     Map<String, String> map = new TreeMap<>();
     if (table != null) {
@@ -1102,6 +1146,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
     return map;
   }
 
+  @Retries.OnceRaw
   private TableDescription getTableDescription(boolean forceUpdate) {
     TableDescription desc = table.getDescription();
     if (desc == null || forceUpdate) {
@@ -1111,6 +1156,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   }
 
   @Override
+  @Retries.OnceRaw
   public void updateParameters(Map<String, String> parameters)
       throws IOException {
     Preconditions.checkNotNull(table, "Not initialized");

@@ -151,14 +151,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * Here, on the basis that isn't a filesystem with consistency guarantees,
    * retryable results in files being deleted.
   */
-  private static final boolean DELETE_CONSIDERED_IDEMPOTENT = true;
+  public static final boolean DELETE_CONSIDERED_IDEMPOTENT = true;
   private URI uri;
   private Path workingDir;
   private String username;
   private AmazonS3 s3;
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
-  // APIs on an uninited filesystem.
+  // APIs on an uninitialized filesystem.
   private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
       Invoker.LOG_EVENT);
   private final Retried onRetry = this::operationRetried;
@@ -421,7 +421,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         new Date(new Date().getTime() - seconds * 1000);
     LOG.debug("Purging outstanding multipart uploads older than {}",
         purgeBefore);
-    invoker.retry("purging multipart uploads", bucket, true,
+    invoker.retry("Purging multipart uploads", bucket, true,
         () -> transfers.abortMultipartUploads(bucket, purgeBefore));
   }
 

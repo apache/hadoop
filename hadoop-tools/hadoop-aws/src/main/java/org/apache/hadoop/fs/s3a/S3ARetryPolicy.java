@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.util.HashMap;
@@ -161,6 +162,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AWSClientIOException.class, retryIdempotentCalls);
     policyMap.put(AWSServiceIOException.class, retryIdempotentCalls);
     policyMap.put(AWSS3IOException.class, retryIdempotentCalls);
+    policyMap.put(SocketTimeoutException.class, retryIdempotentCalls);
 
     // Dynamo DB exceptions
     // asking for more than you should get. It's a retry but should be logged
