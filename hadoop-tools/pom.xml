@@ -48,6 +48,7 @@
     <module>hadoop-aws</module>
     <module>hadoop-azure</module>
     <module>hadoop-azure-datalake</module>
+    <module>hadoop-aliyun</module>
   </modules>
 
   <build>
