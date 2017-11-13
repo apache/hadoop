@@ -1452,4 +1452,63 @@ public class TestWebHDFS {
       }
     }
   }
+
+  /**
+   * Tests that {@link WebHdfsFileSystem.AbstractRunner} propagates original
+   * exception's stacktrace and cause during runWithRetry attempts.
+   * @throws Exception
+   */
+  @Test
+  public void testExceptionPropogationInAbstractRunner() throws Exception{
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path dir = new Path("/testExceptionPropogationInAbstractRunner");
+
+    conf.setBoolean(HdfsClientConfigKeys.Retry.POLICY_ENABLED_KEY, true);
+
+    final short numDatanodes = 1;
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDatanodes)
+        .build();
+    try {
+      cluster.waitActive();
+      final FileSystem fs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      //create a file
+      final long length = 1L << 20;
+      final Path file1 = new Path(dir, "testFile");
+
+      DFSTestUtil.createFile(fs, file1, length, numDatanodes, 20120406L);
+
+      //get file status and check that it was written properly.
+      final FileStatus s1 = fs.getFileStatus(file1);
+      assertEquals("Write failed for file " + file1, length, s1.getLen());
+
+      FSDataInputStream in = fs.open(file1);
+      in.read(); // Connection is made only when the first read() occurs.
+      final WebHdfsInputStream webIn =
+          (WebHdfsInputStream)(in.getWrappedStream());
+
+      final String msg = "Throwing dummy exception";
+      IOException ioe = new IOException(msg, new DummyThrowable());
+
+      WebHdfsFileSystem.ReadRunner readRunner = spy(webIn.getReadRunner());
+      doThrow(ioe).when(readRunner).getResponse(any(HttpURLConnection.class));
+
+      webIn.setReadRunner(readRunner);
+
+      try {
+        webIn.read();
+        fail("Read should have thrown IOException.");
+      } catch (IOException e) {
+        assertTrue(e.getMessage().contains(msg));
+        assertTrue(e.getCause() instanceof DummyThrowable);
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  final static class DummyThrowable extends Throwable {
+  }
 }
