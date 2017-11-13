@@ -798,6 +798,10 @@ task and job commit phases,
 1. Can be used by existing code: Hadoop MapReduce, Spark, Hive.
 1. Retrofittable to existing subclasses of FileOutputFormat and/or compatible
 with committers which expect a specific FileOutputFormat.
+1. Clean up uncommitted data from all task attempts, all previous attempts of
+the job, and any previous incompleted jobs.
+1. Security: not to permit privilege escalation from other users with
+write access to the same file system(s).
 
 
 ## Features of S3 and the S3A Client
@@ -816,7 +820,7 @@ performed on a path before an object was created can be cached, unintentionally
 creating a create inconsistency. The S3A client library does perform such a check,
 on `create()` and `rename()` to check the state of the destination path, and
 so, whether the operation is permitted.
-1. multi-object renames are sequential or parallel single object COPY+DELETE operations:
+1. Multi-object renames are sequential or parallel single object COPY+DELETE operations:
 non atomic, `O(data)` and, on failure, can leave the filesystem in an unknown
 state.
 1. There is a PUT operation, capable of uploading 5GB of data in one HTTP request.
@@ -830,7 +834,7 @@ data, with the `S3ABlockOutputStream` of HADOOP-13560 uploading written data
 as parts of a multipart PUT once the threshold set in the configuration
 parameter `fs.s3a.multipart.size` (default: 100MB).
 
-The S3Guard work, HADOOP-13345, adds a consistent view of the filesystem
+[S3Guard](./s3guard.html) adds an option of consistent view of the filesystem
 to all processes using the shared DynamoDB table as the authoritative store of
 metadata. Some S3-compatible object stores are fully consistent; the
 proposed algorithm is designed to work with such object stores without the
@@ -879,7 +883,7 @@ the committers proposed here combines changing the Hadoop MR committers for
 ease of pluggability, and offers a new committer exclusivley for S3, one
 strongly dependent upon and tightly integrated with the S3A Filesystem.
 
-The simplicity of the Stocator committer is somethign to appreciate.
+The simplicity of the Stocator committer is something to appreciate.
 
 ## Background: The S3 multi-part PUT mechanism
 
@@ -986,7 +990,7 @@ These S3 committers work by writing task outputs to a temporary directory on the
 Task outputs are directed to the local FS by `getTaskAttemptPath` and `getWorkPath`.
 
 
-### Conflict resolution
+### Conflict Resolution
 
 The single-directory and partitioned committers handle conflict resolution by
 checking whether target paths exist in S3 before uploading any data.
@@ -1061,8 +1065,7 @@ File names include a UUID for each write so that files can be identified and rem
 
 All data is written to local temporary files; these need to be cleaned up.
 
-The job must ensure that the local (pending) data is purged. *TODO*: test this
-
+The job must ensure that the local (pending) data is purged.
 
 **Failure during task commit**
 
@@ -1096,30 +1099,61 @@ All in-progress tasks are aborted and cleaned up. The pending commit data
 of all completed tasks can be loaded, outstanding multipart PUT requests aborted.
 
 
-**Executor failure before Job Commit**
+This is done by
 
-Consider entire job lost; rerun required. All pending requests for the job
-will need to be identified and cancelled;
+1. Listing all local files, with a best effort read attempt followed by
+an abort of all successfully read files.
+1. List and abort all pending multipart uploads.
 
-**Executor failure during Job Commit**
+Because of action #2, action #1 is superflous. It is retained so as to leave
+open the option of making action #2 a configurable option -which would be
+required to handle the use case of >1 partitioned commit running simultaneously/
 
-Multipart Put requests which have been completed with the final POST  will be persisted.
-Not-yet-completed requests will remain outstanding. As the data for all the
-commits will be in the cluster FS, it will be possible for a cleanup phase to
-load these and abort them.
+**Job Driver failure before Job Commit**
 
+Because the local data is managed with the v1 commit algorithm, the
+second attempt of the job will recover all the outstanding commit data
+of the first attempt; those tasks will not be rerun.
 
+This also ensures that on a job abort, the invidual tasks' .pendingset
+files can be read and used to initiate the abort of those uploads.
+That is: a recovered job can clean up the pending writes of the previous job
 
-**Job failure prior to commit**
+If the query engine does not support multiple job attempts, then the 
+pending commit data will not be recovered; an explicit abort operation will
+need to be initiated (we will add a CLI command for this), or the S3 bucket
+must be configured to automatically delete the pending request.
 
-* Consider the entire job lost.
-* Executing tasks will not complete, and in aborting, delete local data.
-* Tasks which have completed will have pending commits. These will need
-to be identified and cancelled.
+**Job Driver failure during Job Commit**
+
+Those uploads already executed by a failed job commit will persist; those
+yet to execute will remain outstanding.
+
+The committer currently declares itself as non-recoverble, but that
+may not actually hold, as the recovery process could be one of:
+
+1. Enumerate all job commits from the .pendingset files (*:= Commits*).
+1. List all outstanding uploads under the destination path (*:= Outstandings*)..
+1. List all written files (for better consistency, via a GET call on the known
+filenames)
+1. Identify all files which are yet to be completed (*Commits - Written*)/
+1. Verify that the set of pending uploads matches (*Outstanding = (Commits - Written)*)
+
+The main problem here is the progress of the job-commit-time conflict resolution
+process: how to determine if it completed, as the only way to be confident
+that all files in the destination directory are to be retained is by knowing
+that the pre-commit phase completed. This could be implicitly determined
+based on the rule "no uploads are committed until precommit is completed".
+If it can be determined that 1+ upload has completed, then it could be inferred
+that precommit had completed and so the job could be repeated.
+
+This is dangerous territory to delve into. For now, the committer declares
+itself as unrecoverable.
 
 **Entire application failure before any task commit**
 
-Data is left on local systems, in the temporary directories.
+Data is left on local systems, in the temporary directories. This may
+not be cleaned up.
 
 **Entire application failure after one or more task commits, before job commit**
 

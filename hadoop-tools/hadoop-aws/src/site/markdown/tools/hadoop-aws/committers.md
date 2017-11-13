@@ -539,6 +539,7 @@ Conflict management is left to the execution engine itself.
 | `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. | 8 |
 | `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `abort` or `overwrite`| `fail` |
 | `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames | `true` |
+
 | `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem | `false` |
 
 
@@ -548,6 +549,102 @@ Conflict management is left to the execution engine itself.
 |--------|-------|-----------|-------------|---------|---------|
 | `fs.s3a.buffer.dir` | X | X | X | Local filesystem directory for data being written and/or staged. | |
 | `fs.s3a.committer.staging.tmp.path` |  | X | X | Path in the cluster filesystem for temporary data | `tmp/staging` |
+
+
+```xml
+<property>
+  <name>fs.s3a.committer.name</name>
+  <value>file</value>
+  <description>
+    Committer to create for output to S3A, one of:
+    "file", "directory", "partitioned", "magic".
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.magic.enabled</name>
+  <value>false</value>
+  <description>
+    Enable support in the filesystem for the S3 "Magic" committer.
+    When working with AWS S3, S3Guard must be enabled for the destination
+    bucket, as consistent metadata listings are required.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.threads</name>
+  <value>8</value>
+  <description>
+    Number of threads in committers for parallel operations on files
+    (upload, commit, abort, delete...)
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.tmp.path</name>
+  <value>tmp/staging</value>
+  <description>
+    Path in the cluster filesystem for temporary data.
+    This is for HDFS, not the local filesystem.
+    It is only for the summary data of each file, not the actual
+    data being committed.
+    Using an unqualified path guarantees that the full path will be
+    generated relative to the home directory of the user creating the job,
+    hence private (assuming home directory permissions are secure).
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.unique-filenames</name>
+  <value>true</value>
+  <description>
+    Option for final files to have a unique name through job attempt info,
+    or the value of fs.s3a.committer.staging.uuid
+    When writing data with the "append" conflict option, this guarantees
+    that new data will not overwrite any existing data.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.conflict-mode</name>
+  <value>fail</value>
+  <description>
+    Staging committer conflict resolution policy.
+    Supported: "fail", "append", "replace".
+  </description>
+</property>
+
+<property>
+  <name>s.s3a.committer.staging.abort.pending.uploads</name>
+  <value>true</value>
+  <description>
+    Should the staging committers abort all pending uploads to the destination
+    directory?
+    
+    Changing this if more than one partitioned committer is
+    writing to the same destination tree simultaneously; otherwise
+    the first job to complete will cancel all outstanding uploads from the
+    others. However, it may lead to leaked outstanding uploads from failed
+    tasks. If disabled, configure the bucket lifecycle to remove uploads
+    after a time period, and/or set up a workflow to explicitly delete
+    entries. Otherwise there is a risk that uncommitted uploads may run up
+    bills.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
+  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
+  <description>
+    The committer factory to use when writing data to S3A filesystems.
+    If mapreduce.outputcommitter.factory.class is set, it will
+    override this property.
+    
+    (This property is set in mapred-default.xml)
+  </description>
+</property>
+
+```
 
 
 ## Troubleshooting
@@ -584,7 +681,7 @@ Tip: you can verify that a bucket supports the magic committer through the
 `hadoop s3guard bucket-info` command:
 
 
-```bash
+```
 > hadoop s3guard bucket-info -magic s3a://landsat-pds/
 
 Filesystem s3a://landsat-pds
@@ -638,7 +735,35 @@ If it is 0-bytes long, the classic `FileOutputCommitter` committed the job.
 The S3A committers all write a non-empty JSON file; the `committer` field lists
 the committer used.
 
-## Job/Task fails "Destination path exists and committer conflict resolution mode is FAIL" 
+
+*Common causes*
+
+1. The property `fs.s3a.committer.name` is set to "file". Fix: change.
+1. The job has overridden the property `mapreduce.outputcommitter.factory.class`
+with a new factory class for all committers. This takes priority over
+all committers registered for the s3a:// schema.
+!. The property `mapreduce.outputcommitter.factory.scheme.s3a` is unset.
+1. The output format has overridden `FileOutputFormat.getOutputCommitter()`
+and is returning its own committer -one which is a subclass of `FileOutputCommitter`.
+
+That final cause. *the output format is returning its own committer*, is not
+easily fixed; it may be that the custom committer performs critical work
+during its lifecycle, and contains assumptions about the state of the written
+data during task and job commit (i.e. it is in the destination filesystem).
+Consult with the authors/maintainers of the output format
+to see whether it would be possible to integrate with the new committer factory
+mechanism and object-store-specific commit algorithms.
+
+Parquet is a special case here: its committer does no extra work
+other than add the option to read all newly-created files then write a schema
+summary. The Spark integration has explicit handling for Parquet to enable it
+to support the new committers, removing this (slow on S3) option.
+
+If you have subclassed `FileOutputCommitter` and want to move to the
+factory model, please get in touch.
+
+
+## Job/Task fails with PathExistsException: Destination path exists and committer conflict resolution mode is "fail" 
 
 This surfaces when either of two conditions are met.
 
@@ -651,3 +776,30 @@ during task commit, which will cause the entire job to fail.
 
 If you are trying to write data and want write conflicts to be rejected, this is the correct
 behavior: there was data at the destination so the job was aborted.
+
+## Staging committer task fails with IOException: No space left on device
+
+There's not enough space on the local hard disk (real or virtual)
+to store all the uncommitted data of the active tasks on that host.
+Because the staging committers write all output to the local disk
+and only upload the data on task commits, enough local temporary 
+storage is needed to store all output generated by all uncommitted
+tasks running on the single host. Small EC2 VMs may run out of disk. 
+
+1. Make sure that `fs.s3a.buffer.dir` includes a temporary directory on
+every available hard disk; this spreads load better.
+
+1. Add more disk space. In EC2: request instances with more local storage.
+There is no need for EMR storage; this is just for temporary data.
+
+1. Purge the directories listed in `fs.s3a.buffer.dir` of old data.
+Failed tasks may not clean up all old files.
+
+1. Reduce the number of worker threads/process in the host.
+
+1. Consider partitioning the job into more tasks. This *may* result in more tasks
+generating less data each.
+
+1. Use the magic committer. This only needs enough disk storage to buffer
+blocks of the currently being written file during their upload process, 
+so can use a lot less disk space.
