@@ -788,6 +788,7 @@ public class WebHdfsFileSystem extends FileSystem
           try {
             IOException newIoe = ioe.getClass().getConstructor(String.class)
                 .newInstance(node + ": " + ioe.getMessage());
+            newIoe.initCause(ioe.getCause());
             newIoe.setStackTrace(ioe.getStackTrace());
             ioe = newIoe;
           } catch (NoSuchMethodException | SecurityException 
