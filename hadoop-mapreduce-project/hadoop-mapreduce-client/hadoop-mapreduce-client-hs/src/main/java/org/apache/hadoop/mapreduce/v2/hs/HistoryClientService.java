@@ -26,8 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -90,6 +88,8 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This module is responsible for talking to the
@@ -98,7 +98,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class HistoryClientService extends AbstractService {
 
-  private static final Log LOG = LogFactory.getLog(HistoryClientService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HistoryClientService.class);
 
   private HSClientProtocol protocolHandler;
   private Server server;

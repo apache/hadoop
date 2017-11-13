@@ -24,8 +24,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -45,6 +43,8 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Default Parser for the JobHistory files. Typical usage is
@@ -56,7 +56,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 @InterfaceStability.Unstable
 public class JobHistoryParser implements HistoryEventHandler {
 
-  private static final Log LOG = LogFactory.getLog(JobHistoryParser.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobHistoryParser.class);
   
   private final FSDataInputStream in;
   private JobInfo info = null;

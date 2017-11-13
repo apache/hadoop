@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -92,6 +94,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Containe
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.FlowContextProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
@@ -247,8 +250,10 @@ public class ContainerManagerImpl extends CompositeService implements
     this.containerScheduler = createContainerScheduler(context);
     addService(containerScheduler);
 
+    AuxiliaryLocalPathHandler auxiliaryLocalPathHandler =
+        new AuxiliaryLocalPathHandlerImpl(dirsHandler);
     // Start configurable services
-    auxiliaryServices = new AuxServices();
+    auxiliaryServices = new AuxServices(auxiliaryLocalPathHandler);
     auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
@@ -367,6 +372,13 @@ public class ContainerManagerImpl extends CompositeService implements
         }
         recoverContainer(rcs);
       }
+
+      //Dispatching the RECOVERY_COMPLETED event through the dispatcher
+      //so that all the paused, scheduled and queued containers will
+      //be scheduled for execution on availability of resources.
+      dispatcher.getEventHandler().handle(
+          new ContainerSchedulerEvent(null,
+              ContainerSchedulerEventType.RECOVERY_COMPLETED));
     } else {
       LOG.info("Not a recoverable state store. Nothing to recover.");
     }
@@ -425,7 +437,7 @@ public class ContainerManagerImpl extends CompositeService implements
       throws IOException {
     StartContainerRequest req = rcs.getStartRequest();
     ContainerLaunchContext launchContext = req.getContainerLaunchContext();
-    ContainerTokenIdentifier token = null;
+    ContainerTokenIdentifier token;
     if(rcs.getCapability() != null) {
       ContainerTokenIdentifier originalToken =
           BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());
@@ -437,7 +449,8 @@ public class ContainerManagerImpl extends CompositeService implements
           originalToken.getCreationTime(),
           originalToken.getLogAggregationContext(),
           originalToken.getNodeLabelExpression(),
-          originalToken.getContainerType(), originalToken.getExecutionType());
+          originalToken.getContainerType(), originalToken.getExecutionType(),
+          originalToken.getAllocationRequestId());
 
     } else {
       token = BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());
@@ -480,6 +493,7 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = new ContainerImpl(getConfig(), dispatcher,
         launchContext, credentials, metrics, token, context, rcs);
     context.getContainers().put(token.getContainerID(), container);
+    containerScheduler.recoverActiveContainer(container, rcs.getStatus());
     app.handle(new ApplicationContainerInitEvent(container));
   }
 
@@ -1514,6 +1528,35 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
+  /**
+   * Implements AuxiliaryLocalPathHandler.
+   * It links NodeManager's LocalDirsHandlerService to the Auxiliary Services
+   */
+  static class AuxiliaryLocalPathHandlerImpl
+      implements AuxiliaryLocalPathHandler {
+    private LocalDirsHandlerService dirhandlerService;
+    AuxiliaryLocalPathHandlerImpl(
+        LocalDirsHandlerService dirhandlerService) {
+      this.dirhandlerService = dirhandlerService;
+    }
+
+    @Override
+    public Path getLocalPathForRead(String path) throws IOException {
+      return dirhandlerService.getLocalPathForRead(path);
+    }
+
+    @Override
+    public Path getLocalPathForWrite(String path) throws IOException {
+      return dirhandlerService.getLocalPathForWrite(path);
+    }
+
+    @Override
+    public Path getLocalPathForWrite(String path, long size)
+        throws IOException {
+      return dirhandlerService.getLocalPathForWrite(path, size, false);
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public void handle(ContainerManagerEvent event) {
@@ -1716,7 +1759,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * @param containerId Container Id.
    * @param autoCommit Auto Commit flag.
    * @param reInitLaunchContext Target Launch Context.
-   * @throws YarnException Yarn Exception.
+   * @throws YarnException YARN Exception.
    */
   public void reInitializeContainer(ContainerId containerId,
       ContainerLaunchContext reInitLaunchContext, boolean autoCommit)
@@ -1743,7 +1786,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * Rollback the last reInitialization, if possible.
    * @param containerId Container ID.
    * @return Rollback Response.
-   * @throws YarnException Yarn Exception.
+   * @throws YarnException YARN Exception.
    */
   @Override
   public RollbackResponse rollbackLastReInitialization(ContainerId containerId)
@@ -1764,7 +1807,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * Commit last reInitialization after which no rollback will be possible.
    * @param containerId Container ID.
    * @return Commit Response.
-   * @throws YarnException Yarn Exception.
+   * @throws YarnException YARN Exception.
    */
   @Override
   public CommitResponse commitLastReInitialization(ContainerId containerId)

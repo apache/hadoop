@@ -26,8 +26,6 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -60,13 +58,15 @@ import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The main() for MapReduce task processes.
  */
 class YarnChild {
 
-  private static final Log LOG = LogFactory.getLog(YarnChild.class);
+  private static final Logger LOG = LoggerFactory.getLogger(YarnChild.class);
 
   static volatile TaskAttemptID taskid = null;
 
@@ -100,10 +100,7 @@ class YarnChild {
     // Security framework already loaded the tokens into current ugi
     Credentials credentials =
         UserGroupInformation.getCurrentUser().getCredentials();
-    LOG.info("Executing with tokens:");
-    for (Token<?> token: credentials.getAllTokens()) {
-      LOG.info(token);
-    }
+    LOG.info("Executing with tokens: {}", credentials.getAllTokens());
 
     // Create TaskUmbilicalProtocol as actual task owner.
     UserGroupInformation taskOwner =
@@ -129,7 +126,7 @@ class YarnChild {
 
     try {
       int idleLoopCount = 0;
-      JvmTask myTask = null;;
+      JvmTask myTask = null;
       // poll for new task
       for (int idle = 0; null == myTask; ++idle) {
         long sleepTimeMilliSecs = Math.min(idle * 500, 1500);
@@ -179,7 +176,7 @@ class YarnChild {
         }
       });
     } catch (FSError e) {
-      LOG.fatal("FSError from child", e);
+      LOG.error("FSError from child", e);
       if (!ShutdownHookManager.get().isShutdownInProgress()) {
         umbilical.fsError(taskid, e.getMessage());
       }
@@ -213,7 +210,7 @@ class YarnChild {
         }
       }
     } catch (Throwable throwable) {
-      LOG.fatal("Error running child : "
+      LOG.error("Error running child : "
     	        + StringUtils.stringifyException(throwable));
       if (taskid != null) {
         if (!ShutdownHookManager.get().isShutdownInProgress()) {
@@ -352,7 +349,7 @@ class YarnChild {
       out = FileSystem.create(localFs, jobFile, urw_gr);
       conf.writeXml(out);
     } finally {
-      IOUtils.cleanup(LOG, out);
+      IOUtils.cleanupWithLogger(LOG, out);
     }
   }
 

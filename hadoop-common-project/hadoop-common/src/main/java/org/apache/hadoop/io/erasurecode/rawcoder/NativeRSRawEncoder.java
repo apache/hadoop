@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -39,14 +40,14 @@ public class NativeRSRawEncoder extends AbstractNativeRawEncoder {
   }
 
   @Override
-  protected void performEncodeImpl(
+  protected synchronized void performEncodeImpl(
           ByteBuffer[] inputs, int[] inputOffsets, int dataLen,
-          ByteBuffer[] outputs, int[] outputOffsets) {
+          ByteBuffer[] outputs, int[] outputOffsets) throws IOException {
     encodeImpl(inputs, inputOffsets, dataLen, outputs, outputOffsets);
   }
 
   @Override
-  public void release() {
+  public synchronized void release() {
     destroyImpl();
   }
 
@@ -58,8 +59,8 @@ public class NativeRSRawEncoder extends AbstractNativeRawEncoder {
   private native void initImpl(int numDataUnits, int numParityUnits);
 
   private native void encodeImpl(ByteBuffer[] inputs, int[] inputOffsets,
-                                        int dataLen, ByteBuffer[] outputs,
-                                        int[] outputOffsets);
+                                 int dataLen, ByteBuffer[] outputs,
+                                 int[] outputOffsets) throws IOException;
 
   private native void destroyImpl();
 }

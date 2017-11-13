@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Test class to handle various proto related tests for resources.
  */
@@ -57,5 +59,30 @@ public class TestResourcePBImpl {
     Assert.assertEquals(ResourceInformation.VCORES.getUnits(),
         res.getResourceInformation(ResourceInformation.VCORES.getName())
             .getUnits());
+  }
+
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testGetMemory() {
+    Resource res = new ResourcePBImpl();
+    long memorySize = Integer.MAX_VALUE + 1L;
+    res.setMemorySize(memorySize);
+
+    assertEquals("No need to cast if both are long", memorySize,
+        res.getMemorySize());
+    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
+            + "Integer.MAX_VALUE", Integer.MAX_VALUE, res.getMemory());
+  }
+
+  @Test
+  public void testGetVirtualCores() {
+    Resource res = new ResourcePBImpl();
+    long vcores = Integer.MAX_VALUE + 1L;
+    res.getResourceInformation("vcores").setValue(vcores);
+
+    assertEquals("No need to cast if both are long", vcores,
+        res.getResourceInformation("vcores").getValue());
+    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
+        + "Integer.MAX_VALUE", Integer.MAX_VALUE, res.getVirtualCores());
   }
 }

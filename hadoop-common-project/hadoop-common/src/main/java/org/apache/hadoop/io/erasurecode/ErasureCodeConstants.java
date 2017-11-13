@@ -50,6 +50,7 @@ public final class ErasureCodeConstants {
   public static final ECSchema REPLICATION_1_2_SCHEMA = new ECSchema(
       REPLICATION_CODEC_NAME, 1, 2);
 
+  public static final byte MAX_POLICY_ID = Byte.MAX_VALUE;
   public static final byte USER_DEFINED_POLICY_START_ID = (byte) 64;
   public static final byte REPLICATION_POLICY_ID = (byte) 63;
   public static final String REPLICATION_POLICY_NAME = REPLICATION_CODEC_NAME;

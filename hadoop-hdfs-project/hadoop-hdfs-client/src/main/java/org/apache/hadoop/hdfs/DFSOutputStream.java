@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HFLUSH;
-import static org.apache.hadoop.fs.StreamCapabilities.StreamCapability.HSYNC;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -69,6 +66,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.htrace.core.TraceScope;
 import org.slf4j.Logger;
@@ -552,11 +550,13 @@ public class DFSOutputStream extends FSOutputSummer
 
   @Override
   public boolean hasCapability(String capability) {
-    if (capability.equalsIgnoreCase(HSYNC.getValue()) ||
-        capability.equalsIgnoreCase((HFLUSH.getValue()))) {
+    switch (StringUtils.toLowerCase(capability)) {
+    case StreamCapabilities.HSYNC:
+    case StreamCapabilities.HFLUSH:
       return true;
+    default:
+      return false;
     }
-    return false;
   }
 
   /**

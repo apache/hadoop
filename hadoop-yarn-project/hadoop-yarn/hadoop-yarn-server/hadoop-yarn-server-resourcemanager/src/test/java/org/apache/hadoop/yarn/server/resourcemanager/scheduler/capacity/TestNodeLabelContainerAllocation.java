@@ -656,7 +656,7 @@ public class TestNodeLabelContainerAllocation {
       if (key.getPriority().getPriority() == priority) {
         Assert.assertEquals("Expected partition is " + expectedPartition,
             expectedPartition,
-            info.getSchedulingPlacementSet(key)
+            info.getAppPlacementAllocator(key)
                 .getPrimaryRequestedNodePartition());
       }
     }

@@ -30,6 +30,7 @@ import "yarn_service_protos.proto";
 message RemoteNodeProto {
   optional NodeIdProto node_id = 1;
   optional string http_address = 2;
+  optional string rack_name = 3;
 }
 
 message RegisterDistributedSchedulingAMResponseProto {
@@ -175,6 +176,7 @@ message NMContainerStatusProto {
   optional string nodeLabelExpression = 8;
   optional int32 version = 9;
   optional ExecutionTypeProto executionType = 10 [default = GUARANTEED];
+  optional int64 allocation_request_id = 11 [default = -1];
 }
 
 message SCMUploaderNotifyRequestProto {

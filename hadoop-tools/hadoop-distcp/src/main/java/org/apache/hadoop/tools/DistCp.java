@@ -453,10 +453,12 @@ public class DistCp extends Configured implements Tool {
 
   private synchronized void cleanup() {
     try {
-      if (metaFolder == null) return;
-
-      jobFS.delete(metaFolder, true);
-      metaFolder = null;
+      if (metaFolder != null) {
+        if (jobFS != null) {
+          jobFS.delete(metaFolder, true);
+        }
+        metaFolder = null;
+      }
     } catch (IOException e) {
       LOG.error("Unable to cleanup meta folder: " + metaFolder, e);
     }

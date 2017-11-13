@@ -44,15 +44,129 @@ public interface RegistryConstants {
   String ZK_PREFIX = REGISTRY_PREFIX + "zk.";
 
   /**
+   * Prefix for dns-specific options: {@value}
+   *  <p>
+   * For clients using other protocols, these options are not supported.
+   */
+  String DNS_PREFIX = REGISTRY_PREFIX + "dns.";
+
+  /**
    * flag to indicate whether or not the registry should
-   * be enabled in the RM: {@value}
+   * be enabled in the RM: {@value}.
    */
   String KEY_REGISTRY_ENABLED = REGISTRY_PREFIX + "rm.enabled";
 
   /**
-   * Defaut value for enabling the registry in the RM: {@value}
+   * Defaut value for enabling the registry in the RM: {@value}.
    */
   boolean DEFAULT_REGISTRY_ENABLED = false;
+
+  /**
+   * flag to indicate whether or not the registry should
+   * be enabled in the RM: {@value}.
+   */
+  String KEY_DNS_ENABLED = DNS_PREFIX + "enabled";
+
+  /**
+   * Defaut value for enabling the DNS in the Registry: {@value}.
+   */
+  boolean DEFAULT_DNS_ENABLED = false;
+
+  /**
+   * DNS domain name key.
+   */
+  String KEY_DNS_DOMAIN = DNS_PREFIX + "domain-name";
+
+  /**
+   * Max length of a label (node delimited by a dot in the FQDN).
+   */
+  int MAX_FQDN_LABEL_LENGTH = 63;
+
+  /**
+   * DNS bind address.
+   */
+  String KEY_DNS_BIND_ADDRESS = DNS_PREFIX + "bind-address";
+
+  /**
+   * DNS port number key.
+   */
+  String KEY_DNS_PORT = DNS_PREFIX + "bind-port";
+
+  /**
+   * Default DNS port number.
+   */
+  int DEFAULT_DNS_PORT = 5353;
+
+  /**
+   * DNSSEC Enabled?
+   */
+  String KEY_DNSSEC_ENABLED = DNS_PREFIX + "dnssec.enabled";
+
+  /**
+   * DNSSEC Enabled?
+   */
+  String KEY_DNSSEC_PUBLIC_KEY = DNS_PREFIX + "public-key";
+
+  /**
+   * DNSSEC private key file.
+   */
+  String KEY_DNSSEC_PRIVATE_KEY_FILE = DNS_PREFIX + "private-key-file";
+
+  /**
+   * Default DNSSEC private key file path.
+   */
+  String DEFAULT_DNSSEC_PRIVATE_KEY_FILE =
+      "/etc/hadoop/conf/registryDNS.private";
+
+  /**
+   * Zone subnet.
+   */
+  String KEY_DNS_ZONE_SUBNET = DNS_PREFIX + "zone-subnet";
+
+  /**
+   * Zone subnet mask.
+   */
+  String KEY_DNS_ZONE_MASK = DNS_PREFIX + "zone-mask";
+
+  /**
+   * Zone subnet IP min.
+   */
+  String KEY_DNS_ZONE_IP_MIN = DNS_PREFIX + "zone-ip-min";
+
+  /**
+   * Zone subnet IP max.
+   */
+  String KEY_DNS_ZONE_IP_MAX = DNS_PREFIX + "zone-ip-max";
+
+  /**
+   * DNS Record TTL.
+   */
+  String KEY_DNS_TTL = DNS_PREFIX + "dns-ttl";
+
+  /**
+   * DNS Record TTL.
+   */
+  String KEY_DNS_ZONES_DIR = DNS_PREFIX + "zones-dir";
+
+  /**
+   * Split Reverse Zone.
+   * It may be necessary to spit large reverse zone subnets
+   * into multiple zones to handle existing hosts collocated
+   * with containers.
+   */
+  String KEY_DNS_SPLIT_REVERSE_ZONE = DNS_PREFIX + "split-reverse-zone";
+
+  /**
+   * Default value for splitting the reverse zone.
+   */
+  boolean DEFAULT_DNS_SPLIT_REVERSE_ZONE = false;
+
+  /**
+   * Split Reverse Zone IP Range.
+   * How many IPs should be part of each reverse zone split
+   */
+  String KEY_DNS_SPLIT_REVERSE_ZONE_RANGE = DNS_PREFIX +
+      "split-reverse-zone-range";
 
   /**
    * Key to set if the registry is secure: {@value}.
@@ -69,12 +183,12 @@ public interface RegistryConstants {
   boolean DEFAULT_REGISTRY_SECURE = false;
 
   /**
-   * Root path in the ZK tree for the registry: {@value}
+   * Root path in the ZK tree for the registry: {@value}.
    */
   String KEY_REGISTRY_ZK_ROOT = ZK_PREFIX + "root";
 
   /**
-   * Default root of the yarn registry: {@value}
+   * Default root of the yarn registry: {@value}.
    */
   String DEFAULT_ZK_REGISTRY_ROOT = "/registry";
 
@@ -92,7 +206,7 @@ public interface RegistryConstants {
 
   /**
    * Registry client uses Kerberos: authentication is automatic from
-   * logged in user
+   * logged in user.
    */
   String REGISTRY_CLIENT_AUTH_KERBEROS = "kerberos";
 
@@ -104,12 +218,12 @@ public interface RegistryConstants {
   String REGISTRY_CLIENT_AUTH_DIGEST = "digest";
 
   /**
-   * No authentication; client is anonymous
+   * No authentication; client is anonymous.
    */
   String REGISTRY_CLIENT_AUTH_ANONYMOUS = "";
 
   /**
-   * Registry client authentication ID
+   * Registry client authentication ID.
    * <p>
    * This is only used in secure clusters with
    * {@link #KEY_REGISTRY_CLIENT_AUTH} set to
@@ -134,17 +248,17 @@ public interface RegistryConstants {
 
   /**
    * List of hostname:port pairs defining the
-   * zookeeper quorum binding for the registry {@value}
+   * zookeeper quorum binding for the registry {@value}.
    */
   String KEY_REGISTRY_ZK_QUORUM = ZK_PREFIX + "quorum";
 
   /**
-   * The default zookeeper quorum binding for the registry: {@value}
+   * The default zookeeper quorum binding for the registry: {@value}.
    */
   String DEFAULT_REGISTRY_ZK_QUORUM = "localhost:2181";
 
   /**
-   * Zookeeper session timeout in milliseconds: {@value}
+   * Zookeeper session timeout in milliseconds: {@value}.
    */
   String KEY_REGISTRY_ZK_SESSION_TIMEOUT =
       ZK_PREFIX + "session.timeout.ms";
@@ -259,7 +373,7 @@ public interface RegistryConstants {
   String KEY_REGISTRY_CLIENT_JAAS_CONTEXT = REGISTRY_PREFIX + "jaas.context";
 
   /**
-   * default client-side registry JAAS context: {@value}
+   * default client-side registry JAAS context: {@value}.
    */
   String DEFAULT_REGISTRY_CLIENT_JAAS_CONTEXT = "Client";
 

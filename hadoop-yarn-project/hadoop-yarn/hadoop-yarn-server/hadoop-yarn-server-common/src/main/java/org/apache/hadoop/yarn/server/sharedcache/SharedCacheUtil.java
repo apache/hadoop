@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.sharedcache;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility class that contains helper methods for dealing with the internal
@@ -34,7 +34,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @Unstable
 public class SharedCacheUtil {
 
-  private static final Log LOG = LogFactory.getLog(SharedCacheUtil.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SharedCacheUtil.class);
 
   @Private
   public static int getCacheDepth(Configuration conf) {
@@ -44,9 +45,8 @@ public class SharedCacheUtil {
 
     if (cacheDepth <= 0) {
       LOG.warn("Specified cache depth was less than or equal to zero."
-          + " Using default value instead. Default: "
-          + YarnConfiguration.DEFAULT_SHARED_CACHE_NESTED_LEVEL
-          + ", Specified: " + cacheDepth);
+          + " Using default value instead. Default: {}, Specified: {}",
+          YarnConfiguration.DEFAULT_SHARED_CACHE_NESTED_LEVEL, cacheDepth);
       cacheDepth = YarnConfiguration.DEFAULT_SHARED_CACHE_NESTED_LEVEL;
     }
 

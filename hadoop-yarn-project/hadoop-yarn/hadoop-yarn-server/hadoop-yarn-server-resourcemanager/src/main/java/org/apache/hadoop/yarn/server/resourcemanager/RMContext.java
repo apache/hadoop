@@ -164,4 +164,6 @@ public interface RMContext extends ApplicationMasterServiceContext {
   ResourceProfilesManager getResourceProfilesManager();
 
   void setResourceProfilesManager(ResourceProfilesManager mgr);
+
+  String getAppProxyUrl(Configuration conf, ApplicationId applicationId);
 }

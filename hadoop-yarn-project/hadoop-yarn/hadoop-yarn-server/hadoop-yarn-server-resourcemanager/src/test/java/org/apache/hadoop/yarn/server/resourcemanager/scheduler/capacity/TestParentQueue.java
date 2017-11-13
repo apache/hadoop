@@ -29,7 +29,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
@@ -54,7 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -181,8 +180,9 @@ public class TestParentQueue {
         // Next call - nothing
         if (allocation > 0) {
           doReturn(new CSAssignment(Resources.none(), type)).when(queue)
-              .assignContainers(eq(clusterResource), any(PlacementSet.class),
-                  any(ResourceLimits.class), any(SchedulingMode.class));
+              .assignContainers(eq(clusterResource),
+                  any(CandidateNodeSet.class), any(ResourceLimits.class),
+                  any(SchedulingMode.class));
 
           // Mock the node's resource availability
           Resource available = node.getUnallocatedResource();
@@ -192,8 +192,9 @@ public class TestParentQueue {
 
         return new CSAssignment(allocatedResource, type);
       }
-    }).when(queue).assignContainers(eq(clusterResource), any(PlacementSet.class),
-        any(ResourceLimits.class), any(SchedulingMode.class));
+    }).when(queue).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), any(ResourceLimits.class),
+        any(SchedulingMode.class));
   }
   
   private float computeQueueAbsoluteUsedCapacity(CSQueue queue, 
@@ -274,13 +275,14 @@ public class TestParentQueue {
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     InOrder allocationOrder = inOrder(a, b);
     allocationOrder.verify(a).assignContainers(eq(clusterResource),
-        any(PlacementSet.class), anyResourceLimits(),
+        any(CandidateNodeSet.class), anyResourceLimits(),
         any(SchedulingMode.class));
     root.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(a, 2*GB, clusterResource);
     verifyQueueMetrics(b, 2*GB, clusterResource);
 
@@ -293,10 +295,12 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(b, a);
-    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    allocationOrder.verify(a).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 4*GB, clusterResource);
 
@@ -307,10 +311,12 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0, 
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(b, a);
-    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    allocationOrder.verify(a).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 8*GB, clusterResource);
 
@@ -325,10 +331,12 @@ public class TestParentQueue {
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(a, b);
-    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    allocationOrder.verify(a).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(a, 4*GB, clusterResource);
     verifyQueueMetrics(b, 9*GB, clusterResource);
   }
@@ -547,22 +555,25 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0, 
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     InOrder allocationOrder = inOrder(a, c, b);
-    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    applyAllocationToQueue(clusterResource, 1*GB, a);
+    allocationOrder.verify(a).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    applyAllocationToQueue(clusterResource, 1 * GB, a);
 
     root.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    allocationOrder.verify(c).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    applyAllocationToQueue(clusterResource, 2*GB, root);
+    allocationOrder.verify(c).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    applyAllocationToQueue(clusterResource, 2 * GB, root);
 
     root.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder.verify(b).assignContainers(eq(clusterResource),
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     applyAllocationToQueue(clusterResource, 2*GB, b);
     verifyQueueMetrics(a, 1*GB, clusterResource);
     verifyQueueMetrics(b, 6*GB, clusterResource);
@@ -586,24 +597,28 @@ public class TestParentQueue {
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(a, a2, a1, b, c);
-    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(a2).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(a).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    allocationOrder.verify(a2).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     applyAllocationToQueue(clusterResource, 2*GB, a);
 
     root.assignContainers(clusterResource, node_2,
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     applyAllocationToQueue(clusterResource, 2*GB, b);
 
     root.assignContainers(clusterResource, node_2,
         new ResourceLimits(clusterResource),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    allocationOrder.verify(c).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(c).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 8*GB, clusterResource);
     verifyQueueMetrics(c, 4*GB, clusterResource);
@@ -720,12 +735,14 @@ public class TestParentQueue {
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     InOrder allocationOrder = inOrder(a);
     allocationOrder.verify(a).assignContainers(eq(clusterResource),
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     root.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(b);
     allocationOrder.verify(b).assignContainers(eq(clusterResource),
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(a, 2*GB, clusterResource);
     verifyQueueMetrics(b, 2*GB, clusterResource);
 
@@ -738,9 +755,11 @@ public class TestParentQueue {
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(b, a);
     allocationOrder.verify(b).assignContainers(eq(clusterResource),
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource),
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(a, 2*GB, clusterResource);
     verifyQueueMetrics(b, 4*GB, clusterResource);
 
@@ -800,10 +819,12 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     InOrder allocationOrder = inOrder(b2, b3);
-    allocationOrder.verify(b2).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(b3).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b2).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    allocationOrder.verify(b3).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(b2, 1*GB, clusterResource);
     verifyQueueMetrics(b3, 2*GB, clusterResource);
     
@@ -815,10 +836,12 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0, 
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(b3, b2);
-    allocationOrder.verify(b3).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(b2).assignContainers(eq(clusterResource), 
-        any(PlacementSet.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b3).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
+    allocationOrder.verify(b2).assignContainers(eq(clusterResource),
+        any(CandidateNodeSet.class), anyResourceLimits(),
+        any(SchedulingMode.class));
     verifyQueueMetrics(b2, 1*GB, clusterResource);
     verifyQueueMetrics(b3, 3*GB, clusterResource);
 

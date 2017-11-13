@@ -103,6 +103,7 @@
       <item name="Disk Balancer" href="hadoop-project-dist/hadoop-hdfs/HDFSDiskbalancer.html"/>
       <item name="Upgrade Domain" href="hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html"/>
       <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
+      <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
@@ -112,6 +113,7 @@
       <item name="Encrypted Shuffle" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html"/>
       <item name="Pluggable Shuffle/Sort" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html"/>
       <item name="Distributed Cache Deploy" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistributedCacheDeploy.html"/>
+      <item name="Support for YARN Shared Cache" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/SharedCacheSupport.html"/>
     </menu>
 
     <menu name="MapReduce REST APIs" inherit="top">
@@ -142,6 +144,7 @@
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
       <item name="YARN Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="Resource Profiles" href="hadoop-yarn/hadoop-yarn-site/ResourceProfiles.html"/>
+      <item name="Shared Cache" href="hadoop-yarn/hadoop-yarn-site/SharedCache.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -151,7 +154,15 @@
       <item name="Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html#Timeline_Server_REST_API_v1"/>
       <item name="Timeline Service V.2" href="hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html#Timeline_Service_v.2_REST_API"/>
     </menu>
-    
+
+    <menu name="YARN Service" inherit="top">
+      <item name="Overview" href="hadoop-yarn/hadoop-yarn-site/yarn-service/Overview.html"/>
+      <item name="QuickStart" href="hadoop-yarn/hadoop-yarn-site/yarn-service/QuickStart.html"/>
+      <item name="Concepts" href="hadoop-yarn/hadoop-yarn-site/yarn-service/Concepts.html"/>
+      <item name="Yarn Service API" href="hadoop-yarn/hadoop-yarn-site/yarn-service/YarnServiceAPI.html"/>
+      <item name="Service Discovery" href="hadoop-yarn/hadoop-yarn-site/yarn-service/ServiceDiscovery.html"/>
+    </menu>
+
     <menu name="Hadoop Compatible File Systems" inherit="top">
       <item name="Aliyun OSS" href="hadoop-aliyun/tools/hadoop-aliyun/index.html"/>
       <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
@@ -175,6 +186,7 @@
       <item name="DistCp" href="hadoop-distcp/DistCp.html"/>
       <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
       <item name="Rumen" href="hadoop-rumen/Rumen.html"/>
+      <item name="Resource Estimator Service" href="hadoop-resourceestimator/ResourceEstimator.html"/>
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
       <item name="Hadoop Benchmarking" href="hadoop-project-dist/hadoop-common/Benchmarking.html"/>
     </menu>

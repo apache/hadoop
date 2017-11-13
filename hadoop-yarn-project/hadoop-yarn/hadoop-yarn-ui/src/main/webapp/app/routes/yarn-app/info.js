@@ -26,12 +26,22 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     return Ember.RSVP.hash({
       appId: param.app_id,
       serviceName: param.service,
-      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store)
+      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
+
+      quicklinks: this.store.queryRecord('yarn-service-info', {appId: param.app_id}).then(function(info) {
+        if (info && info.get('quicklinks')) {
+          return info.get('quicklinks');
+        }
+        return [];
+      }, function() {
+        return [];
+      })
     });
   },
 
   unloadAll() {
     this.store.unloadAll('yarn-app');
     this.store.unloadAll('yarn-app-timeline');
+    this.store.unloadAll('yarn-service-info');
   }
 });

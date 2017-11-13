@@ -405,6 +405,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     stateStore.start();
     context = createContext(conf, stateStore);
     ContainerManagerImpl cm = createContainerManager(context, delSrvc);
+    ((NMContext) context).setContainerManager(cm);
     cm.init(conf);
     cm.start();
     // add an application by starting a container
@@ -430,6 +431,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     cm.stop();
     context = createContext(conf, stateStore);
     cm = createContainerManager(context);
+    ((NMContext) context).setContainerManager(cm);
     cm.init(conf);
     cm.start();
     assertEquals(1, context.getApplications().size());
@@ -448,6 +450,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     stateStore.start();
     context = createContext(conf, stateStore);
     ContainerManagerImpl cm = createContainerManager(context, delSrvc);
+    ((NMContext) context).setContainerManager(cm);
     cm.init(conf);
     cm.start();
 
@@ -459,27 +462,29 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
 
     commonLaunchContainer(appId, cid, cm);
 
+    Container nmContainer = context.getContainers().get(cid);
+
     Application app = context.getApplications().get(appId);
     assertNotNull(app);
 
     // store resource mapping of the container
     List<Serializable> gpuResources = Arrays.asList("1", "2", "3");
-    stateStore.storeAssignedResources(cid, "gpu", gpuResources);
+    stateStore.storeAssignedResources(nmContainer, "gpu", gpuResources);
     List<Serializable> numaResources = Arrays.asList("numa1");
-    stateStore.storeAssignedResources(cid, "numa", numaResources);
+    stateStore.storeAssignedResources(nmContainer, "numa", numaResources);
     List<Serializable> fpgaResources = Arrays.asList("fpga1", "fpga2");
-    stateStore.storeAssignedResources(cid, "fpga", fpgaResources);
+    stateStore.storeAssignedResources(nmContainer, "fpga", fpgaResources);
 
     cm.stop();
     context = createContext(conf, stateStore);
     cm = createContainerManager(context);
+    ((NMContext) context).setContainerManager(cm);
     cm.init(conf);
     cm.start();
     assertEquals(1, context.getApplications().size());
     app = context.getApplications().get(appId);
     assertNotNull(app);
 
-    Container nmContainer = context.getContainers().get(cid);
     Assert.assertNotNull(nmContainer);
     ResourceMappings resourceMappings = nmContainer.getResourceMappings();
     List<Serializable> assignedResource = resourceMappings

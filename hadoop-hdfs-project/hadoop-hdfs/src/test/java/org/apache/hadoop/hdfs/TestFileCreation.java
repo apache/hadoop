@@ -86,9 +86,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * This class tests various cases during file creation.
@@ -97,9 +97,9 @@ public class TestFileCreation {
   static final String DIR = "/" + TestFileCreation.class.getSimpleName() + "/";
 
   {
-    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
   }
   private static final String RPC_DETAILED_METRICS =
       "RpcDetailedActivityForPort";

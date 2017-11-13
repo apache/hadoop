@@ -38,12 +38,12 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 
 /**
@@ -62,9 +62,9 @@ public class TestFileConcurrentReader {
     Logger.getLogger(TestFileConcurrentReader.class);
 
   {
-    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
   }
 
   static final long seed = 0xDEADBEEFL;

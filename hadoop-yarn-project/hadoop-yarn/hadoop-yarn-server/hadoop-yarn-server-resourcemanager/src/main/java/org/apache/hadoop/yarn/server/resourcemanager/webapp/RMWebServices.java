@@ -55,7 +55,8 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
+import com.google.common.base.Joiner;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -134,6 +135,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
@@ -196,6 +200,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -2013,9 +2018,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       list.add(rr);
     }
     ReservationRequests reqs = ReservationRequests.newInstance(list, resInt);
-    ReservationDefinition rDef =
-        ReservationDefinition.newInstance(resInfo.getArrival(),
-            resInfo.getDeadline(), reqs, resInfo.getReservationName());
+    ReservationDefinition rDef = ReservationDefinition.newInstance(
+        resInfo.getArrival(), resInfo.getDeadline(), reqs,
+        resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+        Priority.newInstance(resInfo.getPriority()));
 
     ReservationId reservationId =
         ReservationId.parseReservationId(resContext.getReservationId());
@@ -2114,9 +2120,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       list.add(rr);
     }
     ReservationRequests reqs = ReservationRequests.newInstance(list, resInt);
-    ReservationDefinition rDef =
-        ReservationDefinition.newInstance(resInfo.getArrival(),
-            resInfo.getDeadline(), reqs, resInfo.getReservationName());
+    ReservationDefinition rDef = ReservationDefinition.newInstance(
+        resInfo.getArrival(), resInfo.getDeadline(), reqs,
+        resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+        Priority.newInstance(resInfo.getPriority()));
     ReservationUpdateRequest request = ReservationUpdateRequest.newInstance(
         rDef, ReservationId.parseReservationId(resContext.getReservationId()));
 
@@ -2453,5 +2460,64 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   protected List<ContainerReport> getContainersReport(
       GetContainersRequest request) throws YarnException, IOException {
     return rm.getClientRMService().getContainers(request).getContainerList();
+  }
+
+  @PUT
+  @Path("/scheduler-conf")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public synchronized Response updateSchedulerConfiguration(SchedConfUpdateInfo
+      mutationInfo, @Context HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    init();
+
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    ApplicationACLsManager aclsManager = rm.getApplicationACLsManager();
+    if (aclsManager.areACLsEnabled()) {
+      if (callerUGI == null || !aclsManager.isAdmin(callerUGI)) {
+        String msg = "Only admins can carry out this operation.";
+        throw new ForbiddenException(msg);
+      }
+    }
+
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    if (scheduler instanceof MutableConfScheduler && ((MutableConfScheduler)
+        scheduler).isConfigurationMutable()) {
+      try {
+        callerUGI.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            MutableConfigurationProvider provider = ((MutableConfScheduler)
+                scheduler).getMutableConfProvider();
+            if (!provider.getAclMutationPolicy().isMutationAllowed(callerUGI,
+                mutationInfo)) {
+              throw new org.apache.hadoop.security.AccessControlException("User"
+                  + " is not admin of all modified queues.");
+            }
+            provider.logAndApplyMutation(callerUGI, mutationInfo);
+            try {
+              rm.getRMContext().getRMAdminService().refreshQueues();
+            } catch (IOException | YarnException e) {
+              provider.confirmPendingMutation(false);
+              throw e;
+            }
+            provider.confirmPendingMutation(true);
+            return null;
+          }
+        });
+      } catch (IOException e) {
+        LOG.error("Exception thrown when modifying configuration.", e);
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
+            .build();
+      }
+      return Response.status(Status.OK).entity("Configuration change " +
+          "successfully applied.").build();
+    } else {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by " +
+              "MutableConfScheduler.")
+          .build();
+    }
   }
 }

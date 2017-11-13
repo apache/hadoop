@@ -23,6 +23,7 @@ import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -38,7 +39,12 @@ abstract class AbstractNativeRawEncoder extends RawErasureEncoder {
   }
 
   @Override
-  protected void doEncode(ByteBufferEncodingState encodingState) {
+  protected synchronized void doEncode(ByteBufferEncodingState encodingState)
+      throws IOException {
+    if (nativeCoder == 0) {
+      throw new IOException(String.format("%s closed",
+          getClass().getSimpleName()));
+    }
     int[] inputOffsets = new int[encodingState.inputs.length];
     int[] outputOffsets = new int[encodingState.outputs.length];
     int dataLen = encodingState.inputs[0].remaining();
@@ -60,10 +66,12 @@ abstract class AbstractNativeRawEncoder extends RawErasureEncoder {
 
   protected abstract void performEncodeImpl(
           ByteBuffer[] inputs, int[] inputOffsets,
-          int dataLen, ByteBuffer[] outputs, int[] outputOffsets);
+          int dataLen, ByteBuffer[] outputs, int[] outputOffsets)
+      throws IOException;
 
   @Override
-  protected void doEncode(ByteArrayEncodingState encodingState) {
+  protected void doEncode(ByteArrayEncodingState encodingState)
+      throws IOException {
     PerformanceAdvisory.LOG.debug("convertToByteBufferState is invoked, " +
         "not efficiently. Please use direct ByteBuffer inputs/outputs");
 

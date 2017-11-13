@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import org.apache.curator.shaded.com.google.common.reflect.ClassPath;
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+
+import java.util.Map;
 
 /**
  * Class to encapsulate information about a Resource - the name of the resource,
@@ -36,13 +38,20 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
   private long minimumAllocation;
   private long maximumAllocation;
 
+  // Known resource types
   public static final String MEMORY_URI = "memory-mb";
   public static final String VCORES_URI = "vcores";
+  public static final String GPU_URI = "yarn.io/gpu";
 
   public static final ResourceInformation MEMORY_MB =
       ResourceInformation.newInstance(MEMORY_URI, "Mi");
   public static final ResourceInformation VCORES =
       ResourceInformation.newInstance(VCORES_URI);
+  public static final ResourceInformation GPUS =
+      ResourceInformation.newInstance(GPU_URI);
+
+  public static final Map<String, ResourceInformation> MANDATORY_RESOURCES =
+      ImmutableMap.of(MEMORY_URI, MEMORY_MB, VCORES_URI, VCORES, GPU_URI, GPUS);
 
   /**
    * Get the name for the resource.
@@ -55,6 +64,11 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
 
   /**
    * Set the name for the resource.
+   *
+   * A valid resource name must begin with a letter and contain only letters,
+   * numbers, and any of: '.', '_', or '-'. A valid resource name may also be
+   * optionally preceded by a name space followed by a slash. A valid name space
+   * consists of period-separated groups of letters, numbers, and dashes."
    *
    * @param rName name for the resource
    */
@@ -203,6 +217,12 @@ public class ResourceInformation implements Comparable<ResourceInformation> {
     return ResourceInformation
         .newInstance(name, units, 0L, ResourceTypes.COUNTABLE, 0L,
             Long.MAX_VALUE);
+  }
+
+  public static ResourceInformation newInstance(String name, String units,
+      ResourceTypes resourceType) {
+    return ResourceInformation.newInstance(name, units, 0L, resourceType, 0L,
+        Long.MAX_VALUE);
   }
 
   public static ResourceInformation newInstance(String name, long value) {

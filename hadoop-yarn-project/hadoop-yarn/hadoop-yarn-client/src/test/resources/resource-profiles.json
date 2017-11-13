@@ -1,15 +1,7 @@
 {
-    "minimum": {
-        "memory-mb" : 1024,
-        "vcores" : 1
-    },
     "default" : {
         "memory-mb" : 2048,
         "vcores" : 2
-    },
-    "maximum" : {
-        "memory-mb": 4096,
-        "vcores" : 4
     },
     "http" : {
         "memory-mb" : 2048,

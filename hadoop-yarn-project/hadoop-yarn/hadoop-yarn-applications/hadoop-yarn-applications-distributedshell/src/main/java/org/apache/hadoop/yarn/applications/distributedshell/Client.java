@@ -36,8 +36,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -85,6 +83,8 @@ import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Client for Distributed Shell application submission to YARN.
@@ -121,7 +121,8 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 @InterfaceStability.Unstable
 public class Client {
 
-  private static final Log LOG = LogFactory.getLog(Client.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(Client.class);
 
   private static final int DEFAULT_AM_MEMORY = 100;
   private static final int DEFAULT_AM_VCORES = 1;
@@ -237,7 +238,7 @@ public class Client {
       }
       result = client.run();
     } catch (Throwable t) {
-      LOG.fatal("Error running Client", t);
+      LOG.error("Error running Client", t);
       System.exit(1);
     }
     if (result) {

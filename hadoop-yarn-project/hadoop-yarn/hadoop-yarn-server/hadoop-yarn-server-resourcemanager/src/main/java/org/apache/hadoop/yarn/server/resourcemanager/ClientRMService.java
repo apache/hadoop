@@ -150,6 +150,7 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
@@ -925,6 +926,8 @@ public class ClientRMService extends AbstractService implements
           callerUGI.getUserName(), allowAccess));
     }
 
+    RMAuditLogger.logSuccess(callerUGI.getUserName(),
+        AuditConstants.GET_APPLICATIONS_REQUEST, "ClientRMService");
     GetApplicationsResponse response =
       recordFactory.newRecordInstance(GetApplicationsResponse.class);
     response.setApplicationList(reports);
@@ -975,6 +978,13 @@ public class ClientRMService extends AbstractService implements
 
     GetQueueInfoResponse response =
       recordFactory.newRecordInstance(GetQueueInfoResponse.class);
+    RMAuditLogger.ArgsBuilder arguments = new RMAuditLogger.ArgsBuilder()
+        .append(Keys.QUEUENAME, request.getQueueName())
+        .append(Keys.INCLUDEAPPS,
+            String.valueOf(request.getIncludeApplications()))
+        .append(Keys.INCLUDECHILDQUEUES,
+            String.valueOf(request.getIncludeChildQueues()))
+        .append(Keys.RECURSIVE, String.valueOf(request.getRecursive()));
     try {
       QueueInfo queueInfo = 
         scheduler.getQueueInfo(request.getQueueName(),  
@@ -1001,8 +1011,14 @@ public class ClientRMService extends AbstractService implements
       }
       queueInfo.setApplications(appReports);
       response.setQueueInfo(queueInfo);
+      RMAuditLogger.logSuccess(callerUGI.getUserName(),
+          AuditConstants.GET_QUEUE_INFO_REQUEST,
+          "ClientRMService", arguments);
     } catch (IOException ioe) {
       LOG.info("Failed to getQueueInfo for " + request.getQueueName(), ioe);
+      RMAuditLogger.logFailure(callerUGI.getUserName(),
+          AuditConstants.GET_QUEUE_INFO_REQUEST, "UNKNOWN", "ClientRMService",
+          ioe.getMessage(), arguments);
     }
     
     return response;

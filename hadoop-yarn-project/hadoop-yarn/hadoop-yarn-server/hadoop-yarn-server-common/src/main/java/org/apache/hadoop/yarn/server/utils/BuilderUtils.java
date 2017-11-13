@@ -378,6 +378,7 @@ public class BuilderUtils {
     request.setNumContainers(r.getNumContainers());
     request.setNodeLabelExpression(r.getNodeLabelExpression());
     request.setExecutionTypeRequest(r.getExecutionTypeRequest());
+    request.setProfileCapability(r.getProfileCapability());
     return request;
   }
 

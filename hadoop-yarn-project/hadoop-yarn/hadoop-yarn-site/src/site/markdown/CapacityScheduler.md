@@ -295,9 +295,82 @@ The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierach
 Changing Queue Configuration
 ----------------------------
 
-Changing queue properties and adding new queues is very simple. You need to edit **conf/capacity-scheduler.xml** and run *yarn rmadmin -refreshQueues*.
+Changing queue/scheduler properties and adding/removing queues can be done in two ways, via file or via API. This behavior can be changed via `yarn.scheduler.configuration.store.class` in yarn-site.xml. Possible values are *file*, which allows modifying properties via file; *memory*, which allows modifying properties via API, but does not persist changes across restart; *leveldb*, which allows modifying properties via API and stores changes in leveldb backing store; and *zk*, which allows modifying properties via API and stores changes in zookeeper backing store. The default value is *file*.
+
+### Changing queue configuration via file
+
+  To edit by file, you need to edit **conf/capacity-scheduler.xml** and run *yarn rmadmin -refreshQueues*.
 
     $ vi $HADOOP_CONF_DIR/capacity-scheduler.xml
     $ $HADOOP_YARN_HOME/bin/yarn rmadmin -refreshQueues
 
-**Note:** Queues cannot be *deleted*, only addition of new queues is supported - the updated queue configuration should be a valid one i.e. queue-capacity at each *level* should be equal to 100%.
+### Changing queue configuration via API
+
+  Editing by API uses a backing store for the scheduler configuration. To enable this, the following parameters can be configured in yarn-site.xml.
+
+  **Note:** This feature is in alpha phase and is subject to change.
+
+  | Property | Description |
+  |:---- |:---- |
+  | `yarn.scheduler.configuration.store.class` | The type of backing store to use, as described [above](CapacityScheduler.html#Changing_Queue_Configuration). |
+  | `yarn.scheduler.configuration.mutation.acl-policy.class` | An ACL policy can be configured to restrict which users can modify which queues. Default value is *org.apache.hadoop.yarn.server.resourcemanager.scheduler.DefaultConfigurationMutationACLPolicy*, which only allows YARN admins to make any configuration modifications. Another value is *org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueAdminConfigurationMutationACLPolicy*, which only allows queue modifications if the caller is an admin of the queue. |
+  | `yarn.scheduler.configuration.store.max-logs` | Configuration changes are audit logged in the backing store, if using leveldb or zookeeper. This configuration controls the maximum number of audit logs to store, dropping the oldest logs when exceeded. Default is 1000. |
+  | `yarn.scheduler.configuration.leveldb-store.path` | The storage path of the configuration store when using leveldb. Default value is *${hadoop.tmp.dir}/yarn/system/confstore*. |
+  | `yarn.scheduler.configuration.leveldb-store.compaction-interval-secs` | The interval for compacting the configuration store in seconds, when using leveldb. Default value is 86400, or one day. |
+  | `yarn.scheduler.configuration.zk-store.parent-path` | The zookeeper root node path for configuration store related information, when using zookeeper. Default value is */confstore*. |
+
+  **Note:** When enabling scheduler configuration mutations via `yarn.scheduler.configuration.store.class`, *yarn rmadmin -refreshQueues* will be disabled, i.e. it will no longer be possible to update configuration via file.
+
+  See the [YARN Resource Manager REST API](ResourceManagerRest.html#Scheduler_Configuration_Mutation_API) for examples on how to change scheduler configuration via REST, and [YARN Commands Reference](YarnCommands.html#schedulerconf) for examples on how to change scheduler configuration via command line.
+
+Updating a Container (Experimental - API may change in the future)
+--------------------
+
+  Once an Application Master has received a Container from the Resource Manager, it may request the Resource Manager to update certain attributes of the container.
+
+  Currently only two types of container updates are supported:
+
+  * **Resource Update** : Where the AM can request the RM to update the resource size of the container. For eg: Change the container from a 2GB, 2 vcore container to a 4GB, 2 vcore container.
+  * **ExecutionType Update** : Where the AM can request the RM to update the ExecutionType of the container. For eg: Change the execution type from *GUARANTEED* to *OPPORTUNISTIC* or vice versa.
+  
+  This is facilitated by the AM populating the **updated_containers** field, which is a list of type **UpdateContainerRequestProto**, in **AllocateRequestProto.** The AM can make multiple container update requests in the same allocate call.
+  
+  The schema of the **UpdateContainerRequestProto** is as follows:
+  
+    message UpdateContainerRequestProto {
+      required int32 container_version = 1;
+      required ContainerIdProto container_id = 2;
+      required ContainerUpdateTypeProto update_type = 3;
+      optional ResourceProto capability = 4;
+      optional ExecutionTypeProto execution_type = 5;
+    }
+
+  The **ContainerUpdateTypeProto** is an enum:
+  
+    enum ContainerUpdateTypeProto {
+      INCREASE_RESOURCE = 0;
+      DECREASE_RESOURCE = 1;
+      PROMOTE_EXECUTION_TYPE = 2;
+      DEMOTE_EXECUTION_TYPE = 3;
+    }
+
+  As constrained by the above enum, the scheduler currently supports changing either the resource update OR executionType of a container in one update request.
+  
+  The AM must also provide the latest **ContainerProto** it received from the RM. This is the container which the RM will attempt to update.
+
+  If the RM is able to update the requested container, the updated container will be returned, in the **updated_containers** list field of type **UpdatedContainerProto** in the **AllocateResponseProto** return value of either the same allocate call or in one of the subsequent calls.
+  
+  The schema of the **UpdatedContainerProto** is as follows:
+  
+    message UpdatedContainerProto {
+      required ContainerUpdateTypeProto update_type = 1;
+      required ContainerProto container = 2;
+    }
+  
+  It specifies the type of container update that was performed on the Container and the updated Container object which container an updated token.
+
+  The container token can then be used by the AM to ask the corresponding NM to either start the container, if the container has not already been started or update the container using the updated token.
+  
+  The **DECREASE_RESOURCE** and **DEMOTE_EXECUTION_TYPE** container updates are automatic - the AM does not explicitly have to ask the NM to decrease the resources of the container. The other update types require the AM to explicitly ask the NM to update the container.
+  
+  If the **yarn.resourcemanager.auto-update.containers** configuration parameter is set to **true** (false by default), The RM will ensure that all container updates are automatic.  

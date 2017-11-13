@@ -26,11 +26,14 @@ import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import net.jcip.annotations.NotThreadSafe;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
@@ -54,10 +57,26 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+/**
+ * This class tests the {@code AlignedPlannerWithGreedy} agent.
+ */
+@RunWith(value = Parameterized.class)
+@NotThreadSafe
+@SuppressWarnings("VisibilityModifier")
 public class TestAlignedPlanner {
+
+  @Parameterized.Parameter(value = 0)
+  public String recurrenceExpression;
+
+  final static String NONPERIODIC = "0";
+  final static String THREEHOURPERIOD = "10800000";
+  final static String ONEDAYPERIOD = "86400000";
 
   private static final Logger LOG = LoggerFactory
       .getLogger(TestAlignedPlanner.class);
@@ -71,6 +90,16 @@ public class TestAlignedPlanner {
   private final Random rand = new Random();
   private Resource clusterCapacity;
   private long step;
+
+
+  @Parameterized.Parameters(name = "Testing: periodicity {0})")
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][]{
+            {NONPERIODIC},
+            {THREEHOURPERIOD},
+            {ONEDAYPERIOD}
+    });
+  }
 
   @Test
   public void testSingleReservationAccept() throws PlanningException {
@@ -106,6 +135,9 @@ public class TestAlignedPlanner {
     // Verify allocation
     assertTrue(alloc1.toString(),
         check(alloc1, 10 * step, 20 * step, 10, 2048, 2));
+
+    System.out.println("--------AFTER AGENT----------");
+    System.out.println(plan.toString());
 
   }
 
@@ -1139,9 +1171,11 @@ public class TestAlignedPlanner {
       long deadline, ReservationRequest[] reservationRequests,
       ReservationRequestInterpreter rType, String username) {
 
-    return ReservationDefinition.newInstance(arrival, deadline,
-        ReservationRequests.newInstance(Arrays.asList(reservationRequests),
-            rType), username);
+
+    return ReservationDefinition.newInstance(arrival,
+        deadline, ReservationRequests
+            .newInstance(Arrays.asList(reservationRequests), rType),
+        username, recurrenceExpression, Priority.UNDEFINED);
 
   }
 

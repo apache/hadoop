@@ -73,7 +73,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -123,30 +122,31 @@ public class FSDirectory implements Closeable {
 
   @VisibleForTesting
   static boolean CHECK_RESERVED_FILE_NAMES = true;
-  public final static String DOT_RESERVED_STRING = ".reserved";
-  public final static String DOT_RESERVED_PATH_PREFIX = Path.SEPARATOR
-      + DOT_RESERVED_STRING;
+  public final static String DOT_RESERVED_STRING =
+      HdfsConstants.DOT_RESERVED_STRING;
+  public final static String DOT_RESERVED_PATH_PREFIX =
+      HdfsConstants.DOT_RESERVED_PATH_PREFIX;
   public final static byte[] DOT_RESERVED = 
       DFSUtil.string2Bytes(DOT_RESERVED_STRING);
   private final static String RAW_STRING = "raw";
   private final static byte[] RAW = DFSUtil.string2Bytes(RAW_STRING);
-  public final static String DOT_INODES_STRING = ".inodes";
+  public final static String DOT_INODES_STRING =
+      HdfsConstants.DOT_INODES_STRING;
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
   private final static byte[] DOT_DOT =
       DFSUtil.string2Bytes("..");
 
   public final static HdfsFileStatus DOT_RESERVED_STATUS =
-      new HdfsFileStatus(0, true, 0, 0, 0, 0, new FsPermission((short) 01770),
-          EnumSet.noneOf(HdfsFileStatus.Flags.class), null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+      new HdfsFileStatus.Builder()
+        .isdir(true)
+        .perm(new FsPermission((short) 01770))
+        .build();
 
   public final static HdfsFileStatus DOT_SNAPSHOT_DIR_STATUS =
-      new HdfsFileStatus(0, true, 0, 0, 0, 0, null,
-          EnumSet.noneOf(HdfsFileStatus.Flags.class), null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+      new HdfsFileStatus.Builder()
+        .isdir(true)
+        .build();
 
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
@@ -434,16 +434,22 @@ public class FSDirectory implements Closeable {
    * @return Array of HdfsFileStatus
    */
   void createReservedStatuses(long cTime) {
-    HdfsFileStatus inodes = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
-        new FsPermission((short) 0770),
-        EnumSet.noneOf(HdfsFileStatus.Flags.class), null, supergroup, null,
-        DOT_INODES, -1L, 0, null,
-        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
-    HdfsFileStatus raw = new HdfsFileStatus(0, true, 0, 0, cTime, cTime,
-        new FsPermission((short) 0770),
-        EnumSet.noneOf(HdfsFileStatus.Flags.class), null, supergroup, null,
-        RAW, -1L, 0, null,
-        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+    HdfsFileStatus inodes = new HdfsFileStatus.Builder()
+        .isdir(true)
+        .mtime(cTime)
+        .atime(cTime)
+        .perm(new FsPermission((short) 0770))
+        .group(supergroup)
+        .path(DOT_INODES)
+        .build();
+    HdfsFileStatus raw = new HdfsFileStatus.Builder()
+        .isdir(true)
+        .mtime(cTime)
+        .atime(cTime)
+        .perm(new FsPermission((short) 0770))
+        .group(supergroup)
+        .path(RAW)
+        .build();
     reservedStatuses = new HdfsFileStatus[] {inodes, raw};
   }
 

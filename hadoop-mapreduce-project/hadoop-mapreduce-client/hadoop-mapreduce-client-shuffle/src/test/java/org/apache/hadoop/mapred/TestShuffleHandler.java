@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -26,6 +27,7 @@ import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,8 +48,6 @@ import java.util.Map;
 import java.util.zip.CheckedOutputStream;
 import java.util.zip.Checksum;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -69,12 +69,14 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.jboss.netty.channel.Channel;
@@ -95,12 +97,19 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mockito;
 import org.eclipse.jetty.http.HttpHeader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestShuffleHandler {
   static final long MiB = 1024 * 1024; 
-  private static final Log LOG = LogFactory.getLog(TestShuffleHandler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestShuffleHandler.class);
+  private static final File ABS_LOG_DIR = GenericTestUtils.getTestDir(
+      TestShuffleHandler.class.getSimpleName() + "LocDir");
 
   class MockShuffleHandler extends org.apache.hadoop.mapred.ShuffleHandler {
+    private AuxiliaryLocalPathHandler pathHandler =
+        new TestAuxiliaryLocalPathHandler();
     @Override
     protected Shuffle getShuffle(final Configuration conf) {
       return new Shuffle(conf) {
@@ -140,11 +149,35 @@ public class TestShuffleHandler {
         }
       };
     }
+
+    @Override
+    public AuxiliaryLocalPathHandler getAuxiliaryLocalPathHandler() {
+      return pathHandler;
+    }
   }
 
-  private static class MockShuffleHandler2 extends org.apache.hadoop.mapred.ShuffleHandler {
-    boolean socketKeepAlive = false;
+  private class TestAuxiliaryLocalPathHandler
+      implements AuxiliaryLocalPathHandler {
+    @Override
+    public Path getLocalPathForRead(String path) throws IOException {
+      return new Path(ABS_LOG_DIR.getAbsolutePath(), path);
+    }
 
+    @Override
+    public Path getLocalPathForWrite(String path) throws IOException {
+      return new Path(ABS_LOG_DIR.getAbsolutePath());
+    }
+
+    @Override
+    public Path getLocalPathForWrite(String path, long size)
+        throws IOException {
+      return new Path(ABS_LOG_DIR.getAbsolutePath());
+    }
+  }
+
+  private static class MockShuffleHandler2 extends
+      org.apache.hadoop.mapred.ShuffleHandler {
+    boolean socketKeepAlive = false;
     @Override
     protected Shuffle getShuffle(final Configuration conf) {
       return new Shuffle(conf) {
@@ -479,6 +512,11 @@ public class TestShuffleHandler {
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, -100);
     HttpURLConnection conn = null;
     MockShuffleHandler2 shuffleHandler = new MockShuffleHandler2();
+    AuxiliaryLocalPathHandler pathHandler =
+        mock(AuxiliaryLocalPathHandler.class);
+    when(pathHandler.getLocalPathForRead(anyString())).thenThrow(
+        new DiskChecker.DiskErrorException("Test"));
+    shuffleHandler.setAuxiliaryLocalPathHandler(pathHandler);
     try {
       shuffleHandler.init(conf);
       shuffleHandler.start();
@@ -668,19 +706,16 @@ public class TestShuffleHandler {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    File absLogDir = new File("target",
-        TestShuffleHandler.class.getSimpleName() + "LocDir").getAbsoluteFile();
-    conf.set(YarnConfiguration.NM_LOCAL_DIRS, absLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, ABS_LOG_DIR.getAbsolutePath());
     ApplicationId appId = ApplicationId.newInstance(12345, 1);
     LOG.info(appId.toString());
     String appAttemptId = "attempt_12345_1_m_1_0";
     String user = "randomUser";
     String reducerId = "0";
     List<File> fileMap = new ArrayList<File>();
-    createShuffleHandlerFiles(absLogDir, user, appId.toString(), appAttemptId,
+    createShuffleHandlerFiles(ABS_LOG_DIR, user, appId.toString(), appAttemptId,
         conf, fileMap);
     ShuffleHandler shuffleHandler = new ShuffleHandler() {
-
       @Override
       protected Shuffle getShuffle(Configuration conf) {
         // replace the shuffle handler with one stubbed for testing
@@ -696,6 +731,8 @@ public class TestShuffleHandler {
         };
       }
     };
+    AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
+    shuffleHandler.setAuxiliaryLocalPathHandler(pathHandler);
     shuffleHandler.init(conf);
     try {
       shuffleHandler.start();
@@ -740,7 +777,7 @@ public class TestShuffleHandler {
       Assert.assertTrue((new String(byteArr)).contains(message));
     } finally {
       shuffleHandler.stop();
-      FileUtil.fullyDelete(absLogDir);
+      FileUtil.fullyDelete(ABS_LOG_DIR);
     }
   }
 
@@ -801,10 +838,14 @@ public class TestShuffleHandler {
     final File tmpDir = new File(System.getProperty("test.build.data",
         System.getProperty("java.io.tmpdir")),
         TestShuffleHandler.class.getName());
+    ShuffleHandler shuffle = new ShuffleHandler();
+    AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
+    shuffle.setAuxiliaryLocalPathHandler(pathHandler);
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
-    ShuffleHandler shuffle = new ShuffleHandler();
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS,
+        ABS_LOG_DIR.getAbsolutePath());
     // emulate aux services startup with recovery enabled
     shuffle.setRecoveryPath(new Path(tmpDir.toString()));
     tmpDir.mkdirs();
@@ -830,6 +871,7 @@ public class TestShuffleHandler {
       // emulate shuffle handler restart
       shuffle.close();
       shuffle = new ShuffleHandler();
+      shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
       shuffle.start();
@@ -872,6 +914,9 @@ public class TestShuffleHandler {
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     ShuffleHandler shuffle = new ShuffleHandler();
+    AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
+    shuffle.setAuxiliaryLocalPathHandler(pathHandler);
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, ABS_LOG_DIR.getAbsolutePath());
     // emulate aux services startup with recovery enabled
     shuffle.setRecoveryPath(new Path(tmpDir.toString()));
     tmpDir.mkdirs();
@@ -897,6 +942,7 @@ public class TestShuffleHandler {
       // emulate shuffle handler restart
       shuffle.close();
       shuffle = new ShuffleHandler();
+      shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
       shuffle.start();
@@ -914,6 +960,7 @@ public class TestShuffleHandler {
       Assert.assertEquals(version11, shuffle.loadVersion());
       shuffle.close();
       shuffle = new ShuffleHandler();
+      shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
       shuffle.start();
@@ -930,6 +977,7 @@ public class TestShuffleHandler {
       Assert.assertEquals(version21, shuffle.loadVersion());
       shuffle.close();
       shuffle = new ShuffleHandler();
+      shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
     
@@ -979,16 +1027,15 @@ public class TestShuffleHandler {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "simple");
     UserGroupInformation.setConfiguration(conf);
-    File absLogDir = new File("target", TestShuffleHandler.class.
-        getSimpleName() + "LocDir").getAbsoluteFile();
-    conf.set(YarnConfiguration.NM_LOCAL_DIRS, absLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, ABS_LOG_DIR.getAbsolutePath());
     ApplicationId appId = ApplicationId.newInstance(12345, 1);
     String appAttemptId = "attempt_12345_1_m_1_0";
     String user = "randomUser";
     String reducerId = "0";
     List<File> fileMap = new ArrayList<File>();
-    createShuffleHandlerFiles(absLogDir, user, appId.toString(), appAttemptId,
+    createShuffleHandlerFiles(ABS_LOG_DIR, user, appId.toString(), appAttemptId,
         conf, fileMap);
+    AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
     ShuffleHandler shuffleHandler = new ShuffleHandler() {
       @Override
       protected Shuffle getShuffle(Configuration conf) {
@@ -1032,6 +1079,7 @@ public class TestShuffleHandler {
         };
       }
     };
+    shuffleHandler.setAuxiliaryLocalPathHandler(pathHandler);
     shuffleHandler.init(conf);
     try {
       shuffleHandler.start();
@@ -1070,7 +1118,7 @@ public class TestShuffleHandler {
           0, failures.size());
     } finally {
       shuffleHandler.stop();
-      FileUtil.fullyDelete(absLogDir);
+      FileUtil.fullyDelete(ABS_LOG_DIR);
     }
   }
 

@@ -56,9 +56,6 @@ public class CapacityOverTimePolicy extends NoOverCommitPolicy {
   private float maxInst;
   private float maxAvg;
 
-  // For now this is CapacityScheduler specific, but given a hierarchy in the
-  // configuration structure of the schedulers (e.g., SchedulerConfiguration)
-  // it should be easy to remove this limitation
   @Override
   public void init(String reservationQueuePath,
       ReservationSchedulerConfiguration conf) {

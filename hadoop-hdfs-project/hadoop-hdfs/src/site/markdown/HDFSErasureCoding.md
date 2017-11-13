@@ -136,10 +136,17 @@ Deployment
   1. `dfs.datanode.ec.reconstruction.stripedread.timeout.millis` - Timeout for striped reads. Default value is 5000 ms.
   1. `dfs.datanode.ec.reconstruction.stripedread.buffer.size` - Buffer size for reader service. Default value is 64KB.
   1. `dfs.datanode.ec.reconstruction.threads` - Number of threads used by the Datanode for background reconstruction work. Default value is 8 threads.
+  1. `dfs.datanode.ec.reconstruction.xmits.weight` - Relative weight of xmits used by EC background recovery task comparing to replicated block recovery. Default value is 0.5.
+  It sets to `0` to disable calculate weights for EC recovery tasks, that is, EC task always has `1` xmits.
+  The xmits of an erasure coding recovery task is calculated as the maximum value between the number of read streams and the number of write streams. For example, if an EC recovery
+  task need to read from 6 nodes and write to 2 nodes, it has xmits of `max(6, 2) * 0.5 = 3`. Recovery task for replicated file always counts
+  as `1` xmit. NameNode utilizes `dfs.namenode.replication.max-streams` minus the total `xmitsInProgress` on the DataNode that combines of the xmits from
+  replicated file and EC files, to schedule recovery tasks to this DataNode.
 
 ### Enable Intel ISA-L
 
   HDFS native implementation of default RS codec leverages Intel ISA-L library to improve the encoding and decoding calculation. To enable and use Intel ISA-L, there are three steps.
+
   1. Build ISA-L library. Please refer to the official site "https://github.com/01org/isa-l/" for detail information.
   2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop" in (BUILDING.txt) in the source code.
   3. Use `-Dbundle.isal` to copy the contents of the `isal.lib` directory into the final tar file. Deploy Hadoop with the tar file. Make sure ISA-L is available on HDFS clients and DataNodes.
@@ -192,7 +199,7 @@ Below are the details about each command.
 
  *  `[-addPolicies -policyFile <file>]`
 
-     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB.
+     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB. Currently HDFS allows the user to add 64 policies in total, and the added policy ID is in range of 64 to 127. Adding policy will fail if there are already 64 policies added.
 
  *  `[-listCodecs]`
 

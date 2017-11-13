@@ -21,12 +21,17 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -54,6 +59,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -172,6 +178,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       "YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS";
 
   private Configuration conf;
+  private Context nmContext;
   private DockerClient dockerClient;
   private PrivilegedOperationExecutor privilegedOperationExecutor;
   private Set<String> allowedNetworks = new HashSet<>();
@@ -182,6 +189,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private boolean enableUserReMapping;
   private int userRemappingUidThreshold;
   private int userRemappingGidThreshold;
+  private Set<String> capabilities;
 
   /**
    * Return whether the given environment variables indicate that the operation
@@ -220,14 +228,14 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
    * Create an instance using the given {@link PrivilegedOperationExecutor}
    * instance for performing operations and the given {@link CGroupsHandler}
    * instance. This constructor is intended for use in testing.
-   *
-   * @param privilegedOperationExecutor the {@link PrivilegedOperationExecutor}
+   *  @param privilegedOperationExecutor the {@link PrivilegedOperationExecutor}
    * instance
    * @param cGroupsHandler the {@link CGroupsHandler} instance
    */
   @VisibleForTesting
-  public DockerLinuxContainerRuntime(PrivilegedOperationExecutor
-      privilegedOperationExecutor, CGroupsHandler cGroupsHandler) {
+  public DockerLinuxContainerRuntime(
+      PrivilegedOperationExecutor privilegedOperationExecutor,
+      CGroupsHandler cGroupsHandler) {
     this.privilegedOperationExecutor = privilegedOperationExecutor;
 
     if (cGroupsHandler == null) {
@@ -239,8 +247,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
-  public void initialize(Configuration conf)
+  public void initialize(Configuration conf, Context nmContext)
       throws ContainerExecutionException {
+    this.nmContext = nmContext;
     this.conf = conf;
     dockerClient = new DockerClient(conf);
     allowedNetworks.clear();
@@ -279,11 +288,87 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     userRemappingGidThreshold = conf.getInt(
       YarnConfiguration.NM_DOCKER_USER_REMAPPING_GID_THRESHOLD,
       YarnConfiguration.DEFAULT_NM_DOCKER_USER_REMAPPING_GID_THRESHOLD);
+
+    capabilities = getDockerCapabilitiesFromConf();
+  }
+
+  private Set<String> getDockerCapabilitiesFromConf() throws
+      ContainerExecutionException {
+    Set<String> caps = new HashSet<>(Arrays.asList(
+        conf.getTrimmedStrings(
+        YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+        YarnConfiguration.DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES)));
+    if(caps.contains("none") || caps.contains("NONE")) {
+      if(caps.size() > 1) {
+        String msg = "Mixing capabilities with the none keyword is" +
+            " not supported";
+        throw new ContainerExecutionException(msg);
+      }
+      caps = Collections.emptySet();
+    }
+
+    return caps;
+  }
+
+  public Set<String> getCapabilities() {
+    return capabilities;
+  }
+
+  @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    // Avoid propagating nodemanager environment variables into the container
+    // so those variables can be picked up from the Docker image instead.
+    return false;
+  }
+
+  private void runDockerVolumeCommand(DockerVolumeCommand dockerVolumeCommand,
+      Container container) throws ContainerExecutionException {
+    try {
+      String commandFile = dockerClient.writeCommandToTempFile(
+          dockerVolumeCommand, container.getContainerId().toString());
+      PrivilegedOperation privOp = new PrivilegedOperation(
+          PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
+      privOp.appendArgs(commandFile);
+      String output = privilegedOperationExecutor
+          .executePrivilegedOperation(null, privOp, null,
+              null, true, false);
+      LOG.info("ContainerId=" + container.getContainerId()
+          + ", docker volume output for " + dockerVolumeCommand + ": "
+          + output);
+    } catch (ContainerExecutionException e) {
+      LOG.error("Error when writing command to temp file, command="
+              + dockerVolumeCommand,
+          e);
+      throw e;
+    } catch (PrivilegedOperationException e) {
+      LOG.error("Error when executing command, command="
+          + dockerVolumeCommand, e);
+      throw new ContainerExecutionException(e);
+    }
+
   }
 
   @Override
   public void prepareContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
+    Container container = ctx.getContainer();
+
+    // Create volumes when needed.
+    if (nmContext != null
+        && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
+      for (ResourcePlugin plugin : nmContext.getResourcePluginManager()
+          .getNameToPlugins().values()) {
+        DockerCommandPlugin dockerCommandPlugin =
+            plugin.getDockerCommandPluginInstance();
+        if (dockerCommandPlugin != null) {
+          DockerVolumeCommand dockerVolumeCommand =
+              dockerCommandPlugin.getCreateDockerVolumeCommand(ctx.getContainer());
+          if (dockerVolumeCommand != null) {
+            runDockerVolumeCommand(dockerVolumeCommand, container);
+          }
+        }
+      }
+    }
   }
 
   private void validateContainerNetworkType(String network)
@@ -314,6 +399,11 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     if (name == null || name.isEmpty()) {
       name = RegistryPathUtils.encodeYarnID(containerIdStr);
+
+      String domain = conf.get(RegistryConstants.KEY_DNS_DOMAIN);
+      if (domain != null) {
+        name += ("." + domain);
+      }
       validateHostname(name);
     }
 
@@ -544,10 +634,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         LOCALIZED_RESOURCES);
     @SuppressWarnings("unchecked")
     List<String> userLocalDirs = ctx.getExecutionAttribute(USER_LOCAL_DIRS);
-    Set<String> capabilities = new HashSet<>(Arrays.asList(
-        conf.getTrimmedStrings(
-            YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
-            YarnConfiguration.DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES)));
 
     @SuppressWarnings("unchecked")
     DockerRunCommand runCommand = new DockerRunCommand(containerIdStr,
@@ -616,6 +702,19 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       runCommand.groupAdd(groups);
     }
 
+    // use plugins to update docker run command.
+    if (nmContext != null
+        && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
+      for (ResourcePlugin plugin : nmContext.getResourcePluginManager()
+          .getNameToPlugins().values()) {
+        DockerCommandPlugin dockerCommandPlugin =
+            plugin.getDockerCommandPluginInstance();
+        if (dockerCommandPlugin != null) {
+          dockerCommandPlugin.updateDockerRunCommand(runCommand, container);
+        }
+      }
+    }
+
     String commandFile = dockerClient.writeCommandToTempFile(runCommand,
         containerIdStr);
     PrivilegedOperation launchOp = buildLaunchOp(ctx,
@@ -676,6 +775,23 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void reapContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
+    // Cleanup volumes when needed.
+    if (nmContext != null
+        && nmContext.getResourcePluginManager().getNameToPlugins() != null) {
+      for (ResourcePlugin plugin : nmContext.getResourcePluginManager()
+          .getNameToPlugins().values()) {
+        DockerCommandPlugin dockerCommandPlugin =
+            plugin.getDockerCommandPluginInstance();
+        if (dockerCommandPlugin != null) {
+          DockerVolumeCommand dockerVolumeCommand =
+              dockerCommandPlugin.getCleanupDockerVolumesCommand(
+                  ctx.getContainer());
+          if (dockerVolumeCommand != null) {
+            runDockerVolumeCommand(dockerVolumeCommand, ctx.getContainer());
+          }
+        }
+      }
+    }
   }
 
 
@@ -696,6 +812,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           .executePrivilegedOperation(null, privOp, null,
               null, true, false);
       LOG.info("Docker inspect output for " + containerId + ": " + output);
+      // strip off quotes if any
+      output = output.replaceAll("['\"]", "");
       int index = output.lastIndexOf(',');
       if (index == -1) {
         LOG.error("Incorrect format for ip and host");

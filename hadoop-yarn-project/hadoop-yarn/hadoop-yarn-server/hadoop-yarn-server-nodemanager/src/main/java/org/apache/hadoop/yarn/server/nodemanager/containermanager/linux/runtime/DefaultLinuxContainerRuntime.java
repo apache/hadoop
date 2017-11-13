@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
@@ -36,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
@@ -66,9 +68,14 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
   }
 
   @Override
-  public void initialize(Configuration conf)
+  public void initialize(Configuration conf, Context nmContext)
       throws ContainerExecutionException {
     this.conf = conf;
+  }
+
+  @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    return true;
   }
 
   @Override

@@ -1,0 +1,598 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+# YARN Service API 
+
+Bringing a new service on YARN today is not a simple experience. The APIs of existing 
+frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs)
+or writing a complex spec (for declarative frameworks).
+
+This simplified REST API can be used to create and manage the lifecycle of YARN services. 
+In most cases, the application owner will not be forced to make any changes to their applications. 
+This is primarily true if the application is packaged with containerization technologies like Docker.
+
+This document describes the API specifications (aka. YarnFile) for deploying/managing
+containerized services on YARN. The same JSON spec can be used for both REST API
+and CLI to manage the services. 
+
+
+### Version information
+Version: 1.0.0
+
+### License information
+License: Apache 2.0
+License URL: http://www.apache.org/licenses/LICENSE-2.0.html
+
+### URI scheme
+Host: host.mycompany.com
+
+Port: 8088(default RM port)
+
+Schemes: HTTP
+
+### Consumes
+
+* application/json
+
+
+### Produces
+
+* application/json
+
+
+## Paths
+### Create a service
+```
+POST /ws/v1/services
+```
+
+#### Description
+
+Create a service. The request JSON is a service object with details required for creation. If the request is successful it returns 202 Accepted. A success of this API only confirms success in submission of the service creation request. There is no guarantee that the service will actually reach a RUNNING state. Resource availability and several other factors determines if the service will be deployed in the cluster. It is expected that clients would subsequently call the GET API to get details of the service and determine its state.
+
+#### Parameters
+|Type|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|----|
+|BodyParameter|Service|Service request object|true|Service||
+
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|202|The request to create a service is accepted|No Content|
+|400|Invalid service definition provided in the request body|No Content|
+|500|Failed to create a service|No Content|
+|default|Unexpected error|ServiceStatus|
+
+
+### (TBD) List of services running in the cluster.
+```
+GET /ws/v1/services
+```
+
+#### Description
+
+Get a list of all currently running services (response includes a minimal projection of the service info). For more details do a GET on a specific service name.
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|200|An array of services|Service array|
+|default|Unexpected error|ServiceStatus|
+
+
+### Get current version of the API server.
+```
+GET /ws/v1/services/version
+```
+
+#### Description
+
+Get current version of the API server.
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|200|Successful request|No Content|
+
+
+### Update a service or upgrade the binary version of the components of a running service
+```
+PUT /ws/v1/services/{service_name}
+```
+
+#### Description
+
+Update the runtime properties of a service. Currently the following operations are supported - update lifetime, stop/start a service. The PUT operation is also used to orchestrate an upgrade of the service containers to a newer version of their artifacts (TBD).
+
+#### Parameters
+|Type|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|----|
+|PathParameter|service_name|Service name|true|string||
+|BodyParameter|Service|The updated service definition. It can contain the updated lifetime of a service or the desired state (STOPPED/STARTED) of a service to initiate a start/stop operation against the specified service|true|Service||
+
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|204|Update or upgrade was successful|No Content|
+|404|Service does not exist|No Content|
+|default|Unexpected error|ServiceStatus|
+
+
+### Destroy a service
+```
+DELETE /ws/v1/services/{service_name}
+```
+
+#### Description
+
+Destroy a service and release all resources. This API might have to return JSON data providing location of logs (TBD), etc.
+
+#### Parameters
+|Type|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|----|
+|PathParameter|service_name|Service name|true|string||
+
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|204|Destroy was successful|No Content|
+|404|Service does not exist|No Content|
+|default|Unexpected error|ServiceStatus|
+
+
+### Get details of a service.
+```
+GET /ws/v1/services/{service_name}
+```
+
+#### Description
+
+Return the details (including containers) of a running service
+
+#### Parameters
+|Type|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|----|
+|PathParameter|service_name|Service name|true|string||
+
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|200|a service object|object|
+|404|Service does not exist|No Content|
+|default|Unexpected error|ServiceStatus|
+
+
+### Flex a component's number of instances.
+```
+PUT /ws/v1/services/{service_name}/components/{component_name}
+```
+
+#### Description
+
+Set a component's desired number of instanes
+
+#### Parameters
+|Type|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|----|
+|PathParameter|service_name|Service name|true|string||
+|PathParameter|component_name|Component name|true|string||
+|BodyParameter|Component|The definition of a component which contains the updated number of instances.|true|Component||
+
+
+#### Responses
+|HTTP Code|Description|Schema|
+|----|----|----|
+|200|Flex was successful|No Content|
+|404|Service does not exist|No Content|
+|default|Unexpected error|ServiceStatus|
+
+## Definitions
+### Artifact
+
+Artifact of a service component. If not specified, component will just run the bare launch command and no artifact will be localized.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|id|Artifact id. Examples are package location uri for tarball based services, image name for docker, name of service, etc.|true|string||
+|type|Artifact type, like docker, tarball, etc. (optional). For TARBALL type, the specified tarball will be localized to the container local working directory under a folder named lib. For SERVICE type, the service specified will be read and its components will be added into this service. The original component with artifact type SERVICE will be removed (any properties specified in the original component will be ignored).|false|enum (DOCKER, TARBALL, SERVICE)|DOCKER|
+|uri|Artifact location to support multiple artifact stores (optional).|false|string||
+
+
+### Component
+
+One or more components of the service. If the service is HBase say, then the component can be a simple role like master or regionserver. If the service is a complex business webapp then a component can be other services say Kafka or Storm. Thereby it opens up the support for complex and nested services.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|name|Name of the service component (mandatory). If Registry DNS is enabled, the max length is 63 characters. If unique component support is enabled, the max length is lowered to 44 characters.|true|string||
+|state|The state of the component|false|ComponentState||
+|dependencies|An array of service components which should be in READY state (as defined by readiness check), before this component can be started. The dependencies across all components of a service should be represented as a DAG.|false|string array||
+|readiness_check|Readiness check for this component.|false|ReadinessCheck||
+|artifact|Artifact of the component (optional). If not specified, the service level global artifact takes effect.|false|Artifact||
+|launch_command|The custom launch command of this component (optional for DOCKER component, required otherwise). When specified at the component level, it overrides the value specified at the global level (if any).|false|string||
+|resource|Resource of this component (optional). If not specified, the service level global resource takes effect.|false|Resource||
+|number_of_containers|Number of containers for this component (optional). If not specified, the service level global number_of_containers takes effect.|false|integer (int64)||
+|run_privileged_container|Run all containers of this component in privileged mode (YARN-4262).|false|boolean||
+|placement_policy|Advanced scheduling and placement policies for all containers of this component (optional). If not specified, the service level placement_policy takes effect. Refer to the description at the global level for more details.|false|PlacementPolicy||
+|configuration|Config properties for this component.|false|Configuration||
+|quicklinks|A list of quicklink keys defined at the service level, and to be resolved by this component.|false|string array||
+
+
+### ComponentState
+
+The state of the component
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|state|enum of the state of the component|false|enum (FLEXING, STABLE)||
+
+
+### ConfigFile
+
+A config file that needs to be created and made available as a volume in a service component container.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|type|Config file in the standard format like xml, properties, json, yaml, template.|false|enum (XML, PROPERTIES, JSON, YAML, TEMPLATE, ENV, HADOOP_XML)||
+|dest_file|The path that this configuration file should be created as. If it is an absolute path, it will be mounted into the DOCKER container. Absolute paths are only allowed for DOCKER containers.  If it is a relative path, only the file name should be provided, and the file will be created in the container local working directory under a folder named conf.|false|string||
+|src_file|This provides the source location of the configuration file, the content of which is dumped to dest_file post property substitutions, in the format as specified in type. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, or hdfs etc. Currently, only hdfs is supported.|false|string||
+|properties|A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If src_file is specified, src_file content are dumped in the dest_file and these properties will overwrite, if any, existing properties in src_file or be added as new properties in src_file.|false|object||
+
+
+### Configuration
+
+Set of configuration properties that can be injected into the service components via envs, files and custom pluggable helper docker containers. Files of several standard formats like xml, properties, json, yaml and templates will be supported.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|properties|A blob of key-value pairs for configuring YARN service AM.|false|object||
+|env|A blob of key-value pairs which will be appended to the default system properties and handed off to the service at start time. All placeholder references to properties will be substituted before injection.|false|object||
+|files|Array of list of files that needs to be created and made available as volumes in the service component containers.|false|ConfigFile array||
+
+
+### Container
+
+An instance of a running service container.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|id|Unique container id of a running service, e.g. container_e3751_1458061340047_0008_01_000002.|false|string||
+|launch_time|The time when the container was created, e.g. 2016-03-16T01:01:49.000Z. This will most likely be different from cluster launch time.|false|string (date)||
+|ip|IP address of a running container, e.g. 172.31.42.141. The IP address and hostname attribute values are dependent on the cluster/docker network setup as per YARN-4007.|false|string||
+|hostname|Fully qualified hostname of a running container, e.g. ctr-e3751-1458061340047-0008-01-000002.examplestg.site. The IP address and hostname attribute values are dependent on the cluster/docker network setup as per YARN-4007.|false|string||
+|bare_host|The bare node or host in which the container is running, e.g. cn008.example.com.|false|string||
+|state|State of the container of a service.|false|ContainerState||
+|component_instance_name|Name of the component instance that this container instance belongs to. Component instance name is named as $COMPONENT_NAME-i, where i is a monotonically increasing integer. E.g. A componet called nginx can have multiple component instances named as nginx-0, nginx-1 etc. Each component instance is backed by a container instance.|false|string||
+|resource|Resource used for this container.|false|Resource||
+|artifact|Artifact used for this container.|false|Artifact||
+|privileged_container|Container running in privileged mode or not.|false|boolean||
+
+
+### ContainerState
+
+The current state of the container of a service.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|state|enum of the state of the container|false|enum (INIT, STARTED, READY)||
+
+
+### PlacementPolicy
+
+Placement policy of an instance of a service. This feature is in the works in YARN-6592.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|label|Assigns a service to a named partition of the cluster where the service desires to run (optional). If not specified all services are submitted to a default label of the service owner. One or more labels can be setup for each service owner account with required constraints like no-preemption, sla-99999, preemption-ok, etc.|false|string||
+
+
+### ReadinessCheck
+
+A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every service is different. Hence the need for a simple interface, with scope to support advanced usecases.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|type|E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).|true|enum (HTTP, PORT)||
+|properties|A blob of key value pairs that will be used to configure the check.|false|object||
+|artifact|Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits service owners who can run services without any packaging modifications. Note, artifacts of type docker only is supported for now. NOT IMPLEMENTED YET|false|Artifact||
+
+
+### Resource
+
+Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or service. The resource specified at the service (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are expected. It raises a validation exception otherwise.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|profile|Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.|false|string||
+|cpus|Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).|false|integer (int32)||
+|memory|Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.|false|string||
+
+
+### Service
+
+a service resource has the following attributes.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|name|A unique service name. If Registry DNS is enabled, the max length is 63 characters.|true|string||
+|id|A unique service id.|false|string||
+|artifact|The default artifact for all components of the service except the components which has Artifact type set to SERVICE (optional).|false|Artifact||
+|resource|The default resource for all components of the service (optional).|false|Resource||
+|launch_time|The time when the service was created, e.g. 2016-03-16T01:01:49.000Z.|false|string (date)||
+|number_of_running_containers|In get response this provides the total number of running containers for this service (across all components) at the time of request. Note, a subsequent request can return a different number as and when more containers get allocated until it reaches the total number of containers or if a flex request has been made between the two requests.|false|integer (int64)||
+|lifetime|Life time (in seconds) of the service from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.|false|integer (int64)||
+|placement_policy|(TBD) Advanced scheduling and placement policies. If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.|false|PlacementPolicy||
+|components|Components of a service.|false|Component array||
+|configuration|Config properties of a service. Configurations provided at the service/global level are available to all the components. Specific properties can be overridden at the component level.|false|Configuration||
+|state|State of the service. Specifying a value for this attribute for the PUT payload means update the service to this desired state.|false|ServiceState||
+|quicklinks|A blob of key-value pairs of quicklinks to be exported for a service.|false|object||
+|queue|The YARN queue that this service should be submitted to.|false|string||
+
+
+### ServiceState
+
+The current state of a service.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|state|enum of the state of the service|false|enum (ACCEPTED, STARTED, READY, STOPPED, FAILED)||
+
+
+### ServiceStatus
+
+The current status of a submitted service, returned as a response to the GET API.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|diagnostics|Diagnostic information (if any) for the reason of the current state of the service. It typically has a non-null value, if the service is in a non-running state.|false|string||
+|state|Service state.|false|ServiceState||
+|code|An error code specific to a scenario which service owners should be able to use to understand the failure in addition to the diagnostic information.|false|integer (int32)||
+
+
+
+## Examples
+
+### Create a simple single-component service with most attribute values as defaults
+POST URL - http://localhost:8088/ws/v1/services
+
+##### POST Request JSON
+```json
+{
+  "name": "hello-world",
+  "components" :
+    [
+      {
+        "name": "hello",
+        "number_of_containers": 1,
+        "artifact": {
+          "id": "nginx:latest",
+          "type": "DOCKER"
+        },
+        "launch_command": "./start_nginx.sh",
+        "resource": {
+          "cpus": 1,
+          "memory": "256"
+       }
+      }
+    ]
+}
+```
+
+##### GET Response JSON
+GET URL - http://localhost:8088/ws/v1/services/hello-world
+
+Note, lifetime value of -1 means unlimited lifetime.
+
+```json
+{
+    "name": "hello-world",
+    "id": "application_1503963985568_0002",
+    "lifetime": -1,
+    "components": [
+        {
+            "name": "hello",
+            "dependencies": [],
+            "resource": {
+                "cpus": 1,
+                "memory": "256"
+            },
+            "configuration": {
+                "properties": {},
+                "env": {},
+                "files": []
+            },
+            "quicklinks": [],
+            "containers": [
+                {
+                    "id": "container_e03_1503963985568_0002_01_000001",
+                    "ip": "10.22.8.143",
+                    "hostname": "myhost.local",
+                    "state": "READY",
+                    "launch_time": 1504051512412,
+                    "bare_host": "10.22.8.143",
+                    "component_name": "hello-0"
+                },
+                {
+                    "id": "container_e03_1503963985568_0002_01_000002",
+                    "ip": "10.22.8.143",
+                    "hostname": "myhost.local",
+                    "state": "READY",
+                    "launch_time": 1504051536450,
+                    "bare_host": "10.22.8.143",
+                    "component_name": "hello-1"
+                }
+            ],
+            "launch_command": "./start_nginx.sh",
+            "number_of_containers": 1,
+            "run_privileged_container": false
+        }
+    ],
+    "configuration": {
+        "properties": {},
+        "env": {},
+        "files": []
+    },
+    "quicklinks": {}
+}
+
+```
+### Update to modify the lifetime of a service
+PUT URL - http://localhost:8088/ws/v1/services/hello-world
+
+##### PUT Request JSON
+
+Note, irrespective of what the current lifetime value is, this update request will set the lifetime of the service to be 3600 seconds (1 hour) from the time the request is submitted. Hence, if a a service has remaining lifetime of 5 mins (say) and would like to extend it to an hour OR if an application has remaining lifetime of 5 hours (say) and would like to reduce it down to an hour, then for both scenarios you need to submit the same request below.
+
+```json
+{
+  "lifetime": 3600
+}
+```
+### Stop a service
+PUT URL - http://localhost:8088/ws/v1/services/hello-world
+
+##### PUT Request JSON
+```json
+{
+    "state": "STOPPED"
+}
+```
+
+### Start a service
+PUT URL - http://localhost:8088/ws/v1/services/hello-world
+
+##### PUT Request JSON
+```json
+{
+    "state": "STARTED"
+}
+```
+
+### Update to flex up/down the no of containers (instances) of a component of a service
+PUT URL - http://localhost:8088/ws/v1/services/hello-world/components/hello
+
+##### PUT Request JSON
+```json
+{
+    "name": "hello",
+    "number_of_containers": 3
+}
+```
+
+### Destroy a service
+DELETE URL - http://localhost:8088/ws/v1/services/hello-world
+
+***
+
+### Create a complicated service  - HBase
+POST URL - http://localhost:8088:/ws/v1/services/hbase-app-1
+
+##### POST Request JSON
+
+```json
+{
+  "name": "hbase-app-1",
+  "lifetime": "3600",
+  "components": [
+    {
+      "name": "hbasemaster",
+      "number_of_containers": 1,
+      "artifact": {
+        "id": "hbase:latest",
+        "type": "DOCKER"
+      },
+      "launch_command": "/usr/hdp/current/hbase-master/bin/hbase master start",
+      "resource": {
+        "cpus": 1,
+        "memory": "2048"
+      },
+      "configuration": {
+        "env": {
+          "HBASE_LOG_DIR": "<LOG_DIR>"
+        },
+        "files": [
+          {
+            "type": "XML",
+            "dest_file": "/etc/hadoop/conf/core-site.xml",
+            "properties": {
+              "fs.defaultFS": "${CLUSTER_FS_URI}"
+            }
+          },
+          {
+            "type": "XML",
+            "dest_file": "/etc/hbase/conf/hbase-site.xml",
+            "properties": {
+              "hbase.cluster.distributed": "true",
+              "hbase.zookeeper.quorum": "${CLUSTER_ZK_QUORUM}",
+              "hbase.rootdir": "${SERVICE_HDFS_DIR}/hbase",
+              "zookeeper.znode.parent": "${SERVICE_ZK_PATH}",
+              "hbase.master.hostname": "hbasemaster.${SERVICE_NAME}.${USER}.${DOMAIN}",
+              "hbase.master.info.port": "16010"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "regionserver",
+      "number_of_containers": 3,
+      "unique_component_support": "true",
+      "artifact": {
+        "id": "hbase:latest",
+        "type": "DOCKER"
+      },
+      "launch_command": "/usr/hdp/current/hbase-regionserver/bin/hbase regionserver start",
+      "resource": {
+        "cpus": 1,
+        "memory": "2048"
+      },
+      "configuration": {
+        "env": {
+          "HBASE_LOG_DIR": "<LOG_DIR>"
+        },
+        "files": [
+          {
+            "type": "XML",
+            "dest_file": "/etc/hadoop/conf/core-site.xml",
+            "properties": {
+              "fs.defaultFS": "${CLUSTER_FS_URI}"
+            }
+          },
+          {
+            "type": "XML",
+            "dest_file": "/etc/hbase/conf/hbase-site.xml",
+            "properties": {
+              "hbase.cluster.distributed": "true",
+              "hbase.zookeeper.quorum": "${CLUSTER_ZK_QUORUM}",
+              "hbase.rootdir": "${SERVICE_HDFS_DIR}/hbase",
+              "zookeeper.znode.parent": "${SERVICE_ZK_PATH}",
+              "hbase.master.hostname": "hbasemaster.${SERVICE_NAME}.${USER}.${DOMAIN}",
+              "hbase.master.info.port": "16010",
+              "hbase.regionserver.hostname": "${COMPONENT_INSTANCE_NAME}.${SERVICE_NAME}.${USER}.${DOMAIN}"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "quicklinks": {
+    "HBase Master Status UI": "http://hbasemaster0.${SERVICE_NAME}.${USER}.${DOMAIN}:16010/master-status",
+    "Proxied HBase Master Status UI": "http://app-proxy/${DOMAIN}/${USER}/${SERVICE_NAME}/hbasemaster/16010/"
+  }
+}
+```

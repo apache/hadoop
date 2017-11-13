@@ -39,9 +39,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
@@ -451,5 +455,35 @@ public class TestClusterId {
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
     assertFalse("Check version should not exist", version.exists());
+  }
+
+  /**
+   * Test NameNode format failure when reformat is disabled and metadata
+   * directories exist.
+   */
+  @Test
+  public void testNNFormatFailure() throws Exception {
+    NameNode.initMetrics(config, NamenodeRole.NAMENODE);
+    DFSTestUtil.formatNameNode(config);
+    config.setBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED, true);
+    // Call to NameNode format will fail as name dir is not empty
+    try {
+      NameNode.format(config);
+      fail("NN format should fail.");
+    } catch (NameNodeFormatException e) {
+      GenericTestUtils.assertExceptionContains("NameNode format aborted as "
+          + "reformat is disabled for this cluster", e);
+    }
+  }
+
+  /**
+   * Test NameNode format when reformat is disabled and metadata directories do
+   * not exist.
+   */
+  @Test
+  public void testNNFormatSuccess() throws Exception {
+    NameNode.initMetrics(config, NamenodeRole.NAMENODE);
+    config.setBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED, true);
+    DFSTestUtil.formatNameNode(config);
   }
 }

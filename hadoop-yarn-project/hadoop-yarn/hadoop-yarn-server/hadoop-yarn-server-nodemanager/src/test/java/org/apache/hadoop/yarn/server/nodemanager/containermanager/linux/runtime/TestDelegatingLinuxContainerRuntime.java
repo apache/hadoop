@@ -50,7 +50,7 @@ public class TestDelegatingLinuxContainerRuntime {
         YarnConfiguration.DEFAULT_LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES[0]);
     System.out.println(conf.get(
         YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES));
-    delegatingLinuxContainerRuntime.initialize(conf);
+    delegatingLinuxContainerRuntime.initialize(conf, null);
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DEFAULT));
     assertFalse(delegatingLinuxContainerRuntime.isRuntimeAllowed(
@@ -63,7 +63,7 @@ public class TestDelegatingLinuxContainerRuntime {
   public void testIsRuntimeAllowedDocker() throws Exception {
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
         "docker");
-    delegatingLinuxContainerRuntime.initialize(conf);
+    delegatingLinuxContainerRuntime.initialize(conf, null);
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DOCKER));
     assertFalse(delegatingLinuxContainerRuntime.isRuntimeAllowed(
@@ -76,7 +76,7 @@ public class TestDelegatingLinuxContainerRuntime {
   public void testIsRuntimeAllowedJavaSandbox() throws Exception {
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
         "javasandbox");
-    delegatingLinuxContainerRuntime.initialize(conf);
+    delegatingLinuxContainerRuntime.initialize(conf, null);
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.JAVASANDBOX));
     assertFalse(delegatingLinuxContainerRuntime.isRuntimeAllowed(
@@ -89,7 +89,7 @@ public class TestDelegatingLinuxContainerRuntime {
   public void testIsRuntimeAllowedMultiple() throws Exception {
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
         "docker,javasandbox");
-    delegatingLinuxContainerRuntime.initialize(conf);
+    delegatingLinuxContainerRuntime.initialize(conf, null);
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DOCKER));
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
@@ -102,7 +102,7 @@ public class TestDelegatingLinuxContainerRuntime {
   public void testIsRuntimeAllowedAll() throws Exception {
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
         "default,docker,javasandbox");
-    delegatingLinuxContainerRuntime.initialize(conf);
+    delegatingLinuxContainerRuntime.initialize(conf, null);
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DEFAULT));
     assertTrue(delegatingLinuxContainerRuntime.isRuntimeAllowed(
@@ -116,7 +116,7 @@ public class TestDelegatingLinuxContainerRuntime {
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
         "default,docker");
     conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX, "permissive");
-    delegatingLinuxContainerRuntime.initialize(conf);
+    delegatingLinuxContainerRuntime.initialize(conf, null);
     ContainerRuntime runtime =
         delegatingLinuxContainerRuntime.pickContainerRuntime(env);
     assertTrue(runtime instanceof DefaultLinuxContainerRuntime);
@@ -129,7 +129,7 @@ public class TestDelegatingLinuxContainerRuntime {
     conf.set(YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
         "default,docker");
     conf.set(YarnConfiguration.YARN_CONTAINER_SANDBOX, "permissive");
-    delegatingLinuxContainerRuntime.initialize(conf);
+    delegatingLinuxContainerRuntime.initialize(conf, null);
     ContainerRuntime runtime =
         delegatingLinuxContainerRuntime.pickContainerRuntime(env);
     assertTrue(runtime instanceof DockerLinuxContainerRuntime);

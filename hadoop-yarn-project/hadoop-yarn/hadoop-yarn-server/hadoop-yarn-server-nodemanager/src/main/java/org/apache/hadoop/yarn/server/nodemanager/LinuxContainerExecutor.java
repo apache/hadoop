@@ -62,6 +62,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
@@ -280,7 +281,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public void init() throws IOException {
+  public void init(Context nmContext) throws IOException {
     Configuration conf = super.getConf();
 
     // Send command to executor which will just start up,
@@ -304,7 +305,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     try {
       resourceHandlerChain = ResourceHandlerModule
-          .getConfiguredResourceHandlerChain(conf);
+          .getConfiguredResourceHandlerChain(conf, nmContext);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
             != null));
@@ -323,7 +324,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       if (linuxContainerRuntime == null) {
         LinuxContainerRuntime runtime = new DelegatingLinuxContainerRuntime();
 
-        runtime.initialize(conf);
+        runtime.initialize(conf, nmContext);
         this.linuxContainerRuntime = runtime;
       }
     } catch (ContainerExecutionException e) {
@@ -442,6 +443,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
+  protected void updateEnvForWhitelistVars(Map<String, String> env) {
+    if (linuxContainerRuntime.useWhitelistEnv(env)) {
+      super.updateEnvForWhitelistVars(env);
+    }
+  }
+
+  @Override
   public int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
     Container container = ctx.getContainer();
@@ -532,8 +540,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         if (!Optional.fromNullable(e.getErrorOutput()).or("").isEmpty()) {
           builder.append("Exception message: " + e.getErrorOutput() + "\n");
         }
-        builder.append("Stack trace: "
-            + StringUtils.stringifyException(e) + "\n");
+        //Skip stack trace
         String output = e.getOutput();
         if (output != null && !e.getOutput().isEmpty()) {
           builder.append("Shell output: " + output + "\n");
@@ -836,5 +843,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           "; exit code = " + exitCode + " and output: " + e.getOutput(),
           e);
     }
+  }
+
+  @VisibleForTesting
+  public ResourceHandler getResourceHandler() {
+    return resourceHandlerChain;
   }
 }

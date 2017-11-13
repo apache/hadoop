@@ -38,8 +38,8 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A reader to read fixed length records from a split.  Record offset is
@@ -49,8 +49,8 @@ import org.apache.commons.logging.Log;
 @InterfaceStability.Evolving
 public class FixedLengthRecordReader
     extends RecordReader<LongWritable, BytesWritable> {
-  private static final Log LOG 
-      = LogFactory.getLog(FixedLengthRecordReader.class);
+  private static final Logger LOG
+      = LoggerFactory.getLogger(FixedLengthRecordReader.class);
 
   private int recordLength;
   private long start;

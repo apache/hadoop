@@ -313,31 +313,59 @@ public class TestINodeAttributeProvider {
     testBypassProviderHelper(users, HDFS_PERMISSION, true);
   }
 
-  @Test
-  public void testCustomProvider() throws Exception {
+  private void verifyFileStatus(UserGroupInformation ugi) throws IOException {
     FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
-    fs.mkdirs(new Path("/user/xxx"));
-    FileStatus status = fs.getFileStatus(new Path("/user/xxx"));
-    Assert.assertEquals(System.getProperty("user.name"), status.getOwner());
+
+    FileStatus status = fs.getFileStatus(new Path("/"));
+    LOG.info("Path '/' is owned by: "
+        + status.getOwner() + ":" + status.getGroup());
+
+    Path userDir = new Path("/user/" + ugi.getShortUserName());
+    fs.mkdirs(userDir);
+    status = fs.getFileStatus(userDir);
+    Assert.assertEquals(ugi.getShortUserName(), status.getOwner());
     Assert.assertEquals("supergroup", status.getGroup());
     Assert.assertEquals(new FsPermission((short) 0755), status.getPermission());
-    fs.mkdirs(new Path("/user/authz"));
-    Path p = new Path("/user/authz");
-    status = fs.getFileStatus(p);
+
+    Path authzDir = new Path("/user/authz");
+    fs.mkdirs(authzDir);
+    status = fs.getFileStatus(authzDir);
     Assert.assertEquals("foo", status.getOwner());
     Assert.assertEquals("bar", status.getGroup());
     Assert.assertEquals(new FsPermission((short) 0770), status.getPermission());
-    AclStatus aclStatus = fs.getAclStatus(p);
+
+    AclStatus aclStatus = fs.getAclStatus(authzDir);
     Assert.assertEquals(1, aclStatus.getEntries().size());
-    Assert.assertEquals(AclEntryType.GROUP, aclStatus.getEntries().get(0)
-            .getType());
-    Assert.assertEquals("xxx", aclStatus.getEntries().get(0)
-            .getName());
-    Assert.assertEquals(FsAction.ALL, aclStatus.getEntries().get(0)
-            .getPermission());
-    Map<String, byte[]> xAttrs = fs.getXAttrs(p);
+    Assert.assertEquals(AclEntryType.GROUP,
+        aclStatus.getEntries().get(0).getType());
+    Assert.assertEquals("xxx",
+        aclStatus.getEntries().get(0).getName());
+    Assert.assertEquals(FsAction.ALL,
+        aclStatus.getEntries().get(0).getPermission());
+    Map<String, byte[]> xAttrs = fs.getXAttrs(authzDir);
     Assert.assertTrue(xAttrs.containsKey("user.test"));
     Assert.assertEquals(2, xAttrs.get("user.test").length);
   }
 
+  /**
+   * With the custom provider configured, verify file status attributes.
+   * A superuser can bypass permission check while resolving paths. So,
+   * verify file status for both superuser and non-superuser.
+   */
+  @Test
+  public void testCustomProvider() throws Exception {
+    final UserGroupInformation[] users = new UserGroupInformation[]{
+        UserGroupInformation.createUserForTesting(
+            System.getProperty("user.name"), new String[]{"supergroup"}),
+        UserGroupInformation.createUserForTesting(
+            "normaluser", new String[]{"normalusergroup"}),
+    };
+
+    for (final UserGroupInformation user : users) {
+      user.doAs((PrivilegedExceptionAction<Object>) () -> {
+        verifyFileStatus(user);
+        return null;
+      });
+    }
+  }
 }

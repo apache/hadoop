@@ -101,9 +101,10 @@ public class TestClientAccessPrivilege {
     // Create a remove request
     HdfsFileStatus status = nn.getRpcServer().getFileInfo(testdir);
     long dirId = status.getFileId();
+    int namenodeId = Nfs3Utils.getNamenodeId(config);
 
     XDR xdr_req = new XDR();
-    FileHandle handle = new FileHandle(dirId);
+    FileHandle handle = new FileHandle(dirId, namenodeId);
     handle.serialize(xdr_req);
     xdr_req.writeString("f1");
 

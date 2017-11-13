@@ -43,15 +43,17 @@ public class TestDFSClientCache {
 
     DFSClientCache cache = new DFSClientCache(conf, MAX_CACHE_SIZE);
 
-    DFSClient c1 = cache.getDfsClient("test1");
-    assertTrue(cache.getDfsClient("test1").toString().contains("ugi=test1"));
-    assertEquals(c1, cache.getDfsClient("test1"));
+    int namenodeId = Nfs3Utils.getNamenodeId(conf);
+    DFSClient c1 = cache.getDfsClient("test1", namenodeId);
+    assertTrue(cache.getDfsClient("test1", namenodeId)
+        .toString().contains("ugi=test1"));
+    assertEquals(c1, cache.getDfsClient("test1", namenodeId));
     assertFalse(isDfsClientClose(c1));
 
-    cache.getDfsClient("test2");
+    cache.getDfsClient("test2", namenodeId);
     assertTrue(isDfsClientClose(c1));
     assertTrue("cache size should be the max size or less",
-        cache.clientCache.size() <= MAX_CACHE_SIZE);
+        cache.getClientCache().size() <= MAX_CACHE_SIZE);
   }
 
   @Test
@@ -61,6 +63,7 @@ public class TestDFSClientCache {
 
 
     NfsConfiguration conf = new NfsConfiguration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost");
     UserGroupInformation currentUserUgi
             = UserGroupInformation.createRemoteUser(currentUser);
     currentUserUgi.setAuthenticationMethod(KERBEROS);

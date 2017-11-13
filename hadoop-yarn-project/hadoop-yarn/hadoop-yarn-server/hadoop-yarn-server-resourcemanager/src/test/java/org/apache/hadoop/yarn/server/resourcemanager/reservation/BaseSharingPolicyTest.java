@@ -180,8 +180,12 @@ public abstract class BaseSharingPolicyTest {
       }
     }
 
-
-    rle.addInterval(new ReservationInterval(rStart, rEnd), alloc);
+    if(rStart > rEnd){
+      rle.addInterval(new ReservationInterval(rStart, period), alloc);
+      rle.addInterval(new ReservationInterval(0, rEnd), alloc);
+    } else {
+      rle.addInterval(new ReservationInterval(rStart, rEnd), alloc);
+    }
     return rle;
   }
 

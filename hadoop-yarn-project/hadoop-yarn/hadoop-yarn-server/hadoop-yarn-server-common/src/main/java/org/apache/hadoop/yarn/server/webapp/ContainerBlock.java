@@ -23,8 +23,6 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
@@ -38,10 +36,13 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContainerBlock extends HtmlBlock {
 
-  private static final Log LOG = LogFactory.getLog(ContainerBlock.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ContainerBlock.class);
   protected ApplicationBaseProtocol appBaseProt;
 
   @Inject

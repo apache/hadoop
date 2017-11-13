@@ -19,7 +19,9 @@ package org.apache.hadoop.yarn.server.federation.policies;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +47,8 @@ public final class FederationPolicyUtils {
 
   public static final String NO_ACTIVE_SUBCLUSTER_AVAILABLE =
       "No active SubCluster available to submit the request.";
+
+  private static final Random RAND = new Random(System.currentTimeMillis());
 
   /** Disable constructor. */
   private FederationPolicyUtils() {
@@ -80,7 +84,7 @@ public final class FederationPolicyUtils {
    * and configuration as fallback.
    *
    * @param queue the queue of the application
-   * @param conf the Yarn configuration
+   * @param conf the YARN configuration
    * @param federationFacade state store facade
    * @return SubClusterPolicyConfiguration recreated
    */
@@ -139,7 +143,7 @@ public final class FederationPolicyUtils {
    *
    * @param queue the queue of the application
    * @param oldPolicy the previous policy instance (can be null)
-   * @param conf the Yarn configuration
+   * @param conf the YARN configuration
    * @param federationFacade state store facade
    * @param homeSubClusterId home sub-cluster id
    * @return FederationAMRMProxyPolicy recreated
@@ -200,4 +204,39 @@ public final class FederationPolicyUtils {
         FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
   }
 
+  /**
+   * Select a random bin according to the weight array for the bins. Only bins
+   * with positive weights will be considered. If no positive weight found,
+   * return -1.
+   *
+   * @param weights the weight array
+   * @return the index of the sample in the array
+   */
+  public static int getWeightedRandom(ArrayList<Float> weights) {
+    int i;
+    float totalWeight = 0;
+    for (i = 0; i < weights.size(); i++) {
+      if (weights.get(i) > 0) {
+        totalWeight += weights.get(i);
+      }
+    }
+    if (totalWeight == 0) {
+      return -1;
+    }
+    float samplePoint = RAND.nextFloat() * totalWeight;
+    int lastIndex = 0;
+    for (i = 0; i < weights.size(); i++) {
+      if (weights.get(i) > 0) {
+        if (samplePoint <= weights.get(i)) {
+          return i;
+        } else {
+          lastIndex = i;
+          samplePoint -= weights.get(i);
+        }
+      }
+    }
+    // This can only happen if samplePoint is very close to totoalWeight and
+    // float rounding kicks in during subtractions
+    return lastIndex;
+  }
 }

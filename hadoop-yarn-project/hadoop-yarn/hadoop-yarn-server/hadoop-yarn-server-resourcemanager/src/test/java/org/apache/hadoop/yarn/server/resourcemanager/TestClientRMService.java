@@ -148,6 +148,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppRepor
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 
@@ -159,6 +160,7 @@ import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableSet;
@@ -1945,6 +1947,9 @@ public class TestClientRMService {
     int maxPriority = 10;
     int appPriority = 5;
     YarnConfiguration conf = new YarnConfiguration();
+    Assume.assumeFalse("FairScheduler does not support Application Priorities",
+        conf.get(YarnConfiguration.RM_SCHEDULER)
+            .equals(FairScheduler.class.getName()));
     conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
         maxPriority);
     MockRM rm = new MockRM(conf);
@@ -1963,6 +1968,9 @@ public class TestClientRMService {
     int maxPriority = 10;
     int appPriority = 5;
     YarnConfiguration conf = new YarnConfiguration();
+    Assume.assumeFalse("FairScheduler does not support Application Priorities",
+        conf.get(YarnConfiguration.RM_SCHEDULER)
+            .equals(FairScheduler.class.getName()));
     conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
         maxPriority);
     MockRM rm = new MockRM(conf);

@@ -91,7 +91,7 @@ In order to provide transparency with the old world, the ViewFs file system (i.e
 
 ViewFs implements the Hadoop file system interface just like HDFS and the local file system. It is a trivial file system in the sense that it only allows linking to other file systems. Because ViewFs implements the Hadoop file system interface, it works transparently Hadoop tools. For example, all the shell commands work with ViewFs as with HDFS and local file system.
 
-The mount points of a mount table are specified in the standard Hadoop configuration files. In the configuration of each cluster, the default file system is set to the mount table for that cluster as shown below (compare it with the configuration in [Single Namenode Clusters](#Single_Namenode_Clusters)).
+In the configuration of each cluster, the default file system is set to the mount table for that cluster as shown below (compare it with the configuration in [Single Namenode Clusters](#Single_Namenode_Clusters)).
 
 ```xml
 <property>
@@ -100,7 +100,47 @@ The mount points of a mount table are specified in the standard Hadoop configura
 </property>
 ```
 
-The authority following the `viewfs://` scheme in the URI is the mount table name. It is recommanded that the mount table of a cluster should be named by the cluster name. Then Hadoop system will look for a mount table with the name "clusterX" in the Hadoop configuration files. Operations arrange all gateways and service machines to contain the mount tables for ALL clusters such that, for each cluster, the default file system is set to the ViewFs mount table for that cluster as described above.
+The authority following the `viewfs://` scheme in the URI is the mount table name. It is recommended that the mount table of a cluster should be named by the cluster name. Then Hadoop system will look for a mount table with the name "clusterX" in the Hadoop configuration files. Operations arrange all gateways and service machines to contain the mount tables for ALL clusters such that, for each cluster, the default file system is set to the ViewFs mount table for that cluster as described above.
+
+The mount points of a mount table are specified in the standard Hadoop configuration files. All the mount table config entries for `viewfs` are prefixed by `fs.viewfs.mounttable.`. The mount points that are linking other filesystems are specified using `link` tags. The recommendation is to have mount points name same as in the linked filesystem target locations. For all namespaces that are not configured in the mount table, we can have them fallback to a default filesystem via `linkFallback`.
+
+In the below mount table configuration, namespace `/data` is linked to the filesystem `hdfs://nn1-clusterx.example.com:9820/data`, `/project` is linked to the filesystem `hdfs://nn2-clusterx.example.com:9820/project`. All namespaces that are not configured in the mount table, like `/logs` are linked to the filesystem `hdfs://nn5-clusterx.example.com:9820/home`.
+
+```xml
+<configuration>
+  <property>
+    <name>fs.viewfs.mounttable.ClusterX.link./data</name>
+    <value>hdfs://nn1-clusterx.example.com:9820/data</value>
+  </property>
+  <property>
+    <name>fs.viewfs.mounttable.ClusterX.link./project</name>
+    <value>hdfs://nn2-clusterx.example.com:9820/project</value>
+  </property>
+  <property>
+    <name>fs.viewfs.mounttable.ClusterX.link./user</name>
+    <value>hdfs://nn3-clusterx.example.com:9820/user</value>
+  </property>
+  <property>
+    <name>fs.viewfs.mounttable.ClusterX.link./tmp</name>
+    <value>hdfs://nn4-clusterx.example.com:9820/tmp</value>
+  </property>
+  <property>
+    <name>fs.viewfs.mounttable.ClusterX.linkFallback</name>
+    <value>hdfs://nn5-clusterx.example.com:9820/home</value>
+  </property>
+</configuration>
+```
+
+Alternatively we can have the mount table's root merged with the root of another filesystem via `linkMergeSlash`. In the below mount table configuration, ClusterY's root is merged with the root filesystem at `hdfs://nn1-clustery.example.com:9820`.
+
+```xml
+<configuration>
+  <property>
+    <name>fs.viewfs.mounttable.ClusterY.linkMergeSlash</name>
+    <value>hdfs://nn1-clustery.example.com:9820/</value>
+  </property>
+</configuration>
+```
 
 ### Pathname Usage Patterns
 

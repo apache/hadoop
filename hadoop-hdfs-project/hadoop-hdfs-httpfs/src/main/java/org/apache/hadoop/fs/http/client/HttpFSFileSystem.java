@@ -198,6 +198,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
   public static final String EC_BIT_JSON = "ecBit";
+  public static final String SNAPSHOT_BIT_JSON = "seBit";
 
   public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
   public static final String PARTIAL_LISTING_JSON = "partialListing";
@@ -704,14 +705,13 @@ public class HttpFSFileSystem extends FileSystem
   }
 
   /**
-   * List the statuses of the files/directories in the given path if the path is
-   * a directory.
+   * Get {@link FileStatus} of files/directories in the given path. If path
+   * corresponds to a file then {@link FileStatus} of that file is returned.
+   * Else if path represents a directory then {@link FileStatus} of all
+   * files/directories inside given path is returned.
    *
    * @param f given path
-   *
-   * @return the statuses of the files/directories in the given patch
-   *
-   * @throws IOException
+   * @return the statuses of the files/directories in the given path
    */
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
@@ -724,6 +724,13 @@ public class HttpFSFileSystem extends FileSystem
     return toFileStatuses(json, f);
   }
 
+  /**
+   * Get {@link DirectoryEntries} of the given path. {@link DirectoryEntries}
+   * contains an array of {@link FileStatus}, as well as iteration information.
+   *
+   * @param f given path
+   * @return {@link DirectoryEntries} for given path
+   */
   @Override
   public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
       FileNotFoundException, IOException {
@@ -1066,19 +1073,27 @@ public class HttpFSFileSystem extends FileSystem
     final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
     final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
     final Boolean erasureBit = (Boolean) json.get(EC_BIT_JSON);
+    final Boolean snapshotEnabledBit = (Boolean) json.get(SNAPSHOT_BIT_JSON);
     final boolean aBit = (aclBit != null) ? aclBit : false;
     final boolean eBit = (encBit != null) ? encBit : false;
     final boolean ecBit = (erasureBit != null) ? erasureBit : false;
-    if (aBit || eBit || ecBit) {
+    final boolean seBit =
+        (snapshotEnabledBit != null) ? snapshotEnabledBit : false;
+    if (aBit || eBit || ecBit || seBit) {
       // include this for compatibility with 2.x
       FsPermissionExtension deprecatedPerm =
           new FsPermissionExtension(permission, aBit, eBit, ecBit);
-      return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+      FileStatus fileStatus = new FileStatus(len, FILE_TYPE.DIRECTORY == type,
           replication, blockSize, mTime, aTime, deprecatedPerm, owner, group,
           null, path, aBit, eBit, ecBit);
+      if (seBit) {
+        fileStatus.setSnapShotEnabledFlag(seBit);
+      }
+      return fileStatus;
+    } else {
+      return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+          replication, blockSize, mTime, aTime, permission, owner, group, path);
     }
-    return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
-        replication, blockSize, mTime, aTime, permission, owner, group, path);
   }
 
   /**

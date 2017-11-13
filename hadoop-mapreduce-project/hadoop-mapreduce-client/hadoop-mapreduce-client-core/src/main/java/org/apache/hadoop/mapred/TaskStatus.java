@@ -22,8 +22,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
@@ -31,6 +29,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**************************************************
  * Describes the current status of a task.  This is
  * not intended to be a comprehensive piece of data.
@@ -39,8 +39,8 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class TaskStatus implements Writable, Cloneable {
-  static final Log LOG =
-    LogFactory.getLog(TaskStatus.class.getName());
+  static final Logger LOG =
+      LoggerFactory.getLogger(TaskStatus.class.getName());
   
   //enumeration for reporting current phase of a task.
   @InterfaceAudience.Private

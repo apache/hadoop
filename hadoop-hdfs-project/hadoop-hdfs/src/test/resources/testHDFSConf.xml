@@ -16863,7 +16863,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Allowing snaphot on /user/USERNAME/dir1 succeeded</expected-output>
+          <expected-output>Allowing snapshot on /user/USERNAME/dir1 succeeded</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16881,7 +16881,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Disallowing snaphot on /user/USERNAME/dir1 succeeded</expected-output>
+          <expected-output>Disallowing snapshot on /user/USERNAME/dir1 succeeded</expected-output>
         </comparator>
       </comparators>
     </test>

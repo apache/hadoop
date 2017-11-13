@@ -153,18 +153,17 @@ public abstract class ProfileCapability {
     Resource none = Resource.newInstance(0, 0);
     Resource resource = Resource.newInstance(0, 0);
     String profileName = capability.getProfileName();
-    if (profileName.isEmpty()) {
+    if (null == profileName || profileName.isEmpty()) {
       profileName = DEFAULT_PROFILE;
     }
     if (resourceProfilesMap.containsKey(profileName)) {
       resource = Resource.newInstance(resourceProfilesMap.get(profileName));
     }
-
     if (capability.getProfileCapabilityOverride() != null &&
         !capability.getProfileCapabilityOverride().equals(none)) {
       for (ResourceInformation entry : capability
           .getProfileCapabilityOverride().getResources()) {
-        if (entry != null && entry.getValue() >= 0) {
+        if (entry != null && entry.getValue() > 0) {
           resource.setResourceInformation(entry.getName(), entry);
         }
       }

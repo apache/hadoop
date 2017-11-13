@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
@@ -57,7 +58,7 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
       EnumSet.noneOf(LinuxContainerRuntimeConstants.RuntimeType.class);
 
   @Override
-  public void initialize(Configuration conf)
+  public void initialize(Configuration conf, Context nmContext)
       throws ContainerExecutionException {
     String[] configuredRuntimes = conf.getTrimmedStrings(
         YarnConfiguration.LINUX_CONTAINER_RUNTIME_ALLOWED_RUNTIMES,
@@ -77,19 +78,30 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
         LinuxContainerRuntimeConstants.RuntimeType.JAVASANDBOX)) {
       javaSandboxLinuxContainerRuntime = new JavaSandboxLinuxContainerRuntime(
           PrivilegedOperationExecutor.getInstance(conf));
-      javaSandboxLinuxContainerRuntime.initialize(conf);
+      javaSandboxLinuxContainerRuntime.initialize(conf, nmContext);
     }
     if (isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DOCKER)) {
       dockerLinuxContainerRuntime = new DockerLinuxContainerRuntime(
           PrivilegedOperationExecutor.getInstance(conf));
-      dockerLinuxContainerRuntime.initialize(conf);
+      dockerLinuxContainerRuntime.initialize(conf, nmContext);
     }
     if (isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DEFAULT)) {
       defaultLinuxContainerRuntime = new DefaultLinuxContainerRuntime(
           PrivilegedOperationExecutor.getInstance(conf));
-      defaultLinuxContainerRuntime.initialize(conf);
+      defaultLinuxContainerRuntime.initialize(conf, nmContext);
+    }
+  }
+
+  @Override
+  public boolean useWhitelistEnv(Map<String, String> env) {
+    try {
+      LinuxContainerRuntime runtime = pickContainerRuntime(env);
+      return runtime.useWhitelistEnv(env);
+    } catch (ContainerExecutionException e) {
+      LOG.debug("Unable to determine runtime");
+      return false;
     }
   }
 

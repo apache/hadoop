@@ -440,6 +440,7 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
             "pathSuffix"      : "",
             "permission"      : "777",
             "replication"     : 0,
+            "snapshotEnabled" : true
             "type"            : "DIRECTORY"    //enum {FILE, DIRECTORY, SYMLINK}
           }
         }
@@ -466,6 +467,8 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
               {
                 "accessTime"      : 1320171722771,
                 "blockSize"       : 33554432,
+                "childrenNum"     : 0,
+                "fileId"          : 16388,
                 "group"           : "supergroup",
                 "length"          : 24930,
                 "modificationTime": 1320171722771,
@@ -473,11 +476,14 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
                 "pathSuffix"      : "a.patch",
                 "permission"      : "644",
                 "replication"     : 1,
+                "storagePolicy"   : 0,
                 "type"            : "FILE"
               },
               {
                 "accessTime"      : 0,
                 "blockSize"       : 0,
+                "childrenNum"     : 0,
+                "fileId"          : 16389,
                 "group"           : "supergroup",
                 "length"          : 0,
                 "modificationTime": 1320895981256,
@@ -485,6 +491,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
                 "pathSuffix"      : "bar",
                 "permission"      : "711",
                 "replication"     : 0,
+                "snapshotEnabled" : true
                 "type"            : "DIRECTORY"
               },
               ...

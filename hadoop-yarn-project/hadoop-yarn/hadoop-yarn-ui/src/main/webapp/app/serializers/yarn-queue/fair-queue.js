@@ -59,8 +59,9 @@ export default DS.JSONAPISerializer.extend({
 
     handleQueue(store, primaryModelClass, payload, id, requestType) {
       var data = [];
-      var includedData = [];
-      if(!payload) return data;
+      if (!payload) {
+        return data;
+      }
       var result = this.normalizeSingleResponse(store, primaryModelClass,
         payload, id, requestType);
 

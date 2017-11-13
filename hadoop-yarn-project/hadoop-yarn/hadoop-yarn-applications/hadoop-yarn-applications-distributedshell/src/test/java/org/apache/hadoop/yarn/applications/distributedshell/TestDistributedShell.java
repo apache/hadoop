@@ -39,8 +39,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
@@ -96,11 +94,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDistributedShell {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestDistributedShell.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDistributedShell.class);
 
   protected MiniYARNCluster yarnCluster = null;
   protected MiniDFSCluster hdfsCluster = null;
@@ -149,7 +149,6 @@ public class TestDistributedShell {
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
 
     conf.set(YarnConfiguration.NM_VMEM_PMEM_RATIO, "8");
-    conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     conf.set("mapreduce.jobhistory.address",
         "0.0.0.0:" + ServerSocketUtil.getPort(10021, 10));
@@ -893,11 +892,11 @@ public class TestDistributedShell {
     };
 
     //Before run the DS, the default the log level is INFO
-    final Log LOG_Client =
-        LogFactory.getLog(Client.class);
+    final Logger LOG_Client =
+        LoggerFactory.getLogger(Client.class);
     Assert.assertTrue(LOG_Client.isInfoEnabled());
     Assert.assertFalse(LOG_Client.isDebugEnabled());
-    final Log LOG_AM = LogFactory.getLog(ApplicationMaster.class);
+    final Logger LOG_AM = LoggerFactory.getLogger(ApplicationMaster.class);
     Assert.assertTrue(LOG_AM.isInfoEnabled());
     Assert.assertFalse(LOG_AM.isDebugEnabled());
 

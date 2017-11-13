@@ -491,4 +491,17 @@ public class TestDFSStripedInputStream {
     assertEquals(readSize, done);
     assertArrayEquals(expected, readBuffer);
   }
+
+  @Test
+  public void testIdempotentClose() throws Exception {
+    final int numBlocks = 2;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+
+    try (DFSInputStream in = fs.getClient().open(filePath.toString())) {
+      assertTrue(in instanceof DFSStripedInputStream);
+      // Close twice
+      in.close();
+    }
+  }
 }

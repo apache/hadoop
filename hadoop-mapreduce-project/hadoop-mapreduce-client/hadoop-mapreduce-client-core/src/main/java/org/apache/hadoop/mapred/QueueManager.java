@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
@@ -31,6 +29,8 @@ import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.InputStream;
@@ -82,7 +82,7 @@ import java.net.URL;
 @InterfaceAudience.Private
 public class QueueManager {
 
-  private static final Log LOG = LogFactory.getLog(QueueManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(QueueManager.class);
 
   // Map of a queue name and Queue object
   private Map<String, Queue> leafQueues = new HashMap<String,Queue>();

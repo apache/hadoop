@@ -49,7 +49,7 @@ interface AsyncLogger {
   
   interface Factory {
     AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
-        String journalId, InetSocketAddress addr);
+        String journalId, String nameServiceId, InetSocketAddress addr);
   }
 
   /**

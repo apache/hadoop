@@ -54,10 +54,7 @@ import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -84,7 +81,6 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
@@ -136,6 +132,7 @@ import org.jboss.netty.util.CharsetUtil;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
 import org.eclipse.jetty.http.HttpHeader;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -150,9 +147,10 @@ import com.google.protobuf.ByteString;
 
 public class ShuffleHandler extends AuxiliaryService {
 
-  private static final Log LOG = LogFactory.getLog(ShuffleHandler.class);
-  private static final Log AUDITLOG =
-      LogFactory.getLog(ShuffleHandler.class.getName()+".audit");
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(ShuffleHandler.class);
+  private static final org.slf4j.Logger AUDITLOG =
+      LoggerFactory.getLogger(ShuffleHandler.class.getName()+".audit");
   public static final String SHUFFLE_MANAGE_OS_CACHE = "mapreduce.shuffle.manage.os.cache";
   public static final boolean DEFAULT_SHUFFLE_MANAGE_OS_CACHE = true;
 
@@ -777,7 +775,8 @@ public class ShuffleHandler extends AuxiliaryService {
   }
 
   private static class LevelDBLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LevelDBLogger.class);
+    private static final org.slf4j.Logger LOG =
+        LoggerFactory.getLogger(LevelDBLogger.class);
 
     @Override
     public void log(String message) {
@@ -855,8 +854,6 @@ public class ShuffleHandler extends AuxiliaryService {
     private static final int ALLOWED_CONCURRENCY = 16;
     private final Configuration conf;
     private final IndexCache indexCache;
-    private final LocalDirAllocator lDirAlloc =
-      new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
     private int port;
     private final LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache =
       CacheBuilder.newBuilder().expireAfterAccess(EXPIRE_AFTER_ACCESS_MINUTES,
@@ -889,10 +886,10 @@ public class ShuffleHandler extends AuxiliaryService {
             Exception {
           String base = getBaseLocation(key.jobId, key.user);
           String attemptBase = base + key.attemptId;
-          Path indexFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + INDEX_FILE_NAME, conf);
-          Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-              attemptBase + "/" + DATA_FILE_NAME, conf);
+          Path indexFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + INDEX_FILE_NAME);
+          Path mapOutputFileName = getAuxiliaryLocalPathHandler()
+              .getLocalPathForRead(attemptBase + "/" + DATA_FILE_NAME);
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("Loaded : " + key + " via loader");

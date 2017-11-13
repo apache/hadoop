@@ -118,6 +118,22 @@ import java.util.Set;
  * |--- RM_DT_SECRET_MANAGER_ROOT
  *        |----- RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME
  *        |----- RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME
+ *        |       |----- 1
+ *        |       |      |----- (#TokenId barring last character)
+ *        |       |      |       |----- (#Last character of TokenId)
+ *        |       |      ....
+ *        |       |----- 2
+ *        |       |      |----- (#TokenId barring last 2 characters)
+ *        |       |      |       |----- (#Last 2 characters of TokenId)
+ *        |       |      ....
+ *        |       |----- 3
+ *        |       |      |----- (#TokenId barring last 3 characters)
+ *        |       |      |       |----- (#Last 3 characters of TokenId)
+ *        |       |      ....
+ *        |       |----- 4
+ *        |       |      |----- (#TokenId barring last 4 characters)
+ *        |       |      |       |----- (#Last 4 characters of TokenId)
+ *        |       |      ....
  *        |       |----- Token_1
  *        |       |----- Token_2
  *        |       ....
@@ -147,6 +163,11 @@ import java.util.Set;
  * splitting it in 2 parts, depending on a configurable split index. This limits
  * the number of application znodes returned in a single call while loading
  * app state.
+ *
+ * Changes from 1.4 to 1.5 - Change the structure of delegation token znode by
+ * splitting it in 2 parts, depending on a configurable split index. This limits
+ * the number of delegation token znodes returned in a single call while loading
+ * tokens state.
  */
 @Private
 @Unstable
@@ -162,7 +183,7 @@ public class ZKRMStateStore extends RMStateStore {
   @VisibleForTesting
   public static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
   protected static final Version CURRENT_VERSION_INFO = Version
-      .newInstance(1, 4);
+      .newInstance(1, 5);
   @VisibleForTesting
   public static final String RM_APP_ROOT_HIERARCHIES = "HIERARCHIES";
 
@@ -170,6 +191,7 @@ public class ZKRMStateStore extends RMStateStore {
   private String zkRootNodePath;
   private String rmAppRoot;
   private Map<Integer, String> rmAppRootHierarchies;
+  private Map<Integer, String> rmDelegationTokenHierarchies;
   private String rmDTSecretManagerRoot;
   private String dtMasterKeysRootPath;
   private String delegationTokensRootPath;
@@ -180,6 +202,8 @@ public class ZKRMStateStore extends RMStateStore {
   @VisibleForTesting
   protected String znodeWorkingPath;
   private int appIdNodeSplitIndex = 0;
+  @VisibleForTesting
+  protected int delegationTokenNodeSplitIndex = 0;
 
   /* Fencing related variables */
   private static final String FENCING_LOCK = "RM_ZK_FENCING_LOCK";
@@ -212,12 +236,13 @@ public class ZKRMStateStore extends RMStateStore {
   };
 
   /**
-   * Encapsulates full app node path and corresponding split index.
+   * Encapsulates znode path and corresponding split index for hierarchical
+   * znode layouts.
    */
-  private final static class AppNodeSplitInfo {
+  private final static class ZnodeSplitInfo {
     private final String path;
     private final int splitIndex;
-    AppNodeSplitInfo(String path, int splitIndex) {
+    ZnodeSplitInfo(String path, int splitIndex) {
       this.path = path;
       this.splitIndex = splitIndex;
     }
@@ -288,7 +313,7 @@ public class ZKRMStateStore extends RMStateStore {
     appIdNodeSplitIndex =
         conf.getInt(YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX,
             YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX);
-    if (appIdNodeSplitIndex < 1 || appIdNodeSplitIndex > 4) {
+    if (appIdNodeSplitIndex < 0 || appIdNodeSplitIndex > 4) {
       LOG.info("Invalid value " + appIdNodeSplitIndex + " for config " +
           YarnConfiguration.ZK_APPID_NODE_SPLIT_INDEX + " specified. " +
               "Resetting it to " +
@@ -322,14 +347,32 @@ public class ZKRMStateStore extends RMStateStore {
         RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME);
     delegationTokensRootPath = getNodePath(rmDTSecretManagerRoot,
         RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
+    rmDelegationTokenHierarchies = new HashMap<>(5);
+    rmDelegationTokenHierarchies.put(0, delegationTokensRootPath);
+    for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+      rmDelegationTokenHierarchies.put(splitIndex,
+          getNodePath(delegationTokensRootPath, Integer.toString(splitIndex)));
+    }
     dtSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
         RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
     amrmTokenSecretManagerRoot =
         getNodePath(zkRootNodePath, AMRMTOKEN_SECRET_MANAGER_ROOT);
     reservationRoot = getNodePath(zkRootNodePath, RESERVATION_SYSTEM_ROOT);
     zkManager = resourceManager.getZKManager();
-    if (zkManager == null) {
+    if(zkManager==null) {
       zkManager = resourceManager.createAndStartZKManager(conf);
+    }
+    delegationTokenNodeSplitIndex =
+        conf.getInt(YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX,
+            YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX);
+    if (delegationTokenNodeSplitIndex < 0
+        || delegationTokenNodeSplitIndex > 4) {
+      LOG.info("Invalid value " + delegationTokenNodeSplitIndex + " for config "
+          + YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX
+          + " specified.  Resetting it to " +
+          YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX);
+      delegationTokenNodeSplitIndex =
+          YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX;
     }
   }
 
@@ -353,6 +396,9 @@ public class ZKRMStateStore extends RMStateStore {
     create(rmDTSecretManagerRoot);
     create(dtMasterKeysRootPath);
     create(delegationTokensRootPath);
+    for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+      create(rmDelegationTokenHierarchies.get(splitIndex));
+    }
     create(dtSequenceNumberPath);
     create(amrmTokenSecretManagerRoot);
     create(reservationRoot);
@@ -575,36 +621,63 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   private void loadRMDelegationTokenState(RMState rmState) throws Exception {
-    List<String> childNodes =
-        getChildren(delegationTokensRootPath);
-
-    for (String childNodeName : childNodes) {
-      String childNodePath =
-          getNodePath(delegationTokensRootPath, childNodeName);
-      byte[] childData = getData(childNodePath);
-
-      if (childData == null) {
-        LOG.warn("Content of " + childNodePath + " is broken.");
+    for (int splitIndex = 0; splitIndex <= 4; splitIndex++) {
+      String tokenRoot = rmDelegationTokenHierarchies.get(splitIndex);
+      if (tokenRoot == null) {
         continue;
       }
-
-      ByteArrayInputStream is = new ByteArrayInputStream(childData);
-
-      try (DataInputStream fsIn = new DataInputStream(is)) {
+      List<String> childNodes = getChildren(tokenRoot);
+      boolean dtNodeFound = false;
+      for (String childNodeName : childNodes) {
         if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
-          RMDelegationTokenIdentifierData identifierData =
-              new RMDelegationTokenIdentifierData();
-          identifierData.readFields(fsIn);
-          RMDelegationTokenIdentifier identifier =
-              identifierData.getTokenIdentifier();
-          long renewDate = identifierData.getRenewDate();
-          rmState.rmSecretManagerState.delegationTokenState.put(identifier,
-              renewDate);
-
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Loaded RMDelegationTokenIdentifier: " + identifier
-                + " renewDate=" + renewDate);
+          dtNodeFound = true;
+          String parentNodePath = getNodePath(tokenRoot, childNodeName);
+          if (splitIndex == 0) {
+            loadDelegationTokenFromNode(rmState, parentNodePath);
+          } else {
+            // If znode is partitioned.
+            List<String> leafNodes = getChildren(parentNodePath);
+            for (String leafNodeName : leafNodes) {
+              loadDelegationTokenFromNode(rmState,
+                  getNodePath(parentNodePath, leafNodeName));
+            }
           }
+        } else if (splitIndex == 0
+            && !(childNodeName.equals("1") || childNodeName.equals("2")
+            || childNodeName.equals("3") || childNodeName.equals("4"))) {
+          LOG.debug("Unknown child node with name " + childNodeName + " under" +
+              tokenRoot);
+        }
+      }
+      if (splitIndex != delegationTokenNodeSplitIndex && !dtNodeFound) {
+        // If no loaded delegation token exists for a particular split index and
+        // the split index for which tokens are being loaded is not the one
+        // configured, then we do not need to keep track of this hierarchy for
+        // storing/updating/removing delegation token znodes.
+        rmDelegationTokenHierarchies.remove(splitIndex);
+      }
+    }
+  }
+
+  private void loadDelegationTokenFromNode(RMState rmState, String path)
+      throws Exception {
+    byte[] data = getData(path);
+    if (data == null) {
+      LOG.warn("Content of " + path + " is broken.");
+    } else {
+      ByteArrayInputStream is = new ByteArrayInputStream(data);
+      try (DataInputStream fsIn = new DataInputStream(is)) {
+        RMDelegationTokenIdentifierData identifierData =
+            new RMDelegationTokenIdentifierData();
+        identifierData.readFields(fsIn);
+        RMDelegationTokenIdentifier identifier =
+            identifierData.getTokenIdentifier();
+        long renewDate = identifierData.getRenewDate();
+        rmState.rmSecretManagerState.delegationTokenState.put(identifier,
+            renewDate);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Loaded RMDelegationTokenIdentifier: " + identifier
+              + " renewDate=" + renewDate);
         }
       }
     }
@@ -652,8 +725,9 @@ public class ZKRMStateStore extends RMStateStore {
                   getNodePath(parentNodePath, leafNodeName), appIdStr);
             }
           }
-        } else {
-          LOG.info("Unknown child node with name: " + childNodeName);
+        } else if (!childNodeName.equals(RM_APP_ROOT_HIERARCHIES)){
+          LOG.debug("Unknown child node with name " + childNodeName + " under" +
+              appRoot);
         }
       }
       if (splitIndex != appIdNodeSplitIndex && !appNodeFound) {
@@ -686,36 +760,36 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   /**
-   * Get parent app node path based on full path and split index supplied.
-   * @param appIdPath App id path for which parent needs to be returned.
+   * Get znode path based on full path and split index supplied.
+   * @param path path for which parent needs to be returned.
    * @param splitIndex split index.
    * @return parent app node path.
    */
-  private String getSplitAppNodeParent(String appIdPath, int splitIndex) {
-    // Calculated as string upto index (appIdPath Length - split index - 1). We
+  private String getSplitZnodeParent(String path, int splitIndex) {
+    // Calculated as string up to index (path Length - split index - 1). We
     // deduct 1 to exclude path separator.
-    return appIdPath.substring(0, appIdPath.length() - splitIndex - 1);
+    return path.substring(0, path.length() - splitIndex - 1);
   }
 
   /**
-   * Checks if parent app node has no leaf nodes and if it does not have,
-   * removes it. Called while removing application.
-   * @param appIdPath path of app id to be removed.
+   * Checks if parent znode has no leaf nodes and if it does not have,
+   * removes it.
+   * @param path path of znode to be removed.
    * @param splitIndex split index.
    * @throws Exception if any problem occurs while performing ZK operation.
    */
-  private void checkRemoveParentAppNode(String appIdPath, int splitIndex)
+  private void checkRemoveParentZnode(String path, int splitIndex)
       throws Exception {
     if (splitIndex != 0) {
-      String parentAppNode = getSplitAppNodeParent(appIdPath, splitIndex);
+      String parentZnode = getSplitZnodeParent(path, splitIndex);
       List<String> children = null;
       try {
-        children = getChildren(parentAppNode);
+        children = getChildren(parentZnode);
       } catch (KeeperException.NoNodeException ke) {
-        // It should be fine to swallow this exception as the parent app node we
+        // It should be fine to swallow this exception as the parent znode we
         // intend to delete is already deleted.
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Unable to remove app parent node " + parentAppNode +
+          LOG.debug("Unable to remove parent node " + parentZnode +
               " as it does not exist.");
         }
         return;
@@ -723,16 +797,16 @@ public class ZKRMStateStore extends RMStateStore {
       // No apps stored under parent path.
       if (children != null && children.isEmpty()) {
         try {
-          zkManager.safeDelete(parentAppNode, zkAcl, fencingNodePath);
+          zkManager.safeDelete(parentZnode, zkAcl, fencingNodePath);
           if (LOG.isDebugEnabled()) {
-            LOG.debug("No leaf app node exists. Removing parent node " +
-                parentAppNode);
+            LOG.debug("No leaf znode exists. Removing parent node " +
+                parentZnode);
           }
         } catch (KeeperException.NotEmptyException ke) {
-          // It should be fine to swallow this exception as the parent app node
+          // It should be fine to swallow this exception as the parent znode
           // has to be deleted only if it has no children. And this node has.
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Unable to remove app parent node " + parentAppNode +
+            LOG.debug("Unable to remove app parent node " + parentZnode +
                 " as it has children.");
           }
         }
@@ -773,7 +847,7 @@ public class ZKRMStateStore extends RMStateStore {
     // Look for paths based on other split indices if path as per split index
     // does not exist.
     if (!exists(nodeUpdatePath)) {
-      AppNodeSplitInfo alternatePathInfo = getAlternatePath(appId.toString());
+      ZnodeSplitInfo alternatePathInfo = getAlternateAppPath(appId.toString());
       if (alternatePathInfo != null) {
         nodeUpdatePath = alternatePathInfo.path;
       } else {
@@ -781,7 +855,7 @@ public class ZKRMStateStore extends RMStateStore {
         pathExists = false;
         if (appIdNodeSplitIndex != 0) {
           String rootNode =
-              getSplitAppNodeParent(nodeUpdatePath, appIdNodeSplitIndex);
+              getSplitZnodeParent(nodeUpdatePath, appIdNodeSplitIndex);
           if (!exists(rootNode)) {
             zkManager.safeCreate(rootNode, null, zkAcl, CreateMode.PERSISTENT,
                 zkAcl, fencingNodePath);
@@ -822,7 +896,7 @@ public class ZKRMStateStore extends RMStateStore {
     String appDirPath = getLeafAppIdNodePath(appId, false);
     // Look for paths based on other split indices.
     if (!exists(appDirPath)) {
-      AppNodeSplitInfo alternatePathInfo = getAlternatePath(appId);
+      ZnodeSplitInfo alternatePathInfo = getAlternateAppPath(appId);
       if (alternatePathInfo == null) {
         if (operation == AppAttemptOp.REMOVE) {
           // Unexpected. Assume that app attempt has been deleted.
@@ -921,7 +995,7 @@ public class ZKRMStateStore extends RMStateStore {
     // Look for paths based on other split indices if path as per configured
     // split index does not exist.
     if (!exists(appIdRemovePath)) {
-      AppNodeSplitInfo alternatePathInfo = getAlternatePath(removeAppId);
+      ZnodeSplitInfo alternatePathInfo = getAlternateAppPath(removeAppId);
       if (alternatePathInfo != null) {
         appIdRemovePath = alternatePathInfo.path;
         splitIndex = alternatePathInfo.splitIndex;
@@ -949,24 +1023,60 @@ public class ZKRMStateStore extends RMStateStore {
           forPath(appIdRemovePath);
     }
     // Check if we should remove the parent app node as well.
-    checkRemoveParentAppNode(appIdRemovePath, splitIndex);
+    checkRemoveParentZnode(appIdRemovePath, splitIndex);
   }
 
   @Override
   protected synchronized void storeRMDelegationTokenState(
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
       throws Exception {
-    SafeTransaction trx = zkManager.createTransaction(zkAcl, fencingNodePath);
-    addStoreOrUpdateOps(trx, rmDTIdentifier, renewDate, false);
-    trx.commit();
+    String nodeCreatePath = getLeafDelegationTokenNodePath(
+        rmDTIdentifier.getSequenceNumber(), true);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Storing " + DELEGATION_TOKEN_PREFIX
+          + rmDTIdentifier.getSequenceNumber());
+    }
+
+    RMDelegationTokenIdentifierData identifierData =
+        new RMDelegationTokenIdentifierData(rmDTIdentifier, renewDate);
+    ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
+    try (DataOutputStream seqOut = new DataOutputStream(seqOs)) {
+      SafeTransaction trx = zkManager.createTransaction(zkAcl,
+          fencingNodePath);
+      trx.create(nodeCreatePath, identifierData.toByteArray(), zkAcl,
+          CreateMode.PERSISTENT);
+      // Update Sequence number only while storing DT
+      seqOut.writeInt(rmDTIdentifier.getSequenceNumber());
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Storing " + dtSequenceNumberPath + ". SequenceNumber: "
+            + rmDTIdentifier.getSequenceNumber());
+      }
+
+      trx.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1);
+      trx.commit();
+    }
   }
 
   @Override
   protected synchronized void removeRMDelegationTokenState(
       RMDelegationTokenIdentifier rmDTIdentifier) throws Exception {
-    String nodeRemovePath =
-        getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
-            + rmDTIdentifier.getSequenceNumber());
+    String nodeRemovePath = getLeafDelegationTokenNodePath(
+        rmDTIdentifier.getSequenceNumber(), false);
+    int splitIndex = delegationTokenNodeSplitIndex;
+    // Look for paths based on other split indices if path as per configured
+    // split index does not exist.
+    if (!exists(nodeRemovePath)) {
+      ZnodeSplitInfo alternatePathInfo =
+          getAlternateDTPath(rmDTIdentifier.getSequenceNumber());
+      if (alternatePathInfo != null) {
+        nodeRemovePath = alternatePathInfo.path;
+        splitIndex = alternatePathInfo.splitIndex;
+      } else {
+        // Alternate path not found so return.
+        return;
+      }
+    }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing RMDelegationToken_"
@@ -974,62 +1084,41 @@ public class ZKRMStateStore extends RMStateStore {
     }
 
     zkManager.safeDelete(nodeRemovePath, zkAcl, fencingNodePath);
+
+    // Check if we should remove the parent app node as well.
+    checkRemoveParentZnode(nodeRemovePath, splitIndex);
   }
 
   @Override
   protected synchronized void updateRMDelegationTokenState(
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
       throws Exception {
-    SafeTransaction trx = zkManager.createTransaction(zkAcl, fencingNodePath);
-    String nodeRemovePath =
-        getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
-            + rmDTIdentifier.getSequenceNumber());
-
-    if (exists(nodeRemovePath)) {
-      // in case znode exists
-      addStoreOrUpdateOps(trx, rmDTIdentifier, renewDate, true);
-    } else {
-      // in case znode doesn't exist
-      addStoreOrUpdateOps(trx, rmDTIdentifier, renewDate, false);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
+    String nodeUpdatePath = getLeafDelegationTokenNodePath(
+        rmDTIdentifier.getSequenceNumber(), false);
+    boolean pathExists = true;
+    // Look for paths based on other split indices if path as per split index
+    // does not exist.
+    if (!exists(nodeUpdatePath)) {
+      ZnodeSplitInfo alternatePathInfo =
+          getAlternateDTPath(rmDTIdentifier.getSequenceNumber());
+      if (alternatePathInfo != null) {
+        nodeUpdatePath = alternatePathInfo.path;
+      } else {
+        pathExists = false;
       }
     }
 
-    trx.commit();
-  }
-
-  private void addStoreOrUpdateOps(SafeTransaction trx,
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      boolean isUpdate) throws Exception {
-    // store RM delegation token
-    String nodeCreatePath = getNodePath(delegationTokensRootPath,
-        DELEGATION_TOKEN_PREFIX + rmDTIdentifier.getSequenceNumber());
-    RMDelegationTokenIdentifierData identifierData =
-        new RMDelegationTokenIdentifierData(rmDTIdentifier, renewDate);
-    ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
-
-    try (DataOutputStream seqOut = new DataOutputStream(seqOs)) {
-
-      if (isUpdate) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Updating RMDelegationToken_"
-              + rmDTIdentifier.getSequenceNumber());
-        }
-        trx.setData(nodeCreatePath, identifierData.toByteArray(), -1);
-      } else {
-        trx.create(nodeCreatePath, identifierData.toByteArray(), zkAcl,
-            CreateMode.PERSISTENT);
-        // Update Sequence number only while storing DT
-        seqOut.writeInt(rmDTIdentifier.getSequenceNumber());
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Storing " + dtSequenceNumberPath + ". SequenceNumber: "
-              + rmDTIdentifier.getSequenceNumber());
-        }
-
-        trx.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1);
+    if (pathExists) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Updating " + DELEGATION_TOKEN_PREFIX
+            + rmDTIdentifier.getSequenceNumber());
       }
+      RMDelegationTokenIdentifierData identifierData =
+          new RMDelegationTokenIdentifierData(rmDTIdentifier, renewDate);
+      zkManager.safeSetData(nodeUpdatePath, identifierData.toByteArray(), -1,
+          zkAcl, fencingNodePath);
+    } else {
+      storeRMDelegationTokenState(rmDTIdentifier, renewDate);
     }
   }
 
@@ -1159,19 +1248,19 @@ public class ZKRMStateStore extends RMStateStore {
    * Get alternate path for app id if path according to configured split index
    * does not exist. We look for path based on all possible split indices.
    * @param appId
-   * @return a {@link AppNodeSplitInfo} object containing the path and split
+   * @return a {@link ZnodeSplitInfo} object containing the path and split
    *    index if it exists, null otherwise.
    * @throws Exception if any problem occurs while performing ZK operation.
    */
-  private AppNodeSplitInfo getAlternatePath(String appId) throws Exception {
+  private ZnodeSplitInfo getAlternateAppPath(String appId) throws Exception {
     for (Map.Entry<Integer, String> entry : rmAppRootHierarchies.entrySet()) {
       // Look for other paths
       int splitIndex = entry.getKey();
       if (splitIndex != appIdNodeSplitIndex) {
         String alternatePath =
-            getLeafAppIdNodePath(appId, entry.getValue(), splitIndex, false);
+            getLeafZnodePath(appId, entry.getValue(), splitIndex, false);
         if (exists(alternatePath)) {
-          return new AppNodeSplitInfo(alternatePath, splitIndex);
+          return new ZnodeSplitInfo(alternatePath, splitIndex);
         }
       }
     }
@@ -1179,26 +1268,25 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   /**
-   * Returns leaf app node path based on app id and passed split index. If the
-   * passed flag createParentIfNotExists is true, also creates the parent app
-   * node if it does not exist.
-   * @param appId application id.
+   * Returns leaf znode path based on node name and passed split index. If the
+   * passed flag createParentIfNotExists is true, also creates the parent znode
+   * if it does not exist.
+   * @param nodeName the node name.
    * @param rootNode app root node based on split index.
-   * @param appIdNodeSplitIdx split index.
-   * @param createParentIfNotExists flag which determines if parent app node
+   * @param splitIdx split index.
+   * @param createParentIfNotExists flag which determines if parent znode
    *     needs to be created(as per split) if it does not exist.
-   * @return leaf app node path.
+   * @return leaf znode path.
    * @throws Exception if any problem occurs while performing ZK operation.
    */
-  private String getLeafAppIdNodePath(String appId, String rootNode,
-      int appIdNodeSplitIdx, boolean createParentIfNotExists) throws Exception {
-    if (appIdNodeSplitIdx == 0) {
-      return getNodePath(rootNode, appId);
+  private String getLeafZnodePath(String nodeName, String rootNode,
+      int splitIdx, boolean createParentIfNotExists) throws Exception {
+    if (splitIdx == 0) {
+      return getNodePath(rootNode, nodeName);
     }
-    String nodeName = appId;
-    int splitIdx = nodeName.length() - appIdNodeSplitIdx;
+    int split = nodeName.length() - splitIdx;
     String rootNodePath =
-        getNodePath(rootNode, nodeName.substring(0, splitIdx));
+        getNodePath(rootNode, nodeName.substring(0, split));
     if (createParentIfNotExists && !exists(rootNodePath)) {
       try {
         zkManager.safeCreate(rootNodePath, null, zkAcl, CreateMode.PERSISTENT,
@@ -1210,7 +1298,7 @@ public class ZKRMStateStore extends RMStateStore {
         }
       }
     }
-    return getNodePath(rootNodePath, nodeName.substring(splitIdx));
+    return getNodePath(rootNodePath, nodeName.substring(split));
   }
 
   /**
@@ -1225,8 +1313,75 @@ public class ZKRMStateStore extends RMStateStore {
    */
   private String getLeafAppIdNodePath(String appId,
       boolean createParentIfNotExists) throws Exception {
-    return getLeafAppIdNodePath(appId, rmAppRootHierarchies.get(
+    return getLeafZnodePath(appId, rmAppRootHierarchies.get(
         appIdNodeSplitIndex), appIdNodeSplitIndex, createParentIfNotExists);
+  }
+
+  /**
+   * Returns leaf delegation token node path based on sequence number and
+   * configured split index. If the passed flag createParentIfNotExists is true,
+   * also creates the parent znode if it does not exist.  The sequence number
+   * is padded to be at least 4 digits wide to ensure consistency with the split
+   * indexing.
+   * @param rmDTSequenceNumber delegation token sequence number.
+   * @param createParentIfNotExists flag which determines if parent znode
+   *     needs to be created(as per split) if it does not exist.
+   * @return leaf delegation token node path.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private String getLeafDelegationTokenNodePath(int rmDTSequenceNumber,
+      boolean createParentIfNotExists) throws Exception {
+    return getLeafDelegationTokenNodePath(rmDTSequenceNumber,
+        createParentIfNotExists, delegationTokenNodeSplitIndex);
+  }
+
+  /**
+   * Returns leaf delegation token node path based on sequence number and
+   * passed split index. If the passed flag createParentIfNotExists is true,
+   * also creates the parent znode if it does not exist.  The sequence number
+   * is padded to be at least 4 digits wide to ensure consistency with the split
+   * indexing.
+   * @param rmDTSequenceNumber delegation token sequence number.
+   * @param createParentIfNotExists flag which determines if parent znode
+   *     needs to be created(as per split) if it does not exist.
+   * @param split the split index to use
+   * @return leaf delegation token node path.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private String getLeafDelegationTokenNodePath(int rmDTSequenceNumber,
+      boolean createParentIfNotExists, int split) throws Exception {
+    String nodeName = DELEGATION_TOKEN_PREFIX;
+    if (split == 0) {
+      nodeName += rmDTSequenceNumber;
+    } else {
+      nodeName += String.format("%04d", rmDTSequenceNumber);
+    }
+    return getLeafZnodePath(nodeName, rmDelegationTokenHierarchies.get(split),
+        split, createParentIfNotExists);
+  }
+
+  /**
+   * Get alternate path for delegation token if path according to configured
+   * split index does not exist. We look for path based on all possible split
+   * indices.
+   * @param rmDTSequenceNumber delegation token sequence number.
+   * @return a {@link ZnodeSplitInfo} object containing the path and split
+   *    index if it exists, null otherwise.
+   * @throws Exception if any problem occurs while performing ZK operation.
+   */
+  private ZnodeSplitInfo getAlternateDTPath(int rmDTSequenceNumber)
+      throws Exception {
+    // Check all possible paths until we find it
+    for (int splitIndex : rmDelegationTokenHierarchies.keySet()) {
+      if (splitIndex != delegationTokenNodeSplitIndex) {
+        String alternatePath = getLeafDelegationTokenNodePath(
+            rmDTSequenceNumber, false, splitIndex);
+        if (exists(alternatePath)) {
+          return new ZnodeSplitInfo(alternatePath, splitIndex);
+        }
+      }
+    }
+    return null;
   }
 
   @VisibleForTesting

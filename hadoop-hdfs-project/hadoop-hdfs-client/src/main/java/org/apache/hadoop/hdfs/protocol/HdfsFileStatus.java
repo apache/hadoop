@@ -19,21 +19,24 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 
-/** Interface that represents the over the wire information for a file.
+/**
+ * HDFS metadata for an entity in the filesystem.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HdfsFileStatus extends FileStatus {
+public final class HdfsFileStatus extends LocatedFileStatus {
 
   private static final long serialVersionUID = 0x126eb82a;
 
@@ -48,26 +51,28 @@ public class HdfsFileStatus extends FileStatus {
   private final int childrenNum;
   private final byte storagePolicy;
 
+  // BlockLocations[] is the user-facing type
+  private transient LocatedBlocks hdfsloc;
+
   public static final byte[] EMPTY_NAME = new byte[0];
 
-  /**
-   * Set of features potentially active on an instance.
-   */
+  /** Set of features potentially active on an instance. */
   public enum Flags {
     HAS_ACL,
     HAS_CRYPT,
-    HAS_EC;
+    HAS_EC,
+    SNAPSHOT_ENABLED
   }
   private final EnumSet<Flags> flags;
 
   /**
    * Constructor.
-   * @param length            the number of bytes the file has
-   * @param isdir             if the path is a directory
-   * @param block_replication the replication factor
-   * @param blocksize         the block size
-   * @param modification_time modification time
-   * @param access_time access time
+   * @param length the number of bytes the file has
+   * @param isdir if the path is a directory
+   * @param replication the replication factor
+   * @param blocksize the block size
+   * @param mtime modification time
+   * @param atime access time
    * @param permission permission
    * @param owner the owner of the path
    * @param group the group of the path
@@ -79,16 +84,19 @@ public class HdfsFileStatus extends FileStatus {
    * @param storagePolicy ID which specifies storage policy
    * @param ecPolicy the erasure coding policy
    */
-  public HdfsFileStatus(long length, boolean isdir, int block_replication,
-                        long blocksize, long modification_time,
-                        long access_time, FsPermission permission,
-                        EnumSet<Flags> flags, String owner, String group,
-                        byte[] symlink, byte[] path, long fileId,
-                        int childrenNum, FileEncryptionInfo feInfo,
-                        byte storagePolicy, ErasureCodingPolicy ecPolicy) {
-    super(length, isdir, block_replication, blocksize, modification_time,
-        access_time, convert(isdir, symlink != null, permission, flags),
-        owner, group, null, null);
+  private HdfsFileStatus(long length, boolean isdir, int replication,
+                         long blocksize, long mtime, long atime,
+                         FsPermission permission, EnumSet<Flags> flags,
+                         String owner, String group,
+                         byte[] symlink, byte[] path, long fileId,
+                         int childrenNum, FileEncryptionInfo feInfo,
+                         byte storagePolicy, ErasureCodingPolicy ecPolicy,
+                         LocatedBlocks hdfsloc) {
+    super(length, isdir, replication, blocksize, mtime,
+        atime, convert(isdir, symlink != null, permission, flags),
+        owner, group, null, null,
+        flags.contains(Flags.HAS_ACL), flags.contains(Flags.HAS_CRYPT),
+        flags.contains(Flags.HAS_EC), null);
     this.flags = flags;
     this.uSymlink = symlink;
     this.uPath = path;
@@ -97,6 +105,7 @@ public class HdfsFileStatus extends FileStatus {
     this.feInfo = feInfo;
     this.storagePolicy = storagePolicy;
     this.ecPolicy = ecPolicy;
+    this.hdfsloc = hdfsloc;
   }
 
   /**
@@ -148,7 +157,7 @@ public class HdfsFileStatus extends FileStatus {
    * Check if the local name is empty.
    * @return true if the name is empty
    */
-  public final boolean isEmptyLocalName() {
+  public boolean isEmptyLocalName() {
     return uPath.length == 0;
   }
 
@@ -156,7 +165,7 @@ public class HdfsFileStatus extends FileStatus {
    * Get the string representation of the local name.
    * @return the local name in string
    */
-  public final String getLocalName() {
+  public String getLocalName() {
     return DFSUtilClient.bytes2String(uPath);
   }
 
@@ -164,7 +173,7 @@ public class HdfsFileStatus extends FileStatus {
    * Get the Java UTF8 representation of the local name.
    * @return the local name in java UTF8
    */
-  public final byte[] getLocalNameInBytes() {
+  public byte[] getLocalNameInBytes() {
     return uPath;
   }
 
@@ -173,7 +182,7 @@ public class HdfsFileStatus extends FileStatus {
    * @param parent the parent path
    * @return the full path in string
    */
-  public final String getFullName(final String parent) {
+  public String getFullName(String parent) {
     if (isEmptyLocalName()) {
       return parent;
     }
@@ -191,7 +200,7 @@ public class HdfsFileStatus extends FileStatus {
    * @param parent the parent path
    * @return the full path
    */
-  public final Path getFullPath(final Path parent) {
+  public Path getFullPath(Path parent) {
     if (isEmptyLocalName()) {
       return parent;
     }
@@ -215,15 +224,15 @@ public class HdfsFileStatus extends FileStatus {
   /**
    * Opaque referant for the symlink, to be resolved at the client.
    */
-  public final byte[] getSymlinkInBytes() {
+  public byte[] getSymlinkInBytes() {
     return uSymlink;
   }
 
-  public final long getFileId() {
+  public long getFileId() {
     return fileId;
   }
 
-  public final FileEncryptionInfo getFileEncryptionInfo() {
+  public FileEncryptionInfo getFileEncryptionInfo() {
     return feInfo;
   }
 
@@ -235,13 +244,26 @@ public class HdfsFileStatus extends FileStatus {
     return ecPolicy;
   }
 
-  public final int getChildrenNum() {
+  public int getChildrenNum() {
     return childrenNum;
   }
 
   /** @return the storage policy id */
-  public final byte getStoragePolicy() {
+  public byte getStoragePolicy() {
     return storagePolicy;
+  }
+
+  /**
+   * Check if directory is Snapshot enabled or not.
+   *
+   * @return true if directory is snapshot enabled
+   */
+  public boolean isSnapshotEnabled() {
+    return flags.contains(Flags.SNAPSHOT_ENABLED);
+  }
+
+  public LocatedBlocks getLocatedBlocks() {
+    return hdfsloc;
   }
 
   @Override
@@ -264,10 +286,257 @@ public class HdfsFileStatus extends FileStatus {
    * @param parent Parent path of this element.
    * @return Reference to this instance.
    */
-  public final FileStatus makeQualified(URI defaultUri, Path parent) {
+  public FileStatus makeQualified(URI defaultUri, Path parent) {
     // fully-qualify path
     setPath(getFullPath(parent).makeQualified(defaultUri, null));
     return this; // API compatibility
+  }
+
+  /**
+   * This function is used to transform the underlying HDFS LocatedBlocks to
+   * BlockLocations. This method must be invoked before
+   * {@link #getBlockLocations()}.
+   *
+   * The returned BlockLocation will have different formats for replicated
+   * and erasure coded file.
+   * Please refer to
+   * {@link org.apache.hadoop.fs.FileSystem#getFileBlockLocations
+   * (FileStatus, long, long)}
+   * for examples.
+   */
+  public LocatedFileStatus makeQualifiedLocated(URI defaultUri,
+                                                      Path path) {
+    makeQualified(defaultUri, path);
+    setBlockLocations(
+        DFSUtilClient.locatedBlocks2Locations(getLocatedBlocks()));
+    return this;
+  }
+
+  /**
+   * Builder class for HdfsFileStatus instances. Note default values for
+   * parameters.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static class Builder {
+    // Changing default values will affect cases where values are not
+    // specified. Be careful!
+    private long length                    = 0L;
+    private boolean isdir                  = false;
+    private int replication                = 0;
+    private long blocksize                 = 0L;
+    private long mtime                     = 0L;
+    private long atime                     = 0L;
+    private FsPermission permission        = null;
+    private EnumSet<Flags> flags           = EnumSet.noneOf(Flags.class);
+    private String owner                   = null;
+    private String group                   = null;
+    private byte[] symlink                 = null;
+    private byte[] path                    = EMPTY_NAME;
+    private long fileId                    = -1L;
+    private int childrenNum                = 0;
+    private FileEncryptionInfo feInfo      = null;
+    private byte storagePolicy             =
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+    private ErasureCodingPolicy ecPolicy   = null;
+    private LocatedBlocks locations        = null;
+
+    /**
+     * Set the length of the entity (default = 0).
+     * @param length Entity length
+     * @return This Builder instance
+     */
+    public Builder length(long length) {
+      this.length = length;
+      return this;
+    }
+
+    /**
+     * Set the isDir flag for the entity (default = false).
+     * @param isdir True if the referent is a directory.
+     * @return This Builder instance
+     */
+    public Builder isdir(boolean isdir) {
+      this.isdir = isdir;
+      return this;
+    }
+
+    /**
+     * Set the replication of this entity (default = 0).
+     * @param replication Number of replicas
+     * @return This Builder instance
+     */
+    public Builder replication(int replication) {
+      this.replication = replication;
+      return this;
+    }
+
+    /**
+     * Set the blocksize of this entity (default = 0).
+     * @param blocksize Target, default blocksize
+     * @return This Builder instance
+     */
+    public Builder blocksize(long blocksize) {
+      this.blocksize = blocksize;
+      return this;
+    }
+
+    /**
+     * Set the modification time of this entity (default = 0).
+     * @param mtime Last modified time
+     * @return This Builder instance
+     */
+    public Builder mtime(long mtime) {
+      this.mtime = mtime;
+      return this;
+    }
+
+    /**
+     * Set the access time of this entity (default = 0).
+     * @param atime Last accessed time
+     * @return This Builder instance
+     */
+    public Builder atime(long atime) {
+      this.atime = atime;
+      return this;
+    }
+
+    /**
+     * Set the permission mask of this entity (default = null).
+     * @param permission Permission bitmask
+     * @return This Builder instance
+     */
+    public Builder perm(FsPermission permission) {
+      this.permission = permission;
+      return this;
+    }
+
+    /**
+     * Set {@link Flags} for this entity
+     * (default = {@link EnumSet#noneOf(Class)}).
+     * @param flags Flags
+     * @return This builder instance
+     */
+    public Builder flags(EnumSet<Flags> flags) {
+      this.flags = flags;
+      return this;
+    }
+
+    /**
+     * Set the owner for this entity (default = null).
+     * @param owner Owner
+     * @return This Builder instance
+     */
+    public Builder owner(String owner) {
+      this.owner = owner;
+      return this;
+    }
+
+    /**
+     * Set the group for this entity (default = null).
+     * @param group Group
+     * @return This Builder instance
+     */
+    public Builder group(String group) {
+      this.group = group;
+      return this;
+    }
+
+    /**
+     * Set symlink bytes for this entity (default = null).
+     * @param symlink Symlink bytes (see
+     *                {@link DFSUtilClient#bytes2String(byte[])})
+     * @return This Builder instance
+     */
+    public Builder symlink(byte[] symlink) {
+      this.symlink = null == symlink
+          ? null
+          : Arrays.copyOf(symlink, symlink.length);
+      return this;
+    }
+
+    /**
+     * Set path bytes for this entity (default = {@link #EMPTY_NAME}).
+     * @param path Path bytes (see {@link #makeQualified(URI, Path)}).
+     * @return This Builder instance
+     */
+    public Builder path(byte[] path) {
+      this.path = null == path
+          ? null
+          : Arrays.copyOf(path, path.length);
+      return this;
+    }
+
+    /**
+     * Set the fileId for this entity (default = -1).
+     * @param fileId FileId
+     * @return This Builder instance
+     */
+    public Builder fileId(long fileId) {
+      this.fileId = fileId;
+      return this;
+    }
+
+    /**
+     * Set the number of children for this entity (default = 0).
+     * @param childrenNum Number of children
+     * @return This Builder instance
+     */
+    public Builder children(int childrenNum) {
+      this.childrenNum = childrenNum;
+      return this;
+    }
+
+    /**
+     * Set the encryption info for this entity (default = null).
+     * @param feInfo Encryption info
+     * @return This Builder instance
+     */
+    public Builder feInfo(FileEncryptionInfo feInfo) {
+      this.feInfo = feInfo;
+      return this;
+    }
+
+    /**
+     * Set the storage policy for this entity
+     * (default = {@link HdfsConstants#BLOCK_STORAGE_POLICY_ID_UNSPECIFIED}).
+     * @param storagePolicy Storage policy
+     * @return This Builder instance
+     */
+    public Builder storagePolicy(byte storagePolicy) {
+      this.storagePolicy = storagePolicy;
+      return this;
+    }
+
+    /**
+     * Set the erasure coding policy for this entity (default = null).
+     * @param ecPolicy Erasure coding policy
+     * @return This Builder instance
+     */
+    public Builder ecPolicy(ErasureCodingPolicy ecPolicy) {
+      this.ecPolicy = ecPolicy;
+      return this;
+    }
+
+    /**
+     * Set the block locations for this entity (default = null).
+     * @param locations HDFS locations
+     *                  (see {@link #makeQualifiedLocated(URI, Path)})
+     * @return This Builder instance
+     */
+    public Builder locations(LocatedBlocks locations) {
+      this.locations = locations;
+      return this;
+    }
+
+    /**
+     * @return An {@link HdfsFileStatus} instance from these parameters.
+     */
+    public HdfsFileStatus build() {
+      return new HdfsFileStatus(length, isdir, replication, blocksize,
+          mtime, atime, permission, flags, owner, group, symlink, path, fileId,
+          childrenNum, feInfo, storagePolicy, ecPolicy, locations);
+    }
   }
 
 }

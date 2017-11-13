@@ -336,6 +336,8 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_WEBAPP_UI2_WARFILE_PATH = "yarn."
       + "webapp.ui2.war-file-path";
+  public static final String YARN_API_SERVICES_ENABLE = "yarn."
+      + "webapp.api-service.enable";
 
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
@@ -639,6 +641,13 @@ public class YarnConfiguration extends Configuration {
       RM_ZK_PREFIX + "appid-node.split-index";
   public static final int DEFAULT_ZK_APPID_NODE_SPLIT_INDEX = 0;
 
+  /** Index at which the RM Delegation Token ids will be split so that the
+   * delegation token znodes stored in the zookeeper RM state store will be
+   * stored as two different znodes (parent-child). **/
+  public static final  String ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX =
+      RM_ZK_PREFIX + "delegation-token-node.split-index";
+  public static final int DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX = 0;
+
   public static final String RM_ZK_ACL = RM_ZK_PREFIX + "acl";
   public static final String DEFAULT_RM_ZK_ACL = "world:anyone:rwcda";
 
@@ -673,6 +682,67 @@ public class YarnConfiguration extends Configuration {
       + "configuration.provider-class";
   public static final String DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS =
       "org.apache.hadoop.yarn.LocalConfigurationProvider";
+
+  @Private
+  @Unstable
+  public static final String SCHEDULER_CONFIGURATION_STORE_CLASS =
+      YARN_PREFIX + "scheduler.configuration.store.class";
+  @Private
+  @Unstable
+  public static final String FILE_CONFIGURATION_STORE = "file";
+  @Private
+  @Unstable
+  public static final String MEMORY_CONFIGURATION_STORE = "memory";
+  @Private
+  @Unstable
+  public static final String LEVELDB_CONFIGURATION_STORE = "leveldb";
+  @Private
+  @Unstable
+  public static final String ZK_CONFIGURATION_STORE = "zk";
+  @Private
+  @Unstable
+  public static final String DEFAULT_CONFIGURATION_STORE =
+      FILE_CONFIGURATION_STORE;
+  @Private
+  @Unstable
+  public static final String RM_SCHEDCONF_STORE_PATH = YARN_PREFIX
+      + "scheduler.configuration.leveldb-store.path";
+
+  @Private
+  @Unstable
+  public static final String RM_SCHEDCONF_LEVELDB_COMPACTION_INTERVAL_SECS =
+      YARN_PREFIX
+          + "scheduler.configuration.leveldb-store.compaction-interval-secs";
+  @Private
+  @Unstable
+  public static final long
+      DEFAULT_RM_SCHEDCONF_LEVELDB_COMPACTION_INTERVAL_SECS = 60 * 60 * 24L;
+
+  @Private
+  @Unstable
+  public static final String RM_SCHEDCONF_MAX_LOGS =
+      YARN_PREFIX + "scheduler.configuration.store.max-logs";
+  @Private
+  @Unstable
+  public static final long DEFAULT_RM_SCHEDCONF_LEVELDB_MAX_LOGS = 1000;
+  @Private
+  @Unstable
+  public static final long DEFAULT_RM_SCHEDCONF_ZK_MAX_LOGS = 1000;
+
+  /** Parent znode path under which ZKConfigurationStore will create znodes. */
+  @Private
+  @Unstable
+  public static final String RM_SCHEDCONF_STORE_ZK_PARENT_PATH = YARN_PREFIX
+      + "scheduler.configuration.zk-store.parent-path";
+  @Private
+  @Unstable
+  public static final String DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH =
+      "/confstore";
+
+  @Private
+  @Unstable
+  public static final String RM_SCHEDULER_MUTATION_ACL_POLICY_CLASS =
+      YARN_PREFIX + "scheduler.configuration.mutation.acl-policy.class";
 
   public static final String YARN_AUTHORIZATION_PROVIDER = YARN_PREFIX
       + "authorization-provider";
@@ -906,6 +976,17 @@ public class YarnConfiguration extends Configuration {
   @Unstable
   public static final String DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE =
       "resource-profiles.json";
+
+  /**
+   * Enable/disable loading resource-types.xml at client side.
+   */
+  @Public
+  @Unstable
+  public static final String YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER = YARN_PREFIX
+      + "client.load.resource-types.from-server";
+  @Public
+  @Unstable
+  public static final boolean DEFAULT_YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER = false;
 
   /**
    * Timeout in seconds for YARN node graceful decommission.
@@ -1371,6 +1452,68 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String NM_NETWORK_RESOURCE_OUTBOUND_BANDWIDTH_YARN_MBIT =
       NM_NETWORK_RESOURCE_PREFIX + "outbound-bandwidth-yarn-mbit";
+
+  /**
+   * Prefix for computation resources, example of computation resources like
+   * GPU / FPGA / TPU, etc.
+   */
+  @Private
+  public static final String NM_RESOURCE_PLUGINS =
+      NM_PREFIX + "resource-plugins";
+
+  /**
+   * Prefix for gpu configurations. Work in progress: This configuration
+   * parameter may be changed/removed in the future.
+   */
+  @Private
+  public static final String NM_GPU_RESOURCE_PREFIX =
+      NM_RESOURCE_PLUGINS + ".gpu.";
+
+  @Private
+  public static final String NM_GPU_ALLOWED_DEVICES =
+      NM_GPU_RESOURCE_PREFIX + "allowed-gpu-devices";
+  @Private
+  public static final String AUTOMATICALLY_DISCOVER_GPU_DEVICES = "auto";
+
+  /**
+   * This setting controls where to how to invoke GPU binaries
+   */
+  @Private
+  public static final String NM_GPU_PATH_TO_EXEC =
+      NM_GPU_RESOURCE_PREFIX + "path-to-discovery-executables";
+
+  @Private
+  public static final String DEFAULT_NM_GPU_PATH_TO_EXEC = "";
+
+  /**
+   * Settings to control which implementation of docker plugin for GPU will be
+   * used.
+   *
+   * By default uses NVIDIA docker v1.
+   */
+  @Private
+  public static final String NM_GPU_DOCKER_PLUGIN_IMPL =
+      NM_GPU_RESOURCE_PREFIX + "docker-plugin";
+
+  @Private
+  public static final String NVIDIA_DOCKER_V1 = "nvidia-docker-v1";
+
+  @Private
+  public static final String DEFAULT_NM_GPU_DOCKER_PLUGIN_IMPL =
+      NVIDIA_DOCKER_V1;
+
+  /**
+   * This setting controls end point of nvidia-docker-v1 plugin
+   */
+  @Private
+  public static final String NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
+      NM_GPU_RESOURCE_PREFIX + "docker-plugin." + NVIDIA_DOCKER_V1
+          + ".endpoint";
+
+  @Private
+  public static final String DEFAULT_NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
+      "http://localhost:3476/v1.0/docker/cli";
+
 
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
@@ -1907,7 +2050,7 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_PROCESS_KILL_WAIT_MS =
       NM_PREFIX + "process-kill-wait.ms";
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
-      2000;
+      5000;
 
   /** Max time to wait to establish a connection to RM */
   public static final String RESOURCEMANAGER_CONNECT_MAX_WAIT_MS =

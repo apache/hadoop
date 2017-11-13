@@ -54,7 +54,7 @@ public class TestCapacitySchedulerLazyPreemption
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    conf.setBoolean(CapacitySchedulerConfiguration.LAZY_PREEMPTION_ENALBED,
+    conf.setBoolean(CapacitySchedulerConfiguration.LAZY_PREEMPTION_ENABLED,
         true);
   }
 

@@ -85,26 +85,44 @@ public class QuorumJournalManager implements JournalManager {
   private final Configuration conf;
   private final URI uri;
   private final NamespaceInfo nsInfo;
+  private final String nameServiceId;
   private boolean isActiveWriter;
   
   private final AsyncLoggerSet loggers;
 
   private int outputBufferCapacity = 512 * 1024;
   private final URLConnectionFactory connectionFactory;
-  
+
+  @VisibleForTesting
   public QuorumJournalManager(Configuration conf,
-      URI uri, NamespaceInfo nsInfo) throws IOException {
-    this(conf, uri, nsInfo, IPCLoggerChannel.FACTORY);
+                              URI uri,
+                              NamespaceInfo nsInfo) throws IOException {
+    this(conf, uri, nsInfo, null, IPCLoggerChannel.FACTORY);
   }
   
+  public QuorumJournalManager(Configuration conf,
+      URI uri, NamespaceInfo nsInfo, String nameServiceId) throws IOException {
+    this(conf, uri, nsInfo, nameServiceId, IPCLoggerChannel.FACTORY);
+  }
+
+  @VisibleForTesting
   QuorumJournalManager(Configuration conf,
-      URI uri, NamespaceInfo nsInfo,
+                       URI uri, NamespaceInfo nsInfo,
+                       AsyncLogger.Factory loggerFactory) throws IOException {
+    this(conf, uri, nsInfo, null, loggerFactory);
+
+  }
+
+  
+  QuorumJournalManager(Configuration conf,
+      URI uri, NamespaceInfo nsInfo, String nameServiceId,
       AsyncLogger.Factory loggerFactory) throws IOException {
     Preconditions.checkArgument(conf != null, "must be configured");
 
     this.conf = conf;
     this.uri = uri;
     this.nsInfo = nsInfo;
+    this.nameServiceId = nameServiceId;
     this.loggers = new AsyncLoggerSet(createLoggers(loggerFactory));
     this.connectionFactory = URLConnectionFactory
         .newDefaultURLConnectionFactory(conf);
@@ -142,7 +160,7 @@ public class QuorumJournalManager implements JournalManager {
   
   protected List<AsyncLogger> createLoggers(
       AsyncLogger.Factory factory) throws IOException {
-    return createLoggers(conf, uri, nsInfo, factory);
+    return createLoggers(conf, uri, nsInfo, factory, nameServiceId);
   }
 
   static String parseJournalId(URI uri) {
@@ -354,8 +372,11 @@ public class QuorumJournalManager implements JournalManager {
   }
   
   static List<AsyncLogger> createLoggers(Configuration conf,
-      URI uri, NamespaceInfo nsInfo, AsyncLogger.Factory factory)
-          throws IOException {
+                                         URI uri,
+                                         NamespaceInfo nsInfo,
+                                         AsyncLogger.Factory factory,
+                                         String nameServiceId)
+      throws IOException {
     List<AsyncLogger> ret = Lists.newArrayList();
     List<InetSocketAddress> addrs = Util.getAddressesList(uri);
     if (addrs.size() % 2 == 0) {
@@ -364,7 +385,7 @@ public class QuorumJournalManager implements JournalManager {
     }
     String jid = parseJournalId(uri);
     for (InetSocketAddress addr : addrs) {
-      ret.add(factory.createLogger(conf, nsInfo, jid, addr));
+      ret.add(factory.createLogger(conf, nsInfo, jid, nameServiceId, addr));
     }
     return ret;
   }

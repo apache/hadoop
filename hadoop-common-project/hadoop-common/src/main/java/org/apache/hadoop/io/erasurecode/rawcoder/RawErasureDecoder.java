@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -81,7 +82,7 @@ public abstract class RawErasureDecoder {
    *                erasedIndexes, ready for read after the call
    */
   public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
-                     ByteBuffer[] outputs) {
+                     ByteBuffer[] outputs) throws IOException {
     ByteBufferDecodingState decodingState = new ByteBufferDecodingState(this,
         inputs, erasedIndexes, outputs);
 
@@ -117,7 +118,8 @@ public abstract class RawErasureDecoder {
    * Perform the real decoding using Direct ByteBuffer.
    * @param decodingState the decoding state
    */
-  protected abstract void doDecode(ByteBufferDecodingState decodingState);
+  protected abstract void doDecode(ByteBufferDecodingState decodingState)
+      throws IOException;
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
@@ -126,8 +128,10 @@ public abstract class RawErasureDecoder {
    * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs output buffers to put decoded data into according to
    *                erasedIndexes, ready for read after the call
+   * @throws IOException if the decoder is closed.
    */
-  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs) {
+  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs)
+      throws IOException {
     ByteArrayDecodingState decodingState = new ByteArrayDecodingState(this,
         inputs, erasedIndexes, outputs);
 
@@ -142,8 +146,10 @@ public abstract class RawErasureDecoder {
    * Perform the real decoding using bytes array, supporting offsets and
    * lengths.
    * @param decodingState the decoding state
+   * @throws IOException if the decoder is closed.
    */
-  protected abstract void doDecode(ByteArrayDecodingState decodingState);
+  protected abstract void doDecode(ByteArrayDecodingState decodingState)
+      throws IOException;
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
@@ -155,9 +161,10 @@ public abstract class RawErasureDecoder {
    * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs output buffers to put decoded data into according to
    *                erasedIndexes, ready for read after the call
+   * @throws IOException if the decoder is closed
    */
   public void decode(ECChunk[] inputs, int[] erasedIndexes,
-                     ECChunk[] outputs) {
+                     ECChunk[] outputs) throws IOException {
     ByteBuffer[] newInputs = CoderUtil.toBuffers(inputs);
     ByteBuffer[] newOutputs = CoderUtil.toBuffers(outputs);
     decode(newInputs, erasedIndexes, newOutputs);

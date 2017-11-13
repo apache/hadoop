@@ -89,6 +89,7 @@ public class FSLeafQueue extends FSQueue {
       } else {
         nonRunnableApps.add(app);
       }
+      incUsedResource(app.getResourceUsage());
     } finally {
       writeLock.unlock();
     }
@@ -123,6 +124,7 @@ public class FSLeafQueue extends FSQueue {
       getMetrics().setAMResourceUsage(amResourceUsage);
     }
 
+    decUsedResource(app.getResourceUsage());
     return runnable;
   }
 
@@ -292,23 +294,6 @@ public class FSLeafQueue extends FSQueue {
     return demand;
   }
 
-  @Override
-  public Resource getResourceUsage() {
-    Resource usage = Resources.createResource(0);
-    readLock.lock();
-    try {
-      for (FSAppAttempt app : runnableApps) {
-        Resources.addTo(usage, app.getResourceUsage());
-      }
-      for (FSAppAttempt app : nonRunnableApps) {
-        Resources.addTo(usage, app.getResourceUsage());
-      }
-    } finally {
-      readLock.unlock();
-    }
-    return usage;
-  }
-
   Resource getAmResourceUsage() {
     return amResourceUsage;
   }
@@ -332,10 +317,10 @@ public class FSLeafQueue extends FSQueue {
       readLock.unlock();
     }
     // Cap demand to maxShare to limit allocation to maxShare
-    demand = Resources.componentwiseMin(tmpDemand, maxShare);
+    demand = Resources.componentwiseMin(tmpDemand, getMaxShare());
     if (LOG.isDebugEnabled()) {
       LOG.debug("The updated demand for " + getName() + " is " + demand
-          + "; the max is " + maxShare);
+          + "; the max is " + getMaxShare());
       LOG.debug("The updated fairshare for " + getName() + " is "
           + getFairShare());
     }
@@ -611,7 +596,7 @@ public class FSLeafQueue extends FSQueue {
         ", Policy: " + policy.getName() +
         ", FairShare: " + getFairShare() +
         ", SteadyFairShare: " + getSteadyFairShare() +
-        ", MaxShare: " + maxShare +
+        ", MaxShare: " + getMaxShare() +
         ", MinShare: " + minShare +
         ", ResourceUsage: " + getResourceUsage() +
         ", Demand: " + getDemand() +

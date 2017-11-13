@@ -28,6 +28,9 @@ import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CreateBuilder;
 import org.apache.curator.framework.api.DeleteBuilder;
 import org.apache.curator.framework.api.GetChildrenBuilder;
+import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,14 +39,14 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.exceptions.AuthenticationFailedException;
 import org.apache.hadoop.registry.client.exceptions.NoChildrenForEphemeralsException;
 import org.apache.hadoop.registry.client.exceptions.NoPathPermissionsException;
 import org.apache.hadoop.registry.client.exceptions.RegistryIOException;
+import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.ServiceStateException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -69,12 +72,12 @@ public class CuratorService extends CompositeService
       LoggerFactory.getLogger(CuratorService.class);
 
   /**
-   * the Curator binding
+   * the Curator binding.
    */
   private CuratorFramework curator;
 
   /**
-   * Path to the registry root
+   * Path to the registry root.
    */
   private String registryRoot;
 
@@ -85,17 +88,17 @@ public class CuratorService extends CompositeService
   private final RegistryBindingSource bindingSource;
 
   /**
-   * Security service
+   * Security service.
    */
   private RegistrySecurity registrySecurity;
 
   /**
-   * the connection binding text for messages
+   * the connection binding text for messages.
    */
   private String connectionDescription;
 
   /**
-   * Security connection diagnostics
+   * Security connection diagnostics.
    */
   private String securityConnectionDiagnostics = "";
 
@@ -106,10 +109,16 @@ public class CuratorService extends CompositeService
   private EnsembleProvider ensembleProvider;
 
   /**
+   * Registry tree cache.
+   */
+  private TreeCache treeCache;
+
+  /**
    * Construct the service.
-   * @param name service name
+   *
+   * @param name          service name
    * @param bindingSource source of binding information.
-   * If null: use this instance
+   *                      If null: use this instance
    */
   public CuratorService(String name, RegistryBindingSource bindingSource) {
     super(name);
@@ -122,7 +131,8 @@ public class CuratorService extends CompositeService
 
   /**
    * Create an instance using this service as the binding source (i.e. read
-   * configuration options from the registry)
+   * configuration options from the registry).
+   *
    * @param name service name
    */
   public CuratorService(String name) {
@@ -131,7 +141,8 @@ public class CuratorService extends CompositeService
 
   /**
    * Init the service.
-   * This is where the security bindings are set up
+   * This is where the security bindings are set up.
+   *
    * @param conf configuration of the service
    * @throws Exception
    */
@@ -155,6 +166,7 @@ public class CuratorService extends CompositeService
   /**
    * Start the service.
    * This is where the curator instance is started.
+   *
    * @throws Exception
    */
   @Override
@@ -167,29 +179,35 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Close the ZK connection if it is open
+   * Close the ZK connection if it is open.
    */
   @Override
   protected void serviceStop() throws Exception {
     IOUtils.closeStream(curator);
+
+    if (treeCache != null) {
+      treeCache.close();
+    }
     super.serviceStop();
   }
 
   /**
-   * Internal check that a service is in the live state
+   * Internal check that a service is in the live state.
+   *
    * @throws ServiceStateException if not
    */
   private void checkServiceLive() throws ServiceStateException {
     if (!isInState(STATE.STARTED)) {
       throw new ServiceStateException(
           "Service " + getName() + " is in wrong state: "
-          + getServiceState());
+              + getServiceState());
     }
   }
 
   /**
    * Flag to indicate whether or not the registry is secure.
    * Valid once the service is inited.
+   *
    * @return service security policy
    */
   public boolean isSecure() {
@@ -197,7 +215,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Get the registry security helper
+   * Get the registry security helper.
+   *
    * @return the registry security helper
    */
   protected RegistrySecurity getRegistrySecurity() {
@@ -205,7 +224,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Build the security diagnostics string
+   * Build the security diagnostics string.
+   *
    * @return a string for diagnostics
    */
   protected String buildSecurityDiagnostics() {
@@ -224,6 +244,7 @@ public class CuratorService extends CompositeService
    * Create a new curator instance off the root path; using configuration
    * options provided in the service configuration to set timeouts and
    * retry policy.
+   *
    * @return the newly created creator
    */
   private CuratorFramework createCurator() throws IOException {
@@ -240,24 +261,24 @@ public class CuratorService extends CompositeService
     int retryCeiling = conf.getInt(KEY_REGISTRY_ZK_RETRY_CEILING,
         DEFAULT_ZK_RETRY_CEILING);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating CuratorService with connection {}",
+    LOG.info("Creating CuratorService with connection {}",
           connectionDescription);
-    }
+
     CuratorFramework framework;
 
     synchronized (CuratorService.class) {
       // set the security options
 
       // build up the curator itself
-      CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder();
+      CuratorFrameworkFactory.Builder builder =
+          CuratorFrameworkFactory.builder();
       builder.ensembleProvider(ensembleProvider)
-       .connectionTimeoutMs(connectionTimeout)
-       .sessionTimeoutMs(sessionTimeout)
+          .connectionTimeoutMs(connectionTimeout)
+          .sessionTimeoutMs(sessionTimeout)
 
-       .retryPolicy(new BoundedExponentialBackoffRetry(retryInterval,
-           retryCeiling,
-           retryTimes));
+          .retryPolicy(new BoundedExponentialBackoffRetry(retryInterval,
+              retryCeiling,
+              retryTimes));
 
       // set up the builder AND any JVM context
       registrySecurity.applySecurityEnvironment(builder);
@@ -273,21 +294,23 @@ public class CuratorService extends CompositeService
   @Override
   public String toString() {
     return super.toString()
-           + " " + bindingDiagnosticDetails();
+        + " " + bindingDiagnosticDetails();
   }
 
   /**
-   * Get the binding diagnostics
+   * Get the binding diagnostics.
+   *
    * @return a diagnostics string valid after the service is started.
    */
   public String bindingDiagnosticDetails() {
     return " Connection=\"" + connectionDescription + "\""
-           + " root=\"" + registryRoot + "\""
-           + " " + securityConnectionDiagnostics;
+        + " root=\"" + registryRoot + "\""
+        + " " + securityConnectionDiagnostics;
   }
 
   /**
-   * Create a full path from the registry root and the supplied subdir
+   * Create a full path from the registry root and the supplied subdir.
+   *
    * @param path path of operation
    * @return an absolute path
    * @throws IllegalArgumentException if the path is invalide
@@ -299,6 +322,7 @@ public class CuratorService extends CompositeService
   /**
    * Get the registry binding source ... this can be used to
    * create new ensemble providers
+   *
    * @return the registry binding source in use
    */
   public RegistryBindingSource getBindingSource() {
@@ -308,23 +332,23 @@ public class CuratorService extends CompositeService
   /**
    * Create the ensemble provider for this registry, by invoking
    * {@link RegistryBindingSource#supplyBindingInformation()} on
-   * the provider stored in {@link #bindingSource}
+   * the provider stored in {@link #bindingSource}.
    * Sets {@link #ensembleProvider} to that value;
    * sets {@link #connectionDescription} to the binding info
    * for use in toString and logging;
-   *
    */
   protected void createEnsembleProvider() {
     BindingInformation binding = bindingSource.supplyBindingInformation();
     connectionDescription = binding.description
-                            + " " + securityConnectionDiagnostics;
+        + " " + securityConnectionDiagnostics;
     ensembleProvider = binding.ensembleProvider;
   }
 
   /**
    * Supply the binding information.
    * This implementation returns a fixed ensemble bonded to
-   * the quorum supplied by {@link #buildConnectionString()}
+   * the quorum supplied by {@link #buildConnectionString()}.
+   *
    * @return the binding information
    */
   @Override
@@ -339,17 +363,19 @@ public class CuratorService extends CompositeService
 
   /**
    * Override point: get the connection string used to connect to
-   * the ZK service
+   * the ZK service.
+   *
    * @return a registry quorum
    */
   protected String buildConnectionString() {
     return getConfig().getTrimmed(KEY_REGISTRY_ZK_QUORUM,
-        DEFAULT_REGISTRY_ZK_QUORUM);
+                                  DEFAULT_REGISTRY_ZK_QUORUM);
   }
 
   /**
-   * Create an IOE when an operation fails
-   * @param path path of operation
+   * Create an IOE when an operation fails.
+   *
+   * @param path      path of operation
    * @param operation operation attempted
    * @param exception caught the exception caught
    * @return an IOE to throw that contains the path and operation details.
@@ -361,8 +387,9 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Create an IOE when an operation fails
-   * @param path path of operation
+   * Create an IOE when an operation fails.
+   *
+   * @param path      path of operation
    * @param operation operation attempted
    * @param exception caught the exception caught
    * @return an IOE to throw that contains the path and operation details.
@@ -385,9 +412,10 @@ public class CuratorService extends CompositeService
     } else if (exception instanceof KeeperException.AuthFailedException) {
       ioe = new AuthenticationFailedException(path,
           "Authentication Failed: " + exception
-          + "; " + securityConnectionDiagnostics,
+              + "; " + securityConnectionDiagnostics,
           exception);
-    } else if (exception instanceof KeeperException.NoChildrenForEphemeralsException) {
+    } else if (exception instanceof
+        KeeperException.NoChildrenForEphemeralsException) {
       ioe = new NoChildrenForEphemeralsException(path,
           "Cannot create a path under an ephemeral node: " + exception,
           exception);
@@ -402,7 +430,7 @@ public class CuratorService extends CompositeService
     } else {
       ioe = new RegistryIOException(path,
           "Failure of " + operation + " on " + path + ": " +
-          exception.toString(),
+              exception.toString(),
           exception);
     }
     if (ioe.getCause() == null) {
@@ -417,8 +445,8 @@ public class CuratorService extends CompositeService
    * may create the same path before the create() operation is executed/
    * propagated to the ZK node polled.
    *
-   * @param path path to create
-   * @param acl ACL for path -used when creating a new entry
+   * @param path          path to create
+   * @param acl           ACL for path -used when creating a new entry
    * @param createParents flag to trigger parent creation
    * @return true iff the path was created
    * @throws IOException
@@ -432,10 +460,11 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Stat the file
+   * Stat the file.
+   *
    * @param path path of operation
    * @return a curator stat entry
-   * @throws IOException on a failure
+   * @throws IOException           on a failure
    * @throws PathNotFoundException if the path was not found
    */
   public Stat zkStat(String path) throws IOException {
@@ -457,7 +486,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Get the ACLs of a path
+   * Get the ACLs of a path.
+   *
    * @param path path of operation
    * @return a possibly empty list of ACLs
    * @throws IOException
@@ -481,12 +511,13 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Probe for a path existing
+   * Probe for a path existing.
+   *
    * @param path path of operation
    * @return true if the path was visible from the ZK server
    * queried.
    * @throws IOException on any exception other than
-   * {@link PathNotFoundException}
+   *                     {@link PathNotFoundException}
    */
   public boolean zkPathExists(String path) throws IOException {
     checkServiceLive();
@@ -503,7 +534,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Verify a path exists
+   * Verify a path exists.
+   *
    * @param path path of operation
    * @throws PathNotFoundException if the path is absent
    * @throws IOException
@@ -514,11 +546,12 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Create a directory. It is not an error if it already exists
-   * @param path path to create
-   * @param mode mode for path
+   * Create a directory. It is not an error if it already exists.
+   *
+   * @param path          path to create
+   * @param mode          mode for path
    * @param createParents flag to trigger parent creation
-   * @param acls ACL for path
+   * @param acls          ACL for path
    * @throws IOException any problem
    */
   public boolean zkMkPath(String path,
@@ -558,9 +591,10 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Recursively make a path
+   * Recursively make a path.
+   *
    * @param path path to create
-   * @param acl ACL for path
+   * @param acl  ACL for path
    * @throws IOException any problem
    */
   public void zkMkParentPath(String path,
@@ -574,7 +608,8 @@ public class CuratorService extends CompositeService
 
   /**
    * Create a path with given data. byte[0] is used for a path
-   * without data
+   * without data.
+   *
    * @param path path of operation
    * @param data initial data
    * @param acls
@@ -600,7 +635,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Update the data for a path
+   * Update the data for a path.
+   *
    * @param path path of operation
    * @param data new data
    * @throws IOException
@@ -620,13 +656,14 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Create or update an entry
-   * @param path path
-   * @param data data
-   * @param acl ACL for path -used when creating a new entry
+   * Create or update an entry.
+   *
+   * @param path      path
+   * @param data      data
+   * @param acl       ACL for path -used when creating a new entry
    * @param overwrite enable overwrite
-   * @throws IOException
    * @return true if the entry was created, false if it was simply updated.
+   * @throws IOException
    */
   public boolean zkSet(String path,
       CreateMode mode,
@@ -649,12 +686,13 @@ public class CuratorService extends CompositeService
 
   /**
    * Delete a directory/directory tree.
-   * It is not an error to delete a path that does not exist
-   * @param path path of operation
-   * @param recursive flag to trigger recursive deletion
+   * It is not an error to delete a path that does not exist.
+   *
+   * @param path               path of operation
+   * @param recursive          flag to trigger recursive deletion
    * @param backgroundCallback callback; this being set converts the operation
-   * into an async/background operation.
-   * task
+   *                           into an async/background operation.
+   *                           task
    * @throws IOException on problems other than no-such-path
    */
   public void zkDelete(String path,
@@ -682,7 +720,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * List all children of a path
+   * List all children of a path.
+   *
    * @param path path of operation
    * @return a possibly empty list of children
    * @throws IOException
@@ -703,7 +742,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Read data on a path
+   * Read data on a path.
+   *
    * @param path path of operation
    * @return the data
    * @throws IOException read failure
@@ -724,9 +764,10 @@ public class CuratorService extends CompositeService
   /**
    * Return a path dumper instance which can do a full dump
    * of the registry tree in its <code>toString()</code>
-   * operation
-   * @return a class to dump the registry
+   * operation.
+   *
    * @param verbose verbose flag - includes more details (such as ACLs)
+   * @return a class to dump the registry
    */
   public ZKPathDumper dumpPath(boolean verbose) {
     return new ZKPathDumper(curator, registryRoot, verbose);
@@ -734,7 +775,8 @@ public class CuratorService extends CompositeService
 
   /**
    * Add a new write access entry for all future write operations.
-   * @param id ID to use
+   *
+   * @param id   ID to use
    * @param pass password
    * @throws IOException on any failure to build the digest
    */
@@ -746,16 +788,16 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Clear all write accessors
+   * Clear all write accessors.
    */
   public void clearWriteAccessors() {
     getRegistrySecurity().resetDigestACLs();
   }
 
-
   /**
    * Diagnostics method to dump a registry robustly.
-   * Any exception raised is swallowed
+   * Any exception raised is swallowed.
+   *
    * @param verbose verbose path dump
    * @return the registry tree
    */
@@ -768,5 +810,80 @@ public class CuratorService extends CompositeService
       LOG.debug("Ignoring exception:  {}", e);
     }
     return "";
+  }
+
+  /**
+   * Registers a listener to path related events.
+   *
+   * @param listener the listener.
+   * @return a handle allowing for the management of the listener.
+   * @throws Exception if registration fails due to error.
+   */
+  public ListenerHandle registerPathListener(final PathListener listener)
+      throws Exception {
+
+    final TreeCacheListener pathChildrenCacheListener =
+        new TreeCacheListener() {
+
+          public void childEvent(CuratorFramework curatorFramework,
+              TreeCacheEvent event)
+              throws Exception {
+            String path = null;
+            if (event != null && event.getData() != null) {
+              path = event.getData().getPath();
+            }
+            assert event != null;
+            switch (event.getType()) {
+            case NODE_ADDED:
+              LOG.info("Informing listener of added node {}", path);
+              listener.nodeAdded(path);
+
+              break;
+
+            case NODE_REMOVED:
+              LOG.info("Informing listener of removed node {}", path);
+              listener.nodeRemoved(path);
+
+              break;
+
+            case NODE_UPDATED:
+              LOG.info("Informing listener of updated node {}", path);
+              listener.nodeAdded(path);
+
+              break;
+
+            default:
+              // do nothing
+              break;
+
+            }
+          }
+        };
+    treeCache.getListenable().addListener(pathChildrenCacheListener);
+
+    return new ListenerHandle() {
+      @Override
+      public void remove() {
+        treeCache.getListenable().removeListener(pathChildrenCacheListener);
+      }
+    };
+
+  }
+
+  // TODO: should caches be stopped and then restarted if need be?
+
+  /**
+   * Create the tree cache that monitors the registry for node addition, update,
+   * and deletion.
+   *
+   * @throws Exception if any issue arises during monitoring.
+   */
+  public void monitorRegistryEntries()
+      throws Exception {
+    String registryPath =
+        getConfig().get(RegistryConstants.KEY_REGISTRY_ZK_ROOT,
+            RegistryConstants.DEFAULT_ZK_REGISTRY_ROOT);
+    treeCache = new TreeCache(curator, registryPath);
+    treeCache.start();
   }
 }

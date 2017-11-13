@@ -32,8 +32,6 @@ import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -82,9 +80,12 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestContainerLauncherImpl {
-  static final Log LOG = LogFactory.getLog(TestContainerLauncherImpl.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestContainerLauncherImpl.class);
   private static final RecordFactory recordFactory =
     RecordFactoryProvider.getRecordFactory(null);
 

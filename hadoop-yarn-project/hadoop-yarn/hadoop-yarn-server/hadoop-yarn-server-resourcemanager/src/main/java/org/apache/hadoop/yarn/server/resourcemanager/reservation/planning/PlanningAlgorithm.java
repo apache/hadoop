@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.InMemoryReservationAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.PeriodicRLESparseResourceAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.RLESparseResourceAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
@@ -63,21 +64,33 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
 
     // Compute the job allocation
     RLESparseResourceAllocation allocation =
-        computeJobAllocation(plan, reservationId, adjustedContract, user);
+            computeJobAllocation(plan, reservationId, adjustedContract, user);
+
+    long period = Long.parseLong(contract.getRecurrenceExpression());
+
+    // Make allocation periodic if request is periodic
+    if (contract.getRecurrenceExpression() != null) {
+      if (period > 0) {
+        allocation =
+            new PeriodicRLESparseResourceAllocation(allocation, period);
+      }
+    }
 
     // If no job allocation was found, fail
     if (allocation == null) {
       throw new PlanningException(
-          "The planning algorithm could not find a valid allocation"
-              + " for your request");
+              "The planning algorithm could not find a valid allocation"
+                      + " for your request");
     }
 
     // Translate the allocation to a map (with zero paddings)
     long step = plan.getStep();
+
     long jobArrival = stepRoundUp(adjustedContract.getArrival(), step);
     long jobDeadline = stepRoundUp(adjustedContract.getDeadline(), step);
+
     Map<ReservationInterval, Resource> mapAllocations =
-        allocationsToPaddedMap(allocation, jobArrival, jobDeadline);
+        allocationsToPaddedMap(allocation, jobArrival, jobDeadline, period);
 
     // Create the reservation
     ReservationAllocation capReservation =
@@ -85,8 +98,7 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
             adjustedContract, // Contract
             user, // User name
             plan.getQueueName(), // Queue name
-            findEarliestTime(mapAllocations), // Earliest start time
-            findLatestTime(mapAllocations), // Latest end time
+            adjustedContract.getArrival(), adjustedContract.getDeadline(),
             mapAllocations, // Allocations
             plan.getResourceCalculator(), // Resource calculator
             plan.getMinimumAllocation()); // Minimum allocation
@@ -100,33 +112,46 @@ public abstract class PlanningAlgorithm implements ReservationAgent {
 
   }
 
-  private Map<ReservationInterval, Resource>
-      allocationsToPaddedMap(RLESparseResourceAllocation allocation,
-          long jobArrival, long jobDeadline) {
-
-    // Allocate
-    Map<ReservationInterval, Resource> mapAllocations =
-        allocation.toIntervalMap();
+  private Map<ReservationInterval, Resource> allocationsToPaddedMap(
+      RLESparseResourceAllocation allocation, long jobArrival, long jobDeadline,
+      long period) {
 
     // Zero allocation
     Resource zeroResource = Resource.newInstance(0, 0);
 
-    // Pad at the beginning
-    long earliestStart = findEarliestTime(mapAllocations);
-    if (jobArrival < earliestStart) {
-      mapAllocations.put(new ReservationInterval(jobArrival, earliestStart),
-          zeroResource);
+    if (period > 0) {
+      if ((jobDeadline - jobArrival) >= period) {
+        allocation.addInterval(new ReservationInterval(0L, period),
+            zeroResource);
+      }
+      jobArrival = jobArrival % period;
+      jobDeadline = jobDeadline % period;
+
+      if (jobArrival <= jobDeadline) {
+        allocation.addInterval(new ReservationInterval(0, jobArrival),
+            zeroResource);
+        allocation.addInterval(new ReservationInterval(jobDeadline, period),
+            zeroResource);
+      } else {
+        allocation.addInterval(new ReservationInterval(jobDeadline, jobArrival),
+            zeroResource);
+      }
+    } else {
+      // Pad at the beginning
+      long earliestStart = findEarliestTime(allocation.toIntervalMap());
+      if (jobArrival < earliestStart) {
+        allocation.addInterval(
+            new ReservationInterval(jobArrival, earliestStart), zeroResource);
+      }
+
+      // Pad at the beginning
+      long latestEnd = findLatestTime(allocation.toIntervalMap());
+      if (latestEnd < jobDeadline) {
+        allocation.addInterval(new ReservationInterval(latestEnd, jobDeadline),
+            zeroResource);
+      }
     }
-
-    // Pad at the beginning
-    long latestEnd = findLatestTime(mapAllocations);
-    if (latestEnd < jobDeadline) {
-      mapAllocations.put(new ReservationInterval(latestEnd, jobDeadline),
-          zeroResource);
-    }
-
-    return mapAllocations;
-
+    return allocation.toIntervalMap();
   }
 
   public abstract RLESparseResourceAllocation computeJobAllocation(Plan plan,

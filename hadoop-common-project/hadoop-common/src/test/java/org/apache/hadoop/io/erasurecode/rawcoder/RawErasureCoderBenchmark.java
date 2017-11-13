@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.util.StopWatch;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -232,7 +233,7 @@ public final class RawErasureCoderBenchmark {
     }
   }
 
-  private static RawErasureEncoder getRawEncoder(int index) {
+  private static RawErasureEncoder getRawEncoder(int index) throws IOException {
     RawErasureEncoder encoder =
         CODER_MAKERS.get(index).createEncoder(BenchData.OPTIONS);
     final boolean isDirect = encoder.preferDirectBuffer();
@@ -242,7 +243,7 @@ public final class RawErasureCoderBenchmark {
     return encoder;
   }
 
-  private static RawErasureDecoder getRawDecoder(int index) {
+  private static RawErasureDecoder getRawDecoder(int index) throws IOException {
     RawErasureDecoder decoder =
         CODER_MAKERS.get(index).createDecoder(BenchData.OPTIONS);
     final boolean isDirect = decoder.preferDirectBuffer();
@@ -341,11 +342,11 @@ public final class RawErasureCoderBenchmark {
       System.arraycopy(inputs, 0, decodeInputs, 0, NUM_DATA_UNITS);
     }
 
-    public void encode(RawErasureEncoder encoder) {
+    public void encode(RawErasureEncoder encoder) throws IOException {
       encoder.encode(inputs, outputs);
     }
 
-    public void decode(RawErasureDecoder decoder) {
+    public void decode(RawErasureDecoder decoder) throws IOException {
       decoder.decode(decodeInputs, ERASED_INDEXES, outputs);
     }
   }

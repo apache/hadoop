@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -65,8 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.security
-    .AMRMTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.AMRMClientUtils;
@@ -213,14 +213,20 @@ public class ApplicationMasterService extends AbstractService implements
     synchronized (lock) {
       AllocateResponse lastResponse = lock.getAllocateResponse();
       if (hasApplicationMasterRegistered(applicationAttemptId)) {
-        String message = AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE + appID;
-        LOG.warn(message);
-        RMAuditLogger.logFailure(
-          this.rmContext.getRMApps()
-            .get(appID).getUser(),
-          AuditConstants.REGISTER_AM, "", "ApplicationMasterService", message,
-          appID, applicationAttemptId);
-        throw new InvalidApplicationMasterRequestException(message);
+        // allow UAM re-register if work preservation is enabled
+        ApplicationSubmissionContext appContext =
+            rmContext.getRMApps().get(appID).getApplicationSubmissionContext();
+        if (!(appContext.getUnmanagedAM()
+            && appContext.getKeepContainersAcrossApplicationAttempts())) {
+          String message =
+              AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE + appID;
+          LOG.warn(message);
+          RMAuditLogger.logFailure(
+              this.rmContext.getRMApps().get(appID).getUser(),
+              AuditConstants.REGISTER_AM, "", "ApplicationMasterService",
+              message, appID, applicationAttemptId);
+          throw new InvalidApplicationMasterRequestException(message);
+        }
       }
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);

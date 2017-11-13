@@ -263,7 +263,7 @@ public final class HBaseTimelineStorageUtils {
   }
 
   /**
-   * @param conf Yarn configuration. Used to see if there is an explicit config
+   * @param conf YARN configuration. Used to see if there is an explicit config
    *          pointing to the HBase config file to read. It should not be null
    *          or a NullPointerException will be thrown.
    * @return a configuration with the HBase configuration from the classpath,

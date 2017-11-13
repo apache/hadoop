@@ -22,14 +22,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -105,6 +104,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -125,15 +125,19 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
 public class YarnClientImpl extends YarnClient {
 
-  private static final Log LOG = LogFactory.getLog(YarnClientImpl.class);
+  private static final Logger LOG = LoggerFactory
+          .getLogger(YarnClientImpl.class);
 
   protected ApplicationClientProtocol rmClient;
   protected long submitPollIntervalMillis;
@@ -148,6 +152,7 @@ public class YarnClientImpl extends YarnClient {
   String timelineDTRenewer;
   private boolean timelineV1ServiceEnabled;
   protected boolean timelineServiceBestEffort;
+  private boolean loadResourceTypesFromServer;
 
   private static final String ROOT = "root";
 
@@ -199,6 +204,11 @@ public class YarnClientImpl extends YarnClient {
     timelineServiceBestEffort = conf.getBoolean(
         YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_BEST_EFFORT);
+
+    loadResourceTypesFromServer = conf.getBoolean(
+        YarnConfiguration.YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER,
+        YarnConfiguration.DEFAULT_YARN_CLIENT_LOAD_RESOURCETYPES_FROM_SERVER);
+
     super.serviceInit(conf);
   }
 
@@ -217,6 +227,13 @@ public class YarnClientImpl extends YarnClient {
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
+
+    // Reinitialize local resource types cache from list of resources pulled from
+    // RM.
+    if (loadResourceTypesFromServer) {
+      ResourceUtils.reinitializeResources(getResourceTypeInfo());
+    }
+
     super.serviceStart();
   }
 

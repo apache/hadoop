@@ -33,11 +33,11 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -753,7 +753,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Allowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Allowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**
@@ -770,7 +770,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Disallowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Disallowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**

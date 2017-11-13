@@ -369,17 +369,20 @@ public class FairScheduler extends
   }
 
   public float getAppWeight(FSAppAttempt app) {
-    try {
+    double weight = 1.0;
+
+    if (sizeBasedWeight) {
       readLock.lock();
-      double weight = 1.0;
-      if (sizeBasedWeight) {
+
+      try {
         // Set weight based on current memory demand
         weight = Math.log1p(app.getDemand().getMemorySize()) / Math.log(2);
+      } finally {
+        readLock.unlock();
       }
-      return (float)weight * app.getPriority().getPriority();
-    } finally {
-      readLock.unlock();
     }
+
+    return (float)weight * app.getPriority().getPriority();
   }
 
   public Resource getIncrementResourceCapability() {
@@ -781,6 +784,16 @@ public class FairScheduler extends
         minimumAllocation,
         getMaximumResourceCapability(),
         incrAllocation);
+  }
+
+  @VisibleForTesting
+  @Override
+  public void killContainer(RMContainer container) {
+    ContainerStatus status = SchedulerUtils.createKilledContainerStatus(
+        container.getContainerId(),
+        "Killed by RM to simulate an AM container failure");
+    LOG.info("Killing container " + container);
+    completedContainer(container, status, RMContainerEventType.KILL);
   }
 
   @Override
@@ -1513,7 +1526,8 @@ public class FairScheduler extends
       if ((queue.getParent() != null) &&
           !configuredLeafQueues.contains(queue.getName()) &&
           !configuredParentQueues.contains(queue.getName())) {
-        Resource max = queue.getParent().getMaxChildQueueResource();
+        ConfigurableResource max = queue.getParent().
+            getMaxChildQueueResource();
 
         if (max != null) {
           queue.setMaxShare(max);
@@ -1795,5 +1809,11 @@ public class FairScheduler extends
 
   ReadLock getSchedulerReadLock() {
     return this.readLock;
+  }
+
+  @Override
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
+    // Lifetime is the application lifetime by default.
+    return lifetime;
   }
 }

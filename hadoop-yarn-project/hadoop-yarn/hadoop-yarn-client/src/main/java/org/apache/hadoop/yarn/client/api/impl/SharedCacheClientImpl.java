@@ -22,8 +22,6 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -46,6 +44,8 @@ import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of the SharedCacheClient API.
@@ -53,8 +53,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class SharedCacheClientImpl extends SharedCacheClient {
-  private static final Log LOG = LogFactory
-      .getLog(SharedCacheClientImpl.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(SharedCacheClientImpl.class);
 
   private ClientSCMProtocol scmClient;
   private InetSocketAddress scmAddress;

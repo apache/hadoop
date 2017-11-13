@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -39,14 +40,14 @@ public class NativeRSRawDecoder extends AbstractNativeRawDecoder {
   }
 
   @Override
-  protected void performDecodeImpl(ByteBuffer[] inputs, int[] inputOffsets,
-                                   int dataLen, int[] erased,
-                                   ByteBuffer[] outputs, int[] outputOffsets) {
+  protected synchronized void performDecodeImpl(
+      ByteBuffer[] inputs, int[] inputOffsets, int dataLen, int[] erased,
+      ByteBuffer[] outputs, int[] outputOffsets) throws IOException {
     decodeImpl(inputs, inputOffsets, dataLen, erased, outputs, outputOffsets);
   }
 
   @Override
-  public void release() {
+  public synchronized void release() {
     destroyImpl();
   }
 
@@ -59,7 +60,7 @@ public class NativeRSRawDecoder extends AbstractNativeRawDecoder {
 
   private native void decodeImpl(
           ByteBuffer[] inputs, int[] inputOffsets, int dataLen, int[] erased,
-          ByteBuffer[] outputs, int[] outputOffsets);
+          ByteBuffer[] outputs, int[] outputOffsets) throws IOException;
 
   private native void destroyImpl();
 

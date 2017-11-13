@@ -816,6 +816,12 @@
 </property>
 
 <property>
+  <name>fs.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The implementation class of the FTP FileSystem</description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.webhdfs.impl</name>
   <value>org.apache.hadoop.fs.WebHdfs</value>
   <description>The FileSystem for webhdfs: uris.</description>
@@ -1861,9 +1867,15 @@
 <property>
   <name>hadoop.http.cross-origin.allowed-origins</name>
   <value>*</value>
-  <description>Comma separated list of origins that are allowed for web
-    services needing cross-origin (CORS) support. Wildcards (*) and patterns
-    allowed</description>
+  <description>Comma separated list of origins that are allowed for web services
+    needing cross-origin (CORS) support. If a value in the list contains an
+    asterix (*), a regex pattern, escaping any dots ('.' -> '\.') and replacing
+    the asterix such that it captures any characters ('*' -> '.*'), is generated.
+    Values prefixed with 'regex:' are interpreted directly as regular expressions,
+    e.g. use the expression 'regex:https?:\/\/foo\.bar:([0-9]+)?' to allow any
+    origin using the 'http' or 'https' protocol in the domain 'foo.bar' on any
+    port. The use of simple wildcards ('*') is discouraged, and only available for
+    backward compatibility.</description>
 </property>
 
 <property>
@@ -2328,6 +2340,42 @@
     key will be dropped. Default = 12hrs
   </description>
 </property>
+<property>
+  <name>hadoop.security.kms.client.timeout</name>
+  <value>60</value>
+  <description>
+    Sets value for KMS client connection timeout, and the read timeout
+    to KMS servers.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.failover.sleep.base.millis</name>
+  <value>100</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the base value used in the failover calculation. The
+    first failover will retry immediately. The 2nd failover attempt
+    will delay at least hadoop.security.client.failover.sleep.base.millis
+    milliseconds. And so on.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.failover.sleep.max.millis</name>
+  <value>2000</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the maximum value to wait between failovers.
+    Specifically, the time between two failover attempts will not
+    exceed +/- 50% of hadoop.security.client.failover.sleep.max.millis
+    milliseconds.
+  </description>
+</property>
 
  <property>
   <name>ipc.server.max.connections</name>
@@ -2721,6 +2769,19 @@
         This takes a comma-separated list of authentication mechanisms, each of the
         form 'scheme:auth' (the same syntax used for the 'addAuth' command in
         the ZK CLI).
+    </description>
+  </property>
+  <property>
+    <name>hadoop.treat.subject.external</name>
+    <value>false</value>
+    <description>
+      When creating UGI with UserGroupInformation(Subject), treat the passed
+      subject external if set to true, and assume the owner of the subject
+      should do the credential renewal.
+
+      When true this property will introduce an incompatible change which
+      may require changes in client code. For more details, see the jiras:
+      HADOOP-13805,HADOOP-13558.
     </description>
   </property>
 </configuration>

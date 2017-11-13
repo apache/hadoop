@@ -52,21 +52,21 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 public class TestLeaseRecovery2 {
   
   public static final Log LOG = LogFactory.getLog(TestLeaseRecovery2.class);
   
   {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
   }
 
   static final private long BLOCK_SIZE = 1024;

@@ -158,7 +158,7 @@ public class TestLinuxContainerExecutorWithMocks {
         mockPrivilegedExec);
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
-    linuxContainerRuntime.initialize(conf);
+    linuxContainerRuntime.initialize(conf, null);
     mockExec = new LinuxContainerExecutor(linuxContainerRuntime);
     mockExec.setConf(conf);
     mockExecMockRuntime = new LinuxContainerExecutor(mockLinuxContainerRuntime);
@@ -247,9 +247,6 @@ public class TestLinuxContainerExecutorWithMocks {
     // make sure the command doesn't contain the nice -n since priority
     // not specified
     List<String> command = new ArrayList<String>();
-    Configuration conf = mockExec.getConf();
-    conf.unset(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
-    mockExec.setConf(conf);
     mockExec.addSchedPriorityCommand(command);
     assertEquals("addSchedPriority should be empty", 0, command.size());
   }
@@ -318,7 +315,7 @@ public class TestLinuxContainerExecutorWithMocks {
           DefaultLinuxContainerRuntime(PrivilegedOperationExecutor.getInstance(
               conf));
 
-      linuxContainerRuntime.initialize(conf);
+      linuxContainerRuntime.initialize(conf, null);
       exec = new LinuxContainerExecutor(linuxContainerRuntime);
 
       mockExec = spy(exec);
@@ -418,7 +415,7 @@ public class TestLinuxContainerExecutorWithMocks {
   @Test
   public void testInit() throws Exception {
 
-    mockExec.init();
+    mockExec.init(mock(Context.class));
     assertEquals(Arrays.asList("--checksetup"), readMockParams());
     
   }
@@ -548,7 +545,7 @@ public class TestLinuxContainerExecutorWithMocks {
             any(File.class), any(Map.class), anyBoolean(), anyBoolean());
     LinuxContainerRuntime runtime = new DefaultLinuxContainerRuntime(
         spyPrivilegedExecutor);
-    runtime.initialize(conf);
+    runtime.initialize(conf, null);
     mockExec = new LinuxContainerExecutor(runtime);
     mockExec.setConf(conf);
     LinuxContainerExecutor lce = new LinuxContainerExecutor(runtime) {

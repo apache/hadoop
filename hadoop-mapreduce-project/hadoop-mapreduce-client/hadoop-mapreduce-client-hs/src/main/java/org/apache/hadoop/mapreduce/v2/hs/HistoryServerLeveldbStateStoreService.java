@@ -29,8 +29,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -47,8 +45,9 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Logger;
 import org.iq80.leveldb.Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HistoryServerLeveldbStateStoreService extends
     HistoryServerStateStoreService {
@@ -63,8 +62,8 @@ public class HistoryServerLeveldbStateStoreService extends
 
   private DB db;
 
-  public static final Log LOG =
-      LogFactory.getLog(HistoryServerLeveldbStateStoreService.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(HistoryServerLeveldbStateStoreService.class);
 
   @Override
   protected void initStorage(Configuration conf) throws IOException {
@@ -158,7 +157,7 @@ public class HistoryServerLeveldbStateStoreService extends
     try {
       key.readFields(in);
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     state.tokenMasterKeyState.add(key);
   }
@@ -204,7 +203,7 @@ public class HistoryServerLeveldbStateStoreService extends
       tokenId.readFields(in);
       renewDate = in.readLong();
     } finally {
-      IOUtils.cleanup(LOG, in);
+      IOUtils.cleanupWithLogger(LOG, in);
     }
     state.tokenState.put(tokenId, renewDate);
   }
@@ -224,7 +223,7 @@ public class HistoryServerLeveldbStateStoreService extends
       dataStream.close();
       dataStream = null;
     } finally {
-      IOUtils.cleanup(LOG, dataStream);
+      IOUtils.cleanupWithLogger(LOG, dataStream);
     }
 
     String dbKey = getTokenDatabaseKey(tokenId);
@@ -270,7 +269,7 @@ public class HistoryServerLeveldbStateStoreService extends
       dataStream.close();
       dataStream = null;
     } finally {
-      IOUtils.cleanup(LOG, dataStream);
+      IOUtils.cleanupWithLogger(LOG, dataStream);
     }
 
     String dbKey = getTokenMasterKeyDatabaseKey(masterKey);
@@ -368,8 +367,9 @@ public class HistoryServerLeveldbStateStoreService extends
     }
   }
 
-  private static class LeveldbLogger implements Logger {
-    private static final Log LOG = LogFactory.getLog(LeveldbLogger.class);
+  private static class LeveldbLogger implements org.iq80.leveldb.Logger {
+    private static final Logger LOG =
+        LoggerFactory.getLogger(LeveldbLogger.class);
 
     @Override
     public void log(String message) {

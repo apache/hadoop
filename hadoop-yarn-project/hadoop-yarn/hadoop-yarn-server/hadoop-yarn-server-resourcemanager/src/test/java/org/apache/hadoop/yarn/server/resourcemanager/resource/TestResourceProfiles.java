@@ -19,9 +19,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.resource;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -73,7 +79,7 @@ public class TestResourceProfiles {
     Map<String, Resource> expected = new HashMap<>();
     expected.put("minimum", Resource.newInstance(1024, 1));
     expected.put("default", Resource.newInstance(2048, 2));
-    expected.put("maximum", Resource.newInstance(4096, 4));
+    expected.put("maximum", Resource.newInstance(8192, 4));
 
     for (Map.Entry<String, Resource> entry : expected.entrySet()) {
       String profile = entry.getKey();
@@ -86,7 +92,7 @@ public class TestResourceProfiles {
   }
 
   @Test
-  public void testLoadProfilesMissingMandatoryProfile() throws Exception {
+  public void testLoadIllegalProfiles() throws Exception {
 
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
@@ -115,7 +121,7 @@ public class TestResourceProfiles {
     Map<String, Resource> expected = new HashMap<>();
     expected.put("minimum", Resource.newInstance(1024, 1));
     expected.put("default", Resource.newInstance(2048, 2));
-    expected.put("maximum", Resource.newInstance(4096, 4));
+    expected.put("maximum", Resource.newInstance(8192, 4));
     expected.put("small", Resource.newInstance(1024, 1));
     expected.put("medium", Resource.newInstance(2048, 1));
     expected.put("large", Resource.newInstance(4096, 4));
@@ -139,7 +145,7 @@ public class TestResourceProfiles {
     Map<String, Resource> expected = new HashMap<>();
     expected.put("minimum", Resource.newInstance(1024, 1));
     expected.put("default", Resource.newInstance(2048, 2));
-    expected.put("maximum", Resource.newInstance(4096, 4));
+    expected.put("maximum", Resource.newInstance(8192, 4));
 
     Assert.assertEquals("Profile 'minimum' resources don't match",
         expected.get("minimum"), manager.getMinimumProfile());
@@ -148,5 +154,39 @@ public class TestResourceProfiles {
     Assert.assertEquals("Profile 'maximum' resources don't match",
         expected.get("maximum"), manager.getMaximumProfile());
 
+  }
+
+  @Test(timeout = 30000)
+  public void testResourceProfilesInAMResponse() throws Exception {
+    Configuration conf = new Configuration();
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * 1024);
+    RMApp app1 = rm.submitApp(2048);
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+    RegisterApplicationMasterResponse resp = am1.registerAppAttempt();
+    Assert.assertEquals(0, resp.getResourceProfiles().size());
+    rm.stop();
+    conf.setBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED, true);
+    conf.set(YarnConfiguration.RM_RESOURCE_PROFILES_SOURCE_FILE,
+        "profiles/sample-profiles-1.json");
+    rm = new MockRM(conf);
+    rm.start();
+    nm1 = rm.registerNode("127.0.0.1:1234", 6 * 1024);
+    app1 = rm.submitApp(2048);
+    nm1.nodeHeartbeat(true);
+    attempt1 = app1.getCurrentAppAttempt();
+    am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+    resp = am1.registerAppAttempt();
+    Assert.assertEquals(3, resp.getResourceProfiles().size());
+    Assert.assertEquals(Resource.newInstance(1024, 1),
+        resp.getResourceProfiles().get("minimum"));
+    Assert.assertEquals(Resource.newInstance(2048, 2),
+        resp.getResourceProfiles().get("default"));
+    Assert.assertEquals(Resource.newInstance(8192, 4),
+        resp.getResourceProfiles().get("maximum"));
+    rm.stop();
   }
 }

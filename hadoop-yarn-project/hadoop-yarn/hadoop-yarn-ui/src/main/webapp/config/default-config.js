@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-module.exports = { // Yarn UI App configurations
+module.exports = { // YARN UI App configurations
     hosts: {
       localBaseAddress: "",
       timelineWebAddress: "localhost:8188",
@@ -25,9 +25,11 @@ module.exports = { // Yarn UI App configurations
     },
     namespaces: {
       timeline: 'ws/v1/applicationhistory',
+      timelineService: 'ws/v2/timeline/apps',
       cluster: 'ws/v1/cluster',
       metrics: 'ws/v1/cluster/metrics',
-      node: '{nodeAddress}/ws/v1/node',
-      timelineV2: 'ws/v2/timeline'
+      timelineV2: 'ws/v2/timeline',
+      dashService: 'ws/v1/services',
+      node: '{nodeAddress}/ws/v1/node'
     },
 };

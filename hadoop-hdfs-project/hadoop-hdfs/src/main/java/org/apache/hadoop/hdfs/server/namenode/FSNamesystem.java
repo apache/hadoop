@@ -90,6 +90,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
@@ -310,6 +311,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.LoggerFactory;
 
 /**
  * FSNamesystem is a container of both transient
@@ -342,7 +344,9 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Metrics(context="dfs")
 public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     NameNodeMXBean, ReplicatedBlocksMBean, ECBlockGroupsMBean {
-  public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
+
+  public static final org.slf4j.Logger LOG = LoggerFactory
+      .getLogger(FSNamesystem.class.getName());
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
@@ -1671,8 +1675,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         stopStandbyServices();
       } catch (IOException ie) {
       } finally {
-        IOUtils.cleanup(LOG, dir);
-        IOUtils.cleanup(LOG, fsImage);
+        IOUtils.cleanupWithLogger(LOG, dir);
+        IOUtils.cleanupWithLogger(LOG, fsImage);
       }
     }
   }
@@ -4603,9 +4607,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  /**
-   * Get the total number of objects in the system. 
-   */
   @Override // FSNamesystemMBean
   public long getMaxObjects() {
     return maxFsObjects;
@@ -4716,6 +4717,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blockManager.getPendingDeletionReplicatedBlocks();
   }
 
+  @Override // ReplicatedBlocksMBean
+  @Metric({"TotalReplicatedBlocks", "Total number of replicated blocks"})
+  public long getTotalReplicatedBlocks() {
+    return blockManager.getTotalReplicatedBlocks();
+  }
+
   @Override // ECBlockGroupsMBean
   @Metric({"LowRedundancyECBlockGroups", "Number of erasure coded block " +
       "groups with low redundancy"})
@@ -4749,6 +4756,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "that are pending deletion"})
   public long getPendingDeletionECBlocks() {
     return blockManager.getPendingDeletionECBlocks();
+  }
+
+  @Override // ECBlockGroupsMBean
+  @Metric({"TotalECBlockGroups", "Total number of erasure coded block groups"})
+  public long getTotalECBlockGroups() {
+    return blockManager.getTotalECBlockGroups();
   }
 
   @Override
@@ -7406,16 +7419,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get available erasure coding polices
+   * Get all erasure coding polices.
    */
-  ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+  ErasureCodingPolicyInfo[] getErasureCodingPolicies() throws IOException {
     final String operationName = "getErasureCodingPolicies";
     boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      final ErasureCodingPolicy[] ret =
+      final ErasureCodingPolicyInfo[] ret =
           FSDirErasureCodingOp.getErasureCodingPolicies(this);
       success = true;
       return ret;

@@ -73,9 +73,13 @@ public class SchedulingMonitor extends AbstractService {
         return t;
       }
     });
+    schedulePreemptionChecker();
+    super.serviceStart();
+  }
+
+  private void schedulePreemptionChecker() {
     handler = ses.scheduleAtFixedRate(new PreemptionChecker(),
         0, monitorInterval, TimeUnit.MILLISECONDS);
-    super.serviceStart();
   }
 
   @Override
@@ -98,8 +102,13 @@ public class SchedulingMonitor extends AbstractService {
     @Override
     public void run() {
       try {
-        //invoke the preemption policy
-        invokePolicy();
+        if (monitorInterval != scheduleEditPolicy.getMonitoringInterval()) {
+          handler.cancel(true);
+          monitorInterval = scheduleEditPolicy.getMonitoringInterval();
+          schedulePreemptionChecker();
+        } else {
+          invokePolicy();
+        }
       } catch (Throwable t) {
         // The preemption monitor does not alter structures nor do structures
         // persist across invocations. Therefore, log, skip, and retry.

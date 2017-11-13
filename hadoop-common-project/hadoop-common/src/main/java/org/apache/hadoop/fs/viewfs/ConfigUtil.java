@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.viewfs;
 
 import java.net.URI;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
@@ -68,7 +69,72 @@ public class ConfigUtil {
     addLink( conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, 
         src, target);   
   }
-  
+
+  /**
+   * Add a LinkMergeSlash to the config for the specified mount table.
+   * @param conf
+   * @param mountTableName
+   * @param target
+   */
+  public static void addLinkMergeSlash(Configuration conf,
+      final String mountTableName, final URI target) {
+    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
+        Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH, target.toString());
+  }
+
+  /**
+   * Add a LinkMergeSlash to the config for the default mount table.
+   * @param conf
+   * @param target
+   */
+  public static void addLinkMergeSlash(Configuration conf, final URI target) {
+    addLinkMergeSlash(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,
+        target);
+  }
+
+  /**
+   * Add a LinkFallback to the config for the specified mount table.
+   * @param conf
+   * @param mountTableName
+   * @param target
+   */
+  public static void addLinkFallback(Configuration conf,
+      final String mountTableName, final URI target) {
+    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
+        Constants.CONFIG_VIEWFS_LINK_FALLBACK, target.toString());
+  }
+
+  /**
+   * Add a LinkFallback to the config for the default mount table.
+   * @param conf
+   * @param target
+   */
+  public static void addLinkFallback(Configuration conf, final URI target) {
+    addLinkFallback(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,
+        target);
+  }
+
+  /**
+   * Add a LinkMerge to the config for the specified mount table.
+   * @param conf
+   * @param mountTableName
+   * @param targets
+   */
+  public static void addLinkMerge(Configuration conf,
+      final String mountTableName, final URI[] targets) {
+    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
+        Constants.CONFIG_VIEWFS_LINK_MERGE, Arrays.toString(targets));
+  }
+
+  /**
+   * Add a LinkMerge to the config for the default mount table.
+   * @param conf
+   * @param targets
+   */
+  public static void addLinkMerge(Configuration conf, final URI[] targets) {
+    addLinkMerge(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, targets);
+  }
+
   /**
    *
    * @param conf

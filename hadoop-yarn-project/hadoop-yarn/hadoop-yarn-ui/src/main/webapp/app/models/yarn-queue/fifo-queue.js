@@ -17,6 +17,7 @@
  */
 
 import DS from 'ember-data';
+import Converter from 'yarn-ui/utils/converter';
 
 export default DS.Model.extend({
   name: DS.attr('string'),
@@ -33,18 +34,19 @@ export default DS.Model.extend({
   type: DS.attr('string'),
 
   capacitiesBarChartData: function() {
+    var floatToFixed = Converter.floatToFixed;
     return [
       {
         label: "Available Capacity",
-        value: this.get("availNodeCapacity")
+        value: floatToFixed(this.get("availNodeCapacity"))
       },
       {
         label: "Used Capacity",
-        value: this.get("usedNodeCapacity")
+        value: floatToFixed(this.get("usedNodeCapacity"))
       },
       {
         label: "Total Capacity",
-        value: this.get("totalNodeCapacity")
+        value: floatToFixed(this.get("totalNodeCapacity"))
       }
     ];
   }.property("availNodeCapacity", "usedNodeCapacity", "totalNodeCapacity")

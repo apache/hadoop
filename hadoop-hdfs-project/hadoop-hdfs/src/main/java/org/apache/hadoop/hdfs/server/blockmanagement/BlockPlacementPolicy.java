@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class BlockPlacementPolicy {
-  static final Logger LOG = LoggerFactory.getLogger(
+  public static final Logger LOG = LoggerFactory.getLogger(
       BlockPlacementPolicy.class);
 
   @InterfaceAudience.Private

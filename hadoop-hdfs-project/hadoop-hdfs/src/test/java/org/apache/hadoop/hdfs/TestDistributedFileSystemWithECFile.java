@@ -39,34 +39,45 @@ import static org.junit.Assert.assertTrue;
  * FileSystem.listFiles for erasure coded files.
  */
 public class TestDistributedFileSystemWithECFile {
-  private final ErasureCodingPolicy ecPolicy =
-      StripedFileTestUtil.getDefaultECPolicy();
-  private final int cellSize = ecPolicy.getCellSize();
-  private final short dataBlocks = (short) ecPolicy.getNumDataUnits();
-  private final short parityBlocks = (short) ecPolicy.getNumParityUnits();
-  private final int numDNs = dataBlocks + parityBlocks;
-  private final int stripesPerBlock = 4;
-  private final int blockSize = stripesPerBlock * cellSize;
-  private final int blockGroupSize = blockSize * dataBlocks;
+  private ErasureCodingPolicy ecPolicy;
+  private int cellSize;
+  private short dataBlocks;
+  private short parityBlocks;
+  private int numDNs;
+  private int stripesPerBlock;
+  private int blockSize;
+  private int blockGroupSize;
 
   private MiniDFSCluster cluster;
   private FileContext fileContext;
   private DistributedFileSystem fs;
   private Configuration conf = new HdfsConfiguration();
 
+  public ErasureCodingPolicy getEcPolicy() {
+    return StripedFileTestUtil.getDefaultECPolicy();
+  }
+
   @Before
   public void setup() throws IOException {
+    ecPolicy = getEcPolicy();
+    cellSize = ecPolicy.getCellSize();
+    dataBlocks = (short) ecPolicy.getNumDataUnits();
+    parityBlocks = (short) ecPolicy.getNumParityUnits();
+    numDNs = dataBlocks + parityBlocks;
+    stripesPerBlock = 4;
+    blockSize = stripesPerBlock * cellSize;
+    blockGroupSize = blockSize * dataBlocks;
+
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     fileContext = FileContext.getFileContext(cluster.getURI(0), conf);
     fs = cluster.getFileSystem();
-    fs.enableErasureCodingPolicy(
-        StripedFileTestUtil.getDefaultECPolicy().getName());
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
     fs.mkdirs(new Path("/ec"));
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/ec",
-        StripedFileTestUtil.getDefaultECPolicy().getName());
+        ecPolicy.getName());
   }
 
   @After
@@ -121,7 +132,7 @@ public class TestDistributedFileSystemWithECFile {
 
   @Test(timeout=60000)
   public void testListECFilesSmallerThanOneStripe() throws Exception {
-    int dataBlocksNum = 3;
+    int dataBlocksNum = dataBlocks;
     createFile("/ec/smallstripe", cellSize * dataBlocksNum);
     RemoteIterator<LocatedFileStatus> iter =
         cluster.getFileSystem().listFiles(new Path("/ec"), true);
