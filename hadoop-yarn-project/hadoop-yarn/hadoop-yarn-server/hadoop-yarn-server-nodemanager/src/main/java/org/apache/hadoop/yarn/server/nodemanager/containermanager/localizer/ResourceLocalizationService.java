@@ -74,6 +74,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskValidator;
 import org.apache.hadoop.util.DiskValidatorFactory;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
@@ -808,6 +809,7 @@ public class ResourceLocalizationService extends CompositeService
           return; // ignore; already gone
         }
         privLocalizers.remove(locId);
+        LOG.info("Interrupting localizer for " + locId);
         localizer.interrupt();
       }
     }
@@ -1186,6 +1188,44 @@ public class ResourceLocalizationService extends CompositeService
             ContainerLocalizer.getEstimatedSize(rsrc), false);
       return tracker.getPathForLocalization(new LocalResourceRequest(rsrc),
           dirPath, delService);
+    }
+
+    @Override
+    public void interrupt() {
+      boolean destroyedShell = false;
+      try {
+        for (Shell shell : Shell.getAllShells()) {
+          try {
+            if (shell.getWaitingThread() != null &&
+                shell.getWaitingThread().equals(this) &&
+                shell.getProcess() != null &&
+                processIsAlive(shell.getProcess())) {
+              LOG.info("Destroying localization shell process for " +
+                  localizerId);
+              shell.getProcess().destroy();
+              destroyedShell = true;
+              break;
+            }
+          } catch (Exception e) {
+            LOG.warn("Failed to destroy localization shell process for " +
+                localizerId, e);
+          }
+        }
+      } finally {
+        if (!destroyedShell) {
+          super.interrupt();
+        }
+      }
+    }
+
+    private boolean processIsAlive(Process p) {
+      try {
+        p.exitValue();
+        return false;
+      } catch (IllegalThreadStateException e) {
+        // this means the process is still alive
+      }
+      return true;
     }
 
     @Override
