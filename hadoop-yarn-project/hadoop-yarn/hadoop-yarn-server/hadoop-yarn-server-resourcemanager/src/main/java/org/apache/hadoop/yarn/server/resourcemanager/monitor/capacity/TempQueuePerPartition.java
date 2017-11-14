@@ -22,9 +22,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -46,7 +48,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   Resource untouchableExtra;
   Resource preemptableExtra;
 
-  double normalizedGuarantee;
+  double[] normalizedGuarantee;
 
   private Resource effMinRes;
   private Resource effMaxRes;
@@ -88,7 +90,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
       pendingDeductReserved = Resources.createResource(0);
     }
 
-    this.normalizedGuarantee = Float.NaN;
+    this.normalizedGuarantee = new double[ResourceUtils
+        .getNumberOfKnownResourceTypes()];
     this.children = new ArrayList<>();
     this.apps = new ArrayList<>();
     this.untouchableExtra = Resource.newInstance(0, 0);
@@ -240,8 +243,9 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     sb.append(" NAME: " + queueName).append(" CUR: ").append(current)
         .append(" PEN: ").append(pending).append(" RESERVED: ").append(reserved)
         .append(" GAR: ").append(getGuaranteed()).append(" NORM: ")
-        .append(normalizedGuarantee).append(" IDEAL_ASSIGNED: ")
-        .append(idealAssigned).append(" IDEAL_PREEMPT: ").append(toBePreempted)
+        .append(Arrays.toString(normalizedGuarantee))
+        .append(" IDEAL_ASSIGNED: ").append(idealAssigned)
+        .append(" IDEAL_PREEMPT: ").append(toBePreempted)
         .append(" ACTUAL_PREEMPT: ").append(getActuallyToBePreempted())
         .append(" UNTOUCHABLE: ").append(untouchableExtra)
         .append(" PREEMPTABLE: ").append(preemptableExtra).append("\n");

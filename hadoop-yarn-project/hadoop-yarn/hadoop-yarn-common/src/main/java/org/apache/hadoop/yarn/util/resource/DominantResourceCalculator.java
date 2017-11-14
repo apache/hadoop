@@ -496,6 +496,27 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   @Override
+  public Resource multiplyAndNormalizeUp(Resource r, double[] by,
+      Resource stepFactor) {
+    Resource ret = Resource.newInstance(r);
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation rResourceInformation = r.getResourceInformation(i);
+      ResourceInformation stepFactorResourceInformation = stepFactor
+          .getResourceInformation(i);
+
+      long rValue = rResourceInformation.getValue();
+      long stepFactorValue = UnitsConversionUtil.convert(
+          stepFactorResourceInformation.getUnits(),
+          rResourceInformation.getUnits(),
+          stepFactorResourceInformation.getValue());
+      ret.setResourceValue(i, ResourceCalculator
+          .roundUp((long) Math.ceil(rValue * by[i]), stepFactorValue));
+    }
+    return ret;
+  }
+  
+  @Override
   public Resource multiplyAndNormalizeUp(Resource r, double by,
       Resource stepFactor) {
     return this.multiplyAndNormalize(r, by, stepFactor, true);
