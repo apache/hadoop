@@ -18,12 +18,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>2.8.3-SNAPSHOT</version>
+    <version>2.8.3</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce</artifactId>
-  <version>2.8.3-SNAPSHOT</version>
+  <version>2.8.3</version>
   <packaging>pom</packaging>
   <name>Apache Hadoop MapReduce</name>
   <url>http://hadoop.apache.org/mapreduce/</url>
