@@ -943,7 +943,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
         UserGroupInformation.getCurrentUser(), rpc, address);
   }
 
-  private synchronized ApplicationId getAppId(String serviceName)
+  public synchronized ApplicationId getAppId(String serviceName)
       throws IOException, YarnException {
     if (cachedAppIds.containsKey(serviceName)) {
       return cachedAppIds.get(serviceName);
