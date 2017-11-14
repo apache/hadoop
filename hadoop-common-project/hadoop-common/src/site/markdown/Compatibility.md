@@ -63,6 +63,14 @@ when the various labels are appropriate. As a general rule, all new interfaces
 and APIs should have the most limited labels (e.g. Private Unstable) that will
 not inhibit the intent of the interface or API.
 
+### Structure
+
+This document is arranged in sections according to the various compatibility
+concerns. Within each section an introductory text explains what compatibility
+means in that section, why it's important, and what the intent to support
+compatibility is. The subsequent "Policy" section then sets forth in specific
+terms what the governing policy is.
+
 ### Notational Conventions
 
 The key words "MUST" "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
@@ -77,12 +85,18 @@ flagged for removal. The standard meaning of the annotation is that the
 API element should not be used and may be removed in a later version.
 
 In all cases removing an element from an API is an incompatible
-change. In the case of [Stable](./InterfaceClassification.html#Stable) APIs,
-the change cannot be made between minor releases within the same major
-version. In addition, to allow consumers of the API time to adapt to the change,
-the API element to be removed should be marked as deprecated for a full major
-release before it is removed. For example, if a method is marked as deprecated
-in Hadoop 2.8, it cannot be removed until Hadoop 4.0.
+change. The stability of the element SHALL determine when such a change is
+permissible. A [Stable](./InterfaceClassification.html#Stable) element MUST
+be marked as deprecated for a full major release before it can be removed and
+SHALL NOT be removed in a minor or maintenance release. An
+[Evolving](./InterfaceClassification.html#Evolving) element MUST be marked as
+deprecated for a full minor release before it can be removed and SHALL NOT be
+removed during a maintenance release. An
+[Unstable](./InterfaceClassification.html#Unstable) element MAY be removed at
+any time. When possible an [Unstable](./InterfaceClassification.html#Unstable)
+element SHOULD be marked as deprecated for at least one release before being
+removed. For example, if a method is marked as deprecated in Hadoop 2.8, it
+cannot be removed until Hadoop 4.0.
 
 ### Policy
 
@@ -141,7 +155,7 @@ in hand.
 #### Semantic compatibility
 
 Apache Hadoop strives to ensure that the behavior of APIs remains consistent
-over versions, though changes for correctness may result in changes in
+across releases, though changes for correctness may result in changes in
 behavior. API behavior SHALL be specified by the JavaDoc API documentation
 where present and complete. When JavaDoc API documentation is not available,
 behavior SHALL be specified by the behavior expected by the related unit tests.
@@ -229,8 +243,8 @@ transports, such as SSL. Upgrading a service from SSLv2 to SSLv3 may break
 existing SSLv2 clients. The minimum supported major version of any transports
 MUST not increase across minor releases within a major version.
 
-Service ports are considered as part of the transport mechanism. Fixed
-service port numbers MUST be kept consistent to prevent breaking clients.
+Service ports are considered as part of the transport mechanism. Default
+service port numbers must be kept consistent to prevent breaking clients.
 
 #### Policy
 
@@ -281,9 +295,8 @@ according to the following:
 * Client-Server compatibility MUST be maintained so as to allow upgrading individual components without upgrading others. For example, upgrade HDFS from version 2.1.0 to 2.2.0 without upgrading MapReduce.
 * Server-Server compatibility MUST be maintained so as to allow mixed versions within an active cluster so the cluster may be upgraded without downtime in a rolling fashion.
 
-New transport mechanisms MUST only be introduced with minor or major version
-changes. Existing transport mechanisms MUST continue to be supported across
-minor versions within a major version. Service port numbers MUST remain
+Existing transport mechanisms MUST continue to be supported across
+minor versions within a major version. Default service port numbers MUST remain
 consistent across minor version numbers within a major version.
 
 ### REST APIs
@@ -312,7 +325,8 @@ The Hadoop REST APIs SHALL be considered
 numbers, the Hadoop REST APIs SHALL be considered
 [Public](./InterfaceClassification.html#Public) and
 [Stable](./InterfaceClassification.html#Stable), i.e. no incompatible changes
-are allowed to within an API version number.
+are allowed to within an API version number. A REST API version must be labeled
+as deprecated for a full major release before it can be removed.
 
 ### Log Output
 
@@ -325,7 +339,9 @@ use cases are also supported.
 
 All log output SHALL be considered
 [Public](./InterfaceClassification.html#Public) and
-[Evolving](./InterfaceClassification.html#Evolving).
+[Unstable](./InterfaceClassification.html#Unstable). For log output, an
+incompatible change is one that renders a parser unable to find or recognize
+a line of log output.
 
 ### Audit Log Output
 
@@ -400,37 +416,42 @@ server's jhist file format, SHALL be considered
 
 HDFS persists metadata (the image and edit logs) in a private file format.
 Incompatible changes to either the format or the metadata prevent subsequent
-releases from reading older metadata. Incompatible changes MUST include a
-process by which existing metadata may be upgraded. Changes SHALL be
-allowed to require more than one upgrade. Incompatible changes MUST result in
-the metadata version number being incremented.
+releases from reading older metadata. Incompatible changes must include a
+process by which existing metadata may be upgraded.
 
 Depending on the degree of incompatibility in the changes, the following
 potential scenarios can arise:
 
 * Automatic: The image upgrades automatically, no need for an explicit "upgrade".
-* Direct: The image is upgradable, but might require one explicit release "upgrade".
-* Indirect: The image is upgradable, but might require upgrading to intermediate release(s) first.
+* Direct: The image is upgradeable, but might require one explicit release "upgrade".
+* Indirect: The image is upgradeable, but might require upgrading to intermediate release(s) first.
 * Not upgradeable: The image is not upgradeable.
 
-HDFS data nodes store data in a private directory structure. The schema of that
-directory structure must remain stable to retain compatibility.
+HDFS data nodes store data in a private directory structure. Incompatible
+changes to the directory structure may prevent older releases from accessing
+stored data. Incompatible changes must include a process by which existing
+data directories may be upgraded.
 
 ###### Policy
 
 The HDFS metadata format SHALL be considered
 [Private](./InterfaceClassification.html#Private) and
 [Evolving](./InterfaceClassification.html#Evolving). Incompatible
-changes MUST include a process by which existing metada may be upgraded. The
-upgrade process MUST allow the cluster metadata to be rolled back to the older
-version and its older disk format. The rollback MUST restore the original data
-but is not REQUIRED to restore the updated data. Any incompatible change
-to the format MUST result in the major version number of the schema being
-incremented.
+changes MUST include a process by which existing metadata may be upgraded.
+The upgrade process SHALL be allowed to require more than one upgrade.
+The upgrade process MUST allow the cluster metadata to be
+rolled back to the older version and its older disk format. The rollback
+MUST restore the original data but is not REQUIRED to restore the updated
+data. Any incompatible change to the format MUST result in the major version
+number of the schema being incremented.
 
 The data node directory format SHALL be considered
 [Private](./InterfaceClassification.html#Private) and
-[Evolving](./InterfaceClassification.html#Evolving).
+[Evolving](./InterfaceClassification.html#Evolving). Incompatible
+changes MUST include a process by which existing data directories may be
+upgraded. The upgrade process SHALL be allowed to require more than one upgrade.
+The upgrade process MUST allow the data directories to be
+rolled back to the older layout.
 
 ##### AWS S3A Guard Metadata
 
@@ -533,14 +554,41 @@ The Hadoop Web UI SHALL be considered
 [Public](./InterfaceClassification.html#Public) and
 [Unstable](./InterfaceClassification.html#Unstable).
 
+### Functional Compatibility
+
+Users depend on the behavior of a Hadoop cluster remaining consistent across
+releases. Changes which cause unexpectedly different behaviors from the cluster
+can lead to frustration and long adoption cycles. No new configuration should
+be added which changes the behavior of an existing
+cluster, assuming the cluster's configuration files remain unchanged. For any
+new settings that are defined, care should be taken to ensure that the new
+setting does not change the behavior of existing clusters.
+
+#### Policy
+
+Changes to existing functionality MUST NOT change the default behavior or the
+meaning of existing configuration settings between maintenance releases within
+the same minor version, regardless of whether the changes arise from changes
+to the system or logic or to internal or external default configuration values.
+
+Changes to existing functionality SHOULD NOT change the default behavior or the
+meaning of existing configuration settings between minor releases within
+the same major version, though changes, such as to fix correctness or
+security issues, may require incompatible behavioral changes. Where possible
+such behavioral changes SHOULD be off by default.
+
 ### Hadoop Configuration Files
 
 Users use Hadoop-defined properties to configure and provide hints to Hadoop and
 custom properties to pass information to jobs. Users are encouraged to avoid
 using custom configuration property names that conflict with the namespace of
 Hadoop-defined properties and should avoid using any prefixes used by Hadoop,
-e.g. hadoop, io, ipc, fs, net, file, ftp, s3, kfs, ha, file, dfs, mapred,
+e.g. hadoop, io, ipc, fs, net, file, ftp, kfs, ha, file, dfs, mapred,
 mapreduce, and yarn.
+
+In addition to properties files, Hadoop uses other configuration files to
+set system behavior, such as the fair scheduler configuration file or the
+resource profiles configuration file.
 
 #### Policy
 
@@ -551,6 +599,14 @@ Hadoop-defined property MUST NOT change, even
 across major versions. Default values of Hadoop-defined properties SHALL be
 considered [Public](./InterfaceClassification.html#Public) and
 [Evolving](./InterfaceClassification.html#Evolving).
+
+Hadoop configuration files that are not governed by the above rules about
+Hadoop-defined properties SHALL be considered
+[Public](./InterfaceClassification.html#Public) and
+[Stable](./InterfaceClassification.html#Stable). The definition of an
+incompatible change depends on the particular configuration file format, but
+the general rule is that a compatible change will allow a configuration
+file that was valid before the change to remain valid after the change.
 
 ### Log4j Configuration Files
 
@@ -568,11 +624,11 @@ All Log4j configurations SHALL be considered
 ### Directory Structure
 
 Source code, artifacts (source and tests), user logs, configuration files,
-output, and job history are all stored on disk either local file system or HDFS.
-Changing the directory structure of these user-accessible files can break
-compatibility, even in cases where the original path is preserved via symbolic
-links (such as when the path is accessed by a servlet that is configured to
-not follow symbolic links).
+output, and job history are all stored on disk on either the local file system
+or HDFS. Changing the directory structure of these user-accessible files can
+break compatibility, even in cases where the original path is preserved via
+symbolic links (such as when the path is accessed by a servlet that is
+configured to not follow symbolic links).
 
 #### Policy
 
@@ -680,11 +736,11 @@ upgrading other dependent software components.
 #### Policies
 
 * Hardware
-    * Architecture: The community has no plans to restrict Hadoop to specific architectures, but can have family-specific optimizations.
+    * Architecture: Intel and AMD are the processor architectures currently supported by the community. The community has no plans to restrict Hadoop to specific architectures, but MAY have family-specific optimizations. Support for any processor architecture SHOULD NOT be dropped without first being documented as deprecated for a full major release and MUST NOT be dropped without first being deprecated for at least a full minor release.
     * Minimum resources: While there are no guarantees on the minimum resources required by Hadoop daemons, the developer community SHOULD avoid increasing requirements within a minor release.
-* Operating Systems: The community SHOULD maintain the same minimum OS requirements (OS kernel versions) within a minor release. Currently GNU/Linux and Microsoft Windows are the OSes officially supported by the community, while Apache Hadoop is known to work reasonably well on other OSes such as Apple MacOSX, Solaris, etc.
+* Operating Systems: The community SHOULD maintain the same minimum OS requirements (OS kernel versions) within a minor release. Currently GNU/Linux and Microsoft Windows are the OSes officially supported by the community, while Apache Hadoop is known to work reasonably well on other OSes such as Apple MacOSX, Solaris, etc. Support for any OS SHOULD NOT be dropped without first being documented as deprecated for a full major release and MUST NOT be dropped without first being deprecated for at least a full minor release.
 * The JVM requirements SHALL NOT change across minor releases within the same major release unless the JVM version in question becomes unsupported. The JVM version requirement MAY be different for different operating systems or even operating system releases.
-* File systems supported by Hadoop, e.g. through the HDFS FileSystem API, SHOULD not become unsupported between minor releases within a major version unless a migration path to an alternate client implementation is available.
+* File systems supported by Hadoop, e.g. through the FileSystem API, SHOULD not become unsupported between minor releases within a major version unless a migration path to an alternate client implementation is available.
 
 References
 ----------
