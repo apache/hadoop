@@ -200,7 +200,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
-   * Add the specified job to the current list of jobs to abort in teardown
+   * Add the specified job to the current list of jobs to abort in teardown.
    * @param jobData job data.
    */
   protected void abortInTeardown(JobData jobData) {

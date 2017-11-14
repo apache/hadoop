@@ -275,7 +275,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @throws IOException IO failure
    */
   protected void assertNoMultipartUploadsPending(Path path) throws IOException {
-    List<String> uploads = listMultipartUploads(getFileSystem(), pathToPrefix(path));
+    List<String> uploads = listMultipartUploads(getFileSystem(),
+        pathToPrefix(path));
     if (!uploads.isEmpty()) {
       String result = uploads.stream().collect(Collectors.joining("\n"));
       fail("Multipart uploads in progress under " + path + " \n" + result);

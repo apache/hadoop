@@ -497,7 +497,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   public void abortJob(JobContext context, JobStatus.State state)
       throws IOException {
     LOG.info("{}: aborting job {} in state {}",
-        getRole(), CommitUtils.jobIdString(context),state);
+        getRole(), CommitUtils.jobIdString(context), state);
     // final cleanup operations
     abortJobInternal(context, false);
   }

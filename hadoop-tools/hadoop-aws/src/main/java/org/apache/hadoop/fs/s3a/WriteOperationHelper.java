@@ -289,8 +289,7 @@ public class WriteOperationHelper {
 
   /**
    * Abort a multipart commit operation.
-   * @param destKey destination key of ongoing operation
-   * @param uploadId multipart operation Id
+   * @param upload upload to abort.
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated

@@ -599,30 +599,30 @@ public class StagingTestBase {
 
     // abortMultipartUpload mocking
     doAnswer(invocation -> {
-          LOG.debug("abortMultipartUpload for {}", mockClient);
-          synchronized (lock) {
-            if (results.aborts.size() == errors.failOnAbort) {
-              if (errors.recover) {
-                errors.failOnAbort(-1);
-              }
-              throw new AmazonClientException(
-                  "Mock Fail on abort " + results.aborts.size());
-            }
-            AbortMultipartUploadRequest req = invocation.getArgumentAt(
-                0, AbortMultipartUploadRequest.class);
-            String id = req.getUploadId();
-            String p = results.activeUploads.remove(id);
-            if (p == null) {
-              // upload doesn't exist
-              AmazonS3Exception ex = new AmazonS3Exception(
-                  "not found " + id);
-              ex.setStatusCode(404);
-              throw ex;
-            }
-            results.aborts.add(req);
-            return null;
+      LOG.debug("abortMultipartUpload for {}", mockClient);
+      synchronized (lock) {
+        if (results.aborts.size() == errors.failOnAbort) {
+          if (errors.recover) {
+            errors.failOnAbort(-1);
           }
-        })
+          throw new AmazonClientException(
+              "Mock Fail on abort " + results.aborts.size());
+        }
+        AbortMultipartUploadRequest req = invocation.getArgumentAt(
+            0, AbortMultipartUploadRequest.class);
+        String id = req.getUploadId();
+        String p = results.activeUploads.remove(id);
+        if (p == null) {
+          // upload doesn't exist
+          AmazonS3Exception ex = new AmazonS3Exception(
+              "not found " + id);
+          ex.setStatusCode(404);
+          throw ex;
+        }
+        results.aborts.add(req);
+        return null;
+      }
+    })
         .when(mockClient)
         .abortMultipartUpload(any(AbortMultipartUploadRequest.class));
 

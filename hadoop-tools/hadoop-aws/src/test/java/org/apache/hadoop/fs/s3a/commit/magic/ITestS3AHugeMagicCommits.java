@@ -141,7 +141,8 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     List<String> uploads = listMultipartUploads(fs, destDirKey);
 
     assertEquals("Pending uploads: "
-        + uploads.stream().collect(Collectors.joining("\n")), 1, uploads.size());
+        + uploads.stream()
+        .collect(Collectors.joining("\n")), 1, uploads.size());
     assertNotNull("jobDir", jobDir);
     Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
         results = operations.loadSinglePendingCommits(jobDir, false);

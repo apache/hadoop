@@ -821,7 +821,7 @@ public final class S3ATestUtils {
   /**
    * Date format used for mapping upload initiation time to human string.
    */
-  private static final DateFormat df = new SimpleDateFormat(
+  private static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
       "yyyy-MM-dd HH:mm:ss");
 
   /**
@@ -830,15 +830,15 @@ public final class S3ATestUtils {
    * @return possibly empty list
    * @throws IOException IO failure.
    */
-  public static List<String> listMultipartUploads(S3AFileSystem fs, String prefix)
-      throws IOException {
+  public static List<String> listMultipartUploads(S3AFileSystem fs,
+      String prefix) throws IOException {
 
     return fs
         .listMultipartUploads(prefix).stream()
         .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
             upload.getKey(),
             upload.getUploadId(),
-            df.format(upload.getInitiated())))
+            LISTING_FORMAT.format(upload.getInitiated())))
         .collect(Collectors.toList());
   }
 
