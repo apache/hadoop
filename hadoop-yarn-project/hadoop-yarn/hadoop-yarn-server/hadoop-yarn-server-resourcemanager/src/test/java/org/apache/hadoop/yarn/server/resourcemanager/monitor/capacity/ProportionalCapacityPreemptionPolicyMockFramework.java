@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
@@ -533,6 +535,18 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
     } else {
       res = Resources.createResource(Integer.valueOf(resource[0]),
           Integer.valueOf(resource[1]));
+      if (resource.length > 2) {
+        // Using the same order of resources from ResourceUtils, set resource
+        // informations.
+        ResourceInformation[] storedResourceInfo = ResourceUtils
+            .getResourceTypesArray();
+        for (int i = 2; i < resource.length; i++) {
+          res.setResourceInformation(storedResourceInfo[i].getName(),
+              ResourceInformation.newInstance(storedResourceInfo[i].getName(),
+                  storedResourceInfo[i].getUnits(),
+                  Integer.valueOf(resource[i])));
+        }
+      }
     }
     return res;
   }
