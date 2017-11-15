@@ -854,7 +854,8 @@ message CheckStoragePolicySatisfyPathStatusResponseProto {
     PENDING = 0;
     IN_PROGRESS = 1;
     SUCCESS = 2;
-    NOT_AVAILABLE = 3;
+    FAILURE = 3;
+    NOT_AVAILABLE = 4;
   }
   required StoragePolicySatisfyPathStatus status = 1;
 }

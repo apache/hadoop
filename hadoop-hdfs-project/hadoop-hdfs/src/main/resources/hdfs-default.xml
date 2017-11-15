@@ -4557,12 +4557,21 @@
 
 <property>
   <name>dfs.storage.policy.satisfier.low.max-streams.preference</name>
-  <value>false</value>
+  <value>true</value>
   <description>
-    If true, blocks to move tasks will share equal ratio of number of highest-priority
+    If false, blocks to move tasks will share equal ratio of number of highest-priority
     replication streams (dfs.namenode.replication.max-streams) with pending replica and
-    erasure-coded reconstruction tasks. If false, blocks to move tasks will only use
-    the delta number of replication streams. The default value is false.
+    erasure-coded reconstruction tasks. If true, blocks to move tasks will only use
+    the delta number of replication streams. The default value is true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.satisfier.retry.max.attempts</name>
+  <value>3</value>
+  <description>
+    Max retry to satisfy the block storage policy. After this retry block will be removed
+    from the movement needed queue.
   </description>
 </property>
 

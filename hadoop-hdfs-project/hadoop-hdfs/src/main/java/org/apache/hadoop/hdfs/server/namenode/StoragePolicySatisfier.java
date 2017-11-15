@@ -83,6 +83,7 @@ public class StoragePolicySatisfier implements Runnable {
   private volatile boolean isRunning = false;
   private int spsWorkMultiplier;
   private long blockCount = 0L;
+  private int blockMovementMaxRetry;
   /**
    * Represents the collective analysis status for all blocks.
    */
@@ -137,6 +138,9 @@ public class StoragePolicySatisfier implements Runnable {
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT),
         storageMovementNeeded);
     this.spsWorkMultiplier = DFSUtil.getSPSWorkMultiplier(conf);
+    this.blockMovementMaxRetry = conf.getInt(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY,
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT);
   }
 
   /**
@@ -243,6 +247,13 @@ public class StoragePolicySatisfier implements Runnable {
         if (!namesystem.isInSafeMode()) {
           ItemInfo itemInfo = storageMovementNeeded.get();
           if (itemInfo != null) {
+            if(itemInfo.getRetryCount() >= blockMovementMaxRetry){
+              LOG.info("Failed to satisfy the policy after "
+                  + blockMovementMaxRetry + " retries. Removing inode "
+                  + itemInfo.getTrackId() + " from the queue");
+              storageMovementNeeded.removeItemTrackInfo(itemInfo, false);
+              continue;
+            }
             long trackId = itemInfo.getTrackId();
             BlockCollection blockCollection;
             BlocksMovingAnalysis status = null;
@@ -253,7 +264,7 @@ public class StoragePolicySatisfier implements Runnable {
               if (blockCollection == null) {
                 // File doesn't exists (maybe got deleted), remove trackId from
                 // the queue
-                storageMovementNeeded.removeItemTrackInfo(itemInfo);
+                storageMovementNeeded.removeItemTrackInfo(itemInfo, true);
               } else {
                 status =
                     analyseBlocksStorageMovementsAndAssignToDN(
@@ -269,9 +280,9 @@ public class StoragePolicySatisfier implements Runnable {
                 // Just add to monitor, so it will be tracked for report and
                 // be removed on storage movement attempt finished report.
               case BLOCKS_TARGETS_PAIRED:
-                this.storageMovementsMonitor.add(new AttemptedItemInfo(
-                    itemInfo.getStartId(), itemInfo.getTrackId(),
-                    monotonicNow(), status.assignedBlocks));
+                this.storageMovementsMonitor.add(new AttemptedItemInfo(itemInfo
+                    .getStartId(), itemInfo.getTrackId(), monotonicNow(),
+                    status.assignedBlocks, itemInfo.getRetryCount()));
                 break;
               case NO_BLOCKS_TARGETS_PAIRED:
                 if (LOG.isDebugEnabled()) {
@@ -279,6 +290,7 @@ public class StoragePolicySatisfier implements Runnable {
                       + " back to retry queue as none of the blocks"
                       + " found its eligible targets.");
                 }
+                itemInfo.retryCount++;
                 this.storageMovementNeeded.add(itemInfo);
                 break;
               case FEW_LOW_REDUNDANCY_BLOCKS:
@@ -295,7 +307,7 @@ public class StoragePolicySatisfier implements Runnable {
               default:
                 LOG.info("Block analysis skipped or blocks already satisfied"
                     + " with storages. So, Cleaning up the Xattrs.");
-                storageMovementNeeded.removeItemTrackInfo(itemInfo);
+                storageMovementNeeded.removeItemTrackInfo(itemInfo, true);
                 break;
               }
             }
@@ -861,10 +873,19 @@ public class StoragePolicySatisfier implements Runnable {
   public static class ItemInfo {
     private long startId;
     private long trackId;
+    private int retryCount;
 
     public ItemInfo(long startId, long trackId) {
       this.startId = startId;
       this.trackId = trackId;
+      //set 0 when item is getting added first time in queue.
+      this.retryCount = 0;
+    }
+
+    public ItemInfo(long startId, long trackId, int retryCount) {
+      this.startId = startId;
+      this.trackId = trackId;
+      this.retryCount = retryCount;
     }
 
     /**
@@ -886,6 +907,13 @@ public class StoragePolicySatisfier implements Runnable {
      */
     public boolean isDir() {
       return (startId != trackId);
+    }
+
+    /**
+     * Get the attempted retry count of the block for satisfy the policy.
+     */
+    public int getRetryCount() {
+      return retryCount;
     }
   }
 
@@ -910,8 +938,8 @@ public class StoragePolicySatisfier implements Runnable {
      */
     AttemptedItemInfo(long rootId, long trackId,
         long lastAttemptedOrReportedTime,
-        List<Block> blocks) {
-      super(rootId, trackId);
+        List<Block> blocks, int retryCount) {
+      super(rootId, trackId, retryCount);
       this.lastAttemptedOrReportedTime = lastAttemptedOrReportedTime;
       this.blocks = blocks;
     }

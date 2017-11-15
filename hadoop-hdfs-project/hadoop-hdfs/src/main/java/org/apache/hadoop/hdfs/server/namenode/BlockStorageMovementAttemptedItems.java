@@ -183,7 +183,7 @@ public class BlockStorageMovementAttemptedItems {
           Long blockCollectionID = itemInfo.getTrackId();
           synchronized (movementFinishedBlocks) {
             ItemInfo candidate = new ItemInfo(itemInfo.getStartId(),
-                blockCollectionID);
+                blockCollectionID, itemInfo.getRetryCount() + 1);
             blockStorageMovementNeeded.add(candidate);
             iter.remove();
             LOG.info("TrackID: {} becomes timed out and moved to needed "
@@ -211,9 +211,9 @@ public class BlockStorageMovementAttemptedItems {
               // TODO: try add this at front of the Queue, so that this element
               // gets the chance first and can be cleaned from queue quickly as
               // all movements already done.
-              blockStorageMovementNeeded
-                  .add(new ItemInfo(attemptedItemInfo.getStartId(),
-                      attemptedItemInfo.getTrackId()));
+              blockStorageMovementNeeded.add(new ItemInfo(attemptedItemInfo
+                  .getStartId(), attemptedItemInfo.getTrackId(),
+                  attemptedItemInfo.getRetryCount() + 1));
               iterator.remove();
             }
           }

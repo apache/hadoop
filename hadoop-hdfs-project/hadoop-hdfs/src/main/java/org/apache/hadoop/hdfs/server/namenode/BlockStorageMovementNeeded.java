@@ -178,8 +178,8 @@ public class BlockStorageMovementNeeded {
    * Decrease the pending child count for directory once one file blocks moved
    * successfully. Remove the SPS xAttr if pending child count is zero.
    */
-  public synchronized void removeItemTrackInfo(ItemInfo trackInfo)
-      throws IOException {
+  public synchronized void removeItemTrackInfo(ItemInfo trackInfo,
+      boolean isSuccess) throws IOException {
     if (trackInfo.isDir()) {
       // If track is part of some start inode then reduce the pending
       // directory work count.
@@ -188,7 +188,7 @@ public class BlockStorageMovementNeeded {
       if (inode == null) {
         // directory deleted just remove it.
         this.pendingWorkForDirectory.remove(startId);
-        markSuccess(startId);
+        updateStatus(startId, isSuccess);
       } else {
         DirPendingWorkInfo pendingWork = pendingWorkForDirectory.get(startId);
         if (pendingWork != null) {
@@ -196,8 +196,10 @@ public class BlockStorageMovementNeeded {
           if (pendingWork.isDirWorkDone()) {
             namesystem.removeXattr(startId, XATTR_SATISFY_STORAGE_POLICY);
             pendingWorkForDirectory.remove(startId);
-            markSuccess(startId);
+            pendingWork.setFailure(!isSuccess);
+            updateStatus(startId, pendingWork.isPolicySatisfied());
           }
+          pendingWork.setFailure(isSuccess);
         }
       }
     } else {
@@ -205,7 +207,7 @@ public class BlockStorageMovementNeeded {
       // storageMovementAttemptedItems or file policy satisfied.
       namesystem.removeXattr(trackInfo.getTrackId(),
           XATTR_SATISFY_STORAGE_POLICY);
-      markSuccess(trackInfo.getStartId());
+      updateStatus(trackInfo.getStartId(), isSuccess);
     }
   }
 
@@ -224,14 +226,19 @@ public class BlockStorageMovementNeeded {
   /**
    * Mark inode status as SUCCESS in map.
    */
-  private void markSuccess(long startId){
+  private void updateStatus(long startId, boolean isSuccess){
     StoragePolicySatisfyPathStatusInfo spsStatusInfo =
         spsStatus.get(startId);
     if (spsStatusInfo == null) {
       spsStatusInfo = new StoragePolicySatisfyPathStatusInfo();
       spsStatus.put(startId, spsStatusInfo);
     }
-    spsStatusInfo.setSuccess();
+
+    if (isSuccess) {
+      spsStatusInfo.setSuccess();
+    } else {
+      spsStatusInfo.setFailure();
+    }
   }
 
   /**
@@ -325,7 +332,7 @@ public class BlockStorageMovementNeeded {
                   namesystem.removeXattr(startInode.getId(),
                       XATTR_SATISFY_STORAGE_POLICY);
                   pendingWorkForDirectory.remove(startInode.getId());
-                  markSuccess(startInode.getId());
+                  updateStatus(startInode.getId(), true);
                 }
               }
             }
@@ -431,6 +438,7 @@ public class BlockStorageMovementNeeded {
 
     private int pendingWorkCount = 0;
     private boolean fullyScanned = false;
+    private boolean success = true;
 
     /**
      * Increment the pending work count for directory.
@@ -460,6 +468,20 @@ public class BlockStorageMovementNeeded {
      */
     public synchronized void markScanCompleted() {
       this.fullyScanned = true;
+    }
+
+    /**
+     * Return true if all the files block movement is success, otherwise false.
+     */
+    public boolean isPolicySatisfied() {
+      return success;
+    }
+
+    /**
+     * Set directory SPS status failed.
+     */
+    public void setFailure(boolean failure) {
+      this.success = this.success || failure;
     }
   }
 
@@ -510,6 +532,11 @@ public class BlockStorageMovementNeeded {
       this.lastStatusUpdateTime = Time.monotonicNow();
     }
 
+    private void setFailure() {
+      this.status = StoragePolicySatisfyPathStatus.FAILURE;
+      this.lastStatusUpdateTime = Time.monotonicNow();
+    }
+
     private StoragePolicySatisfyPathStatus getStatus() {
       return status;
     }
@@ -518,7 +545,8 @@ public class BlockStorageMovementNeeded {
      * Return true if SUCCESS status cached more then 5 min.
      */
     private boolean canRemove() {
-      return StoragePolicySatisfyPathStatus.SUCCESS == status
+      return (StoragePolicySatisfyPathStatus.SUCCESS == status
+          || StoragePolicySatisfyPathStatus.FAILURE == status)
           && (Time.monotonicNow()
               - lastStatusUpdateTime) > statusClearanceElapsedTimeMs;
     }

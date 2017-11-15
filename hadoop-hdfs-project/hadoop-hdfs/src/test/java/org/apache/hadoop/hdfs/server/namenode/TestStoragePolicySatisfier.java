@@ -1412,8 +1412,8 @@ public class TestStoragePolicySatisfier {
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
       config.setBoolean(DFSConfigKeys
-          .DFS_STORAGE_POLICY_SATISFIER_SHARE_EQUAL_REPLICA_MAX_STREAMS_KEY,
-          true);
+          .DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_KEY,
+          false);
 
       StorageType[][] storagetypes = new StorageType[][] {
           {StorageType.ARCHIVE, StorageType.DISK},
@@ -1474,8 +1474,8 @@ public class TestStoragePolicySatisfier {
           .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
           "3000");
       config.setBoolean(DFSConfigKeys
-          .DFS_STORAGE_POLICY_SATISFIER_SHARE_EQUAL_REPLICA_MAX_STREAMS_KEY,
-          true);
+          .DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_KEY,
+          false);
 
       StorageType[][] storagetypes = new StorageType[][] {
           {StorageType.ARCHIVE, StorageType.DISK},
@@ -1526,6 +1526,55 @@ public class TestStoragePolicySatisfier {
           return false;
         }
       }, 100, 60000);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testMaxRetryForFailedBlock() throws Exception {
+    try {
+      config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
+          true);
+      config.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
+          "1000");
+      config.set(DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
+          "1000");
+      StorageType[][] storagetypes = new StorageType[][] {
+          {StorageType.DISK, StorageType.DISK},
+          {StorageType.DISK, StorageType.DISK}};
+      hdfsCluster = new MiniDFSCluster.Builder(config).numDataNodes(2)
+          .storageTypes(storagetypes).build();
+      hdfsCluster.waitActive();
+      dfs = hdfsCluster.getFileSystem();
+
+      Path filePath = new Path("/retryFile");
+      DFSTestUtil.createFile(dfs, filePath, DEFAULT_BLOCK_SIZE, (short) 2,
+          0);
+
+      dfs.setStoragePolicy(filePath, "COLD");
+      dfs.satisfyStoragePolicy(filePath);
+      Thread.sleep(3000
+          * DFSConfigKeys
+          .DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT);
+      DFSTestUtil.waitExpectedStorageType(filePath.toString(),
+          StorageType.DISK, 2, 60000, hdfsCluster.getFileSystem());
+      // Path status should be FAILURE
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            StoragePolicySatisfyPathStatus status = dfs.getClient()
+                .checkStoragePolicySatisfyPathStatus(filePath.toString());
+            return StoragePolicySatisfyPathStatus.FAILURE.equals(status);
+          } catch (IOException e) {
+            Assert.fail("Fail to get path status for sps");
+          }
+          return false;
+        }
+      }, 100, 90000);
     } finally {
       shutdownCluster();
     }

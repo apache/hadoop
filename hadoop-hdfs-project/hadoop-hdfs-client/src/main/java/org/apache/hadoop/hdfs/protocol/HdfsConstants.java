@@ -150,6 +150,12 @@ public final class HdfsConstants {
     SUCCESS,
 
     /**
+     * Few blocks failed to move and the path is still not
+     * fully satisfied the storage policy.
+     */
+    FAILURE,
+
+    /**
      * Status not available.
      */
     NOT_AVAILABLE

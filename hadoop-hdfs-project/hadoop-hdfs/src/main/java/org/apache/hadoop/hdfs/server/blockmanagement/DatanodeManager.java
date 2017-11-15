@@ -208,7 +208,7 @@ public class DatanodeManager {
    */
   private final long timeBetweenResendingCachingDirectivesMs;
 
-  private final boolean blocksToMoveShareEqualRatio;
+  private final boolean blocksToMoveLowPriority;
 
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
@@ -337,9 +337,9 @@ public class DatanodeManager {
 
     // SPS configuration to decide blocks to move can share equal ratio of
     // maxtransfers with pending replica and erasure-coded reconstruction tasks
-    blocksToMoveShareEqualRatio = conf.getBoolean(
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SHARE_EQUAL_REPLICA_MAX_STREAMS_KEY,
-        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_SHARE_EQUAL_REPLICA_MAX_STREAMS_DEFAULT);
+    blocksToMoveLowPriority = conf.getBoolean(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_KEY,
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_LOW_MAX_STREAMS_PREFERENCE_DEFAULT);
   }
 
   private static long getStaleIntervalFromConf(Configuration conf,
@@ -1699,11 +1699,11 @@ public class DatanodeManager {
       int numReplicationTasks = 0;
       int numECTasks = 0;
       int numBlocksToMoveTasks = 0;
-      // Check blocksToMoveShareEqualRatio configuration is true/false. If true,
+      // Check blocksToMoveLowPriority configuration is true/false. If false,
       // then equally sharing the max transfer. Otherwise gives high priority to
       // the pending_replica/erasure-coded tasks and only the delta streams will
       // be used for blocks to move tasks.
-      if (blocksToMoveShareEqualRatio) {
+      if (!blocksToMoveLowPriority) {
         // add blocksToMove count to total blocks so that will get equal share
         totalBlocks = totalBlocks + totalBlocksToMove;
         numReplicationTasks = (int) Math

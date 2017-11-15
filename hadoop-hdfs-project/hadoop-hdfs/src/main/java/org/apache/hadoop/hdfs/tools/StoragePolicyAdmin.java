@@ -272,8 +272,11 @@ public class StoragePolicyAdmin extends Configured implements Tool {
               + " the policy in given path. This will print the current"
               + "status of the path in each 10 sec and status are:\n"
               + "PENDING : Path is in queue and not processed for satisfying"
-              + " the policy.\nIN_PROGRESS : Satisfying the storage policy for"
-              + " path.\nSUCCESS : Storage policy satisfied for the path.\n"
+              + " the policy.\n"
+              + "IN_PROGRESS : Satisfying the storage policy for"
+              + " path.\n"
+              + "SUCCESS : Storage policy satisfied for the path.\n"
+              + "FAILURE : Few blocks failed to move.\n"
               + "NOT_AVAILABLE : Status not available.");
       return getShortUsage() + "\n" +
           "Schedule blocks to move based on file/directory policy.\n\n" +
@@ -305,18 +308,30 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       return 0;
     }
 
-
     private void waitForSatisfyPolicy(DistributedFileSystem dfs, String path)
         throws IOException {
       System.out.println("Waiting for satisfy the policy ...");
-      while (true) {
+      boolean running = true;
+      while (running) {
         StoragePolicySatisfyPathStatus status = dfs.getClient()
             .checkStoragePolicySatisfyPathStatus(path);
-        if (StoragePolicySatisfyPathStatus.SUCCESS.equals(status)) {
+        switch (status) {
+        case SUCCESS:
+        case FAILURE:
+        case NOT_AVAILABLE:
           System.out.println(status);
+          running = false;
+          break;
+        case PENDING:
+        case IN_PROGRESS:
+          System.out.println(status);
+        default:
+          System.err.println("Unexpected storage policy satisfyer status,"
+              + " Exiting");
+          running = false;
           break;
         }
-        System.out.println(status);
+
         try {
           Thread.sleep(10000);
         } catch (InterruptedException e) {
