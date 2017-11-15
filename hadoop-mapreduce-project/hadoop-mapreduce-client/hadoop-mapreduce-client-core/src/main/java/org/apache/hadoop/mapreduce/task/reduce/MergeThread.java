@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 abstract class MergeThread<T,K,V> extends Thread {
   
-  private static final Log LOG = LogFactory.getLog(MergeThread.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MergeThread.class);
 
   private AtomicInteger numPending = new AtomicInteger(0);
   private LinkedList<List<T>> pendingToBeMerged;

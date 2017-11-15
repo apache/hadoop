@@ -28,14 +28,18 @@ import java.util.List;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
@@ -46,6 +50,7 @@ import com.aliyun.oss.model.ObjectMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
@@ -60,6 +65,12 @@ public class AliyunOSSFileSystem extends FileSystem {
   private Path workingDir;
   private AliyunOSSFileSystemStore store;
   private int maxKeys;
+  private static final PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path file) {
+      return true;
+    }
+  };
 
   @Override
   public FSDataOutputStream append(Path path, int bufferSize,
@@ -302,18 +313,6 @@ public class AliyunOSSFileSystem extends FileSystem {
   }
 
   /**
-   * Check if OSS object represents a directory.
-   *
-   * @param name object key
-   * @param size object content length
-   * @return true if object represents a directory
-   */
-  private boolean objectRepresentsDirectory(final String name,
-      final long size) {
-    return StringUtils.isNotEmpty(name) && name.endsWith("/") && size == 0L;
-  }
-
-  /**
    * Turn a path (relative or otherwise) into an OSS key.
    *
    * @param path the path of the file.
@@ -402,6 +401,58 @@ public class AliyunOSSFileSystem extends FileSystem {
     }
 
     return result.toArray(new FileStatus[result.size()]);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listFiles(
+      final Path f, final boolean recursive) throws IOException {
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    final FileStatus status = getFileStatus(qualifiedPath);
+    PathFilter filter = new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        return status.isFile() || !path.equals(f);
+      }
+    };
+    FileStatusAcceptor acceptor =
+        new FileStatusAcceptor.AcceptFilesOnly(qualifiedPath);
+    return innerList(f, status, filter, acceptor, recursive);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
+      throws IOException {
+    return listLocatedStatus(f, DEFAULT_FILTER);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
+      final PathFilter filter) throws IOException {
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    final FileStatus status = getFileStatus(qualifiedPath);
+    FileStatusAcceptor acceptor =
+        new FileStatusAcceptor.AcceptAllButSelf(qualifiedPath);
+    return innerList(f, status, filter, acceptor, false);
+  }
+
+  private RemoteIterator<LocatedFileStatus> innerList(final Path f,
+      final FileStatus status,
+      final PathFilter filter,
+      final FileStatusAcceptor acceptor,
+      final boolean recursive) throws IOException {
+    Path qualifiedPath = f.makeQualified(uri, workingDir);
+    String key = pathToKey(qualifiedPath);
+
+    if (status.isFile()) {
+      LOG.debug("{} is a File", qualifiedPath);
+      final BlockLocation[] locations = getFileBlockLocations(status,
+        0, status.getLen());
+      return store.singleStatusRemoteIterator(filter.accept(f) ? status : null,
+        locations);
+    } else {
+      return store.createLocatedFileStatusIterator(key, maxKeys, this, filter,
+        acceptor, recursive ? null : "/");
+    }
   }
 
   /**

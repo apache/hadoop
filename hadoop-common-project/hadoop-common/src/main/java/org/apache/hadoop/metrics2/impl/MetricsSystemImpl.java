@@ -519,7 +519,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
         conf.getFilter(SOURCE_FILTER_KEY),
         conf.getFilter(RECORD_FILTER_KEY),
         conf.getFilter(METRIC_FILTER_KEY),
-        conf.getInt(PERIOD_KEY, PERIOD_DEFAULT),
+        conf.getInt(PERIOD_KEY, PERIOD_DEFAULT) * 1000,
         conf.getInt(QUEUE_CAPACITY_KEY, QUEUE_CAPACITY_DEFAULT),
         conf.getInt(RETRY_DELAY_KEY, RETRY_DELAY_DEFAULT),
         conf.getFloat(RETRY_BACKOFF_KEY, RETRY_BACKOFF_DEFAULT),
@@ -616,6 +616,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   @VisibleForTesting
   MetricsSourceAdapter getSourceAdapter(String name) {
     return sources.get(name);
+  }
+
+  @VisibleForTesting
+  public MetricsSinkAdapter getSinkAdapter(String name) {
+    return sinks.get(name);
   }
 
   private InitMode initMode() {

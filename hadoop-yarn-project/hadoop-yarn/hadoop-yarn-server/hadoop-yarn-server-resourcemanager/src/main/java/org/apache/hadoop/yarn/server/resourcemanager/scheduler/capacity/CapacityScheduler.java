@@ -132,9 +132,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSet;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PlacementSetUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSetUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.Lock;
@@ -1183,7 +1183,7 @@ public class CapacityScheduler extends
 
   /**
    * We need to make sure when doing allocation, Node should be existed
-   * And we will construct a {@link PlacementSet} before proceeding
+   * And we will construct a {@link CandidateNodeSet} before proceeding
    */
   private void allocateContainersToNode(NodeId nodeId,
       boolean withNodeHeartbeat) {
@@ -1192,8 +1192,10 @@ public class CapacityScheduler extends
       int offswitchCount = 0;
       int assignedContainers = 0;
 
-      PlacementSet<FiCaSchedulerNode> ps = new SimplePlacementSet<>(node);
-      CSAssignment assignment = allocateContainersToNode(ps, withNodeHeartbeat);
+      CandidateNodeSet<FiCaSchedulerNode> candidates =
+          new SimpleCandidateNodeSet<>(node);
+      CSAssignment assignment = allocateContainersToNode(candidates,
+          withNodeHeartbeat);
       // Only check if we can allocate more container on the same node when
       // scheduling is triggered by node heartbeat
       if (null != assignment && withNodeHeartbeat) {
@@ -1210,7 +1212,7 @@ public class CapacityScheduler extends
             assignedContainers)) {
           // Try to see if it is possible to allocate multiple container for
           // the same node heartbeat
-          assignment = allocateContainersToNode(ps, true);
+          assignment = allocateContainersToNode(candidates, true);
 
           if (null != assignment
               && assignment.getType() == NodeType.OFF_SWITCH) {
@@ -1237,8 +1239,9 @@ public class CapacityScheduler extends
   /*
    * Logics of allocate container on a single node (Old behavior)
    */
-  private CSAssignment allocateContainerOnSingleNode(PlacementSet<FiCaSchedulerNode> ps,
-      FiCaSchedulerNode node, boolean withNodeHeartbeat) {
+  private CSAssignment allocateContainerOnSingleNode(
+      CandidateNodeSet<FiCaSchedulerNode> candidates, FiCaSchedulerNode node,
+      boolean withNodeHeartbeat) {
     // Backward compatible way to make sure previous behavior which allocation
     // driven by node heartbeat works.
     if (getNode(node.getNodeID()) != node) {
@@ -1262,7 +1265,7 @@ public class CapacityScheduler extends
               .getApplicationId() + " on node: " + node.getNodeID());
 
       LeafQueue queue = ((LeafQueue) reservedApplication.getQueue());
-      assignment = queue.assignContainers(getClusterResource(), ps,
+      assignment = queue.assignContainers(getClusterResource(), candidates,
           // TODO, now we only consider limits for parent for non-labeled
           // resources, should consider labeled resources as well.
           new ResourceLimits(labelManager
@@ -1329,14 +1332,16 @@ public class CapacityScheduler extends
               + node.getUnallocatedResource());
     }
 
-    return allocateOrReserveNewContainers(ps, withNodeHeartbeat);
+    return allocateOrReserveNewContainers(candidates, withNodeHeartbeat);
   }
 
   private CSAssignment allocateOrReserveNewContainers(
-      PlacementSet<FiCaSchedulerNode> ps, boolean withNodeHeartbeat) {
+      CandidateNodeSet<FiCaSchedulerNode> candidates,
+      boolean withNodeHeartbeat) {
     CSAssignment assignment = getRootQueue().assignContainers(
-        getClusterResource(), ps, new ResourceLimits(labelManager
-            .getResourceByLabel(ps.getPartition(), getClusterResource())),
+        getClusterResource(), candidates, new ResourceLimits(labelManager
+            .getResourceByLabel(candidates.getPartition(),
+                getClusterResource())),
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
 
     assignment.setSchedulingMode(SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
@@ -1346,30 +1351,34 @@ public class CapacityScheduler extends
         assignment.getResource(), Resources.none())) {
       if (withNodeHeartbeat) {
         updateSchedulerHealth(lastNodeUpdateTime,
-            PlacementSetUtils.getSingleNode(ps).getNodeID(), assignment);
+            CandidateNodeSetUtils.getSingleNode(candidates).getNodeID(),
+            assignment);
       }
       return assignment;
     }
 
     // Only do non-exclusive allocation when node has node-labels.
-    if (StringUtils.equals(ps.getPartition(), RMNodeLabelsManager.NO_LABEL)) {
+    if (StringUtils.equals(candidates.getPartition(),
+        RMNodeLabelsManager.NO_LABEL)) {
       return null;
     }
 
     // Only do non-exclusive allocation when the node-label supports that
     try {
       if (rmContext.getNodeLabelManager().isExclusiveNodeLabel(
-          ps.getPartition())) {
+          candidates.getPartition())) {
         return null;
       }
     } catch (IOException e) {
-      LOG.warn("Exception when trying to get exclusivity of node label=" + ps
+      LOG.warn(
+          "Exception when trying to get exclusivity of node label=" + candidates
           .getPartition(), e);
       return null;
     }
 
     // Try to use NON_EXCLUSIVE
-    assignment = getRootQueue().assignContainers(getClusterResource(), ps,
+    assignment = getRootQueue().assignContainers(getClusterResource(),
+        candidates,
         // TODO, now we only consider limits for parent for non-labeled
         // resources, should consider labeled resources as well.
         new ResourceLimits(labelManager
@@ -1386,13 +1395,14 @@ public class CapacityScheduler extends
    * New behavior, allocate containers considering multiple nodes
    */
   private CSAssignment allocateContainersOnMultiNodes(
-      PlacementSet<FiCaSchedulerNode> ps) {
+      CandidateNodeSet<FiCaSchedulerNode> candidates) {
     // When this time look at multiple nodes, try schedule if the
     // partition has any available resource or killable resource
     if (getRootQueue().getQueueCapacities().getUsedCapacity(
-        ps.getPartition()) >= 1.0f && preemptionManager.getKillableResource(
-        CapacitySchedulerConfiguration.ROOT, ps.getPartition()) == Resources
-        .none()) {
+        candidates.getPartition()) >= 1.0f
+        && preemptionManager.getKillableResource(
+        CapacitySchedulerConfiguration.ROOT, candidates.getPartition())
+        == Resources.none()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("This node or this node partition doesn't have available or"
             + "killable resource");
@@ -1400,11 +1410,12 @@ public class CapacityScheduler extends
       return null;
     }
 
-    return allocateOrReserveNewContainers(ps, false);
+    return allocateOrReserveNewContainers(candidates, false);
   }
 
   @VisibleForTesting
-  CSAssignment allocateContainersToNode(PlacementSet<FiCaSchedulerNode> ps,
+  CSAssignment allocateContainersToNode(
+      CandidateNodeSet<FiCaSchedulerNode> candidates,
       boolean withNodeHeartbeat) {
     if (rmContext.isWorkPreservingRecoveryEnabled() && !rmContext
         .isSchedulerReadyForAllocatingContainers()) {
@@ -1413,14 +1424,14 @@ public class CapacityScheduler extends
 
     // Backward compatible way to make sure previous behavior which allocation
     // driven by node heartbeat works.
-    FiCaSchedulerNode node = PlacementSetUtils.getSingleNode(ps);
+    FiCaSchedulerNode node = CandidateNodeSetUtils.getSingleNode(candidates);
 
     // We have two different logics to handle allocation on single node / multi
     // nodes.
     if (null != node) {
-      return allocateContainerOnSingleNode(ps, node, withNodeHeartbeat);
-    } else {
-      return allocateContainersOnMultiNodes(ps);
+      return allocateContainerOnSingleNode(candidates, node, withNodeHeartbeat);
+    } else{
+      return allocateContainersOnMultiNodes(candidates);
     }
   }
 
@@ -1759,6 +1770,12 @@ public class CapacityScheduler extends
     }
   }
 
+  @VisibleForTesting
+  @Override
+  public void killContainer(RMContainer container) {
+    markContainerForKillable(container);
+  }
+
   public void markContainerForKillable(
       RMContainer killableContainer) {
     try {
@@ -1921,12 +1938,12 @@ public class CapacityScheduler extends
       writeLock.lock();
       LOG.info("Removing queue: " + queueName);
       CSQueue q = this.getQueue(queueName);
-      if (!(q instanceof ReservationQueue)) {
+      if (!(q instanceof AutoCreatedLeafQueue)) {
         throw new SchedulerDynamicEditException(
             "The queue that we are asked " + "to remove (" + queueName
-                + ") is not a ReservationQueue");
+                + ") is not a AutoCreatedLeafQueue");
       }
-      ReservationQueue disposableLeafQueue = (ReservationQueue) q;
+      AutoCreatedLeafQueue disposableLeafQueue = (AutoCreatedLeafQueue) q;
       // at this point we should have no more apps
       if (disposableLeafQueue.getNumApplications() > 0) {
         throw new SchedulerDynamicEditException(
@@ -1936,9 +1953,11 @@ public class CapacityScheduler extends
                 + " pending apps");
       }
 
-      ((PlanQueue) disposableLeafQueue.getParent()).removeChildQueue(q);
+      ((AbstractManagedParentQueue) disposableLeafQueue.getParent())
+          .removeChildQueue(q);
       this.queueManager.removeQueue(queueName);
-      LOG.info("Removal of ReservationQueue " + queueName + " has succeeded");
+      LOG.info("Removal of AutoCreatedLeafQueue "
+          + queueName + " has succeeded");
     } finally {
       writeLock.unlock();
     }
@@ -1949,25 +1968,28 @@ public class CapacityScheduler extends
       throws SchedulerDynamicEditException {
     try {
       writeLock.lock();
-      if (!(queue instanceof ReservationQueue)) {
+      if (!(queue instanceof AutoCreatedLeafQueue)) {
         throw new SchedulerDynamicEditException(
-            "Queue " + queue.getQueueName() + " is not a ReservationQueue");
+            "Queue " + queue.getQueueName() + " is not a AutoCreatedLeafQueue");
       }
 
-      ReservationQueue newQueue = (ReservationQueue) queue;
+      AutoCreatedLeafQueue newQueue = (AutoCreatedLeafQueue) queue;
 
-      if (newQueue.getParent() == null || !(newQueue
-          .getParent() instanceof PlanQueue)) {
+      if (newQueue.getParent() == null
+          || !(AbstractManagedParentQueue.class.
+          isAssignableFrom(newQueue.getParent().getClass()))) {
         throw new SchedulerDynamicEditException(
             "ParentQueue for " + newQueue.getQueueName()
-                + " is not properly set (should be set and be a PlanQueue)");
+                + " is not properly set"
+                + " (should be set and be a PlanQueue or ManagedParentQueue)");
       }
 
-      PlanQueue parentPlan = (PlanQueue) newQueue.getParent();
+      AbstractManagedParentQueue parentPlan =
+          (AbstractManagedParentQueue) newQueue.getParent();
       String queuename = newQueue.getQueueName();
       parentPlan.addChildQueue(newQueue);
       this.queueManager.addQueue(queuename, newQueue);
-      LOG.info("Creation of ReservationQueue " + newQueue + " succeeded");
+      LOG.info("Creation of AutoCreatedLeafQueue " + newQueue + " succeeded");
     } finally {
       writeLock.unlock();
     }
@@ -1981,21 +2003,22 @@ public class CapacityScheduler extends
       LeafQueue queue = this.queueManager.getAndCheckLeafQueue(inQueue);
       ParentQueue parent = (ParentQueue) queue.getParent();
 
-      if (!(queue instanceof ReservationQueue)) {
+      if (!(queue instanceof AutoCreatedLeafQueue)) {
         throw new SchedulerDynamicEditException(
             "Entitlement can not be" + " modified dynamically since queue "
-                + inQueue + " is not a ReservationQueue");
+                + inQueue + " is not a AutoCreatedLeafQueue");
       }
 
-      if (!(parent instanceof PlanQueue)) {
+      if (parent == null
+          || !(AbstractManagedParentQueue.class.isAssignableFrom(parent.getClass()))) {
         throw new SchedulerDynamicEditException(
-            "The parent of ReservationQueue " + inQueue
-                + " must be an PlanQueue");
+            "The parent of AutoCreatedLeafQueue " + inQueue
+                + " must be a PlanQueue/ManagedParentQueue");
       }
 
-      ReservationQueue newQueue = (ReservationQueue) queue;
+      AutoCreatedLeafQueue newQueue = (AutoCreatedLeafQueue) queue;
 
-      float sumChilds = ((PlanQueue) parent).sumOfChildCapacities();
+      float sumChilds = parent.sumOfChildCapacities();
       float newChildCap =
           sumChilds - queue.getCapacity() + entitlement.getCapacity();
 
@@ -2010,12 +2033,13 @@ public class CapacityScheduler extends
         newQueue.setEntitlement(entitlement);
       } else{
         throw new SchedulerDynamicEditException(
-            "Sum of child queues would exceed 100% for PlanQueue: " + parent
-                .getQueueName());
+            "Sum of child queues should exceed 100% for auto creating parent "
+                + "queue : " + parent.getQueueName());
       }
       LOG.info(
-          "Set entitlement for ReservationQueue " + inQueue + "  to " + queue
-              .getCapacity() + " request was (" + entitlement.getCapacity()
+          "Set entitlement for AutoCreatedLeafQueue " + inQueue
+              + "  to " + queue.getCapacity() +
+              " request was (" + entitlement.getCapacity()
               + ")");
     } finally {
       writeLock.unlock();
@@ -2591,7 +2615,7 @@ public class CapacityScheduler extends
       long maximumApplicationLifetime =
           ((LeafQueue) queue).getMaximumApplicationLifetime();
 
-      // check only for maximum, that's enough because default cann't
+      // check only for maximum, that's enough because default can't
       // exceed maximum
       if (maximumApplicationLifetime <= 0) {
         return lifetimeRequestedByApp;

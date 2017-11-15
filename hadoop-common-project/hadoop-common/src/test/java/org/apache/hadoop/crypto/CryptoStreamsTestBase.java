@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
@@ -102,7 +103,32 @@ public abstract class CryptoStreamsTestBase {
     
     return total;
   }
-  
+
+  private int preadAll(PositionedReadable in, byte[] b, int off, int len)
+      throws IOException {
+    int n = 0;
+    int total = 0;
+    while (n != -1) {
+      total += n;
+      if (total >= len) {
+        break;
+      }
+      n = in.read(total, b, off + total, len - total);
+    }
+
+    return total;
+  }
+
+  private void preadCheck(PositionedReadable in) throws Exception {
+    byte[] result = new byte[dataLen];
+    int n = preadAll(in, result, 0, dataLen);
+
+    Assert.assertEquals(dataLen, n);
+    byte[] expectedData = new byte[n];
+    System.arraycopy(data, 0, expectedData, 0, n);
+    Assert.assertArrayEquals(result, expectedData);
+  }
+
   protected OutputStream getOutputStream(int bufferSize) throws IOException {
     return getOutputStream(bufferSize, key, iv);
   }
@@ -146,7 +172,6 @@ public abstract class CryptoStreamsTestBase {
     // EOF
     n = in.read(result, 0, dataLen);
     Assert.assertEquals(n, -1);
-    in.close();
   }
   
   /** Test crypto writing with different buffer size. */
@@ -729,5 +754,48 @@ public abstract class CryptoStreamsTestBase {
     ((HasEnhancedByteBufferAccess) in).releaseBuffer(buffer);
     
     in.close();
+  }
+
+  /** Test unbuffer. */
+  @Test(timeout=120000)
+  public void testUnbuffer() throws Exception {
+    OutputStream out = getOutputStream(smallBufferSize);
+    writeData(out);
+
+    // Test buffered read
+    try (InputStream in = getInputStream(smallBufferSize)) {
+      // Test unbuffer after buffered read
+      readCheck(in);
+      ((CanUnbuffer) in).unbuffer();
+
+      if (in instanceof Seekable) {
+        // Test buffered read again after unbuffer
+        // Must seek to the beginning first
+        ((Seekable) in).seek(0);
+        readCheck(in);
+      }
+
+      // Test close after unbuffer
+      ((CanUnbuffer) in).unbuffer();
+      // The close will be called when exiting this try-with-resource block
+    }
+
+    // Test pread
+    try (InputStream in = getInputStream(smallBufferSize)) {
+      if (in instanceof PositionedReadable) {
+        PositionedReadable pin = (PositionedReadable) in;
+
+        // Test unbuffer after pread
+        preadCheck(pin);
+        ((CanUnbuffer) in).unbuffer();
+
+        // Test pread again after unbuffer
+        preadCheck(pin);
+
+        // Test close after unbuffer
+        ((CanUnbuffer) in).unbuffer();
+        // The close will be called when exiting this try-with-resource block
+      }
+    }
   }
 }

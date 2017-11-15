@@ -38,7 +38,6 @@ module.exports = function(environment) {
       'connect-src': "* 'self'",
       'child-src': "'self' 'unsafe-inline'",
       'style-src': "'self' 'unsafe-inline'",
-      'script-src': "'self' 'unsafe-inline'"
     }
   };
 

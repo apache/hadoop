@@ -36,8 +36,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +47,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.QueueACL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
 
@@ -69,7 +69,8 @@ import com.google.common.base.Charsets;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class JobSubmitter {
-  protected static final Log LOG = LogFactory.getLog(JobSubmitter.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(JobSubmitter.class);
   private static final ObjectReader READER =
       new ObjectMapper().readerFor(Map.class);
   private static final String SHUFFLE_KEYGEN_ALGORITHM = "HmacSHA1";
@@ -298,9 +299,7 @@ class JobSubmitter {
   private void printTokens(JobID jobId,
       Credentials credentials) throws IOException {
     LOG.info("Submitting tokens for job: " + jobId);
-    for (Token<?> token: credentials.getAllTokens()) {
-      LOG.info(token);
-    }
+    LOG.info("Executing with tokens: {}", credentials.getAllTokens());
   }
 
   @SuppressWarnings("unchecked")

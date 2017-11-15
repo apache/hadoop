@@ -20,14 +20,15 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.net.InetAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ipc.Server;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 public class HSAuditLogger {
-  private static final Log LOG = LogFactory.getLog(HSAuditLogger.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HSAuditLogger.class);
 
   enum Keys {
     USER, OPERATION, TARGET, RESULT, IP, PERMISSIONS, DESCRIPTION

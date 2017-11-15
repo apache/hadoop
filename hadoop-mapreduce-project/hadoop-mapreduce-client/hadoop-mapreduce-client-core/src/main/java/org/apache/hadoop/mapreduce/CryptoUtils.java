@@ -22,8 +22,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +35,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.LimitInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides utilities to make it easier to work with Cryptographic
@@ -47,7 +47,7 @@ import org.apache.hadoop.util.LimitInputStream;
 @InterfaceStability.Unstable
 public class CryptoUtils {
 
-  private static final Log LOG = LogFactory.getLog(CryptoUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
 
   public static boolean isEncryptedSpillEnabled(Configuration conf) {
     return conf.getBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA,

@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.util.resource;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -32,6 +30,8 @@ import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -62,6 +62,10 @@ public class ResourceUtils {
   private static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
       Pattern.compile("^([0-9]+) ?([a-zA-Z]*)$");
 
+  private static final Pattern RESOURCE_NAME_PATTERN = Pattern.compile(
+      "^(((\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?\\.)*"
+          + "\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?)/)?\\p{Alpha}([\\w.-]*)$");
+
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
       new ConcurrentHashMap<String, Integer>();
@@ -71,7 +75,7 @@ public class ResourceUtils {
   private static volatile Map<String, ResourceInformation> readOnlyNodeResources;
   private static volatile int numKnownResourceTypes = -1;
 
-  static final Log LOG = LogFactory.getLog(ResourceUtils.class);
+  static final Logger LOG = LoggerFactory.getLogger(ResourceUtils.class);
 
   private ResourceUtils() {
   }
@@ -138,73 +142,60 @@ public class ResourceUtils {
     }
   }
 
-  private static void setMinimumAllocationForMandatoryResources(
+  private static void setAllocationForMandatoryResources(
       Map<String, ResourceInformation> res, Configuration conf) {
-    String[][] resourceTypesKeys = {
-        {ResourceInformation.MEMORY_MB.getName(),
-            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
-            ResourceInformation.MEMORY_MB.getName()},
-        {ResourceInformation.VCORES.getName(),
-            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES),
-            ResourceInformation.VCORES.getName()}};
-    for (String[] arr : resourceTypesKeys) {
-      String resourceTypesKey =
-          YarnConfiguration.RESOURCE_TYPES + "." + arr[0] + MINIMUM_ALLOCATION;
-      long minimumResourceTypes = conf.getLong(resourceTypesKey, -1);
-      long minimumConf = conf.getLong(arr[1], -1);
-      long minimum;
-      if (minimumResourceTypes != -1) {
-        minimum = minimumResourceTypes;
-        if (minimumConf != -1) {
-          LOG.warn("Using minimum allocation for memory specified in "
-              + "resource-types config file with key "
-              + minimumResourceTypes + ", ignoring minimum specified using "
-              + arr[1]);
-        }
-      } else {
-        minimum = conf.getLong(arr[1], Long.parseLong(arr[2]));
-      }
-      ResourceInformation ri = res.get(arr[3]);
-      ri.setMinimumAllocation(minimum);
-    }
+    ResourceInformation mem = res.get(ResourceInformation.MEMORY_MB.getName());
+    mem.setMinimumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+            mem.getName() + MINIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
+    mem.setMaximumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+            mem.getName() + MAXIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+
+    ResourceInformation cpu = res.get(ResourceInformation.VCORES.getName());
+
+    cpu.setMinimumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+            cpu.getName() + MINIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES));
+    cpu.setMaximumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+        cpu.getName() + MAXIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES));
   }
 
-  private static void setMaximumAllocationForMandatoryResources(
-      Map<String, ResourceInformation> res, Configuration conf) {
-    String[][] resourceTypesKeys = {
-        {ResourceInformation.MEMORY_MB.getName(),
-            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB),
-            ResourceInformation.MEMORY_MB.getName()},
-        {ResourceInformation.VCORES.getName(),
-            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES),
-            ResourceInformation.VCORES.getName()}};
-    for (String[] arr : resourceTypesKeys) {
-      String resourceTypesKey =
-          YarnConfiguration.RESOURCE_TYPES + "." + arr[0] + MAXIMUM_ALLOCATION;
-      long maximumResourceTypes = conf.getLong(resourceTypesKey, -1);
-      long maximumConf = conf.getLong(arr[1], -1);
-      long maximum;
-      if (maximumResourceTypes != -1) {
-        maximum = maximumResourceTypes;
-        if (maximumConf != -1) {
-          LOG.warn("Using maximum allocation for memory specified in "
-              + "resource-types config file with key "
-              + maximumResourceTypes + ", ignoring maximum specified using "
-              + arr[1]);
-        }
-      } else {
-        maximum = conf.getLong(arr[1], Long.parseLong(arr[2]));
-      }
-      ResourceInformation ri = res.get(arr[3]);
-      ri.setMaximumAllocation(maximum);
+  private static long getAllocation(Configuration conf,
+      String resourceTypesKey, String schedulerKey, long schedulerDefault) {
+    long value = conf.getLong(resourceTypesKey, -1L);
+    if (value == -1) {
+      LOG.debug("Mandatory Resource '" + resourceTypesKey + "' is not "
+          + "configured in resource-types config file. Setting allocation "
+          + "specified using '" + schedulerKey + "'");
+      value = conf.getLong(schedulerKey, schedulerDefault);
+    }
+    return value;
+  }
+
+  @VisibleForTesting
+  static void validateNameOfResourceNameAndThrowException(String resourceName)
+      throws YarnRuntimeException {
+    Matcher matcher = RESOURCE_NAME_PATTERN.matcher(resourceName);
+    if (!matcher.matches()) {
+      String message = String.format(
+          "'%s' is not a valid resource name. A valid resource name must"
+              + " begin with a letter and contain only letters, numbers, "
+              + "and any of: '.', '_', or '-'. A valid resource name may also"
+              + " be optionally preceded by a name space followed by a slash."
+              + " A valid name space consists of period-separated groups of"
+              + " letters, numbers, and dashes.",
+          resourceName);
+      throw new YarnRuntimeException(message);
     }
   }
 
@@ -246,11 +237,15 @@ public class ResourceUtils {
       }
     }
 
+    // Validate names of resource information map.
+    for (String name : resourceInformationMap.keySet()) {
+      validateNameOfResourceNameAndThrowException(name);
+    }
+
     checkMandatoryResources(resourceInformationMap);
     addMandatoryResources(resourceInformationMap);
 
-    setMinimumAllocationForMandatoryResources(resourceInformationMap, conf);
-    setMaximumAllocationForMandatoryResources(resourceInformationMap, conf);
+    setAllocationForMandatoryResources(resourceInformationMap, conf);
 
     initializeResourcesFromResourceInformationMap(resourceInformationMap);
   }
@@ -267,6 +262,7 @@ public class ResourceUtils {
     updateKnownResources();
     updateResourceTypeIndex();
     initializedResources = true;
+    numKnownResourceTypes = resourceTypes.size();
   }
 
   private static void updateKnownResources() {
@@ -341,17 +337,14 @@ public class ResourceUtils {
     if (!initializedResources) {
       synchronized (ResourceUtils.class) {
         if (!initializedResources) {
-          if (conf == null) {
-            conf = new YarnConfiguration();
+          Configuration resConf = conf;
+
+          if (resConf == null) {
+            resConf = new YarnConfiguration();
           }
-          try {
-            addResourcesFileToConf(resourceFile, conf);
-          } catch (FileNotFoundException fe) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Unable to find '" + resourceFile + "'.");
-            }
-          }
-          initializeResourcesMap(conf);
+
+          addResourcesFileToConf(resourceFile, resConf);
+          initializeResourcesMap(resConf);
         }
       }
     }
@@ -388,7 +381,7 @@ public class ResourceUtils {
   }
 
   private static void addResourcesFileToConf(String resourceFile,
-      Configuration conf) throws FileNotFoundException {
+      Configuration conf) {
     try {
       InputStream ris = getConfInputStream(resourceFile, conf);
       if (LOG.isDebugEnabled()) {
@@ -396,15 +389,11 @@ public class ResourceUtils {
       }
       conf.addResource(ris);
     } catch (FileNotFoundException fe) {
-      throw fe;
-    } catch (IOException ie) {
-      LOG.fatal("Exception trying to read resource types configuration '"
-          + resourceFile + "'.", ie);
-      throw new YarnRuntimeException(ie);
-    } catch (YarnException ye) {
-      LOG.fatal("YARN Exception trying to read resource types configuration '"
-          + resourceFile + "'.", ye);
-      throw new YarnRuntimeException(ye);
+      LOG.info("Unable to find '" + resourceFile + "'.");
+    } catch (IOException | YarnException ex) {
+      LOG.error("Exception trying to read resource types configuration '"
+          + resourceFile + "'.", ex);
+      throw new YarnRuntimeException(ex);
     }
   }
 
@@ -453,8 +442,7 @@ public class ResourceUtils {
               conf);
           addMandatoryResources(nodeResources);
           checkMandatoryResources(nodeResources);
-          setMinimumAllocationForMandatoryResources(nodeResources, conf);
-          setMaximumAllocationForMandatoryResources(nodeResources, conf);
+          setAllocationForMandatoryResources(nodeResources, conf);
           readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
           initializedNodeResources = true;
         }
@@ -466,22 +454,19 @@ public class ResourceUtils {
   private static Map<String, ResourceInformation> initializeNodeResourceInformation(
       Configuration conf) {
     Map<String, ResourceInformation> nodeResources = new HashMap<>();
-    try {
-      addResourcesFileToConf(
-          YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE, conf);
-      for (Map.Entry<String, String> entry : conf) {
-        String key = entry.getKey();
-        String value = entry.getValue();
-        if (key.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
-          addResourceInformation(key, value, nodeResources);
-        }
-      }
-    } catch (FileNotFoundException fe) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Couldn't find node resources file: "
-            + YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE);
+
+    addResourcesFileToConf(YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE,
+        conf);
+
+    for (Map.Entry<String, String> entry : conf) {
+      String key = entry.getKey();
+      String value = entry.getValue();
+
+      if (key.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
+        addResourceInformation(key, value, nodeResources);
       }
     }
+
     return nodeResources;
   }
 

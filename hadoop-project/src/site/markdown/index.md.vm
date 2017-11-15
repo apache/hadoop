@@ -225,8 +225,26 @@ cluster for existing HDFS clients.
 
 See [HDFS-10467](https://issues.apache.org/jira/browse/HADOOP-10467) and the
 HDFS Router-based Federation
-[documentation](./hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.md) for
+[documentation](./hadoop-project-dist/hadoop-hdfs/HDFSRouterFederation.html) for
 more details.
+
+API-based configuration of Capacity Scheduler queue configuration
+----------------------
+
+The OrgQueue extension to the capacity scheduler provides a programmatic way to
+change configurations by providing a REST API that users can call to modify
+queue configurations. This enables automation of queue configuration management
+by administrators in the queue's `administer_queue` ACL.
+
+See [YARN-5734](https://issues.apache.org/jira/browse/YARN-5734) and the
+[Capacity Scheduler documentation](./hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html) for more information.
+
+YARN Resource Types
+---------------
+
+The YARN resource model has been generalized to support user-defined countable resource types beyond CPU and memory. For instance, the cluster administrator could define resources like GPUs, software licenses, or locally-attached storage. YARN tasks can then be scheduled based on the availability of these resources.
+
+See [YARN-3926](https://issues.apache.org/jira/browse/YARN-3926) and the [YARN resource model documentation](./hadoop-yarn/hadoop-yarn-site/ResourceModel.html) for more information.
 
 Getting Started
 ===============

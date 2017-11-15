@@ -27,13 +27,13 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.jobcontrol.Job;
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob.State;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 
  *  This class encapsulates a set of MapReduce jobs and its dependency.
@@ -55,7 +55,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class JobControl implements Runnable {
-  private static final Log LOG = LogFactory.getLog(JobControl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobControl.class);
 
   // The thread can be in one of the following state
   public enum ThreadState {RUNNING, SUSPENDED,STOPPED, STOPPING, READY};

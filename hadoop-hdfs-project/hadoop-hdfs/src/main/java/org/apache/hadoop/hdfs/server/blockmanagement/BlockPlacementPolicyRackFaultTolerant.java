@@ -62,10 +62,17 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
    * randomly.
    * 2. If total replica expected is bigger than numOfRacks, it choose:
    *  2a. Fill each rack exactly (maxNodesPerRack-1) replicas.
-   *  2b. For some random racks, place one more replica to each one of them, until
-   *  numOfReplicas have been chosen. <br>
-   * In the end, the difference of the numbers of replicas for each two racks
-   * is no more than 1.
+   *  2b. For some random racks, place one more replica to each one of them,
+   *  until numOfReplicas have been chosen. <br>
+   * 3. If after step 2, there are still replicas not placed (due to some
+   * racks have fewer datanodes than maxNodesPerRack), the rest of the replicas
+   * is placed evenly on the rest of the racks who have Datanodes that have
+   * not been placed a replica.
+   * 4. If after step 3, there are still replicas not placed. A
+   * {@link NotEnoughReplicasException} is thrown.
+   * <p>
+   * For normal setups, step 2 would suffice. So in the end, the difference
+   * of the numbers of replicas for each two racks is no more than 1.
    * Either way it always prefer local storage.
    * @return local node of writer
    */
@@ -132,24 +139,63 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageTypes);
     } catch (NotEnoughReplicasException e) {
-      LOG.debug("Only able to place {} of {} (maxNodesPerRack={}) nodes " +
-              "evenly across racks, falling back to uneven placement.",
-          results.size(), numOfReplicas, maxNodesPerRack);
+      LOG.warn("Only able to place {} of total expected {}"
+              + " (maxNodesPerRack={}, numOfReplicas={}) nodes "
+              + "evenly across racks, falling back to evenly place on the "
+              + "remaining racks. This may not guarantee rack-level fault "
+              + "tolerance. Please check if the racks are configured properly.",
+          results.size(), totalReplicaExpected, maxNodesPerRack, numOfReplicas);
       LOG.debug("Caught exception was:", e);
+      chooseEvenlyFromRemainingRacks(writer, excludedNodes, blocksize,
+          maxNodesPerRack, results, avoidStaleNodes, storageTypes,
+          totalReplicaExpected, e);
+
+    }
+
+    return writer;
+  }
+
+  /**
+   * Choose as evenly as possible from the racks which have available datanodes.
+   */
+  private void chooseEvenlyFromRemainingRacks(Node writer,
+      Set<Node> excludedNodes, long blocksize, int maxNodesPerRack,
+      List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
+      EnumMap<StorageType, Integer> storageTypes, int totalReplicaExpected,
+      NotEnoughReplicasException e) throws NotEnoughReplicasException {
+    int numResultsOflastChoose = 0;
+    NotEnoughReplicasException lastException = e;
+    int bestEffortMaxNodesPerRack = maxNodesPerRack;
+    while (results.size() != totalReplicaExpected &&
+        numResultsOflastChoose != results.size()) {
       // Exclude the chosen nodes
+      final Set<Node> newExcludeNodes = new HashSet<>();
       for (DatanodeStorageInfo resultStorage : results) {
         addToExcludedNodes(resultStorage.getDatanodeDescriptor(),
-            excludedNodes);
+            newExcludeNodes);
       }
 
       LOG.trace("Chosen nodes: {}", results);
       LOG.trace("Excluded nodes: {}", excludedNodes);
-      numOfReplicas = totalReplicaExpected - results.size();
-      chooseOnce(numOfReplicas, writer, excludedNodes, blocksize,
-          totalReplicaExpected, results, avoidStaleNodes, storageTypes);
+      LOG.trace("New Excluded nodes: {}", newExcludeNodes);
+      final int numOfReplicas = totalReplicaExpected - results.size();
+      numResultsOflastChoose = results.size();
+      try {
+        chooseOnce(numOfReplicas, writer, newExcludeNodes, blocksize,
+            ++bestEffortMaxNodesPerRack, results, avoidStaleNodes,
+            storageTypes);
+      } catch (NotEnoughReplicasException nere) {
+        lastException = nere;
+      } finally {
+        excludedNodes.addAll(newExcludeNodes);
+      }
     }
 
-    return writer;
+    if (numResultsOflastChoose != totalReplicaExpected) {
+      LOG.debug("Best effort placement failed: expecting {} replicas, only "
+          + "chose {}.", totalReplicaExpected, numResultsOflastChoose);
+      throw lastException;
+    }
   }
 
   /**

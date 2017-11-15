@@ -35,7 +35,7 @@ export default DS.Model.extend({
 
   nodeLabelsAsString: function() {
     var labels = this.get("nodeLabels");
-    var labelToReturn = "";
+    var labelToReturn = "default";
     // Only one label per node supported.
     if (labels && labels.length > 0) {
       labelToReturn = labels[0];

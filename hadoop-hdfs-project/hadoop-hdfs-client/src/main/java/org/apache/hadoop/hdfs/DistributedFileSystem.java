@@ -77,6 +77,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
@@ -84,7 +85,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
-import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -1211,8 +1211,7 @@ public class DistributedFileSystem extends FileSystem {
         T next;
         HdfsFileStatus fileStat = thisListing.getPartialListing()[i++];
         if (needLocation) {
-          next = (T)((HdfsLocatedFileStatus)fileStat)
-              .makeQualifiedLocated(getUri(), p);
+          next = (T)fileStat.makeQualifiedLocated(getUri(), p);
         } else {
           next = (T)fileStat.makeQualified(getUri(), p);
         }
@@ -2676,7 +2675,7 @@ public class DistributedFileSystem extends FileSystem {
    * @return all erasure coding policies supported by this file system.
    * @throws IOException
    */
-  public Collection<ErasureCodingPolicy> getAllErasureCodingPolicies()
+  public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies()
       throws IOException {
     return Arrays.asList(dfs.getErasureCodingPolicies());
   }

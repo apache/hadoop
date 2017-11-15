@@ -34,6 +34,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import com.sun.jersey.spi.resource.Singleton;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
 import org.apache.hadoop.resourceestimator.common.api.ResourceSkyline;
@@ -56,60 +57,58 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import com.google.inject.Singleton;
 
 /**
  * Resource Estimator Service which provides a set of REST APIs for users to
  * use the estimation service.
  */
-@Singleton @Path("/resourceestimator") public class ResourceEstimatorService {
+@Singleton
+@Path("/resourceestimator") public class ResourceEstimatorService {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ResourceEstimatorService.class);
-  private static SkylineStore skylineStore;
-  private static Solver solver;
-  private static LogParser logParser;
-  private static LogParserUtil logParserUtil = new LogParserUtil();
-  private static Configuration config;
-  private static Gson gson;
-  private static Type rleType;
-  private static Type skylineStoreType;
+  private final SkylineStore skylineStore;
+  private final Solver solver;
+  private final LogParser logParser;
+  private final LogParserUtil logParserUtil = new LogParserUtil();
+  private final Configuration config;
+  private final Gson gson;
+  private final Type rleType;
+  private final Type skylineStoreType;
 
   public ResourceEstimatorService() throws ResourceEstimatorException {
-    if (skylineStore == null) {
-      try {
-        config = new Configuration();
-        config.addResource(ResourceEstimatorConfiguration.CONFIG_FILE);
-        skylineStore = ResourceEstimatorUtil.createProviderInstance(config,
-            ResourceEstimatorConfiguration.SKYLINESTORE_PROVIDER,
-            ResourceEstimatorConfiguration.DEFAULT_SKYLINESTORE_PROVIDER,
-            SkylineStore.class);
-        logParser = ResourceEstimatorUtil.createProviderInstance(config,
-            ResourceEstimatorConfiguration.TRANSLATOR_PROVIDER,
-            ResourceEstimatorConfiguration.DEFAULT_TRANSLATOR_PROVIDER,
-            LogParser.class);
-        logParser.init(config, skylineStore);
-        logParserUtil.setLogParser(logParser);
-        solver = ResourceEstimatorUtil.createProviderInstance(config,
-            ResourceEstimatorConfiguration.SOLVER_PROVIDER,
-            ResourceEstimatorConfiguration.DEFAULT_SOLVER_PROVIDER,
-            Solver.class);
-        solver.init(config, skylineStore);
-      } catch (Exception ex) {
-        LOGGER
-            .error("Server initialization failed due to: {}", ex.getMessage());
-        throw new ResourceEstimatorException(ex.getMessage(), ex);
-      }
-      gson = new GsonBuilder()
-          .registerTypeAdapter(Resource.class, new ResourceSerDe())
-          .registerTypeAdapter(RLESparseResourceAllocation.class,
-              new RLESparseResourceAllocationSerDe())
-          .enableComplexMapKeySerialization().create();
-      rleType = new TypeToken<RLESparseResourceAllocation>() {
-      }.getType();
-      skylineStoreType =
-          new TypeToken<Map<RecurrenceId, List<ResourceSkyline>>>() {
-          }.getType();
+    try {
+      config = new Configuration();
+      config.addResource(ResourceEstimatorConfiguration.CONFIG_FILE);
+      skylineStore = ResourceEstimatorUtil.createProviderInstance(config,
+          ResourceEstimatorConfiguration.SKYLINESTORE_PROVIDER,
+          ResourceEstimatorConfiguration.DEFAULT_SKYLINESTORE_PROVIDER,
+          SkylineStore.class);
+      logParser = ResourceEstimatorUtil.createProviderInstance(config,
+          ResourceEstimatorConfiguration.TRANSLATOR_PROVIDER,
+          ResourceEstimatorConfiguration.DEFAULT_TRANSLATOR_PROVIDER,
+          LogParser.class);
+      logParser.init(config, skylineStore);
+      logParserUtil.setLogParser(logParser);
+      solver = ResourceEstimatorUtil.createProviderInstance(config,
+          ResourceEstimatorConfiguration.SOLVER_PROVIDER,
+          ResourceEstimatorConfiguration.DEFAULT_SOLVER_PROVIDER,
+          Solver.class);
+      solver.init(config, skylineStore);
+    } catch (Exception ex) {
+      LOGGER
+          .error("Server initialization failed due to: {}", ex.getMessage());
+      throw new ResourceEstimatorException(ex.getMessage(), ex);
     }
+    gson = new GsonBuilder()
+        .registerTypeAdapter(Resource.class, new ResourceSerDe())
+        .registerTypeAdapter(RLESparseResourceAllocation.class,
+            new RLESparseResourceAllocationSerDe())
+        .enableComplexMapKeySerialization().create();
+    rleType = new TypeToken<RLESparseResourceAllocation>() {
+    }.getType();
+    skylineStoreType =
+        new TypeToken<Map<RecurrenceId, List<ResourceSkyline>>>() {
+        }.getType();
   }
 
   /**
@@ -191,9 +190,6 @@ import com.google.inject.Singleton;
     final String skyline = gson.toJson(jobHistory, skylineStoreType);
     LOGGER
         .debug("Query the skyline store for recurrenceId: {}." + recurrenceId);
-
-    recurrenceId = new RecurrenceId("*", "*");
-    jobHistory = skylineStore.getHistory(recurrenceId);
 
     return skyline;
   }

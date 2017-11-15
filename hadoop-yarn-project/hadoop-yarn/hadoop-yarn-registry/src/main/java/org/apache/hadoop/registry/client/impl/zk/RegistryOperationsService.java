@@ -107,8 +107,10 @@ public class RegistryOperationsService extends CuratorService
     validatePath(path);
     // validate the record before putting it
     RegistryTypeUtils.validateServiceRecord(path, record);
-    LOG.info("Bound at {} : {}", path, record);
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Bound at {} : ServiceRecord = {}", path, record);
+    }
     CreateMode mode = CreateMode.PERSISTENT;
     byte[] bytes = serviceRecordMarshal.toBytes(record);
     zkSet(path, mode, bytes, getClientAcls(),

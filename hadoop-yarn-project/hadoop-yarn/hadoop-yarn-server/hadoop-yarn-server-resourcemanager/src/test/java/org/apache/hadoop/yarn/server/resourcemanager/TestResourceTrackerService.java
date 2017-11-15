@@ -2088,17 +2088,17 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         NMContainerStatus.newInstance(c1, 1, ContainerState.RUNNING,
             Resource.newInstance(1024, 1), "Dummy Queued OC",
             ContainerExitStatus.INVALID, Priority.newInstance(5), 1234, "",
-            ExecutionType.OPPORTUNISTIC);
+            ExecutionType.OPPORTUNISTIC, -1);
     NMContainerStatus runningOpp =
         NMContainerStatus.newInstance(c2, 1, ContainerState.RUNNING,
             Resource.newInstance(2048, 1), "Dummy Running OC",
             ContainerExitStatus.INVALID, Priority.newInstance(6), 1234, "",
-            ExecutionType.OPPORTUNISTIC);
+            ExecutionType.OPPORTUNISTIC, -1);
     NMContainerStatus runningGuar =
         NMContainerStatus.newInstance(c3, 1, ContainerState.RUNNING,
             Resource.newInstance(2048, 1), "Dummy Running GC",
             ContainerExitStatus.INVALID, Priority.newInstance(6), 1234, "",
-            ExecutionType.GUARANTEED);
+            ExecutionType.GUARANTEED, -1);
     req.setContainerStatuses(Arrays.asList(queuedOpp, runningOpp, runningGuar));
     // trying to register a invalid node.
     RegisterNodeManagerResponse response =

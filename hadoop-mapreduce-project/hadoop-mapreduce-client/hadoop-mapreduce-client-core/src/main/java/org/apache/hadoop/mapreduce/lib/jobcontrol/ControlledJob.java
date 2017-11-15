@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +32,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** 
  *  This class encapsulates a MapReduce job and its dependency. It monitors 
@@ -49,7 +49,8 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ControlledJob {
-  private static final Log LOG = LogFactory.getLog(ControlledJob.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ControlledJob.class);
 
   // A job will be in one of the following states
   public enum State {SUCCESS, WAITING, RUNNING, READY, FAILED,

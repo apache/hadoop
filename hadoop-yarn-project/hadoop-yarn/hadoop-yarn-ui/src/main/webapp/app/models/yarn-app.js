@@ -52,6 +52,7 @@ export default DS.Model.extend({
   currentAppAttemptId: DS.attr('string'),
   remainingTimeoutInSeconds: DS.attr('number'),
   applicationExpiryTime: DS.attr('string'),
+  resourceRequests: DS.attr('array'),
 
   isFailed: function() {
     return this.get('finalStatus') === "FAILED";

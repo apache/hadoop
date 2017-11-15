@@ -34,8 +34,6 @@ import static org.junit.Assert.*;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,6 +54,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unchecked")
 public class TestFileOutputCommitter {
@@ -67,8 +67,8 @@ public class TestFileOutputCommitter {
   private final static String SUB_DIR = "SUB_DIR";
   private final static Path OUT_SUB_DIR = new Path(outDir, SUB_DIR);
 
-  private static final Log LOG =
-      LogFactory.getLog(TestFileOutputCommitter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileOutputCommitter.class);
 
   // A random task attempt id for testing.
   private static final String attempt = "attempt_200707121733_0001_m_000000_0";
