@@ -132,6 +132,48 @@
   {{/if}}
 </div>
 
+{{#unless model.serviceName}}
+  <div class="row">
+    <div class="col-md-12 container-fluid">
+      <div class="panel panel-default">
+        <div class="panel-heading">Outstanding Resource Requests</div>
+        <table class="display table table-striped table-bordered"
+              cellspacing="0" width="100%">
+          <thead>
+          <tr>
+            <th>Scheduler Key</th>
+            <th>Resource Name</th>
+            <th>Capability</th>
+            <th># Containers</th>
+            <th>Relax Locality</th>
+            <th>Node Label Expression</th>
+          </tr>
+          </thead>
+          <tbody>
+          {{#each model.app.resourceRequests as |request|}}
+            <tr>
+              <td>{{request.priority}}</td>
+              <td>{{request.resourceName}}</td>
+              <td>&lt;Memory:{{request.capability.memory}};vCores:{{request.capability.virtualCores}}&gt;</td>
+              <td>{{request.numContainers}}</td>
+              <td>{{request.relaxLocality}}</td>
+              <td>
+                {{#if request.nodeLabelExpression}}
+                  {{request.nodeLabelExpression}}
+                {{else}}
+                  N/A
+                {{/if}}
+              </td>
+            </tr>
+          {{else}}
+            <div class="panel-body">No data available!</div>
+          {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{{/unless}}
 <div class="row">
   <div class="col-md-12 container-fluid">
     <div class="panel panel-default">
