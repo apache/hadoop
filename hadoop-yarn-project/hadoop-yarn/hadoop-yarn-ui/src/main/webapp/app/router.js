@@ -31,6 +31,7 @@ Router.map(function() {
   this.route('yarn-nodes', function(){
     this.route('table');
     this.route('heatmap');
+    this.route('status');
   });
   this.route('yarn-queue', {path: '/yarn-queue/:queue_name'}, function() {
     this.route('info');

@@ -15,14 +15,21 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --}}
+
+{{#if model.clusterMetrics}}
 <div class="row clearfix">
-  <div class="col-md-12 yarn-applications-container">
-    {{#if model.nodes}}
-      {{em-table columns=columns rows=model.nodes definition=tableDefinition}}
-    {{else}}
-      <h4 align="center">No nodes found on this cluster</h4>
-    {{/if}}
+  <div class="col-lg-6">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        Node Managers
+      </div>
+      <div class="container-fluid" id="nodes-donut-chart">
+        {{donut-chart data=model.clusterMetrics.firstObject.getNodesDataForDonutChart showLabels=true parentId="nodes-donut-chart"
+        ratio=0.6 maxHeight=350 colorTargets="good error warn"}}
+      </div>
+    </div>
   </div>
 </div>
+{{/if}}
 
 {{outlet}}
