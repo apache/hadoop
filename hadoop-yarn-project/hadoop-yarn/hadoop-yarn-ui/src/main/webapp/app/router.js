@@ -51,12 +51,12 @@ Router.map(function() {
 
   this.route('yarn-deploy-service');
   this.route('cluster-overview');
-  this.route('yarn-app', function() {
-    this.route('info', {path: '/:app_id/info'});
-    this.route('attempts', {path: '/:app_id/attempts'});
-    this.route('components', {path: '/:app_id/components'});
-    this.route('charts', {path: '/:app_id/charts'});
-    this.route('configs', {path: '/:app_id/configs'});
+  this.route('yarn-app', { path: '/yarn-app/:app_id' }, function() {
+    this.route('info');
+    this.route('attempts');
+    this.route('components');
+    this.route('charts');
+    this.route('configs');
   });
   this.route('yarn-component-instances', function() {
     this.route('info', {path: '/:component_name/info'});
