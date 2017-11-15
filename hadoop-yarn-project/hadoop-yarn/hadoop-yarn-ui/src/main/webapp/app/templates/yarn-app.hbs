@@ -18,46 +18,37 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
-<div class="col-md-12 container-fluid">
-  <div class="row">
-
-    <div class="col-md-2 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          {{#if serviceName}}
-            Service
-          {{else}}
-            Application
-          {{/if}}
-        </div>
-        <div class="panel-body">
-          <ul class="nav nav-pills nav-stacked" id="stacked-menu">
-            <ul class="nav nav-pills nav-stacked collapse in">
-              {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
-                {{#link-to 'yarn-app.info' appId (query-params service=serviceName)}}Information{{/link-to}}
+<div class="panel-group">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <div class="clearfix">
+        <ul class="nav nav-pills">
+          <ul class="nav nav-pills collapse in">
+            {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
+              {{#link-to 'yarn-app.info' appId (query-params service=serviceName)}}Information{{/link-to}}
+            {{/link-to}}
+            {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
+              {{#link-to 'yarn-app.attempts' appId (query-params service=serviceName)}}Attempts List{{/link-to}}
+            {{/link-to}}
+            {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
+              {{#link-to 'yarn-app.charts' appId (query-params service=serviceName)}}Resource Usage{{/link-to}}
+            {{/link-to}}
+            {{#if serviceName}}
+              {{#link-to 'yarn-app.components' tagName="li" class=(if (eq target.currentPath 'yarn-app.components') "active")}}
+                {{#link-to 'yarn-app.components' appId (query-params service=serviceName)}}Components{{/link-to}}
               {{/link-to}}
-              {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
-                {{#link-to 'yarn-app.attempts' appId (query-params service=serviceName)}}Attempts List{{/link-to}}
+              {{#link-to 'yarn-app.configs' tagName="li" class=(if (eq target.currentPath 'yarn-app.configs') "active")}}
+                {{#link-to 'yarn-app.configs' appId (query-params service=serviceName)}}Configurations &amp; Metrics{{/link-to}}
               {{/link-to}}
-              {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
-                {{#link-to 'yarn-app.charts' appId (query-params service=serviceName)}}Resource Usage{{/link-to}}
-              {{/link-to}}
-              {{#if serviceName}}
-                {{#link-to 'yarn-app.components' tagName="li" class=(if (eq target.currentPath 'yarn-app.components') "active")}}
-                  {{#link-to 'yarn-app.components' appId (query-params service=serviceName)}}Components{{/link-to}}
-                {{/link-to}}
-                {{#link-to 'yarn-app.configs' tagName="li" class=(if (eq target.currentPath 'yarn-app.configs') "active")}}
-                  {{#link-to 'yarn-app.configs' appId (query-params service=serviceName)}}Configurations &amp; Metrics{{/link-to}}
-                {{/link-to}}
-              {{/if}}
-            </ul>
+            {{/if}}
           </ul>
-        </div>
+        </ul>
       </div>
     </div>
-
-    <div class="col-md-10 container-fluid">
+    <div class="panel-body">
       {{outlet}}
     </div>
   </div>
 </div>
+
+
