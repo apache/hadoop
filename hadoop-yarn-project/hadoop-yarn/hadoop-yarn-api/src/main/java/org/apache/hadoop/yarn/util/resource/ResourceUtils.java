@@ -143,74 +143,44 @@ public class ResourceUtils {
     }
   }
 
-  private static void setMinimumAllocationForMandatoryResources(
+  private static void setAllocationForMandatoryResources(
       Map<String, ResourceInformation> res, Configuration conf) {
-    String[][] resourceTypesKeys = {
-        {ResourceInformation.MEMORY_MB.getName(),
-            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
-            ResourceInformation.MEMORY_MB.getName()},
-        {ResourceInformation.VCORES.getName(),
-            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES),
-            ResourceInformation.VCORES.getName()}};
-    for (String[] arr : resourceTypesKeys) {
-      String resourceTypesKey =
-          YarnConfiguration.RESOURCE_TYPES + "." + arr[0] + MINIMUM_ALLOCATION;
-      long minimumResourceTypes = conf.getLong(resourceTypesKey, -1);
-      long minimumConf = conf.getLong(arr[1], -1);
-      long minimum;
-      if (minimumResourceTypes != -1) {
-        minimum = minimumResourceTypes;
-        if (minimumConf != -1) {
-          LOG.warn("Using minimum allocation for memory specified in "
-              + "resource-types config file with key "
-              + minimumResourceTypes + ", ignoring minimum specified using "
-              + arr[1]);
-        }
-      } else {
-        minimum = conf.getLong(arr[1], Long.parseLong(arr[2]));
-      }
-      ResourceInformation ri = res.get(arr[3]);
-      ri.setMinimumAllocation(minimum);
-    }
+    ResourceInformation mem = res.get(ResourceInformation.MEMORY_MB.getName());
+    mem.setMinimumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+            mem.getName() + MINIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
+    mem.setMaximumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+            mem.getName() + MAXIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+
+    ResourceInformation cpu = res.get(ResourceInformation.VCORES.getName());
+
+    cpu.setMinimumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+            cpu.getName() + MINIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES));
+    cpu.setMaximumAllocation(getAllocation(conf,
+        YarnConfiguration.RESOURCE_TYPES + "." +
+        cpu.getName() + MAXIMUM_ALLOCATION,
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES));
   }
 
-  private static void setMaximumAllocationForMandatoryResources(
-      Map<String, ResourceInformation> res, Configuration conf) {
-    String[][] resourceTypesKeys = {
-        {ResourceInformation.MEMORY_MB.getName(),
-            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB),
-            ResourceInformation.MEMORY_MB.getName()},
-        {ResourceInformation.VCORES.getName(),
-            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-            String.valueOf(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES),
-            ResourceInformation.VCORES.getName()}};
-    for (String[] arr : resourceTypesKeys) {
-      String resourceTypesKey =
-          YarnConfiguration.RESOURCE_TYPES + "." + arr[0] + MAXIMUM_ALLOCATION;
-      long maximumResourceTypes = conf.getLong(resourceTypesKey, -1);
-      long maximumConf = conf.getLong(arr[1], -1);
-      long maximum;
-      if (maximumResourceTypes != -1) {
-        maximum = maximumResourceTypes;
-        if (maximumConf != -1) {
-          LOG.warn("Using maximum allocation for memory specified in "
-              + "resource-types config file with key "
-              + maximumResourceTypes + ", ignoring maximum specified using "
-              + arr[1]);
-        }
-      } else {
-        maximum = conf.getLong(arr[1], Long.parseLong(arr[2]));
-      }
-      ResourceInformation ri = res.get(arr[3]);
-      ri.setMaximumAllocation(maximum);
+  private static long getAllocation(Configuration conf,
+      String resourceTypesKey, String schedulerKey, long schedulerDefault) {
+    long value = conf.getLong(resourceTypesKey, -1L);
+    if (value == -1) {
+      LOG.debug("Mandatory Resource '" + resourceTypesKey + "' is not "
+          + "configured in resource-types config file. Setting allocation "
+          + "specified using '" + schedulerKey + "'");
+      value = conf.getLong(schedulerKey, schedulerDefault);
     }
+    return value;
   }
 
   @VisibleForTesting
@@ -276,8 +246,7 @@ public class ResourceUtils {
     checkMandatoryResources(resourceInformationMap);
     addMandatoryResources(resourceInformationMap);
 
-    setMinimumAllocationForMandatoryResources(resourceInformationMap, conf);
-    setMaximumAllocationForMandatoryResources(resourceInformationMap, conf);
+    setAllocationForMandatoryResources(resourceInformationMap, conf);
 
     initializeResourcesFromResourceInformationMap(resourceInformationMap);
   }
@@ -474,8 +443,7 @@ public class ResourceUtils {
               conf);
           addMandatoryResources(nodeResources);
           checkMandatoryResources(nodeResources);
-          setMinimumAllocationForMandatoryResources(nodeResources, conf);
-          setMaximumAllocationForMandatoryResources(nodeResources, conf);
+          setAllocationForMandatoryResources(nodeResources, conf);
           readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
           initializedNodeResources = true;
         }
