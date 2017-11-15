@@ -15,56 +15,35 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --}}
-
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
-
 <div class="row">
-  <div class="col-md-2 container-fluid">
+  <div class="container-fluid">
     <div class="panel panel-default">
       <div class="panel-heading">
-        <h4>Nodes</h4>
-      </div>
-      <div class="panel-body">
-        <ul class="nav nav-pills nav-stacked" id="stacked-menu">
-          <ul class="nav nav-pills nav-stacked collapse in">
-
-            {{#link-to "yarn-nodes.table" tagName="li"}}
-              {{#link-to 'yarn-nodes.table'}}Information
+        <div class="clearfix">
+          <ul class="nav nav-pills">
+            <ul class="nav nav-pills collapse in">
+              {{#link-to "yarn-nodes.table" tagName="li"}}
+                {{#link-to 'yarn-nodes.table'}}Information
+                {{/link-to}}
               {{/link-to}}
-            {{/link-to}}
 
-            {{#link-to 'yarn-nodes.heatmap' tagName="li"}}
-              {{#link-to 'yarn-nodes.heatmap'}}Nodes Heatmap Chart
+              {{#link-to 'yarn-nodes.status' tagName="li"}}
+                {{#link-to 'yarn-nodes.status'}}Node Status
+                {{/link-to}}
               {{/link-to}}
-            {{/link-to}}
 
+              {{#link-to 'yarn-nodes.heatmap' tagName="li"}}
+                {{#link-to 'yarn-nodes.heatmap'}}Nodes Heatmap Chart
+                {{/link-to}}
+              {{/link-to}}
+            </ul>
           </ul>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-10 container-fluid">
-    {{#if model.clusterMetrics}}
-      <div class="row">
-        <div class="col-lg-6 container-fluid">
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              Node Managers
-            </div>
-            <div class="container-fluid" id="nodes-donut-chart">
-              {{donut-chart data=model.clusterMetrics.firstObject.getNodesDataForDonutChart
-              showLabels=true
-              parentId="nodes-donut-chart"
-              ratio=0.6
-              maxHeight=350
-              colorTargets="good error warn"}}
-            </div>
-          </div>
         </div>
       </div>
-    {{/if}}
-
-    {{outlet}}
+      <div class="panel-body">
+        {{outlet}}
+      </div>
+    </div>
   </div>
 </div>

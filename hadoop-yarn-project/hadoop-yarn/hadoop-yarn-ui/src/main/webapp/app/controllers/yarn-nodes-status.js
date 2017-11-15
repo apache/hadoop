@@ -1,4 +1,4 @@
-{{!
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,15 +14,23 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-}}
+ */
 
-<div class="row clearfix">
-  <div class="col-md-6">
-    <input type="text" class="form-control" aria-label="..." placeholder="Enter part of host/rack to filter nodes"
-            onchange={{action "applyFilter"}}>
-  </div>
-  <div class="col-md-6">
-    <select id="heatmap-select" class="form-control"></select>
-  </div>
-</div>
-<p/>
+import Ember from 'ember';
+
+export default Ember.Controller.extend({
+  needReload: true,
+  selectedQueue: undefined,
+
+  breadcrumbs: [{
+    text: "Home",
+    routeName: 'application'
+  }, {
+    text: "Nodes",
+    routeName: 'yarn-nodes.table',
+  }, {
+    text: "Node status",
+    routeName: 'yarn-nodes-status',
+  }]
+
+});
