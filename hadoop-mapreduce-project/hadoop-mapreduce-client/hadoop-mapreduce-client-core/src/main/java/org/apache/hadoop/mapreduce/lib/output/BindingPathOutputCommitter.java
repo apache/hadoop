@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
  * This is a special committer which creates the factory for the committer and
- * runs off that. Why does it exist? So that you can explicily instantiate
+ * runs off that. Why does it exist? So that you can explicitly instantiate
  * a committer by classname and yet still have the actual implementation
  * driven dynamically by the factory options and destination filesystem.
  * This simplifies integration
@@ -44,7 +44,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * <ol>
  *   <li>
  *     In applications which take a classname of committer in
- *     a configuration option, set it to the cononical name of this class
+ *     a configuration option, set it to the canonical name of this class
  *     (see {@link #NAME}). When this class is instantiated, it will
  *     use the factory mechanism to locate the configured committer for the
  *     destination.
@@ -124,6 +124,7 @@ public class BindingPathOutputCommitter extends PathOutputCommitter {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public void cleanupJob(JobContext jobContext) throws IOException {
     super.cleanupJob(jobContext);
   }

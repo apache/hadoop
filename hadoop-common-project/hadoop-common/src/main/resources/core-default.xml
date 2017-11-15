@@ -1442,7 +1442,7 @@
 </property>
 
 <property>
-  <name>s.s3a.committer.staging.abort.pending.uploads</name>
+  <name>fs.s3a.committer.staging.abort.pending.uploads</name>
   <value>true</value>
   <description>
     Should the staging committers abort all pending uploads to the destination

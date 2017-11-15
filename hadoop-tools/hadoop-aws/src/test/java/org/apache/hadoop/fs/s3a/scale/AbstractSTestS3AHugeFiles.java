@@ -64,12 +64,12 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
       AbstractSTestS3AHugeFiles.class);
   public static final int DEFAULT_UPLOAD_BLOCKSIZE = 64 * _1KB;
   public static final String DEFAULT_PARTITION_SIZE = "8M";
-  protected Path scaleTestDir;
-  protected Path hugefile;
-  protected Path hugefileRenamed;
+  private Path scaleTestDir;
+  private Path hugefile;
+  private Path hugefileRenamed;
 
-  protected int uploadBlockSize = DEFAULT_UPLOAD_BLOCKSIZE;
-  protected int partitionSize;
+  private int uploadBlockSize = DEFAULT_UPLOAD_BLOCKSIZE;
+  private int partitionSize;
   private long filesize;
 
   @Override
@@ -243,6 +243,30 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    */
   protected Path getPathOfFileToCreate() {
     return this.hugefile;
+  }
+
+  protected Path getScaleTestDir() {
+    return scaleTestDir;
+  }
+
+  protected Path getHugefile() {
+    return hugefile;
+  }
+
+  public void setHugefile(Path hugefile) {
+    this.hugefile = hugefile;
+  }
+
+  protected Path getHugefileRenamed() {
+    return hugefileRenamed;
+  }
+
+  protected int getUploadBlockSize() {
+    return uploadBlockSize;
+  }
+
+  protected int getPartitionSize() {
+    return partitionSize;
   }
 
   /**
@@ -474,10 +498,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   /**
    * After all the work, dump the statistics.
-   * @throws IOException failure
    */
   @Test
-  public void test_900_dumpStats() throws IOException {
+  public void test_900_dumpStats() {
     StringBuilder sb = new StringBuilder();
 
     getFileSystem().getStorageStatistics()

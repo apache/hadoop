@@ -98,11 +98,11 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     super.setup();
 
     // set up the paths for the commit operation
-    Path finalDirectory = new Path(scaleTestDir, "commit");
+    Path finalDirectory = new Path(getScaleTestDir(), "commit");
     magicDir = new Path(finalDirectory, MAGIC);
     jobDir = new Path(magicDir, "job_001");
     String filename = "commit.bin";
-    hugefile = new Path(finalDirectory, filename);
+    setHugefile(new Path(finalDirectory, filename));
     magicOutputFile = new Path(jobDir, filename);
     pendingDataFile = new Path(jobDir, filename + PENDING_SUFFIX);
   }
@@ -124,7 +124,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   @Override
   public void test_030_postCreationAssertions() throws Throwable {
     describe("Committing file");
-    assertPathDoesNotExist("final file exists", hugefile);
+    assertPathDoesNotExist("final file exists", getHugefile());
     assertPathExists("No pending file", pendingDataFile);
     S3AFileSystem fs = getFileSystem();
 
@@ -135,7 +135,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
         0, status.getLen());
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     CommitOperations operations = new CommitOperations(fs);
-    Path destDir = hugefile.getParent();
+    Path destDir = getHugefile().getParent();
     assertPathExists("Magic dir", new Path(destDir, CommitConstants.MAGIC));
     String destDirKey = fs.pathToKey(destDir);
     List<String> uploads = listMultipartUploads(fs, destDirKey);
@@ -166,17 +166,17 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   }
 
   @Override
-  public void test_040_PositionedReadHugeFile() throws Throwable {
+  public void test_040_PositionedReadHugeFile() {
     skipQuietly("test_040_PositionedReadHugeFile");
   }
 
   @Override
-  public void test_050_readHugeFile() throws Throwable {
+  public void test_050_readHugeFile() {
     skipQuietly("readHugeFile");
   }
 
   @Override
-  public void test_100_renameHugeFile() throws Throwable {
+  public void test_100_renameHugeFile() {
     skipQuietly("renameHugeFile");
   }
 
