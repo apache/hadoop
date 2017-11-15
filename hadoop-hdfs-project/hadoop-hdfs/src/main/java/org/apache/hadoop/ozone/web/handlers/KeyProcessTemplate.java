@@ -94,10 +94,10 @@ public abstract class KeyProcessTemplate {
       return response;
 
     } catch (IllegalArgumentException argExp) {
-      LOG.error("Invalid bucket in key call. ex:{}", argExp);
+      LOG.error("Invalid bucket in key call.", argExp);
       throw newError(INVALID_BUCKET_NAME, userArgs, argExp);
     } catch (IOException fsExp) {
-      LOG.error("IOException. ex : {}", fsExp);
+      LOG.error("IOException:", fsExp);
       // Map KEY_NOT_FOUND to INVALID_KEY
       if (fsExp.getMessage().endsWith(
           KeySpaceManagerProtocolProtos.Status.KEY_NOT_FOUND.name())) {
@@ -109,7 +109,7 @@ public abstract class KeyProcessTemplate {
       throw ErrorTable.newError(ErrorTable.SERVER_ERROR, userArgs, fsExp);
     } catch (NoSuchAlgorithmException algoEx) {
       LOG.error("NoSuchAlgorithmException. Probably indicates an unusual java "
-          + "installation.  ex : {}", algoEx);
+          + "installation.", algoEx);
       throw ErrorTable.newError(SERVER_ERROR, userArgs, algoEx);
     }
   }

@@ -99,7 +99,7 @@ public abstract class BucketProcessTemplate {
       return response;
 
     } catch (IllegalArgumentException argEx) {
-      LOG.error("Invalid bucket. ex:{}", argEx);
+      LOG.error("Invalid bucket.", argEx);
       throw ErrorTable.newError(ErrorTable.INVALID_BUCKET_NAME, userArgs,
           argEx);
     } catch (IOException fsExp) {
@@ -149,7 +149,7 @@ public abstract class BucketProcessTemplate {
    */
   void handleIOException(String bucket, String reqID, String hostName,
                          IOException fsExp) throws OzoneException {
-    LOG.error("IOException: {}", fsExp);
+    LOG.error("IOException:", fsExp);
 
     OzoneException exp = null;
     if (fsExp instanceof FileAlreadyExistsException) {
