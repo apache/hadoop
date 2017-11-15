@@ -132,7 +132,6 @@ public class ServiceScheduler extends CompositeService {
   private AMRMClientAsync<AMRMClient.ContainerRequest> amRMClient;
   private NMClientAsync nmClient;
   private AsyncDispatcher dispatcher;
-  AsyncDispatcher compInstanceDispatcher;
   private YarnRegistryViewForProviders yarnRegistryOperations;
   private ServiceContext context;
   private ContainerLaunchService containerLaunchService;
@@ -152,7 +151,7 @@ public class ServiceScheduler extends CompositeService {
     yarnRegistryOperations =
         createYarnRegistryOperations(context, registryClient);
 
-    // register metrics
+    // register metrics,
     serviceMetrics = ServiceMetrics
         .register(app.getName(), "Metrics for service");
     serviceMetrics.tag("type", "Metrics type [component or service]", "service");
@@ -167,14 +166,11 @@ public class ServiceScheduler extends CompositeService {
     dispatcher = new AsyncDispatcher("Component  dispatcher");
     dispatcher.register(ComponentEventType.class,
         new ComponentEventHandler());
+    dispatcher.register(ComponentInstanceEventType.class,
+        new ComponentInstanceEventHandler());
     dispatcher.setDrainEventsOnStop();
     addIfService(dispatcher);
 
-    compInstanceDispatcher =
-        new AsyncDispatcher("CompInstance dispatcher");
-    compInstanceDispatcher.register(ComponentInstanceEventType.class,
-        new ComponentInstanceEventHandler());
-    addIfService(compInstanceDispatcher);
     containerLaunchService = new ContainerLaunchService(context.fs);
     addService(containerLaunchService);
 
@@ -277,10 +273,10 @@ public class ServiceScheduler extends CompositeService {
   }
 
   private void recoverComponents(RegisterApplicationMasterResponse response) {
-    List<Container> recoveredContainers = response
+    List<Container> containersFromPrevAttempt = response
         .getContainersFromPreviousAttempts();
     LOG.info("Received {} containers from previous attempt.",
-        recoveredContainers.size());
+        containersFromPrevAttempt.size());
     Map<String, ServiceRecord> existingRecords = new HashMap<>();
     List<String> existingComps = null;
     try {
@@ -302,9 +298,8 @@ public class ServiceScheduler extends CompositeService {
         }
       }
     }
-    for (Container container : recoveredContainers) {
-      LOG.info("Handling container {} from previous attempt",
-          container.getId());
+    for (Container container : containersFromPrevAttempt) {
+      LOG.info("Handling {} from previous attempt", container.getId());
       ServiceRecord record = existingRecords.get(RegistryPathUtils
           .encodeYarnID(container.getId().toString()));
       if (record != null) {
@@ -487,16 +482,21 @@ public class ServiceScheduler extends CompositeService {
             new ComponentEvent(comp.getName(), CONTAINER_ALLOCATED)
                 .setContainer(container);
         dispatcher.getEventHandler().handle(event);
-        Collection<AMRMClient.ContainerRequest> requests = amRMClient
-            .getMatchingRequests(container.getAllocationRequestId());
-        LOG.info("[COMPONENT {}]: {} outstanding container requests.",
-            comp.getName(), requests.size());
-        // remove the corresponding request
-        if (requests.iterator().hasNext()) {
-          LOG.info("[COMPONENT {}]: removing one container request.", comp
-              .getName());
-          AMRMClient.ContainerRequest request = requests.iterator().next();
-          amRMClient.removeContainerRequest(request);
+        try {
+          Collection<AMRMClient.ContainerRequest> requests = amRMClient
+              .getMatchingRequests(container.getAllocationRequestId());
+          LOG.info("[COMPONENT {}]: remove {} outstanding container requests " +
+                  "for allocateId " + container.getAllocationRequestId(),
+              comp.getName(), requests.size());
+          // remove the corresponding request
+          if (requests.iterator().hasNext()) {
+            AMRMClient.ContainerRequest request = requests.iterator().next();
+            amRMClient.removeContainerRequest(request);
+          }
+        } catch(Exception e) {
+          //TODO Due to YARN-7490, exception may be thrown, catch and ignore for
+          //now.
+          LOG.error("Exception when removing the matching requests. ", e);
         }
       }
     }
@@ -569,7 +569,7 @@ public class ServiceScheduler extends CompositeService {
       }
       ComponentEvent event =
           new ComponentEvent(instance.getCompName(), CONTAINER_STARTED)
-              .setInstance(instance);
+              .setInstance(instance).setContainerId(containerId);
       dispatcher.getEventHandler().handle(event);
     }
 
@@ -647,10 +647,6 @@ public class ServiceScheduler extends CompositeService {
 
   public void removeLiveCompInstance(ContainerId containerId) {
     liveInstances.remove(containerId);
-  }
-
-  public AsyncDispatcher getCompInstanceDispatcher() {
-    return compInstanceDispatcher;
   }
 
   public YarnRegistryViewForProviders getYarnRegistryOperations() {

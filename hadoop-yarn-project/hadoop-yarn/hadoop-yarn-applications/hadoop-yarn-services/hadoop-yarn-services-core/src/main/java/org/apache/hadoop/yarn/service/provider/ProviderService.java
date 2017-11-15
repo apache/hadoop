@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.service.provider;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
@@ -34,6 +35,6 @@ public interface ProviderService {
    */
   void buildContainerLaunchContext(AbstractLauncher containerLauncher,
       Service service, ComponentInstance instance,
-      SliderFileSystem sliderFileSystem, Configuration yarnConf)
-      throws IOException, SliderException;
+      SliderFileSystem sliderFileSystem, Configuration yarnConf, Container
+      container) throws IOException, SliderException;
 }
