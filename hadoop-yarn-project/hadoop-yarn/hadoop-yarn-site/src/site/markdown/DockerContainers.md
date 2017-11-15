@@ -144,7 +144,8 @@ The following properties should be set in yarn-site.xml:
       Optional. This configuration setting determines the capabilities
       assigned to docker containers when they are launched. While these may not
       be case-sensitive from a docker perspective, it is best to keep these
-      uppercase.
+      uppercase. To run without any capabilites, set this value to
+      "none" or "NONE"
     </description>
   </property>
 </configuration>
