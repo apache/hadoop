@@ -97,7 +97,7 @@ public abstract class VolumeProcessTemplate {
       return response;
 
     } catch (IllegalArgumentException ex) {
-      LOG.error("illegal argument. {}", ex);
+      LOG.error("Illegal argument.", ex);
       throw ErrorTable.newError(ErrorTable.INVALID_VOLUME_NAME, userArgs, ex);
     } catch (IOException ex) {
       handleIOException(volume, reqID, hostName, ex);
@@ -130,7 +130,7 @@ public abstract class VolumeProcessTemplate {
    */
   private void handleIOException(String volume, String reqID, String hostName,
                                  IOException fsExp) throws OzoneException {
-    LOG.error("IOException: {}", fsExp);
+    LOG.error("IOException:", fsExp);
     OzoneException exp = null;
 
     if ((fsExp != null && fsExp.getMessage().endsWith(
@@ -178,7 +178,7 @@ public abstract class VolumeProcessTemplate {
     try {
       args.setQuota(quota);
     } catch (IllegalArgumentException ex) {
-      LOG.debug("Malformed Quota: {}", ex);
+      LOG.debug("Malformed Quota.", ex);
       throw ErrorTable.newError(ErrorTable.MALFORMED_QUOTA, args, ex);
     }
   }
@@ -235,7 +235,7 @@ public abstract class VolumeProcessTemplate {
       ListVolumes volumes = fs.listVolumes(listArgs);
       return OzoneUtils.getResponse(user, HTTP_OK, volumes.toJsonString());
     } catch (IOException ex) {
-      LOG.debug("unable to get the volume list for the user. Ex: {}", ex);
+      LOG.debug("unable to get the volume list for the user.", ex);
       OzoneException exp = ErrorTable.newError(ErrorTable.SERVER_ERROR,
           user, ex);
       exp.setMessage("unable to get the volume list for the user");
@@ -264,8 +264,7 @@ public abstract class VolumeProcessTemplate {
       ListBuckets bucketList = fs.listBuckets(listArgs);
       return OzoneUtils.getResponse(args, HTTP_OK, bucketList.toJsonString());
     } catch (IOException ex) {
-      LOG.debug("unable to get the bucket list for the specified volume." +
-          " Ex: {}", ex);
+      LOG.debug("unable to get the bucket list for the specified volume.", ex);
       OzoneException exp =
           ErrorTable.newError(ErrorTable.SERVER_ERROR, args, ex);
       exp.setMessage("unable to get the bucket list for the specified volume.");
