@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.service.provider;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -55,7 +56,7 @@ public abstract class AbstractProviderService implements ProviderService,
 
   public void buildContainerLaunchContext(AbstractLauncher launcher,
       Service service, ComponentInstance instance,
-      SliderFileSystem fileSystem, Configuration yarnConf)
+      SliderFileSystem fileSystem, Configuration yarnConf, Container container)
       throws IOException, SliderException {
     Component component = instance.getComponent().getComponentSpec();;
     processArtifact(launcher, instance, fileSystem, service);
@@ -67,7 +68,7 @@ public abstract class AbstractProviderService implements ProviderService,
     Map<String, String> globalTokens =
         instance.getComponent().getScheduler().globalTokens;
     Map<String, String> tokensForSubstitution = ProviderUtils
-        .initCompTokensForSubstitute(instance);
+        .initCompTokensForSubstitute(instance, container);
     tokensForSubstitution.putAll(globalTokens);
     // Set the environment variables in launcher
     launcher.putEnv(ServiceUtils

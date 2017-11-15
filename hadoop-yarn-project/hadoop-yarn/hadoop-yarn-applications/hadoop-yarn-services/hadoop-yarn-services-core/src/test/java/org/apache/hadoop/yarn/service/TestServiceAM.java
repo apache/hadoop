@@ -16,19 +16,15 @@
  * limitations under the License.
  */
 
-
-package org.apache.hadoop.yarn.service.monitor;
+package org.apache.hadoop.yarn.service;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.service.MockServiceAM;
-import org.apache.hadoop.yarn.service.ServiceTestUtils;
-
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
+import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,12 +32,12 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants
     .KEY_REGISTRY_ZK_QUORUM;
 
-public class TestServiceMonitor extends ServiceTestUtils {
+public class TestServiceAM extends ServiceTestUtils{
 
   private File basedir;
   YarnConfiguration conf = new YarnConfiguration();
@@ -55,7 +51,6 @@ public class TestServiceMonitor extends ServiceTestUtils {
     } else {
       basedir.mkdirs();
     }
-    conf.setLong(YarnServiceConf.READINESS_CHECK_INTERVAL, 2);
     zkCluster = new TestingCluster(1);
     zkCluster.start();
     conf.set(KEY_REGISTRY_ZK_QUORUM, zkCluster.getConnectString());
@@ -72,45 +67,43 @@ public class TestServiceMonitor extends ServiceTestUtils {
     }
   }
 
-  // Create compa with 1 container
-  // Create compb with 1 container
-  // Verify compb dependency satisfied
-  // Increase compa to 2 containers
-  // Verify compb dependency becomes unsatisfied.
+  // Race condition YARN-7486
+  // 1. Allocate 1 container to compa and wait it to be started
+  // 2. Fail this container, and in the meanwhile allocate the 2nd container.
+  // 3. The 2nd container should not be assigned to compa-0 instance, because
+  //   the compa-0 instance is not stopped yet.
+  // 4. check compa still has the instance in the pending list.
   @Test
-  public void testComponentDependency() throws Exception{
+  public void testContainerCompleted() throws TimeoutException,
+      InterruptedException {
     ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
     Service exampleApp = new Service();
     exampleApp.setId(applicationId.toString());
-    exampleApp.setName("testComponentDependency");
-    exampleApp.addComponent(createComponent("compa", 1, "sleep 1000"));
-    Component compb = createComponent("compb", 1, "sleep 1000");
-
-    // Let compb depends on compa;
-    compb.setDependencies(Collections.singletonList("compa"));
-    exampleApp.addComponent(compb);
+    exampleApp.setName("testContainerCompleted");
+    exampleApp.addComponent(createComponent("compa", 1, "pwd"));
 
     MockServiceAM am = new MockServiceAM(exampleApp);
     am.init(conf);
     am.start();
 
-    // compa ready
-    Assert.assertTrue(am.getComponent("compa").areDependenciesReady());
-    //compb not ready
-    Assert.assertFalse(am.getComponent("compb").areDependenciesReady());
-
-    // feed 1 container to compa,
+    ComponentInstance compa0 = am.getCompInstance("compa", "compa-0");
+    // allocate a container
     am.feedContainerToComp(exampleApp, 1, "compa");
-    // waiting for compb's dependencies are satisfied
-    am.waitForDependenciesSatisfied("compb");
+    am.waitForCompInstanceState(compa0, ComponentInstanceState.STARTED);
 
-    // feed 1 container to compb
-    am.feedContainerToComp(exampleApp, 2, "compb");
-    am.flexComponent("compa", 2);
-    am.waitForNumDesiredContainers("compa", 2);
+    System.out.println("Fail the container 1");
+    // fail the container
+    am.feedFailedContainerToComp(exampleApp, 1, "compa");
 
-    // compb dependencies not satisfied again.
-    Assert.assertFalse(am.getComponent("compb").areDependenciesReady());
+    // allocate the second container immediately, this container will not be
+    // assigned to comp instance
+    // because the instance is not yet added to the pending list.
+    am.feedContainerToComp(exampleApp, 2, "compa");
+
+    am.waitForCompInstanceState(compa0, ComponentInstanceState.INIT);
+    // still 1 pending instance
+    Assert.assertEquals(1,
+        am.getComponent("compa").getPendingInstances().size());
     am.stop();
   }
 }

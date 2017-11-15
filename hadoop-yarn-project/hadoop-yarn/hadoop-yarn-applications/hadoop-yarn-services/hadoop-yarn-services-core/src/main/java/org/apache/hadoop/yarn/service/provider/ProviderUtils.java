@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.service.ServiceContext;
@@ -393,13 +394,13 @@ public class ProviderUtils implements YarnServiceConstants {
    * @return tokens to replace
    */
   public static Map<String, String> initCompTokensForSubstitute(
-      ComponentInstance instance) {
+      ComponentInstance instance, Container container) {
     Map<String, String> tokens = new HashMap<>();
     tokens.put(COMPONENT_NAME, instance.getCompSpec().getName());
     tokens
         .put(COMPONENT_NAME_LC, instance.getCompSpec().getName().toLowerCase());
     tokens.put(COMPONENT_INSTANCE_NAME, instance.getCompInstanceName());
-    tokens.put(CONTAINER_ID, instance.getContainer().getId().toString());
+    tokens.put(CONTAINER_ID, container.getId().toString());
     tokens.put(COMPONENT_ID,
         String.valueOf(instance.getCompInstanceId().getId()));
     tokens.putAll(instance.getComponent().getDependencyHostIpTokens());

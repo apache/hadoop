@@ -24,14 +24,8 @@ import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
+
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
@@ -42,15 +36,15 @@ import org.apache.hadoop.yarn.proto.ClientAMProtocol;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentState;
+import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
+import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState;
 import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
+import org.apache.hadoop.yarn.util.Records;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 import static org.mockito.Mockito.mock;
@@ -63,6 +57,8 @@ public class MockServiceAM extends ServiceMaster {
   final List<Container> feedContainers =
       Collections.synchronizedList(new LinkedList<>());
 
+  final List<ContainerStatus> failedContainers =
+      Collections.synchronizedList(new LinkedList<>());
   public MockServiceAM(Service service) {
     super(service.getName());
     this.service = service;
@@ -102,10 +98,10 @@ public class MockServiceAM extends ServiceMaster {
 
             AllocateResponse.AllocateResponseBuilder builder =
                 AllocateResponse.newBuilder();
+            // add new containers if any
             synchronized (feedContainers) {
               if (feedContainers.isEmpty()) {
                 System.out.println("Allocating........ no containers");
-                return builder.build();
               } else {
                 // The AMRMClient will return containers for compoenent that are
                 // at FLEXING state
@@ -121,9 +117,20 @@ public class MockServiceAM extends ServiceMaster {
                     itor.remove();
                   }
                 }
-                return builder.allocatedContainers(allocatedContainers).build();
+                builder.allocatedContainers(allocatedContainers);
               }
             }
+
+            // add failed containers if any
+            synchronized (failedContainers) {
+              if (!failedContainers.isEmpty()) {
+                List<ContainerStatus> failed =
+                    new LinkedList<>(failedContainers);
+                failedContainers.clear();
+                builder.completedContainersStatuses(failed);
+              }
+            }
+            return builder.build();
           }
 
           @Override
@@ -184,6 +191,19 @@ public class MockServiceAM extends ServiceMaster {
     return container;
   }
 
+  public void feedFailedContainerToComp(Service service, int id, String
+      compName) {
+    ApplicationId applicationId = ApplicationId.fromString(service.getId());
+    ContainerId containerId = ContainerId
+        .newContainerId(ApplicationAttemptId.newInstance(applicationId, 1), id);
+    ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
+    containerStatus.setContainerId(containerId);
+    synchronized (failedContainers) {
+      failedContainers.add(containerStatus);
+    }
+  }
+
+
   public void flexComponent(String compName, long numberOfContainers)
       throws IOException {
     ClientAMProtocol.ComponentCountProto componentCountProto =
@@ -215,6 +235,24 @@ public class MockServiceAM extends ServiceMaster {
       @Override public Boolean get() {
         return context.scheduler.getAllComponents().get(compName)
             .getNumDesiredInstances() == numDesiredContainers;
+      }
+    }, 1000, 20000);
+  }
+
+
+  public ComponentInstance getCompInstance(String compName, String
+      instanceName) {
+    return context.scheduler.getAllComponents().get(compName)
+        .getComponentInstance(instanceName);
+  }
+
+  public void waitForCompInstanceState(ComponentInstance instance,
+      ComponentInstanceState state)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return instance.getState().equals(state);
       }
     }, 1000, 20000);
   }
