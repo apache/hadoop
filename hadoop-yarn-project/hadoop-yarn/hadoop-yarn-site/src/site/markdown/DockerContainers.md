@@ -17,11 +17,15 @@ Launching Applications Using Docker Containers
 
 <!-- MACRO{toc|fromDepth=0|toDepth=1} -->
 
-Notice
-------
-This feature is experimental and is not complete. Enabling this feature and
-running Docker containers in your cluster has security implications.
-Please do a security analysis before enabling this feature.
+Security Warning
+---------------
+**IMPORTANT** This feature is experimental and is not complete. **IMPORTANT**
+Enabling this feature and running Docker containers in your cluster has security
+implications. With this feature enabled, it may be possible to gain root access
+to the YARN NodeManager hosts. Given Docker's integration with many powerful
+kernel features, it is imperative that administrators understand
+[Docker security](https://docs.docker.com/engine/security/security/) before
+enabling this feature.
 
 Overview
 --------
@@ -151,6 +155,18 @@ The following properties should be set in yarn-site.xml:
     <description>
       Optional. A comma-separated list of users who are allowed to request
       privileged contains if privileged containers are allowed.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.runtime.linux.docker.capabilities</name>
+    <value>CHOWN,DAC_OVERRIDE,FSETID,FOWNER,MKNOD,NET_RAW,SETGID,SETUID,SETFCAP,SETPCAP,NET_BIND_SERVICE,SYS_CHROOT,KILL,AUDIT_WRITE</value>
+    <description>
+      Optional. This configuration setting determines the capabilities
+      assigned to docker containers when they are launched. While these may not
+      be case-sensitive from a docker perspective, it is best to keep these
+      uppercase. To run without any capabilites, set this value to
+      "none" or "NONE"
     </description>
   </property>
 </configuration>
