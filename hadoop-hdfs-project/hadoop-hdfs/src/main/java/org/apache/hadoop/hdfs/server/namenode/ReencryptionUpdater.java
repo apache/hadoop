@@ -93,6 +93,13 @@ public final class ReencryptionUpdater implements Runnable {
       numFutureDone = 0;
     }
 
+    void reset() {
+      submissionDone = false;
+      tasks.clear();
+      numCheckpointed = 0;
+      numFutureDone = 0;
+    }
+
     LinkedList<Future> getTasks() {
       return tasks;
     }
@@ -238,12 +245,12 @@ public final class ReencryptionUpdater implements Runnable {
   void markZoneSubmissionDone(final long zoneId)
       throws IOException, InterruptedException {
     final ZoneSubmissionTracker tracker = handler.getTracker(zoneId);
-    if (tracker != null) {
+    if (tracker != null && !tracker.getTasks().isEmpty()) {
       tracker.submissionDone = true;
     } else {
       // Caller thinks submission is done, but no tasks submitted - meaning
       // no files in the EZ need to be re-encrypted. Complete directly.
-      handler.addDummyTracker(zoneId);
+      handler.addDummyTracker(zoneId, tracker);
     }
   }
 
@@ -289,6 +296,7 @@ public final class ReencryptionUpdater implements Runnable {
       LOG.debug(
           "Updating file xattrs for re-encrypting zone {}," + " starting at {}",
           zoneNodePath, task.batch.getFirstFilePath());
+      final int batchSize = task.batch.size();
       for (Iterator<FileEdekInfo> it = task.batch.getBatch().iterator();
            it.hasNext();) {
         FileEdekInfo entry = it.next();
@@ -342,7 +350,7 @@ public final class ReencryptionUpdater implements Runnable {
       }
 
       LOG.info("Updated xattrs on {}({}) files in zone {} for re-encryption,"
-              + " starting:{}.", task.numFilesUpdated, task.batch.size(),
+              + " starting:{}.", task.numFilesUpdated, batchSize,
           zoneNodePath, task.batch.getFirstFilePath());
     }
     task.processed = true;
@@ -377,6 +385,9 @@ public final class ReencryptionUpdater implements Runnable {
     ListIterator<Future> iter = tasks.listIterator();
     while (iter.hasNext()) {
       Future<ReencryptionTask> curr = iter.next();
+      if (curr.isCancelled()) {
+        break;
+      }
       if (!curr.isDone() || !curr.get().processed) {
         // still has earlier tasks not completed, skip here.
         break;
@@ -411,12 +422,12 @@ public final class ReencryptionUpdater implements Runnable {
     final Future<ReencryptionTask> completed = batchService.take();
     throttle();
     checkPauseForTesting();
-    ReencryptionTask task = completed.get();
     if (completed.isCancelled()) {
-      LOG.debug("Skipped canceled re-encryption task for zone {}, last: {}",
-          task.zoneId, task.lastFile);
+      // Ignore canceled zones. The cancellation is edit-logged by the handler.
+      LOG.debug("Skipped a canceled re-encryption task");
       return;
     }
+    final ReencryptionTask task = completed.get();
 
     boolean shouldRetry;
     do {
@@ -465,7 +476,11 @@ public final class ReencryptionUpdater implements Runnable {
           task.batch.size(), task.batch.getFirstFilePath());
       final ZoneSubmissionTracker tracker =
           handler.getTracker(zoneNode.getId());
-      Preconditions.checkNotNull(tracker, "zone tracker not found " + zonePath);
+      if (tracker == null) {
+        // re-encryption canceled.
+        LOG.info("Re-encryption was canceled.");
+        return;
+      }
       tracker.numFutureDone++;
       EncryptionFaultInjector.getInstance().reencryptUpdaterProcessOneTask();
       processTaskEntries(zonePath, task);

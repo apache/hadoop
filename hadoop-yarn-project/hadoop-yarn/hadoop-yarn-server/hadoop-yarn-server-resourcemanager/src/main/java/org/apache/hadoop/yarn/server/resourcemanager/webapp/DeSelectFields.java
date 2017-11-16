@@ -91,7 +91,16 @@ public class DeSelectFields {
      * <code>RESOURCE_REQUESTS</code> is the first
      * supported type from YARN-6280.
      */
-    RESOURCE_REQUESTS("resourceRequests");
+    RESOURCE_REQUESTS("resourceRequests"),
+    /**
+     * <code>APP_TIMEOUTS, APP_NODE_LABEL_EXPRESSION, AM_NODE_LABEL_EXPRESSION,
+     * RESOURCE_INFO</code> are additionally supported parameters added in
+     * YARN-6871.
+     */
+    TIMEOUTS("timeouts"),
+    APP_NODE_LABEL_EXPRESSION("appNodeLabelExpression"),
+    AM_NODE_LABEL_EXPRESSION("amNodeLabelExpression"),
+    RESOURCE_INFO("resourceInfo");
 
     private final String literals;
 

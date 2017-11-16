@@ -731,7 +731,9 @@ public class UsersManager implements AbstractUsersManager {
      * should be higher than queue-hard-limit * ulMin
      */
     float usersSummedByWeight = activeUsersTimesWeights;
-    Resource resourceUsed = totalResUsageForActiveUsers.getUsed(nodePartition);
+    Resource resourceUsed = Resources.add(
+                            totalResUsageForActiveUsers.getUsed(nodePartition),
+                            required);
 
     // For non-activeUser calculation, consider all users count.
     if (!activeUser) {

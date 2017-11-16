@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.hadoop.mapreduce.MRJobConfig.MR_AM_RESOURCE_PREFIX;
+
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -82,6 +87,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -91,6 +97,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenSelector;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -338,16 +346,41 @@ public class YARNRunner implements ClientProtocol {
     }
   }
 
-  private LocalResource createApplicationResource(FileContext fs, Path p, LocalResourceType type)
-      throws IOException {
+  private LocalResource createApplicationResource(FileContext fs, Path p,
+      LocalResourceType type) throws IOException {
+    return createApplicationResource(fs, p, null, type,
+        LocalResourceVisibility.APPLICATION, false);
+  }
+
+  private LocalResource createApplicationResource(FileContext fs, Path p,
+      String fileSymlink, LocalResourceType type, LocalResourceVisibility viz,
+      Boolean uploadToSharedCache) throws IOException {
     LocalResource rsrc = recordFactory.newRecordInstance(LocalResource.class);
     FileStatus rsrcStat = fs.getFileStatus(p);
-    rsrc.setResource(URL.fromPath(fs
-        .getDefaultFileSystem().resolvePath(rsrcStat.getPath())));
+    // We need to be careful when converting from path to URL to add a fragment
+    // so that the symlink name when localized will be correct.
+    Path qualifiedPath =
+        fs.getDefaultFileSystem().resolvePath(rsrcStat.getPath());
+    URI uriWithFragment = null;
+    boolean useFragment = fileSymlink != null && !fileSymlink.equals("");
+    try {
+      if (useFragment) {
+        uriWithFragment = new URI(qualifiedPath.toUri() + "#" + fileSymlink);
+      } else {
+        uriWithFragment = qualifiedPath.toUri();
+      }
+    } catch (URISyntaxException e) {
+      throw new IOException(
+          "Error parsing local resource path."
+              + " Path was not able to be converted to a URI: " + qualifiedPath,
+          e);
+    }
+    rsrc.setResource(URL.fromURI(uriWithFragment));
     rsrc.setSize(rsrcStat.getLen());
     rsrc.setTimestamp(rsrcStat.getModificationTime());
     rsrc.setType(type);
-    rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc.setVisibility(viz);
+    rsrc.setShouldBeUploadedToSharedCache(uploadToSharedCache);
     return rsrc;
   }
 
@@ -368,10 +401,21 @@ public class YARNRunner implements ClientProtocol {
             jobConfPath, LocalResourceType.FILE));
     if (jobConf.get(MRJobConfig.JAR) != null) {
       Path jobJarPath = new Path(jobConf.get(MRJobConfig.JAR));
+      // We hard code the job.jar symlink because mapreduce code expects the
+      // job.jar to be named that way.
+      FileContext fccc =
+          FileContext.getFileContext(jobJarPath.toUri(), jobConf);
+      LocalResourceVisibility jobJarViz =
+          jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+              MRJobConfig.JOBJAR_VISIBILITY_DEFAULT)
+                  ? LocalResourceVisibility.PUBLIC
+                  : LocalResourceVisibility.APPLICATION;
       LocalResource rc = createApplicationResource(
-          FileContext.getFileContext(jobJarPath.toUri(), jobConf),
-          jobJarPath,
-          LocalResourceType.PATTERN);
+          FileContext.getFileContext(jobJarPath.toUri(), jobConf), jobJarPath,
+          MRJobConfig.JOB_JAR, LocalResourceType.PATTERN, jobJarViz,
+          jobConf.getBoolean(
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY,
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT));
       String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN,
           JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
       rc.setPattern(pattern);
@@ -621,16 +665,76 @@ public class YARNRunner implements ClientProtocol {
 
   private List<ResourceRequest> generateResourceRequests() throws IOException {
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemorySize(
-        conf.getInt(
-            MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
-        )
-    );
-    capability.setVirtualCores(
-        conf.getInt(
-            MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
-        )
-    );
+    boolean memorySet = false;
+    boolean cpuVcoresSet = false;
+    List<ResourceInformation> resourceRequests = ResourceUtils
+        .getRequestedResourcesFromConfig(conf, MR_AM_RESOURCE_PREFIX);
+    for (ResourceInformation resourceReq : resourceRequests) {
+      String resourceName = resourceReq.getName();
+      if (MRJobConfig.RESOURCE_TYPE_NAME_MEMORY.equals(resourceName) ||
+          MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY.equals(
+              resourceName)) {
+        if (memorySet) {
+          throw new IllegalArgumentException(
+              "Only one of the following keys " +
+                  "can be specified for a single job: " +
+                  MRJobConfig.RESOURCE_TYPE_ALTERNATIVE_NAME_MEMORY + ", " +
+                  MRJobConfig.RESOURCE_TYPE_NAME_MEMORY);
+        }
+        String units = isEmpty(resourceReq.getUnits()) ?
+            ResourceUtils.getDefaultUnit(ResourceInformation.MEMORY_URI) :
+              resourceReq.getUnits();
+        capability.setMemorySize(
+            UnitsConversionUtil.convert(units, "Mi", resourceReq.getValue()));
+        memorySet = true;
+        if (conf.get(MRJobConfig.MR_AM_VMEM_MB) != null) {
+          LOG.warn("Configuration " + MR_AM_RESOURCE_PREFIX +
+              resourceName + "=" + resourceReq.getValue() +
+              resourceReq.getUnits() + " is overriding the " +
+              MRJobConfig.MR_AM_VMEM_MB + "=" +
+              conf.get(MRJobConfig.MR_AM_VMEM_MB) + " configuration");
+        }
+      } else if (MRJobConfig.RESOURCE_TYPE_NAME_VCORE.equals(resourceName)) {
+        capability.setVirtualCores(
+            (int) UnitsConversionUtil.convert(resourceReq.getUnits(), "",
+                resourceReq.getValue()));
+        cpuVcoresSet = true;
+        if (conf.get(MRJobConfig.MR_AM_CPU_VCORES) != null) {
+          LOG.warn("Configuration " + MR_AM_RESOURCE_PREFIX +
+              resourceName + "=" + resourceReq.getValue() +
+              resourceReq.getUnits() + " is overriding the " +
+              MRJobConfig.MR_AM_CPU_VCORES + "=" +
+              conf.get(MRJobConfig.MR_AM_CPU_VCORES) + " configuration");
+        }
+      } else if (!MRJobConfig.MR_AM_VMEM_MB.equals(
+          MR_AM_RESOURCE_PREFIX + resourceName) &&
+          !MRJobConfig.MR_AM_CPU_VCORES.equals(
+              MR_AM_RESOURCE_PREFIX + resourceName)) {
+        // the "mb", "cpu-vcores" resource types are not processed here
+        // since the yarn.app.mapreduce.am.resource.mb,
+        // yarn.app.mapreduce.am.resource.cpu-vcores keys are used for
+        // backward-compatibility - which is handled after this loop
+        ResourceInformation resourceInformation = capability
+            .getResourceInformation(resourceName);
+        resourceInformation.setUnits(resourceReq.getUnits());
+        resourceInformation.setValue(resourceReq.getValue());
+        capability.setResourceInformation(resourceName, resourceInformation);
+      }
+    }
+    if (!memorySet) {
+      capability.setMemorySize(
+          conf.getInt(
+              MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
+          )
+      );
+    }
+    if (!cpuVcoresSet) {
+      capability.setVirtualCores(
+          conf.getInt(
+              MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
+          )
+      );
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("AppMaster capability = " + capability);
     }

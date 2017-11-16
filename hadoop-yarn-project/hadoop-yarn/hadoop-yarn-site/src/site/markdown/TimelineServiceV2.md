@@ -415,13 +415,13 @@ Service v.2. Note that currently you need to be on the cluster to be able to wri
 Service. For example, an application master or code in the container can write to the Timeline
 Service, while an off-cluster MapReduce job submitter cannot.
 
-After creating the timeline v2 client, user also needs to set the timeline collector address for the application. If `AMRMClient` is used then by registering the timeline client by calling `AMRMClient#registerTimelineV2Client` is sufficient.
+After creating the timeline v2 client, user also needs to set the timeline collector info which contains the collector address and collector token(only in secure mode) for the application. If `AMRMClient` is used then by registering the timeline client by calling `AMRMClient#registerTimelineV2Client` is sufficient.
 
     amRMClient.registerTimelineV2Client(timelineClient);
 
 Else address needs to be retrieved from the AM allocate response and need to be set in timeline client explicitly.
 
-    timelineClient.setTimelineServiceAddress(response.getCollectorAddr());
+    timelineClient.setTimelineCollectorInfo(response.getCollectorInfo());
 
 You can create and publish your own entities, events, and metrics as with previous versions.
 

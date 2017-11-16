@@ -256,8 +256,7 @@ public class TestNodeManagerShutdown {
         GetContainerStatusesRequest.newInstance(containerIds);
     ContainerStatus containerStatus =
         containerManager.getContainerStatuses(request).getContainerStatuses().get(0);
-    Assert.assertTrue(
-        EnumSet.of(ContainerState.RUNNING, ContainerState.SCHEDULED)
+    Assert.assertTrue(EnumSet.of(ContainerState.RUNNING)
             .contains(containerStatus.getState()));
   }
   

@@ -20,16 +20,14 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils.newNodeHeartbeatResponse;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -81,8 +79,6 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -118,40 +114,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("rawtypes")
-public class TestNodeStatusUpdater {
-
-  // temp fix until metrics system can auto-detect itself running in unit test:
-  static {
-    DefaultMetricsSystem.setMiniClusterMode(true);
-  }
-
-  static final Logger LOG =
-       LoggerFactory.getLogger(TestNodeStatusUpdater.class);
-  static final File basedir =
-      new File("target", TestNodeStatusUpdater.class.getName());
-  static final File nmLocalDir = new File(basedir, "nm0");
-  static final File tmpDir = new File(basedir, "tmpDir");
-  static final File remoteLogsDir = new File(basedir, "remotelogs");
-  static final File logsDir = new File(basedir, "logs");
-  private static final RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
-
+public class TestNodeStatusUpdater extends NodeManagerTestBase {
   volatile int heartBeatID = 0;
   volatile Throwable nmStartError = null;
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
   private boolean triggered = false;
-  private Configuration conf;
   private NodeManager nm;
   private AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
-
-  @Before
-  public void setUp() throws IOException {
-    nmLocalDir.mkdirs();
-    tmpDir.mkdirs();
-    logsDir.mkdirs();
-    remoteLogsDir.mkdirs();
-    conf = createNMConfig();
-  }
 
   @After
   public void tearDown() {
@@ -334,29 +303,7 @@ public class TestNodeStatusUpdater {
     }
   }
 
-  private class MyContainerManager extends ContainerManagerImpl {
-    public boolean signaled = false;
-
-    public MyContainerManager(Context context, ContainerExecutor exec,
-        DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
-        NodeManagerMetrics metrics,
-        LocalDirsHandlerService dirsHandler) {
-      super(context, exec, deletionContext, nodeStatusUpdater,
-          metrics, dirsHandler);
-    }
-
-    @Override
-    public void handle(ContainerManagerEvent event) {
-      if (event.getType() == ContainerManagerEventType.SIGNAL_CONTAINERS) {
-        signaled = true;
-      }
-    }
-  }
-
-  private class MyNodeStatusUpdater extends NodeStatusUpdaterImpl {
-    public ResourceTracker resourceTracker;
-    private Context context;
-
+  private class MyNodeStatusUpdater extends BaseNodeStatusUpdaterForTest {
     public MyNodeStatusUpdater(Context context, Dispatcher dispatcher,
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
       this(context, dispatcher, healthChecker, metrics, false);
@@ -365,19 +312,8 @@ public class TestNodeStatusUpdater {
     public MyNodeStatusUpdater(Context context, Dispatcher dispatcher,
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
         boolean signalContainer) {
-      super(context, dispatcher, healthChecker, metrics);
-      this.context = context;
-      resourceTracker = new MyResourceTracker(this.context, signalContainer);
-    }
-
-    @Override
-    protected ResourceTracker getRMClient() {
-      return resourceTracker;
-    }
-
-    @Override
-    protected void stopRMProxy() {
-      return;
+      super(context, dispatcher, healthChecker, metrics,
+          new MyResourceTracker(context, signalContainer));
     }
   }
 
@@ -1820,7 +1756,6 @@ public class TestNodeStatusUpdater {
     Assert.assertTrue("Test failed with exception(s)" + exceptions,
         exceptions.isEmpty());
   }
-
   // Add new containers info into NM context each time node heart beats.
   private class MyNMContext extends NMContext {
 
@@ -1922,31 +1857,6 @@ public class TestNodeStatusUpdater {
 
     Assert.assertEquals("Number of registered nodes is wrong!", 0,
         this.registeredNodes.size());
-  }
-
-  private YarnConfiguration createNMConfig(int port) throws IOException {
-    YarnConfiguration conf = new YarnConfiguration();
-    String localhostAddress = null;
-    try {
-      localhostAddress = InetAddress.getByName("localhost")
-          .getCanonicalHostName();
-    } catch (UnknownHostException e) {
-      Assert.fail("Unable to get localhost address: " + e.getMessage());
-    }
-    conf.setInt(YarnConfiguration.NM_PMEM_MB, 5 * 1024); // 5GB
-    conf.set(YarnConfiguration.NM_ADDRESS, localhostAddress + ":" + port);
-    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, localhostAddress + ":"
-        + ServerSocketUtil.getPort(49160, 10));
-    conf.set(YarnConfiguration.NM_LOG_DIRS, logsDir.getAbsolutePath());
-    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-      remoteLogsDir.getAbsolutePath());
-    conf.set(YarnConfiguration.NM_LOCAL_DIRS, nmLocalDir.getAbsolutePath());
-    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
-    return conf;
-  }
-
-  private YarnConfiguration createNMConfig() throws IOException {
-    return createNMConfig(ServerSocketUtil.getPort(49170, 10));
   }
 
   private NodeManager getNodeManager(final NodeAction nodeHeartBeatAction) {

@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -239,6 +240,15 @@ public class FSSchedulerNode extends SchedulerNode {
   protected synchronized void allocateContainer(RMContainer rmContainer,
                                                 boolean launchedOnNode) {
     super.allocateContainer(rmContainer, launchedOnNode);
+    if (LOG.isDebugEnabled()) {
+      final Container container = rmContainer.getContainer();
+      LOG.debug("Assigned container " + container.getId() + " of capacity "
+          + container.getResource() + " on host " + getRMNode().getNodeAddress()
+          + ", which has " + getNumContainers() + " containers, "
+          + getAllocatedResource() + " used and " + getUnallocatedResource()
+          + " available after allocation");
+    }
+
     Resource allocated = rmContainer.getAllocatedResource();
     if (!Resources.isNone(allocated)) {
       // check for satisfied preemption request and update bookkeeping

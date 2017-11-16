@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -95,18 +93,23 @@ import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES;
 
 /**
  * <p>
- * Embedded Yarn minicluster for testcases that need to interact with a cluster.
+ * Embedded YARN minicluster for testcases that need to interact with a cluster.
  * </p>
  * <p>
  * In a real cluster, resource request matching is done using the hostname, and
- * by default Yarn minicluster works in the exact same way as a real cluster.
+ * by default YARN minicluster works in the exact same way as a real cluster.
  * </p>
  * <p>
  * If a testcase needs to use multiple nodes and exercise resource request
@@ -123,7 +126,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class MiniYARNCluster extends CompositeService {
 
-  private static final Log LOG = LogFactory.getLog(MiniYARNCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniYARNCluster.class);
 
   // temp fix until metrics system can auto-detect itself running in unit test:
   static {
@@ -250,6 +254,10 @@ public class MiniYARNCluster extends CompositeService {
         YarnConfiguration.DEFAULT_YARN_MINICLUSTER_USE_RPC);
     failoverTimeout = conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
+
+    if (conf.getBoolean(TEST_CONF_RESET_RESOURCE_TYPES, true)) {
+      ResourceUtils.resetResourceTypes(conf);
+    }
 
     if (useRpc && !useFixedPorts) {
       throw new YarnRuntimeException("Invalid configuration!" +

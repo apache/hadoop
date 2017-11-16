@@ -533,8 +533,11 @@ public class TestClientRMTokens {
   private static RMDelegationTokenSecretManager
       createRMDelegationTokenSecretManager(long secretKeyInterval,
           long tokenMaxLifetime, long tokenRenewInterval) {
+    ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
+    when(rm.getRMContext()).thenReturn(rmContext);
+    when(rmContext.getResourceManager()).thenReturn(rm);
 
     RMDelegationTokenSecretManager rmDtSecretManager =
         new RMDelegationTokenSecretManager(secretKeyInterval, tokenMaxLifetime,

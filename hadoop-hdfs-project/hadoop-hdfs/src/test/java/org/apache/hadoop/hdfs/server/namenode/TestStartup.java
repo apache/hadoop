@@ -577,7 +577,6 @@ public class TestStartup {
         .getDefaultECPolicy();
     final String policy = defaultPolicy.getName();
     final Path f1 = new Path("/f1");
-    config.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, policy);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(0)
@@ -586,6 +585,7 @@ public class TestStartup {
     try {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
+      fs.enableErasureCodingPolicy(policy);
       // set root directory to use the default ec policy
       Path srcECDir = new Path("/");
       fs.setErasureCodingPolicy(srcECDir,

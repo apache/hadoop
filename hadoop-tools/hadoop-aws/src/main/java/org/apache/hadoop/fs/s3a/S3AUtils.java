@@ -736,9 +736,11 @@ public final class S3AUtils {
         // propagate the value, building a new origin field.
         // to track overwrites, the generic key is overwritten even if
         // already matches the new one.
+        String origin = "[" + StringUtils.join(
+            source.getPropertySources(key), ", ") +"]";
         final String generic = FS_S3A_PREFIX + stripped;
-        LOG.debug("Updating {}", generic);
-        dest.set(generic, value, key);
+        LOG.debug("Updating {} from {}", generic, origin);
+        dest.set(generic, value, key + " via " + origin);
       }
     }
     return dest;
@@ -879,6 +881,60 @@ public final class S3AUtils {
         }
       }
     }
+  }
+
+  /**
+   * Set a bucket-specific property to a particular value.
+   * If the generic key passed in has an {@code fs.s3a. prefix},
+   * that's stripped off, so that when the the bucket properties are propagated
+   * down to the generic values, that value gets copied down.
+   * @param conf configuration to set
+   * @param bucket bucket name
+   * @param genericKey key; can start with "fs.s3a."
+   * @param value value to set
+   */
+  public static void setBucketOption(Configuration conf, String bucket,
+      String genericKey, String value) {
+    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
+        genericKey.substring(FS_S3A_PREFIX.length())
+        : genericKey;
+    conf.set(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey, value, "S3AUtils");
+  }
+
+  /**
+   * Clear a bucket-specific property.
+   * If the generic key passed in has an {@code fs.s3a. prefix},
+   * that's stripped off, so that when the the bucket properties are propagated
+   * down to the generic values, that value gets copied down.
+   * @param conf configuration to set
+   * @param bucket bucket name
+   * @param genericKey key; can start with "fs.s3a."
+   */
+  public static void clearBucketOption(Configuration conf, String bucket,
+      String genericKey) {
+    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
+        genericKey.substring(FS_S3A_PREFIX.length())
+        : genericKey;
+    String k = FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey;
+    LOG.debug("Unset {}", k);
+    conf.unset(k);
+  }
+
+  /**
+   * Get a bucket-specific property.
+   * If the generic key passed in has an {@code fs.s3a. prefix},
+   * that's stripped off.
+   * @param conf configuration to set
+   * @param bucket bucket name
+   * @param genericKey key; can start with "fs.s3a."
+   * @return the bucket option, null if there is none
+   */
+  public static String getBucketOption(Configuration conf, String bucket,
+      String genericKey) {
+    final String baseKey = genericKey.startsWith(FS_S3A_PREFIX) ?
+        genericKey.substring(FS_S3A_PREFIX.length())
+        : genericKey;
+    return conf.get(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey);
   }
 
 }

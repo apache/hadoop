@@ -204,7 +204,7 @@ public class PrivilegedOperationExecutor {
   public String executePrivilegedOperation(PrivilegedOperation operation,
       boolean grabOutput) throws PrivilegedOperationException {
     return executePrivilegedOperation(null, operation, null, null, grabOutput,
-        true);
+        false);
   }
 
   //Utility functions for squashing together operations in supported ways

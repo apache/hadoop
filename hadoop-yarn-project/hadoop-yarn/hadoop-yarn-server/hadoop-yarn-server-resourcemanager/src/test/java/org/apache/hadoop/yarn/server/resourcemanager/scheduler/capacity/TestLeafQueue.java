@@ -1252,7 +1252,7 @@ public class TestLeafQueue {
     //app4 is user 0
     //maxqueue 16G, userlimit 7G, used 8G, headroom 5G
     //(8G used is 6G from this test case - app4, 2 from last test case, app_1)
-    assertEquals(0*GB, app_4.getHeadroom().getMemorySize());
+    assertEquals(1*GB, app_4.getHeadroom().getMemorySize());
   }
 
   @Test
@@ -1436,7 +1436,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     // TODO, fix headroom in the future patch
-    assertEquals(0*GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(1*GB, app_0.getHeadroom().getMemorySize());
       // User limit = 2G, 2 in use
     assertEquals(0*GB, app_1.getHeadroom().getMemorySize());
       // the application is not yet active
@@ -1449,8 +1449,8 @@ public class TestLeafQueue {
     assertEquals(3*GB, a.getUsedResources().getMemorySize());
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemorySize());
-    assertEquals(0*GB, app_0.getHeadroom().getMemorySize()); // 4G - 3G
-    assertEquals(0*GB, app_1.getHeadroom().getMemorySize()); // 4G - 3G
+    assertEquals(1*GB, app_0.getHeadroom().getMemorySize()); // 4G - 3G
+    assertEquals(1*GB, app_1.getHeadroom().getMemorySize()); // 4G - 3G
     
     // Submit requests for app_1 and set max-cap
     a.setMaxCapacity(.1f);

@@ -94,11 +94,10 @@ public class TestDFSStripedOutputStream {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
-    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
-    cluster.getFileSystem().getClient().setErasureCodingPolicy("/", ecPolicy
-        .getName());
     fs = cluster.getFileSystem();
+    DFSTestUtil.enableAllECPolicies(fs);
+    fs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
   }
 
   @After

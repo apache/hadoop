@@ -22,7 +22,7 @@ Overview
 
 YARN commands are invoked by the bin/yarn script. Running the yarn script without any arguments prints the description for all commands.
 
-Usage: `yarn [SHELL_OPTIONS] COMMAND [GENERIC_OPTIONS] [COMMAND_OPTIONS]`
+Usage: `yarn [SHELL_OPTIONS] COMMAND [GENERIC_OPTIONS] [SUB_COMMAND] [COMMAND_OPTIONS]`
 
 YARN has an option parsing framework that employs parsing generic options as well as running classes.
 
@@ -37,25 +37,36 @@ User Commands
 
 Commands useful for users of a Hadoop cluster.
 
-### `application`
+### `application` or `app`
 
 Usage: `yarn application [options] `
+Usage: `yarn app [options] `
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -appId \<ApplicationId\> | Specify Application Id to be operated |
 | -appStates \<States\> | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
+| -appTags \<Tags\> | Works with -list to filter applications based on input comma-separated list of application tags. |
 | -appTypes \<Types\> | Works with -list to filter applications based on input comma-separated list of application types. |
-| -help | Help |
-| -list | Lists applications from the RM. Supports optional use of -appTypes to filter applications based on application type, and -appStates to filter applications based on application state. |
-| -kill \<ApplicationId\> | Kills the application. |
-| -movetoqueue \<Application Id\> | Moves the application to a different queue. |
+| -changeQueue \<Queue Name\> | Moves application to a new queue. ApplicationId can be passed using 'appId' option. 'movetoqueue' command is deprecated, this new command 'changeQueue' performs same functionality. |
+| -component \<Component Name\> \<Count\> | Works with -flex option to change the number of components/containers running for an application / long-running service. Supports absolute or relative changes, such as +1, 2, or -3. |
+| -destroy \<Application Name\> | Destroys a saved application specification and removes all application data permanently. Supports -appTypes option to specify which client implementation to use. |
+| -enableFastLaunch | Uploads AM dependencies to HDFS to make future launches faster. Supports -appTypes option to specify which client implementation to use. |
+| -flex \<Application Name or ID\> | Changes number of running containers for a component of an application / long-running service. Requires -component option. If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
+| -help | Displays help for all commands. |
+| -kill \<Application ID\> | Kills the application. Set of applications can be provided separated with space |
+| -launch \<Application Name\> \<File Name\> | Launches application from specification file (saves specification and starts application). Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
+| -list | List applications. Supports optional use of -appTypes to filter applications based on application type, -appStates to filter applications based on application state and -appTags to filter applications based on application tag. |
+| -movetoqueue \<Application ID\> | Moves the application to a different queue. Deprecated command. Use 'changeQueue' instead. |
 | -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
+| -save \<Application Name\> \<File Name\> | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
+| -start \<Application Name\> | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. |
 | -status \<ApplicationId\> | Prints the status of the application. |
-| -updateLifetime \<Timeout\> | Update application timeout (from the time of request) in seconds. ApplicationId can be specified using 'appId' option. |
+| -stop \<Application Name or ID\> | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
+| -updateLifetime \<Timeout\> | Update timeout of an application from NOW. ApplicationId can be passed using 'appId' option. Timeout value is in seconds. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
 
-Prints application(s) report/kill application
+Prints application(s) report/kill application/manage long running application
 
 ### `applicationattempt`
 
@@ -237,6 +248,19 @@ Usage:
 
 Runs ResourceManager admin client
 
+### schedulerconf
+
+Usage: `yarn schedulerconf [options]`
+
+| COMMAND\_OPTIONS | Description |
+|:---- |:---- |
+| -add <"queuePath1:key1=val1,key2=val2;queuePath2:key3=val3"> | Semicolon separated values of queues to add and their queue configurations. This example adds queue "queuePath1" (a full path name), which has queue configurations key1=val1 and key2=val2. It also adds queue "queuePath2", which has queue configuration key3=val3. |
+| -remove <"queuePath1;queuePath2"> | Semicolon separated queues to remove. This example removes queuePath1 and queuePath2 queues (full path names). **Note:** Queues must be put into `STOPPED` state before they are deleted. |
+| -update <"queuePath1:key1=val1,key2=val2;queuePath2:key3=val3"> | Semicolon separated values of queues whose configurations should be updated. This example sets key1=val1 and key2=val2 for queue configuration of queuePath1 (full path name), and sets key3=val3 for queue configuration of queuePath2. |
+| -global <key1=val1,key2=val2> | Update scheduler global configurations. This example sets key1=val1 and key2=val2 for scheduler's global configuration. |
+
+Updates scheduler configuration. Note, this feature is in alpha phase and is subject to change.
+
 ### scmadmin
 
 Usage: `yarn scmadmin [options] `
@@ -259,6 +283,12 @@ Start the Shared Cache Manager
 Usage: `yarn timelineserver`
 
 Start the TimeLineServer
+
+### registrydns
+
+Usage: `yarn registrydns`
+
+Start the RegistryDNS server
 
 Files
 -----

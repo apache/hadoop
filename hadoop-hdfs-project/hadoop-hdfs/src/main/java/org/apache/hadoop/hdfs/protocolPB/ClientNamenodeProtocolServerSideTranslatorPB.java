@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.QuotaUsage;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
@@ -124,12 +125,12 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFil
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingRequestProto;
@@ -763,22 +764,22 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetFsBlocksStatsResponseProto getFsBlocksStats(
-      RpcController controller, GetFsBlocksStatsRequestProto request)
+  public GetFsReplicatedBlockStatsResponseProto getFsReplicatedBlockStats(
+      RpcController controller, GetFsReplicatedBlockStatsRequestProto request)
       throws ServiceException {
     try {
-      return PBHelperClient.convert(server.getBlocksStats());
+      return PBHelperClient.convert(server.getReplicatedBlockStats());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 
   @Override
-  public GetFsECBlockGroupsStatsResponseProto getFsECBlockGroupsStats(
-      RpcController controller, GetFsECBlockGroupsStatsRequestProto request)
+  public GetFsECBlockGroupStatsResponseProto getFsECBlockGroupStats(
+      RpcController controller, GetFsECBlockGroupStatsRequestProto request)
       throws ServiceException {
     try {
-      return PBHelperClient.convert(server.getECBlockGroupsStats());
+      return PBHelperClient.convert(server.getECBlockGroupStats());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -948,6 +949,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
+
   public GetFileLinkInfoResponseProto getFileLinkInfo(RpcController controller,
       GetFileLinkInfoRequestProto req) throws ServiceException {
     try {
@@ -1682,11 +1684,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetErasureCodingPoliciesResponseProto getErasureCodingPolicies(RpcController controller,
       GetErasureCodingPoliciesRequestProto request) throws ServiceException {
     try {
-      ErasureCodingPolicy[] ecPolicies = server.getErasureCodingPolicies();
+      ErasureCodingPolicyInfo[] ecpInfos = server.getErasureCodingPolicies();
       GetErasureCodingPoliciesResponseProto.Builder resBuilder = GetErasureCodingPoliciesResponseProto
           .newBuilder();
-      for (ErasureCodingPolicy ecPolicy : ecPolicies) {
-        resBuilder.addEcPolicies(PBHelperClient.convertErasureCodingPolicy(ecPolicy));
+      for (ErasureCodingPolicyInfo info : ecpInfos) {
+        resBuilder.addEcPolicies(
+            PBHelperClient.convertErasureCodingPolicy(info));
       }
       return resBuilder.build();
     } catch (IOException e) {
@@ -1721,15 +1724,16 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       ErasureCodingPolicy[] policies = request.getEcPoliciesList().stream()
           .map(PBHelperClient::convertErasureCodingPolicy)
           .toArray(ErasureCodingPolicy[]::new);
-      AddECPolicyResponse[] result = server
+      AddErasureCodingPolicyResponse[] result = server
           .addErasureCodingPolicies(policies);
 
-      List<HdfsProtos.AddECPolicyResponseProto> responseProtos = Arrays
-          .stream(result).map(PBHelperClient::convertAddECPolicyResponse)
-          .collect(Collectors.toList());
+      List<HdfsProtos.AddErasureCodingPolicyResponseProto> responseProtos =
+          Arrays.stream(result)
+              .map(PBHelperClient::convertAddErasureCodingPolicyResponse)
+              .collect(Collectors.toList());
       AddErasureCodingPoliciesResponseProto response =
           AddErasureCodingPoliciesResponseProto.newBuilder()
-            .addAllResponses(responseProtos).build();
+              .addAllResponses(responseProtos).build();
       return response;
     } catch (IOException e) {
       throw new ServiceException(e);

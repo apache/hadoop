@@ -71,8 +71,11 @@ public class TestTokenClientRMService {
 
   @BeforeClass
   public static void setupSecretManager() throws IOException {
+    ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
+    when(rm.getRMContext()).thenReturn(rmContext);
+    when(rmContext.getResourceManager()).thenReturn(rm);
     dtsm =
         new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000,
             rmContext);

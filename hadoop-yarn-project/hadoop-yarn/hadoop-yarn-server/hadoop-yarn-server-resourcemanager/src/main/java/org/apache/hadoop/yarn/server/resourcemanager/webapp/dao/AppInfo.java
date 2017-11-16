@@ -101,6 +101,7 @@ public class AppInfo {
   private long vcoreSeconds;
   protected float queueUsagePercentage;
   protected float clusterUsagePercentage;
+  protected Map<String, Long> resourceSecondsMap;
 
   // preemption info fields
   private long preemptedResourceMB;
@@ -109,6 +110,7 @@ public class AppInfo {
   private int numAMContainerPreempted;
   private long preemptedMemorySeconds;
   private long preemptedVcoreSeconds;
+  protected Map<String, Long> preemptedResourceSecondsMap;
 
   // list of resource requests
   @XmlElement(name = "resourceRequests")
@@ -121,7 +123,7 @@ public class AppInfo {
   protected String amNodeLabelExpression;
 
   protected ResourcesInfo resourceInfo = null;
-  protected AppTimeoutsInfo timeouts = new AppTimeoutsInfo();
+  private AppTimeoutsInfo timeouts;
 
   public AppInfo() {
   } // JAXB needs this
@@ -236,54 +238,96 @@ public class AppInfo {
           appMetrics.getResourcePreempted().getVirtualCores();
       memorySeconds = appMetrics.getMemorySeconds();
       vcoreSeconds = appMetrics.getVcoreSeconds();
+      resourceSecondsMap = appMetrics.getResourceSecondsMap();
       preemptedMemorySeconds = appMetrics.getPreemptedMemorySeconds();
       preemptedVcoreSeconds = appMetrics.getPreemptedVcoreSeconds();
+      preemptedResourceSecondsMap = appMetrics.getPreemptedResourceSecondsMap();
       ApplicationSubmissionContext appSubmissionContext =
           app.getApplicationSubmissionContext();
       unmanagedApplication = appSubmissionContext.getUnmanagedAM();
       appNodeLabelExpression =
           app.getApplicationSubmissionContext().getNodeLabelExpression();
-      amNodeLabelExpression = (unmanagedApplication) ? null
-          : app.getAMResourceRequests().get(0).getNodeLabelExpression();
+      /*
+       * When the deSelects parameter contains "amNodeLabelExpression", objects
+       * pertaining to the amNodeLabelExpression are not returned. By default,
+       * this is not skipped. (YARN-6871)
+       */
+      if(!deSelects.contains(DeSelectType.AM_NODE_LABEL_EXPRESSION)) {
+        amNodeLabelExpression = (unmanagedApplication) ?
+            null :
+            app.getAMResourceRequests().get(0).getNodeLabelExpression();
+      }
+      /*
+       * When the deSelects parameter contains "appNodeLabelExpression", objects
+       * pertaining to the appNodeLabelExpression are not returned. By default,
+       * this is not skipped. (YARN-6871)
+       */
+      if (!deSelects.contains(DeSelectType.APP_NODE_LABEL_EXPRESSION)) {
+        appNodeLabelExpression =
+            app.getApplicationSubmissionContext().getNodeLabelExpression();
+      }
+      /*
+       * When the deSelects parameter contains "amNodeLabelExpression", objects
+       * pertaining to the amNodeLabelExpression are not returned. By default,
+       * this is not skipped. (YARN-6871)
+       */
+      if (!deSelects.contains(DeSelectType.AM_NODE_LABEL_EXPRESSION)) {
+        amNodeLabelExpression = (unmanagedApplication) ?
+            null :
+            app.getAMResourceRequests().get(0).getNodeLabelExpression();
+      }
 
+      /*
+       * When the deSelects parameter contains "resourceInfo", ResourceInfo
+       * objects are not returned. Default behavior is no skipping. (YARN-6871)
+       */
       // Setting partition based resource usage of application
-      ResourceScheduler scheduler = rm.getRMContext().getScheduler();
-      if (scheduler instanceof CapacityScheduler) {
-        RMAppAttempt attempt = app.getCurrentAppAttempt();
-        if (null != attempt) {
-          FiCaSchedulerApp ficaAppAttempt = ((CapacityScheduler) scheduler)
-              .getApplicationAttempt(attempt.getAppAttemptId());
-          resourceInfo = null != ficaAppAttempt
-              ? new ResourcesInfo(ficaAppAttempt.getSchedulingResourceUsage())
-              : null;
-        }
-      }
-
-      Map<ApplicationTimeoutType, Long> applicationTimeouts =
-          app.getApplicationTimeouts();
-      if (applicationTimeouts.isEmpty()) {
-        // If application is not set timeout, lifetime should be sent as default
-        // with expiryTime=UNLIMITED and remainingTime=-1
-        AppTimeoutInfo timeoutInfo = new AppTimeoutInfo();
-        timeoutInfo.setTimeoutType(ApplicationTimeoutType.LIFETIME);
-        timeouts.add(timeoutInfo);
-      } else {
-        for (Map.Entry<ApplicationTimeoutType, Long> entry : app
-            .getApplicationTimeouts().entrySet()) {
-          AppTimeoutInfo timeout = new AppTimeoutInfo();
-          timeout.setTimeoutType(entry.getKey());
-          long timeoutInMillis = entry.getValue().longValue();
-          timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis));
-          if (app.isAppInCompletedStates()) {
-            timeout.setRemainingTime(0);
-          } else {
-            timeout.setRemainingTime(Math
-                .max((timeoutInMillis - System.currentTimeMillis()) / 1000, 0));
+      if (!deSelects.contains(DeSelectType.RESOURCE_INFO)) {
+        ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+        if (scheduler instanceof CapacityScheduler) {
+          RMAppAttempt attempt = app.getCurrentAppAttempt();
+          if (null != attempt) {
+            FiCaSchedulerApp ficaAppAttempt = ((CapacityScheduler) scheduler)
+                .getApplicationAttempt(attempt.getAppAttemptId());
+            resourceInfo = null != ficaAppAttempt ?
+                new ResourcesInfo(ficaAppAttempt.getSchedulingResourceUsage()) :
+                null;
           }
-          timeouts.add(timeout);
         }
       }
 
+      /*
+       * When the deSelects parameter contains "appTimeouts", objects pertaining
+       * to app timeouts are not returned. By default, this is not skipped.
+       * (YARN-6871)
+       */
+      if (!deSelects.contains(DeSelectType.TIMEOUTS)) {
+        Map<ApplicationTimeoutType, Long> applicationTimeouts =
+            app.getApplicationTimeouts();
+        timeouts = new AppTimeoutsInfo();
+        if (applicationTimeouts.isEmpty()) {
+          // If application is not set timeout, lifetime should be sent
+          // as default with expiryTime=UNLIMITED and remainingTime=-1
+          AppTimeoutInfo timeoutInfo = new AppTimeoutInfo();
+          timeoutInfo.setTimeoutType(ApplicationTimeoutType.LIFETIME);
+          timeouts.add(timeoutInfo);
+        } else {
+          for (Map.Entry<ApplicationTimeoutType, Long> entry : app
+              .getApplicationTimeouts().entrySet()) {
+            AppTimeoutInfo timeout = new AppTimeoutInfo();
+            timeout.setTimeoutType(entry.getKey());
+            long timeoutInMillis = entry.getValue();
+            timeout.setExpiryTime(Times.formatISO8601(timeoutInMillis));
+            if (app.isAppInCompletedStates()) {
+              timeout.setRemainingTime(0);
+            } else {
+              timeout.setRemainingTime(Math.max(
+                  (timeoutInMillis - System.currentTimeMillis()) / 1000, 0));
+            }
+            timeouts.add(timeout);
+          }
+        }
+      }
     }
   }
 
@@ -415,6 +459,22 @@ public class AppInfo {
     return this.reservedVCores;
   }
 
+  public long getPreemptedMB() {
+    return preemptedResourceMB;
+  }
+
+  public long getPreemptedVCores() {
+    return preemptedResourceVCores;
+  }
+
+  public int getNumNonAMContainersPreempted() {
+    return numNonAMContainerPreempted;
+  }
+  
+  public int getNumAMContainersPreempted() {
+    return numAMContainerPreempted;
+  }
+
   public long getMemorySeconds() {
     return memorySeconds;
   }
@@ -423,12 +483,20 @@ public class AppInfo {
     return vcoreSeconds;
   }
 
+  public Map<String, Long> getResourceSecondsMap() {
+    return resourceSecondsMap;
+  }
+
   public long getPreemptedMemorySeconds() {
     return preemptedMemorySeconds;
   }
 
   public long getPreemptedVcoreSeconds() {
     return preemptedVcoreSeconds;
+  }
+
+  public Map<String, Long> getPreemptedResourceSecondsMap() {
+    return preemptedResourceSecondsMap;
   }
 
   public List<ResourceRequestInfo> getResourceRequests() {

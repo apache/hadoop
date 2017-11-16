@@ -33,11 +33,11 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -66,13 +66,13 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -534,30 +534,31 @@ public class DFSAdmin extends FsShell {
      * minutes. Use "-metaSave" to list of all such blocks and accurate 
      * counts.
      */
-    BlocksStats blocksStats = dfs.getClient().getNamenode().getBlocksStats();
+    ReplicatedBlockStats replicatedBlockStats =
+        dfs.getClient().getNamenode().getReplicatedBlockStats();
     System.out.println("Replicated Blocks:");
     System.out.println("\tUnder replicated blocks: " +
-        blocksStats.getLowRedundancyBlocksStat());
+        replicatedBlockStats.getLowRedundancyBlocks());
     System.out.println("\tBlocks with corrupt replicas: " +
-        blocksStats.getCorruptBlocksStat());
+        replicatedBlockStats.getCorruptBlocks());
     System.out.println("\tMissing blocks: " +
-        blocksStats.getMissingReplicaBlocksStat());
+        replicatedBlockStats.getMissingReplicaBlocks());
     System.out.println("\tMissing blocks (with replication factor 1): " +
-        blocksStats.getMissingReplicationOneBlocksStat());
+        replicatedBlockStats.getMissingReplicationOneBlocks());
     System.out.println("\tPending deletion blocks: " +
-        blocksStats.getPendingDeletionBlocksStat());
+        replicatedBlockStats.getPendingDeletionBlocks());
 
-    ECBlockGroupsStats ecBlockGroupsStats =
-        dfs.getClient().getNamenode().getECBlockGroupsStats();
+    ECBlockGroupStats ecBlockGroupStats =
+        dfs.getClient().getNamenode().getECBlockGroupStats();
     System.out.println("Erasure Coded Block Groups: ");
     System.out.println("\tLow redundancy block groups: " +
-        ecBlockGroupsStats.getLowRedundancyBlockGroupsStat());
+        ecBlockGroupStats.getLowRedundancyBlockGroups());
     System.out.println("\tBlock groups with corrupt internal blocks: " +
-        ecBlockGroupsStats.getCorruptBlockGroupsStat());
+        ecBlockGroupStats.getCorruptBlockGroups());
     System.out.println("\tMissing block groups: " +
-        ecBlockGroupsStats.getMissingBlockGroupsStat());
-    System.out.println("\tPending deletion block groups: " +
-        ecBlockGroupsStats.getPendingDeletionBlockGroupsStat());
+        ecBlockGroupStats.getMissingBlockGroups());
+    System.out.println("\tPending deletion blocks: " +
+        ecBlockGroupStats.getPendingDeletionBlocks());
 
     System.out.println();
 
@@ -752,7 +753,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Allowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Allowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**
@@ -769,7 +770,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Disallowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Disallowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**
@@ -2243,7 +2244,7 @@ public class DFSAdmin extends FsShell {
       System.err.println(cmd.substring(1) + ": "
                          + e.getLocalizedMessage());
     }
-    if (LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled() && debugException != null) {
       LOG.debug("Exception encountered:", debugException);
     }
     return exitCode;

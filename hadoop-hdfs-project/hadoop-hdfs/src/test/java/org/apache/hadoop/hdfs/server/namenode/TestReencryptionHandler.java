@@ -101,9 +101,9 @@ public class TestReencryptionHandler {
     final StopWatch sw = new StopWatch().start();
     rh.throttle();
     sw.stop();
-    assertTrue("should have throttled for at least 4 second",
+    assertTrue("should have throttled for at least 8 second",
         sw.now(TimeUnit.MILLISECONDS) > 8000);
-    assertTrue("should have throttled for at most 6 second",
+    assertTrue("should have throttled for at most 12 second",
         sw.now(TimeUnit.MILLISECONDS) < 12000);
   }
 
@@ -191,7 +191,8 @@ public class TestReencryptionHandler {
     removeTaskThread.start();
     rh.throttle();
     sw.stop();
+    LOG.info("Throttle completed, consumed {}", sw.now(TimeUnit.MILLISECONDS));
     assertTrue("should have throttled for at least 3 second",
-        sw.now(TimeUnit.MILLISECONDS) > 3000);
+        sw.now(TimeUnit.MILLISECONDS) >= 3000);
   }
 }

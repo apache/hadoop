@@ -1,0 +1,10 @@
+{
+    "default" : {
+        "memory-mb" : 2048,
+        "vcores" : 2
+    },
+    "http" : {
+        "memory-mb" : 2048,
+        "vcores" : 2
+    }
+}

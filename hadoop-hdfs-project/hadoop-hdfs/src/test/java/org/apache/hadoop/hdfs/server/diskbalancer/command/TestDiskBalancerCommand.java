@@ -476,9 +476,12 @@ public class TestDiskBalancerCommand {
   public void testPlanJsonNode() throws Exception {
     final String planArg = String.format("-%s %s", PLAN,
         "a87654a9-54c7-4693-8dd9-c9c7021dc340");
+    final Path testPath = new Path(
+        PathUtils.getTestPath(getClass()),
+        GenericTestUtils.getMethodName());
     final String cmdLine = String
         .format(
-            "hdfs diskbalancer %s", planArg);
+            "hdfs diskbalancer -out %s %s", testPath, planArg);
     runCommand(cmdLine);
   }
 

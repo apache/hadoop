@@ -22,10 +22,6 @@
     <Method name="checkPath" />
     <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ" />
   </Match>
-  <!-- S3n warnings about malicious code aren't that relevant given its limited future. -->
-  <Match>
-    <Class name="org.apache.hadoop.fs.s3.INode" />
-  </Match>
   <!-- Redundant null check makes code clearer, future-proof here. -->
   <Match>
     <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem" />

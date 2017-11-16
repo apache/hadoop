@@ -400,6 +400,19 @@ Exit Code:
 
 Returns 0 on success and non-zero on error.
 
+head
+----
+
+Usage: `hadoop fs -head URI`
+
+Displays first kilobyte of the file to stdout.
+
+Example:
+
+* `hadoop fs -head pathname`
+
+Exit Code: Returns 0 on success and -1 on error.
+
 help
 ----
 

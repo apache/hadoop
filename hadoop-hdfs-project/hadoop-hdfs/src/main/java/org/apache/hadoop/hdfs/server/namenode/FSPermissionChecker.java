@@ -275,8 +275,16 @@ class FSPermissionChecker implements AccessControlEnforcer {
     INodeAttributes inodeAttrs = inode.getSnapshotINode(snapshotId);
     if (getAttributesProvider() != null) {
       String[] elements = new String[pathIdx + 1];
-      for (int i = 0; i < elements.length; i++) {
-        elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+      /**
+       * {@link INode#getPathComponents(String)} returns a null component
+       * for the root only path "/". Assign an empty string if so.
+       */
+      if (pathByNameArr.length == 1 && pathByNameArr[0] == null) {
+        elements[0] = "";
+      } else {
+        for (int i = 0; i < elements.length; i++) {
+          elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+        }
       }
       inodeAttrs = getAttributesProvider().getAttributes(elements, inodeAttrs);
     }

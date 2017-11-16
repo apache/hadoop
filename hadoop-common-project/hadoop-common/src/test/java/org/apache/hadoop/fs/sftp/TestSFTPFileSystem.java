@@ -34,16 +34,16 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.apache.sshd.SshServer;
+import org.apache.sshd.server.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.server.Command;
-import org.apache.sshd.server.PasswordAuthenticator;
-import org.apache.sshd.server.UserAuth;
-import org.apache.sshd.server.auth.UserAuthPassword;
+import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.auth.UserAuth;
+import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.sftp.SftpSubsystem;
 
+import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -76,7 +76,7 @@ public class TestSFTPFileSystem {
 
     List<NamedFactory<UserAuth>> userAuthFactories =
         new ArrayList<NamedFactory<UserAuth>>();
-    userAuthFactories.add(new UserAuthPassword.Factory());
+    userAuthFactories.add(new UserAuthPasswordFactory());
 
     sshd.setUserAuthFactories(userAuthFactories);
 
@@ -92,7 +92,7 @@ public class TestSFTPFileSystem {
     });
 
     sshd.setSubsystemFactories(
-        Arrays.<NamedFactory<Command>>asList(new SftpSubsystem.Factory()));
+        Arrays.<NamedFactory<Command>>asList(new SftpSubsystemFactory()));
 
     sshd.start();
     port = sshd.getPort();
@@ -140,7 +140,7 @@ public class TestSFTPFileSystem {
     if (sshd != null) {
       try {
         sshd.stop(true);
-      } catch (InterruptedException e) {
+      } catch (IOException e) {
         // ignore
       }
     }

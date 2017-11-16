@@ -20,6 +20,11 @@ package org.apache.hadoop.mapreduce;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 
 import java.io.IOException;
 import java.net.URI;
@@ -36,9 +41,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.mapred.JobConf;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.verification.VerificationMode;
 
 /**
  * A class for unit testing JobResourceUploader.
@@ -212,7 +220,7 @@ public class TestJobResourceUploader {
           destinationPathPrefix + "tmpArchives1.tgz#tmpArchivesfragment1.tgz" };
 
   private String jobjarSubmitDir = "/jobjar-submit-dir";
-  private String expectedJobJar = jobjarSubmitDir + "/job.jar";
+  private String basicExpectedJobJar = jobjarSubmitDir + "/job.jar";
 
   @Test
   public void testPathsWithNoFragNoSchemeRelative() throws IOException {
@@ -228,7 +236,7 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesNoFrags,
-        expectedArchivesNoFrags, expectedJobJar);
+        expectedArchivesNoFrags, basicExpectedJobJar);
   }
 
   @Test
@@ -246,7 +254,7 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesNoFrags,
-        expectedArchivesNoFrags, expectedJobJar);
+        expectedArchivesNoFrags, basicExpectedJobJar);
   }
 
   @Test
@@ -264,7 +272,7 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesWithFrags,
-        expectedArchivesWithFrags, expectedJobJar);
+        expectedArchivesWithFrags, basicExpectedJobJar);
   }
 
   @Test
@@ -282,7 +290,7 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesWithFrags,
-        expectedArchivesWithFrags, expectedJobJar);
+        expectedArchivesWithFrags, basicExpectedJobJar);
   }
 
   @Test
@@ -300,7 +308,7 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesWithFrags,
-        expectedArchivesWithFrags, expectedJobJar);
+        expectedArchivesWithFrags, basicExpectedJobJar);
   }
 
   @Test
@@ -318,7 +326,7 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesNoFrags,
-        expectedArchivesNoFrags, expectedJobJar);
+        expectedArchivesNoFrags, basicExpectedJobJar);
   }
 
   @Test
@@ -336,7 +344,7 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf, true);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesWithWildcard,
-        expectedArchivesNoFrags, expectedJobJar);
+        expectedArchivesNoFrags, basicExpectedJobJar);
   }
 
   @Test
@@ -354,50 +362,79 @@ public class TestJobResourceUploader {
     JobResourceUploader uploader = new StubedUploader(jConf, true);
 
     runTmpResourcePathTest(uploader, rConf, jConf, expectedFilesWithFrags,
-        expectedArchivesWithFrags, expectedJobJar);
+        expectedArchivesWithFrags, basicExpectedJobJar);
+  }
+
+  @Test
+  public void testErasureCodingDefault() throws IOException {
+    testErasureCodingSetting(true);
+  }
+
+  @Test
+  public void testErasureCodingDisabled() throws IOException {
+    testErasureCodingSetting(false);
+  }
+
+  private void testErasureCodingSetting(boolean defaultBehavior)
+      throws IOException {
+    JobConf jConf = new JobConf();
+    // don't set to false if EC remains disabled to check default setting
+    if (!defaultBehavior) {
+      jConf.setBoolean(MRJobConfig.MR_AM_STAGING_DIR_ERASURECODING_ENABLED,
+          true);
+    }
+
+    DistributedFileSystem fs = mock(DistributedFileSystem.class);
+    Path path = new Path("/");
+    when(fs.makeQualified(any(Path.class))).thenReturn(path);
+    JobResourceUploader uploader = new StubedUploader(fs, true);
+    Job job = Job.getInstance(jConf);
+
+    uploader.uploadResources(job, new Path("/test"));
+
+    String replicationPolicyName = SystemErasureCodingPolicies
+        .getReplicationPolicy().getName();
+    VerificationMode mode = defaultBehavior ? times(1) : never();
+    verify(fs, mode).setErasureCodingPolicy(eq(path),
+        eq(replicationPolicyName));
   }
 
   private void runTmpResourcePathTest(JobResourceUploader uploader,
       ResourceConf rConf, JobConf jConf, String[] expectedFiles,
       String[] expectedArchives, String expectedJobJar) throws IOException {
-    rConf.setupJobConf(jConf);
-    // We use a pre and post job object here because we need the post job object
-    // to get the new values set during uploadResources, but we need the pre job
-    // to set the job jar because JobResourceUploader#uploadJobJar uses the Job
-    // interface not the JobConf. The post job is automatically created in
-    // validateResourcePaths.
-    Job jobPre = Job.getInstance(jConf);
-    uploadResources(uploader, jConf, jobPre);
-
-    validateResourcePaths(jConf, expectedFiles, expectedArchives,
-        expectedJobJar, jobPre);
+    Job job = rConf.setupJobConf(jConf);
+    uploadResources(uploader, job);
+    validateResourcePaths(job, expectedFiles, expectedArchives, expectedJobJar);
   }
 
-  private void uploadResources(JobResourceUploader uploader, JobConf jConf,
-      Job job) throws IOException {
-    Collection<String> files = jConf.getStringCollection("tmpfiles");
-    Collection<String> libjars = jConf.getStringCollection("tmpjars");
-    Collection<String> archives = jConf.getStringCollection("tmparchives");
-    String jobJar = jConf.getJar();
-    uploader.uploadFiles(jConf, files, new Path("/files-submit-dir"), null,
-        (short) 3);
-    uploader.uploadArchives(jConf, archives, new Path("/archives-submit-dir"),
-        null, (short) 3);
-    uploader.uploadLibJars(jConf, libjars, new Path("/libjars-submit-dir"),
-        null, (short) 3);
-    uploader.uploadJobJar(job, jobJar, new Path(jobjarSubmitDir), (short) 3);
-  }
-
-  private void validateResourcePaths(JobConf jConf, String[] expectedFiles,
-      String[] expectedArchives, String expectedJobJar, Job preJob)
+  private void uploadResources(JobResourceUploader uploader, Job job)
       throws IOException {
-    Job j = Job.getInstance(jConf);
-    validateResourcePathsSub(j.getCacheFiles(), expectedFiles);
-    validateResourcePathsSub(j.getCacheArchives(), expectedArchives);
+    Configuration conf = job.getConfiguration();
+    Collection<String> files = conf.getStringCollection("tmpfiles");
+    Collection<String> libjars = conf.getStringCollection("tmpjars");
+    Collection<String> archives = conf.getStringCollection("tmparchives");
+    Map<URI, FileStatus> statCache = new HashMap<>();
+    Map<String, Boolean> fileSCUploadPolicies = new HashMap<>();
+    String jobJar = job.getJar();
+    uploader.uploadFiles(job, files, new Path("/files-submit-dir"), null,
+        (short) 3, fileSCUploadPolicies, statCache);
+    uploader.uploadArchives(job, archives, new Path("/archives-submit-dir"),
+        null, (short) 3, fileSCUploadPolicies, statCache);
+    uploader.uploadLibJars(job, libjars, new Path("/libjars-submit-dir"), null,
+        (short) 3, fileSCUploadPolicies, statCache);
+    uploader.uploadJobJar(job, jobJar, new Path(jobjarSubmitDir), (short) 3,
+        statCache);
+  }
+
+  private void validateResourcePaths(Job job, String[] expectedFiles,
+      String[] expectedArchives, String expectedJobJar)
+      throws IOException {
+    validateResourcePathsSub(job.getCacheFiles(), expectedFiles);
+    validateResourcePathsSub(job.getCacheArchives(), expectedArchives);
     // We use a different job object here because the jobjar was set on a
     // different job object
     Assert.assertEquals("Job jar path is different than expected!",
-        expectedJobJar, preJob.getJar());
+        expectedJobJar, job.getJar());
   }
 
   private void validateResourcePathsSub(URI[] actualURIs,
@@ -603,7 +640,7 @@ public class TestJobResourceUploader {
       }
     }
 
-    private void setupJobConf(JobConf conf) {
+    private Job setupJobConf(JobConf conf) throws IOException {
       conf.set("tmpfiles",
           buildPathString("tmpFiles", this.numOfTmpFiles, ".txt"));
       conf.set("tmpjars",
@@ -633,6 +670,7 @@ public class TestJobResourceUploader {
       conf.setLong(MRJobConfig.MAX_RESOURCES_MB, this.maxResourcesMB);
       conf.setLong(MRJobConfig.MAX_SINGLE_RESOURCE_MB,
           this.maxSingleResourceMB);
+      return new Job(conf);
     }
 
     // We always want absolute paths with a scheme in the DistributedCache, so
@@ -696,6 +734,10 @@ public class TestJobResourceUploader {
 
     StubedUploader(JobConf conf, boolean useWildcard) throws IOException {
       super(FileSystem.getLocal(conf), useWildcard);
+    }
+
+    StubedUploader(FileSystem fs, boolean useWildcard) throws IOException {
+      super(fs, useWildcard);
     }
 
     @Override

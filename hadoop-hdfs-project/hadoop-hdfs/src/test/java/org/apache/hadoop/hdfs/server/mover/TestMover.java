@@ -76,7 +76,7 @@ import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
@@ -508,8 +508,6 @@ public class TestMover {
         capacities[i][j]=capacity;
       }
     }
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .storagesPerDatanode(storagesPerDatanode)
@@ -529,6 +527,8 @@ public class TestMover {
 
     try {
       cluster.waitActive();
+      cluster.getFileSystem().enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
 
       // set "/bar" directory with HOT storage policy.
       ClientProtocol client = NameNodeProxies.createProxy(conf,
@@ -758,7 +758,7 @@ public class TestMover {
       for (int i = 0; i < cluster.getDataNodes().size(); i++) {
         DataNode dn = cluster.getDataNodes().get(i);
         LOG.info("Simulate block pinning in datanode {}", dn);
-        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
       }
 
       // move file blocks to ONE_SSD policy
@@ -896,7 +896,7 @@ public class TestMover {
       if (dn.getDatanodeId().getDatanodeUuid()
           .equals(datanodeInfo.getDatanodeUuid())) {
         LOG.info("Simulate block pinning in datanode {}", datanodeInfo);
-        DataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
+        InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
         break;
       }
     }

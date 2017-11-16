@@ -32,6 +32,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
@@ -64,6 +68,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
@@ -206,7 +212,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * Yarn Router forwards every getNewApplication requests to any RM. During
+   * YARN Router forwards every getNewApplication requests to any RM. During
    * this operation there will be no communication with the State Store. The
    * Router will forward the requests to any SubCluster. The Router will retry
    * to submit the request on #numSubmitRetries different SubClusters. The
@@ -425,7 +431,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    *
    * Possible failures and behaviors:
@@ -490,7 +496,7 @@ public class FederationClientInterceptor
   }
 
   /**
-   * The Yarn Router will forward to the respective Yarn RM in which the AM is
+   * The YARN Router will forward to the respective YARN RM in which the AM is
    * running.
    *
    * Possible failure:
@@ -709,4 +715,21 @@ public class FederationClientInterceptor
     throw new NotImplementedException();
   }
 
+  @Override
+  public GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException {
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public GetAllResourceTypeInfoResponse getResourceTypeInfo(
+      GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
+    throw new NotImplementedException();
+  }
 }

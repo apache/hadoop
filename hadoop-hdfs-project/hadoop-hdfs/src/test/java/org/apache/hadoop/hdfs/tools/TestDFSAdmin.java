@@ -534,8 +534,6 @@ public class TestDFSAdmin {
     final Configuration dfsConf = new HdfsConfiguration();
     ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
-    dfsConf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        ecPolicy.getName());
     dfsConf.setInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     dfsConf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
@@ -565,6 +563,7 @@ public class TestDFSAdmin {
       final long fileLength = 512L;
       final DistributedFileSystem fs = miniCluster.getFileSystem();
       final Path file = new Path(baseDir, "/corrupted");
+      fs.enableErasureCodingPolicy(ecPolicy.getName());
       DFSTestUtil.createFile(fs, file, fileLength, replFactor, 12345L);
       DFSTestUtil.waitReplication(fs, file, replFactor);
       final ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file);
@@ -778,9 +777,9 @@ public class TestDFSAdmin {
     assertEquals(numCorruptBlocks + numCorruptECBlockGroups,
         client.getCorruptBlocksCount());
     assertEquals(numCorruptBlocks, client.getNamenode()
-        .getBlocksStats().getCorruptBlocksStat());
+        .getReplicatedBlockStats().getCorruptBlocks());
     assertEquals(numCorruptECBlockGroups, client.getNamenode()
-        .getECBlockGroupsStats().getCorruptBlockGroupsStat());
+        .getECBlockGroupStats().getCorruptBlockGroups());
   }
 
   @Test

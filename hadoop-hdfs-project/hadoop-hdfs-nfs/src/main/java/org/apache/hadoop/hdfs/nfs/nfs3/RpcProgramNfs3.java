@@ -319,12 +319,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     GETATTR3Request request;
     try {
       request = GETATTR3Request.deserialize(xdr);
@@ -335,9 +329,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("GETATTR for fileId: " + handle.getFileId() + " client: "
-          + remoteAddress);
+      LOG.debug("GETATTR for fileHandle: " + handle.dumpFileHandle()
+          + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     Nfs3FileAttributes attrs = null;
@@ -412,11 +414,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   SETATTR3Response setattr(XDR xdr, SecurityHandler securityHandler,
       SocketAddress remoteAddress) {
     SETATTR3Response response = new SETATTR3Response(Nfs3Status.NFS3_OK);
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     SETATTR3Request request;
     try {
@@ -428,9 +425,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS SETATTR fileId: " + handle.getFileId() + " client: "
-          + remoteAddress);
+      LOG.debug("NFS SETATTR fileHandle: " + handle.dumpFileHandle()
+          + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     if (request.getAttr().getUpdateFields().contains(SetAttrField.SIZE)) {
@@ -498,12 +503,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     LOOKUP3Request request;
     try {
       request = LOOKUP3Request.deserialize(xdr);
@@ -514,15 +513,22 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FileHandle dirHandle = request.getHandle();
     String fileName = request.getName();
+    int namenodeId = dirHandle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS LOOKUP dir fileId: " + dirHandle.getFileId() + " name: "
-          + fileName + " client: " + remoteAddress);
+      LOG.debug("NFS LOOKUP dir fileHandle: " + dirHandle.dumpFileHandle()
+          + " name: " + fileName + " client: " + remoteAddress);
     }
 
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
+    }
     try {
       String dirFileIdPath = Nfs3Utils.getFileIdPath(dirHandle);
       Nfs3FileAttributes postOpObjAttr = writeManager.getFileAttr(dfsClient,
-          dirHandle, fileName);
+          dirHandle, fileName, namenodeId);
       if (postOpObjAttr == null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("NFS LOOKUP fileId: " + dirHandle.getFileId() + " name: "
@@ -540,7 +546,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         LOG.info("Can't get path for dir fileId: " + dirHandle.getFileId());
         return new LOOKUP3Response(Nfs3Status.NFS3ERR_STALE);
       }
-      FileHandle fileHandle = new FileHandle(postOpObjAttr.getFileId());
+      FileHandle fileHandle =
+          new FileHandle(postOpObjAttr.getFileId(), namenodeId);
       return new LOOKUP3Response(Nfs3Status.NFS3_OK, fileHandle, postOpObjAttr,
           postOpDirAttr);
 
@@ -566,12 +573,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     ACCESS3Request request;
     try {
       request = ACCESS3Request.deserialize(xdr);
@@ -581,13 +582,21 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
-    Nfs3FileAttributes attrs;
+    int namenodeId = handle.getNamenodeId();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS ACCESS fileId: " + handle.getFileId() + " client: "
-          + remoteAddress);
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("NFS ACCESS fileHandle: " + handle.dumpFileHandle()
+          + " client: " + remoteAddress);
+    }
+
+    Nfs3FileAttributes attrs;
     try {
       attrs = writeManager.getFileAttr(dfsClient, handle, iug);
 
@@ -639,12 +648,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     READLINK3Request request;
 
     try {
@@ -655,9 +658,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS READLINK fileId: " + handle.getFileId() + " client: "
-          + remoteAddress);
+      LOG.debug("NFS READLINK fileHandle: " + handle.dumpFileHandle()
+          + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     String fileIdPath = Nfs3Utils.getFileIdPath(handle);
@@ -715,12 +726,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(userName);
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     READ3Request request;
 
     try {
@@ -734,9 +739,16 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     int count = request.getCount();
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS READ fileId: " + handle.getFileId() + " offset: " + offset
-          + " count: " + count + " client: " + remoteAddress);
+      LOG.debug("NFS READ fileHandle: " + handle.dumpFileHandle()+ " offset: "
+          + offset + " count: " + count + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient = clientCache.getDfsClient(userName, namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     Nfs3FileAttributes attrs;
@@ -791,7 +803,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
        */
       for (int i = 0; i < 1; ++i) {
         FSDataInputStream fis = clientCache.getDfsInputStream(userName,
-            Nfs3Utils.getFileIdPath(handle));
+            Nfs3Utils.getFileIdPath(handle), namenodeId);
 
         if (fis == null) {
             return new READ3Response(Nfs3Status.NFS3ERR_ACCES);
@@ -805,7 +817,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           // which requires incompatible changes.
           if (e.getMessage().equals("Stream closed")) {
             clientCache.invalidateDfsInputStream(userName,
-                Nfs3Utils.getFileIdPath(handle));
+                Nfs3Utils.getFileIdPath(handle), namenodeId);
             continue;
           } else {
             throw e;
@@ -850,11 +862,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       SecurityHandler securityHandler, SocketAddress remoteAddress) {
     WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK);
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     WRITE3Request request;
 
@@ -875,10 +882,18 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS WRITE fileId: " + handle.getFileId() + " offset: "
+      LOG.debug("NFS WRITE fileHandle: " + handle.dumpFileHandle() + " offset: "
           + offset + " length: " + count + " stableHow: " + stableHow.getValue()
           + " xid: " + xid + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     Nfs3FileAttributes preOpAttr = null;
@@ -932,11 +947,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   CREATE3Response create(XDR xdr, SecurityHandler securityHandler,
       SocketAddress remoteAddress) {
     CREATE3Response response = new CREATE3Response(Nfs3Status.NFS3_OK);
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     CREATE3Request request;
 
@@ -949,9 +959,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FileHandle dirHandle = request.getHandle();
     String fileName = request.getName();
+    int namenodeId = dirHandle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS CREATE dir fileId: " + dirHandle.getFileId()
+      LOG.debug("NFS CREATE dir fileHandle: " + dirHandle.dumpFileHandle()
           + " filename: " + fileName + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     int createMode = request.getMode();
@@ -1016,7 +1034,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       OpenFileCtx openFileCtx = new OpenFileCtx(fos, postOpObjAttr,
           writeDumpDir + "/" + postOpObjAttr.getFileId(), dfsClient, iug,
           aixCompatMode, config);
-      fileHandle = new FileHandle(postOpObjAttr.getFileId());
+      fileHandle = new FileHandle(postOpObjAttr.getFileId(), namenodeId);
       if (!writeManager.addOpenFileStream(fileHandle, openFileCtx)) {
         LOG.warn("Can't add more stream, close it."
             + " Future write will become append");
@@ -1066,11 +1084,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   MKDIR3Response mkdir(XDR xdr, SecurityHandler securityHandler,
       SocketAddress remoteAddress) {
     MKDIR3Response response = new MKDIR3Response(Nfs3Status.NFS3_OK);
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     MKDIR3Request request;
 
@@ -1082,9 +1095,18 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
     FileHandle dirHandle = request.getHandle();
     String fileName = request.getName();
+    int namenodeId = dirHandle.getNamenodeId();
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
+    }
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS MKDIR dirId: " + dirHandle.getFileId() + " filename: "
-          + fileName + " client: " + remoteAddress);
+      LOG.debug("NFS MKDIR dirHandle: " + dirHandle.dumpFileHandle()
+          + " filename: " + fileName + " client: " + remoteAddress);
     }
 
     if (request.getObjAttr().getUpdateFields().contains(SetAttrField.SIZE)) {
@@ -1130,11 +1152,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       setattrInternal(dfsClient, fileIdPath, setAttr3, false);
 
       postOpObjAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
-      objFileHandle = new FileHandle(postOpObjAttr.getFileId());
+      objFileHandle = new FileHandle(postOpObjAttr.getFileId(), namenodeId);
       WccData dirWcc = Nfs3Utils.createWccData(
           Nfs3Utils.getWccAttr(preOpDirAttr), dfsClient, dirFileIdPath, iug);
       return new MKDIR3Response(Nfs3Status.NFS3_OK, new FileHandle(
-          postOpObjAttr.getFileId()), postOpObjAttr, dirWcc);
+          postOpObjAttr.getFileId(), namenodeId), postOpObjAttr, dirWcc);
     } catch (IOException e) {
       LOG.warn("Exception ", e);
       // Try to return correct WccData
@@ -1167,11 +1189,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   REMOVE3Response remove(XDR xdr, SecurityHandler securityHandler,
       SocketAddress remoteAddress) {
     REMOVE3Response response = new REMOVE3Response(Nfs3Status.NFS3_OK);
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     REMOVE3Request request;
     try {
@@ -1181,10 +1198,19 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return new REMOVE3Response(Nfs3Status.NFS3ERR_INVAL);
     }
     FileHandle dirHandle = request.getHandle();
+    int namenodeId = dirHandle.getNamenodeId();
+
     String fileName = request.getName();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS REMOVE dir fileId: " + dirHandle.getFileId()
+      LOG.debug("NFS REMOVE dir fileHandle: " + dirHandle.dumpFileHandle()
           + " fileName: " + fileName + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     String dirFileIdPath = Nfs3Utils.getFileIdPath(dirHandle);
@@ -1247,11 +1273,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   RMDIR3Response rmdir(XDR xdr, SecurityHandler securityHandler,
       SocketAddress remoteAddress) {
     RMDIR3Response response = new RMDIR3Response(Nfs3Status.NFS3_OK);
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     RMDIR3Request request;
     try {
@@ -1262,10 +1283,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
     FileHandle dirHandle = request.getHandle();
     String fileName = request.getName();
-
+    int namenodeId = dirHandle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS RMDIR dir fileId: " + dirHandle.getFileId()
+      LOG.debug("NFS RMDIR dir fileHandle: " + dirHandle.dumpFileHandle()
           + " fileName: " + fileName + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     String dirFileIdPath = Nfs3Utils.getFileIdPath(dirHandle);
@@ -1332,11 +1360,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   RENAME3Response rename(XDR xdr, SecurityHandler securityHandler,
       SocketAddress remoteAddress) {
     RENAME3Response response = new RENAME3Response(Nfs3Status.NFS3_OK);
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     RENAME3Request request = null;
     try {
@@ -1347,13 +1370,28 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle fromHandle = request.getFromDirHandle();
+    int fromNamenodeId = fromHandle.getNamenodeId();
     String fromName = request.getFromName();
     FileHandle toHandle = request.getToDirHandle();
+    int toNamenodeId = toHandle.getNamenodeId();
     String toName = request.getToName();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS RENAME from: " + fromHandle.getFileId() + "/" + fromName
-          + " to: " + toHandle.getFileId() + "/" + toName + " client: "
-          + remoteAddress);
+      LOG.debug("NFS RENAME from: " + fromHandle.dumpFileHandle()
+          + "/" + fromName + " to: " + toHandle.dumpFileHandle()
+          + "/" + toName + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), fromNamenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
+    }
+
+    if (fromNamenodeId != toNamenodeId) {
+      // renaming file from one namenode to another is not supported
+      response.setStatus(Nfs3Status.NFS3ERR_INVAL);
+      return response;
     }
 
     String fromDirFileIdPath = Nfs3Utils.getFileIdPath(fromHandle);
@@ -1429,12 +1467,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     SYMLINK3Request request;
     try {
       request = SYMLINK3Request.deserialize(xdr);
@@ -1448,11 +1480,20 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     String name = request.getName();
     String symData = request.getSymData();
     String linkDirIdPath = Nfs3Utils.getFileIdPath(dirHandle);
+    int namenodeId = dirHandle.getNamenodeId();
+
     // Don't do any name check to source path, just leave it to HDFS
     String linkIdPath = linkDirIdPath + "/" + name;
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS SYMLINK, target: " + symData + " link: " + linkIdPath
-          + " client: " + remoteAddress);
+          + " namenodeId: " + namenodeId + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     try {
@@ -1471,7 +1512,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           .setPostOpAttr(Nfs3Utils.getFileAttr(dfsClient, linkDirIdPath, iug));
 
       return new SYMLINK3Response(Nfs3Status.NFS3_OK, new FileHandle(
-          objAttr.getFileId()), objAttr, dirWcc);
+          objAttr.getFileId(), namenodeId), objAttr, dirWcc);
 
     } catch (IOException e) {
       LOG.warn("Exception: " + e);
@@ -1524,12 +1565,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     READDIR3Request request;
     try {
       request = READDIR3Request.deserialize(xdr);
@@ -1538,6 +1573,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return new READDIR3Response(Nfs3Status.NFS3ERR_INVAL);
     }
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
+
     long cookie = request.getCookie();
     if (cookie < 0) {
       LOG.error("Invalid READDIR request, with negative cookie: " + cookie);
@@ -1550,8 +1587,16 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS READDIR fileId: " + handle.getFileId() + " cookie: "
-          + cookie + " count: " + count + " client: " + remoteAddress);
+      LOG.debug("NFS READDIR fileHandle: " + handle.dumpFileHandle()
+          + " cookie: " + cookie + " count: " + count + " client: "
+          + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     HdfsFileStatus dirStatus;
@@ -1684,10 +1729,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_ACCES);
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
-    }
 
     READDIRPLUS3Request request = null;
     try {
@@ -1698,6 +1739,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     long cookie = request.getCookie();
     if (cookie < 0) {
       LOG.error("Invalid READDIRPLUS request, with negative cookie: " + cookie);
@@ -1715,9 +1757,15 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS READDIRPLUS fileId: " + handle.getFileId() + " cookie: "
-          + cookie + " dirCount: " + dirCount + " maxCount: " + maxCount
-          + " client: " + remoteAddress);
+      LOG.debug("NFS READDIRPLUS fileHandle: " + handle.dumpFileHandle()
+          + " cookie: " + cookie + " dirCount: " + dirCount + " maxCount: "
+          + maxCount + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
     }
 
     HdfsFileStatus dirStatus;
@@ -1805,14 +1853,14 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
       entries[0] = new READDIRPLUS3Response.EntryPlus3(
           postOpDirAttr.getFileId(), ".", 0, postOpDirAttr, new FileHandle(
-              postOpDirAttr.getFileId()));
+              postOpDirAttr.getFileId(), namenodeId));
       entries[1] = new READDIRPLUS3Response.EntryPlus3(dotdotFileId, "..",
           dotdotFileId, Nfs3Utils.getNfs3FileAttrFromFileStatus(dotdotStatus,
-              iug), new FileHandle(dotdotFileId));
+              iug), new FileHandle(dotdotFileId, namenodeId));
 
       for (int i = 2; i < n + 2; i++) {
         long fileId = fstatus[i - 2].getFileId();
-        FileHandle childHandle = new FileHandle(fileId);
+        FileHandle childHandle = new FileHandle(fileId, namenodeId);
         Nfs3FileAttributes attr;
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
@@ -1829,7 +1877,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       entries = new READDIRPLUS3Response.EntryPlus3[n]; 
       for (int i = 0; i < n; i++) {
         long fileId = fstatus[i].getFileId();
-        FileHandle childHandle = new FileHandle(fileId);
+        FileHandle childHandle = new FileHandle(fileId, namenodeId);
         Nfs3FileAttributes attr;
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
@@ -1863,11 +1911,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     FSSTAT3Request request;
     try {
@@ -1878,9 +1921,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS FSSTAT fileId: " + handle.getFileId() + " client: "
-          + remoteAddress);
+      LOG.debug("NFS FSSTAT fileHandle: " + handle.dumpFileHandle()
+          + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     try {
@@ -1938,12 +1989,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     FSINFO3Request request;
     try {
       request = FSINFO3Request.deserialize(xdr);
@@ -1953,9 +1998,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS FSINFO fileId: " + handle.getFileId() + " client: "
-          + remoteAddress);
+      LOG.debug("NFS FSINFO fileHandle: " + handle.dumpFileHandle()
+          +" client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     try {
@@ -2003,12 +2056,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
-
     PATHCONF3Request request;
     try {
       request = PATHCONF3Request.deserialize(xdr);
@@ -2019,10 +2066,18 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FileHandle handle = request.getHandle();
     Nfs3FileAttributes attrs;
+    int namenodeId = handle.getNamenodeId();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS PATHCONF fileId: " + handle.getFileId() + " client: "
-          + remoteAddress);
+      LOG.debug("NFS PATHCONF fileHandle: " + handle.dumpFileHandle()
+          + " client: " + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     try {
@@ -2055,11 +2110,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   COMMIT3Response commit(XDR xdr, Channel channel, int xid,
       SecurityHandler securityHandler, SocketAddress remoteAddress) {
     COMMIT3Response response = new COMMIT3Response(Nfs3Status.NFS3_OK);
-    DFSClient dfsClient = clientCache.getDfsClient(securityHandler.getUser());
-    if (dfsClient == null) {
-      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
-      return response;
-    }
 
     COMMIT3Request request;
     try {
@@ -2071,10 +2121,18 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
+    int namenodeId = handle.getNamenodeId();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS COMMIT fileId: " + handle.getFileId() + " offset="
+      LOG.debug("NFS COMMIT fileHandle: " + handle.dumpFileHandle() + " offset="
           + request.getOffset() + " count=" + request.getCount() + " client: "
           + remoteAddress);
+    }
+
+    DFSClient dfsClient =
+        clientCache.getDfsClient(securityHandler.getUser(), namenodeId);
+    if (dfsClient == null) {
+      response.setStatus(Nfs3Status.NFS3ERR_SERVERFAULT);
+      return response;
     }
 
     String fileIdPath = Nfs3Utils.getFileIdPath(handle);
@@ -2097,7 +2155,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
       // Insert commit as an async request
       writeManager.handleCommit(dfsClient, handle, commitOffset, channel, xid,
-          preOpAttr);
+          preOpAttr, namenodeId);
       return null;
     } catch (IOException e) {
       LOG.warn("Exception ", e);

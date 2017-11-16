@@ -59,6 +59,7 @@ URL and redirects the application submission request to the appropriate sub-clus
 The Router exposes the ApplicationClientProtocol to the outside world, transparently hiding the presence of multiple RMs. To achieve this the Router also persists the mapping
 between the application and its home sub-cluster into the State Store. This allows Routers to be soft-state while supporting user requests cheaply, as any Router can recover
 this application to home sub-cluster mapping and direct requests to the right RM without broadcasting them. For performance caching and session stickiness might be advisable.
+The state of the federation (including applications and nodes) is exposed through the Web UI.
 
 ###AMRMProxy
 The AMRMProxy is a key component to allow the application to scale and run across sub-clusters. The AMRMProxy runs on all the NM machines and acts as a proxy to the
@@ -246,9 +247,9 @@ Optional:
 |:---- |:---- |
 |`yarn.router.hostname` | `0.0.0.0` | Router host name.
 |`yarn.router.clientrm.address` | `0.0.0.0:8050` | Router client address. |
-|`yarn.router.webapp.address` | `0.0.0.0:80` | Webapp address at the router. |
+|`yarn.router.webapp.address` | `0.0.0.0:8089` | Webapp address at the router. |
 |`yarn.router.admin.address` | `0.0.0.0:8052` | Admin address at the router. |
-|`yarn.router.webapp.https.address` | `0.0.0.0:443` | Secure webapp address at the router. |
+|`yarn.router.webapp.https.address` | `0.0.0.0:8091` | Secure webapp address at the router. |
 |`yarn.router.submit.retry` | `3` | The number of retries in the router before we give up. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
@@ -306,4 +307,5 @@ The output from this particular example job should be something like:
       Job Finished in 30.586 seconds
       Estimated value of Pi is 3.14250000......
 
+The state of the job can also be tracked on the Router Web UI at `routerhost:8089`.
 Note that no change in the code or recompilation of the input jar was required to use federation. Also, the output of this job is the exact same as it would be when run without federation. Also, in order to get the full benefit of federation, use a large enough number of mappers such that more than one cluster is required. That number happens to be 16 in the case of the above example.

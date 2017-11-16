@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,14 +33,17 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<ApplicationId, ContainerManagerApplicationProto> apps;
@@ -119,6 +123,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       rcsCopy.setRemainingRetryAttempts(rcs.getRemainingRetryAttempts());
       rcsCopy.setWorkDir(rcs.getWorkDir());
       rcsCopy.setLogDir(rcs.getLogDir());
+      rcsCopy.setResourceMappings(rcs.getResourceMappings());
       result.add(rcsCopy);
     }
     return result;
@@ -142,6 +147,19 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
+  public void storeContainerPaused(ContainerId containerId) throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.status = RecoveredContainerStatus.PAUSED;
+  }
+
+  @Override
+  public void removeContainerPaused(ContainerId containerId)
+      throws IOException {
+    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
+    rcs.status = RecoveredContainerStatus.LAUNCHED;
+  }
+
+  @Override
   public synchronized void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException {
     RecoveredContainerState rcs = getRecoveredContainerState(containerId);
@@ -159,12 +177,17 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public synchronized void storeContainerResourceChanged(
-      ContainerId containerId, int version, Resource capability)
-      throws IOException {
+  public void storeContainerUpdateToken(ContainerId containerId,
+      ContainerTokenIdentifier containerTokenIdentifier) throws IOException {
     RecoveredContainerState rcs = getRecoveredContainerState(containerId);
-    rcs.capability = capability;
-    rcs.version = version;
+    rcs.capability = containerTokenIdentifier.getResource();
+    rcs.version = containerTokenIdentifier.getVersion();
+    Token currentToken = rcs.getStartRequest().getContainerToken();
+    Token updatedToken = Token
+        .newInstance(containerTokenIdentifier.getBytes(),
+            ContainerTokenIdentifier.KIND.toString(),
+            currentToken.getPassword().array(), currentToken.getService());
+    rcs.startRequest.setContainerToken(updatedToken);
   }
 
   @Override
@@ -478,6 +501,20 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   public synchronized void removeAMRMProxyAppContext(
       ApplicationAttemptId attempt) throws IOException {
     amrmProxyState.getAppContexts().remove(attempt);
+  }
+
+  @Override
+  public void storeAssignedResources(Container container,
+      String resourceType, List<Serializable> assignedResources)
+      throws IOException {
+    ResourceMappings.AssignedResources ar =
+        new ResourceMappings.AssignedResources();
+    ar.updateAssignedResources(assignedResources);
+    containerStates.get(container.getContainerId()).getResourceMappings()
+        .addAssignedResources(resourceType, ar);
+
+    // update container resource mapping.
+    updateContainerResourceMapping(container, resourceType, assignedResources);
   }
 
   private static class TrackerState {

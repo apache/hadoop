@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,6 +51,8 @@ public class TestQueueManager {
 
     when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     when(scheduler.getConf()).thenReturn(conf);
+    when(scheduler.getResourceCalculator()).thenReturn(
+        new DefaultResourceCalculator());
 
     SystemClock clock = SystemClock.getInstance();
 
@@ -206,7 +209,7 @@ public class TestQueueManager {
 
     queueManager.updateAllocationConfiguration(allocConf);
     queueManager.getQueue("root.test").setMaxChildQueueResource(
-        Resources.createResource(8192, 256));
+        new ConfigurableResource(Resources.createResource(8192, 256)));
 
     FSQueue q1 = queueManager.createQueue("root.test.childC", FSQueueType.LEAF);
     assertNotNull("Leaf queue root.test.childC was not created",

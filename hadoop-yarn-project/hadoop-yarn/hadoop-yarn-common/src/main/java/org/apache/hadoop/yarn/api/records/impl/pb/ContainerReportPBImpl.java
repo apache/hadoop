@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -354,5 +355,24 @@ public class ContainerReportPBImpl extends ContainerReport {
       return;
     }
     builder.setNodeHttpAddress(nodeHttpAddress);
+  }
+
+  @Override
+  public ExecutionType getExecutionType() {
+    ContainerReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasExecutionType()) {
+      return ExecutionType.GUARANTEED;  // default value
+    }
+    return ProtoUtils.convertFromProtoFormat(p.getExecutionType());
+  }
+
+  @Override
+  public void setExecutionType(ExecutionType executionType) {
+    maybeInitBuilder();
+    if (executionType == null) {
+      builder.clearExecutionType();
+      return;
+    }
+    builder.setExecutionType(ProtoUtils.convertToProtoFormat(executionType));
   }
 }

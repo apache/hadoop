@@ -108,6 +108,10 @@ The output result of this processor should be like the following output:
        ...some output omitted...
        OP_APPEND                      ( 47): 1
        OP_SET_QUOTA_BY_STORAGETYPE    ( 48): 1
+       OP_ADD_ERASURE_CODING_POLICY   ( 49): 0
+       OP_ENABLE_ERASURE_CODING_POLICY  ( 50): 1
+       OP_DISABLE_ERASURE_CODING_POLICY ( 51): 0
+       OP_REMOVE_ERASURE_CODING_POLICY  ( 52): 0
        OP_INVALID                     ( -1): 0
 
 The output is formatted as a colon separated two column table: OpCode and OpCodeCount. Each OpCode corresponding to the specific operation(s) in NameNode.

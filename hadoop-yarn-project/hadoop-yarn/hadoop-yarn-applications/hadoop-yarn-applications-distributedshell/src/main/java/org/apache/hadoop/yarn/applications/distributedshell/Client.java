@@ -36,8 +36,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -66,10 +64,12 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -79,9 +79,12 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Client for Distributed Shell application submission to YARN.
@@ -118,7 +121,13 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 @InterfaceStability.Unstable
 public class Client {
 
-  private static final Log LOG = LogFactory.getLog(Client.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(Client.class);
+
+  private static final int DEFAULT_AM_MEMORY = 100;
+  private static final int DEFAULT_AM_VCORES = 1;
+  private static final int DEFAULT_CONTAINER_MEMORY = 10;
+  private static final int DEFAULT_CONTAINER_VCORES = 1;
   
   // Configuration
   private Configuration conf;
@@ -130,9 +139,12 @@ public class Client {
   // Queue for App master
   private String amQueue = "";
   // Amt. of memory resource to request for to run the App Master
-  private long amMemory = 100;
+  private long amMemory = DEFAULT_AM_MEMORY;
   // Amt. of virtual core resource to request for to run the App Master
-  private int amVCores = 1;
+  private int amVCores = DEFAULT_AM_VCORES;
+
+  // AM resource profile
+  private String amResourceProfile = "";
 
   // Application master jar file
   private String appMasterJar = ""; 
@@ -151,9 +163,11 @@ public class Client {
   private int shellCmdPriority = 0;
 
   // Amt of memory to request for container in which shell script will be executed
-  private int containerMemory = 10; 
+  private long containerMemory = DEFAULT_CONTAINER_MEMORY;
   // Amt. of virtual cores to request for container in which shell script will be executed
-  private int containerVirtualCores = 1;
+  private int containerVirtualCores = DEFAULT_CONTAINER_VCORES;
+  // container resource profile
+  private String containerResourceProfile = "";
   // No. of containers in which the shell script needs to be executed
   private int numContainers = 1;
   private String nodeLabelExpression = null;
@@ -224,7 +238,7 @@ public class Client {
       }
       result = client.run();
     } catch (Throwable t) {
-      LOG.fatal("Error running Client", t);
+      LOG.error("Error running Client", t);
       System.exit(1);
     }
     if (result) {
@@ -256,6 +270,7 @@ public class Client {
     opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
     opts.addOption("master_vcores", true, "Amount of virtual cores to be requested to run the application master");
     opts.addOption("jar", true, "Jar file containing the application master");
+    opts.addOption("master_resource_profile", true, "Resource profile for the application master");
     opts.addOption("shell_command", true, "Shell command to be executed by " +
         "the Application Master. Can only specify either --shell_command " +
         "or --shell_script");
@@ -269,6 +284,7 @@ public class Client {
     opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");
     opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
+    opts.addOption("container_resource_profile", true, "Resource profile for the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("keep_containers_across_application_attempts", false,
@@ -372,17 +388,11 @@ public class Client {
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
-    amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "100"));
-    amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
-
-    if (amMemory < 0) {
-      throw new IllegalArgumentException("Invalid memory specified for application master, exiting."
-          + " Specified memory=" + amMemory);
-    }
-    if (amVCores < 0) {
-      throw new IllegalArgumentException("Invalid virtual cores specified for application master, exiting."
-          + " Specified virtual cores=" + amVCores);
-    }
+    amMemory =
+        Integer.parseInt(cliParser.getOptionValue("master_memory", "-1"));
+    amVCores =
+        Integer.parseInt(cliParser.getOptionValue("master_vcores", "-1"));
+    amResourceProfile = cliParser.getOptionValue("master_resource_profile", "");
 
     if (!cliParser.hasOption("jar")) {
       throw new IllegalArgumentException("No jar file specified for application master");
@@ -423,17 +433,18 @@ public class Client {
     }
     shellCmdPriority = Integer.parseInt(cliParser.getOptionValue("shell_cmd_priority", "0"));
 
-    containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
-    containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
-    numContainers = Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
-    
+    containerMemory =
+        Integer.parseInt(cliParser.getOptionValue("container_memory", "-1"));
+    containerVirtualCores =
+        Integer.parseInt(cliParser.getOptionValue("container_vcores", "-1"));
+    containerResourceProfile =
+        cliParser.getOptionValue("container_resource_profile", "");
+    numContainers =
+        Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
 
-    if (containerMemory < 0 || containerVirtualCores < 0 || numContainers < 1) {
-      throw new IllegalArgumentException("Invalid no. of containers or container memory/vcores specified,"
-          + " exiting."
-          + " Specified containerMemory=" + containerMemory
-          + ", containerVirtualCores=" + containerVirtualCores
-          + ", numContainer=" + numContainers);
+    if (numContainers < 1) {
+      throw new IllegalArgumentException("Invalid no. of containers specified,"
+          + " exiting. Specified numContainer=" + numContainers);
     }
     
     nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
@@ -540,6 +551,32 @@ public class Client {
       prepareTimelineDomain();
     }
 
+    Map<String, Resource> profiles;
+    try {
+      profiles = yarnClient.getResourceProfiles();
+    } catch (YARNFeatureNotEnabledException re) {
+      profiles = null;
+    }
+
+    List<String> appProfiles = new ArrayList<>(2);
+    appProfiles.add(amResourceProfile);
+    appProfiles.add(containerResourceProfile);
+    for (String appProfile : appProfiles) {
+      if (appProfile != null && !appProfile.isEmpty()) {
+        if (profiles == null) {
+          String message = "Resource profiles is not enabled";
+          LOG.error(message);
+          throw new IOException(message);
+        }
+        if (!profiles.containsKey(appProfile)) {
+          String message = "Unknown resource profile '" + appProfile
+              + "'. Valid resource profiles are " + profiles.keySet();
+          LOG.error(message);
+          throw new IOException(message);
+        }
+      }
+    }
+
     // Get a new application id
     YarnClientApplication app = yarnClient.createApplication();
     GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
@@ -572,6 +609,13 @@ public class Client {
     // set the application name
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
+
+    // Set up resource type requirements
+    // For now, both memory and vcores are supported, so we set memory and
+    // vcores requirements
+    setAMResourceCapability(appContext, amMemory, amVCores, amResourceProfile,
+        amPriority, profiles);
+    setContainerResources(containerMemory, containerVirtualCores, profiles);
 
     appContext.setKeepContainersAcrossApplicationAttempts(keepContainers);
     appContext.setApplicationName(appName);
@@ -696,8 +740,16 @@ public class Client {
     // Set class name 
     vargs.add(appMasterMainClass);
     // Set params for Application Master
-    vargs.add("--container_memory " + String.valueOf(containerMemory));
-    vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
+    if (containerMemory > 0) {
+      vargs.add("--container_memory " + String.valueOf(containerMemory));
+    }
+    if (containerVirtualCores > 0) {
+      vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
+    }
+    if (containerResourceProfile != null && !containerResourceProfile
+        .isEmpty()) {
+      vargs.add("--container_resource_profile " + containerResourceProfile);
+    }
     vargs.add("--num_containers " + String.valueOf(numContainers));
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);
@@ -729,12 +781,6 @@ public class Client {
     // Set up the container launch context for the application master
     ContainerLaunchContext amContainer = ContainerLaunchContext.newInstance(
       localResources, env, commands, null, null, null);
-
-    // Set up resource type requirements
-    // For now, both memory and vcores are supported, so we set memory and 
-    // vcores requirements
-    Resource capability = Resource.newInstance(amMemory, amVCores);
-    appContext.setResource(capability);
 
     // Service data is a binary blob that can be passed to the application
     // Not needed in this scenario
@@ -931,6 +977,67 @@ public class Client {
       LOG.error("Error when putting the timeline domain", e);
     } finally {
       timelineClient.stop();
+    }
+  }
+
+  private void setAMResourceCapability(ApplicationSubmissionContext appContext,
+      long memory, int vcores, String profile, int priority,
+      Map<String, Resource> profiles) throws IllegalArgumentException {
+    if (memory < -1 || memory == 0) {
+      throw new IllegalArgumentException("Invalid memory specified for"
+          + " application master, exiting. Specified memory=" + memory);
+    }
+    if (vcores < -1 || vcores == 0) {
+      throw new IllegalArgumentException("Invalid virtual cores specified for"
+          + " application master, exiting. Specified virtual cores=" + vcores);
+    }
+    String tmp = profile;
+    if (profile.isEmpty()) {
+      tmp = "default";
+    }
+    if (appContext.getAMContainerResourceRequests() == null) {
+      List<ResourceRequest> amResourceRequests = new ArrayList<ResourceRequest>();
+      amResourceRequests
+          .add(ResourceRequest.newInstance(Priority.newInstance(priority), "*",
+              Resources.clone(Resources.none()), 1));
+      appContext.setAMContainerResourceRequests(amResourceRequests);
+    }
+
+    if (appContext.getAMContainerResourceRequests().get(0)
+        .getProfileCapability() == null) {
+      appContext.getAMContainerResourceRequests().get(0).setProfileCapability(
+          ProfileCapability.newInstance(tmp, Resource.newInstance(0, 0)));
+    }
+    Resource capability = Resource.newInstance(0, 0);
+    // set amMemory because it's used to set Xmx param
+    if (profiles == null) {
+      amMemory = memory == -1 ? DEFAULT_AM_MEMORY : memory;
+      amVCores = vcores == -1 ? DEFAULT_AM_VCORES : vcores;
+      capability.setMemorySize(amMemory);
+      capability.setVirtualCores(amVCores);
+    } else {
+      amMemory = memory == -1 ? profiles.get(tmp).getMemorySize() : memory;
+      amVCores = vcores == -1 ? profiles.get(tmp).getVirtualCores() : vcores;
+      capability.setMemorySize(memory);
+      capability.setVirtualCores(vcores);
+    }
+    appContext.getAMContainerResourceRequests().get(0).getProfileCapability()
+        .setProfileCapabilityOverride(capability);
+  }
+
+  private void setContainerResources(long memory, int vcores,
+      Map<String, Resource> profiles) throws IllegalArgumentException {
+    if (memory < -1 || memory == 0) {
+      throw new IllegalArgumentException(
+          "Container memory '" + memory + "' has to be greated than 0");
+    }
+    if (vcores < -1 || vcores == 0) {
+      throw new IllegalArgumentException(
+          "Container vcores '" + vcores + "' has to be greated than 0");
+    }
+    if (profiles == null) {
+      containerMemory = memory == -1 ? DEFAULT_CONTAINER_MEMORY : memory;
+      containerVirtualCores = vcores == -1 ? DEFAULT_CONTAINER_VCORES : vcores;
     }
   }
 }

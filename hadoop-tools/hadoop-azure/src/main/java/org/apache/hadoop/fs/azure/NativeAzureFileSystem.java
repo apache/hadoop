@@ -40,6 +40,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
+import java.util.HashMap;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -62,21 +64,29 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.azure.NativeAzureFileSystemHelper.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -281,7 +291,7 @@ public class NativeAzureFileSystem extends FileSystem {
      * @param fs file system on which a file is written.
      * @throws IOException Thrown when fail to write file.
      */
-    public void writeFile(FileSystem fs) throws IOException {
+    public void writeFile(NativeAzureFileSystem fs) throws IOException {
       Path path = getRenamePendingFilePath();
       LOG.debug("Preparing to write atomic rename state to {}", path.toString());
       OutputStream output = null;
@@ -290,7 +300,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // Write file.
       try {
-        output = fs.create(path);
+        output = fs.createInternal(path, FsPermission.getFileDefault(), false, null);
         output.write(contents.getBytes(Charset.forName("UTF-8")));
       } catch (IOException e) {
         throw new IOException("Unable to write RenamePending file for folder rename from "
@@ -352,9 +362,9 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     /**
-     * This is an exact copy of org.codehaus.jettison.json.JSONObject.quote 
+     * This is an exact copy of org.codehaus.jettison.json.JSONObject.quote
      * method.
-     * 
+     *
      * Produce a string in double quotes with backslash sequences in all the
      * right places. A backslash will be inserted within </, allowing JSON
      * text to be delivered in HTML. In JSON text, a string cannot contain a
@@ -555,7 +565,7 @@ public class NativeAzureFileSystem extends FileSystem {
       if (!sourceFolderGone) {
         // Make sure the target folder exists.
         Path dst = fullPath(dstKey);
-        if (!fs.exists(dst)) {
+        if (!fs.existsInternal(dst)) {
           fs.mkdirs(dst);
         }
 
@@ -693,9 +703,28 @@ public class NativeAzureFileSystem extends FileSystem {
    * Configuration property used to specify list of users that can perform
    * chown operation when authorization is enabled in WASB.
    */
-  public static final String AZURE_CHOWN_USERLIST_PROPERTY_NAME = "fs.azure.chown.allowed.userlist";
+  public static final String AZURE_CHOWN_USERLIST_PROPERTY_NAME =
+      "fs.azure.chown.allowed.userlist";
 
   static final String AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
+
+  /**
+   * Configuration property used to specify list of daemon users that can
+   * perform chmod operation when authorization is enabled in WASB.
+   */
+  public static final String AZURE_DAEMON_USERLIST_PROPERTY_NAME =
+      "fs.azure.daemon.userlist";
+
+  static final String AZURE_DAEMON_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
+
+  /**
+   * Configuration property used to specify list of users that can perform
+   * chmod operation when authorization is enabled in WASB.
+   */
+  public static final String AZURE_CHMOD_USERLIST_PROPERTY_NAME =
+          "fs.azure.chmod.allowed.userlist";
+
+  static final String AZURE_CHMOD_USERLIST_PROPERTY_DEFAULT_VALUE = "*";
 
   static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME =
       "fs.azure.block.location.impersonatedhost";
@@ -947,11 +976,11 @@ public class NativeAzureFileSystem extends FileSystem {
     }
   }
 
-  private class NativeAzureFsOutputStream extends OutputStream {
-    // We should not override flush() to actually close current block and flush
-    // to DFS, this will break applications that assume flush() is a no-op.
-    // Applications are advised to use Syncable.hflush() for that purpose.
-    // NativeAzureFsOutputStream needs to implement Syncable if needed.
+  /**
+   * Azure output stream; wraps an inner stream of different types.
+   */
+  public class NativeAzureFsOutputStream extends OutputStream
+      implements Syncable, StreamCapabilities {
     private String key;
     private String keyEncoded;
     private OutputStream out;
@@ -983,6 +1012,48 @@ public class NativeAzureFileSystem extends FileSystem {
       setEncodedKey(anEncodedKey);
     }
 
+    /**
+     * Get a reference to the wrapped output stream.
+     *
+     * @return the underlying output stream
+     */
+    @InterfaceAudience.LimitedPrivate({"HDFS"})
+    public OutputStream getOutStream() {
+      return out;
+    }
+
+    @Override  // Syncable
+    public void hflush() throws IOException {
+      if (out instanceof Syncable) {
+        ((Syncable) out).hflush();
+      } else {
+        flush();
+      }
+    }
+
+    @Override  // Syncable
+    public void hsync() throws IOException {
+      if (out instanceof Syncable) {
+        ((Syncable) out).hsync();
+      } else {
+        flush();
+      }
+    }
+
+    /**
+     * Propagate probe of stream capabilities to nested stream
+     * (if supported), else return false.
+     * @param capability string to query the stream support for.
+     * @return true if the nested stream supports the specific capability.
+     */
+    @Override // StreamCapability
+    public boolean hasCapability(String capability) {
+      if (out instanceof StreamCapabilities) {
+        return ((StreamCapabilities) out).hasCapability(capability);
+      }
+      return false;
+    }
+
     @Override
     public synchronized void close() throws IOException {
       if (out != null) {
@@ -990,8 +1061,11 @@ public class NativeAzureFileSystem extends FileSystem {
         // before returning to the caller.
         //
         out.close();
-        restoreKey();
-        out = null;
+        try {
+          restoreKey();
+        } finally {
+          out = null;
+        }
       }
     }
 
@@ -1045,10 +1119,10 @@ public class NativeAzureFileSystem extends FileSystem {
     /**
      * Writes <code>len</code> from the specified byte array starting at offset
      * <code>off</code> to the output stream. The general contract for write(b,
-     * off, len) is that some of the bytes in the array <code>
-     * b</code b> are written to the output stream in order; element
-     * <code>b[off]</code> is the first byte written and
-     * <code>b[off+len-1]</code> is the last byte written by this operation.
+     * off, len) is that some of the bytes in the array <code>b</code>
+     * are written to the output stream in order; element <code>b[off]</code>
+     * is the first byte written and <code>b[off+len-1]</code> is the last
+     * byte written by this operation.
      * 
      * @param b
      *          Byte array to be written.
@@ -1138,7 +1212,9 @@ public class NativeAzureFileSystem extends FileSystem {
   private DelegationTokenAuthenticatedURL authURL;
   private DelegationTokenAuthenticatedURL.Token authToken = new DelegationTokenAuthenticatedURL.Token();
   private String credServiceUrl;
-
+  private List<String> chownAllowedUsers;
+  private List<String> chmodAllowedUsers;
+  private List<String> daemonUsers;
   /**
    * Configuration key to enable authorization support in WASB.
    */
@@ -1315,6 +1391,19 @@ public class NativeAzureFileSystem extends FileSystem {
       this.authorizer =
           new RemoteWasbAuthorizerImpl();
       authorizer.init(conf);
+
+      this.chmodAllowedUsers =
+          Arrays.asList(conf.getTrimmedStrings(
+              AZURE_CHMOD_USERLIST_PROPERTY_NAME,
+                  AZURE_CHMOD_USERLIST_PROPERTY_DEFAULT_VALUE));
+      this.chownAllowedUsers =
+          Arrays.asList(conf.getTrimmedStrings(
+              AZURE_CHOWN_USERLIST_PROPERTY_NAME,
+                  AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE));
+      this.daemonUsers =
+          Arrays.asList(conf.getTrimmedStrings(
+              AZURE_DAEMON_USERLIST_PROPERTY_NAME,
+                  AZURE_DAEMON_USERLIST_PROPERTY_DEFAULT_VALUE));
     }
 
     if (UserGroupInformation.isSecurityEnabled() && kerberosSupportEnabled) {
@@ -1604,6 +1693,10 @@ public class NativeAzureFileSystem extends FileSystem {
     // At this point, we have exclusive access to the source folder
     // via the lease, so we will not conflict with an active folder
     // rename operation.
+    //
+    // In the secure case, the call to exists will happen in the context
+    // of the user that initiated the operation. In this case, we should
+    // do the auth-check against ranger for the path.
     if (!exists(parent)) {
       try {
 
@@ -1699,6 +1792,30 @@ public class NativeAzureFileSystem extends FileSystem {
 
     performAuthCheck(ancestor, WasbAuthorizationOperations.WRITE, "create", absolutePath);
 
+    return createInternal(f, permission, overwrite, parentFolderLease);
+  }
+
+
+  /**
+   * This is the version of the create call that is meant for internal usage.
+   * This version is not public facing and does not perform authorization checks.
+   * It is used by the public facing create call and by FolderRenamePending to
+   * create the internal -RenamePending.json file.
+   * @param f the path to a file to be created.
+   * @param permission for the newly created file.
+   * @param overwrite specifies if the file should be overwritten.
+   * @param parentFolderLease lease on the parent folder.
+   * @return the output stream used to write data into the newly created file .
+   * @throws IOException if an IO error occurs while attempting to delete the
+   * path.
+   *
+   */
+  protected FSDataOutputStream createInternal(Path f, FsPermission permission,
+                                    boolean overwrite,
+                                    SelfRenewingLease parentFolderLease)
+      throws FileAlreadyExistsException, IOException {
+
+    Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
 
     FileMetadata existingMetadata = store.retrieveMetadata(key);
@@ -1749,7 +1866,7 @@ public class NativeAzureFileSystem extends FileSystem {
     OutputStream bufOutStream;
     if (store.isPageBlobKey(key)) {
       // Store page blobs directly in-place without renames.
-      bufOutStream = store.storefile(key, permissionStatus);
+      bufOutStream = store.storefile(key, permissionStatus, key);
     } else {
       // This is a block blob, so open the output blob stream based on the
       // encoded key.
@@ -1777,7 +1894,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // these
       // blocks.
       bufOutStream = new NativeAzureFsOutputStream(store.storefile(
-          keyEncoded, permissionStatus), key, keyEncoded);
+          keyEncoded, permissionStatus, key), key, keyEncoded);
     }
     // Construct the data output stream from the buffered output stream.
     FSDataOutputStream fsOut = new FSDataOutputStream(bufOutStream, statistics);
@@ -1802,31 +1919,256 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   /**
-   * Delete the specified file or folder. The parameter
-   * skipParentFolderLastModifiedTimeUpdate
-   * is used in the case of atomic folder rename redo. In that case, there is
-   * a lease on the parent folder, so (without reworking the code) modifying
-   * the parent folder update time will fail because of a conflict with the
-   * lease. Since we are going to delete the folder soon anyway so accurate
-   * modified time is not necessary, it's easier to just skip
-   * the modified time update.
-   *
-   * @param f file path to be deleted.
-   * @param recursive specify deleting recursively or not.
-   * @param skipParentFolderLastModifiedTimeUpdate If true, don't update the folder last
-   * modified time.
-   * @return true if and only if the file is deleted
-   * @throws IOException Thrown when fail to delete file or directory.
+   * Delete file or folder with authorization checks. Most of the code
+   * is duplicate of the actual delete implementation and will be merged
+   * once the performance and funcional aspects are guaranteed not to
+   * regress existing delete semantics.
    */
-  public boolean delete(Path f, boolean recursive,
+  private boolean deleteWithAuthEnabled(Path f, boolean recursive,
       boolean skipParentFolderLastModifiedTimeUpdate) throws IOException {
 
-    LOG.debug("Deleting file: {}", f.toString());
+    LOG.debug("Deleting file: {}", f);
 
     Path absolutePath = makeAbsolute(f);
     Path parentPath = absolutePath.getParent();
 
-    performAuthCheck(parentPath, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
+    // If delete is issued for 'root', parentPath will be null
+    // In that case, we perform auth check for root itself before
+    // proceeding for deleting contents under root.
+    if (parentPath != null) {
+      performAuthCheck(parentPath, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
+    } else {
+      performAuthCheck(absolutePath, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
+    }
+
+    String key = pathToKey(absolutePath);
+
+    // Capture the metadata for the path.
+    FileMetadata metaFile = null;
+    try {
+      metaFile = store.retrieveMetadata(key);
+    } catch (IOException e) {
+
+      Throwable innerException = checkForAzureStorageException(e);
+
+      if (innerException instanceof StorageException
+          && isFileNotFoundException((StorageException) innerException)) {
+
+        return false;
+      }
+      throw e;
+    }
+
+    if (null == metaFile) {
+      // The path to be deleted does not exist.
+      return false;
+    }
+
+    FileMetadata parentMetadata = null;
+    String parentKey = null;
+    if (parentPath != null) {
+      parentKey = pathToKey(parentPath);
+
+      try {
+        parentMetadata = store.retrieveMetadata(parentKey);
+      } catch (IOException e) {
+         Throwable innerException = checkForAzureStorageException(e);
+         if (innerException instanceof StorageException) {
+           // Invalid State.
+           // A FileNotFoundException is not thrown here as the API returns false
+           // if the file not present. But not retrieving metadata here is an
+           // unrecoverable state and can only happen if there is a race condition
+           // hence throwing a IOException
+           if (isFileNotFoundException((StorageException) innerException)) {
+             throw new IOException("File " + f + " has a parent directory "
+               + parentPath + " whose metadata cannot be retrieved. Can't resolve");
+           }
+         }
+         throw e;
+      }
+
+      // Same case as unable to retrieve metadata
+      if (parentMetadata == null) {
+          throw new IOException("File " + f + " has a parent directory "
+              + parentPath + " whose metadata cannot be retrieved. Can't resolve");
+      }
+
+      if (!parentMetadata.isDir()) {
+         // Invalid state: the parent path is actually a file. Throw.
+         throw new AzureException("File " + f + " has a parent directory "
+             + parentPath + " which is also a file. Can't resolve.");
+      }
+    }
+
+    // The path exists, determine if it is a folder containing objects,
+    // an empty folder, or a simple file and take the appropriate actions.
+    if (!metaFile.isDir()) {
+      // The path specifies a file. We need to check the parent path
+      // to make sure it's a proper materialized directory before we
+      // delete the file. Otherwise we may get into a situation where
+      // the file we were deleting was the last one in an implicit directory
+      // (e.g. the blob store only contains the blob a/b and there's no
+      // corresponding directory blob a) and that would implicitly delete
+      // the directory as well, which is not correct.
+
+      if (parentPath != null && parentPath.getParent() != null) {// Not root
+
+        if (parentMetadata.getBlobMaterialization() == BlobMaterialization.Implicit) {
+          LOG.debug("Found an implicit parent directory while trying to"
+              + " delete the file {}. Creating the directory blob for"
+              + " it in {}.", f, parentKey);
+
+          store.storeEmptyFolder(parentKey,
+              createPermissionStatus(FsPermission.getDefault()));
+        } else {
+          if (!skipParentFolderLastModifiedTimeUpdate) {
+            updateParentFolderLastModifiedTime(key);
+          }
+        }
+      }
+
+      // check if the file can be deleted based on sticky bit check
+      // This check will be performed only when authorization is enabled
+      if (isStickyBitCheckViolated(metaFile, parentMetadata)) {
+        throw new WasbAuthorizationException(String.format("%s has sticky bit set. "
+          + "File %s cannot be deleted.", parentPath, f));
+      }
+
+      try {
+        if (store.delete(key)) {
+          instrumentation.fileDeleted();
+        } else {
+          return false;
+        }
+      } catch(IOException e) {
+
+        Throwable innerException = checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException
+            && isFileNotFoundException((StorageException) innerException)) {
+          return false;
+        }
+
+       throw e;
+      }
+    } else {
+      // The path specifies a folder. Recursively delete all entries under the
+      // folder.
+      LOG.debug("Directory Delete encountered: {}", f);
+      if (parentPath != null && parentPath.getParent() != null) {
+
+        if (parentMetadata.getBlobMaterialization() == BlobMaterialization.Implicit) {
+          LOG.debug("Found an implicit parent directory while trying to"
+                  + " delete the directory {}. Creating the directory blob for"
+                  + " it in {}. ", f, parentKey);
+
+          store.storeEmptyFolder(parentKey,
+                  createPermissionStatus(FsPermission.getDefault()));
+        }
+      }
+
+      // check if the folder can be deleted based on sticky bit check on parent
+      // This check will be performed only when authorization is enabled.
+      if (!metaFile.getKey().equals("/")
+          && isStickyBitCheckViolated(metaFile, parentMetadata)) {
+
+        throw new WasbAuthorizationException(String.format("%s has sticky bit set. "
+          + "File %s cannot be deleted.", parentPath, f));
+      }
+
+      // Iterate through folder contents and get the list of files
+      // and folders that can be deleted. We might encounter IOException
+      // while listing blobs. In such cases, we return false.
+      ArrayList<FileMetadata> fileMetadataList = new ArrayList<>();
+      boolean isPartialDelete = false;
+
+      // Start time for list operation
+      long start = Time.monotonicNow();
+
+      try {
+        // Get list of files/folders that can be deleted
+        // based on authorization checks and stickybit checks
+        isPartialDelete = getFolderContentsToDelete(metaFile, fileMetadataList);
+      } catch (IOException e) {
+        Throwable innerException = checkForAzureStorageException(e);
+
+        if (innerException instanceof StorageException
+            && isFileNotFoundException((StorageException) innerException)) {
+            return false;
+        }
+        throw e;
+      }
+
+      long end = Time.monotonicNow();
+      LOG.debug("Time taken to list {} blobs for delete operation: {} ms",
+        fileMetadataList.size(), (end - start));
+
+      // Here contents holds the list of metadata of the files and folders that can be deleted
+      // under the path that is requested for delete(excluding itself).
+      final FileMetadata[] contents = fileMetadataList.toArray(new FileMetadata[fileMetadataList.size()]);
+
+      if (contents.length > 0 && !recursive) {
+          // The folder is non-empty and recursive delete was not specified.
+          // Throw an exception indicating that a non-recursive delete was
+          // specified for a non-empty folder.
+          throw new IOException("Non-recursive delete of non-empty directory "
+              + f);
+      }
+
+      // Delete all files / folders in current directory stored as list in 'contents'.
+      AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
+        @Override
+        public boolean execute(FileMetadata file) throws IOException{
+          if (!deleteFile(file.getKey(), file.isDir())) {
+            LOG.warn("Attempt to delete non-existent {} {}",
+                file.isDir() ? "directory" : "file",
+                file.getKey());
+          }
+          return true;
+        }
+      };
+
+      AzureFileSystemThreadPoolExecutor executor = getThreadPoolExecutor(this.deleteThreadCount,
+          "AzureBlobDeleteThread", "Delete", key, AZURE_DELETE_THREADS);
+
+      if (!executor.executeParallel(contents, task)) {
+        LOG.error("Failed to delete files / subfolders in blob {}", key);
+        return false;
+      }
+
+      if (metaFile.getKey().equals("/")) {
+        LOG.error("Cannot delete root directory {}", f);
+        return false;
+      }
+
+      // Delete the current directory if all underlying contents are deleted
+      if (isPartialDelete || (store.retrieveMetadata(metaFile.getKey()) != null
+          && !deleteFile(metaFile.getKey(), metaFile.isDir()))) {
+        LOG.error("Failed delete directory : {}", f);
+        return false;
+      }
+
+      // Update parent directory last modified time
+      Path parent = absolutePath.getParent();
+      if (parent != null && parent.getParent() != null) { // not root
+        if (!skipParentFolderLastModifiedTimeUpdate) {
+          updateParentFolderLastModifiedTime(key);
+        }
+      }
+    }
+
+    // File or directory was successfully deleted.
+    LOG.debug("Delete Successful for : {}", f);
+    return true;
+  }
+
+  private boolean deleteWithoutAuth(Path f, boolean recursive,
+      boolean skipParentFolderLastModifiedTimeUpdate) throws IOException {
+
+    LOG.debug("Deleting file: {}", f);
+
+    Path absolutePath = makeAbsolute(f);
+    Path parentPath = absolutePath.getParent();
 
     String key = pathToKey(absolutePath);
 
@@ -1837,10 +2179,10 @@ public class NativeAzureFileSystem extends FileSystem {
       metaFile = store.retrieveMetadata(key);
     } catch (IOException e) {
 
-      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+      Throwable innerException = checkForAzureStorageException(e);
 
       if (innerException instanceof StorageException
-          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+          && isFileNotFoundException((StorageException) innerException)) {
 
         return false;
       }
@@ -1871,7 +2213,7 @@ public class NativeAzureFileSystem extends FileSystem {
           parentMetadata = store.retrieveMetadata(parentKey);
         } catch (IOException e) {
 
-          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+          Throwable innerException = checkForAzureStorageException(e);
 
           if (innerException instanceof StorageException) {
             // Invalid State.
@@ -1879,7 +2221,7 @@ public class NativeAzureFileSystem extends FileSystem {
             // if the file not present. But not retrieving metadata here is an
             // unrecoverable state and can only happen if there is a race condition
             // hence throwing a IOException
-            if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+            if (isFileNotFoundException((StorageException) innerException)) {
               throw new IOException("File " + f + " has a parent directory "
                   + parentPath + " whose metadata cannot be retrieved. Can't resolve");
             }
@@ -1925,10 +2267,10 @@ public class NativeAzureFileSystem extends FileSystem {
         }
       } catch(IOException e) {
 
-        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+        Throwable innerException = checkForAzureStorageException(e);
 
         if (innerException instanceof StorageException
-            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+            && isFileNotFoundException((StorageException) innerException)) {
           return false;
         }
 
@@ -1937,7 +2279,7 @@ public class NativeAzureFileSystem extends FileSystem {
     } else {
       // The path specifies a folder. Recursively delete all entries under the
       // folder.
-      LOG.debug("Directory Delete encountered: {}", f.toString());
+      LOG.debug("Directory Delete encountered: {}", f);
       if (parentPath.getParent() != null) {
         String parentKey = pathToKey(parentPath);
         FileMetadata parentMetadata = null;
@@ -1946,7 +2288,7 @@ public class NativeAzureFileSystem extends FileSystem {
           parentMetadata = store.retrieveMetadata(parentKey);
         } catch (IOException e) {
 
-          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+          Throwable innerException = checkForAzureStorageException(e);
 
           if (innerException instanceof StorageException) {
             // Invalid State.
@@ -1954,7 +2296,7 @@ public class NativeAzureFileSystem extends FileSystem {
             // if the file not present. But not retrieving metadata here is an
             // unrecoverable state and can only happen if there is a race condition
             // hence throwing a IOException
-            if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+            if (isFileNotFoundException((StorageException) innerException)) {
               throw new IOException("File " + f + " has a parent directory "
                   + parentPath + " whose metadata cannot be retrieved. Can't resolve");
             }
@@ -1999,10 +2341,10 @@ public class NativeAzureFileSystem extends FileSystem {
           }
           priorLastKey = listing.getPriorLastKey();
         } catch (IOException e) {
-          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+          Throwable innerException = checkForAzureStorageException(e);
 
           if (innerException instanceof StorageException
-              && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+              && isFileNotFoundException((StorageException) innerException)) {
             return false;
           }
 
@@ -2020,22 +2362,7 @@ public class NativeAzureFileSystem extends FileSystem {
           // The folder is non-empty and recursive delete was not specified.
           // Throw an exception indicating that a non-recursive delete was
           // specified for a non-empty folder.
-          throw new IOException("Non-recursive delete of non-empty directory "
-              + f.toString());
-        }
-        else {
-          // Check write-permissions on sub-tree including current folder
-          // NOTE: Ideally the subtree needs read-write-execute access check.
-          // But we will simplify it to write-access check.
-          if (metaFile.isDir()) { // the absolute-path
-            performAuthCheck(absolutePath, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
-          }
-          for (FileMetadata meta : contents) {
-            if (meta.isDir()) {
-              Path subTreeDir = keyToPath(meta.getKey());
-              performAuthCheck(subTreeDir, WasbAuthorizationOperations.WRITE, "delete", absolutePath);
-            }
-          }
+          throw new IOException("Non-recursive delete of non-empty directory "+ f);
         }
       }
 
@@ -2061,8 +2388,9 @@ public class NativeAzureFileSystem extends FileSystem {
       }
 
       // Delete the current directory
-      if (store.retrieveMetadata(metaFile.getKey()) != null && !deleteFile(metaFile.getKey(), metaFile.isDir())) {
-        LOG.error("Failed delete directory {}", f.toString());
+      if (store.retrieveMetadata(metaFile.getKey()) != null
+          && !deleteFile(metaFile.getKey(), metaFile.isDir())) {
+        LOG.error("Failed delete directory : {}", f);
         return false;
       }
 
@@ -2076,13 +2404,224 @@ public class NativeAzureFileSystem extends FileSystem {
     }
 
     // File or directory was successfully deleted.
-    LOG.debug("Delete Successful for : {}", f.toString());
+    LOG.debug("Delete Successful for : {}", f);
     return true;
+  }
+
+  /**
+   * Delete the specified file or folder. The parameter
+   * skipParentFolderLastModifiedTimeUpdate
+   * is used in the case of atomic folder rename redo. In that case, there is
+   * a lease on the parent folder, so (without reworking the code) modifying
+   * the parent folder update time will fail because of a conflict with the
+   * lease. Since we are going to delete the folder soon anyway so accurate
+   * modified time is not necessary, it's easier to just skip
+   * the modified time update.
+   *
+   * @param f file path to be deleted.
+   * @param recursive specify deleting recursively or not.
+   * @param skipParentFolderLastModifiedTimeUpdate If true, don't update the folder last
+   * modified time.
+   * @return true if and only if the file is deleted
+   * @throws IOException Thrown when fail to delete file or directory.
+   */
+  public boolean delete(Path f, boolean recursive,
+      boolean skipParentFolderLastModifiedTimeUpdate) throws IOException {
+
+    if (this.azureAuthorization) {
+      return deleteWithAuthEnabled(f, recursive,
+        skipParentFolderLastModifiedTimeUpdate);
+    } else {
+      return deleteWithoutAuth(f, recursive,
+        skipParentFolderLastModifiedTimeUpdate);
+    }
   }
 
   public AzureFileSystemThreadPoolExecutor getThreadPoolExecutor(int threadCount,
       String threadNamePrefix, String operation, String key, String config) {
     return new AzureFileSystemThreadPoolExecutor(threadCount, threadNamePrefix, operation, key, config);
+  }
+
+  /**
+   * Gets list of contents that can be deleted based on authorization check calls
+   * performed on the sub-tree for the folderToDelete.
+   *
+   * @param folderToDelete - metadata of the folder whose delete is requested.
+   * @param finalList - list of metadata of all files/folders that can be deleted .
+   *
+   * @return 'true' only if all the contents of the folderToDelete can be deleted
+   * @throws IOException Thrown when current user cannot be retrieved.
+   */
+  private boolean getFolderContentsToDelete(FileMetadata folderToDelete,
+      ArrayList<FileMetadata> finalList) throws IOException {
+
+    final int maxListingDepth = 1;
+    Stack<FileMetadata> foldersToProcess = new Stack<FileMetadata>();
+    HashMap<String, FileMetadata> folderContentsMap = new HashMap<String, FileMetadata>();
+
+    boolean isPartialDelete = false;
+
+    Path pathToDelete = makeAbsolute(keyToPath(folderToDelete.getKey()));
+    foldersToProcess.push(folderToDelete);
+
+    while (!foldersToProcess.empty()) {
+
+      FileMetadata currentFolder = foldersToProcess.pop();
+      Path currentPath = makeAbsolute(keyToPath(currentFolder.getKey()));
+      boolean canDeleteChildren = true;
+
+      // If authorization is enabled, check for 'write' permission on current folder
+      // This check maps to subfolders 'write' check for deleting contents recursively.
+      try {
+        performAuthCheck(currentPath, WasbAuthorizationOperations.WRITE, "delete", pathToDelete);
+      } catch (WasbAuthorizationException we) {
+        LOG.debug("Authorization check failed for {}", currentPath);
+        // We cannot delete the children of currentFolder since 'write' check on parent failed
+        canDeleteChildren = false;
+      }
+
+      if (canDeleteChildren) {
+
+        // get immediate children list
+        ArrayList<FileMetadata> fileMetadataList = getChildrenMetadata(currentFolder.getKey(),
+            maxListingDepth);
+
+        // Process children of currentFolder and add them to list of contents
+        // that can be deleted. We Perform stickybit check on every file and
+        // folder under currentFolder in case stickybit is set on currentFolder.
+        for (FileMetadata childItem : fileMetadataList) {
+          if (isStickyBitCheckViolated(childItem, currentFolder, false)) {
+            // Stickybit check failed for the childItem that is being processed.
+            // This file/folder cannot be deleted and neither can the parent paths be deleted.
+            // Remove parent paths from list of contents that can be deleted.
+            canDeleteChildren = false;
+            Path filePath = makeAbsolute(keyToPath(childItem.getKey()));
+            LOG.error("User does not have permissions to delete {}. "
+              + "Parent directory has sticky bit set.", filePath);
+          } else {
+            // push the child directories to the stack to process their contents
+            if (childItem.isDir()) {
+              foldersToProcess.push(childItem);
+            }
+            // Add items to list of contents that can be deleted.
+            folderContentsMap.put(childItem.getKey(), childItem);
+          }
+        }
+
+      } else {
+        // Cannot delete children since parent permission check has not passed and
+        // if there are files/folders under currentFolder they will not be deleted.
+        LOG.error("Authorization check failed. Files or folders under {} "
+          + "will not be processed for deletion.", currentPath);
+      }
+
+      if (!canDeleteChildren) {
+        // We reach here if
+        // 1. cannot delete children since 'write' check on parent failed or
+        // 2. One of the files under the current folder cannot be deleted due to stickybit check.
+        // In this case we remove all the parent paths from the list of contents
+        // that can be deleted till we reach the original path of delete request
+        String pathToRemove = currentFolder.getKey();
+        while (!pathToRemove.equals(folderToDelete.getKey())) {
+          if (folderContentsMap.containsKey(pathToRemove)) {
+            LOG.debug("Cannot delete {} since some of its contents "
+              + "cannot be deleted", pathToRemove);
+            folderContentsMap.remove(pathToRemove);
+          }
+          Path parentPath = keyToPath(pathToRemove).getParent();
+          pathToRemove = pathToKey(parentPath);
+        }
+        // Since one or more files/folders cannot be deleted return value should indicate
+        // partial delete, so that the delete on the path requested by user is not performed
+        isPartialDelete = true;
+      }
+    }
+
+    // final list of contents that can be deleted
+    for (HashMap.Entry<String, FileMetadata> entry : folderContentsMap.entrySet()) {
+      finalList.add(entry.getValue());
+    }
+
+    return isPartialDelete;
+  }
+
+  private ArrayList<FileMetadata> getChildrenMetadata(String key, int maxListingDepth)
+    throws IOException {
+
+    String priorLastKey = null;
+    ArrayList<FileMetadata> fileMetadataList = new ArrayList<FileMetadata>();
+    do {
+       PartialListing listing = store.listAll(key, AZURE_LIST_ALL,
+         maxListingDepth, priorLastKey);
+       for (FileMetadata file : listing.getFiles()) {
+         fileMetadataList.add(file);
+       }
+       priorLastKey = listing.getPriorLastKey();
+    } while (priorLastKey != null);
+
+    return fileMetadataList;
+  }
+
+  private boolean isStickyBitCheckViolated(FileMetadata metaData,
+    FileMetadata parentMetadata, boolean throwOnException) throws IOException {
+      try {
+        return isStickyBitCheckViolated(metaData, parentMetadata);
+      } catch (FileNotFoundException ex) {
+        if (throwOnException) {
+          throw ex;
+        } else {
+          LOG.debug("Encountered FileNotFoundException while performing "
+            + "stickybit check operation for {}", metaData.getKey());
+          // swallow exception and return that stickyBit check has been violated
+          return true;
+        }
+      }
+  }
+
+  /**
+   * Checks if the Current user is not permitted access to a file/folder when
+   * sticky bit is set on parent path. Only the owner of parent path
+   * and owner of the file/folder itself are permitted to perform certain
+   * operations on file/folder based on sticky bit check. Sticky bit check will
+   * be performed only when authorization is enabled.
+   *
+   * @param metaData - metadata of the file/folder whose parent has sticky bit set.
+   * @param parentMetadata - metadata of the parent.
+   *
+   * @return true if Current user violates stickybit check
+   * @throws IOException Thrown when current user cannot be retrieved.
+   */
+   private boolean isStickyBitCheckViolated(FileMetadata metaData,
+    FileMetadata parentMetadata) throws IOException {
+
+    // In case stickybit check should not be performed,
+    // return value should indicate stickybit check is not violated.
+    if (!this.azureAuthorization) {
+      return false;
+    }
+
+    // This should never happen when the sticky bit check is invoked.
+    if (parentMetadata == null) {
+      throw new FileNotFoundException(
+        String.format("Parent metadata for '%s' not found!", metaData.getKey()));
+    }
+
+    // stickybit is not set on parent and hence cannot be violated
+    if (!parentMetadata.getPermissionStatus().getPermission().getStickyBit()) {
+      return false;
+    }
+
+    String currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
+    String parentDirectoryOwner = parentMetadata.getPermissionStatus().getUserName();
+    String currentFileOwner = metaData.getPermissionStatus().getUserName();
+
+    // Files/Folders with no owner set will not pass stickybit check
+    if ((parentDirectoryOwner.equalsIgnoreCase(currentUser))
+      || currentFileOwner.equalsIgnoreCase(currentUser)) {
+
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -2113,8 +2652,43 @@ public class NativeAzureFileSystem extends FileSystem {
   public FileStatus getFileStatus(Path f) throws FileNotFoundException, IOException {
 
     LOG.debug("Getting the file status for {}", f.toString());
+    return getFileStatusInternal(f);
+  }
 
-    // Capture the absolute path and the path to key.
+  /**
+   * Checks if a given path exists in the filesystem.
+   * Calls getFileStatusInternal and has the same costs
+   * as the public facing exists call.
+   * This internal version of the exists call does not perform
+   * authorization checks, and is used internally by various filesystem
+   * operations that need to check if the parent/ancestor/path exist.
+   * The idea is to avoid having to configure authorization policies for
+   * these internal calls.
+   * @param f the path to a file or directory.
+   * @return true if path exists; otherwise false.
+   * @throws IOException if an IO error occurs while attempting to check
+   * for existence of the path.
+   *
+   */
+  protected boolean existsInternal(Path f) throws IOException {
+    try {
+      this.getFileStatusInternal(f);
+      return true;
+    } catch (FileNotFoundException fnfe) {
+      return false;
+    }
+  }
+
+  /**
+   * Inner implementation of {@link #getFileStatus(Path)}.
+   * Return a file status object that represents the path.
+   * @param f The path we want information from
+   * @return a FileStatus object
+   * @throws FileNotFoundException when the path does not exist
+   * @throws IOException Other failure
+   */
+  private FileStatus getFileStatusInternal(Path f) throws FileNotFoundException, IOException {
+
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     if (key.length() == 0) { // root always exists
@@ -2181,7 +2755,7 @@ public class NativeAzureFileSystem extends FileSystem {
     // Check if there is a -RenamePending.json file for this folder, and if so,
     // redo the rename.
     Path absoluteRenamePendingFile = renamePendingFilePath(f);
-    if (exists(absoluteRenamePendingFile)) {
+    if (existsInternal(absoluteRenamePendingFile)) {
       FolderRenamePending pending =
           new FolderRenamePending(absoluteRenamePendingFile, this);
       pending.redo();
@@ -2425,13 +2999,13 @@ public class NativeAzureFileSystem extends FileSystem {
 
   private Path getAncestor(Path f) throws IOException {
 
-    for (Path current = f.getParent(), parent = current.getParent();
+    for (Path current = f, parent = current.getParent();
          parent != null; // Stop when you get to the root
          current = parent, parent = current.getParent()) {
 
       String currentKey = pathToKey(current);
       FileMetadata currentMetadata = store.retrieveMetadata(currentKey);
-      if (currentMetadata != null) {
+      if (currentMetadata != null && currentMetadata.isDir()) {
         Path ancestor = keyToPath(currentMetadata.getKey());
         LOG.debug("Found ancestor {}, for path: {}", ancestor.toString(), f.toString());
         return ancestor;
@@ -2448,7 +3022,6 @@ public class NativeAzureFileSystem extends FileSystem {
 
   public boolean mkdirs(Path f, FsPermission permission, boolean noUmask) throws IOException {
 
-
     LOG.debug("Creating directory: {}", f.toString());
 
     if (containsColon(f)) {
@@ -2458,6 +3031,10 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
     Path ancestor = getAncestor(absolutePath);
+
+    if (absolutePath.equals(ancestor)) {
+      return true;
+    }
 
     performAuthCheck(ancestor, WasbAuthorizationOperations.WRITE, "mkdirs", absolutePath);
 
@@ -2571,8 +3148,6 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     }
 
-    performAuthCheck(srcParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteSrcPath);
-
     String srcKey = pathToKey(absoluteSrcPath);
 
     if (srcKey.length() == 0) {
@@ -2580,11 +3155,29 @@ public class NativeAzureFileSystem extends FileSystem {
       return false;
     }
 
+    performAuthCheck(srcParentFolder, WasbAuthorizationOperations.WRITE, "rename",
+        absoluteSrcPath);
+
+    if (this.azureAuthorization) {
+      try {
+        performStickyBitCheckForRenameOperation(absoluteSrcPath, srcParentFolder);
+      } catch (FileNotFoundException ex) {
+        return false;
+      } catch (IOException ex) {
+        Throwable innerException = checkForAzureStorageException(ex);
+        if (innerException instanceof StorageException
+          && isFileNotFoundException((StorageException) innerException)) {
+          LOG.debug("Encountered FileNotFound Exception when performing sticky bit check "
+            + "on {}. Failing rename", srcKey);
+          return false;
+        }
+        throw ex;
+      }
+    }
+
     // Figure out the final destination
     Path absoluteDstPath = makeAbsolute(dst);
     Path dstParentFolder = absoluteDstPath.getParent();
-
-    performAuthCheck(dstParentFolder, WasbAuthorizationOperations.WRITE, "rename", absoluteDstPath);
 
     String dstKey = pathToKey(absoluteDstPath);
     FileMetadata dstMetadata = null;
@@ -2610,6 +3203,9 @@ public class NativeAzureFileSystem extends FileSystem {
 
     if (dstMetadata != null && dstMetadata.isDir()) {
       // It's an existing directory.
+      performAuthCheck(absoluteDstPath, WasbAuthorizationOperations.WRITE, "rename",
+          absoluteDstPath);
+
       dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
       LOG.debug("Destination {} "
           + " is a directory, adjusted the destination to be {}", dst, dstKey);
@@ -2645,6 +3241,9 @@ public class NativeAzureFileSystem extends FileSystem {
         LOG.debug("Parent of the destination {}"
             + " is a file, failing the rename.", dst);
         return false;
+      } else {
+        performAuthCheck(dstParentFolder, WasbAuthorizationOperations.WRITE,
+          "rename", absoluteDstPath);
       }
     }
     FileMetadata srcMetadata = null;
@@ -2823,6 +3422,43 @@ public class NativeAzureFileSystem extends FileSystem {
   }
 
   /**
+   * Performs sticky bit check on source folder for rename operation.
+   *
+   * @param srcPath - path which is to be renamed.
+   * @param srcParentPath - parent to srcPath to check for stickybit check.
+   * @throws FileNotFoundException if srcPath or srcParentPath do not exist.
+   * @throws WasbAuthorizationException if stickybit check is violated.
+   * @throws IOException when retrieving metadata operation fails.
+   */
+  private void performStickyBitCheckForRenameOperation(Path srcPath,
+      Path srcParentPath)
+    throws FileNotFoundException, WasbAuthorizationException, IOException {
+
+    String srcKey = pathToKey(srcPath);
+    FileMetadata srcMetadata = null;
+    srcMetadata = store.retrieveMetadata(srcKey);
+    if (srcMetadata == null) {
+      LOG.debug("Source {} doesn't exist. Failing rename.", srcPath);
+      throw new FileNotFoundException(
+        String.format("%s does not exist.", srcPath));
+    }
+
+    String parentkey = pathToKey(srcParentPath);
+    FileMetadata parentMetadata = store.retrieveMetadata(parentkey);
+    if (parentMetadata == null) {
+      LOG.debug("Path {} doesn't exist, failing rename.", srcParentPath);
+      throw new FileNotFoundException(
+        String.format("%s does not exist.", parentkey));
+    }
+
+    if (isStickyBitCheckViolated(srcMetadata, parentMetadata)) {
+      throw new WasbAuthorizationException(
+        String.format("Rename operation for %s is not permitted."
+        + " Details : Stickybit check failed.", srcPath));
+    }
+  }
+
+  /**
    * Return an array containing hostnames, offset and size of
    * portions of the given file. For WASB we'll just lie and give
    * fake hosts to make sure we get many splits in MR jobs.
@@ -2899,6 +3535,27 @@ public class NativeAzureFileSystem extends FileSystem {
     if (metadata == null) {
       throw new FileNotFoundException("File doesn't exist: " + p);
     }
+
+    // If authorization is enabled, check if the user is
+    // part of chmod allowed list or a daemon user or owner of the file/folder
+    if (azureAuthorization) {
+      UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+
+      // Check if the user is part of chown allowed list or a daemon user.
+      if (!isAllowedUser(currentUgi.getShortUserName(), chmodAllowedUsers)
+          && !isAllowedUser(currentUgi.getShortUserName(), daemonUsers)) {
+
+        //Check if the user is the owner of the file.
+        String owner = metadata.getPermissionStatus().getUserName();
+        if (!currentUgi.getShortUserName().equals(owner)) {
+          throw new WasbAuthorizationException(
+              String.format("user '%s' does not have the privilege to "
+                  + "change the permission of files/folders.",
+                      currentUgi.getShortUserName()));
+        }
+      }
+    }
+
     permission = applyUMask(permission,
         metadata.isDir() ? UMaskApplyMode.ChangeExistingDirectory
             : UMaskApplyMode.ChangeExistingFile);
@@ -2944,26 +3601,14 @@ public class NativeAzureFileSystem extends FileSystem {
     *  to change the ownership of file/folder
     */
     if (this.azureAuthorization && username != null) {
-      String[] listOfUsers = getConf().getTrimmedStrings(AZURE_CHOWN_USERLIST_PROPERTY_NAME,
-        AZURE_CHOWN_USERLIST_PROPERTY_DEFAULT_VALUE);
-      boolean shouldSkipUserCheck = listOfUsers.length == 1 && listOfUsers[0].equals("*");
-      // skip the check if the chown allowed users config value is set as '*'
-      if (!shouldSkipUserCheck) {
-        UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
-        UserGroupInformation actualUgi = currentUgi.getRealUser();
+      UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
 
-        if (actualUgi == null) {
-          actualUgi = currentUgi;
-        }
-
-        List<String> userList = Arrays.asList(listOfUsers);
-        if (userList.contains("*")) {
-          throw new IllegalArgumentException("User list must contain "
-          + "either '*' or list of user names, but not both.");
-        } else if (!userList.contains(actualUgi.getShortUserName())) {
-          throw new WasbAuthorizationException(String.format("user '%s' does not have the privilege to change the ownership of files/folders.",
-            actualUgi.getShortUserName()));
-        }
+      if (!isAllowedUser(currentUgi.getShortUserName(),
+          chownAllowedUsers)) {
+          throw new WasbAuthorizationException(
+            String.format("user '%s' does not have the privilege to change "
+                + "the ownership of files/folders.",
+                    currentUgi.getShortUserName()));
       }
     }
 
@@ -2979,6 +3624,38 @@ public class NativeAzureFileSystem extends FileSystem {
     } else {
       store.changePermissionStatus(key, newPermissionStatus);
     }
+  }
+
+  /**
+   * Is the user allowed?
+   * <ol>
+   *   <li>No user: false</li>
+   *   <li>Empty list: false</li>
+   *   <li>List == ["*"]: true</li>
+   *   <li>Otherwise: is the user in the list?</li>
+   * </ol>
+   * @param username user to check; may be null
+   * @param userList list of users; may be null or empty
+   * @return
+   * @throws IllegalArgumentException if the userList is invalid.
+   */
+  private boolean isAllowedUser(String username, List<String> userList) {
+
+    if (null == userList || userList.isEmpty()) {
+      return false;
+    }
+
+    boolean shouldSkipUserCheck = userList.size() == 1
+        && userList.get(0).equals("*");
+
+    // skip the check if the allowed users config value is set as '*'
+    if (!shouldSkipUserCheck) {
+      Preconditions.checkArgument(!userList.contains("*"),
+        "User list must contain either '*' or a list of user names,"
+            + " but not both.");
+      return userList.contains(username);
+    }
+    return true;
   }
 
   @Override
@@ -3021,6 +3698,41 @@ public class NativeAzureFileSystem extends FileSystem {
       return wasbDelegationTokenManager.getDelegationToken(renewer);
     } else {
       return super.getDelegationToken(renewer);
+    }
+  }
+
+  @Override
+  public void access(Path path, FsAction mode) throws IOException {
+    if (azureAuthorization && authorizer != null) {
+      try {
+        // Required to check the existence of the path.
+        getFileStatus(path);
+        switch (mode) {
+        case READ:
+        case READ_EXECUTE:
+          performAuthCheck(path, WasbAuthorizationOperations.READ, "access", path);
+          break;
+        case WRITE:
+        case WRITE_EXECUTE:
+          performAuthCheck(path, WasbAuthorizationOperations.WRITE, "access",
+              path);
+          break;
+        case READ_WRITE:
+        case ALL:
+          performAuthCheck(path, WasbAuthorizationOperations.READ, "access", path);
+          performAuthCheck(path, WasbAuthorizationOperations.WRITE, "access",
+              path);
+          break;
+        case EXECUTE:
+        case NONE:
+        default:
+          break;
+        }
+      } catch (WasbAuthorizationException wae){
+        throw new AccessControlException(wae);
+      }
+    } else {
+      super.access(path, mode);
     }
   }
 
@@ -3231,5 +3943,32 @@ public class NativeAzureFileSystem extends FileSystem {
           }
       }
     return owner;
+  }
+
+  /**
+   * Helper method to update the chownAllowedUsers in tests.
+   * @param chownAllowedUsers list of chown allowed users
+   */
+  @VisibleForTesting
+  void updateChownAllowedUsers(List<String> chownAllowedUsers) {
+    this.chownAllowedUsers = chownAllowedUsers;
+  }
+
+  /**
+   * Helper method to update the chmodAllowedUsers in tests.
+   * @param chmodAllowedUsers list of chmod allowed users
+   */
+  @VisibleForTesting
+  void updateChmodAllowedUsers(List<String> chmodAllowedUsers) {
+    this.chmodAllowedUsers = chmodAllowedUsers;
+  }
+
+  /**
+   * Helper method to update the daemonUsers in tests.
+   * @param daemonUsers list of daemon users
+   */
+  @VisibleForTesting
+  void updateDaemonUsers(List<String> daemonUsers) {
+    this.daemonUsers = daemonUsers;
   }
 }

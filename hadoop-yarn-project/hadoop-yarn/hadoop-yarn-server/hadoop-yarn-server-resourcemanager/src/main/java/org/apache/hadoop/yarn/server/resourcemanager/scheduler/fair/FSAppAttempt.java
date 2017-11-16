@@ -43,12 +43,12 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -75,7 +75,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   private final long startTime;
   private final Priority appPriority;
-  private final ResourceWeights resourceWeights;
   private Resource demand = Resources.createResource(0);
   private final FairScheduler scheduler;
   private Resource fairShare = Resources.createResource(0, 0);
@@ -120,11 +119,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     this.startTime = scheduler.getClock().getTime();
     this.lastTimeAtFairShare = this.startTime;
     this.appPriority = Priority.newInstance(1);
-    this.resourceWeights = new ResourceWeights();
-  }
-
-  ResourceWeights getResourceWeights() {
-    return resourceWeights;
   }
 
   /**
@@ -174,6 +168,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           rmContainer.getNodeLabelExpression(),
           getUser(), 1, containerResource);
       this.attemptResourceUsage.decUsed(containerResource);
+      getQueue().decUsedResource(containerResource);
 
       // Clear resource utilization metrics cache.
       lastMemoryAggregateAllocationUpdateTime = -1;
@@ -468,6 +463,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       List<ResourceRequest> resourceRequestList = appSchedulingInfo.allocate(
           type, node, schedulerKey, container);
       this.attemptResourceUsage.incUsed(container.getResource());
+      getQueue().incUsedResource(container.getResource());
 
       // Update resource requests related to "request" and store in RMContainer
       ((RMContainerImpl) rmContainer).setResourceRequests(resourceRequestList);
@@ -614,9 +610,16 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     // Check if the app's allocation will be over its fairshare even
     // after preempting this container
-    Resource usageAfterPreemption = Resources.subtract(
-        getResourceUsage(), container.getAllocatedResource());
+    Resource usageAfterPreemption = Resources.clone(getResourceUsage());
 
+    // Subtract resources of containers already queued for preemption
+    synchronized (preemptionVariablesLock) {
+      Resources.subtractFrom(usageAfterPreemption, resourcesToBePreempted);
+    }
+
+    // Subtract this container's allocation to compute usage after preemption
+    Resources.subtractFrom(
+        usageAfterPreemption, container.getAllocatedResource());
     return !isUsageBelowShare(usageAfterPreemption, getFairShare());
   }
 
@@ -642,6 +645,32 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         node.getRMNode().getHttpAddress(), capability,
         schedulerKey.getPriority(), null,
         schedulerKey.getAllocationRequestId());
+  }
+
+  @Override
+  public synchronized void recoverContainer(SchedulerNode node,
+      RMContainer rmContainer) {
+    try {
+      writeLock.lock();
+
+      super.recoverContainer(node, rmContainer);
+
+      if (!rmContainer.getState().equals(RMContainerState.COMPLETED)) {
+        getQueue().incUsedResource(rmContainer.getContainer().getResource());
+      }
+
+      // If not running unmanaged, the first container we recover is always
+      // the AM. Set the amResource for this app and update the leaf queue's AM
+      // usage
+      if (!isAmRunning() && !getUnmanagedAM()) {
+        Resource resource = rmContainer.getAllocatedResource();
+        setAMResource(resource);
+        getQueue().addAMResourceUsage(resource);
+        setAmRunning(true);
+      }
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   /**
@@ -990,7 +1019,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         }
 
         if (offswitchAsk.getCount() > 0) {
-          if (getSchedulingPlacementSet(schedulerKey).getUniqueLocationAsks()
+          if (getAppPlacementAllocator(schedulerKey).getUniqueLocationAsks()
               <= 1 || allowedLocality.equals(NodeType.OFF_SWITCH)) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Assign container on " + node.getNodeName()
@@ -1270,18 +1299,25 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public Resource getResourceUsage() {
-    // Subtract copies the object, so that we have a snapshot,
-    // in case usage changes, while the caller is using the value
-    synchronized (preemptionVariablesLock) {
-      return containersToBePreempted.isEmpty()
-          ? getCurrentConsumption()
-          : Resources.subtract(getCurrentConsumption(), resourcesToBePreempted);
-    }
+    return getCurrentConsumption();
   }
 
   @Override
-  public ResourceWeights getWeights() {
-    return scheduler.getAppWeight(this);
+  public float getWeight() {
+    double weight = 1.0;
+
+    if (scheduler.isSizeBasedWeight()) {
+      scheduler.getSchedulerReadLock().lock();
+
+      try {
+        // Set weight based on current memory demand
+        weight = Math.log1p(getDemand().getMemorySize()) / Math.log(2);
+      } finally {
+        scheduler.getSchedulerReadLock().unlock();
+      }
+    }
+
+    return (float)weight * this.getPriority().getPriority();
   }
 
   @Override

@@ -95,6 +95,8 @@ public class IPCLoggerChannel implements AsyncLogger {
   private long committedTxId = HdfsServerConstants.INVALID_TXID;
   
   private final String journalId;
+  private final String nameServiceId;
+
   private final NamespaceInfo nsInfo;
 
   private URL httpServerURL;
@@ -152,8 +154,8 @@ public class IPCLoggerChannel implements AsyncLogger {
   static final Factory FACTORY = new AsyncLogger.Factory() {
     @Override
     public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
-        String journalId, InetSocketAddress addr) {
-      return new IPCLoggerChannel(conf, nsInfo, journalId, addr);
+        String journalId, String nameServiceId, InetSocketAddress addr) {
+      return new IPCLoggerChannel(conf, nsInfo, journalId, nameServiceId, addr);
     }
   };
 
@@ -161,11 +163,19 @@ public class IPCLoggerChannel implements AsyncLogger {
       NamespaceInfo nsInfo,
       String journalId,
       InetSocketAddress addr) {
+    this(conf, nsInfo, journalId, null, addr);
+  }
+
+  public IPCLoggerChannel(Configuration conf,
+                          NamespaceInfo nsInfo,
+                          String journalId,
+                          String nameServiceId,
+                          InetSocketAddress addr) {
     this.conf = conf;
     this.nsInfo = nsInfo;
     this.journalId = journalId;
+    this.nameServiceId = nameServiceId;
     this.addr = addr;
-    
     this.queueSizeLimitBytes = 1024 * 1024 * conf.getInt(
         DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY,
         DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_DEFAULT);
@@ -286,7 +296,8 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   private synchronized RequestInfo createReqInfo() {
     Preconditions.checkState(epoch > 0, "bad epoch: " + epoch);
-    return new RequestInfo(journalId, epoch, ipcSerial++, committedTxId);
+    return new RequestInfo(journalId, nameServiceId,
+        epoch, ipcSerial++, committedTxId);
   }
 
   @VisibleForTesting
@@ -330,7 +341,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<Boolean>() {
       @Override
       public Boolean call() throws IOException {
-        return getProxy().isFormatted(journalId);
+        return getProxy().isFormatted(journalId, nameServiceId);
       }
     });
   }
@@ -341,7 +352,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       @Override
       public GetJournalStateResponseProto call() throws IOException {
         GetJournalStateResponseProto ret =
-            getProxy().getJournalState(journalId);
+            getProxy().getJournalState(journalId, nameServiceId);
         constructHttpServerURI(ret);
         return ret;
       }
@@ -354,7 +365,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<NewEpochResponseProto>() {
       @Override
       public NewEpochResponseProto call() throws IOException {
-        return getProxy().newEpoch(journalId, nsInfo, epoch);
+        return getProxy().newEpoch(journalId, nameServiceId, nsInfo, epoch);
       }
     });
   }
@@ -495,7 +506,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        getProxy().format(journalId, nsInfo);
+        getProxy().format(journalId, nameServiceId, nsInfo);
         return null;
       }
     });
@@ -554,7 +565,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       @Override
       public RemoteEditLogManifest call() throws IOException {
         GetEditLogManifestResponseProto ret = getProxy().getEditLogManifest(
-            journalId, fromTxnId, inProgressOk);
+            journalId, nameServiceId, fromTxnId, inProgressOk);
         // Update the http port, since we need this to build URLs to any of the
         // returned logs.
         constructHttpServerURI(ret);
@@ -573,7 +584,7 @@ public class IPCLoggerChannel implements AsyncLogger {
           // force an RPC call so we know what the HTTP port should be if it
           // haven't done so.
           GetJournalStateResponseProto ret = getProxy().getJournalState(
-              journalId);
+              journalId, nameServiceId);
           constructHttpServerURI(ret);
         }
         return getProxy().prepareRecovery(createReqInfo(), segmentTxId);
@@ -620,7 +631,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<Void>() {
       @Override
       public Void call() throws IOException {
-        getProxy().doFinalize(journalId);
+        getProxy().doFinalize(journalId, nameServiceId);
         return null;
       }
     });
@@ -632,8 +643,8 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<Boolean>() {
       @Override
       public Boolean call() throws IOException {
-        return getProxy().canRollBack(journalId, storage, prevStorage,
-            targetLayoutVersion);
+        return getProxy().canRollBack(journalId, nameServiceId,
+            storage, prevStorage, targetLayoutVersion);
       }
     });
   }
@@ -643,7 +654,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<Void>() {
       @Override
       public Void call() throws IOException {
-        getProxy().doRollback(journalId);
+        getProxy().doRollback(journalId, nameServiceId);
         return null;
       }
     });
@@ -654,7 +665,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<Void>() {
       @Override
       public Void call() throws IOException {
-        getProxy().discardSegments(journalId, startTxId);
+        getProxy().discardSegments(journalId, nameServiceId, startTxId);
         return null;
       }
     });
@@ -665,7 +676,7 @@ public class IPCLoggerChannel implements AsyncLogger {
     return singleThreadExecutor.submit(new Callable<Long>() {
       @Override
       public Long call() throws IOException {
-        return getProxy().getJournalCTime(journalId);
+        return getProxy().getJournalCTime(journalId, nameServiceId);
       }
     });
   }

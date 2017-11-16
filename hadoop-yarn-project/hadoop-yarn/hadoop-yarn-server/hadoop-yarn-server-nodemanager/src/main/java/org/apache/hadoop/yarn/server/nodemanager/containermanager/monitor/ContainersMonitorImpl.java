@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -502,7 +503,8 @@ public class ContainersMonitorImpl extends AbstractService implements
      * @param entry process tree entry to fill in
      */
     private void initializeProcessTrees(
-            Entry<ContainerId, ProcessTreeInfo> entry) {
+            Entry<ContainerId, ProcessTreeInfo> entry)
+        throws ContainerExecutionException {
       ContainerId containerId = entry.getKey();
       ProcessTreeInfo ptInfo = entry.getValue();
       String pId = ptInfo.getPID();

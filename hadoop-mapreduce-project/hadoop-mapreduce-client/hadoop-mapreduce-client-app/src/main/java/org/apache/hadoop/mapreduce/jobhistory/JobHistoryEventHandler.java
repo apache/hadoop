@@ -31,8 +31,6 @@ import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -82,6 +80,8 @@ import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The job history events get routed to this class. This class writes the Job
@@ -123,7 +123,7 @@ public class JobHistoryEventHandler extends AbstractService
   private volatile boolean stopped;
   private final Object lock = new Object();
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       JobHistoryEventHandler.class);
 
   protected static final Map<JobId, MetaInfo> fileMap =

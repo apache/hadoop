@@ -103,7 +103,7 @@ public class NativeRuntime {
   }
 
   /**
-   * destroy native object We use to destory native handlers
+   * destroy native object We use to destroy native handlers
    */
   public synchronized static void releaseNativeObject(long addr) {
     assertNativeLibraryLoaded();

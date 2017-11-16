@@ -1115,7 +1115,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * Shutdown disk balancer.
    */
-  private  void shutdownDiskBalancer() {
+  private void shutdownDiskBalancer() {
     if (this.diskBalancer != null) {
       this.diskBalancer.shutdown();
       this.diskBalancer = null;
@@ -2077,6 +2077,10 @@ public class DataNode extends ReconfigurableBase
       ipcServer.stop();
     }
 
+    if (ecWorker != null) {
+      ecWorker.shutDown();
+    }
+
     if(blockPoolManager != null) {
       try {
         this.blockPoolManager.shutDownAll(bposArray);
@@ -3000,8 +3004,16 @@ public class DataNode extends ReconfigurableBase
     b.setNumBytes(visible);
 
     if (targets.length > 0) {
-      new Daemon(new DataTransfer(targets, targetStorageTypes,
-          targetStorageIds, b, stage, client)).start();
+      Daemon daemon = new Daemon(threadGroup,
+          new DataTransfer(targets, targetStorageTypes, targetStorageIds, b,
+              stage, client));
+      daemon.start();
+      try {
+        daemon.join();
+      } catch (InterruptedException e) {
+        throw new IOException(
+            "Pipeline recovery for " + b + " is interrupted.", e);
+      }
     }
   }
 

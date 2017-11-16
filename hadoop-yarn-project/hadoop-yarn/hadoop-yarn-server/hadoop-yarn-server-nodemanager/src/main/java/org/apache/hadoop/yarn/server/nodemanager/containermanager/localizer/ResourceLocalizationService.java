@@ -74,6 +74,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskValidator;
 import org.apache.hadoop.util.DiskValidatorFactory;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
@@ -808,6 +809,7 @@ public class ResourceLocalizationService extends CompositeService
           return; // ignore; already gone
         }
         privLocalizers.remove(locId);
+        LOG.info("Interrupting localizer for " + locId);
         localizer.interrupt();
       }
     }
@@ -859,7 +861,7 @@ public class ResourceLocalizationService extends CompositeService
       // TODO handle failures, cancellation, requests by other containers
       LocalizedResource rsrc = request.getResource();
       LocalResourceRequest key = rsrc.getRequest();
-      LOG.info("Downloading public rsrc:" + key);
+      LOG.info("Downloading public resource: " + key);
       /*
        * Here multiple containers may request the same resource. So we need
        * to start downloading only when
@@ -918,7 +920,16 @@ public class ResourceLocalizationService extends CompositeService
                 + " Either queue is full or threadpool is shutdown.", re);
           }
         } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skip downloading resource: " + key + " since it's in"
+                + " state: " + rsrc.getState());
+          }
           rsrc.unlock();
+        }
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skip downloading resource: " + key + " since it is locked"
+              + " by other threads");
         }
       }
     }
@@ -1180,6 +1191,34 @@ public class ResourceLocalizationService extends CompositeService
     }
 
     @Override
+    public void interrupt() {
+      boolean destroyedShell = false;
+      try {
+        for (Shell shell : Shell.getAllShells()) {
+          try {
+            if (shell.getWaitingThread() != null &&
+                shell.getWaitingThread().equals(this) &&
+                shell.getProcess() != null &&
+                shell.getProcess().isAlive()) {
+              LOG.info("Destroying localization shell process for " +
+                  localizerId);
+              shell.getProcess().destroy();
+              destroyedShell = true;
+              break;
+            }
+          } catch (Exception e) {
+            LOG.warn("Failed to destroy localization shell process for " +
+                localizerId, e);
+          }
+        }
+      } finally {
+        if (!destroyedShell) {
+          super.interrupt();
+        }
+      }
+    }
+
+    @Override
     @SuppressWarnings("unchecked") // dispatcher not typed
     public void run() {
       Path nmPrivateCTokensPath = null;
@@ -1217,7 +1256,7 @@ public class ResourceLocalizationService extends CompositeService
         exception = e;
       } finally {
         if (exception != null) {
-          LOG.info("Localizer failed", exception);
+          LOG.info("Localizer failed for "+localizerId, exception);
           // On error, report failure to Container and signal ABORT
           // Notify resource of failed localization
           ContainerId cId = context.getContainerId();

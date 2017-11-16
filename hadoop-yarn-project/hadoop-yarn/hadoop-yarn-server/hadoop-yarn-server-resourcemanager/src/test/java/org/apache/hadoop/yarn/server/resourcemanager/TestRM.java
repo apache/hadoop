@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.base.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.junit.Before;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -71,7 +73,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.log4j.Level;
@@ -88,6 +89,10 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   private final static int WAIT_SLEEP_MS = 100;
 
   private YarnConfiguration conf;
+
+  public TestRM(SchedulerType type) throws IOException {
+    super(type);
+  }
 
   @Before
   public void setup() {
@@ -199,8 +204,6 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   // corresponding NM Token.
   @Test (timeout = 20000)
   public void testNMTokenSentForNormalContainer() throws Exception {
-    conf.set(YarnConfiguration.RM_SCHEDULER,
-        CapacityScheduler.class.getCanonicalName());
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
@@ -209,8 +212,10 @@ public class TestRM extends ParameterizedSchedulerTestBase {
 
     // Call getNewContainerId to increase container Id so that the AM container
     // Id doesn't equal to one.
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    cs.getApplicationAttempt(attempt.getAppAttemptId()).getNewContainerId();
+    AbstractYarnScheduler scheduler = (AbstractYarnScheduler)
+        rm.getResourceScheduler();
+    scheduler.getApplicationAttempt(attempt.getAppAttemptId()).
+        getNewContainerId();
 
     MockAM am = MockRM.launchAM(app, rm, nm1);
     // am container Id not equal to 1.

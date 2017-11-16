@@ -21,8 +21,8 @@ package org.apache.hadoop.cli;
 import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CLICommandErasureCodingCli;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Before;
@@ -34,7 +34,7 @@ import org.xml.sax.SAXException;
 public class TestErasureCodingCLI extends CLITestHelper {
   private final int NUM_OF_DATANODES = 3;
   private MiniDFSCluster dfsCluster = null;
-  private FileSystem fs = null;
+  private DistributedFileSystem fs = null;
   private String namenode = null;
 
   @Rule
@@ -44,10 +44,6 @@ public class TestErasureCodingCLI extends CLITestHelper {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        "RS-6-3-1024k,RS-3-2-1024k,XOR-2-1-1024k");
-
     dfsCluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_OF_DATANODES).build();
     dfsCluster.waitClusterUp();
@@ -56,6 +52,9 @@ public class TestErasureCodingCLI extends CLITestHelper {
     username = System.getProperty("user.name");
 
     fs = dfsCluster.getFileSystem();
+    fs.enableErasureCodingPolicy("RS-6-3-1024k");
+    fs.enableErasureCodingPolicy("RS-3-2-1024k");
+    fs.enableErasureCodingPolicy("XOR-2-1-1024k");
   }
 
   @Override

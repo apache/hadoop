@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.NoSuchElementException;
 import java.util.Iterator;
 
 import static org.apache.hadoop.http.HttpConfig.Policy;
@@ -126,9 +127,15 @@ public class MRWebAppUtil {
       throws UnknownHostException {
     //construct the history url for job
     String addr = getJHSWebappURLWithoutScheme(conf);
-    Iterator<String> it = ADDR_SPLITTER.split(addr).iterator();
-    it.next(); // ignore the bind host
-    String port = it.next();
+    String port;
+    try{
+      Iterator<String> it = ADDR_SPLITTER.split(addr).iterator();
+      it.next(); // ignore the bind host
+      port = it.next();
+    } catch(NoSuchElementException e) {
+      throw new IllegalArgumentException("MapReduce JobHistory WebApp Address"
+        + " does not contain a valid host:port authority: " + addr);
+    }
     // Use hs address to figure out the host for webapp
     addr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);

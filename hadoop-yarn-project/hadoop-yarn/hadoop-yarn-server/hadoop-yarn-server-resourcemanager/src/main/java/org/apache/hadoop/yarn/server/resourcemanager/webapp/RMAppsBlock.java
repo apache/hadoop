@@ -22,14 +22,17 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -47,9 +50,8 @@ public class RMAppsBlock extends AppsBlock {
   private ResourceManager rm;
 
   @Inject
-  RMAppsBlock(ResourceManager rm, ApplicationBaseProtocol appBaseProt,
-      View.ViewContext ctx) {
-    super(appBaseProt, ctx);
+  RMAppsBlock(ResourceManager rm, View.ViewContext ctx) {
+    super(null, ctx);
     this.rm = rm;
   }
 
@@ -192,5 +194,12 @@ public class RMAppsBlock extends AppsBlock {
       .__("var appsTableData=" + appsTableData).__();
 
     tbody.__().__();
+  }
+
+  @Override
+  protected List<ApplicationReport> getApplicationReport(
+      final GetApplicationsRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getApplications(request)
+        .getApplicationList();
   }
 }

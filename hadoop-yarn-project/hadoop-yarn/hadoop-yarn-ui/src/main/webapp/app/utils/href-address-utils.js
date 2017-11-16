@@ -22,6 +22,6 @@ export default {
   },
 
   getQueueLink: function(queueName) {
-    return '#/yarn-queue/' + queueName;
+    return '#/yarn-queue/' + queueName + '/info';
   }
 };

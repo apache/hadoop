@@ -33,12 +33,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -69,7 +64,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -80,16 +74,20 @@ import com.google.common.collect.Lists;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.crypto.SecretKey;
 
@@ -133,10 +131,9 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     TestZKRMStateStoreInternal store;
     String workingZnode;
 
-
     class TestZKRMStateStoreInternal extends ZKRMStateStore {
 
-      public TestZKRMStateStoreInternal(Configuration conf, String workingZnode)
+      TestZKRMStateStoreInternal(Configuration conf, String workingZnode)
           throws Exception {
         setResourceManager(new ResourceManager());
         init(conf);
@@ -145,10 +142,11 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         assertTrue(znodeWorkingPath.equals(workingZnode));
       }
 
-      public String getVersionNode() {
+      private String getVersionNode() {
         return znodeWorkingPath + "/" + ROOT_ZNODE_NAME + "/" + VERSION_NODE;
       }
 
+      @Override
       public Version getCurrentVersion() {
         return CURRENT_VERSION_INFO;
       }
@@ -166,11 +164,11 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         return rootPath + "/" + appPath;
       }
 
-      public String getAppNode(String appId) {
+      private String getAppNode(String appId) {
         return getAppNode(appId, 0);
       }
 
-      public String getAttemptNode(String appId, String attemptId) {
+      private String getAttemptNode(String appId, String attemptId) {
         return getAppNode(appId) + "/" + attemptId;
       }
 
@@ -178,10 +176,28 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
        * Emulating retrying createRootDir not to raise NodeExist exception
        * @throws Exception
        */
-      public void testRetryingCreateRootDir() throws Exception {
+      private void testRetryingCreateRootDir() throws Exception {
         create(znodeWorkingPath);
       }
 
+      private String getDelegationTokenNode(int rmDTSequenceNumber, int splitIdx) {
+        String rootPath = workingZnode + "/" + ROOT_ZNODE_NAME + "/" +
+            RM_DT_SECRET_MANAGER_ROOT + "/" +
+            RMStateStore.RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME;
+        String nodeName = DELEGATION_TOKEN_PREFIX;
+        if (splitIdx == 0) {
+          nodeName += rmDTSequenceNumber;
+        } else {
+          nodeName += String.format("%04d", rmDTSequenceNumber);
+        }
+        String path = nodeName;
+        if (splitIdx != 0) {
+          int idx = nodeName.length() - splitIdx;
+          path = splitIdx + "/" + nodeName.substring(0, idx) + "/"
+              + nodeName.substring(idx);
+        }
+        return rootPath + "/" + path;
+      }
     }
 
     private RMStateStore createStore(Configuration conf) throws Exception {
@@ -198,6 +214,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       return createStore(conf);
     }
 
+    @Override
     public RMStateStore getRMStateStore() throws Exception {
       YarnConfiguration conf = new YarnConfiguration();
       return createStore(conf);
@@ -221,6 +238,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       return store.getCurrentVersion();
     }
 
+    @Override
     public boolean appExists(RMApp app) throws Exception {
       String appIdPath = app.getApplicationId().toString();
       int split =
@@ -230,11 +248,23 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
           .forPath(store.getAppNode(appIdPath, split));
     }
 
+    @Override
     public boolean attemptExists(RMAppAttempt attempt) throws Exception {
       ApplicationAttemptId attemptId = attempt.getAppAttemptId();
       return null != curatorFramework.checkExists()
           .forPath(store.getAttemptNode(
               attemptId.getApplicationId().toString(), attemptId.toString()));
+    }
+
+    public boolean delegationTokenExists(RMDelegationTokenIdentifier token,
+        int index) throws Exception {
+      int rmDTSequenceNumber = token.getSequenceNumber();
+      return curatorFramework.checkExists().forPath(
+          store.getDelegationTokenNode(rmDTSequenceNumber, index)) != null;
+    }
+
+    public int getDelegationTokenNodeSplitIndex() {
+      return store.delegationTokenNodeSplitIndex;
     }
   }
 
@@ -279,6 +309,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   static class TestAppRejDispatcher extends TestDispatcher {
     private boolean appsavefailedEvnt;
 
+    @Override
     public void handle(Event event) {
       if (event instanceof RMAppEvent && event.getType()
           .equals(RMAppEventType.APP_SAVE_FAILED)) {
@@ -332,7 +363,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     RMStateStore store = zkTester.getRMStateStore();
     Version defaultVersion = zkTester.getCurrentVersion();
     store.checkVersion();
-    Assert.assertEquals(defaultVersion, store.loadVersion());
+    assertEquals("Store had wrong version",
+        defaultVersion, store.loadVersion());
   }
 
   public static Configuration createHARMConf(String rmIds, String rmId,
@@ -511,7 +543,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     when(mockAttempt.getRMAppAttemptMetrics())
         .thenReturn(mockRmAppAttemptMetrics);
     when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
-        .thenReturn(new AggregateAppResourceUsage(0,0));
+        .thenReturn(new AggregateAppResourceUsage(new HashMap<>()));
     store.storeNewApplicationAttempt(mockAttempt);
     assertEquals("RMStateStore should have been in fenced state",
             true, store.isFencedState());
@@ -523,7 +555,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
             store.getCredentialsFromAppAttempt(mockAttempt),
             startTime, RMAppAttemptState.FINISHED, "testUrl", 
             "test", FinalApplicationStatus.SUCCEEDED, 100, 
-            finishTime, 0, 0, 0, 0);
+            finishTime, new HashMap<>(), new HashMap<>());
     store.updateApplicationAttemptState(newAttemptState);
     assertEquals("RMStateStore should have been in fenced state",
             true, store.isFencedState());
@@ -546,11 +578,20 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
             new Text("renewer1"), new Text("realuser1"));
     Long renewDate1 = new Long(System.currentTimeMillis()); 
     dtId1.setSequenceNumber(1111);
+    assertFalse("Token " + dtId1
+        + " should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(dtId1, 0));
     store.storeRMDelegationToken(dtId1, renewDate1);
+    assertFalse("Token " + dtId1
+        + " should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(dtId1, 0));
     assertEquals("RMStateStore should have been in fenced state", true,
         store.isFencedState());
 
     store.updateRMDelegationToken(dtId1, renewDate1);
+    assertFalse("Token " + dtId1
+        + " should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(dtId1, 0));
     assertEquals("RMStateStore should have been in fenced state", true,
         store.isFencedState());
 
@@ -606,7 +647,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     try {
       store.removeApplicationStateInternal(appStateRemoved);
     } catch (KeeperException.NoNodeException nne) {
-      Assert.fail("NoNodeException should not happen.");
+      fail("NoNodeException should not happen.");
     }
     store.close();
   }
@@ -751,10 +792,20 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   private static ApplicationAttemptStateData createFinishedAttempt(
       ApplicationAttemptId attemptId, Container container, long startTime,
       int amExitStatus) {
+    Map<String, Long> resourceSecondsMap = new HashMap<>();
+    Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+    resourceSecondsMap
+        .put(ResourceInformation.MEMORY_MB.getName(), 0L);
+    resourceSecondsMap
+        .put(ResourceInformation.VCORES.getName(), 0L);
+    preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+        0L);
+    preemptedResoureSecondsMap
+        .put(ResourceInformation.VCORES.getName(), 0L);
     return ApplicationAttemptStateData.newInstance(attemptId,
         container, null, startTime, RMAppAttemptState.FINISHED,
         "myTrackingUrl", "attemptDiagnostics", FinalApplicationStatus.SUCCEEDED,
-        amExitStatus, 0, 0, 0, 0, 0);
+        amExitStatus, 0, resourceSecondsMap, preemptedResoureSecondsMap);
   }
 
   private ApplicationAttemptId storeAttempt(RMStateStore store,
@@ -1122,6 +1173,319 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     assertEquals("Number of apps loaded should be 0.", 0,
         state.getApplicationState().size());
     // Close the state store.
+    store.close();
+  }
+
+  private static Configuration createConfForDelegationTokenNodeSplit(
+      int splitIndex) {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX,
+        splitIndex);
+    return conf;
+  }
+
+  private void verifyDelegationTokensStateStore(
+      TestZKRMStateStoreTester zkTester,
+      Map<RMDelegationTokenIdentifier, Long> tokensWithRenewal,
+      Map<RMDelegationTokenIdentifier, Integer> tokensWithIndex,
+      int sequenceNumber) throws Exception {
+    RMStateStore.RMDTSecretManagerState secretManagerState =
+        zkTester.store.loadState().getRMDTSecretManagerState();
+    assertEquals("Unexpected token state",
+        tokensWithRenewal, secretManagerState.getTokenState());
+    assertEquals("Unexpected sequence number", sequenceNumber,
+        secretManagerState.getDTSequenceNumber());
+    for (Map.Entry<RMDelegationTokenIdentifier, Integer> tokenEntry
+        : tokensWithIndex.entrySet()) {
+      assertTrue("Expected to find token " + tokenEntry.getKey()
+          + " in zookeeper but did not",
+          zkTester.delegationTokenExists(tokenEntry.getKey(),
+          tokenEntry.getValue()));
+    }
+  }
+
+  private void verifyDelegationTokenInStateStore(
+      TestZKRMStateStoreTester zkTester, RMDelegationTokenIdentifier token,
+      long renewDate, int index) throws Exception {
+    RMStateStore.RMDTSecretManagerState secretManagerState =
+        zkTester.store.loadState().getRMDTSecretManagerState();
+    Map<RMDelegationTokenIdentifier, Long> tokenState =
+        secretManagerState.getTokenState();
+    assertTrue("token state does not contain " + token,
+        tokenState.containsKey(token));
+    assertTrue("token state does not contain a token with renewal " + renewDate,
+        tokenState.containsValue(renewDate));
+    assertTrue("Token " + token + "should exist but was not found in ZooKeeper",
+        zkTester.delegationTokenExists(token, index));
+  }
+
+  private RMDelegationTokenIdentifier storeUpdateAndVerifyDelegationToken(
+      TestZKRMStateStoreTester zkTester,
+      Map<RMDelegationTokenIdentifier, Long> tokensWithRenewal,
+      Map<RMDelegationTokenIdentifier, Integer> tokensWithIndex,
+      int sequenceNumber, int split) throws Exception {
+    // Store token
+    RMDelegationTokenIdentifier token =
+        new RMDelegationTokenIdentifier(new Text("owner"),
+            new Text("renewer"), new Text("realuser"));
+    assertFalse("Token should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(token, split));
+    token.setSequenceNumber(sequenceNumber);
+    Long renewDate = System.currentTimeMillis();
+    zkTester.store.storeRMDelegationToken(token, renewDate);
+    modifyRMDelegationTokenState();
+    tokensWithRenewal.put(token, renewDate);
+    tokensWithIndex.put(token, split);
+
+    // Verify the token
+    verifyDelegationTokensStateStore(zkTester, tokensWithRenewal,
+        tokensWithIndex, sequenceNumber);
+
+    // Update the token
+    renewDate = System.currentTimeMillis();
+    zkTester.store.updateRMDelegationToken(token, renewDate);
+    tokensWithRenewal.put(token, renewDate);
+    tokensWithIndex.put(token, split);
+
+    // Verify updates
+    verifyDelegationTokensStateStore(zkTester, tokensWithRenewal,
+        tokensWithIndex, sequenceNumber);
+
+    return token;
+  }
+
+  @Test
+  public void testDelegationTokenSplitIndexConfig() throws Exception {
+    // Valid values
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(0)).close();
+    assertEquals("Incorrect split index",
+        0, zkTester.getDelegationTokenNodeSplitIndex());
+    zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(1)).close();
+    assertEquals("Incorrect split index",
+        1, zkTester.getDelegationTokenNodeSplitIndex());
+    zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(2)).close();
+    assertEquals("Incorrect split index",
+        2, zkTester.getDelegationTokenNodeSplitIndex());
+    zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(3)).close();
+    assertEquals("Incorrect split index",
+        3, zkTester.getDelegationTokenNodeSplitIndex());
+    zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(4)).close();
+    assertEquals("Incorrect split index",
+        4, zkTester.getDelegationTokenNodeSplitIndex());
+
+    // Invalid values --> override to 0
+    zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(-1)).close();
+    assertEquals("Incorrect split index",
+        0, zkTester.getDelegationTokenNodeSplitIndex());
+    zkTester.getRMStateStore(createConfForDelegationTokenNodeSplit(5)).close();
+    assertEquals("Incorrect split index",
+        0, zkTester.getDelegationTokenNodeSplitIndex());
+  }
+
+  @Test
+  public void testDelegationTokenNodeNoSplit() throws Exception {
+    testDelegationTokenNode(0);
+  }
+
+  @Test
+  public void testDelegationTokenNodeWithSplitOne() throws Exception {
+    testDelegationTokenNode(1);
+  }
+
+  @Test
+  public void testDelegationTokenNodeWithSplitTwo() throws Exception {
+    testDelegationTokenNode(2);
+  }
+
+  @Test
+  public void testDelegationTokenNodeWithSplitThree() throws Exception {
+    testDelegationTokenNode(3);
+  }
+
+  @Test
+  public void testDelegationTokenNodeWithSplitFour() throws Exception {
+    testDelegationTokenNode(4);
+  }
+
+  public void testDelegationTokenNode(int split) throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    Configuration conf = createConfForDelegationTokenNodeSplit(split);
+    RMStateStore store = zkTester.getRMStateStore(conf);
+
+    // Store the token and verify
+    Map<RMDelegationTokenIdentifier, Long> tokensWithRenewal = new HashMap<>();
+    Map<RMDelegationTokenIdentifier, Integer> tokensWithIndex = new HashMap<>();
+    int sequenceNumber = 0;
+    RMDelegationTokenIdentifier token = storeUpdateAndVerifyDelegationToken(
+        zkTester, tokensWithRenewal, tokensWithIndex, sequenceNumber, split);
+
+    // Delete the token and verify
+    store.removeRMDelegationToken(token);
+    RMStateStore.RMDTSecretManagerState state =
+        store.loadState().getRMDTSecretManagerState();
+    tokensWithRenewal.clear();
+    tokensWithIndex.clear();
+    assertEquals("Unexpected token state",
+        tokensWithRenewal, state.getTokenState());
+    assertEquals("Unexpected sequence number",
+        sequenceNumber, state.getDTSequenceNumber());
+    assertFalse("Token should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(token, split));
+    store.close();
+  }
+
+  @Test
+  public void testDelegationTokenNodeWithSplitMultiple() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    Configuration conf = createConfForDelegationTokenNodeSplit(1);
+    RMStateStore store = zkTester.getRMStateStore(conf);
+
+    // With the split set to 1, we can store 10 tokens under a znode (i.e. 0-9)
+    // Try to store more than 10
+    Map<RMDelegationTokenIdentifier, Long> tokensWithRenewal = new HashMap<>();
+    Map<RMDelegationTokenIdentifier, Integer> tokensWithIndex = new HashMap<>();
+    Set<RMDelegationTokenIdentifier> tokensToDelete = new HashSet<>();
+    int sequenceNumber = 0;
+    for (int i = 0; i <= 12; i++) {
+      RMDelegationTokenIdentifier token =
+          new RMDelegationTokenIdentifier(new Text("owner" + i),
+              new Text("renewer" + i), new Text("realuser" + i));
+      sequenceNumber = i;
+      token.setSequenceNumber(sequenceNumber);
+      assertFalse("Token should not exist but was found in ZooKeeper",
+          zkTester.delegationTokenExists(token, 1));
+      Long renewDate = System.currentTimeMillis();
+      store.storeRMDelegationToken(token, renewDate);
+      modifyRMDelegationTokenState();
+      tokensWithRenewal.put(token, renewDate);
+      tokensWithIndex.put(token, 1);
+      switch (i) {
+        case 0:
+        case 3:
+        case 6:
+        case 11:
+          tokensToDelete.add(token);
+          break;
+        default:
+          break;
+      }
+    }
+    // Verify
+    verifyDelegationTokensStateStore(zkTester, tokensWithRenewal,
+        tokensWithIndex, sequenceNumber);
+
+    // Try deleting some tokens and adding some new ones
+    for (RMDelegationTokenIdentifier tokenToDelete : tokensToDelete) {
+      store.removeRMDelegationToken(tokenToDelete);
+      tokensWithRenewal.remove(tokenToDelete);
+      tokensWithIndex.remove(tokenToDelete);
+    }
+    for (int i = 13; i <= 22; i++) {
+      RMDelegationTokenIdentifier token =
+          new RMDelegationTokenIdentifier(new Text("owner" + i),
+              new Text("renewer" + i), new Text("realuser" + i));
+      sequenceNumber = i;
+      token.setSequenceNumber(sequenceNumber);
+      Long renewDate = System.currentTimeMillis();
+      store.storeRMDelegationToken(token, renewDate);
+      modifyRMDelegationTokenState();
+      tokensWithRenewal.put(token, renewDate);
+      tokensWithIndex.put(token, 1);
+    }
+    // Verify
+    verifyDelegationTokensStateStore(zkTester, tokensWithRenewal,
+        tokensWithIndex, sequenceNumber);
+    for (RMDelegationTokenIdentifier token : tokensToDelete) {
+      assertFalse("Token " + token
+              + " should not exist but was found in ZooKeeper",
+          zkTester.delegationTokenExists(token, 1));
+    }
+    store.close();
+  }
+
+  @Test
+  public void testDelegationTokenNodeWithSplitChangeAcrossRestarts()
+      throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    Map<RMDelegationTokenIdentifier, Long> tokensWithRenewal = new HashMap<>();
+    Map<RMDelegationTokenIdentifier, Integer> tokensWithIndex = new HashMap<>();
+    int sequenceNumber = 0;
+
+    // Start the store with index 1
+    Configuration conf = createConfForDelegationTokenNodeSplit(1);
+    RMStateStore store = zkTester.getRMStateStore(conf);
+    // Store a token with index 1
+    RMDelegationTokenIdentifier token1 = storeUpdateAndVerifyDelegationToken(
+        zkTester, tokensWithRenewal, tokensWithIndex, sequenceNumber, 1);
+    store.close();
+
+    // Start the store with index 2
+    conf = createConfForDelegationTokenNodeSplit(2);
+    store = zkTester.getRMStateStore(conf);
+    // Verify token1 is still there and under the /1/ znode
+    verifyDelegationTokenInStateStore(
+        zkTester, token1, tokensWithRenewal.get(token1), 1);
+    // Store a token with index 2
+    sequenceNumber++;
+    RMDelegationTokenIdentifier token2 = storeUpdateAndVerifyDelegationToken(
+        zkTester, tokensWithRenewal, tokensWithIndex, sequenceNumber, 2);
+    // Update and verify token1
+    long renewDate1 = System.currentTimeMillis();
+    zkTester.store.updateRMDelegationToken(token1, renewDate1);
+    tokensWithRenewal.put(token1, renewDate1);
+    verifyDelegationTokenInStateStore(
+        zkTester, token1, tokensWithRenewal.get(token1), 1);
+    store.close();
+
+    // Start the store with index 0
+    conf = createConfForDelegationTokenNodeSplit(0);
+    store = zkTester.getRMStateStore(conf);
+    // Verify token1 is still there and under the /1/ znode
+    verifyDelegationTokenInStateStore(
+        zkTester, token1, tokensWithRenewal.get(token1), 1);
+    // Verify token2 is still there and under the /2/ znode
+    verifyDelegationTokenInStateStore(
+        zkTester, token2, tokensWithRenewal.get(token2), 2);
+    // Store a token with no index
+    sequenceNumber++;
+    RMDelegationTokenIdentifier token0 = storeUpdateAndVerifyDelegationToken(
+        zkTester, tokensWithRenewal, tokensWithIndex, sequenceNumber, 0);
+    store.close();
+
+    // Start the store with index 3
+    conf = createConfForDelegationTokenNodeSplit(3);
+    store = zkTester.getRMStateStore(conf);
+    // Verify token1 is still there and under the /1/ znode
+    verifyDelegationTokenInStateStore(
+        zkTester, token1, tokensWithRenewal.get(token1), 1);
+    // Verify token2 is still there and under the /2/ znode
+    verifyDelegationTokenInStateStore(
+        zkTester, token2, tokensWithRenewal.get(token2), 2);
+    // Verify token0 is still there and under the token root node
+    verifyDelegationTokenInStateStore(
+        zkTester, token0, tokensWithRenewal.get(token0), 0);
+    // Delete all tokens and verify
+    for (RMDelegationTokenIdentifier token : tokensWithRenewal.keySet()) {
+      store.removeRMDelegationToken(token);
+    }
+    tokensWithRenewal.clear();
+    tokensWithIndex.clear();
+    verifyDelegationTokensStateStore(
+        zkTester, tokensWithRenewal, tokensWithIndex, sequenceNumber);
+    assertFalse("Token " + token1
+            + " should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(token1, 1));
+    assertFalse("Token " + token1
+            + " should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(token2, 2));
+    assertFalse("Token " + token1
+            + " should not exist but was found in ZooKeeper",
+        zkTester.delegationTokenExists(token0, 0));
+    // Store a token with index 3
+    sequenceNumber++;
+    storeUpdateAndVerifyDelegationToken(zkTester, tokensWithRenewal,
+        tokensWithIndex, sequenceNumber, 3);
     store.close();
   }
 }

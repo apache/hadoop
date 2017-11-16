@@ -107,7 +107,6 @@ It is recommended that you leave the default setting here:
     <name>fs.s3a.metadatastore.authoritative</name>
     <value>false</value>
 </property>
-
 ```
 
 Setting this to `true` is currently an experimental feature.  When true, the
@@ -388,7 +387,7 @@ Example 2
 hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1
 ```
 
-Creates a table "ireland-team" in the same region "s3-eu-west-1.amazonaws.com"
+Creates a table "ireland-team" in the region "eu-west-1.amazonaws.com"
 
 
 ### Import a bucket: `s3guard import`
@@ -422,6 +421,98 @@ Example
 hadoop s3guard diff s3a://ireland-1
 ```
 
+### Display information about a bucket, `s3guard bucket-info`
+
+Prints and optionally checks the s3guard and encryption status of a bucket.
+
+```bash
+hadoop s3guard bucket-info [ -guarded ] [-unguarded] [-auth] [-nonauth] [-encryption ENCRYPTION] s3a://BUCKET
+```
+
+Options
+
+| argument | meaning |
+|-----------|-------------|
+| `-guarded` | Require S3Guard to be enabled |
+| `-unguarded` | Require S3Guard to be disabled |
+| `-auth` | Require the S3Guard mode to be "authoritative" |
+| `-nonauth` | Require the S3Guard mode to be "non-authoritative" |
+| `-encryption <type>` | Require a specific server-side encryption algorithm  |
+
+The server side encryption options are not directly related to S3Guard, but
+it is often convenient to check them at the same time.
+
+Example
+
+```bash
+hadoop s3guard bucket-info -guarded s3a://ireland-1
+```
+
+List the details of bucket `s3a://ireland-1`, mandating that it must have S3Guard enabled
+
+```
+Filesystem s3a://ireland-1
+Location: eu-west-1
+Filesystem s3a://ireland-1 is using S3Guard with store DynamoDBMetadataStore{region=eu-west-1, tableName=ireland-1}
+Authoritative S3Guard: fs.s3a.metadatastore.authoritative=false
+Metadata Store Diagnostics:
+  ARN=arn:aws:dynamodb:eu-west-1:00000000:table/ireland-1
+  description=S3Guard metadata store in DynamoDB
+  name=ireland-1
+  read-capacity=20
+  region=eu-west-1
+  retryPolicy=ExponentialBackoffRetry(maxRetries=9, sleepTime=100 MILLISECONDS)
+  size=12812
+  status=ACTIVE
+  table={AttributeDefinitions: [{AttributeName: child,AttributeType: S},
+    {AttributeName: parent,AttributeType: S}],TableName: ireland-1,
+    KeySchema: [{AttributeName: parent,KeyType: HASH}, {AttributeName: child,KeyType: RANGE}],
+    TableStatus: ACTIVE,
+    CreationDateTime: Fri Aug 25 19:07:25 BST 2017,
+    ProvisionedThroughput: {LastIncreaseDateTime: Tue Aug 29 11:45:18 BST 2017,
+    LastDecreaseDateTime: Wed Aug 30 15:37:51 BST 2017,
+    NumberOfDecreasesToday: 1,
+    ReadCapacityUnits: 20,WriteCapacityUnits: 20},
+    TableSizeBytes: 12812,ItemCount: 91,
+    TableArn: arn:aws:dynamodb:eu-west-1:00000000:table/ireland-1,}
+  write-capacity=20
+
+S3A Client
+  Endpoint: fs.s3a.endpoint=s3-eu-west-1.amazonaws.com
+  Encryption: fs.s3a.server-side-encryption-algorithm=none
+  Input seek policy: fs.s3a.experimental.input.fadvise=normal
+```
+
+This listing includes all the information about the table supplied from
+
+```bash
+hadoop s3guard bucket-info -unguarded -encryption none s3a://landsat-pds
+```
+
+List the S3Guard status of clients of the public `landsat-pds` bucket,
+and verifies that the data is neither tracked with S3Guard nor encrypted.
+
+
+```
+Filesystem s3a://landsat-pdsLocation: us-west-2
+Filesystem s3a://landsat-pds is not using S3Guard
+Endpoint: fs.s3a.endpoints3.amazonaws.com
+Encryption: fs.s3a.server-side-encryption-algorithm=none
+Input seek policy: fs.s3a.experimental.input.fadvise=normal
+```
+
+Note that other clients may have a S3Guard table set up to store metadata
+on this bucket; the checks are all done from the perspective of the configuration
+setttings of the current client.
+
+```bash
+hadoop s3guard bucket-info -guarded -auth s3a://landsat-pds
+```
+
+Require the bucket to be using S3Guard in authoritative mode. This will normally
+fail against this specific bucket.
+
+
 ### Delete a table: `s3guard destroy`
 
 
@@ -450,7 +541,6 @@ hadoop s3guard destroy -meta dynamodb://ireland-team -region eu-west-1
 ```
 
 
-
 ### Clean up a table, `s3guard prune`
 
 Delete all file entries in the MetadataStore table whose object "modification
@@ -461,7 +551,7 @@ hadoop s3guard prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
     [-seconds SECONDS] [-m URI] ( -region REGION | s3a://BUCKET )
 ```
 
-A time value must be supplied.
+A time value of hours, minutes and/or seconds must be supplied.
 
 1. This does not delete the entries in the bucket itself.
 1. The modification time is effectively the creation time of the objects
@@ -486,6 +576,63 @@ Delete all entries more than 90 minutes old from the table "ireland-team" in
 the region "eu-west-1".
 
 
+### Tune the IO capacity of the DynamoDB Table, `s3guard set-capacity`
+
+Alter the read and/or write capacity of a s3guard table.
+
+```bash
+hadoop s3guard set-capacity [--read UNIT] [--write UNIT] ( -region REGION | s3a://BUCKET )
+```
+
+The `--read` and `--write` units are those of `s3guard init`.
+
+
+Example
+
+```
+hadoop s3guard set-capacity  -read 20 -write 20 s3a://ireland-1
+```
+
+Set the capacity of the table used by bucket `s3a://ireland-1` to 20 read
+and 20 write. (This is a low number, incidentally)
+
+```
+2017-08-30 16:21:26,343 [main] INFO  s3guard.S3GuardTool (S3GuardTool.java:initMetadataStore(229)) - Metadata store DynamoDBMetadataStore{region=eu-west-1, tableName=ireland-1} is initialized.
+2017-08-30 16:21:26,344 [main] INFO  s3guard.DynamoDBMetadataStore (DynamoDBMetadataStore.java:updateParameters(1084)) - Current table capacity is read: 25, write: 25
+2017-08-30 16:21:26,344 [main] INFO  s3guard.DynamoDBMetadataStore (DynamoDBMetadataStore.java:updateParameters(1086)) - Changing capacity of table to read: 20, write: 20
+Metadata Store Diagnostics:
+  ARN=arn:aws:dynamodb:eu-west-1:00000000000:table/ireland-1
+  description=S3Guard metadata store in DynamoDB
+  name=ireland-1
+  read-capacity=25
+  region=eu-west-1
+  retryPolicy=ExponentialBackoffRetry(maxRetries=9, sleepTime=100 MILLISECONDS)
+  size=12812
+  status=UPDATING
+  table={ ... }
+  write-capacity=25
+```
+
+After the update, the table status changes to `UPDATING`; this is a sign that
+the capacity has been changed
+
+Repeating the same command will not change the capacity, as both read and
+write values match that already in use
+
+```
+2017-08-30 16:24:35,337 [main] INFO  s3guard.DynamoDBMetadataStore (DynamoDBMetadataStore.java:updateParameters(1090)) - Table capacity unchanged at read: 20, write: 20
+Metadata Store Diagnostics:
+  ARN=arn:aws:dynamodb:eu-west-1:00000000000:table/ireland-1
+  description=S3Guard metadata store in DynamoDB
+  name=ireland-1
+  read-capacity=20
+  region=eu-west-1
+  retryPolicy=ExponentialBackoffRetry(maxRetries=9, sleepTime=100 MILLISECONDS)
+  size=12812
+  status=ACTIVE
+  table={ ... }
+  write-capacity=20
+```
 
 ## Debugging and Error Handling
 
@@ -510,7 +657,6 @@ log4j.logger.com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 # Log all HTTP requests made; includes S3 interaction. This may
 # include sensitive information such as account IDs in HTTP headers.
 log4j.logger.com.amazonaws.request=DEBUG
-
 ```
 
 If all else fails, S3Guard is designed to allow for easy recovery by deleting
@@ -538,7 +684,7 @@ S3Guard tables are created with a version marker, an entry with the primary
 key and child entry of `../VERSION`; the use of a relative path guarantees
 that it will not be resolved.
 
-#### Versioning policy.
+*Versioning policy*
 
 1. The version number of an S3Guard table will only be incremented when
 an incompatible change is made to the table structure —that is, the structure
@@ -557,7 +703,7 @@ in an incompatible manner. The version marker in tables exists to support
 such an option if it ever becomes necessary, by ensuring that all S3Guard
 client can recognise any version mismatch.
 
-### Security
+## Security
 
 All users of the DynamoDB table must have write access to it. This
 effectively means they must have write access to the entire object store.
@@ -569,9 +715,9 @@ are only made after successful file creation, deletion and rename, the
 store is *unlikely* to get out of sync, it is still something which
 merits more testing before it could be considered reliable.
 
-### Troubleshooting
+## Troubleshooting
 
-#### Error: `S3Guard table lacks version marker.`
+### Error: `S3Guard table lacks version marker.`
 
 The table which was intended to be used as a S3guard metadata store
 does not have any version marker indicating that it is a S3Guard table.
@@ -581,7 +727,7 @@ It may be that this is not a S3Guard table.
 * Make sure that this is the correct table name.
 * Delete the table, so it can be rebuilt.
 
-#### Error: `Database table is from an incompatible S3Guard version`
+### Error: `Database table is from an incompatible S3Guard version`
 
 This indicates that the version of S3Guard which created (or possibly updated)
 the database table is from a different version that that expected by the S3A
@@ -596,7 +742,7 @@ bucket. Upgrade the application/library.
 If the expected version is higher than the actual version, then the table
 itself will need upgrading.
 
-#### Error `"DynamoDB table TABLE does not exist in region REGION; auto-creation is turned off"`
+### Error `"DynamoDB table TABLE does not exist in region REGION; auto-creation is turned off"`
 
 S3Guard could not find the DynamoDB table for the Metadata Store,
 and it was not configured to create it. Either the table was missing,
@@ -608,3 +754,14 @@ or the configuration is preventing S3Guard from finding the table.
 1. If the region is not set, verify that the table exists in the same
 region as the bucket being used.
 1. Create the table if necessary.
+
+### Error `"The level of configured provisioned throughput for the table was exceeded"`
+
+The IO load of clients of the (shared) DynamoDB table was exceeded.
+
+Currently S3Guard doesn't do any throttling and retries here; the way to address
+this is to increase capacity via the AWS console or the `set-capacity` command.
+
+## Other Topis
+
+For details on how to test S3Guard, see [Testing S3Guard](./testing.html#s3guard)

@@ -27,6 +27,7 @@ import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -993,14 +994,31 @@ public final class HttpServer2 implements FilterContainer {
    * Get the pathname to the webapps files.
    * @param appName eg "secondary" or "datanode"
    * @return the pathname as a URL
-   * @throws FileNotFoundException if 'webapps' directory cannot be found on CLASSPATH.
+   * @throws FileNotFoundException if 'webapps' directory cannot be found
+   *   on CLASSPATH or in the development location.
    */
   protected String getWebAppsPath(String appName) throws FileNotFoundException {
-    URL url = getClass().getClassLoader().getResource("webapps/" + appName);
-    if (url == null)
-      throw new FileNotFoundException("webapps/" + appName
-          + " not found in CLASSPATH");
-    String urlString = url.toString();
+    URL resourceUrl = null;
+    File webResourceDevLocation = new File("src/main/webapps", appName);
+    if (webResourceDevLocation.exists()) {
+      LOG.info("Web server is in development mode. Resources "
+          + "will be read from the source tree.");
+      try {
+        resourceUrl = webResourceDevLocation.getParentFile().toURI().toURL();
+      } catch (MalformedURLException e) {
+        throw new FileNotFoundException("Mailformed URL while finding the "
+            + "web resource dir:" + e.getMessage());
+      }
+    } else {
+      resourceUrl =
+          getClass().getClassLoader().getResource("webapps/" + appName);
+
+      if (resourceUrl == null) {
+        throw new FileNotFoundException("webapps/" + appName +
+            " not found in CLASSPATH");
+      }
+    }
+    String urlString = resourceUrl.toString();
     return urlString.substring(0, urlString.lastIndexOf('/'));
   }
 
@@ -1200,6 +1218,7 @@ public final class HttpServer2 implements FilterContainer {
    * @throws Exception
    */
   void openListeners() throws Exception {
+    LOG.debug("opening listeners: {}", listeners);
     for (ServerConnector listener : listeners) {
       if (listener.getLocalPort() != -1 && listener.getLocalPort() != -2) {
         // This listener is either started externally or has been bound or was

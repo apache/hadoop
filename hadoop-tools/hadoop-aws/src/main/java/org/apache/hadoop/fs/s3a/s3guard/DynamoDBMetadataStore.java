@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.AmazonClientException;
@@ -51,6 +52,7 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -183,6 +185,18 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /** Initial delay for retries when batched operations get throttled by
    * DynamoDB. Value is {@value} msec. */
   public static final long MIN_RETRY_SLEEP_MSEC = 100;
+
+  @VisibleForTesting
+  static final String DESCRIPTION
+      = "S3Guard metadata store in DynamoDB";
+  @VisibleForTesting
+  static final String READ_CAPACITY = "read-capacity";
+  @VisibleForTesting
+  static final String WRITE_CAPACITY = "write-capacity";
+  @VisibleForTesting
+  static final String STATUS = "status";
+  @VisibleForTesting
+  static final String TABLE = "table";
 
   private static ValueMap deleteTrackingValueMap =
       new ValueMap().withBoolean(":false", false);
@@ -788,7 +802,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
     try {
       try {
         LOG.debug("Binding to table {}", tableName);
-        final String status = table.describe().getTableStatus();
+        TableDescription description = table.describe();
+        LOG.debug("Table state: {}", description);
+        final String status = description.getTableStatus();
         switch (status) {
         case "CREATING":
         case "UPDATING":
@@ -824,9 +840,10 @@ public class DynamoDBMetadataStore implements MetadataStore {
 
           createTable(capacity);
         } else {
-          throw new FileNotFoundException("DynamoDB table "
-              + "'" + tableName + "' does not "
-              + "exist in region " + region + "; auto-creation is turned off");
+          throw (FileNotFoundException)new FileNotFoundException(
+              "DynamoDB table '" + tableName + "' does not "
+              + "exist in region " + region + "; auto-creation is turned off")
+              .initCause(rnfe);
         }
       }
 
@@ -1005,6 +1022,85 @@ public class DynamoDBMetadataStore implements MetadataStore {
     Preconditions.checkNotNull(meta);
     Preconditions.checkNotNull(meta.getFileStatus());
     Preconditions.checkNotNull(meta.getFileStatus().getPath());
+  }
+
+  @Override
+  public Map<String, String> getDiagnostics() throws IOException {
+    Map<String, String> map = new TreeMap<>();
+    if (table != null) {
+      TableDescription desc = getTableDescription(true);
+      map.put("name", desc.getTableName());
+      map.put(STATUS, desc.getTableStatus());
+      map.put("ARN", desc.getTableArn());
+      map.put("size", desc.getTableSizeBytes().toString());
+      map.put(TABLE, desc.toString());
+      ProvisionedThroughputDescription throughput
+          = desc.getProvisionedThroughput();
+      map.put(READ_CAPACITY, throughput.getReadCapacityUnits().toString());
+      map.put(WRITE_CAPACITY, throughput.getWriteCapacityUnits().toString());
+      map.put(TABLE, desc.toString());
+    } else {
+      map.put("name", "DynamoDB Metadata Store");
+      map.put(TABLE, "none");
+      map.put(STATUS, "undefined");
+    }
+    map.put("description", DESCRIPTION);
+    map.put("region", region);
+    if (dataAccessRetryPolicy != null) {
+      map.put("retryPolicy", dataAccessRetryPolicy.toString());
+    }
+    return map;
+  }
+
+  private TableDescription getTableDescription(boolean forceUpdate) {
+    TableDescription desc = table.getDescription();
+    if (desc == null || forceUpdate) {
+      desc = table.describe();
+    }
+    return desc;
+  }
+
+  @Override
+  public void updateParameters(Map<String, String> parameters)
+      throws IOException {
+    Preconditions.checkNotNull(table, "Not initialized");
+    TableDescription desc = getTableDescription(true);
+    ProvisionedThroughputDescription current
+        = desc.getProvisionedThroughput();
+
+    long currentRead = current.getReadCapacityUnits();
+    long newRead = getLongParam(parameters,
+        S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
+        currentRead);
+    long currentWrite = current.getWriteCapacityUnits();
+    long newWrite = getLongParam(parameters,
+            S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
+            currentWrite);
+
+    ProvisionedThroughput throughput = new ProvisionedThroughput()
+        .withReadCapacityUnits(newRead)
+        .withWriteCapacityUnits(newWrite);
+    if (newRead != currentRead || newWrite != currentWrite) {
+      LOG.info("Current table capacity is read: {}, write: {}",
+          currentRead, currentWrite);
+      LOG.info("Changing capacity of table to read: {}, write: {}",
+          newRead, newWrite);
+      table.updateTable(throughput);
+    } else {
+      LOG.info("Table capacity unchanged at read: {}, write: {}",
+          newRead, newWrite);
+    }
+  }
+
+  private long getLongParam(Map<String, String> parameters,
+      String key,
+      long defVal) {
+    String k = parameters.get(key);
+    if (k != null) {
+      return Long.parseLong(k);
+    } else {
+      return defVal;
+    }
   }
 
 }

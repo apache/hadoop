@@ -53,11 +53,10 @@ public class TestErasureCodingPolicyWithSnapshot {
     groupSize = (short) (ecPolicy.getNumDataUnits()
         + ecPolicy.getNumParityUnits());
     conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        ecPolicy.getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
   }
 
   @After

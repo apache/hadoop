@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
@@ -42,7 +37,7 @@ import org.junit.Test;
 /**
  * Tests that we put the correct metadata on blobs created through WASB.
  */
-public class TestBlobMetadata {
+public class TestBlobMetadata extends AbstractWasbTestWithTimeout {
   private AzureBlobStorageTestAccount testAccount;
   private FileSystem fs;
   private InMemoryBlockBlobStore backingStore;

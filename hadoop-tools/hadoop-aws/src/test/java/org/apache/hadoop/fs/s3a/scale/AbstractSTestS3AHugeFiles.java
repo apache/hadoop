@@ -98,7 +98,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     conf.setLong(MIN_MULTIPART_THRESHOLD, partitionSize);
     conf.setInt(MULTIPART_SIZE, partitionSize);
     conf.set(USER_AGENT_PREFIX, "STestS3AHugeFileCreate");
-    conf.setBoolean(FAST_UPLOAD, true);
     conf.set(FAST_UPLOAD_BUFFER, getBlockOutputBufferName());
     return conf;
   }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.conf;
 
+import com.ctc.wstx.api.ReaderConfig;
 import com.ctc.wstx.io.StreamBootstrapper;
 import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
@@ -70,6 +71,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -81,6 +83,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -90,6 +93,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
@@ -205,19 +209,31 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static final String DEFAULT_STRING_CHECK =
     "testingforemptydefaultvalue";
 
+  private static boolean restrictSystemPropsDefault = false;
+  private boolean restrictSystemProps = restrictSystemPropsDefault;
   private boolean allowNullValueProperties = false;
 
   private static class Resource {
     private final Object resource;
     private final String name;
+    private final boolean restrictParser;
     
     public Resource(Object resource) {
       this(resource, resource.toString());
     }
-    
+
+    public Resource(Object resource, boolean useRestrictedParser) {
+      this(resource, resource.toString(), useRestrictedParser);
+    }
+
     public Resource(Object resource, String name) {
+      this(resource, name, getRestrictParserDefault(resource));
+    }
+
+    public Resource(Object resource, String name, boolean restrictParser) {
       this.resource = resource;
       this.name = name;
+      this.restrictParser = restrictParser;
     }
     
     public String getName(){
@@ -227,10 +243,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     public Object getResource() {
       return resource;
     }
-    
+
+    public boolean isParserRestricted() {
+      return restrictParser;
+    }
+
     @Override
     public String toString() {
       return name;
+    }
+
+    private static boolean getRestrictParserDefault(Object resource) {
+      if (resource instanceof String) {
+        return false;
+      }
+      UserGroupInformation user;
+      try {
+        user = UserGroupInformation.getCurrentUser();
+      } catch (IOException e) {
+        throw new RuntimeException("Unable to determine current user", e);
+      }
+      return user.getRealUser() != null;
     }
   }
   
@@ -253,13 +286,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       new ConcurrentHashMap<String, Boolean>());
   
   private boolean loadDefaults = true;
-  
+
   /**
    * Configuration objects
    */
   private static final WeakHashMap<Configuration,Object> REGISTRY = 
     new WeakHashMap<Configuration,Object>();
-  
+
+  /**
+   * Map to register all classes holding property tag enums.
+   */
+  private static final Map<String, Class>
+      REGISTERED_TAG_CLASS = new HashMap<>();
+  /**
+   * Map to hold properties by there tag groupings.
+   */
+  private final Map<PropertyTag, Properties> propertyTagsMap =
+      new ConcurrentHashMap<>();
+
   /**
    * List of default Resources. Resources are loaded in the order of the list 
    * entries
@@ -278,9 +322,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Stores the mapping of key to the resource which modifies or loads 
-   * the key most recently
+   * the key most recently. Created lazily to avoid wasting memory.
    */
-  private Map<String, String[]> updatingResource;
+  private volatile Map<String, String[]> updatingResource;
 
   /**
    * Specify exact input factory to avoid time finding correct one.
@@ -737,7 +781,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
-    updatingResource = new ConcurrentHashMap<String, String[]>();
+
+    // Register all classes holding property tags with
+    REGISTERED_TAG_CLASS.put("core", CorePropertyTag.class);
+    REGISTERED_TAG_CLASS.put("hdfs", HDFSPropertyTag.class);
+    REGISTERED_TAG_CLASS.put("yarn", YarnPropertyTag.class);
+
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -750,23 +799,28 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-   this.resources = (ArrayList<Resource>) other.resources.clone();
-   synchronized(other) {
-     if (other.properties != null) {
-       this.properties = (Properties)other.properties.clone();
-     }
+    this.resources = (ArrayList<Resource>) other.resources.clone();
+    synchronized(other) {
+      if (other.properties != null) {
+        this.properties = (Properties)other.properties.clone();
+      }
 
-     if (other.overlay!=null) {
-       this.overlay = (Properties)other.overlay.clone();
-     }
+      if (other.overlay!=null) {
+        this.overlay = (Properties)other.overlay.clone();
+      }
 
-     this.updatingResource = new ConcurrentHashMap<String, String[]>(
-         other.updatingResource);
-     this.finalParameters = Collections.newSetFromMap(
-         new ConcurrentHashMap<String, Boolean>());
-     this.finalParameters.addAll(other.finalParameters);
-   }
-   
+      this.restrictSystemProps = other.restrictSystemProps;
+      if (other.updatingResource != null) {
+        this.updatingResource = new ConcurrentHashMap<String, String[]>(
+           other.updatingResource);
+      }
+      this.finalParameters = Collections.newSetFromMap(
+          new ConcurrentHashMap<String, Boolean>());
+      this.finalParameters.addAll(other.finalParameters);
+      this.REGISTERED_TAG_CLASS.putAll(other.REGISTERED_TAG_CLASS);
+      this.propertyTagsMap.putAll(other.propertyTagsMap);
+    }
+
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -804,6 +858,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  public static void setRestrictSystemPropertiesDefault(boolean val) {
+    restrictSystemPropsDefault = val;
+  }
+
+  public void setRestrictSystemProperties(boolean val) {
+    this.restrictSystemProps = val;
+  }
+
   /**
    * Add a configuration resource. 
    * 
@@ -815,6 +877,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void addResource(String name) {
     addResourceObject(new Resource(name));
+  }
+
+  public void addResource(String name, boolean restrictedParser) {
+    addResourceObject(new Resource(name, restrictedParser));
   }
 
   /**
@@ -831,6 +897,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     addResourceObject(new Resource(url));
   }
 
+  public void addResource(URL url, boolean restrictedParser) {
+    addResourceObject(new Resource(url, restrictedParser));
+  }
+
   /**
    * Add a configuration resource. 
    * 
@@ -843,6 +913,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void addResource(Path file) {
     addResourceObject(new Resource(file));
+  }
+
+  public void addResource(Path file, boolean restrictedParser) {
+    addResourceObject(new Resource(file, restrictedParser));
   }
 
   /**
@@ -862,6 +936,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     addResourceObject(new Resource(in));
   }
 
+  public void addResource(InputStream in, boolean restrictedParser) {
+    addResourceObject(new Resource(in, restrictedParser));
+  }
+
   /**
    * Add a configuration resource. 
    * 
@@ -875,7 +953,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public void addResource(InputStream in, String name) {
     addResourceObject(new Resource(in, name));
   }
-  
+
+  public void addResource(InputStream in, String name,
+      boolean restrictedParser) {
+    addResourceObject(new Resource(in, name, restrictedParser));
+  }
+
   /**
    * Add a configuration resource.
    *
@@ -885,7 +968,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param conf Configuration object from which to load properties
    */
   public void addResource(Configuration conf) {
-    addResourceObject(new Resource(conf.getProps()));
+    addResourceObject(new Resource(conf.getProps(), conf.restrictSystemProps));
   }
 
   
@@ -905,6 +988,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   private synchronized void addResourceObject(Resource resource) {
     resources.add(resource);                      // add to resources
+    restrictSystemProps |= resource.isParserRestricted();
     reloadConfiguration();
   }
 
@@ -1013,34 +1097,36 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       final String var = eval.substring(varBounds[SUB_START_IDX],
           varBounds[SUB_END_IDX]);
       String val = null;
-      try {
-        if (var.startsWith("env.") && 4 < var.length()) {
-          String v = var.substring(4);
-          int i = 0;
-          for (; i < v.length(); i++) {
-            char c = v.charAt(i);
-            if (c == ':' && i < v.length() - 1 && v.charAt(i + 1) == '-') {
-              val = getenv(v.substring(0, i));
-              if (val == null || val.length() == 0) {
-                val = v.substring(i + 2);
+      if (!restrictSystemProps) {
+        try {
+          if (var.startsWith("env.") && 4 < var.length()) {
+            String v = var.substring(4);
+            int i = 0;
+            for (; i < v.length(); i++) {
+              char c = v.charAt(i);
+              if (c == ':' && i < v.length() - 1 && v.charAt(i + 1) == '-') {
+                val = getenv(v.substring(0, i));
+                if (val == null || val.length() == 0) {
+                  val = v.substring(i + 2);
+                }
+                break;
+              } else if (c == '-') {
+                val = getenv(v.substring(0, i));
+                if (val == null) {
+                  val = v.substring(i + 1);
+                }
+                break;
               }
-              break;
-            } else if (c == '-') {
-              val = getenv(v.substring(0, i));
-              if (val == null) {
-                val = v.substring(i + 1);
-              }
-              break;
             }
+            if (i == v.length()) {
+              val = getenv(v);
+            }
+          } else {
+            val = getProperty(var);
           }
-          if (i == v.length()) {
-            val = getenv(v);
-          }
-        } else {
-          val = getProperty(var);
+        } catch (SecurityException se) {
+          LOG.warn("Unexpected SecurityException in Configuration", se);
         }
-      } catch(SecurityException se) {
-        LOG.warn("Unexpected SecurityException in Configuration", se);
       }
       if (val == null) {
         val = getRaw(var);
@@ -1105,6 +1191,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   @VisibleForTesting
   public void setAllowNullValueProperties( boolean val ) {
     this.allowNullValueProperties = val;
+  }
+
+  public void setRestrictSystemProps(boolean val) {
+    this.restrictSystemProps = val;
   }
 
   /**
@@ -1257,14 +1347,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String newSource = (source == null ? "programmatically" : source);
 
     if (!isDeprecated(name)) {
-      updatingResource.put(name, new String[] {newSource});
+      putIntoUpdatingResource(name, new String[] {newSource});
       String[] altNames = getAlternativeNames(name);
       if(altNames != null) {
         for(String n: altNames) {
           if(!n.equals(name)) {
             getOverlay().setProperty(n, value);
             getProps().setProperty(n, value);
-            updatingResource.put(n, new String[] {newSource});
+            putIntoUpdatingResource(n, new String[] {newSource});
           }
         }
       }
@@ -1275,7 +1365,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       for(String n : names) {
         getOverlay().setProperty(n, value);
         getProps().setProperty(n, value);
-        updatingResource.put(n, new String[] {altSource});
+        putIntoUpdatingResource(n, new String[] {altSource});
       }
     }
   }
@@ -2614,17 +2704,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
-      Map<String, String[]> backup =
-          new ConcurrentHashMap<String, String[]>(updatingResource);
+      Map<String, String[]> backup = updatingResource != null ?
+          new ConcurrentHashMap<String, String[]>(updatingResource) : null;
       loadResources(properties, resources, quietmode);
 
       if (overlay != null) {
         properties.putAll(overlay);
-        for (Map.Entry<Object,Object> item: overlay.entrySet()) {
-          String key = (String)item.getKey();
-          String[] source = backup.get(key);
-          if(source != null) {
-            updatingResource.put(key, source);
+        if (backup != null) {
+          for (Map.Entry<Object, Object> item : overlay.entrySet()) {
+            String key = (String) item.getKey();
+            String[] source = backup.get(key);
+            if (source != null) {
+              updatingResource.put(key, source);
+            }
           }
         }
       }
@@ -2680,11 +2772,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return mapping of configuration properties with prefix stripped
    */
   public Map<String, String> getPropsWithPrefix(String confPrefix) {
+    Properties props = getProps();
+    Enumeration e = props.propertyNames();
     Map<String, String> configMap = new HashMap<>();
-    for (Map.Entry<String, String> entry : this) {
-      String name = entry.getKey();
+    String name = null;
+    while (e.hasMoreElements()) {
+      name = (String) e.nextElement();
       if (name.startsWith(confPrefix)) {
-        String value = this.get(name);
+        String value = props.getProperty(name);
         name = name.substring(confPrefix.length());
         configMap.put(name, value);
       }
@@ -2692,7 +2787,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return configMap;
   }
 
-  private XMLStreamReader parse(URL url)
+  private XMLStreamReader parse(URL url, boolean restricted)
       throws IOException, XMLStreamException {
     if (!quietmode) {
       if (LOG.isDebugEnabled()) {
@@ -2709,11 +2804,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       // with other users.
       connection.setUseCaches(false);
     }
-    return parse(connection.getInputStream(), url.toString());
+    return parse(connection.getInputStream(), url.toString(), restricted);
   }
 
-  private XMLStreamReader parse(InputStream is, String systemIdStr)
-      throws IOException, XMLStreamException {
+  private XMLStreamReader parse(InputStream is, String systemIdStr,
+      boolean restricted) throws IOException, XMLStreamException {
     if (!quietmode) {
       LOG.debug("parsing input stream " + is);
     }
@@ -2721,9 +2816,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return null;
     }
     SystemId systemId = SystemId.construct(systemIdStr);
-    return XML_INPUT_FACTORY.createSR(XML_INPUT_FACTORY.createPrivateConfig(),
-        systemId, StreamBootstrapper.getInstance(null, systemId, is), false,
-        true);
+    ReaderConfig readerConfig = XML_INPUT_FACTORY.createPrivateConfig();
+    if (restricted) {
+      readerConfig.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+    }
+    return XML_INPUT_FACTORY.createSR(readerConfig, systemId,
+        StreamBootstrapper.getInstance(null, systemId, is), false, true);
   }
 
   private void loadResources(Properties properties,
@@ -2731,7 +2829,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                              boolean quiet) {
     if(loadDefaults) {
       for (String resource : defaultResources) {
-        loadResource(properties, new Resource(resource), quiet);
+        loadResource(properties, new Resource(resource, false), quiet);
       }
     }
     
@@ -2751,12 +2849,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       name = wrapper.getName();
       XMLStreamReader2 reader = null;
       boolean returnCachedProperties = false;
+      boolean isRestricted = wrapper.isParserRestricted();
 
       if (resource instanceof URL) {                  // an URL resource
-        reader = (XMLStreamReader2)parse((URL)resource);
+        reader = (XMLStreamReader2)parse((URL)resource, isRestricted);
       } else if (resource instanceof String) {        // a CLASSPATH resource
         URL url = getResource((String)resource);
-        reader = (XMLStreamReader2)parse(url);
+        reader = (XMLStreamReader2)parse(url, isRestricted);
       } else if (resource instanceof Path) {          // a file resource
         // Can't use FileSystem API or we get an infinite loop
         // since FileSystem uses Configuration API.  Use java.io.File instead.
@@ -2767,10 +2866,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             LOG.debug("parsing File " + file);
           }
           reader = (XMLStreamReader2)parse(new BufferedInputStream(
-              new FileInputStream(file)), ((Path)resource).toString());
+              new FileInputStream(file)), ((Path)resource).toString(),
+              isRestricted);
         }
       } else if (resource instanceof InputStream) {
-        reader = (XMLStreamReader2)parse((InputStream)resource, null);
+        reader = (XMLStreamReader2)parse((InputStream)resource, null,
+            isRestricted);
         returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
@@ -2792,6 +2893,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String confName = null;
       String confValue = null;
       String confInclude = null;
+      String confTag = null;
       boolean confFinal = false;
       boolean fallbackAllowed = false;
       boolean fallbackEntered = false;
@@ -2806,6 +2908,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             confName = null;
             confValue = null;
             confFinal = false;
+            confTag = null;
             confSource.clear();
 
             // First test for short format configuration
@@ -2823,6 +2926,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               } else if ("source".equals(propertyAttr)) {
                 confSource.add(StringInterner.weakIntern(
                     reader.getAttributeValue(i)));
+              } else if ("tag".equals(propertyAttr)) {
+                confTag = StringInterner
+                    .weakIntern(reader.getAttributeValue(i));
               }
             }
             break;
@@ -2830,6 +2936,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           case "value":
           case "final":
           case "source":
+          case "tag":
             parseToken = true;
             token.setLength(0);
             break;
@@ -2846,12 +2953,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             if (confInclude == null) {
               break;
             }
+            if (isRestricted) {
+              throw new RuntimeException("Error parsing resource " + wrapper
+                  + ": XInclude is not supported for restricted resources");
+            }
             // Determine if the included resource is a classpath resource
             // otherwise fallback to a file resource
             // xi:include are treated as inline and retain current source
             URL include = getResource(confInclude);
             if (include != null) {
-              Resource classpathResource = new Resource(include, name);
+              Resource classpathResource = new Resource(include, name,
+                  wrapper.isParserRestricted());
               loadResource(properties, classpathResource, quiet);
             } else {
               URL url;
@@ -2872,7 +2984,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                 }
                 url = href.toURI().toURL();
               }
-              Resource uriResource = new Resource(url, name);
+              Resource uriResource = new Resource(url, name,
+                  wrapper.isParserRestricted());
               loadResource(properties, uriResource, quiet);
             }
             break;
@@ -2911,6 +3024,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           case "source":
             confSource.add(StringInterner.weakIntern(token.toString()));
             break;
+          case "tag":
+            if (token.length() > 0) {
+              confTag = StringInterner.weakIntern(token.toString());
+            }
+            break;
           case "include":
             if (fallbackAllowed && !fallbackEntered) {
               throw new IOException("Fetch fail on include for '"
@@ -2925,6 +3043,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               break;
             }
             confSource.add(name);
+            //Read tags and put them in propertyTagsMap
+            if (confTag != null) {
+              readTagFromConfig(confTag, confName, confValue, confSource);
+            }
+
             DeprecatedKeyInfo keyInfo =
                 deprecations.getDeprecatedKeyMap().get(confName);
             if (keyInfo != null) {
@@ -2950,7 +3073,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
       if (returnCachedProperties) {
         overlay(properties, toAddTo);
-        return new Resource(toAddTo, name);
+        return new Resource(toAddTo, name, wrapper.isParserRestricted());
       }
       return null;
     } catch (IOException e) {
@@ -2959,6 +3082,51 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (XMLStreamException e) {
       LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
+    }
+  }
+
+  private void readTagFromConfig(String attributeValue, String confName, String
+      confValue, List<String> confSource) {
+    for (String tagStr : attributeValue.split(",")) {
+      tagStr = tagStr.trim();
+      try {
+        if (confSource.size() > 0) {
+          for (String source : confSource) {
+            PropertyTag tag1 = this.getPropertyTag(tagStr,
+                FilenameUtils.getName(source).split("-")[0]);
+            if (tag1 != null) {
+              //Handle property with no/null value
+              if (confValue == null) {
+                confValue = "";
+              }
+              if (propertyTagsMap.containsKey(tag1)) {
+                propertyTagsMap.get(tag1).setProperty(confName, confValue);
+              } else {
+                Properties props = new Properties();
+                props.setProperty(confName, confValue);
+                propertyTagsMap.put(tag1, props);
+              }
+            }
+          }
+        } else {
+          // If no source is set try to find tag in CorePropertyTag
+          if (propertyTagsMap.containsKey(CorePropertyTag.valueOf(tagStr))) {
+            propertyTagsMap.get(CorePropertyTag.valueOf(tagStr))
+                .setProperty(confName, confValue);
+          } else {
+            Properties props = new Properties();
+            props.setProperty(confName, confValue);
+            propertyTagsMap.put(CorePropertyTag.valueOf(tagStr),
+                props);
+          }
+        }
+      } catch (Exception ex) {
+        // Log the invalid tag and continue to parse rest of the properties.
+        LOG.info("Invalid tag '" + tagStr + "' found for "
+            + "property:" + confName + " Source:" + Arrays
+            .toString(confSource.toArray()), ex);
+      }
+
     }
   }
 
@@ -2976,8 +3144,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
       if (!finalParameters.contains(attr)) {
         properties.setProperty(attr, value);
-        if(source != null) {
-          updatingResource.put(attr, source);
+        if (source != null) {
+          putIntoUpdatingResource(attr, source);
         }
       } else {
         // This is a final parameter so check for overrides.
@@ -3282,9 +3450,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           redactor.redact(name, config.get(name)));
       jsonGen.writeBooleanField("isFinal",
           config.finalParameters.contains(name));
-      String[] resources = config.updatingResource.get(name);
+      String[] resources = config.updatingResource != null ?
+          config.updatingResource.get(name) : null;
       String resource = UNKNOWN_RESOURCE;
-      if(resources != null && resources.length > 0) {
+      if (resources != null && resources.length > 0) {
         resource = resources[0];
       }
       jsonGen.writeStringField("resource", resource);
@@ -3364,8 +3533,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String value = org.apache.hadoop.io.Text.readString(in);
       set(key, value); 
       String sources[] = WritableUtils.readCompressedStringArray(in);
-      if(sources != null) {
-        updatingResource.put(key, sources);
+      if (sources != null) {
+        putIntoUpdatingResource(key, sources);
       }
     }
   }
@@ -3378,8 +3547,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     for(Map.Entry<Object, Object> item: props.entrySet()) {
       org.apache.hadoop.io.Text.writeString(out, (String) item.getKey());
       org.apache.hadoop.io.Text.writeString(out, (String) item.getValue());
-      WritableUtils.writeCompressedStringArray(out, 
-          updatingResource.get(item.getKey()));
+      WritableUtils.writeCompressedStringArray(out, updatingResource != null ?
+          updatingResource.get(item.getKey()) : null);
     }
   }
   
@@ -3437,5 +3606,59 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     return false;
+  }
+
+  /**
+   * Get all properties belonging to tag.
+   * @return Properties with matching properties
+   */
+  public Properties getAllPropertiesByTag(final PropertyTag tag) {
+    Properties props = new Properties();
+    if (propertyTagsMap.containsKey(tag)) {
+      props.putAll(propertyTagsMap.get(tag));
+    }
+    return props;
+  }
+
+  /**
+   * Get all properties belonging to list of input tags. Calls
+   * getAllPropertiesByTag internally.
+   *
+   * @return Properties with all matching properties
+   */
+  public Properties getAllPropertiesByTags(final List<PropertyTag> tagList) {
+    Properties prop = new Properties();
+    for (PropertyTag tag : tagList) {
+      prop.putAll(this.getAllPropertiesByTag(tag));
+    }
+    return prop;
+  }
+
+  /**
+   * Get Property tag Enum corresponding to given source.
+   *
+   * @param tagStr String representation of Enum
+   * @param group Group to which enum belongs.Ex hdfs,yarn
+   * @return Properties with all matching properties
+   */
+  private PropertyTag getPropertyTag(String tagStr, String group) {
+    PropertyTag tag = null;
+    if (REGISTERED_TAG_CLASS.containsKey(group)) {
+      tag = (PropertyTag) Enum.valueOf(REGISTERED_TAG_CLASS.get(group), tagStr);
+    }
+    return tag;
+  }
+
+  private void putIntoUpdatingResource(String key, String[] value) {
+    Map<String, String[]> localUR = updatingResource;
+    if (localUR == null) {
+      synchronized (this) {
+        localUR = updatingResource;
+        if (localUR == null) {
+          updatingResource = localUR = new ConcurrentHashMap<>(8);
+        }
+      }
+    }
+    localUR.put(key, value);
   }
 }

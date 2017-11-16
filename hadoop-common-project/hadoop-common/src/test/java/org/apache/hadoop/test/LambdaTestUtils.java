@@ -70,7 +70,7 @@ public final class LambdaTestUtils {
      * @throws Exception if the handler wishes to raise an exception
      * that way.
      */
-    Exception evaluate(int timeoutMillis, Exception caught) throws Exception;
+    Throwable evaluate(int timeoutMillis, Throwable caught) throws Throwable;
   }
 
   /**
@@ -116,7 +116,7 @@ public final class LambdaTestUtils {
     Preconditions.checkNotNull(timeoutHandler);
 
     long endTime = Time.now() + timeoutMillis;
-    Exception ex = null;
+    Throwable ex = null;
     boolean running = true;
     int iterations = 0;
     while (running) {
@@ -128,9 +128,11 @@ public final class LambdaTestUtils {
         // the probe failed but did not raise an exception. Reset any
         // exception raised by a previous probe failure.
         ex = null;
-      } catch (InterruptedException | FailFastException e) {
+      } catch (InterruptedException
+          | FailFastException
+          | VirtualMachineError e) {
         throw e;
-      } catch (Exception e) {
+      } catch (Throwable e) {
         LOG.debug("eventually() iteration {}", iterations, e);
         ex = e;
       }
@@ -145,15 +147,20 @@ public final class LambdaTestUtils {
       }
     }
     // timeout
-    Exception evaluate = timeoutHandler.evaluate(timeoutMillis, ex);
-    if (evaluate == null) {
-      // bad timeout handler logic; fall back to GenerateTimeout so the
-      // underlying problem isn't lost.
-      LOG.error("timeout handler {} did not throw an exception ",
-          timeoutHandler);
-      evaluate = new GenerateTimeout().evaluate(timeoutMillis, ex);
+    Throwable evaluate;
+    try {
+      evaluate = timeoutHandler.evaluate(timeoutMillis, ex);
+      if (evaluate == null) {
+        // bad timeout handler logic; fall back to GenerateTimeout so the
+        // underlying problem isn't lost.
+        LOG.error("timeout handler {} did not throw an exception ",
+            timeoutHandler);
+        evaluate = new GenerateTimeout().evaluate(timeoutMillis, ex);
+      }
+    } catch (Throwable throwable) {
+      evaluate = throwable;
     }
-    throw evaluate;
+    return raise(evaluate);
   }
 
   /**
@@ -217,6 +224,7 @@ public final class LambdaTestUtils {
    * @throws Exception the last exception thrown before timeout was triggered
    * @throws FailFastException if raised -without any retry attempt.
    * @throws InterruptedException if interrupted during the sleep operation.
+   * @throws OutOfMemoryError you've run out of memory.
    */
   public static <T> T eventually(int timeoutMillis,
       Callable<T> eval,
@@ -224,7 +232,7 @@ public final class LambdaTestUtils {
     Preconditions.checkArgument(timeoutMillis >= 0,
         "timeoutMillis must be >= 0");
     long endTime = Time.now() + timeoutMillis;
-    Exception ex;
+    Throwable ex;
     boolean running;
     int sleeptime;
     int iterations = 0;
@@ -232,10 +240,12 @@ public final class LambdaTestUtils {
       iterations++;
       try {
         return eval.call();
-      } catch (InterruptedException | FailFastException e) {
+      } catch (InterruptedException
+          | FailFastException
+          | VirtualMachineError e) {
         // these two exceptions trigger an immediate exit
         throw e;
-      } catch (Exception e) {
+      } catch (Throwable e) {
         LOG.debug("evaluate() iteration {}", iterations, e);
         ex = e;
       }
@@ -245,7 +255,26 @@ public final class LambdaTestUtils {
       }
     } while (running);
     // timeout. Throw the last exception raised
-    throw ex;
+    return raise(ex);
+  }
+
+  /**
+   * Take the throwable and raise it as an exception or an error, depending
+   * upon its type. This allows callers to declare that they only throw
+   * Exception (i.e. can be invoked by Callable) yet still rethrow a
+   * previously caught Throwable.
+   * @param throwable Throwable to rethrow
+   * @param <T> expected return type
+   * @return never
+   * @throws Exception if throwable is an Exception
+   * @throws Error if throwable is not an Exception
+   */
+  private static <T> T raise(Throwable throwable) throws Exception {
+    if (throwable instanceof Exception) {
+      throw (Exception) throwable;
+    } else {
+      throw (Error) throwable;
+    }
   }
 
   /**
@@ -365,6 +394,7 @@ public final class LambdaTestUtils {
    * @throws Exception any other exception raised
    * @throws AssertionError if the evaluation call didn't raise an exception.
    */
+  @SuppressWarnings("unchecked")
   public static <E extends Throwable> E intercept(
       Class<E> clazz,
       VoidCallable eval)
@@ -487,14 +517,14 @@ public final class LambdaTestUtils {
      * @return TimeoutException
      */
     @Override
-    public Exception evaluate(int timeoutMillis, Exception caught)
-        throws Exception {
+    public Throwable evaluate(int timeoutMillis, Throwable caught)
+        throws Throwable {
       String s = String.format("%s: after %d millis", message,
           timeoutMillis);
       String caughtText = caught != null
           ? ("; " + robustToString(caught)) : "";
 
-      return (TimeoutException) (new TimeoutException(s + caughtText)
+      return (new TimeoutException(s + caughtText)
                                      .initCause(caught));
     }
   }

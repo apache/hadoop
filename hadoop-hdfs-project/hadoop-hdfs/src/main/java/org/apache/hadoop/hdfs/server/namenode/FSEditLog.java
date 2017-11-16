@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -97,6 +98,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TruncateOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.EnableErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DisableErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveErasureCodingPolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -125,7 +130,7 @@ public class FSEditLog implements LogsPurgeable {
    * 
    * In a non-HA setup:
    * 
-   * The log starts in UNITIALIZED state upon construction. Once it's
+   * The log starts in UNINITIALIZED state upon construction. Once it's
    * initialized, it is usually in IN_SEGMENT state, indicating that edits may
    * be written. In the middle of a roll, or while saving the namespace, it
    * briefly enters the BETWEEN_LOG_SEGMENTS state, indicating that the previous
@@ -1228,6 +1233,38 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
 
+  void logAddErasureCodingPolicy(ErasureCodingPolicy ecPolicy,
+      boolean toLogRpcIds) {
+    AddErasureCodingPolicyOp op =
+        AddErasureCodingPolicyOp.getInstance(cache.get());
+    op.setErasureCodingPolicy(ecPolicy);
+    logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
+
+  void logEnableErasureCodingPolicy(String ecPolicyName, boolean toLogRpcIds) {
+    EnableErasureCodingPolicyOp op =
+        EnableErasureCodingPolicyOp.getInstance(cache.get());
+    op.setErasureCodingPolicy(ecPolicyName);
+    logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
+
+  void logDisableErasureCodingPolicy(String ecPolicyName, boolean toLogRpcIds) {
+    DisableErasureCodingPolicyOp op =
+        DisableErasureCodingPolicyOp.getInstance(cache.get());
+    op.setErasureCodingPolicy(ecPolicyName);
+    logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
+
+  void logRemoveErasureCodingPolicy(String ecPolicyName, boolean toLogRpcIds) {
+    RemoveErasureCodingPolicyOp op =
+        RemoveErasureCodingPolicyOp.getInstance(cache.get());
+    op.setErasureCodingPolicy(ecPolicyName);
+    logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
   /**
    * Get all the journals this edit log is currently operating on.
    */
@@ -1768,8 +1805,20 @@ public class FSEditLog implements LogsPurgeable {
     try {
       Constructor<? extends JournalManager> cons
         = clazz.getConstructor(Configuration.class, URI.class,
+            NamespaceInfo.class, String.class);
+      String nameServiceId = conf.get(DFSConfigKeys.DFS_NAMESERVICE_ID);
+      return cons.newInstance(conf, uri, storage.getNamespaceInfo(),
+          nameServiceId);
+    } catch (NoSuchMethodException ne) {
+      try {
+        Constructor<? extends JournalManager> cons
+            = clazz.getConstructor(Configuration.class, URI.class,
             NamespaceInfo.class);
-      return cons.newInstance(conf, uri, storage.getNamespaceInfo());
+        return cons.newInstance(conf, uri, storage.getNamespaceInfo());
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Unable to construct journal, "
+            + uri, e);
+      }
     } catch (Exception e) {
       throw new IllegalArgumentException("Unable to construct journal, "
                                          + uri, e);

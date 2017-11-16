@@ -21,17 +21,18 @@ package org.apache.hadoop.examples.terasort;
 import java.io.*;
 import java.util.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 
 class TeraScheduler {
-  private static final Log LOG = LogFactory.getLog(TeraScheduler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TeraScheduler.class);
   private Split[] splits;
   private List<Host> hosts = new ArrayList<Host>();
   private int slotsPerHost;

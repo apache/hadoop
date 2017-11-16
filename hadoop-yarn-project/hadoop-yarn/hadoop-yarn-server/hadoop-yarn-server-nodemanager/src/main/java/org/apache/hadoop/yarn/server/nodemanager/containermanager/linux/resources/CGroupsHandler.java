@@ -173,4 +173,10 @@ public interface CGroupsHandler {
    */
   String getCGroupParam(CGroupController controller, String cGroupId,
       String param) throws ResourceHandlerException;
+
+  /**
+   * Returns CGroup Mount Path.
+   * @return parameter value as read from the parameter file
+   */
+  String getCGroupMountPath();
 }

@@ -23,12 +23,9 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.MapType;
 import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -122,8 +119,6 @@ public class HttpFSFileSystem extends FileSystem
   public static final String NEW_LENGTH_PARAM = "newlength";
   public static final String START_AFTER_PARAM = "startAfter";
   public static final String POLICY_NAME_PARAM = "storagepolicy";
-  public static final String OFFSET_PARAM = "offset";
-  public static final String LENGTH_PARAM = "length";
   public static final String SNAPSHOT_NAME_PARAM = "snapshotname";
   public static final String OLD_SNAPSHOT_NAME_PARAM = "oldsnapshotname";
 
@@ -203,6 +198,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
   public static final String EC_BIT_JSON = "ecBit";
+  public static final String SNAPSHOT_BIT_JSON = "seBit";
 
   public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
   public static final String PARTIAL_LISTING_JSON = "partialListing";
@@ -210,7 +206,6 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
   public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
-  public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
@@ -710,14 +705,13 @@ public class HttpFSFileSystem extends FileSystem
   }
 
   /**
-   * List the statuses of the files/directories in the given path if the path is
-   * a directory.
+   * Get {@link FileStatus} of files/directories in the given path. If path
+   * corresponds to a file then {@link FileStatus} of that file is returned.
+   * Else if path represents a directory then {@link FileStatus} of all
+   * files/directories inside given path is returned.
    *
    * @param f given path
-   *
-   * @return the statuses of the files/directories in the given patch
-   *
-   * @throws IOException
+   * @return the statuses of the files/directories in the given path
    */
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
@@ -730,6 +724,13 @@ public class HttpFSFileSystem extends FileSystem
     return toFileStatuses(json, f);
   }
 
+  /**
+   * Get {@link DirectoryEntries} of the given path. {@link DirectoryEntries}
+   * contains an array of {@link FileStatus}, as well as iteration information.
+   *
+   * @param f given path
+   * @return {@link DirectoryEntries} for given path
+   */
   @Override
   public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
       FileNotFoundException, IOException {
@@ -1072,19 +1073,27 @@ public class HttpFSFileSystem extends FileSystem
     final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
     final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
     final Boolean erasureBit = (Boolean) json.get(EC_BIT_JSON);
+    final Boolean snapshotEnabledBit = (Boolean) json.get(SNAPSHOT_BIT_JSON);
     final boolean aBit = (aclBit != null) ? aclBit : false;
     final boolean eBit = (encBit != null) ? encBit : false;
     final boolean ecBit = (erasureBit != null) ? erasureBit : false;
-    if (aBit || eBit || ecBit) {
+    final boolean seBit =
+        (snapshotEnabledBit != null) ? snapshotEnabledBit : false;
+    if (aBit || eBit || ecBit || seBit) {
       // include this for compatibility with 2.x
       FsPermissionExtension deprecatedPerm =
           new FsPermissionExtension(permission, aBit, eBit, ecBit);
-      return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+      FileStatus fileStatus = new FileStatus(len, FILE_TYPE.DIRECTORY == type,
           replication, blockSize, mTime, aTime, deprecatedPerm, owner, group,
           null, path, aBit, eBit, ecBit);
+      if (seBit) {
+        fileStatus.setSnapShotEnabledFlag(seBit);
+      }
+      return fileStatus;
+    } else {
+      return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+          replication, blockSize, mTime, aTime, permission, owner, group, path);
     }
-    return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
-        replication, blockSize, mTime, aTime, permission, owner, group, path);
   }
 
   /**
@@ -1357,42 +1366,6 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return createStoragePolicy((JSONObject) json.get(STORAGE_POLICY_JSON));
-  }
-
-  @Override
-  public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
-      long len) throws IOException {
-    Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, Operation.GETFILEBLOCKLOCATIONS.toString());
-    params.put(OFFSET_PARAM, Long.toString(start));
-    params.put(LENGTH_PARAM, Long.toString(len));
-    HttpURLConnection conn =
-        getConnection(Operation.GETFILEBLOCKLOCATIONS.getMethod(), params,
-            file.getPath(), true);
-    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
-    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-    return toBlockLocations(json);
-  }
-
-  private BlockLocation[] toBlockLocations(JSONObject json)
-      throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    MapType subType = mapper.getTypeFactory().constructMapType(
-        Map.class,
-        String.class,
-        BlockLocation[].class);
-    MapType rootType = mapper.getTypeFactory().constructMapType(
-        Map.class,
-        mapper.constructType(String.class),
-        mapper.constructType(subType));
-
-    Map<String, Map<String, BlockLocation[]>> jsonMap = mapper
-        .readValue(json.toJSONString(), rootType);
-    Map<String, BlockLocation[]> locationMap = jsonMap
-        .get(BLOCK_LOCATIONS_JSON);
-    BlockLocation[] locationArray = locationMap.get(
-        BlockLocation.class.getSimpleName());
-    return locationArray;
   }
 
   private BlockStoragePolicy createStoragePolicy(JSONObject policyJson)

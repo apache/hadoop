@@ -38,8 +38,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -50,6 +48,7 @@ import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -133,6 +132,8 @@ import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Implementation of Job interface. Maintains the state machines of Job.
  * The read and write calls use ReadWriteLock for concurrency.
@@ -147,7 +148,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private static final TaskCompletionEvent[]
     EMPTY_TASK_COMPLETION_EVENTS = new TaskCompletionEvent[0];
 
-  private static final Log LOG = LogFactory.getLog(JobImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobImpl.class);
 
   //The maximum fraction of fetch failures allowed for a map
   private float maxAllowedFetchFailuresFraction;
@@ -1414,6 +1415,19 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         new char[] {'"', '=', '.'});
   }
 
+  /*
+   * The goal is to make sure only the NM that hosts MRAppMaster will upload
+   * resources to shared cache. Clean up the shared cache policies for all
+   * resources so that later when TaskAttemptImpl creates
+   * ContainerLaunchContext, LocalResource.setShouldBeUploadedToSharedCache will
+   * be set up to false. In that way, the NMs that host the task containers
+   * won't try to upload the resources to shared cache.
+   */
+  private static void cleanupSharedCacheUploadPolicies(Configuration conf) {
+    Job.setArchiveSharedCacheUploadPolicies(conf, Collections.emptyMap());
+    Job.setFileSharedCacheUploadPolicies(conf, Collections.emptyMap());
+  }
+
   public static class InitTransition 
       implements MultipleArcTransition<JobImpl, JobEvent, JobStateInternal> {
 
@@ -1491,6 +1505,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             job.conf.getInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 0);
         job.allowedReduceFailuresPercent =
             job.conf.getInt(MRJobConfig.REDUCE_FAILURES_MAXPERCENT, 0);
+
+        cleanupSharedCacheUploadPolicies(job.conf);
 
         // create the Tasks but don't start them yet
         createMapTasks(job, inputLength, taskSplitMetaInfo);

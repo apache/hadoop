@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Map;
 import java.util.TimeZone;
 
 import com.google.protobuf.ByteString;
@@ -36,15 +37,20 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.ErasureCodingSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
@@ -60,6 +66,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.XMLUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.LimitInputStream;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -79,6 +86,8 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_
 @InterfaceAudience.Private
 public final class PBImageXmlWriter {
   public static final String NAME_SECTION_NAME = "NameSection";
+  public static final String ERASURE_CODING_SECTION_NAME =
+      "ErasureCodingSection";
   public static final String INODE_SECTION_NAME = "INodeSection";
   public static final String SECRET_MANAGER_SECTION_NAME =
       "SecretManagerSection";
@@ -108,6 +117,33 @@ public final class PBImageXmlWriter {
       "rollingUpgradeStartTime";
   public static final String NAME_SECTION_LAST_ALLOCATED_STRIPED_BLOCK_ID =
       "lastAllocatedStripedBlockId";
+
+  public static final String ERASURE_CODING_SECTION_POLICY =
+      "erasureCodingPolicy";
+  public static final String ERASURE_CODING_SECTION_POLICY_ID =
+      "policyId";
+  public static final String ERASURE_CODING_SECTION_POLICY_NAME =
+      "policyName";
+  public static final String ERASURE_CODING_SECTION_POLICY_CELL_SIZE =
+      "cellSize";
+  public static final String ERASURE_CODING_SECTION_POLICY_STATE =
+      "policyState";
+  public static final String ERASURE_CODING_SECTION_SCHEMA =
+      "ecSchema";
+  public static final String ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME =
+      "codecName";
+  public static final String ERASURE_CODING_SECTION_SCHEMA_DATA_UNITS =
+      "dataUnits";
+  public static final String ERASURE_CODING_SECTION_SCHEMA_PARITY_UNITS =
+      "parityUnits";
+  public static final String ERASURE_CODING_SECTION_SCHEMA_OPTIONS =
+      "extraOptions";
+  public static final String ERASURE_CODING_SECTION_SCHEMA_OPTION =
+      "option";
+  public static final String ERASURE_CODING_SECTION_SCHEMA_OPTION_KEY =
+      "key";
+  public static final String ERASURE_CODING_SECTION_SCHEMA_OPTION_VALUE =
+      "value";
 
   public static final String INODE_SECTION_LAST_INODE_ID = "lastInodeId";
   public static final String INODE_SECTION_NUM_INODES = "numInodes";
@@ -296,6 +332,9 @@ public final class PBImageXmlWriter {
           break;
         case STRING_TABLE:
           loadStringTable(is);
+          break;
+        case ERASURE_CODING:
+          dumpErasureCodingSection(is);
           break;
         case INODE:
           dumpINodeSection(is);
@@ -525,6 +564,47 @@ public final class PBImageXmlWriter {
       }
       out.print("</" + INODE_SECTION_ACLS + ">");
     }
+  }
+
+  private void dumpErasureCodingSection(InputStream in) throws IOException {
+    ErasureCodingSection s = ErasureCodingSection.parseDelimitedFrom(in);
+    if (s.getPoliciesCount() > 0) {
+      out.println("<" + ERASURE_CODING_SECTION_NAME + ">");
+      for (int i = 0; i < s.getPoliciesCount(); ++i) {
+        HdfsProtos.ErasureCodingPolicyProto policy = s.getPolicies(i);
+        dumpErasureCodingPolicy(PBHelperClient
+            .convertErasureCodingPolicyInfo(policy));
+      }
+      out.println("</" + ERASURE_CODING_SECTION_NAME + ">\n");
+    }
+  }
+
+  private void dumpErasureCodingPolicy(ErasureCodingPolicyInfo ecPolicyInfo) {
+    ErasureCodingPolicy ecPolicy = ecPolicyInfo.getPolicy();
+    out.println("<" + ERASURE_CODING_SECTION_POLICY + ">");
+    o(ERASURE_CODING_SECTION_POLICY_ID, ecPolicy.getId());
+    o(ERASURE_CODING_SECTION_POLICY_NAME, ecPolicy.getName());
+    o(ERASURE_CODING_SECTION_POLICY_CELL_SIZE, ecPolicy.getCellSize());
+    o(ERASURE_CODING_SECTION_POLICY_STATE, ecPolicyInfo.getState());
+    out.println("<" + ERASURE_CODING_SECTION_SCHEMA + ">");
+    ECSchema schema = ecPolicy.getSchema();
+    o(ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME, schema.getCodecName());
+    o(ERASURE_CODING_SECTION_SCHEMA_DATA_UNITS, schema.getNumDataUnits());
+    o(ERASURE_CODING_SECTION_SCHEMA_PARITY_UNITS,
+        schema.getNumParityUnits());
+    if (schema.getExtraOptions().size() > 0) {
+      out.println("<" + ERASURE_CODING_SECTION_SCHEMA_OPTIONS + ">");
+      for (Map.Entry<String, String> option :
+          schema.getExtraOptions().entrySet()) {
+        out.println("<" + ERASURE_CODING_SECTION_SCHEMA_OPTION + ">");
+        o(ERASURE_CODING_SECTION_SCHEMA_OPTION_KEY, option.getKey());
+        o(ERASURE_CODING_SECTION_SCHEMA_OPTION_VALUE, option.getValue());
+        out.println("</" + ERASURE_CODING_SECTION_SCHEMA_OPTION + ">");
+      }
+      out.println("</" + ERASURE_CODING_SECTION_SCHEMA_OPTIONS + ">");
+    }
+    out.println("</" + ERASURE_CODING_SECTION_SCHEMA + ">");
+    out.println("</" + ERASURE_CODING_SECTION_POLICY + ">\n");
   }
 
   private void dumpINodeSection(InputStream in) throws IOException {

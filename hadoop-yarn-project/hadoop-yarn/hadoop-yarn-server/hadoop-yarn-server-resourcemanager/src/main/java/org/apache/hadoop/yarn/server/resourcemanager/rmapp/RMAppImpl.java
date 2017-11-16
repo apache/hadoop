@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -103,7 +102,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSch
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -113,7 +111,6 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -429,12 +426,12 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.systemClock = SystemClock.getInstance();
 
     this.applicationId = applicationId;
-    this.name = name;
+    this.name = StringInterner.weakIntern(name);
     this.rmContext = rmContext;
     this.dispatcher = rmContext.getDispatcher();
     this.handler = dispatcher.getEventHandler();
     this.conf = config;
-    this.user = user;
+    this.user = StringInterner.weakIntern(user);
     this.queue = queue;
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
@@ -445,7 +442,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     } else {
       this.startTime = startTime;
     }
-    this.applicationType = applicationType;
+    this.applicationType = StringInterner.weakIntern(applicationType);
     this.applicationTags = applicationTags;
     this.amReqs = amReqs;
     if (submissionContext.getPriority() != null) {
@@ -707,7 +704,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       float progress = 0.0f;
       org.apache.hadoop.yarn.api.records.Token amrmToken = null;
       if (allowAccess) {
-        trackingUrl = getDefaultProxyTrackingUrl();
+        trackingUrl = rmContext.getAppProxyUrl(conf, applicationId);
         if (this.currentAttempt != null) {
           currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
@@ -748,14 +745,10 @@ public class RMAppImpl implements RMApp, Recoverable {
         }
 
         RMAppMetrics rmAppMetrics = getRMAppMetrics();
-        appUsageReport.setMemorySeconds(rmAppMetrics.getMemorySeconds());
-        appUsageReport.setVcoreSeconds(rmAppMetrics.getVcoreSeconds());
-        appUsageReport.
-            setPreemptedMemorySeconds(rmAppMetrics.
-                getPreemptedMemorySeconds());
-        appUsageReport.
-            setPreemptedVcoreSeconds(rmAppMetrics.
-                getPreemptedVcoreSeconds());
+        appUsageReport
+            .setResourceSecondsMap(rmAppMetrics.getResourceSecondsMap());
+        appUsageReport.setPreemptedResourceSecondsMap(
+            rmAppMetrics.getPreemptedResourceSecondsMap());
       }
 
       if (currentApplicationAttemptId == null) {
@@ -798,20 +791,6 @@ public class RMAppImpl implements RMApp, Recoverable {
       return report;
     } finally {
       this.readLock.unlock();
-    }
-  }
-
-  private String getDefaultProxyTrackingUrl() {
-    try {
-      final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-      String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, applicationId);
-      return result.toASCIIString();
-    } catch (URISyntaxException e) {
-      LOG.warn("Could not generate default proxy tracking URL for "
-          + applicationId);
-      return UNAVAILABLE;
     }
   }
 
@@ -1225,6 +1204,8 @@ public class RMAppImpl implements RMApp, Recoverable {
 
       long applicationLifetime =
           app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
+      applicationLifetime = app.scheduler
+          .checkAndGetApplicationLifetime(app.queue, applicationLifetime);
       if (applicationLifetime > 0) {
         // calculate next timeout value
         Long newTimeout =
@@ -1461,7 +1442,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.rmContext.getSystemMetricsPublisher()
           .appFinished(app, finalState, app.finishTime);
       // set the memory free
-      app.submissionContext.getAMContainerSpec().setTokensConf(null);
+      app.clearUnusedFields();
     };
   }
 
@@ -1628,10 +1609,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     Resource resourcePreempted = Resource.newInstance(0, 0);
     int numAMContainerPreempted = 0;
     int numNonAMContainerPreempted = 0;
-    long memorySeconds = 0;
-    long vcoreSeconds = 0;
-    long preemptedMemorySeconds = 0;
-    long preemptedVcoreSeconds = 0;
+    Map<String, Long> resourceSecondsMap = new HashMap<>();
+    Map<String, Long> preemptedSecondsMap = new HashMap<>();
+
     for (RMAppAttempt attempt : attempts.values()) {
       if (null != attempt) {
         RMAppAttemptMetrics attemptMetrics =
@@ -1645,17 +1625,25 @@ public class RMAppImpl implements RMApp, Recoverable {
         // for both running and finished containers.
         AggregateAppResourceUsage resUsage =
             attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
-        memorySeconds += resUsage.getMemorySeconds();
-        vcoreSeconds += resUsage.getVcoreSeconds();
-        preemptedMemorySeconds += attemptMetrics.getPreemptedMemory();
-        preemptedVcoreSeconds += attemptMetrics.getPreemptedVcore();
+        for (Map.Entry<String, Long> entry : resUsage
+            .getResourceUsageSecondsMap().entrySet()) {
+          long value = RMServerUtils
+              .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
+          value += entry.getValue();
+          resourceSecondsMap.put(entry.getKey(), value);
+        }
+        for (Map.Entry<String, Long> entry : attemptMetrics
+            .getPreemptedResourceSecondsMap().entrySet()) {
+          long value = RMServerUtils
+              .getOrDefault(preemptedSecondsMap, entry.getKey(), 0L);
+          value += entry.getValue();
+          preemptedSecondsMap.put(entry.getKey(), value);
+        }
       }
     }
 
-    return new RMAppMetrics(resourcePreempted,
-        numNonAMContainerPreempted, numAMContainerPreempted,
-        memorySeconds, vcoreSeconds,
-        preemptedMemorySeconds, preemptedVcoreSeconds);
+    return new RMAppMetrics(resourcePreempted, numNonAMContainerPreempted,
+        numAMContainerPreempted, resourceSecondsMap, preemptedSecondsMap);
   }
 
   @Private
@@ -2015,5 +2003,14 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   public void setApplicationPriority(Priority applicationPriority) {
     this.applicationPriority = applicationPriority;
+  }
+
+  /**
+     * Clear Unused fields to free memory.
+     * @param app
+     */
+  private void clearUnusedFields() {
+    this.submissionContext.setAMContainerSpec(null);
+    this.submissionContext.setLogAggregationContext(null);
   }
 }

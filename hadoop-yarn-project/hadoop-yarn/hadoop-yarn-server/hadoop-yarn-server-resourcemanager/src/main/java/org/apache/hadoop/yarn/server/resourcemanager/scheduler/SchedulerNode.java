@@ -129,7 +129,7 @@ public abstract class SchedulerNode {
    * Typically this is the 'hostname' reported by the node, but it could be
    * configured to be 'hostname:port' reported by the node via the
    * {@link YarnConfiguration#RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} constant.
-   * The main usecase of this is Yarn minicluster to be able to differentiate
+   * The main usecase of this is YARN minicluster to be able to differentiate
    * node manager instances by their port number.
    * @return Name of the node for scheduling matching decisions.
    */
@@ -170,14 +170,6 @@ public abstract class SchedulerNode {
 
     launchedContainers.put(container.getId(),
         new ContainerInfo(rmContainer, launchedOnNode));
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Assigned container " + container.getId() + " of capacity "
-              + container.getResource() + " on host " + rmNode.getNodeAddress()
-              + ", which has " + numContainers + " containers, "
-              + getAllocatedResource() + " used and " + getUnallocatedResource()
-              + " available after allocation");
-    }
   }
 
   /**

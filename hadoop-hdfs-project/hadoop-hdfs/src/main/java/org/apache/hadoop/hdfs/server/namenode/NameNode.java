@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.MetricsLoggerTask;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -1145,6 +1146,21 @@ public class NameNode extends ReconfigurableBase implements
     try {
       FSNamesystem fsn = new FSNamesystem(conf, fsImage);
       fsImage.getEditLog().initJournalsForWrite();
+
+      // Abort NameNode format if reformat is disabled and if
+      // meta-dir already exists
+      if (conf.getBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED,
+          DFSConfigKeys.DFS_REFORMAT_DISABLED_DEFAULT)) {
+        force = false;
+        isInteractive = false;
+        for (StorageDirectory sd : fsImage.storage.dirIterable(null)) {
+          if (sd.hasSomeData()) {
+            throw new NameNodeFormatException(
+                "NameNode format aborted as reformat is disabled for "
+                    + "this cluster.");
+          }
+        }
+      }
 
       if (!fsImage.confirmFormat(force, isInteractive)) {
         return true; // aborted

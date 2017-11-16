@@ -50,7 +50,6 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`CHECKACCESS`](#Check_access) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).access)
     * [`GETALLSTORAGEPOLICY`](#Get_all_Storage_Policies) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAllStoragePolicies)
     * [`GETSTORAGEPOLICY`](#Get_Storage_Policy) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStoragePolicy)
-    * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -441,6 +440,7 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
             "pathSuffix"      : "",
             "permission"      : "777",
             "replication"     : 0,
+            "snapshotEnabled" : true
             "type"            : "DIRECTORY"    //enum {FILE, DIRECTORY, SYMLINK}
           }
         }
@@ -467,6 +467,8 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
               {
                 "accessTime"      : 1320171722771,
                 "blockSize"       : 33554432,
+                "childrenNum"     : 0,
+                "fileId"          : 16388,
                 "group"           : "supergroup",
                 "length"          : 24930,
                 "modificationTime": 1320171722771,
@@ -474,11 +476,14 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
                 "pathSuffix"      : "a.patch",
                 "permission"      : "644",
                 "replication"     : 1,
+                "storagePolicy"   : 0,
                 "type"            : "FILE"
               },
               {
                 "accessTime"      : 0,
                 "blockSize"       : 0,
+                "childrenNum"     : 0,
+                "fileId"          : 16389,
                 "group"           : "supergroup",
                 "length"          : 0,
                 "modificationTime": 1320895981256,
@@ -486,6 +491,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
                 "pathSuffix"      : "bar",
                 "permission"      : "711",
                 "replication"     : 0,
+                "snapshotEnabled" : true
                 "type"            : "DIRECTORY"
               },
               ...
@@ -1069,7 +1075,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).unsetStor
         {
             "BlockStoragePolicy": {
                 "copyOnCreateFile": false,
-                "creationFallbacks": [],
+               "creationFallbacks": [],
                 "id":7,
                 "name":"HOT",
                 "replicationFallbacks":["ARCHIVE"],
@@ -1078,51 +1084,6 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).unsetStor
         }
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStoragePolicy
-
-### Get File Block Locations
-
-* Submit a HTTP GET request.
-
-        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILEBLOCKLOCATIONS
-
-    The client receives a response with a [`BlockLocations` JSON Object](#Block_Locations_JSON_Schema):
-
-        HTTP/1.1 200 OK
-        Content-Type: application/json
-        Transfer-Encoding: chunked
-
-        {
-          "BlockLocations" :
-          {
-            "BlockLocation":
-            [
-              {
-                "cachedHosts" : [],
-                "corrupt" : false,
-                "hosts" : ["host"],
-                "length" : 134217728,                             // length of this block
-                "names" : ["host:ip"],
-                "offset" : 0,                                     // offset of the block in the file
-                "storageIds" : ["storageid"],
-                "storageTypes" : ["DISK"],                        // enum {RAM_DISK, SSD, DISK, ARCHIVE}
-                "topologyPaths" : ["/default-rack/hostname:ip"]
-              }, {
-                "cachedHosts" : [],
-                "corrupt" : false,
-                "hosts" : ["host"],
-                "length" : 62599364,
-                "names" : ["host:ip"],
-                "offset" : 134217728,
-                "storageIds" : ["storageid"],
-                "storageTypes" : ["DISK"],
-                "topologyPaths" : ["/default-rack/hostname:ip"]
-              },
-              ...
-            ]
-          }
-        }
-
-See also: [`offset`](#Offset), [`length`](#Length), [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations
 
 Extended Attributes(XAttrs) Operations
 --------------------------------------
@@ -2080,146 +2041,6 @@ A `BlockStoragePolicies` JSON object represents an array of `BlockStoragePolicy`
     }
   }
 }
-```
-
-#### BlockLocations JSON Schema
-
-A `BlockLocations` JSON object represents an array of `BlockLocation` JSON objects.
-
-```json
-{
-  "name"      : "BlockLocations",
-  "properties":
-  {
-    "BlockLocations":
-    {
-      "type"      : "object",
-      "properties":
-      {
-        "BlockLocation":
-        {
-          "description": "An array of BlockLocation",
-          "type"       : "array",
-          "items"      : blockLocationProperties      //See BlockLocation Properties
-        }
-      }
-    }
-  }
-}
-```
-
-See also [`BlockLocation` Properties](#BlockLocation_Properties), [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations), [BlockLocation](../../api/org/apache/hadoop/fs/BlockLocation.html)
-
-### BlockLocation JSON Schema
-
-```json
-{
-  "name"      : "BlockLocation",
-  "properties":
-  {
-    "BlockLocation": blockLocationProperties      //See BlockLocation Properties
-  }
-}
-```
-
-See also [`BlockLocation` Properties](#BlockLocation_Properties), [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations), [BlockLocation](../../api/org/apache/hadoop/fs/BlockLocation.html)
-
-#### BlockLocation Properties
-
-JavaScript syntax is used to define `blockLocationProperties` so that it can be referred in both `BlockLocation` and `BlockLocations` JSON schemas.
-
-```javascript
-var blockLocationProperties =
-{
-  "type"      : "object",
-  "properties":
-  {
-    "cachedHosts":
-    {
-      "description": "Datanode hostnames with a cached replica",
-      "type"       : "array",
-      "required"   : "true",
-      "items"      :
-      {
-        "description": "A datanode hostname",
-        "type"       : "string"
-      }
-    },
-    "corrupt":
-    {
-      "description": "True if the block is corrupted",
-      "type"       : "boolean",
-      "required"   : "true"
-    },
-    "hosts":
-    {
-      "description": "Datanode hostnames store the block",
-      "type"       : "array",
-      "required"   : "true",
-      "items"      :
-      {
-        "description": "A datanode hostname",
-        "type"       : "string"
-      }
-    },
-    "length":
-    {
-      "description": "Length of the block",
-      "type"       : "integer",
-      "required"   : "true"
-    },
-    "names":
-    {
-      "description": "Datanode IP:xferPort for accessing the block",
-      "type"       : "array",
-      "required"   : "true",
-      "items"      :
-      {
-        "description": "DatanodeIP:xferPort",
-        "type"       : "string"
-      }
-    },
-    "offset":
-    {
-      "description": "Offset of the block in the file",
-      "type"       : "integer",
-      "required"   : "true"
-    },
-    "storageIds":
-    {
-      "description": "Storage ID of each replica",
-      "type"       : "array",
-      "required"   : "true",
-      "items"      :
-      {
-        "description": "Storage ID",
-        "type"       : "string"
-      }
-    },
-    "storageTypes":
-    {
-      "description": "Storage type of each replica",
-      "type"       : "array",
-      "required"   : "true",
-      "items"      :
-      {
-        "description": "Storage type",
-        "enum"       : ["RAM_DISK", "SSD", "DISK", "ARCHIVE"]
-      }
-    },
-    "topologyPaths":
-    {
-      "description": "Datanode addresses in network topology",
-      "type"       : "array",
-      "required"   : "true",
-      "items"      :
-      {
-        "description": "/rack/host:ip",
-        "type"       : "string"
-      }
-    }
-  }
-};
 ```
 
 HTTP Query Parameter Dictionary

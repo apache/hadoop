@@ -39,6 +39,8 @@ function hadoop_usage
   hadoop_add_subcommand "debug" admin "run a Debug Admin to execute HDFS debug commands"
   hadoop_add_subcommand "dfs" client "run a filesystem command on the file system"
   hadoop_add_subcommand "dfsadmin" admin "run a DFS admin client"
+  hadoop_add_subcommand "dfsrouter" daemon "run the DFS router"
+  hadoop_add_subcommand "dfsrouteradmin" admin "manage Router-based federation"
   hadoop_add_subcommand "diskbalancer" daemon "Distributes data evenly among disks on a given node"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
   hadoop_add_subcommand "ec" admin "run a HDFS ErasureCoding CLI"
@@ -104,6 +106,13 @@ function hdfscmd_case
     ;;
     dfsadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSAdmin
+    ;;
+    dfsrouter)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.federation.router.DFSRouter'
+    ;;
+    dfsrouteradmin)
+      HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.federation.RouterAdmin'
     ;;
     diskbalancer)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DiskBalancerCLI

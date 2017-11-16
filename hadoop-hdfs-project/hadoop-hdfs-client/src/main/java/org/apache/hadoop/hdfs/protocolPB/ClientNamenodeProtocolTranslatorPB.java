@@ -50,7 +50,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -61,9 +61,10 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
@@ -73,7 +74,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -120,8 +121,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFil
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupsStatsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsBlocksStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
@@ -246,13 +247,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   private final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
       GetFsStatusRequestProto.newBuilder().build();
 
-  private final static GetFsBlocksStatsRequestProto
-      VOID_GET_FS_REPLICABLOCKS_STATS_REQUEST =
-      GetFsBlocksStatsRequestProto.newBuilder().build();
+  private final static GetFsReplicatedBlockStatsRequestProto
+      VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST =
+      GetFsReplicatedBlockStatsRequestProto.newBuilder().build();
 
-  private final static GetFsECBlockGroupsStatsRequestProto
-      VOID_GET_FS_ECBLOCKGROUPS_STATS_REQUEST =
-      GetFsECBlockGroupsStatsRequestProto.newBuilder().build();
+  private final static GetFsECBlockGroupStatsRequestProto
+      VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST =
+      GetFsECBlockGroupStatsRequestProto.newBuilder().build();
 
   private final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST =
       RollEditsRequestProto.getDefaultInstance();
@@ -695,20 +696,20 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public BlocksStats getBlocksStats() throws IOException {
+  public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
     try {
-      return PBHelperClient.convert(rpcProxy.getFsBlocksStats(null,
-          VOID_GET_FS_REPLICABLOCKS_STATS_REQUEST));
+      return PBHelperClient.convert(rpcProxy.getFsReplicatedBlockStats(null,
+          VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public ECBlockGroupsStats getECBlockGroupsStats() throws IOException {
+  public ECBlockGroupStats getECBlockGroupStats() throws IOException {
     try {
-      return PBHelperClient.convert(rpcProxy.getFsECBlockGroupsStats(null,
-          VOID_GET_FS_ECBLOCKGROUPS_STATS_REQUEST));
+      return PBHelperClient.convert(rpcProxy.getFsECBlockGroupStats(null,
+          VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -1718,7 +1719,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public AddECPolicyResponse[] addErasureCodingPolicies(
+  public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
     List<ErasureCodingPolicyProto> protos = Arrays.stream(policies)
         .map(PBHelperClient::convertErasureCodingPolicy)
@@ -1729,9 +1730,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       AddErasureCodingPoliciesResponseProto rep = rpcProxy
           .addErasureCodingPolicies(null, req);
-      AddECPolicyResponse[] responses = rep.getResponsesList().stream()
-          .map(PBHelperClient::convertAddECPolicyResponse)
-          .toArray(AddECPolicyResponse[]::new);
+      AddErasureCodingPolicyResponse[] responses =
+          rep.getResponsesList().stream()
+              .map(PBHelperClient::convertAddErasureCodingPolicyResponse)
+              .toArray(AddErasureCodingPolicyResponse[]::new);
       return responses;
     }  catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
@@ -1781,17 +1783,17 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+  public ErasureCodingPolicyInfo[] getErasureCodingPolicies()
+      throws IOException {
     try {
       GetErasureCodingPoliciesResponseProto response = rpcProxy
           .getErasureCodingPolicies(null, VOID_GET_EC_POLICIES_REQUEST);
-      ErasureCodingPolicy[] ecPolicies =
-          new ErasureCodingPolicy[response.getEcPoliciesCount()];
+      ErasureCodingPolicyInfo[] ecPolicies =
+          new ErasureCodingPolicyInfo[response.getEcPoliciesCount()];
       int i = 0;
-      for (ErasureCodingPolicyProto ecPolicyProto :
-          response.getEcPoliciesList()) {
+      for (ErasureCodingPolicyProto proto : response.getEcPoliciesList()) {
         ecPolicies[i++] =
-            PBHelperClient.convertErasureCodingPolicy(ecPolicyProto);
+            PBHelperClient.convertErasureCodingPolicyInfo(proto);
       }
       return ecPolicies;
     } catch (ServiceException e) {

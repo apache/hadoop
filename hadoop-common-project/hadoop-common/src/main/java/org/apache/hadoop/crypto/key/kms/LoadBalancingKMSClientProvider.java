@@ -141,7 +141,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
           }
           throw new IOException(e);
         }
-        if (action.action == RetryAction.RetryDecision.FAIL) {
+        // make sure each provider is tried at least once, to keep behavior
+        // compatible with earlier versions of LBKMSCP
+        if (action.action == RetryAction.RetryDecision.FAIL
+            && numFailovers >= providers.length - 1) {
           LOG.warn("Aborting since the Request has failed with all KMS"
               + " providers(depending on {}={} setting and numProviders={})"
               + " in the group OR the exception is not recoverable",

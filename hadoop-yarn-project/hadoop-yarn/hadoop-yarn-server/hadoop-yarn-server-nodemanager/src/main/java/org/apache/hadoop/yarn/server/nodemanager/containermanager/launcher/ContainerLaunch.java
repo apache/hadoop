@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -86,14 +87,21 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContainerLaunch implements Callable<Integer> {
 
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainerLaunch.class);
 
+  private static final String CONTAINER_PRE_LAUNCH_PREFIX = "prelaunch";
+  public static final String CONTAINER_PRE_LAUNCH_STDOUT = CONTAINER_PRE_LAUNCH_PREFIX + ".out";
+  public static final String CONTAINER_PRE_LAUNCH_STDERR = CONTAINER_PRE_LAUNCH_PREFIX + ".err";
+
   public static final String CONTAINER_SCRIPT =
     Shell.appendScriptExtension("launch_container");
+
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
 
   private static final String PID_FILE_NAME_FMT = "%s.pid";
@@ -106,8 +114,10 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Configuration conf;
   private final Context context;
   private final ContainerManagerImpl containerManager;
-  
+
   protected AtomicBoolean containerAlreadyLaunched = new AtomicBoolean(false);
+  protected AtomicBoolean shouldPauseContainer = new AtomicBoolean(false);
+
   protected AtomicBoolean completed = new AtomicBoolean(false);
 
   private volatile boolean killedBeforeStart = false;
@@ -143,7 +153,7 @@ public class ContainerLaunch implements Callable<Integer> {
       Path containerLogDir) {
     var = var.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
       containerLogDir.toString());
-    var =  var.replace(ApplicationConstants.CLASS_PATH_SEPARATOR,
+    var = var.replace(ApplicationConstants.CLASS_PATH_SEPARATOR,
       File.pathSeparator);
 
     // replace parameter expansion marker. e.g. {{VAR}} on Windows is replaced
@@ -367,7 +377,7 @@ public class ContainerLaunch implements Callable<Integer> {
     String relativeContainerLogDir = ContainerLaunch
         .getRelativeContainerLogDir(appIdStr, containerIdStr);
 
-    for(String logDir : logDirs) {
+    for (String logDir : logDirs) {
       containerLogDirs.add(logDir + Path.SEPARATOR + relativeContainerLogDir);
     }
 
@@ -512,6 +522,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * Tries to tail and fetch TAIL_SIZE_IN_BYTES of data from the error log.
    * ErrorLog filename is not fixed and depends upon app, hence file name
    * pattern is used.
+   *
    * @param containerID
    * @param ret
    * @param containerLogDir
@@ -520,20 +531,46 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked")
   protected void handleContainerExitWithFailure(ContainerId containerID,
       int ret, Path containerLogDir, StringBuilder diagnosticInfo) {
-    LOG.warn(diagnosticInfo.toString());
+    LOG.warn("Container launch failed : " + diagnosticInfo.toString());
 
+    FileSystem fileSystem = null;
+    long tailSizeInBytes =
+        conf.getLong(YarnConfiguration.NM_CONTAINER_STDERR_BYTES,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_STDERR_BYTES);
+
+    // Append container prelaunch stderr to diagnostics
+    try {
+      fileSystem = FileSystem.getLocal(conf).getRaw();
+      FileStatus preLaunchErrorFileStatus = fileSystem
+          .getFileStatus(new Path(containerLogDir, ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR));
+
+      Path errorFile = preLaunchErrorFileStatus.getPath();
+      long fileSize = preLaunchErrorFileStatus.getLen();
+
+      diagnosticInfo.append("Error file: ")
+          .append(ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR).append(".\n");
+      ;
+
+      byte[] tailBuffer = tailFile(errorFile, fileSize, tailSizeInBytes);
+      diagnosticInfo.append("Last ").append(tailSizeInBytes)
+          .append(" bytes of ").append(errorFile.getName()).append(" :\n")
+          .append(new String(tailBuffer, StandardCharsets.UTF_8));
+    } catch (IOException e) {
+      LOG.error("Failed to get tail of the container's prelaunch error log file", e);
+    }
+
+    // Append container stderr to diagnostics
     String errorFileNamePattern =
         conf.get(YarnConfiguration.NM_CONTAINER_STDERR_PATTERN,
             YarnConfiguration.DEFAULT_NM_CONTAINER_STDERR_PATTERN);
-    FSDataInputStream errorFileIS = null;
+
     try {
-      FileSystem fileSystem = FileSystem.getLocal(conf).getRaw();
+      if (fileSystem == null) {
+        fileSystem = FileSystem.getLocal(conf).getRaw();
+      }
       FileStatus[] errorFileStatuses = fileSystem
           .globStatus(new Path(containerLogDir, errorFileNamePattern));
       if (errorFileStatuses != null && errorFileStatuses.length != 0) {
-        long tailSizeInBytes =
-            conf.getLong(YarnConfiguration.NM_CONTAINER_STDERR_BYTES,
-                YarnConfiguration.DEFAULT_NM_CONTAINER_STDERR_BYTES);
         Path errorFile = errorFileStatuses[0].getPath();
         long fileSize = errorFileStatuses[0].getLen();
 
@@ -556,30 +593,38 @@ public class ContainerLaunch implements Callable<Integer> {
               .append(StringUtils.join(", ", errorFileNames)).append(".\n");
         }
 
-        long startPosition =
-            (fileSize < tailSizeInBytes) ? 0 : fileSize - tailSizeInBytes;
-        int bufferSize =
-            (int) ((fileSize < tailSizeInBytes) ? fileSize : tailSizeInBytes);
-        byte[] tailBuffer = new byte[bufferSize];
-        errorFileIS = fileSystem.open(errorFile);
-        errorFileIS.readFully(startPosition, tailBuffer);
-
+        byte[] tailBuffer = tailFile(errorFile, fileSize, tailSizeInBytes);
         String tailBufferMsg = new String(tailBuffer, StandardCharsets.UTF_8);
         diagnosticInfo.append("Last ").append(tailSizeInBytes)
             .append(" bytes of ").append(errorFile.getName()).append(" :\n")
             .append(tailBufferMsg).append("\n")
             .append(analysesErrorMsgOfContainerExitWithFailure(tailBufferMsg));
+
       }
     } catch (IOException e) {
       LOG.error("Failed to get tail of the container's error log file", e);
-    } finally {
-      IOUtils.cleanupWithLogger(LOG, errorFileIS);
     }
-
     this.dispatcher.getEventHandler()
         .handle(new ContainerExitEvent(containerID,
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
             diagnosticInfo.toString()));
+  }
+
+  private byte[] tailFile(Path filePath, long fileSize, long tailSizeInBytes) throws IOException {
+    FSDataInputStream errorFileIS = null;
+    FileSystem fileSystem = FileSystem.getLocal(conf).getRaw();
+    try {
+      long startPosition =
+          (fileSize < tailSizeInBytes) ? 0 : fileSize - tailSizeInBytes;
+      int bufferSize =
+          (int) ((fileSize < tailSizeInBytes) ? fileSize : tailSizeInBytes);
+      byte[] tailBuffer = new byte[bufferSize];
+      errorFileIS = fileSystem.open(filePath);
+      errorFileIS.readFully(startPosition, tailBuffer);
+      return tailBuffer;
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, errorFileIS);
+    }
   }
 
   private String analysesErrorMsgOfContainerExitWithFailure(String errorMsg) {
@@ -597,7 +642,7 @@ public class ContainerLaunch implements Callable<Integer> {
           .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
               + "distribution directory}</value>\n")
           .append("</property>\n<property>\n")
-          .append("  <name>mapreduce.reduce.e nv</name>\n")
+          .append("  <name>mapreduce.reduce.env</name>\n")
           .append("  <value>HADOOP_MAPRED_HOME=${full path of your hadoop "
               + "distribution directory}</value>\n")
           .append("</property>\n");
@@ -688,6 +733,26 @@ public class ContainerLaunch implements Callable<Integer> {
         if (sleepDelayBeforeSigKill > 0) {
           new DelayedProcessKiller(container, user,
               processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
+        }
+      } else {
+        // Normally this means that the process was notified about
+        // deactivateContainer above and did not start.
+        // Since we already set the state to RUNNING or REINITIALIZING
+        // we have to send a killed event to continue.
+        if (!completed.get()) {
+          LOG.warn("Container clean up before pid file created "
+              + containerIdStr);
+          dispatcher.getEventHandler().handle(
+              new ContainerExitEvent(container.getContainerId(),
+                  ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+                  Shell.WINDOWS ? ExitCode.FORCE_KILLED.getExitCode() :
+                      ExitCode.TERMINATED.getExitCode(),
+                  "Container terminated before pid file created."));
+          // There is a possibility that the launch grabbed the file name before
+          // the deactivateContainer above but it was slow enough to avoid
+          // getContainerPid.
+          // Increasing YarnConfiguration.NM_PROCESS_KILL_WAIT_MS
+          // reduces the likelihood of this race condition and process leak.
         }
       }
     } catch (Exception e) {
@@ -803,6 +868,106 @@ public class ContainerLaunch implements Callable<Integer> {
   }
 
   /**
+   * Pause the container.
+   * Cancels the launch if the container isn't launched yet. Otherwise asks the
+   * executor to pause the container.
+   * @throws IOException in case of errors.
+   */
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  public void pauseContainer() throws IOException {
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
+    LOG.info("Pausing the container " + containerIdStr);
+
+    // The pause event is only handled if the container is in the running state
+    // (the container state machine), so we don't check for
+    // shouldLaunchContainer over here
+
+    if (!shouldPauseContainer.compareAndSet(false, true)) {
+      LOG.info("Container " + containerId + " not paused as "
+          + "resume already called");
+      return;
+    }
+
+    try {
+      // Pause the container
+      exec.pauseContainer(container);
+
+      // PauseContainer is a blocking call. We are here almost means the
+      // container is paused, so send out the event.
+      dispatcher.getEventHandler().handle(new ContainerEvent(
+          containerId,
+          ContainerEventType.CONTAINER_PAUSED));
+
+      try {
+        this.context.getNMStateStore().storeContainerPaused(
+            container.getContainerId());
+      } catch (IOException e) {
+        LOG.warn("Could not store container [" + container.getContainerId()
+            + "] state. The Container has been paused.", e);
+      }
+    } catch (Exception e) {
+      String message =
+          "Exception when trying to pause container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.info(message);
+      container.handle(new ContainerKillEvent(container.getContainerId(),
+          ContainerExitStatus.PREEMPTED, "Container preempted as there was "
+          + " an exception in pausing it."));
+    }
+  }
+
+  /**
+   * Resume the container.
+   * Cancels the launch if the container isn't launched yet. Otherwise asks the
+   * executor to pause the container.
+   * @throws IOException in case of error.
+   */
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  public void resumeContainer() throws IOException {
+    ContainerId containerId = container.getContainerId();
+    String containerIdStr = containerId.toString();
+    LOG.info("Resuming the container " + containerIdStr);
+
+    // The resume event is only handled if the container is in a paused state
+    // so we don't check for the launched flag here.
+
+    // paused flag will be set to true if process already paused
+    boolean alreadyPaused = !shouldPauseContainer.compareAndSet(false, true);
+    if (!alreadyPaused) {
+      LOG.info("Container " + containerIdStr + " not paused."
+          + " No resume necessary");
+      return;
+    }
+
+    // If the container has already started
+    try {
+      exec.resumeContainer(container);
+      // ResumeContainer is a blocking call. We are here almost means the
+      // container is resumed, so send out the event.
+      dispatcher.getEventHandler().handle(new ContainerEvent(
+          containerId,
+          ContainerEventType.CONTAINER_RESUMED));
+
+      try {
+        this.context.getNMStateStore().removeContainerPaused(
+            container.getContainerId());
+      } catch (IOException e) {
+        LOG.warn("Could not store container [" + container.getContainerId()
+            + "] state. The Container has been resumed.", e);
+      }
+    } catch (Exception e) {
+      String message =
+          "Exception when trying to resume container " + containerIdStr
+              + ": " + StringUtils.stringifyException(e);
+      LOG.info(message);
+      container.handle(new ContainerKillEvent(container.getContainerId(),
+          ContainerExitStatus.PREEMPTED, "Container preempted as there was "
+          + " an exception in pausing it."));
+    }
+  }
+
+  /**
    * Loop through for a time-bounded interval waiting to
    * read the process id from a file generated by a running process.
    * @param pidFilePath File from which to read the process id
@@ -876,9 +1041,47 @@ public class ContainerLaunch implements Callable<Integer> {
 
     public abstract void command(List<String> command) throws IOException;
 
-    public abstract void whitelistedEnv(String key, String value) throws IOException;
+    protected static final String ENV_PRELAUNCH_STDOUT = "PRELAUNCH_OUT";
+    protected static final String ENV_PRELAUNCH_STDERR = "PRELAUNCH_ERR";
+
+    private boolean redirectStdOut = false;
+    private boolean redirectStdErr = false;
+
+    /**
+     * Set stdout for the shell script
+     * @param stdoutDir stdout must be an absolute path
+     * @param stdOutFile stdout file name
+     * @throws IOException thrown when stdout path is not absolute
+     */
+    public final void stdout(Path stdoutDir, String stdOutFile) throws IOException {
+      if (!stdoutDir.isAbsolute()) {
+        throw new IOException("Stdout path must be absolute");
+      }
+      redirectStdOut = true;
+      setStdOut(new Path(stdoutDir, stdOutFile));
+    }
+
+    /**
+     * Set stderr for the shell script
+     * @param stderrDir stderr must be an absolute path
+     * @param stdErrFile stderr file name
+     * @throws IOException thrown when stderr path is not absolute
+     */
+    public final void stderr(Path stderrDir, String stdErrFile) throws IOException {
+      if (!stderrDir.isAbsolute()) {
+        throw new IOException("Stdout path must be absolute");
+      }
+      redirectStdErr = true;
+      setStdErr(new Path(stderrDir, stdErrFile));
+    }
+
+    protected abstract void setStdOut(Path stdout) throws IOException;
+
+    protected abstract void setStdErr(Path stdout) throws IOException;
 
     public abstract void env(String key, String value) throws IOException;
+
+    public abstract void echo(String echoStr) throws IOException;
 
     public final void symlink(Path src, Path dst) throws IOException {
       if (!src.isAbsolute()) {
@@ -924,11 +1127,19 @@ public class ContainerLaunch implements Callable<Integer> {
       out.append(sb);
     }
 
-    protected final void line(String... command) {
+    protected final void buildCommand(String... command) {
       for (String s : command) {
         sb.append(s);
       }
+    }
+
+    protected final void linebreak(String... command) {
       sb.append(LINE_SEPARATOR);
+    }
+
+    protected final void line(String... command) {
+      buildCommand(command);
+      linebreak();
     }
 
     public void setExitOnFailure() {
@@ -938,19 +1149,27 @@ public class ContainerLaunch implements Callable<Integer> {
     protected abstract void link(Path src, Path dst) throws IOException;
 
     protected abstract void mkdir(Path path) throws IOException;
+
+    boolean doRedirectStdOut() {
+      return redirectStdOut;
+    }
+
+    boolean doRedirectStdErr() {
+      return redirectStdErr;
+    }
+
   }
 
   private static final class UnixShellScriptBuilder extends ShellScriptBuilder {
-
     private void errorCheck() {
       line("hadoop_shell_errorcode=$?");
-      line("if [ $hadoop_shell_errorcode -ne 0 ]");
+      line("if [[ \"$hadoop_shell_errorcode\" -ne 0 ]]");
       line("then");
       line("  exit $hadoop_shell_errorcode");
       line("fi");
     }
 
-    public UnixShellScriptBuilder(){
+    public UnixShellScriptBuilder() {
       line("#!/bin/bash");
       line();
     }
@@ -958,29 +1177,42 @@ public class ContainerLaunch implements Callable<Integer> {
     @Override
     public void command(List<String> command) {
       line("exec /bin/bash -c \"", StringUtils.join(" ", command), "\"");
-      errorCheck();
     }
 
     @Override
-    public void whitelistedEnv(String key, String value) {
-      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
+    public void setStdOut(final Path stdout) throws IOException {
+      line("export ", ENV_PRELAUNCH_STDOUT, "=\"", stdout.toString(), "\"");
+      // tee is needed for DefaultContainerExecutor error propagation to stdout
+      // Close stdout of subprocess to prevent it from writing to the stdout file
+      line("exec >\"${" + ENV_PRELAUNCH_STDOUT + "}\"");
     }
 
     @Override
-    public void env(String key, String value) {
+    public void setStdErr(final Path stderr) throws IOException {
+      line("export ", ENV_PRELAUNCH_STDERR, "=\"", stderr.toString(), "\"");
+      // tee is needed for DefaultContainerExecutor error propagation to stderr
+      // Close stdout of subprocess to prevent it from writing to the stdout file
+      line("exec 2>\"${" + ENV_PRELAUNCH_STDERR + "}\"");
+    }
+
+    @Override
+    public void env(String key, String value) throws IOException {
       line("export ", key, "=\"", value, "\"");
+    }
+
+    @Override
+    public void echo(final String echoStr) throws IOException {
+      line("echo \"" + echoStr + "\"");
     }
 
     @Override
     protected void link(Path src, Path dst) throws IOException {
       line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
-      errorCheck();
     }
 
     @Override
-    protected void mkdir(Path path) {
+    protected void mkdir(Path path) throws IOException {
       line("mkdir -p ", path.toString());
-      errorCheck();
     }
 
     @Override
@@ -1042,16 +1274,25 @@ public class ContainerLaunch implements Callable<Integer> {
       errorCheck();
     }
 
+    //Dummy implementation
     @Override
-    public void whitelistedEnv(String key, String value) throws IOException {
-      lineWithLenCheck("@set ", key, "=", value);
-      errorCheck();
+    protected void setStdOut(final Path stdout) throws IOException {
+    }
+
+    //Dummy implementation
+    @Override
+    protected void setStdErr(final Path stderr) throws IOException {
     }
 
     @Override
     public void env(String key, String value) throws IOException {
       lineWithLenCheck("@set ", key, "=", value);
       errorCheck();
+    }
+
+    @Override
+    public void echo(final String echoStr) throws IOException {
+      lineWithLenCheck("@echo \"", echoStr, "\"");
     }
 
     @Override
@@ -1148,24 +1389,10 @@ public class ContainerLaunch implements Callable<Integer> {
     
     environment.put(Environment.PWD.name(), pwd.toString());
     
-    putEnvIfNotNull(environment, 
-        Environment.HADOOP_CONF_DIR.name(), 
-        System.getenv(Environment.HADOOP_CONF_DIR.name())
-        );
+    putEnvIfAbsent(environment, Environment.HADOOP_CONF_DIR.name());
 
     if (!Shell.WINDOWS) {
       environment.put("JVM_PID", "$$");
-    }
-
-    /**
-     * Modifiable environment variables
-     */
-    
-    // allow containers to override these variables
-    String[] whitelist = conf.get(YarnConfiguration.NM_ENV_WHITELIST, YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
-    
-    for(String whitelistEnvVariable : whitelist) {
-      putEnvIfAbsent(environment, whitelistEnvVariable.trim());
     }
 
     // variables here will be forced in, even if the container has specified them.

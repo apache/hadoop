@@ -181,7 +181,7 @@ public class ContainerPBImpl extends Container {
       builder.clearNodeHttpAddress();
       return;
     }
-    builder.setNodeHttpAddress(nodeHttpAddress);
+    builder.setNodeHttpAddress(nodeHttpAddress.intern());
   }
 
   @Override

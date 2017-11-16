@@ -22,14 +22,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.junit.Assume;
 import org.junit.Test;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
+
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Test cases that validate S3Guard's behavior for writing things like
@@ -66,7 +68,7 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
     noS3Guard.mkdirs(new Path(directory, "OnS3"));
     // Create a directory on both S3 and metadata store
     Path p = new Path(directory, "OnS3AndMS");
-    assertPathDoesntExist(noWriteBack, p);
+    ContractTestUtils.assertPathDoesNotExist(noWriteBack, "path", p);
     noWriteBack.mkdirs(p);
 
     FileStatus[] fsResults;
@@ -87,7 +89,7 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
 
     // FS should return both (and will write it back)
     fsResults = yesWriteBack.listStatus(directory);
-    assertEquals("Filesystem enabled S3Guard with write back should have "
+    assertEquals("Filesystem enabled S3Guard with write back should have"
             + " both /OnS3 and /OnS3AndMS: " + Arrays.toString(fsResults),
         2, fsResults.length);
 
@@ -104,7 +106,12 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
         new Path(directory, "OnS3"));
   }
 
-  /** Create a separate S3AFileSystem instance for testing. */
+  /**
+   * Create a separate S3AFileSystem instance for testing.
+   * There's a bit of complexity as it forces pushes up s3guard options from
+   * the base values to the per-bucket options. This stops explicit bucket
+   * settings in test XML configs from unintentionally breaking tests.
+   */
   private S3AFileSystem createTestFS(URI fsURI, boolean disableS3Guard,
       boolean authoritativeMeta) throws IOException {
     Configuration conf;
@@ -112,12 +119,22 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
     // Create a FileSystem that is S3-backed only
     conf = createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
+    String host = fsURI.getHost();
     if (disableS3Guard) {
       conf.set(Constants.S3_METADATA_STORE_IMPL,
           Constants.S3GUARD_METASTORE_NULL);
+      S3AUtils.setBucketOption(conf, host,
+          S3_METADATA_STORE_IMPL,
+          S3GUARD_METASTORE_NULL);
     } else {
       S3ATestUtils.maybeEnableS3Guard(conf);
-      conf.setBoolean(Constants.METADATASTORE_AUTHORITATIVE, authoritativeMeta);
+      conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMeta);
+      S3AUtils.setBucketOption(conf, host,
+          METADATASTORE_AUTHORITATIVE,
+          Boolean.toString(authoritativeMeta));
+      S3AUtils.setBucketOption(conf, host,
+          S3_METADATA_STORE_IMPL,
+          conf.get(S3_METADATA_STORE_IMPL));
     }
     FileSystem fs = FileSystem.get(fsURI, conf);
     return asS3AFS(fs);
@@ -126,16 +143,6 @@ public class ITestS3GuardWriteBack extends AbstractS3ATestBase {
   private static S3AFileSystem asS3AFS(FileSystem fs) {
     assertTrue("Not a S3AFileSystem: " + fs, fs instanceof S3AFileSystem);
     return (S3AFileSystem)fs;
-  }
-
-  private static void assertPathDoesntExist(FileSystem fs, Path p)
-      throws IOException {
-    try {
-      FileStatus s = fs.getFileStatus(p);
-    } catch (FileNotFoundException e) {
-      return;
-    }
-    fail("Path should not exist: " + p);
   }
 
 }

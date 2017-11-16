@@ -33,8 +33,6 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.WritableUtils;
@@ -42,6 +40,8 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An abstract class to provide common implementation of the filesystem
@@ -56,7 +56,8 @@ public abstract class FileSystemCounterGroup<C extends Counter>
   static final int MAX_NUM_SCHEMES = 100; // intern/sanity check
   static final ConcurrentMap<String, String> schemes = Maps.newConcurrentMap();
   
-  private static final Log LOG = LogFactory.getLog(FileSystemCounterGroup.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FileSystemCounterGroup.class);
 
   // C[] would need Array.newInstance which requires a Class<C> reference.
   // Just a few local casts probably worth not having to carry it around.

@@ -32,8 +32,6 @@ import java.util.Arrays;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -63,6 +61,8 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 
@@ -72,7 +72,7 @@ import com.google.common.base.Charsets;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class CLI extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(CLI.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CLI.class);
   protected Cluster cluster;
   private final Set<String> taskStates = new HashSet<String>(
               Arrays.asList("pending", "running", "completed", "failed", "killed"));
@@ -167,7 +167,7 @@ public class CLI extends Configured implements Tool {
         try {
           jpvalue = Integer.parseInt(argv[2]);
         } catch (NumberFormatException ne) {
-          LOG.info(ne);
+          LOG.info("Error number format: ", ne);
           displayUsage(cmd);
           return exitCode;
         }

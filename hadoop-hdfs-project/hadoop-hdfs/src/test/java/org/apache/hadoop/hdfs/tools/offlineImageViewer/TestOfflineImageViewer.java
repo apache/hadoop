@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import com.google.common.collect.ImmutableMap;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
@@ -24,7 +25,19 @@ import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_CELL_SIZE;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_STATE;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_OPTION;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -48,11 +61,14 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -91,6 +107,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -106,6 +126,7 @@ public class TestOfflineImageViewer {
   private static final String TEST_RENEWER = "JobTracker";
   private static File originalFsimage = null;
   private static int filesECCount = 0;
+  private static String addedErasureCodingPolicyName = null;
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
@@ -137,11 +158,19 @@ public class TestOfflineImageViewer {
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
           "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-          ecPolicy.getName());
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       DistributedFileSystem hdfs = cluster.getFileSystem();
+      hdfs.enableErasureCodingPolicy(ecPolicy.getName());
+
+      Map<String, String> options = ImmutableMap.of("k1", "v1", "k2", "v2");
+      ECSchema schema = new ECSchema(ErasureCodeConstants.RS_CODEC_NAME,
+          10, 4, options);
+      ErasureCodingPolicy policy = new ErasureCodingPolicy(schema, 1024);
+      AddErasureCodingPolicyResponse[] responses =
+          hdfs.addErasureCodingPolicies(new ErasureCodingPolicy[]{policy});
+      addedErasureCodingPolicyName = responses[0].getPolicy().getName();
+      hdfs.enableErasureCodingPolicy(addedErasureCodingPolicyName);
 
       // Create a reasonable namespace
       for (int i = 0; i < NUM_DIRS; i++, dirCount++) {
@@ -273,8 +302,9 @@ public class TestOfflineImageViewer {
       }
       LOG.debug("original FS image file is " + originalFsimage);
     } finally {
-      if (cluster != null)
+      if (cluster != null) {
         cluster.shutdown();
+      }
     }
   }
 
@@ -586,6 +616,7 @@ public class TestOfflineImageViewer {
       IOUtils.closeStream(out);
     }
   }
+
   private void testPBDelimitedWriter(String db)
       throws IOException, InterruptedException {
     final String DELIMITER = "\t";
@@ -807,6 +838,73 @@ public class TestOfflineImageViewer {
     } finally {
       System.setOut(oldOut);
       IOUtils.closeStream(out);
+    }
+  }
+
+  private static String getXmlString(Element element, String name) {
+    NodeList id = element.getElementsByTagName(name);
+    Element line = (Element) id.item(0);
+    if (line == null) {
+      return "";
+    }
+    Node first = line.getFirstChild();
+    // handle empty <key></key>
+    if (first == null) {
+      return "";
+    }
+    String val = first.getNodeValue();
+    if (val == null) {
+      return "";
+    }
+    return val;
+  }
+
+  @Test
+  public void testOfflineImageViewerForECPolicies() throws Exception {
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    PrintStream o = new PrintStream(output);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    v.visit(new RandomAccessFile(originalFsimage, "r"));
+    final String xml = output.toString();
+
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+    NodeList ecSection = dom.getElementsByTagName(ERASURE_CODING_SECTION_NAME);
+    assertEquals(1, ecSection.getLength());
+    NodeList policies =
+        dom.getElementsByTagName(ERASURE_CODING_SECTION_POLICY);
+    assertEquals(1 + SystemErasureCodingPolicies.getPolicies().size(),
+        policies.getLength());
+    for (int i = 0; i < policies.getLength(); i++) {
+      Element policy = (Element) policies.item(i);
+      String name = getXmlString(policy, ERASURE_CODING_SECTION_POLICY_NAME);
+      if (name.equals(addedErasureCodingPolicyName)) {
+        String cellSize =
+            getXmlString(policy, ERASURE_CODING_SECTION_POLICY_CELL_SIZE);
+        assertEquals("1024", cellSize);
+        String state =
+            getXmlString(policy, ERASURE_CODING_SECTION_POLICY_STATE);
+        assertEquals(ErasureCodingPolicyState.ENABLED.toString(), state);
+
+        Element schema = (Element) policy
+            .getElementsByTagName(ERASURE_CODING_SECTION_SCHEMA).item(0);
+        String codecName =
+            getXmlString(schema, ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME);
+        assertEquals(ErasureCodeConstants.RS_CODEC_NAME, codecName);
+
+        NodeList options =
+            schema.getElementsByTagName(ERASURE_CODING_SECTION_SCHEMA_OPTION);
+        assertEquals(2, options.getLength());
+        Element option1 = (Element) options.item(0);
+        assertEquals("k1", getXmlString(option1, "key"));
+        assertEquals("v1", getXmlString(option1, "value"));
+        Element option2 = (Element) options.item(1);
+        assertEquals("k2", getXmlString(option2, "key"));
+        assertEquals("v2", getXmlString(option2, "value"));
+      }
     }
   }
 }

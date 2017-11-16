@@ -175,10 +175,10 @@ public class TestDeadDatanode {
     // choose the targets, but local node should not get selected as this is not
     // part of the cluster anymore
     DatanodeStorageInfo[] results = bm.chooseTarget4NewBlock("/hello", 3,
-        clientNode, new HashSet<Node>(), 256 * 1024 * 1024L, null, (byte) 7,
-        BlockType.CONTIGUOUS, null);
+        clientNode, new HashSet<>(), 256 * 1024 * 1024L, null, (byte) 7,
+        BlockType.CONTIGUOUS, null, null);
     for (DatanodeStorageInfo datanodeStorageInfo : results) {
-      assertFalse("Dead node should not be choosen", datanodeStorageInfo
+      assertFalse("Dead node should not be chosen", datanodeStorageInfo
           .getDatanodeDescriptor().equals(clientNode));
     }
   }
@@ -187,7 +187,8 @@ public class TestDeadDatanode {
   public void testNonDFSUsedONDeadNodeReReg() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+        3000);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
         6 * 1000);
     long CAPACITY = 5000L;

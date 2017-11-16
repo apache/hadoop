@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -104,6 +105,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -150,6 +152,10 @@ public class MockRM extends ResourceManager {
   public MockRM(Configuration conf, RMStateStore store,
       boolean useNullRMNodeLabelsManager, boolean useRealElector) {
     super();
+    if (conf.getBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES,
+        true)) {
+      ResourceUtils.resetResourceTypes(conf);
+    }
     this.useNullRMNodeLabelsManager = useNullRMNodeLabelsManager;
     this.useRealElector = useRealElector;
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
@@ -158,7 +164,7 @@ public class MockRM extends ResourceManager {
     } else {
       Class storeClass = getRMContext().getStateStore().getClass();
       if (storeClass.equals(MemoryRMStateStore.class)) {
-        MockRMMemoryStateStore mockStateStore = new MockRMMemoryStateStore();
+        MockMemoryRMStateStore mockStateStore = new MockMemoryRMStateStore();
         mockStateStore.init(conf);
         setRMStateStore(mockStateStore);
       } else if (storeClass.equals(NullRMStateStore.class)) {
@@ -811,6 +817,8 @@ public class MockRM extends ResourceManager {
           RMAppAttemptState.SCHEDULED);
     }
 
+    ((AbstractYarnScheduler)getResourceScheduler()).update();
+
     return rmApp;
   }
 
@@ -836,6 +844,15 @@ public class MockRM extends ResourceManager {
         new MockNM(nodeIdStr, memory, vCores, getResourceTrackerService(),
             YarnVersionInfo.getVersion());
     nm.registerNode(runningApplications);
+    drainEventsImplicitly();
+    return nm;
+  }
+
+  public MockNM registerNode(String nodeIdStr, Resource nodeCapatibility)
+      throws Exception {
+    MockNM nm = new MockNM(nodeIdStr, nodeCapatibility,
+        getResourceTrackerService());
+    nm.registerNode();
     drainEventsImplicitly();
     return nm;
   }
@@ -934,6 +951,7 @@ public class MockRM extends ResourceManager {
   public MockAM sendAMLaunched(ApplicationAttemptId appAttemptId)
       throws Exception {
     MockAM am = new MockAM(getRMContext(), masterService, appAttemptId);
+    ((AbstractYarnScheduler)scheduler).update();
     waitForState(appAttemptId, RMAppAttemptState.ALLOCATED);
     //create and set AMRMToken
     Token<AMRMTokenIdentifier> amrmToken =
@@ -1158,6 +1176,7 @@ public class MockRM extends ResourceManager {
     RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
     LOG.info("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
@@ -1173,6 +1192,7 @@ public class MockRM extends ResourceManager {
     waitForSchedulerAppAttemptAdded(attempt.getAppAttemptId(), rm);
     LOG.info("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
     MockAM am = new MockAM(rm.getRMContext(), rm.masterService,
         attempt.getAppAttemptId());

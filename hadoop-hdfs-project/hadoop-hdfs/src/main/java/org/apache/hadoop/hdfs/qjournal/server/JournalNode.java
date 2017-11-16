@@ -86,7 +86,9 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
    */
   private int resultCode = 0;
 
-  synchronized Journal getOrCreateJournal(String jid, StartupOption startOpt)
+  synchronized Journal getOrCreateJournal(String jid,
+                                          String nameServiceId,
+                                          StartupOption startOpt)
       throws IOException {
     QuorumJournalManager.checkJournalId(jid);
     
@@ -101,22 +103,46 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
       if (conf.getBoolean(
           DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY,
           DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_DEFAULT)) {
-        startSyncer(journal, jid);
+        startSyncer(journal, jid, nameServiceId);
       }
+    } else if (journalSyncersById.get(jid) != null &&
+        !journalSyncersById.get(jid).isJournalSyncerStarted() &&
+        !journalsById.get(jid).getTriedJournalSyncerStartedwithnsId() &&
+        nameServiceId != null) {
+      startSyncer(journal, jid, nameServiceId);
     }
+
 
     return journal;
   }
 
-  private void startSyncer(Journal journal, String jid) {
-    JournalNodeSyncer jSyncer = new JournalNodeSyncer(this, journal, jid, conf);
-    journalSyncersById.put(jid, jSyncer);
-    jSyncer.start();
+  @VisibleForTesting
+  public boolean getJournalSyncerStatus(String jid) {
+    if (journalSyncersById.get(jid) != null) {
+      return journalSyncersById.get(jid).isJournalSyncerStarted();
+    } else {
+      return false;
+    }
+  }
+
+  private void startSyncer(Journal journal, String jid, String nameServiceId) {
+    JournalNodeSyncer jSyncer = journalSyncersById.get(jid);
+    if (jSyncer == null) {
+      jSyncer = new JournalNodeSyncer(this, journal, jid, conf, nameServiceId);
+      journalSyncersById.put(jid, jSyncer);
+    }
+    jSyncer.start(nameServiceId);
   }
 
   @VisibleForTesting
   public Journal getOrCreateJournal(String jid) throws IOException {
-    return getOrCreateJournal(jid, StartupOption.REGULAR);
+    return getOrCreateJournal(jid, null, StartupOption.REGULAR);
+  }
+
+  public Journal getOrCreateJournal(String jid,
+                                    String nameServiceId)
+      throws IOException {
+    return getOrCreateJournal(jid, nameServiceId, StartupOption.REGULAR);
   }
 
   @Override
@@ -157,27 +183,36 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
    */
   public void start() throws IOException {
     Preconditions.checkState(!isStarted(), "JN already running");
-    
-    validateAndCreateJournalDir(localDir);
-    
-    DefaultMetricsSystem.initialize("JournalNode");
-    JvmMetrics.create("JournalNode",
-        conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
-        DefaultMetricsSystem.instance());
 
-    InetSocketAddress socAddr = JournalNodeRpcServer.getAddress(conf);
-    SecurityUtil.login(conf, DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
-    
-    registerJNMXBean();
-    
-    httpServer = new JournalNodeHttpServer(conf, this);
-    httpServer.start();
+    try {
 
-    httpServerURI = httpServer.getServerURI().toString();
+      validateAndCreateJournalDir(localDir);
 
-    rpcServer = new JournalNodeRpcServer(conf, this);
-    rpcServer.start();
+      DefaultMetricsSystem.initialize("JournalNode");
+      JvmMetrics.create("JournalNode",
+          conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+          DefaultMetricsSystem.instance());
+
+      InetSocketAddress socAddr = JournalNodeRpcServer.getAddress(conf);
+      SecurityUtil.login(conf, DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY,
+          socAddr.getHostName());
+
+      registerJNMXBean();
+
+      httpServer = new JournalNodeHttpServer(conf, this);
+      httpServer.start();
+
+      httpServerURI = httpServer.getServerURI().toString();
+
+      rpcServer = new JournalNodeRpcServer(conf, this);
+      rpcServer.start();
+    } catch (IOException ioe) {
+      //Shutdown JournalNode of JournalNodeRpcServer fails to start
+      LOG.error("Failed to start JournalNode.", ioe);
+      this.stop(1);
+      throw ioe;
+    }
   }
 
   public boolean isStarted() {
@@ -348,26 +383,40 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     getOrCreateJournal(journalId).doUpgrade(sInfo);
   }
 
-  public void doFinalize(String journalId) throws IOException {
-    getOrCreateJournal(journalId).doFinalize();
+  public void doFinalize(String journalId,
+                         String nameServiceId)
+      throws IOException {
+    getOrCreateJournal(journalId, nameServiceId).doFinalize();
   }
 
   public Boolean canRollBack(String journalId, StorageInfo storage,
-      StorageInfo prevStorage, int targetLayoutVersion) throws IOException {
-    return getOrCreateJournal(journalId, StartupOption.ROLLBACK).canRollBack(
+      StorageInfo prevStorage, int targetLayoutVersion,
+      String nameServiceId) throws IOException {
+    return getOrCreateJournal(journalId,
+        nameServiceId, StartupOption.ROLLBACK).canRollBack(
         storage, prevStorage, targetLayoutVersion);
   }
 
-  public void doRollback(String journalId) throws IOException {
-    getOrCreateJournal(journalId, StartupOption.ROLLBACK).doRollback();
+  public void doRollback(String journalId,
+                         String nameServiceId) throws IOException {
+    getOrCreateJournal(journalId,
+        nameServiceId, StartupOption.ROLLBACK).doRollback();
   }
 
-  public void discardSegments(String journalId, long startTxId)
+  public void discardSegments(String journalId, long startTxId,
+                              String nameServiceId)
       throws IOException {
-    getOrCreateJournal(journalId).discardSegments(startTxId);
+    getOrCreateJournal(journalId, nameServiceId).discardSegments(startTxId);
   }
 
-  public Long getJournalCTime(String journalId) throws IOException {
-    return getOrCreateJournal(journalId).getJournalCTime();
+  public Long getJournalCTime(String journalId,
+                              String nameServiceId) throws IOException {
+    return getOrCreateJournal(journalId, nameServiceId).getJournalCTime();
   }
+
+  @VisibleForTesting
+  public Journal getJournal(String  jid) {
+    return journalsById.get(jid);
+  }
+
 }

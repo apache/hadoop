@@ -50,16 +50,16 @@ public class TestLowRedundancyBlockQueues {
       int corruptReplicationOneCount, int lowRedundancyStripedCount,
       int corruptStripedCount) {
     assertEquals("Low redundancy replica count incorrect!",
-        lowRedundancyReplicaCount, queues.getLowRedundancyBlocksStat());
+        lowRedundancyReplicaCount, queues.getLowRedundancyBlocks());
     assertEquals("Corrupt replica count incorrect!",
-        corruptReplicaCount, queues.getCorruptBlocksStat());
+        corruptReplicaCount, queues.getCorruptBlocks());
     assertEquals("Corrupt replica one count incorrect!",
         corruptReplicationOneCount,
-        queues.getCorruptReplicationOneBlocksStat());
+        queues.getCorruptReplicationOneBlocks());
     assertEquals("Low redundancy striped blocks count incorrect!",
-        lowRedundancyStripedCount, queues.getLowRedundancyECBlockGroupsStat());
+        lowRedundancyStripedCount, queues.getLowRedundancyECBlockGroups());
     assertEquals("Corrupt striped blocks count incorrect!",
-        corruptStripedCount, queues.getCorruptECBlockGroupsStat());
+        corruptStripedCount, queues.getCorruptECBlockGroups());
     assertEquals("Low Redundancy count incorrect!",
         lowRedundancyReplicaCount + lowRedundancyStripedCount,
         queues.getLowRedundancyBlockCount());

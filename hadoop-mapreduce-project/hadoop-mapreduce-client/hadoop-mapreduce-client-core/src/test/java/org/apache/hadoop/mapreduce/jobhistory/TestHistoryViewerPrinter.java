@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskID;
 import org.apache.hadoop.mapred.TaskStatus;
@@ -30,6 +28,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -38,8 +38,8 @@ import java.util.TimeZone;
 
 public class TestHistoryViewerPrinter {
 
-  private static final Log LOG = LogFactory.getLog(
-      TestHistoryViewerPrinter.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHistoryViewerPrinter.class);
 
   @Test
   public void testHumanPrinter() throws Exception {

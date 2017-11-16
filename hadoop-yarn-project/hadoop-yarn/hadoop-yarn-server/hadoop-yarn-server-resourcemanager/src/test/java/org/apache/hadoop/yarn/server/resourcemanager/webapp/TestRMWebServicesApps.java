@@ -1113,8 +1113,83 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     JSONArray array = apps.getJSONArray("app");
     assertEquals("incorrect number of elements", 1, array.length());
     JSONObject app = array.getJSONObject(0);
-    assertTrue("resource requests shouldn't exits",
+    assertTrue("resource requests shouldn't exist",
         !app.has("resourceRequests"));
+
+    params.clear();
+    params.add("deSelects",
+        DeSelectFields.DeSelectType.AM_NODE_LABEL_EXPRESSION.toString());
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    app = array.getJSONObject(0);
+    assertTrue("AMNodeLabelExpression shouldn't exist",
+        !app.has("amNodeLabelExpression"));
+
+    params.clear();
+    params.add("deSelects", DeSelectFields.DeSelectType.TIMEOUTS.toString());
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    app = array.getJSONObject(0);
+    assertTrue("Timeouts shouldn't exist", !app.has("timeouts"));
+    rm.stop();
+
+    params.clear();
+    params.add("deSelects",
+        DeSelectFields.DeSelectType.APP_NODE_LABEL_EXPRESSION.toString());
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    app = array.getJSONObject(0);
+    assertTrue("AppNodeLabelExpression shouldn't exist",
+        !app.has("appNodeLabelExpression"));
+    rm.stop();
+
+    params.clear();
+    params
+        .add("deSelects", DeSelectFields.DeSelectType.RESOURCE_INFO.toString());
+    response =
+        r.path("ws").path("v1").path("cluster").path("apps").queryParams(params)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+
+    json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    app = array.getJSONObject(0);
+    assertTrue("Resource info shouldn't exist", !app.has("resourceInfo"));
     rm.stop();
   }
 
@@ -1528,7 +1603,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   public void verifyAppInfo(JSONObject info, RMApp app, boolean hasResourceReqs)
       throws JSONException, Exception {
 
-    int expectedNumberOfElements = 36 + (hasResourceReqs ? 2 : 0);
+    int expectedNumberOfElements = 38 + (hasResourceReqs ? 2 : 0);
     String appNodeLabelExpression = null;
     String amNodeLabelExpression = null;
     if (app.getApplicationSubmissionContext()

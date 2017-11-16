@@ -55,7 +55,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.api.ApplicationConstants.Environment.JAVA_HOME;
-import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.LOG;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.MULTI_COMMAND_REGEX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.CLEAN_CMD_REGEX;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.JavaSandboxLinuxContainerRuntime.NMContainerPolicyUtils.CONTAINS_JAVA_CMD;
@@ -134,7 +133,7 @@ public class TestJavaSandboxLinuxContainerRuntime {
 
     mockExecutor = mock(PrivilegedOperationExecutor.class);
     runtime = new JavaSandboxLinuxContainerRuntime(mockExecutor);
-    runtime.initialize(conf);
+    runtime.initialize(conf, null);
 
     resources = new HashMap<>();
     grantDir = new File(baseTestDirectory, "grantDir");

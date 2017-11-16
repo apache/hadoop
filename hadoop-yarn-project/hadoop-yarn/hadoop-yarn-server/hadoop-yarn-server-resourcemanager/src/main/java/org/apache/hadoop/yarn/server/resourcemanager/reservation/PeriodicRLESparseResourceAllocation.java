@@ -221,7 +221,8 @@ public class PeriodicRLESparseResourceAllocation
       NavigableMap<Long, Resource> cumulativeMap = this.getCumulative();
       Long previous = cumulativeMap.floorKey(relativeStart);
       previous = (previous != null) ? previous : 0;
-      for (long i = 0; i <= (end - start) / timePeriod; i++) {
+      //make sure to go one past end, to catch end times extending past period
+      for (long i = 0; i <= 1 + (end - start) / timePeriod; i++) {
         for (Map.Entry<Long, Resource> e : cumulativeMap.entrySet()) {
           long curKey = e.getKey() + (i * timePeriod);
           if (curKey >= previous && (start + curKey - relativeStart) <= end) {

@@ -41,27 +41,54 @@ import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 @InterfaceStability.Evolving
 public class GzipCodec extends DefaultCodec {
   /**
-   * A bridge that wraps around a DeflaterOutputStream to make it 
+   * A bridge that wraps around a DeflaterOutputStream to make it
    * a CompressionOutputStream.
    */
   @InterfaceStability.Evolving
   protected static class GzipOutputStream extends CompressorStream {
 
     private static class ResetableGZIPOutputStream extends GZIPOutputStream {
+      /**
+       * Fixed ten-byte gzip header. See {@link GZIPOutputStream}'s source for
+       * details.
+       */
+      private static final byte[] GZIP_HEADER = new byte[] {
+          0x1f, (byte) 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+      private boolean reset = false;
 
       public ResetableGZIPOutputStream(OutputStream out) throws IOException {
         super(out);
       }
 
-      public void resetState() throws IOException {
-        def.reset();
+      public synchronized void resetState() throws IOException {
+        reset = true;
       }
+
+      @Override
+      public synchronized void write(byte[] buf, int off, int len)
+          throws IOException {
+        if (reset) {
+          def.reset();
+          crc.reset();
+          out.write(GZIP_HEADER);
+          reset = false;
+        }
+        super.write(buf, off, len);
+      }
+
+      @Override
+      public synchronized void close() throws IOException {
+        reset = false;
+        super.close();
+      }
+
     }
 
     public GzipOutputStream(OutputStream out) throws IOException {
       super(new ResetableGZIPOutputStream(out));
     }
-    
+
     /**
      * Allow children types to put a different type in here.
      * @param out the Deflater stream to use
@@ -69,7 +96,7 @@ public class GzipCodec extends DefaultCodec {
     protected GzipOutputStream(CompressorStream out) {
       super(out);
     }
-    
+
     @Override
     public void close() throws IOException {
       out.close();

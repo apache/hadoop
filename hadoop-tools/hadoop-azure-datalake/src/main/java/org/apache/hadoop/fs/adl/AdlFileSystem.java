@@ -290,9 +290,7 @@ public class AdlFileSystem extends FileSystem {
 
   private AccessTokenProvider getMsiBasedTokenProvider(
           Configuration conf) throws IOException {
-    int port = Integer.parseInt(getNonEmptyVal(conf, MSI_PORT));
-    String tenantGuid = getPasswordString(conf, MSI_TENANT_GUID);
-    return new MsiTokenProvider(port, tenantGuid);
+    return new MsiTokenProvider(conf.getInt(MSI_PORT, -1));
   }
 
   private AccessTokenProvider getDeviceCodeTokenProvider(

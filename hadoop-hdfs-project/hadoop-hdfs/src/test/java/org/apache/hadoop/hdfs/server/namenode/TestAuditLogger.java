@@ -152,7 +152,6 @@ public class TestAuditLogger {
     conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
         DummyAuditLogger.class.getName());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    
     GetOpParam.Op op = GetOpParam.Op.GETFILESTATUS;
     try {
       cluster.waitClusterUp();
@@ -168,7 +167,8 @@ public class TestAuditLogger {
       conn.connect();
       assertEquals(200, conn.getResponseCode());
       conn.disconnect();
-      assertEquals(1, DummyAuditLogger.logCount);
+      assertEquals("getfileinfo", DummyAuditLogger.lastCommand);
+      DummyAuditLogger.resetLogCount();
       assertEquals("127.0.0.1", DummyAuditLogger.remoteAddr);
       
       // non-trusted proxied request
@@ -178,7 +178,9 @@ public class TestAuditLogger {
       conn.connect();
       assertEquals(200, conn.getResponseCode());
       conn.disconnect();
-      assertEquals(2, DummyAuditLogger.logCount);
+      assertEquals("getfileinfo", DummyAuditLogger.lastCommand);
+      assertTrue(DummyAuditLogger.logCount == 1);
+      DummyAuditLogger.resetLogCount();
       assertEquals("127.0.0.1", DummyAuditLogger.remoteAddr);
       
       // trusted proxied request
@@ -190,7 +192,8 @@ public class TestAuditLogger {
       conn.connect();
       assertEquals(200, conn.getResponseCode());
       conn.disconnect();
-      assertEquals(3, DummyAuditLogger.logCount);
+      assertEquals("getfileinfo", DummyAuditLogger.lastCommand);
+      assertTrue(DummyAuditLogger.logCount == 1);
       assertEquals("1.1.1.1", DummyAuditLogger.remoteAddr);
     } finally {
       cluster.shutdown();
@@ -547,6 +550,7 @@ public class TestAuditLogger {
     static int unsuccessfulCount;
     static short foundPermission;
     static String remoteAddr;
+    private static String lastCommand;
     
     public void initialize(Configuration conf) {
       initialized = true;
@@ -565,9 +569,14 @@ public class TestAuditLogger {
       if (!succeeded) {
         unsuccessfulCount++;
       }
+      lastCommand = cmd;
       if (stat != null) {
         foundPermission = stat.getPermission().toShort();
       }
+    }
+
+    public static String getLastCommand() {
+      return lastCommand;
     }
 
   }
@@ -581,7 +590,9 @@ public class TestAuditLogger {
     public void logAuditEvent(boolean succeeded, String userName,
         InetAddress addr, String cmd, String src, String dst,
         FileStatus stat) {
-      throw new RuntimeException("uh oh");
+      if (!cmd.equals("datanodeReport")) {
+        throw new RuntimeException("uh oh");
+      }
     }
 
   }

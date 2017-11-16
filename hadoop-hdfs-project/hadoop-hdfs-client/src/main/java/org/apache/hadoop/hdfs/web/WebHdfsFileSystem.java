@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -65,6 +66,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.StorageStatistics;
@@ -192,6 +194,17 @@ public class WebHdfsFileSystem extends FileSystem
         HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
         HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
 
+    int connectTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_WEBHDFS_SOCKET_CONNECT_TIMEOUT_KEY,
+        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+        TimeUnit.MILLISECONDS);
+
+    int readTimeout = (int) conf.getTimeDuration(
+        HdfsClientConfigKeys.DFS_WEBHDFS_SOCKET_READ_TIMEOUT_KEY,
+        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+        TimeUnit.MILLISECONDS);
+
+
     boolean isOAuth = conf.getBoolean(
         HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_KEY,
         HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_DEFAULT);
@@ -199,11 +212,11 @@ public class WebHdfsFileSystem extends FileSystem
     if(isOAuth) {
       LOG.debug("Enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
-          .newOAuth2URLConnectionFactory(conf);
+          .newOAuth2URLConnectionFactory(connectTimeout, readTimeout, conf);
     } else {
       LOG.debug("Not enabling OAuth2 in WebHDFS");
       connectionFactory = URLConnectionFactory
-          .newDefaultURLConnectionFactory(conf);
+          .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
     }
 
 
@@ -767,6 +780,7 @@ public class WebHdfsFileSystem extends FileSystem
           try {
             IOException newIoe = ioe.getClass().getConstructor(String.class)
                 .newInstance(node + ": " + ioe.getMessage());
+            newIoe.initCause(ioe.getCause());
             newIoe.setStackTrace(ioe.getStackTrace());
             ioe = newIoe;
           } catch (NoSuchMethodException | SecurityException 
@@ -1494,6 +1508,15 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Get {@link FileStatus} of files/directories in the given path. If path
+   * corresponds to a file then {@link FileStatus} of that file is returned.
+   * Else if path represents a directory then {@link FileStatus} of all
+   * files/directories inside given path is returned.
+   *
+   * @param f given path
+   * @return the statuses of the files/directories in the given path
+   */
   @Override
   public FileStatus[] listStatus(final Path f) throws IOException {
     statistics.incrementReadOps(1);
@@ -1518,6 +1541,13 @@ public class WebHdfsFileSystem extends FileSystem
 
   private static final byte[] EMPTY_ARRAY = new byte[] {};
 
+  /**
+   * Get DirectoryEntries of the given path. DirectoryEntries contains an array
+   * of {@link FileStatus}, as well as iteration information.
+   *
+   * @param f given path
+   * @return DirectoryEntries for given path
+   */
   @Override
   public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
       FileNotFoundException, IOException {
@@ -1616,68 +1646,14 @@ public class WebHdfsFileSystem extends FileSystem
       final long offset, final long length) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
-    BlockLocation[] locations = null;
-    try {
-      locations = getFileBlockLocations(
-          GetOpParam.Op.GETFILEBLOCKLOCATIONS,
-          p, offset, length);
-    } catch (RemoteException e) {
-      // See the error message from ExceptionHandle
-      if(e.getMessage() != null &&
-          e.getMessage().contains(
-              "Invalid value for webhdfs parameter") &&
-          e.getMessage().contains(
-              GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString())) {
-        // Old webhdfs server doesn't support GETFILEBLOCKLOCATIONS
-        // operation, fall back to query again using old API
-        // GET_BLOCK_LOCATIONS.
-        LOG.info("Invalid webhdfs operation parameter "
-            + GetOpParam.Op.GETFILEBLOCKLOCATIONS + ". Fallback to use "
-            + GetOpParam.Op.GET_BLOCK_LOCATIONS + " instead.");
-        locations = getFileBlockLocations(
-            GetOpParam.Op.GET_BLOCK_LOCATIONS,
-            p, offset, length);
-      }
-    }
-    return locations;
-  }
 
-  /**
-   * Get file block locations implementation. Provide a operation
-   * parameter to determine how to get block locations from a webhdfs
-   * server. Older server only supports <b>GET_BLOCK_LOCATIONS</b> but
-   * not <b>GETFILEBLOCKLOCATIONS</b>.
-   *
-   * @param path path to the file
-   * @param offset start offset in the given file
-   * @param length of the file to get locations for
-   * @param operation
-   *   Valid operation is either
-   *   {@link org.apache.hadoop.hdfs.web.resources.GetOpParam.Op
-   *   #GET_BLOCK_LOCATIONS} or
-   *   {@link org.apache.hadoop.hdfs.web.resources.GetOpParam.Op
-   *   #GET_BLOCK_LOCATIONS}
-   * @throws IOException
-   *   Http connection error, decoding error or given
-   *   operation is not valid
-   */
-  @VisibleForTesting
-  protected BlockLocation[] getFileBlockLocations(
-      GetOpParam.Op operation, final Path path,
-      final long offset, final long length) throws IOException {
-    return new FsPathResponseRunner<BlockLocation[]>(operation, path,
+    final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
+    return new FsPathResponseRunner<BlockLocation[]>(op, p,
         new OffsetParam(offset), new LengthParam(length)) {
       @Override
       BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
-        switch(operation) {
-        case GETFILEBLOCKLOCATIONS:
-          return JsonUtilClient.toBlockLocationArray(json);
-        case GET_BLOCK_LOCATIONS:
-          return DFSUtilClient.locatedBlocks2Locations(
-              JsonUtilClient.toLocatedBlocks(json));
-        default :
-          throw new IOException("Unknown operation " + operation.name());
-        }
+        return DFSUtilClient.locatedBlocks2Locations(
+            JsonUtilClient.toLocatedBlocks(json));
       }
     }.run();
   }
@@ -1818,6 +1794,22 @@ public class WebHdfsFileSystem extends FileSystem
     storageStatistics.incrementOpCounter(OpType.UNSET_STORAGE_POLICY);
     final HttpOpParam.Op op = PostOpParam.Op.UNSETSTORAGEPOLICY;
     new FsPathRunner(op, src).run();
+  }
+
+  /*
+   * Caller of this method should handle UnsupportedOperationException in case
+   * when new client is talking to old namenode that don't support
+   * FsServerDefaults call.
+   */
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.GETSERVERDEFAULTS;
+    return new FsPathResponseRunner<FsServerDefaults>(op, null) {
+      @Override
+      FsServerDefaults decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtilClient.toFsServerDefaults(json);
+      }
+    }.run();
   }
 
   @VisibleForTesting

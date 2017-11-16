@@ -70,11 +70,11 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
-    DFSTestUtil.enableAllECPolicies(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
+    DFSTestUtil.enableAllECPolicies(fs);
   }
 
   @After
@@ -361,5 +361,18 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
       assertExceptionContains("Cannot unset an erasure coding policy on a file "
           + ecFilePath, e);
     }
+  }
+
+  /**
+   * Test unsetEcPolicy is persisted correctly in edit log.
+   */
+  @Test
+  public void testUnsetEcPolicyInEditLog() throws IOException {
+    fs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
+    Assert.assertEquals(ecPolicy, fs.getErasureCodingPolicy(new Path("/")));
+    fs.getClient().unsetErasureCodingPolicy("/");
+
+    cluster.restartNameNode(true);
+    Assert.assertNull(fs.getErasureCodingPolicy(new Path("/")));
   }
 }

@@ -22,6 +22,8 @@ import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 
+import java.io.IOException;
+
 /**
  * Erasure decoding step, a wrapper of all the necessary information to perform
  * a decoding step involved in the whole process of decoding a block group.
@@ -50,7 +52,8 @@ public class ErasureDecodingStep implements ErasureCodingStep {
   }
 
   @Override
-  public void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks) {
+  public void performCoding(ECChunk[] inputChunks, ECChunk[] outputChunks)
+      throws IOException {
     rawDecoder.decode(inputChunks, erasedIndexes, outputChunks);
   }
 

@@ -39,7 +39,8 @@ public class LocalConfigurationProvider extends ConfigurationProvider {
     if (name == null || name.isEmpty()) {
       throw new YarnException(
           "Illegal argument! The parameter should not be null or empty");
-    } else if (YarnConfiguration.RM_CONFIGURATION_FILES.contains(name)) {
+    } else if (YarnConfiguration.RM_CONFIGURATION_FILES.contains(name) ||
+        YarnConfiguration.NM_CONFIGURATION_FILES.contains(name)) {
       return bootstrapConf.getConfResourceAsInputStream(name);
     }
     return new FileInputStream(name);

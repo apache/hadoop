@@ -160,7 +160,8 @@ public class TestWriteStripedFileWithFailure {
         blockSize * dataBlocks);
     StripedFileTestUtil.verifyStatefulRead(fs, srcPath, fileLength, expected,
         smallBuf);
-    StripedFileTestUtil.verifyPread(fs, srcPath, fileLength, expected, largeBuf);
+    StripedFileTestUtil.verifyPread((DistributedFileSystem)fs, srcPath,
+        fileLength, expected, largeBuf);
 
     // delete the file
     fs.delete(srcPath, true);

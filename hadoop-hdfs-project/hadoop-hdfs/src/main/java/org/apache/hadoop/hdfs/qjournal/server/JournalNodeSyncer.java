@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos
@@ -51,6 +52,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -65,6 +68,7 @@ public class JournalNodeSyncer {
   private final JournalNode jn;
   private final Journal journal;
   private final String jid;
+  private  String nameServiceId;
   private final JournalIdProto jidProto;
   private final JNStorage jnStorage;
   private final Configuration conf;
@@ -78,12 +82,14 @@ public class JournalNodeSyncer {
   private final int logSegmentTransferTimeout;
   private final DataTransferThrottler throttler;
   private final JournalMetrics metrics;
+  private boolean journalSyncerStarted;
 
   JournalNodeSyncer(JournalNode jouranlNode, Journal journal, String jid,
-      Configuration conf) {
+      Configuration conf, String nameServiceId) {
     this.jn = jouranlNode;
     this.journal = journal;
     this.jid = jid;
+    this.nameServiceId = nameServiceId;
     this.jidProto = convertJournalId(this.jid);
     this.jnStorage = journal.getStorage();
     this.conf = conf;
@@ -95,6 +101,7 @@ public class JournalNodeSyncer {
         DFSConfigKeys.DFS_EDIT_LOG_TRANSFER_TIMEOUT_DEFAULT);
     throttler = getThrottler(conf);
     metrics = journal.getMetrics();
+    journalSyncerStarted = false;
   }
 
   void stopSync() {
@@ -109,13 +116,21 @@ public class JournalNodeSyncer {
     }
   }
 
-  public void start() {
-    LOG.info("Starting SyncJournal daemon for journal " + jid);
-    if (getOtherJournalNodeProxies()) {
-      startSyncJournalsDaemon();
-    } else {
-      LOG.warn("Failed to start SyncJournal daemon for journal " + jid);
+  public void start(String nsId) {
+    if (nsId != null) {
+      this.nameServiceId = nsId;
+      journal.setTriedJournalSyncerStartedwithnsId(true);
     }
+    if (!journalSyncerStarted && getOtherJournalNodeProxies()) {
+      LOG.info("Starting SyncJournal daemon for journal " + jid);
+      startSyncJournalsDaemon();
+      journalSyncerStarted = true;
+    }
+
+  }
+
+  public boolean isJournalSyncerStarted() {
+    return journalSyncerStarted;
   }
 
   private boolean createEditsSyncDir() {
@@ -251,23 +266,61 @@ public class JournalNodeSyncer {
   }
 
   private List<InetSocketAddress> getOtherJournalNodeAddrs() {
-    URI uri = null;
+    String uriStr = "";
     try {
-      String uriStr = conf.get(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+      uriStr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+
       if (uriStr == null || uriStr.isEmpty()) {
-        LOG.warn("Could not construct Shared Edits Uri");
-        return null;
+        if (nameServiceId != null) {
+          uriStr = conf.getTrimmed(DFSConfigKeys
+              .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + "." + nameServiceId);
+        }
       }
-      uri = new URI(uriStr);
-      return Util.getLoggerAddresses(uri,
-          Sets.newHashSet(jn.getBoundIpcAddress()));
+
+      if (uriStr == null || uriStr.isEmpty()) {
+        HashSet<String> sharedEditsUri = Sets.newHashSet();
+        if (nameServiceId != null) {
+          Collection<String> nnIds = DFSUtilClient.getNameNodeIds(
+              conf, nameServiceId);
+          for (String nnId : nnIds) {
+            String suffix = nameServiceId + "." + nnId;
+            uriStr = conf.getTrimmed(DFSConfigKeys
+                .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + "." + suffix);
+            sharedEditsUri.add(uriStr);
+          }
+          if (sharedEditsUri.size() > 1) {
+            uriStr = null;
+            LOG.error("The conf property " + DFSConfigKeys
+                .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + " not set properly, " +
+                "it has been configured with different journalnode values " +
+                sharedEditsUri.toString() + " for a" +
+                " single nameserviceId" + nameServiceId);
+          }
+        }
+      }
+
+      if (uriStr == null || uriStr.isEmpty()) {
+        LOG.error("Could not construct Shared Edits Uri");
+        return null;
+      } else {
+        return getJournalAddrList(uriStr);
+      }
+
     } catch (URISyntaxException e) {
       LOG.error("The conf property " + DFSConfigKeys
           .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + " not set properly.");
     } catch (IOException e) {
-      LOG.error("Could not parse JournalNode addresses: " + uri);
+      LOG.error("Could not parse JournalNode addresses: " + uriStr);
     }
     return null;
+  }
+
+  private List<InetSocketAddress> getJournalAddrList(String uriStr) throws
+      URISyntaxException,
+      IOException {
+    URI uri = new URI(uriStr);
+    return Util.getLoggerAddresses(uri,
+        Sets.newHashSet(jn.getBoundIpcAddress()));
   }
 
   private JournalIdProto convertJournalId(String journalId) {
@@ -297,14 +350,22 @@ public class JournalNodeSyncer {
         boolean success = false;
         try {
           if (remoteJNproxy.httpServerUrl == null) {
-            remoteJNproxy.httpServerUrl = getHttpServerURI("http",
-                remoteJNproxy.jnAddr.getHostName(), response.getHttpPort());
+            if (response.hasFromURL()) {
+              remoteJNproxy.httpServerUrl = getHttpServerURI(
+                  response.getFromURL(), remoteJNproxy.jnAddr.getHostName());
+            } else {
+              LOG.error("EditLogManifest response does not have fromUrl " +
+                  "field set. Aborting current sync attempt");
+              break;
+            }
           }
 
           String urlPath = GetJournalEditServlet.buildPath(jid, missingLog
               .getStartTxId(), nsInfo, false);
           url = new URL(remoteJNproxy.httpServerUrl, urlPath);
           success = downloadMissingLogSegment(url, missingLog);
+        } catch (URISyntaxException e) {
+          LOG.error("EditLogManifest's fromUrl field syntax incorrect", e);
         } catch (MalformedURLException e) {
           LOG.error("MalformedURL when download missing log segment", e);
         } catch (Exception e) {
@@ -362,9 +423,10 @@ public class JournalNodeSyncer {
     return missingEditLogs;
   }
 
-  private URL getHttpServerURI(String scheme, String hostname, int port)
-    throws MalformedURLException {
-    return new URL(scheme, hostname, port, "");
+  private URL getHttpServerURI(String fromUrl, String hostAddr)
+      throws URISyntaxException, MalformedURLException {
+    URI uri = new URI(fromUrl);
+    return new URL(uri.getScheme(), hostAddr, uri.getPort(), "");
   }
 
   /**

@@ -136,7 +136,10 @@ public final class Constants {
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
 
   // switch to the fast block-by-block upload mechanism
+  // this is the only supported upload mechanism
+  @Deprecated
   public static final String FAST_UPLOAD = "fs.s3a.fast.upload";
+  @Deprecated
   public static final boolean DEFAULT_FAST_UPLOAD = false;
 
   //initial size of memory buffer for a fast upload
@@ -450,5 +453,14 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String FAIL_INJECT_INCONSISTENCY_PROBABILITY =
       "fs.s3a.failinject.inconsistency.probability";
+
+  /**
+   * S3 API level parameters.
+   */
+  @InterfaceStability.Unstable
+  public static final String LIST_VERSION = "fs.s3a.list.version";
+
+  @InterfaceStability.Unstable
+  public static final int DEFAULT_LIST_VERSION = 2;
 
 }

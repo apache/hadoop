@@ -93,8 +93,6 @@ public class TestDFSStripedInputStream {
 
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        getEcPolicy().getName());
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
@@ -108,6 +106,7 @@ public class TestDFSStripedInputStream {
       DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
     }
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(getEcPolicy().getName());
     fs.mkdirs(dirPath);
     fs.getClient()
         .setErasureCodingPolicy(dirPath.toString(), ecPolicy.getName());
@@ -491,5 +490,18 @@ public class TestDFSStripedInputStream {
 
     assertEquals(readSize, done);
     assertArrayEquals(expected, readBuffer);
+  }
+
+  @Test
+  public void testIdempotentClose() throws Exception {
+    final int numBlocks = 2;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+
+    try (DFSInputStream in = fs.getClient().open(filePath.toString())) {
+      assertTrue(in instanceof DFSStripedInputStream);
+      // Close twice
+      in.close();
+    }
   }
 }

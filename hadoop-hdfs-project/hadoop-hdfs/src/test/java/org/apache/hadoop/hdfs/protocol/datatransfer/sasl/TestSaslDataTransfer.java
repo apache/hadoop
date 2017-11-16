@@ -118,7 +118,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
     clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication");
     exception.expect(IOException.class);
-    exception.expectMessage("could only be replicated to 0 nodes");
+    exception.expectMessage("could only be written to 0");
     doTest(clientConf);
   }
 
@@ -140,7 +140,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
           "configured or not supported in client");
     } catch (IOException e) {
       GenericTestUtils.assertMatches(e.getMessage(), 
-          "could only be replicated to 0 nodes");
+          "could only be written to 0");
     } finally {
       logs.stopCapturing();
     }

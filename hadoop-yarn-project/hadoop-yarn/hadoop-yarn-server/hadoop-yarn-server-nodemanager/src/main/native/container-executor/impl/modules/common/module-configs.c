@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
+#include "module-configs.h"
 #include "util.h"
-#include "configuration.h"
-#include "container-executor.h"
 #include "modules/common/constants.h"
 
 #include <string.h>

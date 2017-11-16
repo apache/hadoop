@@ -59,15 +59,11 @@ enum operations {
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
 #define ALLOWED_SYSTEM_USERS_KEY "allowed.system.users"
-#define DOCKER_BINARY_KEY "docker.binary"
 #define DOCKER_SUPPORT_ENABLED_KEY "feature.docker.enabled"
 #define TC_SUPPORT_ENABLED_KEY "feature.tc.enabled"
 #define TMP_DIR "tmp"
 
 extern struct passwd *user_detail;
-
-// get the executable's filename
-char* get_executable(char *argv0);
 
 //function used to load the configurations present in the secure config
 void read_executor_config(const char* file_name);
@@ -257,11 +253,6 @@ int is_docker_support_enabled();
  * Run a docker command passing the command file as an argument
  */
 int run_docker(const char *command_file);
-
-/**
- * Sanitize docker commands. Returns NULL if there was any failure.
-*/
-char* sanitize_docker_command(const char *line);
 
 /*
  * Compile the regex_str and determine if the input string matches.

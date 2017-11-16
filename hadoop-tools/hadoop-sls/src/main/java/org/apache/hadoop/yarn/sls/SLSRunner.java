@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -84,6 +85,7 @@ import org.apache.hadoop.yarn.sls.synthetic.SynthJob;
 import org.apache.hadoop.yarn.sls.synthetic.SynthTraceJobProducer;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 import org.apache.hadoop.yarn.util.UTCClock;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +101,7 @@ public class SLSRunner extends Configured implements Tool {
 
   // NM simulator
   private HashMap<NodeId, NMSimulator> nmMap;
-  private int nmMemoryMB, nmVCores;
+  private Resource nodeManagerResource;
   private String nodeFile;
 
   // AM simulator
@@ -173,11 +175,35 @@ public class SLSRunner extends Configured implements Tool {
     // <AMType, Class> map
     for (Map.Entry e : tempConf) {
       String key = e.getKey().toString();
-      if (key.startsWith(SLSConfiguration.AM_TYPE)) {
-        String amType = key.substring(SLSConfiguration.AM_TYPE.length());
+      if (key.startsWith(SLSConfiguration.AM_TYPE_PREFIX)) {
+        String amType = key.substring(SLSConfiguration.AM_TYPE_PREFIX.length());
         amClassMap.put(amType, Class.forName(tempConf.get(key)));
       }
     }
+
+    nodeManagerResource = getNodeManagerResource();
+  }
+
+  private Resource getNodeManagerResource() {
+    Resource resource = Resources.createResource(0);
+    ResourceInformation[] infors = ResourceUtils.getResourceTypesArray();
+    for (ResourceInformation info : infors) {
+      long value;
+      if (info.getName().equals(ResourceInformation.MEMORY_URI)) {
+        value = getConf().getInt(SLSConfiguration.NM_MEMORY_MB,
+            SLSConfiguration.NM_MEMORY_MB_DEFAULT);
+      } else if (info.getName().equals(ResourceInformation.VCORES_URI)) {
+        value = getConf().getInt(SLSConfiguration.NM_VCORES,
+            SLSConfiguration.NM_VCORES_DEFAULT);
+      } else {
+        value = getConf().getLong(SLSConfiguration.NM_PREFIX +
+            info.getName(), SLSConfiguration.NM_RESOURCE_DEFAULT);
+      }
+
+      resource.setResourceValue(info.getName(), value);
+    }
+
+    return resource;
   }
 
   /**
@@ -261,10 +287,6 @@ public class SLSRunner extends Configured implements Tool {
 
   private void startNM() throws YarnException, IOException {
     // nm configuration
-    nmMemoryMB = getConf().getInt(SLSConfiguration.NM_MEMORY_MB,
-        SLSConfiguration.NM_MEMORY_MB_DEFAULT);
-    nmVCores = getConf().getInt(SLSConfiguration.NM_VCORES,
-        SLSConfiguration.NM_VCORES_DEFAULT);
     int heartbeatInterval =
         getConf().getInt(SLSConfiguration.NM_HEARTBEAT_INTERVAL_MS,
             SLSConfiguration.NM_HEARTBEAT_INTERVAL_MS_DEFAULT);
@@ -304,7 +326,7 @@ public class SLSRunner extends Configured implements Tool {
     for (String hostName : nodeSet) {
       // we randomize the heartbeat start time from zero to 1 interval
       NMSimulator nm = new NMSimulator();
-      nm.init(hostName, nmMemoryMB, nmVCores, random.nextInt(heartbeatInterval),
+      nm.init(hostName, nodeManagerResource, random.nextInt(heartbeatInterval),
           heartbeatInterval, rm);
       nmMap.put(nm.getNode().getNodeID(), nm);
       runner.schedule(nm);
@@ -384,33 +406,36 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   private void createAMForJob(Map jsonJob) throws YarnException {
-    long jobStartTime = Long.parseLong(jsonJob.get("job.start.ms").toString());
+    long jobStartTime = Long.parseLong(
+        jsonJob.get(SLSConfiguration.JOB_START_MS).toString());
 
     long jobFinishTime = 0;
-    if (jsonJob.containsKey("job.end.ms")) {
-      jobFinishTime = Long.parseLong(jsonJob.get("job.end.ms").toString());
+    if (jsonJob.containsKey(SLSConfiguration.JOB_END_MS)) {
+      jobFinishTime = Long.parseLong(
+          jsonJob.get(SLSConfiguration.JOB_END_MS).toString());
     }
 
-    String user = (String) jsonJob.get("job.user");
+    String user = (String) jsonJob.get(SLSConfiguration.JOB_USER);
     if (user == null) {
       user = "default";
     }
 
-    String queue = jsonJob.get("job.queue.name").toString();
+    String queue = jsonJob.get(SLSConfiguration.JOB_QUEUE_NAME).toString();
     increaseQueueAppNum(queue);
 
-    String amType = (String)jsonJob.get("am.type");
+    String amType = (String)jsonJob.get(SLSConfiguration.AM_TYPE);
     if (amType == null) {
       amType = SLSUtils.DEFAULT_JOB_TYPE;
     }
 
     int jobCount = 1;
-    if (jsonJob.containsKey("job.count")) {
-      jobCount = Integer.parseInt(jsonJob.get("job.count").toString());
+    if (jsonJob.containsKey(SLSConfiguration.JOB_COUNT)) {
+      jobCount = Integer.parseInt(
+          jsonJob.get(SLSConfiguration.JOB_COUNT).toString());
     }
     jobCount = Math.max(jobCount, 1);
 
-    String oldAppId = (String)jsonJob.get("job.id");
+    String oldAppId = (String)jsonJob.get(SLSConfiguration.JOB_ID);
     // Job id is generated automatically if this job configuration allows
     // multiple job instances
     if(jobCount > 1) {
@@ -426,7 +451,7 @@ public class SLSRunner extends Configured implements Tool {
   private List<ContainerSimulator> getTaskContainers(Map jsonJob)
       throws YarnException {
     List<ContainerSimulator> containers = new ArrayList<>();
-    List tasks = (List) jsonJob.get("job.tasks");
+    List tasks = (List) jsonJob.get(SLSConfiguration.JOB_TASKS);
     if (tasks == null || tasks.size() == 0) {
       throw new YarnException("No task for the job!");
     }
@@ -434,17 +459,22 @@ public class SLSRunner extends Configured implements Tool {
     for (Object o : tasks) {
       Map jsonTask = (Map) o;
 
-      String hostname = (String) jsonTask.get("container.host");
+      String hostname = (String) jsonTask.get(SLSConfiguration.TASK_HOST);
 
       long duration = 0;
-      if (jsonTask.containsKey("duration.ms")) {
-        duration = Integer.parseInt(jsonTask.get("duration.ms").toString());
-      } else if (jsonTask.containsKey("container.start.ms") &&
-          jsonTask.containsKey("container.end.ms")) {
-        long taskStart = Long.parseLong(jsonTask.get("container.start.ms")
-            .toString());
-        long taskFinish = Long.parseLong(jsonTask.get("container.end.ms")
-            .toString());
+      if (jsonTask.containsKey(SLSConfiguration.TASK_DURATION_MS)) {
+        duration = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.TASK_DURATION_MS).toString());
+      } else if (jsonTask.containsKey(SLSConfiguration.DURATION_MS)) {
+        // Also support "duration.ms" for backward compatibility
+        duration = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.DURATION_MS).toString());
+      } else if (jsonTask.containsKey(SLSConfiguration.TASK_START_MS) &&
+          jsonTask.containsKey(SLSConfiguration.TASK_END_MS)) {
+        long taskStart = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_START_MS).toString());
+        long taskFinish = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_END_MS).toString());
         duration = taskFinish - taskStart;
       }
       if (duration <= 0) {
@@ -452,33 +482,23 @@ public class SLSRunner extends Configured implements Tool {
             + " to 0!");
       }
 
-      Resource res = getDefaultContainerResource();
-      if (jsonTask.containsKey("container.memory")) {
-        int containerMemory =
-            Integer.parseInt(jsonTask.get("container.memory").toString());
-        res.setMemorySize(containerMemory);
-      }
-
-      if (jsonTask.containsKey("container.vcores")) {
-        int containerVCores =
-            Integer.parseInt(jsonTask.get("container.vcores").toString());
-        res.setVirtualCores(containerVCores);
-      }
+      Resource res = getResourceForContainer(jsonTask);
 
       int priority = DEFAULT_MAPPER_PRIORITY;
-      if (jsonTask.containsKey("container.priority")) {
-        priority = Integer.parseInt(jsonTask.get("container.priority")
-            .toString());
+      if (jsonTask.containsKey(SLSConfiguration.TASK_PRIORITY)) {
+        priority = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.TASK_PRIORITY).toString());
       }
 
       String type = "map";
-      if (jsonTask.containsKey("container.type")) {
-        type = jsonTask.get("container.type").toString();
+      if (jsonTask.containsKey(SLSConfiguration.TASK_TYPE)) {
+        type = jsonTask.get(SLSConfiguration.TASK_TYPE).toString();
       }
 
       int count = 1;
-      if (jsonTask.containsKey("count")) {
-        count = Integer.parseInt(jsonTask.get("count").toString());
+      if (jsonTask.containsKey(SLSConfiguration.COUNT)) {
+        count = Integer.parseInt(
+            jsonTask.get(SLSConfiguration.COUNT).toString());
       }
       count = Math.max(count, 1);
 
@@ -489,6 +509,21 @@ public class SLSRunner extends Configured implements Tool {
     }
 
     return containers;
+  }
+
+  private Resource getResourceForContainer(Map jsonTask) {
+    Resource res = getDefaultContainerResource();
+    ResourceInformation[] infors = ResourceUtils.getResourceTypesArray();
+    for (ResourceInformation info : infors) {
+      if (jsonTask.containsKey(SLSConfiguration.TASK_PREFIX + info.getName())) {
+        long value = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_PREFIX + info.getName())
+                .toString());
+        res.setResourceValue(info.getName(), value);
+      }
+    }
+
+    return res;
   }
 
   /**
@@ -708,15 +743,15 @@ public class SLSRunner extends Configured implements Tool {
       return amContainerResource;
     }
 
-    if (jsonJob.containsKey("am.memory")) {
-      amContainerResource.setMemorySize(
-          Long.parseLong(jsonJob.get("am.memory").toString()));
+    ResourceInformation[] infors = ResourceUtils.getResourceTypesArray();
+    for (ResourceInformation info : infors) {
+      String key = SLSConfiguration.JOB_AM_PREFIX + info.getName();
+      if (jsonJob.containsKey(key)) {
+        long value = Long.parseLong(jsonJob.get(key).toString());
+        amContainerResource.setResourceValue(info.getName(), value);
+      }
     }
 
-    if (jsonJob.containsKey("am.vcores")) {
-      amContainerResource.setVirtualCores(
-          Integer.parseInt(jsonJob.get("am.vcores").toString()));
-    }
     return amContainerResource;
   }
 
@@ -731,6 +766,7 @@ public class SLSRunner extends Configured implements Tool {
     }
 
     queueAppNumMap.put(queueName, appNum);
+    wrapper.getSchedulerMetrics().trackQueue(queueName);
   }
 
   private void runNewAM(String jobType, String user,
@@ -767,8 +803,8 @@ public class SLSRunner extends Configured implements Tool {
       // node
       LOG.info("------------------------------------");
       LOG.info("# nodes = {}, # racks = {}, capacity " +
-              "of each node {} MB memory and {} vcores.",
-              numNMs, numRacks, nmMemoryMB, nmVCores);
+              "of each node {}.",
+              numNMs, numRacks, nodeManagerResource);
       LOG.info("------------------------------------");
       // job
       LOG.info("# applications = {}, # total " +
@@ -794,8 +830,10 @@ public class SLSRunner extends Configured implements Tool {
     // package these information in the simulateInfoMap used by other places
     simulateInfoMap.put("Number of racks", numRacks);
     simulateInfoMap.put("Number of nodes", numNMs);
-    simulateInfoMap.put("Node memory (MB)", nmMemoryMB);
-    simulateInfoMap.put("Node VCores", nmVCores);
+    simulateInfoMap.put("Node memory (MB)",
+        nodeManagerResource.getResourceValue(ResourceInformation.MEMORY_URI));
+    simulateInfoMap.put("Node VCores",
+        nodeManagerResource.getResourceValue(ResourceInformation.VCORES_URI));
     simulateInfoMap.put("Number of applications", numAMs);
     simulateInfoMap.put("Number of tasks", numTasks);
     simulateInfoMap.put("Average tasks per applicaion",

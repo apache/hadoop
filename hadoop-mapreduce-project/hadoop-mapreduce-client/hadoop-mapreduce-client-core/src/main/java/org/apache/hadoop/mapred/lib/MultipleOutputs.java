@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * The MultipleOutputs class simplifies writting to additional outputs other
+ * The MultipleOutputs class simplifies writing to additional outputs other
  * than the job default output via the <code>OutputCollector</code> passed to
  * the <code>map()</code> and <code>reduce()</code> methods of the
  * <code>Mapper</code> and <code>Reducer</code> implementations.
@@ -36,7 +36,7 @@ import java.util.*;
  * <code>OutputFormat</code>, with its own key class and with its own value
  * class.
  * <p>
- * A named output can be a single file or a multi file. The later is refered as
+ * A named output can be a single file or a multi file. The later is referred as
  * a multi named output.
  * <p>
  * A multi named output is an unbound set of files all sharing the same

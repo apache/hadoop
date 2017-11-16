@@ -93,6 +93,7 @@ public class InMemoryPlan implements Plan {
   private final Planner replanner;
   private final boolean getMoveOnExpiry;
   private final Clock clock;
+  private final long maxPeriodicity;
 
   private Resource totalCapacity;
 
@@ -111,9 +112,9 @@ public class InMemoryPlan implements Plan {
       ReservationAgent agent, Resource totalCapacity, long step,
       ResourceCalculator resCalc, Resource minAlloc, Resource maxAlloc,
       String queueName, Planner replanner, boolean getMoveOnExpiry,
-      long maxPeriodicty, RMContext rmContext) {
+      long maxPeriodicity, RMContext rmContext) {
     this(queueMetrics, policy, agent, totalCapacity, step, resCalc, minAlloc,
-        maxAlloc, queueName, replanner, getMoveOnExpiry, maxPeriodicty,
+        maxAlloc, queueName, replanner, getMoveOnExpiry, maxPeriodicity,
         rmContext, new UTCClock());
   }
 
@@ -132,8 +133,9 @@ public class InMemoryPlan implements Plan {
     this.minAlloc = minAlloc;
     this.maxAlloc = maxAlloc;
     this.rleSparseVector = new RLESparseResourceAllocation(resCalc);
+    this.maxPeriodicity = maxPeriodicty;
     this.periodicRle =
-        new PeriodicRLESparseResourceAllocation(resCalc, maxPeriodicty);
+        new PeriodicRLESparseResourceAllocation(resCalc, this.maxPeriodicity);
     this.queueName = queueName;
     this.replanner = replanner;
     this.getMoveOnExpiry = getMoveOnExpiry;
@@ -627,10 +629,35 @@ public class InMemoryPlan implements Plan {
             // handle periodic reservations
             long period = reservation.getPeriodicity();
             if (period > 0) {
-              long t = endTime % period;
-              // check for both contained and wrap-around reservations
-              if ((t - startTime) * (t - endTime)
-                  * (startTime - endTime) >= 0) {
+              // The shift is used to remove the wrap around for the
+              // reservation interval. The wrap around will still
+              // exist for the search interval.
+              long shift = reservation.getStartTime() % period;
+              // This is the duration of the reservation since
+              // duration < period.
+              long periodicReservationEnd =
+                  (reservation.getEndTime() -shift) % period;
+              long periodicSearchStart = (startTime - shift) % period;
+              long periodicSearchEnd = (endTime - shift) % period;
+              long searchDuration = endTime - startTime;
+
+              // 1. If the searchDuration is greater than the period, then
+              // the reservation is within the interval. This will allow
+              // us to ignore cases where search end > search start >
+              // reservation end.
+              // 2/3. If the search end is less than the reservation end, or if
+              // the search start is less than the reservation end, then the
+              // reservation will be in the reservation since
+              // periodic reservation start is always zero. Note that neither
+              // of those values will ever be negative.
+              // 4. If the search end is less than the search start, then
+              // there is a wrap around, and both values are implicitly
+              // greater than the reservation end because of condition 2/3,
+              // so the reservation is within the search interval.
+              if (searchDuration > period
+                  || periodicSearchEnd < periodicReservationEnd
+                  || periodicSearchStart < periodicReservationEnd
+                  || periodicSearchStart > periodicSearchEnd) {
                 flattenedReservations.add(reservation);
               }
             } else {
@@ -719,8 +746,14 @@ public class InMemoryPlan implements Plan {
 
         if (periodicRle.getTimePeriod() % period != 0) {
           throw new PlanningException("The reservation periodicity (" + period
-              + ") must be" + "an exact divider of the system maxPeriod ("
+              + ") must be" + " an exact divider of the system maxPeriod ("
               + periodicRle.getTimePeriod() + ")");
+        }
+
+        if (period < (end - start)) {
+          throw new PlanningException(
+              "Invalid input: (end - start) = (" + end + " - " + start + ") = "
+                  + (end - start) + " > period = " + period);
         }
 
         // find the minimum resources available among all the instances that fit
@@ -803,6 +836,11 @@ public class InMemoryPlan implements Plan {
   @Override
   public Resource getMaximumAllocation() {
     return Resources.clone(maxAlloc);
+  }
+
+  @Override
+  public long getMaximumPeriodicity() {
+    return this.maxPeriodicity;
   }
 
   public String toCumulativeString() {

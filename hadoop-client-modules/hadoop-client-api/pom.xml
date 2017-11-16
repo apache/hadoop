@@ -182,9 +182,31 @@
                         <exclude>io/serializations</exclude>
                       </excludes>
                     </relocation>
+                    <!-- JSRs that haven't made it to inclusion in J2SE -->
+                    <relocation>
+                      <pattern>javax/el/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.el.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/cache/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.cache.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
                     <relocation>
                       <pattern>javax/servlet/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.servlet.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/ws/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.ws.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>
                       </excludes>
@@ -198,6 +220,11 @@
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
                       </excludes>
+                    </relocation>
+                    <!-- okio declares a top level package instead of nested -->
+                    <relocation>
+                      <pattern>okio/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.okio.</shadedPattern>
                     </relocation>
                   </relocations>
                   <transformers>

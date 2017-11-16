@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
@@ -392,7 +393,8 @@ extends ContainerLaunchContext {
     this.environment = new HashMap<String, String>();
 
     for (StringStringMapProto c : list) {
-      this.environment.put(c.getKey(), c.getValue());
+      this.environment.put(StringInterner.weakIntern(c.getKey()),
+          StringInterner.weakIntern(c.getValue()));
     }
   }
   
@@ -402,7 +404,10 @@ extends ContainerLaunchContext {
       return;
     initEnv();
     this.environment.clear();
-    this.environment.putAll(env);
+    for (Map.Entry<String, String> e : env.entrySet()) {
+      this.environment.put(StringInterner.weakIntern(e.getKey()),
+          StringInterner.weakIntern(e.getValue()));
+    }
   }
   
   private void addEnvToProto() {
@@ -464,7 +469,7 @@ extends ContainerLaunchContext {
 
     for (ApplicationACLMapProto aclProto : list) {
       this.applicationACLS.put(ProtoUtils.convertFromProtoFormat(aclProto
-          .getAccessType()), aclProto.getAcl());
+          .getAccessType()), StringInterner.weakIntern(aclProto.getAcl()));
     }
   }
 
@@ -513,7 +518,10 @@ extends ContainerLaunchContext {
       return;
     initApplicationACLs();
     this.applicationACLS.clear();
-    this.applicationACLS.putAll(appACLs);
+    for (Map.Entry<ApplicationAccessType, String> e : appACLs.entrySet()) {
+      this.applicationACLS.put(e.getKey(),
+          StringInterner.weakIntern(e.getValue()));
+    }
   }
 
   public ContainerRetryContext getContainerRetryContext() {

@@ -38,8 +38,8 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Treats keys as offset in file and value as line. 
@@ -47,7 +47,8 @@ import org.apache.commons.logging.Log;
 @InterfaceAudience.LimitedPrivate({"MapReduce", "Pig"})
 @InterfaceStability.Evolving
 public class LineRecordReader extends RecordReader<LongWritable, Text> {
-  private static final Log LOG = LogFactory.getLog(LineRecordReader.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LineRecordReader.class);
   public static final String MAX_LINE_LENGTH = 
     "mapreduce.input.linerecordreader.line.maxlength";
 

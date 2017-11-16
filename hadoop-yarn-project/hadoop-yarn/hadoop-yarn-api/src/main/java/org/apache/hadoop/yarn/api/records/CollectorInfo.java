@@ -18,16 +18,16 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Collector info containing collector address and collector token passed from
  * RM to AM in Allocate Response.
  */
-@Private
-@InterfaceStability.Unstable
+@Public
+@Evolving
 public abstract class CollectorInfo {
 
   protected static final long DEFAULT_TIMESTAMP_VALUE = -1;

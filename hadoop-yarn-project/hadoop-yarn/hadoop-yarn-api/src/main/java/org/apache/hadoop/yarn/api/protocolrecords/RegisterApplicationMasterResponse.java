@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -204,4 +205,42 @@ public abstract class RegisterApplicationMasterResponse {
   @Unstable
   public abstract void setSchedulerResourceTypes(
       EnumSet<SchedulerResourceTypes> types);
+
+  /**
+   * Get list of supported resource profiles from RM.
+   *
+   * @return a map of resource profiles and its capabilities.
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Resource> getResourceProfiles();
+
+  /**
+   * Set supported resource profiles for RM.
+   *
+   * @param profiles
+   *          a map of resource profiles with its capabilities.
+   */
+  @Private
+  @Unstable
+  public abstract void setResourceProfiles(Map<String, Resource> profiles);
+
+  /**
+   * Get available resource types supported by RM.
+   *
+   * @return a Map of RM settings
+   */
+  @Public
+  @Unstable
+  public abstract List<ResourceTypeInfo> getResourceTypes();
+
+  /**
+   * Set the resource types used by RM.
+   *
+   * @param types
+   *          a set of the resource types supported by RM.
+   */
+  @Private
+  @Unstable
+  public abstract void setResourceTypes(List<ResourceTypeInfo> types);
 }

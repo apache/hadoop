@@ -19,8 +19,8 @@ package org.apache.hadoop.examples.dancing;
 
 import java.util.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A generic solver for tile laying problems using Knuth's dancing link
@@ -35,8 +35,7 @@ import org.apache.commons.logging.LogFactory;
  * The type parameter ColumnName is the class of application's column names.
  */
 public class DancingLinks<ColumnName> {
-  private static final Log LOG = 
-    LogFactory.getLog(DancingLinks.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(DancingLinks.class);
   
   /**
    * A cell in the table with up/down and left/right links that form doubly
@@ -369,7 +368,7 @@ public class DancingLinks<ColumnName> {
 
   /**
    * Make one move from a prefix
-   * @param goalRow the row that should be choosen
+   * @param goalRow the row that should be chosen
    * @return the row that was found
    */
   private Node<ColumnName> advance(int goalRow) {

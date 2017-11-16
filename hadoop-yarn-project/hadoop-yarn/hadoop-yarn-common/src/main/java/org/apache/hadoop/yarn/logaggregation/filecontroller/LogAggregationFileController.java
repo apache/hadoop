@@ -25,9 +25,6 @@ import com.google.common.collect.Sets;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,9 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +42,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -56,6 +52,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.webapp.View.ViewContext;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
@@ -68,7 +66,7 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 @Unstable
 public abstract class LogAggregationFileController {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       LogAggregationFileController.class);
 
   /*
@@ -91,12 +89,23 @@ public abstract class LogAggregationFileController {
   protected static final FsPermission APP_DIR_PERMISSIONS = FsPermission
       .createImmutable((short) 0770);
 
+  /**
+   * Umask for the log file.
+   */
+  protected static final FsPermission APP_LOG_FILE_UMASK = FsPermission
+      .createImmutable((short) (0640 ^ 0777));
+
   // This is temporary solution. The configuration will be deleted once
   // we find a more scalable method to only write a single log file per LRS.
   private static final String NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP
       = YarnConfiguration.NM_PREFIX + "log-aggregation.num-log-files-per-app";
   private static final int
       DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP = 30;
+
+  // This is temporary solution. The configuration will be deleted once we have
+  // the FileSystem API to check whether append operation is supported or not.
+  public static final String LOG_AGGREGATION_FS_SUPPORT_APPEND
+      = YarnConfiguration.YARN_PREFIX+ "log-aggregation.fs-support-append";
 
   protected Configuration conf;
   protected Path remoteRootLogDir;
@@ -178,22 +187,9 @@ public abstract class LogAggregationFileController {
   public abstract void postWrite(LogAggregationFileControllerContext record)
       throws Exception;
 
-  protected PrintStream createPrintStream(String localDir, String nodeId,
-      String containerId) throws IOException {
-    PrintStream out = System.out;
-    if(localDir != null && !localDir.isEmpty()) {
-      Path nodePath = new Path(localDir, LogAggregationUtils
-          .getNodeString(nodeId));
-      Files.createDirectories(Paths.get(nodePath.toString()));
-      Path containerLogPath = new Path(nodePath, containerId);
-      out = new PrintStream(containerLogPath.toString(), "UTF-8");
-    }
-    return out;
-  }
-
   protected void closePrintStream(OutputStream out) {
     if (out != System.out) {
-      IOUtils.closeQuietly(out);
+      IOUtils.cleanupWithLogger(LOG, out);
     }
   }
 
@@ -201,6 +197,7 @@ public abstract class LogAggregationFileController {
    * Output container log.
    * @param logRequest {@link ContainerLogsRequest}
    * @param os the output stream
+   * @return true if we can read the aggregated logs successfully
    * @throws IOException if we can not access the log file.
    */
   public abstract boolean readAggregatedLogs(ContainerLogsRequest logRequest,
@@ -228,9 +225,9 @@ public abstract class LogAggregationFileController {
   /**
    * Returns the owner of the application.
    *
-   * @param the aggregatedLog path.
-   * @return the application owner.
-   * @throws IOException
+   * @param aggregatedLogPath the aggregatedLog path
+   * @return the application owner
+   * @throws IOException if we can not get the application owner
    */
   public abstract String getApplicationOwner(Path aggregatedLogPath)
       throws IOException;
@@ -239,9 +236,9 @@ public abstract class LogAggregationFileController {
    * Returns ACLs for the application. An empty map is returned if no ACLs are
    * found.
    *
-   * @param the aggregatedLog path.
+   * @param aggregatedLogPath the aggregatedLog path.
    * @return a map of the Application ACLs.
-   * @throws IOException
+   * @throws IOException if we can not get the application acls
    */
   public abstract Map<ApplicationAccessType, String> getApplicationAcls(
       Path aggregatedLogPath) throws IOException;
@@ -479,5 +476,22 @@ public abstract class LogAggregationFileController {
     } catch (Exception e) {
       LOG.error("Failed to clean old logs", e);
     }
+  }
+
+  /**
+   * Create the aggregated log suffix. The LogAggregationFileController
+   * should call this to get the suffix and append the suffix to the end
+   * of each log. This would keep the aggregated log format consistent.
+   *
+   * @param fileName the File Name
+   * @return the aggregated log suffix String
+   */
+  protected String aggregatedLogSuffix(String fileName) {
+    StringBuilder sb = new StringBuilder();
+    String endOfFile = "End of LogType:" + fileName;
+    sb.append("\n" + endOfFile + "\n");
+    sb.append(StringUtils.repeat("*", endOfFile.length() + 50)
+        + "\n\n");
+    return sb.toString();
   }
 }

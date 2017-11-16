@@ -50,6 +50,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -799,7 +800,36 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The default implementation returns an array containing one element:
    * <pre>
    * BlockLocation( { "localhost:9866" },  { "localhost" }, 0, file.getLen())
-   * </pre>>
+   * </pre>
+   *
+   * In HDFS, if file is three-replicated, the returned array contains
+   * elements like:
+   * <pre>
+   * BlockLocation(offset: 0, length: BLOCK_SIZE,
+   *   hosts: {"host1:9866", "host2:9866, host3:9866"})
+   * BlockLocation(offset: BLOCK_SIZE, length: BLOCK_SIZE,
+   *   hosts: {"host2:9866", "host3:9866, host4:9866"})
+   * </pre>
+   *
+   * And if a file is erasure-coded, the returned BlockLocation are logical
+   * block groups.
+   *
+   * Suppose we have a RS_3_2 coded file (3 data units and 2 parity units).
+   * 1. If the file size is less than one stripe size, say 2 * CELL_SIZE, then
+   * there will be one BlockLocation returned, with 0 offset, actual file size
+   * and 4 hosts (2 data blocks and 2 parity blocks) hosting the actual blocks.
+   * 3. If the file size is less than one group size but greater than one
+   * stripe size, then there will be one BlockLocation returned, with 0 offset,
+   * actual file size with 5 hosts (3 data blocks and 2 parity blocks) hosting
+   * the actual blocks.
+   * 4. If the file size is greater than one group size, 3 * BLOCK_SIZE + 123
+   * for example, then the result will be like:
+   * <pre>
+   * BlockLocation(offset: 0, length: 3 * BLOCK_SIZE, hosts: {"host1:9866",
+   *   "host2:9866","host3:9866","host4:9866","host5:9866"})
+   * BlockLocation(offset: 3 * BLOCK_SIZE, length: 123, hosts: {"host1:9866",
+   *   "host4:9866", "host5:9866"})
+   * </pre>
    *
    * @param file FilesStatus to get data from
    * @param start offset into the given file
@@ -919,6 +949,50 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FSDataInputStream open(Path f) throws IOException {
     return open(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
         IO_FILE_BUFFER_SIZE_DEFAULT));
+  }
+
+  /**
+   * Open an FSDataInputStream matching the PathHandle instance. The
+   * implementation may encode metadata in PathHandle to address the
+   * resource directly and verify that the resource referenced
+   * satisfies constraints specified at its construciton.
+   * @param fd PathHandle object returned by the FS authority.
+   * @param bufferSize the size of the buffer to use
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException If not overridden by subclass
+   */
+  public FSDataInputStream open(PathHandle fd, int bufferSize)
+      throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Create a durable, serializable handle to the referent of the given
+   * entity.
+   * @param stat Referent in the target FileSystem
+   * @param opt If absent, assume {@link HandleOpt#path()}.
+   * @throws IllegalArgumentException If the FileStatus does not belong to
+   *         this FileSystem
+   * @throws UnsupportedOperationException If {@link #createPathHandle}
+   *         not overridden by subclass.
+   * @throws UnsupportedOperationException If this FileSystem cannot enforce
+   *         the specified constraints.
+   */
+  public final PathHandle getPathHandle(FileStatus stat, HandleOpt... opt) {
+    if (null == opt || 0 == opt.length) {
+      return createPathHandle(stat, HandleOpt.path());
+    }
+    return createPathHandle(stat, opt);
+  }
+
+  /**
+   * Hook to implement support for {@link PathHandle} operations.
+   * @param stat Referent in the target FileSystem
+   * @param opt Constraints that determine the validity of the
+   *            {@link PathHandle} reference.
+   */
+  protected PathHandle createPathHandle(FileStatus stat, HandleOpt... opt) {
+    throw new UnsupportedOperationException();
   }
 
   /**
@@ -2115,6 +2189,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * List the statuses and block locations of the files in the given path.
    * Does not guarantee to return the iterator that traverses statuses
    * of the files in a sorted order.
+   *
    * <pre>
    * If the path is a directory,
    *   if recursive is false, returns files in the directory;

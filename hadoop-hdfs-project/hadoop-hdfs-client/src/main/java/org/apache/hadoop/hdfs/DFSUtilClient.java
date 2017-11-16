@@ -21,6 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.SignedBytes;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -94,6 +95,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSF
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
 
+@InterfaceAudience.Private
 public class DFSUtilClient {
   public static final byte[] EMPTY_BYTES = {};
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -406,7 +408,7 @@ public class DFSUtilClient {
    * @param keys list of keys in the order of preference
    * @return value of the key or default if a key was not found in configuration
    */
-  private static String getConfValue(String defaultValue, String keySuffix,
+  public static String getConfValue(String defaultValue, String keySuffix,
       Configuration conf, String... keys) {
     String value = null;
     for (String key : keys) {
@@ -860,4 +862,25 @@ public class DFSUtilClient {
     }
     return threadPoolExecutor;
   }
+
+  private static final int INODE_PATH_MAX_LENGTH = 3 * Path.SEPARATOR.length()
+      + HdfsConstants.DOT_RESERVED_STRING.length()
+      + HdfsConstants.DOT_INODES_STRING.length()
+      + (int)Math.ceil(Math.log10(Long.MAX_VALUE)) + 1;
+
+  /**
+   * Create the internal unique file path from HDFS file ID (inode ID). Unlike
+   * a regular file path, this one is guaranteed to refer to the same file at
+   * all times, across overwrites, etc.
+   * @param fileId File ID.
+   * @return The internal ID-based path.
+   */
+  public static Path makePathFromFileId(long fileId) {
+    StringBuilder sb = new StringBuilder(INODE_PATH_MAX_LENGTH);
+    sb.append(Path.SEPARATOR).append(HdfsConstants.DOT_RESERVED_STRING)
+      .append(Path.SEPARATOR).append(HdfsConstants.DOT_INODES_STRING)
+      .append(Path.SEPARATOR).append(fileId);
+    return new Path(sb.toString());
+  }
+
 }

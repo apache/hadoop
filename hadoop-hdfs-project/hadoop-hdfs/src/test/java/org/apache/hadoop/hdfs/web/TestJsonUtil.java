@@ -23,7 +23,6 @@ import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -52,6 +51,10 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Lists;
 
 public class TestJsonUtil {
+
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(Map.class);
+
   static FileStatus toFileStatus(HdfsFileStatus f, String parent) {
     return new FileStatus(f.getLen(), f.isDirectory(), f.getReplication(),
         f.getBlockSize(), f.getModificationTime(), f.getAccessTime(),
@@ -66,19 +69,26 @@ public class TestJsonUtil {
   public void testHdfsFileStatus() throws IOException {
     final long now = Time.now();
     final String parent = "/dir";
-    final HdfsFileStatus status = new HdfsFileStatus(1001L, false, 3, 1L << 26,
-        now, now + 10, new FsPermission((short) 0644),
-        EnumSet.noneOf(HdfsFileStatus.Flags.class), "user", "group",
-        DFSUtil.string2Bytes("bar"), DFSUtil.string2Bytes("foo"),
-        HdfsConstants.GRANDFATHER_INODE_ID, 0, null, (byte) 0, null);
+    final HdfsFileStatus status = new HdfsFileStatus.Builder()
+        .length(1001L)
+        .replication(3)
+        .blocksize(1L << 26)
+        .mtime(now)
+        .atime(now + 10)
+        .perm(new FsPermission((short) 0644))
+        .owner("user")
+        .group("group")
+        .symlink(DFSUtil.string2Bytes("bar"))
+        .path(DFSUtil.string2Bytes("foo"))
+        .fileId(HdfsConstants.GRANDFATHER_INODE_ID)
+        .build();
     final FileStatus fstatus = toFileStatus(status, parent);
     System.out.println("status  = " + status);
     System.out.println("fstatus = " + fstatus);
     final String json = JsonUtil.toJsonString(status, true);
     System.out.println("json    = " + json.replace(",", ",\n  "));
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
     final HdfsFileStatus s2 =
-        JsonUtilClient.toFileStatus((Map<?, ?>) reader.readValue(json), true);
+        JsonUtilClient.toFileStatus((Map<?, ?>) READER.readValue(json), true);
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
@@ -164,8 +174,7 @@ public class TestJsonUtil {
   public void testToAclStatus() throws IOException {
     String jsonString =
         "{\"AclStatus\":{\"entries\":[\"user::rwx\",\"user:user1:rw-\",\"group::rw-\",\"other::r-x\"],\"group\":\"supergroup\",\"owner\":\"testuser\",\"stickyBit\":false}}";
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
-    Map<?, ?> json = reader.readValue(jsonString);
+    Map<?, ?> json = READER.readValue(jsonString);
 
     List<AclEntry> aclSpec =
         Lists.newArrayList(aclEntry(ACCESS, USER, ALL),
@@ -224,8 +233,7 @@ public class TestJsonUtil {
     String jsonString = 
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
-    Map<?, ?> json = reader.readValue(jsonString);
+    Map<?, ?> json = READER.readValue(jsonString);
     XAttr xAttr1 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
         setName("a1").setValue(XAttrCodec.decodeValue("0x313233")).build();
     XAttr xAttr2 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
@@ -250,8 +258,7 @@ public class TestJsonUtil {
     String jsonString = 
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
-    ObjectReader reader = new ObjectMapper().readerFor(Map.class);
-    Map<?, ?> json = reader.readValue(jsonString);
+    Map<?, ?> json = READER.readValue(jsonString);
 
     // Get xattr: user.a2
     byte[] value = JsonUtilClient.getXAttr(json, "user.a2");

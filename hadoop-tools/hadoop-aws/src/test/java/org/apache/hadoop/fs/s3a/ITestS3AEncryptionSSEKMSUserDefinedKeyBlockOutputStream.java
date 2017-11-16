@@ -39,9 +39,7 @@ public class ITestS3AEncryptionSSEKMSUserDefinedKeyBlockOutputStream
       skip(Constants.SERVER_SIDE_ENCRYPTION_KEY+ " is not set for " +
           S3AEncryptionMethods.SSE_KMS.getMethod());
     }
-    conf.setBoolean(Constants.FAST_UPLOAD, true);
-    conf.set(Constants.FAST_UPLOAD_BUFFER,
-        Constants.FAST_UPLOAD_BYTEBUFFER);
+    conf.set(Constants.FAST_UPLOAD_BUFFER, Constants.FAST_UPLOAD_BYTEBUFFER);
     return conf;
   }
 

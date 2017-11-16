@@ -69,7 +69,7 @@ Architecture
 
     `REPLICATION` is a special policy. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
 
-    `REPLICATION` policy is always enabled. For other built-in policies, unless they are configured in `dfs.namenode.ec.policies.enabled` property, otherwise they are disabled by default.
+    `REPLICATION` policy is always enabled. For other built-in policies, they are disabled by default.
 
     Similar to HDFS storage policies, erasure coding policies are set on a directory. When a file is created, it inherits the EC policy of its nearest ancestor directory.
 
@@ -110,11 +110,8 @@ Deployment
 
 ### Configuration keys
 
-  The set of enabled erasure coding policies can be configured on the NameNode via `dfs.namenode.ec.policies.enabled` configuration. This restricts
-  what EC policies can be set by clients. It does not affect the behavior of already set file or directory-level EC policies.
-
-  By default, all built-in erasure coding policies are disabled. Typically, the cluster administrator will enable set of policies by including them
-  in the `dfs.namenode.ec.policies.enabled` configuration based on the size of the cluster and the desired fault-tolerance properties. For instance,
+  By default, all built-in erasure coding policies are disabled, except the one defined in `dfs.namenode.ec.system.default.policy` which is enabled by default.
+  The cluster administrator can enable set of policies through `hdfs ec [-enablePolicy -policy <policyName>]` command based on the size of the cluster and the desired fault-tolerance properties. For instance,
   for a cluster with 9 racks, a policy like `RS-10-4-1024k` will not preserve rack-level fault-tolerance, and `RS-6-3-1024k` or `RS-3-2-1024k` might
   be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-1024k` would still be appropriate as long as
   there are at least 14 DataNodes in the cluster.
@@ -137,13 +134,19 @@ Deployment
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 
   1. `dfs.datanode.ec.reconstruction.stripedread.timeout.millis` - Timeout for striped reads. Default value is 5000 ms.
-  1. `dfs.datanode.ec.reconstruction.stripedread.threads` - Number of concurrent reader threads. Default value is 20 threads.
   1. `dfs.datanode.ec.reconstruction.stripedread.buffer.size` - Buffer size for reader service. Default value is 64KB.
-  1. `dfs.datanode.ec.reconstruction.stripedblock.threads.size` - Number of threads used by the Datanode for background reconstruction work. Default value is 8 threads.
+  1. `dfs.datanode.ec.reconstruction.threads` - Number of threads used by the Datanode for background reconstruction work. Default value is 8 threads.
+  1. `dfs.datanode.ec.reconstruction.xmits.weight` - Relative weight of xmits used by EC background recovery task comparing to replicated block recovery. Default value is 0.5.
+  It sets to `0` to disable calculate weights for EC recovery tasks, that is, EC task always has `1` xmits.
+  The xmits of an erasure coding recovery task is calculated as the maximum value between the number of read streams and the number of write streams. For example, if an EC recovery
+  task need to read from 6 nodes and write to 2 nodes, it has xmits of `max(6, 2) * 0.5 = 3`. Recovery task for replicated file always counts
+  as `1` xmit. NameNode utilizes `dfs.namenode.replication.max-streams` minus the total `xmitsInProgress` on the DataNode that combines of the xmits from
+  replicated file and EC files, to schedule recovery tasks to this DataNode.
 
 ### Enable Intel ISA-L
 
   HDFS native implementation of default RS codec leverages Intel ISA-L library to improve the encoding and decoding calculation. To enable and use Intel ISA-L, there are three steps.
+
   1. Build ISA-L library. Please refer to the official site "https://github.com/01org/isa-l/" for detail information.
   2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop" in (BUILDING.txt) in the source code.
   3. Use `-Dbundle.isal` to copy the contents of the `isal.lib` directory into the final tar file. Deploy Hadoop with the tar file. Make sure ISA-L is available on HDFS clients and DataNodes.
@@ -196,7 +199,7 @@ Below are the details about each command.
 
  *  `[-addPolicies -policyFile <file>]`
 
-     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB.
+     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB. Currently HDFS allows the user to add 64 policies in total, and the added policy ID is in range of 64 to 127. Adding policy will fail if there are already 64 policies added.
 
  *  `[-listCodecs]`
 

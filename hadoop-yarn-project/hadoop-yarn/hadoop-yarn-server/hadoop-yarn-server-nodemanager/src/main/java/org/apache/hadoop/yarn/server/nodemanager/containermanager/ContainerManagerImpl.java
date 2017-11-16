@@ -20,11 +20,14 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -91,6 +94,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Containe
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.FlowContextProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
@@ -144,7 +148,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEventType;
 
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.UpdateContainerSchedulerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
@@ -247,8 +250,10 @@ public class ContainerManagerImpl extends CompositeService implements
     this.containerScheduler = createContainerScheduler(context);
     addService(containerScheduler);
 
+    AuxiliaryLocalPathHandler auxiliaryLocalPathHandler =
+        new AuxiliaryLocalPathHandlerImpl(dirsHandler);
     // Start configurable services
-    auxiliaryServices = new AuxServices();
+    auxiliaryServices = new AuxServices(auxiliaryLocalPathHandler);
     auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
@@ -367,6 +372,13 @@ public class ContainerManagerImpl extends CompositeService implements
         }
         recoverContainer(rcs);
       }
+
+      //Dispatching the RECOVERY_COMPLETED event through the dispatcher
+      //so that all the paused, scheduled and queued containers will
+      //be scheduled for execution on availability of resources.
+      dispatcher.getEventHandler().handle(
+          new ContainerSchedulerEvent(null,
+              ContainerSchedulerEventType.RECOVERY_COMPLETED));
     } else {
       LOG.info("Not a recoverable state store. Nothing to recover.");
     }
@@ -425,7 +437,7 @@ public class ContainerManagerImpl extends CompositeService implements
       throws IOException {
     StartContainerRequest req = rcs.getStartRequest();
     ContainerLaunchContext launchContext = req.getContainerLaunchContext();
-    ContainerTokenIdentifier token = null;
+    ContainerTokenIdentifier token;
     if(rcs.getCapability() != null) {
       ContainerTokenIdentifier originalToken =
           BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());
@@ -437,7 +449,8 @@ public class ContainerManagerImpl extends CompositeService implements
           originalToken.getCreationTime(),
           originalToken.getLogAggregationContext(),
           originalToken.getNodeLabelExpression(),
-          originalToken.getContainerType(), originalToken.getExecutionType());
+          originalToken.getContainerType(), originalToken.getExecutionType(),
+          originalToken.getAllocationRequestId());
 
     } else {
       token = BuilderUtils.newContainerTokenIdentifier(req.getContainerToken());
@@ -480,6 +493,7 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = new ContainerImpl(getConfig(), dispatcher,
         launchContext, credentials, metrics, token, context, rcs);
     context.getContainers().put(token.getContainerID(), container);
+    containerScheduler.recoverActiveContainer(container, rcs.getStatus());
     app.handle(new ApplicationContainerInitEvent(container));
   }
 
@@ -1251,29 +1265,6 @@ public class ContainerManagerImpl extends CompositeService implements
           + " [" + containerTokenIdentifier.getVersion() + "]");
     }
 
-    // Check container state
-    org.apache.hadoop.yarn.server.nodemanager.
-        containermanager.container.ContainerState currentState =
-        container.getContainerState();
-    EnumSet<org.apache.hadoop.yarn.server.nodemanager.containermanager
-        .container.ContainerState> allowedStates = EnumSet.of(
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-            .ContainerState.RUNNING,
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-            .ContainerState.SCHEDULED,
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-            .ContainerState.LOCALIZING,
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-            .ContainerState.REINITIALIZING,
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container
-            .ContainerState.RELAUNCHING);
-    if (!allowedStates.contains(currentState)) {
-      throw RPCUtil.getRemoteException("Container " + containerId.toString()
-          + " is in " + currentState.name() + " state."
-          + " Resource can only be changed when a container is in"
-          + " RUNNING or SCHEDULED state");
-    }
-
     // Check validity of the target resource.
     Resource currentResource = container.getResource();
     ExecutionType currentExecType =
@@ -1313,11 +1304,11 @@ public class ContainerManagerImpl extends CompositeService implements
     this.readLock.lock();
     try {
       if (!serviceStopped) {
-        // Dispatch message to ContainerScheduler to actually
+        // Dispatch message to Container to actually
         // make the change.
-        dispatcher.getEventHandler().handle(new UpdateContainerSchedulerEvent(
-            container, containerTokenIdentifier, isResourceChange,
-            isExecTypeUpdate, isIncrease));
+        dispatcher.getEventHandler().handle(new UpdateContainerTokenEvent(
+            container.getContainerId(), containerTokenIdentifier,
+            isResourceChange, isExecTypeUpdate, isIncrease));
       } else {
         throw new YarnException(
             "Unable to change container resource as the NodeManager is "
@@ -1537,6 +1528,35 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
+  /**
+   * Implements AuxiliaryLocalPathHandler.
+   * It links NodeManager's LocalDirsHandlerService to the Auxiliary Services
+   */
+  static class AuxiliaryLocalPathHandlerImpl
+      implements AuxiliaryLocalPathHandler {
+    private LocalDirsHandlerService dirhandlerService;
+    AuxiliaryLocalPathHandlerImpl(
+        LocalDirsHandlerService dirhandlerService) {
+      this.dirhandlerService = dirhandlerService;
+    }
+
+    @Override
+    public Path getLocalPathForRead(String path) throws IOException {
+      return dirhandlerService.getLocalPathForRead(path);
+    }
+
+    @Override
+    public Path getLocalPathForWrite(String path) throws IOException {
+      return dirhandlerService.getLocalPathForWrite(path);
+    }
+
+    @Override
+    public Path getLocalPathForWrite(String path, long size)
+        throws IOException {
+      return dirhandlerService.getLocalPathForWrite(path, size, false);
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public void handle(ContainerManagerEvent event) {
@@ -1739,7 +1759,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * @param containerId Container Id.
    * @param autoCommit Auto Commit flag.
    * @param reInitLaunchContext Target Launch Context.
-   * @throws YarnException Yarn Exception.
+   * @throws YarnException YARN Exception.
    */
   public void reInitializeContainer(ContainerId containerId,
       ContainerLaunchContext reInitLaunchContext, boolean autoCommit)
@@ -1766,7 +1786,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * Rollback the last reInitialization, if possible.
    * @param containerId Container ID.
    * @return Rollback Response.
-   * @throws YarnException Yarn Exception.
+   * @throws YarnException YARN Exception.
    */
   @Override
   public RollbackResponse rollbackLastReInitialization(ContainerId containerId)
@@ -1787,7 +1807,7 @@ public class ContainerManagerImpl extends CompositeService implements
    * Commit last reInitialization after which no rollback will be possible.
    * @param containerId Container ID.
    * @return Commit Response.
-   * @throws YarnException Yarn Exception.
+   * @throws YarnException YARN Exception.
    */
   @Override
   public CommitResponse commitLastReInitialization(ContainerId containerId)
@@ -1816,10 +1836,14 @@ public class ContainerManagerImpl extends CompositeService implements
     if (container == null) {
       throw new YarnException("Specified " + containerId + " does not exist!");
     }
-    if (!container.isRunning() || container.isReInitializing()) {
+    if (!container.isRunning() || container.isReInitializing()
+        || container.getContainerTokenIdentifier().getExecutionType()
+        == ExecutionType.OPPORTUNISTIC) {
       throw new YarnException("Cannot perform " + op + " on [" + containerId
           + "]. Current state is [" + container.getContainerState() + ", " +
-          "isReInitializing=" + container.isReInitializing() + "].");
+          "isReInitializing=" + container.isReInitializing() + "]. Container"
+          + " Execution Type is [" + container.getContainerTokenIdentifier()
+          .getExecutionType() + "].");
     }
     return container;
   }

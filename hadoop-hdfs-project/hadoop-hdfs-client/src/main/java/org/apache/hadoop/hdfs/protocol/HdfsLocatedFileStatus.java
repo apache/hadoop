@@ -78,6 +78,17 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
     return locations;
   }
 
+  /**
+   * This function is used to transform the underlying HDFS LocatedBlocks to
+   * BlockLocations.
+   *
+   * The returned BlockLocation will have different formats for replicated
+   * and erasure coded file.
+   * Please refer to
+   * {@link org.apache.hadoop.fs.FileSystem#getFileBlockLocations
+   * (FileStatus, long, long)}
+   * for examples.
+   */
   public final LocatedFileStatus makeQualifiedLocated(URI defaultUri,
       Path path) {
     makeQualified(defaultUri, path);
@@ -96,5 +107,4 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
     // satisfy findbugs
     return super.hashCode();
   }
-
 }

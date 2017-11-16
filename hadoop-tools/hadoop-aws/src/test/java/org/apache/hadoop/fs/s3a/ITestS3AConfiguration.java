@@ -559,6 +559,16 @@ public class ITestS3AConfiguration {
   }
 
   @Test
+  public void testClearBucketOption() throws Throwable {
+    Configuration config = new Configuration();
+    config.set(USER_AGENT_PREFIX, "base");
+    setBucketOption(config, "bucket", USER_AGENT_PREFIX, "overridden");
+    clearBucketOption(config, "bucket", USER_AGENT_PREFIX);
+    Configuration updated = propagateBucketOptions(config, "c");
+    assertOptionEquals(updated, USER_AGENT_PREFIX, "base");
+  }
+
+  @Test
   public void testBucketConfigurationSkipsUnmodifiable() throws Throwable {
     Configuration config = new Configuration(false);
     String impl = "fs.s3a.impl";

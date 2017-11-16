@@ -390,10 +390,17 @@ message ErasureCodingPolicyProto {
   optional ErasureCodingPolicyState state = 5 [default = ENABLED];
 }
 
-message AddECPolicyResponseProto {
+message AddErasureCodingPolicyResponseProto {
   required ErasureCodingPolicyProto policy = 1;
   required bool succeed = 2;
   optional string errorMsg = 3;
+}
+
+/**
+ * Placeholder type for consistent HDFS operations.
+ */
+message HdfsPathHandleProto {
+  optional uint64 inodeId = 1;
 }
 
 /**
@@ -410,6 +417,7 @@ message HdfsFileStatusProto {
     HAS_ACL   = 0x01; // has ACLs
     HAS_CRYPT = 0x02; // encrypted
     HAS_EC    = 0x04; // erasure coded
+    SNAPSHOT_ENABLED    = 0x08; // SNAPSHOT ENABLED
   }
   required FileType fileType = 1;
   required bytes path = 2;          // local name of inode encoded java UTF8

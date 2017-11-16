@@ -21,11 +21,12 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import org.junit.Test;
 
@@ -34,12 +35,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Diff;
 
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test S3Guard related CLI commands against a LocalMetadataStore.
  */
 public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
+
+  private static final String LOCAL_METADATA = "local://metadata";
 
   @Override
   protected MetadataStore newMetadataStore() {
@@ -65,10 +69,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
 
     S3GuardTool.Import cmd = new S3GuardTool.Import(fs.getConf());
     cmd.setStore(ms);
-
-    expectSuccess("Import command did not exit successfully - see output",
-        cmd,
-        "import", parent.toString());
+    exec(cmd, "import", parent.toString());
 
     DirListingMetadata children =
         ms.listChildren(dir);
@@ -80,7 +81,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   }
 
   @Test
-  public void testDiffCommand() throws IOException {
+  public void testDiffCommand() throws Exception {
     S3AFileSystem fs = getFileSystem();
     MetadataStore ms = getMetadataStore();
     Set<Path> filesOnS3 = new HashSet<>(); // files on S3.
@@ -108,13 +109,10 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
     }
 
     ByteArrayOutputStream buf = new ByteArrayOutputStream();
-    PrintStream out = new PrintStream(buf);
     Diff cmd = new Diff(fs.getConf());
     cmd.setStore(ms);
-    assertEquals("Diff command did not exit successfully - see output", SUCCESS,
-        cmd.run(new String[]{"diff", "-meta", "local://metadata",
-            testPath.toString()}, out));
-    out.close();
+    exec(cmd, buf, "diff", "-meta", LOCAL_METADATA,
+            testPath.toString());
 
     Set<Path> actualOnS3 = new HashSet<>();
     Set<Path> actualOnMS = new HashSet<>();
@@ -140,10 +138,128 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         }
       }
     }
-    String actualOut = out.toString();
+    String actualOut = buf.toString();
     assertEquals("Mismatched metadata store outputs: " + actualOut,
         filesOnMS, actualOnMS);
     assertEquals("Mismatched s3 outputs: " + actualOut, filesOnS3, actualOnS3);
     assertFalse("Diff contained duplicates", duplicates);
   }
+
+  @Test
+  public void testDestroyBucketExistsButNoTable() throws Throwable {
+    run(Destroy.NAME,
+        "-meta", LOCAL_METADATA,
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testImportNoFilesystem() throws Throwable {
+    final Import importer =
+        new S3GuardTool.Import(getConfiguration());
+    importer.setStore(getMetadataStore());
+    intercept(IOException.class,
+        new Callable<Integer>() {
+          @Override
+          public Integer call() throws Exception {
+            return importer.run(
+                new String[]{
+                    "import",
+                    "-meta", LOCAL_METADATA,
+                    S3A_THIS_BUCKET_DOES_NOT_EXIST
+                });
+          }
+        });
+  }
+
+  @Test
+  public void testInfoBucketAndRegionNoFS() throws Throwable {
+    intercept(FileNotFoundException.class,
+        new Callable<Integer>() {
+          @Override
+          public Integer call() throws Exception {
+            return run(BucketInfo.NAME, "-meta",
+                LOCAL_METADATA, "-region",
+                "any-region", S3A_THIS_BUCKET_DOES_NOT_EXIST);
+          }
+        });
+  }
+
+  @Test
+  public void testInitNegativeRead() throws Throwable {
+    runToFailure(INVALID_ARGUMENT,
+        Init.NAME, "-meta", LOCAL_METADATA, "-region",
+        "eu-west-1",
+        READ_FLAG, "-10");
+  }
+
+  @Test
+  public void testInit() throws Throwable {
+    run(Init.NAME,
+        "-meta", LOCAL_METADATA,
+        "-region", "us-west-1");
+  }
+
+  @Test
+  public void testInitTwice() throws Throwable {
+    run(Init.NAME,
+        "-meta", LOCAL_METADATA,
+        "-region", "us-west-1");
+    run(Init.NAME,
+        "-meta", LOCAL_METADATA,
+        "-region", "us-west-1");
+  }
+
+  @Test
+  public void testLandsatBucketUnguarded() throws Throwable {
+    run(BucketInfo.NAME,
+        "-" + BucketInfo.UNGUARDED_FLAG,
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketRequireGuarded() throws Throwable {
+    runToFailure(E_BAD_STATE,
+        BucketInfo.NAME,
+        "-" + BucketInfo.GUARDED_FLAG,
+        ITestS3GuardToolLocal.this.getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketRequireUnencrypted() throws Throwable {
+    run(BucketInfo.NAME,
+        "-" + BucketInfo.ENCRYPTION_FLAG, "none",
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketRequireEncrypted() throws Throwable {
+    runToFailure(E_BAD_STATE,
+        BucketInfo.NAME,
+        "-" + BucketInfo.ENCRYPTION_FLAG,
+        "AES256", ITestS3GuardToolLocal.this.getLandsatCSVFile());
+  }
+
+  @Test
+  public void testStoreInfo() throws Throwable {
+    S3GuardTool.BucketInfo cmd = new S3GuardTool.BucketInfo(
+        getFileSystem().getConf());
+    cmd.setStore(getMetadataStore());
+    String output = exec(cmd, cmd.getName(),
+        "-" + S3GuardTool.BucketInfo.GUARDED_FLAG,
+        getFileSystem().getUri().toString());
+    LOG.info("Exec output=\n{}", output);
+  }
+
+  @Test
+  public void testSetCapacity() throws Throwable {
+    S3GuardTool cmd = new S3GuardTool.SetCapacity(getFileSystem().getConf());
+    cmd.setStore(getMetadataStore());
+    String output = exec(cmd, cmd.getName(),
+        "-" + READ_FLAG, "100",
+        "-" + WRITE_FLAG, "100",
+        getFileSystem().getUri().toString());
+    LOG.info("Exec output=\n{}", output);
+  }
+
+
 }

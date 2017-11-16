@@ -22,9 +22,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -52,7 +51,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <code>AMRMClientAsync</code> handles communication with the ResourceManager
@@ -107,7 +107,8 @@ import com.google.common.base.Supplier;
 @Stable
 public abstract class AMRMClientAsync<T extends ContainerRequest> 
 extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(AMRMClientAsync.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(AMRMClientAsync.class);
   
   protected final AMRMClient<T> client;
   protected final CallbackHandler handler;
@@ -375,8 +376,8 @@ extends AbstractService {
 
   /**
    * Wait for <code>check</code> to return true for each 1000 ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int)}
-   * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int)}
+   * and {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check the condition for which it should wait
    */
   public void waitFor(Supplier<Boolean> check) throws InterruptedException {
@@ -386,7 +387,7 @@ extends AbstractService {
   /**
    * Wait for <code>check</code> to return true for each
    * <code>checkEveryMillis</code> ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check user defined checker
    * @param checkEveryMillis interval to call <code>check</code>
    */

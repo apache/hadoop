@@ -66,9 +66,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Times;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.yarn.util.StringHelper;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -188,7 +190,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
           .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
           .add("preemptedResources", metrics.getResourcePreempted())
-          .add("applicationType", app.getApplicationType());
+          .add("applicationType", app.getApplicationType())
+          .add("resourceSeconds", StringHelper
+              .getResourceSecondsString(metrics.getResourceSecondsMap()))
+          .add("preemptedResourceSeconds", StringHelper
+              .getResourceSecondsString(
+                  metrics.getPreemptedResourceSecondsMap()));
       return summary;
     }
 
@@ -571,17 +578,40 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   }
 
   // transaction method.
-  public void updateApplicationTimeout(RMApp app,
+  public Map<ApplicationTimeoutType, String> updateApplicationTimeout(RMApp app,
       Map<ApplicationTimeoutType, String> newTimeoutInISO8601Format)
       throws YarnException {
     ApplicationId applicationId = app.getApplicationId();
     synchronized (applicationId) {
       if (app.isAppInCompletedStates()) {
-        return;
+        return newTimeoutInISO8601Format;
       }
 
       Map<ApplicationTimeoutType, Long> newExpireTime = RMServerUtils
           .validateISO8601AndConvertToLocalTimeEpoch(newTimeoutInISO8601Format);
+
+      // validation is only for lifetime
+      Long updatedlifetimeInMillis =
+          newExpireTime.get(ApplicationTimeoutType.LIFETIME);
+      if (updatedlifetimeInMillis != null) {
+        long queueMaxLifetimeInSec =
+            scheduler.getMaximumApplicationLifetime(app.getQueue());
+
+        if (queueMaxLifetimeInSec > 0) {
+          if (updatedlifetimeInMillis > (app.getSubmitTime()
+              + queueMaxLifetimeInSec * 1000)) {
+            updatedlifetimeInMillis =
+                app.getSubmitTime() + queueMaxLifetimeInSec * 1000;
+            // cut off to maximum queue lifetime if update lifetime is exceeding
+            // queue lifetime.
+            newExpireTime.put(ApplicationTimeoutType.LIFETIME,
+                updatedlifetimeInMillis);
+
+            newTimeoutInISO8601Format.put(ApplicationTimeoutType.LIFETIME,
+                Times.formatISO8601(updatedlifetimeInMillis.longValue()));
+          }
+        }
+      }
 
       SettableFuture<Object> future = SettableFuture.create();
 
@@ -605,6 +635,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
       // update in-memory
       ((RMAppImpl) app).updateApplicationTimeout(newExpireTime);
+
+      return newTimeoutInISO8601Format;
     }
   }
 

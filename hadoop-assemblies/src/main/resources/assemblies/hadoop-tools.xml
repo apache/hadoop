@@ -175,6 +175,17 @@
       <outputDirectory>/share/hadoop/${hadoop.component}/sls</outputDirectory>
     </fileSet>
     <fileSet>
+      <directory>../hadoop-resourceestimator/target</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+      <includes>
+        <include>*-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>../hadoop-resourceestimator/target/hadoop-resourceestimator-${project.version}/resourceestimator</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/resourceestimator</outputDirectory>
+    </fileSet>
+    <fileSet>
       <directory>../hadoop-aws/src/main/bin</directory>
       <outputDirectory>/bin</outputDirectory>
       <fileMode>0755</fileMode>

@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.collect.ConcurrentHashMultiset;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang.time.FastDateFormat;
@@ -55,11 +54,13 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
@@ -73,14 +74,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRese
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerUpdatesAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
-
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SchedulingPlacementSet;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -89,6 +87,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ConcurrentHashMultiset;
 
 /**
  * Represents an application attempt from the viewpoint of the scheduler.
@@ -107,9 +106,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   private static final long MEM_AGGREGATE_ALLOCATION_CACHE_MSECS = 3000;
   protected long lastMemoryAggregateAllocationUpdateTime = 0;
-  private long lastMemorySeconds = 0;
-  private long lastVcoreSeconds = 0;
-
+  private Map<String, Long> lastResourceSecondsMap = new HashMap<>();
   protected final AppSchedulingInfo appSchedulingInfo;
   protected ApplicationAttemptId attemptId;
   protected Map<ContainerId, RMContainer> liveContainers =
@@ -316,9 +313,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       String resourceName) {
     try {
       readLock.lock();
-      SchedulingPlacementSet ps = appSchedulingInfo.getSchedulingPlacementSet(
+      AppPlacementAllocator ap = appSchedulingInfo.getAppPlacementAllocator(
           schedulerKey);
-      return ps == null ? 0 : ps.getOutstandingAsksCount(resourceName);
+      return ap == null ? 0 : ap.getOutstandingAsksCount(resourceName);
     } finally {
       readLock.unlock();
     }
@@ -617,13 +614,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       try {
         readLock.lock();
         for (SchedulerRequestKey schedulerKey : getSchedulerKeys()) {
-          SchedulingPlacementSet ps = getSchedulingPlacementSet(schedulerKey);
-          if (ps != null &&
-              ps.getOutstandingAsksCount(ResourceRequest.ANY) > 0) {
+          AppPlacementAllocator ap = getAppPlacementAllocator(schedulerKey);
+          if (ap != null &&
+              ap.getOutstandingAsksCount(ResourceRequest.ANY) > 0) {
             LOG.debug("showRequests:" + " application=" + getApplicationId()
                 + " headRoom=" + getHeadroom() + " currentConsumption="
                 + attemptResourceUsage.getUsed().getMemorySize());
-            ps.showRequests();
+            ap.showRequests();
           }
         }
       } finally {
@@ -655,7 +652,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
               container.getNodeId(), getUser(), container.getResource(),
               container.getPriority(), rmContainer.getCreationTime(),
               this.logAggregationContext, rmContainer.getNodeLabelExpression(),
-              containerType, container.getExecutionType()));
+              containerType, container.getExecutionType(),
+              container.getAllocationRequestId()));
       updateNMToken(container);
     } catch (IllegalArgumentException e) {
       // DNS might be down, skip returning this container.
@@ -690,7 +688,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       if (autoUpdate) {
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMNodeUpdateContainerEvent(rmContainer.getNodeId(),
-                Collections.singletonList(rmContainer.getContainer())));
+                Collections.singletonMap(
+                    rmContainer.getContainer(), updateType)));
       } else {
         rmContainer.handle(new RMContainerUpdatesAcquiredEvent(
             rmContainer.getContainerId(),
@@ -1001,22 +1000,23 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     // recently.
     if ((currentTimeMillis - lastMemoryAggregateAllocationUpdateTime)
         > MEM_AGGREGATE_ALLOCATION_CACHE_MSECS) {
-      long memorySeconds = 0;
-      long vcoreSeconds = 0;
+      Map<String, Long> resourceSecondsMap = new HashMap<>();
       for (RMContainer rmContainer : this.liveContainers.values()) {
         long usedMillis = currentTimeMillis - rmContainer.getCreationTime();
         Resource resource = rmContainer.getContainer().getResource();
-        memorySeconds += resource.getMemorySize() * usedMillis /
-            DateUtils.MILLIS_PER_SECOND;
-        vcoreSeconds += resource.getVirtualCores() * usedMillis  
-            / DateUtils.MILLIS_PER_SECOND;
+        for (ResourceInformation entry : resource.getResources()) {
+          long value = RMServerUtils
+              .getOrDefault(resourceSecondsMap, entry.getName(), 0L);
+          value += entry.getValue() * usedMillis
+              / DateUtils.MILLIS_PER_SECOND;
+          resourceSecondsMap.put(entry.getName(), value);
+        }
       }
 
       lastMemoryAggregateAllocationUpdateTime = currentTimeMillis;
-      lastMemorySeconds = memorySeconds;
-      lastVcoreSeconds = vcoreSeconds;
+      lastResourceSecondsMap = resourceSecondsMap;
     }
-    return new AggregateAppResourceUsage(lastMemorySeconds, lastVcoreSeconds);
+    return new AggregateAppResourceUsage(lastResourceSecondsMap);
   }
 
   public ApplicationResourceUsageReport getResourceUsageReport() {
@@ -1031,6 +1031,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       Resource cluster = rmContext.getScheduler().getClusterResource();
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();
+      Map<String, Long> preemptedResourceSecondsMaps = new HashMap<>();
+      preemptedResourceSecondsMaps
+          .put(ResourceInformation.MEMORY_MB.getName(), 0L);
+      preemptedResourceSecondsMaps
+          .put(ResourceInformation.VCORES.getName(), 0L);
       float queueUsagePerc = 0.0f;
       float clusterUsagePerc = 0.0f;
       if (!calc.isInvalidDivisor(cluster)) {
@@ -1040,15 +1045,15 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           queueUsagePerc = calc.divide(cluster, usedResourceClone,
               Resources.multiply(cluster, queueCapacityPerc)) * 100;
         }
-        clusterUsagePerc = calc.divide(cluster, usedResourceClone, cluster)
-            * 100;
+        clusterUsagePerc =
+            calc.divide(cluster, usedResourceClone, cluster) * 100;
       }
-      return ApplicationResourceUsageReport.newInstance(liveContainers.size(),
-          reservedContainers.size(), usedResourceClone, reservedResourceClone,
-          Resources.add(usedResourceClone, reservedResourceClone),
-          runningResourceUsage.getMemorySeconds(),
-          runningResourceUsage.getVcoreSeconds(), queueUsagePerc,
-          clusterUsagePerc, 0, 0);
+      return ApplicationResourceUsageReport
+          .newInstance(liveContainers.size(), reservedContainers.size(),
+              usedResourceClone, reservedResourceClone,
+              Resources.add(usedResourceClone, reservedResourceClone),
+              runningResourceUsage.getResourceUsageSecondsMap(), queueUsagePerc,
+              clusterUsagePerc, preemptedResourceSecondsMaps);
     } finally {
       writeLock.unlock();
     }
@@ -1131,9 +1136,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       }
       LOG.info("SchedulerAttempt " + getApplicationAttemptId()
           + " is recovering container " + rmContainer.getContainerId());
-      liveContainers.put(rmContainer.getContainerId(), rmContainer);
-      attemptResourceUsage.incUsed(node.getPartition(),
-          rmContainer.getContainer().getResource());
+      addRMContainer(rmContainer.getContainerId(), rmContainer);
+      if (rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
+        attemptResourceUsage.incUsed(node.getPartition(),
+            rmContainer.getContainer().getResource());
+      }
 
       // resourceLimit: updated when LeafQueue#recoverContainer#allocateResource
       // is called.
@@ -1324,14 +1331,14 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     this.isAttemptRecovering = isRecovering;
   }
 
-  public <N extends SchedulerNode> SchedulingPlacementSet<N> getSchedulingPlacementSet(
+  public <N extends SchedulerNode> AppPlacementAllocator<N> getAppPlacementAllocator(
       SchedulerRequestKey schedulerRequestKey) {
-    return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey);
+    return appSchedulingInfo.getAppPlacementAllocator(schedulerRequestKey);
   }
 
   public Map<String, ResourceRequest> getResourceRequests(
       SchedulerRequestKey schedulerRequestKey) {
-    return appSchedulingInfo.getSchedulingPlacementSet(schedulerRequestKey)
+    return appSchedulingInfo.getAppPlacementAllocator(schedulerRequestKey)
         .getResourceRequests();
   }
 

@@ -71,7 +71,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -109,6 +108,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -117,8 +117,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
-import org.apache.hadoop.hdfs.protocol.ECBlockGroupsStats;
-import org.apache.hadoop.hdfs.protocol.BlocksStats;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -147,6 +149,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -164,6 +167,8 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.tools.JMXGet;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
@@ -289,12 +294,26 @@ public class DFSTestUtil {
     Whitebox.setInternalState(fsn.getFSDirectory(), "editLog", newLog);
   }
 
-  public static void enableAllECPolicies(Configuration conf) {
-    // Enable all the available EC policies
-    String policies = SystemErasureCodingPolicies.getPolicies().stream()
-        .map(ErasureCodingPolicy::getName)
-        .collect(Collectors.joining(","));
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY, policies);
+  public static void enableAllECPolicies(DistributedFileSystem fs)
+      throws IOException {
+    // Enable all available EC policies
+    for (ErasureCodingPolicy ecPolicy :
+        SystemErasureCodingPolicies.getPolicies()) {
+      fs.enableErasureCodingPolicy(ecPolicy.getName());
+    }
+  }
+
+  public static ErasureCodingPolicyState getECPolicyState(
+      final ErasureCodingPolicy policy) {
+    final ErasureCodingPolicyInfo[] policyInfos =
+        ErasureCodingPolicyManager.getInstance().getPolicies();
+    for (ErasureCodingPolicyInfo pi : policyInfos) {
+      if (pi.getPolicy().equals(policy)) {
+        return pi.getState();
+      }
+    }
+    throw new IllegalArgumentException("ErasureCodingPolicy <" + policy
+        + "> doesn't exist in the policies:" + Arrays.toString(policyInfos));
   }
 
   /** class MyFile contains enough information to recreate the contents of
@@ -1464,6 +1483,33 @@ public class DFSTestUtil {
         new byte[]{0x37, 0x38, 0x39});
     // OP_REMOVE_XATTR
     filesystem.removeXAttr(pathConcatTarget, "user.a2");
+
+    // OP_ADD_ERASURE_CODING_POLICY
+    ErasureCodingPolicy newPolicy1 =
+        new ErasureCodingPolicy(ErasureCodeConstants.RS_3_2_SCHEMA, 8 * 1024);
+    ErasureCodingPolicy[] policyArray = new ErasureCodingPolicy[] {newPolicy1};
+    AddErasureCodingPolicyResponse[] responses =
+        filesystem.addErasureCodingPolicies(policyArray);
+    newPolicy1 = responses[0].getPolicy();
+
+    // OP_ADD_ERASURE_CODING_POLICY - policy with extra options
+    Map<String, String> extraOptions = new HashMap<String, String>();
+    extraOptions.put("dummyKey", "dummyValue");
+    ECSchema schema =
+        new ECSchema(ErasureCodeConstants.RS_CODEC_NAME, 6, 10, extraOptions);
+    ErasureCodingPolicy newPolicy2 = new ErasureCodingPolicy(schema, 4 * 1024);
+    policyArray = new ErasureCodingPolicy[] {newPolicy2};
+    responses = filesystem.addErasureCodingPolicies(policyArray);
+    newPolicy2 = responses[0].getPolicy();
+    // OP_ENABLE_ERASURE_CODING_POLICY
+    filesystem.enableErasureCodingPolicy(newPolicy1.getName());
+    filesystem.enableErasureCodingPolicy(newPolicy2.getName());
+    // OP_DISABLE_ERASURE_CODING_POLICY
+    filesystem.disableErasureCodingPolicy(newPolicy1.getName());
+    filesystem.disableErasureCodingPolicy(newPolicy2.getName());
+    // OP_REMOVE_ERASURE_CODING_POLICY
+    filesystem.removeErasureCodingPolicy(newPolicy1.getName());
+    filesystem.removeErasureCodingPolicy(newPolicy2.getName());
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {
@@ -1657,8 +1703,8 @@ public class DFSTestUtil {
 
   /**
    * Verify the aggregated {@link ClientProtocol#getStats()} block counts equal
-   * the sum of {@link ClientProtocol#getBlocksStats()} and
-   * {@link ClientProtocol#getECBlockGroupsStats()}.
+   * the sum of {@link ClientProtocol#getReplicatedBlockStats()} and
+   * {@link ClientProtocol#getECBlockGroupStats()}.
    * @throws Exception
    */
   public static  void verifyClientStats(Configuration conf,
@@ -1667,36 +1713,36 @@ public class DFSTestUtil {
         cluster.getFileSystem(0).getUri(),
         ClientProtocol.class).getProxy();
     long[] aggregatedStats = cluster.getNameNode().getRpcServer().getStats();
-    BlocksStats blocksStats =
-        client.getBlocksStats();
-    ECBlockGroupsStats ecBlockGroupsStats = client.getECBlockGroupsStats();
+    ReplicatedBlockStats replicatedBlockStats =
+        client.getReplicatedBlockStats();
+    ECBlockGroupStats ecBlockGroupStats = client.getECBlockGroupStats();
 
     assertEquals("Under replicated stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
         aggregatedStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX]);
     assertEquals("Low redundancy stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
-        blocksStats.getLowRedundancyBlocksStat() +
-            ecBlockGroupsStats.getLowRedundancyBlockGroupsStat());
+        replicatedBlockStats.getLowRedundancyBlocks() +
+            ecBlockGroupStats.getLowRedundancyBlockGroups());
     assertEquals("Corrupt blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX],
-        blocksStats.getCorruptBlocksStat() +
-            ecBlockGroupsStats.getCorruptBlockGroupsStat());
+        replicatedBlockStats.getCorruptBlocks() +
+            ecBlockGroupStats.getCorruptBlockGroups());
     assertEquals("Missing blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX],
-        blocksStats.getMissingReplicaBlocksStat() +
-            ecBlockGroupsStats.getMissingBlockGroupsStat());
+        replicatedBlockStats.getMissingReplicaBlocks() +
+            ecBlockGroupStats.getMissingBlockGroups());
     assertEquals("Missing blocks with replication factor one not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX],
-        blocksStats.getMissingReplicationOneBlocksStat());
+        replicatedBlockStats.getMissingReplicationOneBlocks());
     assertEquals("Bytes in future blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX],
-        blocksStats.getBytesInFutureBlocksStat() +
-            ecBlockGroupsStats.getBytesInFutureBlockGroupsStat());
+        replicatedBlockStats.getBytesInFutureBlocks() +
+            ecBlockGroupStats.getBytesInFutureBlockGroups());
     assertEquals("Pending deletion blocks stats not matching!",
         aggregatedStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX],
-        blocksStats.getPendingDeletionBlocksStat() +
-            ecBlockGroupsStats.getPendingDeletionBlockGroupsStat());
+        replicatedBlockStats.getPendingDeletionBlocks() +
+            ecBlockGroupStats.getPendingDeletionBlocks());
   }
 
   /**

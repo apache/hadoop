@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
@@ -73,6 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
@@ -100,18 +102,21 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
       RecordFactoryProvider.getRecordFactory(null);
 
   private RMContext rmContext;
+  private ResourceProfilesManager resourceProfilesManager;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
       ApplicationMasterServiceProcessor nextProcessor) {
     this.rmContext = (RMContext)amsContext;
+    this.resourceProfilesManager = rmContext.getResourceProfilesManager();
   }
 
   @Override
   public void registerApplicationMaster(
       ApplicationAttemptId applicationAttemptId,
       RegisterApplicationMasterRequest request,
-      RegisterApplicationMasterResponse response) throws IOException {
+      RegisterApplicationMasterResponse response)
+      throws IOException, YarnException {
 
     RMApp app = getRmContext().getRMApps().get(
         applicationAttemptId.getApplicationId());
@@ -144,6 +149,11 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
           .getTransferredContainers(applicationAttemptId);
       if (!transferredContainers.isEmpty()) {
         response.setContainersFromPreviousAttempts(transferredContainers);
+        // Clear the node set remembered by the secret manager. Necessary
+        // for UAM restart because we use the same attemptId.
+        rmContext.getNMTokenSecretManager()
+            .clearNodeSetForAttempt(applicationAttemptId);
+
         List<NMToken> nmTokens = new ArrayList<NMToken>();
         for (Container container : transferredContainers) {
           try {
@@ -171,6 +181,13 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
     response.setSchedulerResourceTypes(getScheduler()
         .getSchedulingResourceTypes());
+    response.setResourceTypes(ResourceUtils.getResourcesTypeInfo());
+    if (getRmContext().getYarnConfiguration().getBoolean(
+        YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED)) {
+      response.setResourceProfiles(
+          resourceProfilesManager.getResourceProfiles());
+    }
   }
 
   @Override

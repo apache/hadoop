@@ -127,7 +127,8 @@ public class OpportunisticContainerAllocatorAMService
     public void registerApplicationMaster(
         ApplicationAttemptId applicationAttemptId,
         RegisterApplicationMasterRequest request,
-        RegisterApplicationMasterResponse response) throws IOException {
+        RegisterApplicationMasterResponse response)
+        throws IOException, YarnException {
       SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
           getScheduler()).getApplicationAttempt(applicationAttemptId);
       if (appAttempt.getOpportunisticContainerContext() == null) {
@@ -432,8 +433,12 @@ public class OpportunisticContainerAllocatorAMService
   private RemoteNode convertToRemoteNode(NodeId nodeId) {
     SchedulerNode node =
         ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(nodeId);
-    return node != null ? RemoteNode.newInstance(nodeId, node.getHttpAddress())
-        : null;
+    if (node != null) {
+      RemoteNode rNode = RemoteNode.newInstance(nodeId, node.getHttpAddress());
+      rNode.setRackName(node.getRackName());
+      return rNode;
+    }
+    return null;
   }
 
   private static ApplicationAttemptId getAppAttemptId() throws YarnException {

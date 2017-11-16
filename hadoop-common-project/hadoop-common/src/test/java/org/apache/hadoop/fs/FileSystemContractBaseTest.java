@@ -61,7 +61,16 @@ public abstract class FileSystemContractBaseTest {
   protected byte[] data = dataset(getBlockSize() * 2, 0, 255);
 
   @Rule
-  public Timeout globalTimeout = new Timeout(30000);
+  public Timeout globalTimeout = new Timeout(getGlobalTimeout());
+
+  /**
+   * Get the timeout in milliseconds for each test case.
+   * @return a time in milliseconds.
+   */
+  protected int getGlobalTimeout() {
+    return 30 * 1000;
+  }
+
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -246,39 +255,18 @@ public abstract class FileSystemContractBaseTest {
 
   @Test
   public void testMkdirsWithUmask() throws Exception {
-    if (!isS3(fs)) {
-      Configuration conf = fs.getConf();
-      String oldUmask = conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
-      try {
-        conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, TEST_UMASK);
-        final Path dir = path("newDir");
-        assertTrue(fs.mkdirs(dir, new FsPermission((short) 0777)));
-        FileStatus status = fs.getFileStatus(dir);
-        assertTrue(status.isDirectory());
-        assertEquals((short) 0715, status.getPermission().toShort());
-      } finally {
-        conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, oldUmask);
-      }
-    }
-  }
-
-  /**
-   * Skip permission tests for S3FileSystem until HDFS-1333 is fixed.
-   * Classes that do not implement {@link FileSystem#getScheme()} method
-   * (e.g {@link RawLocalFileSystem}) will throw an
-   * {@link UnsupportedOperationException}.
-   * @param fileSystem FileSystem object to determine if it is S3 or not
-   * @return true if S3 false in any other case
-   */
-  private boolean isS3(FileSystem fileSystem) {
+    Configuration conf = fs.getConf();
+    String oldUmask = conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
     try {
-      if (fileSystem.getScheme().equals("s3n")) {
-        return true;
-      }
-    } catch (UnsupportedOperationException e) {
-      LOG.warn("Unable to determine the schema of filesystem.");
+      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, TEST_UMASK);
+      final Path dir = path("newDir");
+      assertTrue(fs.mkdirs(dir, new FsPermission((short) 0777)));
+      FileStatus status = fs.getFileStatus(dir);
+      assertTrue(status.isDirectory());
+      assertEquals((short) 0715, status.getPermission().toShort());
+    } finally {
+      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, oldUmask);
     }
-    return false;
   }
 
   @Test

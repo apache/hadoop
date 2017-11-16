@@ -18,10 +18,19 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationUpdateTimeoutMapProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateApplicationTimeoutsResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateApplicationTimeoutsResponseProtoOrBuilder;
 
 import com.google.protobuf.TextFormat;
 
@@ -33,6 +42,7 @@ public class UpdateApplicationTimeoutsResponsePBImpl
       UpdateApplicationTimeoutsResponseProto.getDefaultInstance();
   UpdateApplicationTimeoutsResponseProto.Builder builder = null;
   boolean viaProto = false;
+  private Map<ApplicationTimeoutType, String> applicationTimeouts = null;
 
   public UpdateApplicationTimeoutsResponsePBImpl() {
     builder = UpdateApplicationTimeoutsResponseProto.newBuilder();
@@ -45,9 +55,32 @@ public class UpdateApplicationTimeoutsResponsePBImpl
   }
 
   public UpdateApplicationTimeoutsResponseProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  private void mergeLocalToProto() {
+    if (viaProto) {
+      maybeInitBuilder();
+    }
+    mergeLocalToBuilder();
+    proto = builder.build();
+    viaProto = true;
+  }
+
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = UpdateApplicationTimeoutsResponseProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  private void mergeLocalToBuilder() {
+    if (this.applicationTimeouts != null) {
+      addApplicationTimeouts();
+    }
   }
 
   @Override
@@ -69,5 +102,80 @@ public class UpdateApplicationTimeoutsResponsePBImpl
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  @Override
+  public Map<ApplicationTimeoutType, String> getApplicationTimeouts() {
+    initApplicationTimeout();
+    return this.applicationTimeouts;
+  }
+
+  private void initApplicationTimeout() {
+    if (this.applicationTimeouts != null) {
+      return;
+    }
+    UpdateApplicationTimeoutsResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
+    List<ApplicationUpdateTimeoutMapProto> lists =
+        p.getApplicationTimeoutsList();
+    this.applicationTimeouts =
+        new HashMap<ApplicationTimeoutType, String>(lists.size());
+    for (ApplicationUpdateTimeoutMapProto timeoutProto : lists) {
+      this.applicationTimeouts.put(
+          ProtoUtils
+              .convertFromProtoFormat(timeoutProto.getApplicationTimeoutType()),
+          timeoutProto.getExpireTime());
+    }
+  }
+
+  @Override
+  public void setApplicationTimeouts(
+      Map<ApplicationTimeoutType, String> appTimeouts) {
+    if (appTimeouts == null) {
+      return;
+    }
+    initApplicationTimeout();
+    this.applicationTimeouts.clear();
+    this.applicationTimeouts.putAll(appTimeouts);
+  }
+
+  private void addApplicationTimeouts() {
+    maybeInitBuilder();
+    builder.clearApplicationTimeouts();
+    if (applicationTimeouts == null) {
+      return;
+    }
+    Iterable<? extends ApplicationUpdateTimeoutMapProto> values =
+        new Iterable<ApplicationUpdateTimeoutMapProto>() {
+
+          @Override
+          public Iterator<ApplicationUpdateTimeoutMapProto> iterator() {
+            return new Iterator<ApplicationUpdateTimeoutMapProto>() {
+              private Iterator<ApplicationTimeoutType> iterator =
+                  applicationTimeouts.keySet().iterator();
+
+              @Override
+              public boolean hasNext() {
+                return iterator.hasNext();
+              }
+
+              @Override
+              public ApplicationUpdateTimeoutMapProto next() {
+                ApplicationTimeoutType key = iterator.next();
+                return ApplicationUpdateTimeoutMapProto.newBuilder()
+                    .setExpireTime(applicationTimeouts.get(key))
+                    .setApplicationTimeoutType(
+                        ProtoUtils.convertToProtoFormat(key))
+                    .build();
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+          }
+        };
+    this.builder.addAllApplicationTimeouts(values);
   }
 }

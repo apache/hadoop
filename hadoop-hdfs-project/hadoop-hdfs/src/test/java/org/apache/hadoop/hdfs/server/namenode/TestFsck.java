@@ -48,7 +48,6 @@ import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -92,6 +91,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -685,13 +685,12 @@ public class TestFsck {
     final int numAllUnits = dataBlocks + ecPolicy.getNumParityUnits();
     int blockSize = 2 * cellSize;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        ecPolicy.getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         numAllUnits + 1).build();
     String topDir = "/myDir";
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
     util.createFiles(fs, topDir);
     // set topDir to EC when it has replicated files
     cluster.getFileSystem().getClient().setErasureCodingPolicy(
@@ -1341,25 +1340,20 @@ public class TestFsck {
 
     String pathString = "/tmp/testFile";
 
-    long length = 123L;
-    boolean isDir = false;
-    int blockReplication = 1;
-    long blockSize = 128 *1024L;
-    long modTime = 123123123L;
-    long accessTime = 123123120L;
-    FsPermission perms = FsPermission.getDefault();
-    String owner = "foo";
-    String group = "bar";
-    byte[] symlink = null;
-    byte[] path = DFSUtil.string2Bytes(pathString);
-    long fileId = 312321L;
-    int numChildren = 1;
-    byte storagePolicy = 0;
-
-    HdfsFileStatus file = new HdfsFileStatus(length, isDir, blockReplication,
-        blockSize, modTime, accessTime, perms,
-        EnumSet.noneOf(HdfsFileStatus.Flags.class), owner, group, symlink,
-        path, fileId, numChildren, null, storagePolicy, null);
+    HdfsFileStatus file = new HdfsFileStatus.Builder()
+        .length(123L)
+        .replication(1)
+        .blocksize(128 * 1024L)
+        .mtime(123123123L)
+        .atime(123123120L)
+        .perm(FsPermission.getDefault())
+        .owner("foo")
+        .group("bar")
+        .path(DFSUtil.string2Bytes(pathString))
+        .fileId(312321L)
+        .children(1)
+        .storagePolicy(HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED)
+        .build();
     Result replRes = new ReplicationResult(conf);
     Result ecRes = new ErasureCodingResult(conf);
 
@@ -1999,19 +1993,19 @@ public class TestFsck {
 
   @Test
   public void testECFsck() throws Exception {
-    FileSystem fs = null;
+    DistributedFileSystem fs = null;
     final long precision = 1L;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
         precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
     int parityBlocks =
         StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
     int totalSize = dataBlocks + parityBlocks;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(totalSize).build();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     // create a contiguous file
     Path replDirPath = new Path("/replicated");
@@ -2301,11 +2295,11 @@ public class TestFsck {
         StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
     int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
     int totalSize = dataBlocks + parityBlocks;
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(totalSize).build();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     Map<Integer, Integer> dnIndices = new HashMap<>();
     ArrayList<DataNode> dnList = cluster.getDataNodes();
     for (int i = 0; i < totalSize; i++) {
@@ -2372,11 +2366,11 @@ public class TestFsck {
         StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
     int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
     int totalSize = dataBlocks + parityBlocks;
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(totalSize).build();
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
 
     // create file
     Path ecDirPath = new Path("/striped");

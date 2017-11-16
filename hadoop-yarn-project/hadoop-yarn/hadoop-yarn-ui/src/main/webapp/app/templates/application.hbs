@@ -41,7 +41,7 @@
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
-          {{#link-to 'yarn-queues' 'root' tagName="li"}}
+          {{#link-to 'yarn-queues' 'root' tagName="li" classNameBindings="isQueuesTabActive:active"}}
             {{#link-to 'yarn-queues' 'root' class="navigation-link"}}Queues
               <span class="sr-only">(current)</span>
             {{/link-to}}
@@ -80,8 +80,8 @@
   <br/>
 </div>
 
-<div class="footer">
-  <div class="container-fluid content">
+<div class="footer yarn-ui-footer">
+  <div>
     <a href={{env.app.hrefs.license}} target="_blank">
       Licensed under the Apache License, Version 2.0.
     </a>
@@ -91,4 +91,15 @@
       {{/if}}
     </div>
   </div>
+  <div class="yarn-cluster-info">
+    <div>
+      <strong>v{{model.firstObject.hadoopVersion}}</strong>
+      <span class="yarn-cluster-status yarn-tooltip" title="Hadoop Version: {{model.firstObject.getYARNBuildHash}} &#10;Started on: {{date-formatter model.firstObject.startedOn}}" data-toggle="tooltip" data-placement="top">
+        <i class={{lower model.firstObject.state}} />
+      </span>
+      <div>Started at {{date-formatter model.firstObject.startedOn}}</div>
+    </div>
+  </div>
 </div>
+
+{{info-tooltip}}

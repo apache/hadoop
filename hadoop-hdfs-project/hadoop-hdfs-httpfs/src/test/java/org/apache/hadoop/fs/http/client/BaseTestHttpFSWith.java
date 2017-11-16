@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.http.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -1041,7 +1040,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER,
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
     GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
-    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING, GETFILEBLOCKLOCATIONS,
+    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT
   }
 
@@ -1131,9 +1130,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     case ERASURE_CODING:
       testErasureCoding();
       break;
-    case GETFILEBLOCKLOCATIONS:
-      testGetFileBlockLocations();
-      break;
     case CREATE_SNAPSHOT:
       testCreateSnapshot();
       break;
@@ -1187,88 +1183,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         return null;
       }
     });
-  }
-
-  private void testGetFileBlockLocations() throws Exception {
-    BlockLocation[] locations1, locations2, locations11, locations21 = null;
-    Path testFile = null;
-
-    // Test single block file block locations.
-    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
-      testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
-      DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
-      locations1 = fs.getFileBlockLocations(testFile, 0, 1);
-      Assert.assertNotNull(locations1);
-    }
-
-    try (FileSystem fs = getHttpFSFileSystem()) {
-      locations2 = fs.getFileBlockLocations(testFile, 0, 1);
-      Assert.assertNotNull(locations2);
-    }
-
-    verifyBlockLocations(locations1, locations2);
-
-    // Test multi-block single replica file block locations.
-    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
-      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
-      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
-          (long) 512, (short) 1,  0L);
-      locations1 = fs.getFileBlockLocations(testFile, 0, 1024);
-      locations11 = fs.getFileBlockLocations(testFile, 1024, 2048);
-      Assert.assertNotNull(locations1);
-      Assert.assertNotNull(locations11);
-    }
-
-    try (FileSystem fs = getHttpFSFileSystem()) {
-      locations2 = fs.getFileBlockLocations(testFile, 0, 1024);
-      locations21 = fs.getFileBlockLocations(testFile, 1024, 2048);
-      Assert.assertNotNull(locations2);
-      Assert.assertNotNull(locations21);
-    }
-
-    verifyBlockLocations(locations1, locations2);
-    verifyBlockLocations(locations11, locations21);
-
-    // Test multi-block multi-replica file block locations.
-    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
-      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
-      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
-          (long) 512, (short) 3,  0L);
-      locations1 = fs.getFileBlockLocations(testFile, 0, 2048);
-      Assert.assertNotNull(locations1);
-    }
-
-    try (FileSystem fs = getHttpFSFileSystem()) {
-      locations2 = fs.getFileBlockLocations(testFile, 0, 2048);
-      Assert.assertNotNull(locations2);
-    }
-
-    verifyBlockLocations(locations1, locations2);
-  }
-
-  private void verifyBlockLocations(BlockLocation[] locations1,
-      BlockLocation[] locations2) throws IOException {
-    Assert.assertEquals(locations1.length, locations2.length);
-    for (int i = 0; i < locations1.length; i++) {
-      BlockLocation location1 = locations1[i];
-      BlockLocation location2 = locations2[i];
-
-      Assert.assertEquals(location1.isCorrupt(), location2.isCorrupt());
-      Assert.assertEquals(location1.getOffset(), location2.getOffset());
-      Assert.assertEquals(location1.getLength(), location2.getLength());
-
-      Arrays.sort(location1.getHosts());
-      Arrays.sort(location2.getHosts());
-      Arrays.sort(location1.getNames());
-      Arrays.sort(location2.getNames());
-      Arrays.sort(location1.getTopologyPaths());
-      Arrays.sort(location2.getTopologyPaths());
-
-      Assert.assertArrayEquals(location1.getHosts(), location2.getHosts());
-      Assert.assertArrayEquals(location1.getNames(), location2.getNames());
-      Assert.assertArrayEquals(location1.getTopologyPaths(),
-          location2.getTopologyPaths());
-    }
   }
 
   private void testCreateSnapshot(String snapshotName) throws Exception {
@@ -1363,5 +1277,4 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs.delete(snapshottablePath, true);
     }
   }
-
 }

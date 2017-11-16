@@ -18,8 +18,17 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.file.FileSystemException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.nfs.NfsFileType;
 import org.apache.hadoop.nfs.NfsTime;
@@ -88,6 +97,8 @@ public class Nfs3Utils {
   /**
    * HDFS directory size is always zero. Try to return something meaningful
    * here. Assume each child take 32bytes.
+   * @param childNum number of children of the directory
+   * @return total size of the directory
    */
   public static long getDirSize(int childNum) {
     return (childNum + 2) * 32;
@@ -122,6 +133,9 @@ public class Nfs3Utils {
 
   /**
    * Send a write response to the netty network socket channel
+   * @param channel channel to which the buffer needs to be written
+   * @param out xdr object to be written to the channel
+   * @param xid transaction identifier
    */
   public static void writeChannel(Channel channel, XDR out, int xid) {
     if (channel == null) {
@@ -218,5 +232,42 @@ public class Nfs3Utils {
   
   public static long getElapsedTime(long startTimeNano) {
     return System.nanoTime() - startTimeNano;
+  }
+
+  public static int getNamenodeId(Configuration conf) {
+    URI filesystemURI = FileSystem.getDefaultUri(conf);
+    return getNamenodeId(conf, filesystemURI);
+  }
+
+  public static int getNamenodeId(Configuration conf, URI namenodeURI) {
+    InetSocketAddress address =
+        DFSUtilClient.getNNAddressCheckLogical(conf, namenodeURI);
+    return address.hashCode();
+  }
+
+  public static URI getResolvedURI(FileSystem fs, String exportPath)
+      throws IOException {
+    URI fsURI = fs.getUri();
+    String scheme = fs.getScheme();
+    if (scheme.equalsIgnoreCase(FsConstants.VIEWFS_SCHEME)) {
+      ViewFileSystem viewFs = (ViewFileSystem)fs;
+      ViewFileSystem.MountPoint[] mountPoints = viewFs.getMountPoints();
+      for (ViewFileSystem.MountPoint mount : mountPoints) {
+        String mountedPath = mount.getMountedOnPath().toString();
+        if (exportPath.startsWith(mountedPath)) {
+          String subpath = exportPath.substring(mountedPath.length());
+          fsURI = mount.getTargetFileSystemURIs()[0].resolve(subpath);
+          break;
+        }
+      }
+    } else if (scheme.equalsIgnoreCase(HdfsConstants.HDFS_URI_SCHEME)) {
+      fsURI = fsURI.resolve(exportPath);
+    }
+
+    if (!fsURI.getScheme().equalsIgnoreCase(HdfsConstants.HDFS_URI_SCHEME)) {
+      throw new FileSystemException("Only HDFS is supported as underlying"
+          + "FileSystem, fs scheme:" + scheme + " uri to be added" + fsURI);
+    }
+    return fsURI;
   }
 }

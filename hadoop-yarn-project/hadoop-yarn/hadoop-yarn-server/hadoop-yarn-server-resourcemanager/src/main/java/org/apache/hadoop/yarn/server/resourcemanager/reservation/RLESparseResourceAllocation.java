@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -275,7 +274,7 @@ public class RLESparseResourceAllocation {
   public NavigableMap<Long, Resource> getCumulative() {
     readLock.lock();
     try {
-      return Collections.unmodifiableNavigableMap(cumulativeCapacity);
+      return cumulativeCapacity;
     } finally {
       readLock.unlock();
     }
@@ -424,7 +423,8 @@ public class RLESparseResourceAllocation {
       Resource outRes) {
 
     if (out.isEmpty() || (out.lastEntry() != null && outRes == null)
-        || !Resources.equals(out.lastEntry().getValue(), outRes)) {
+        || (out.lastEntry().getValue() != null
+            && !Resources.equals(out.lastEntry().getValue(), outRes))) {
       out.put(time, outRes);
     }
 
@@ -461,7 +461,8 @@ public class RLESparseResourceAllocation {
       if (!Resources.fitsIn(b, a)) {
         throw new PlanningException(
             "RLESparseResourceAllocation: merge failed as the "
-                + "resulting RLESparseResourceAllocation would be negative");
+                + "resulting RLESparseResourceAllocation would "
+                + "be negative, when testing: (" + eB + ") > (" + eA + ")");
       } else {
         return Resources.subtract(a, b);
       }

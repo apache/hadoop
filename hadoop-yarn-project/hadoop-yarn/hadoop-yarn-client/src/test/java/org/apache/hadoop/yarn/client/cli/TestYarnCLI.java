@@ -39,8 +39,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -48,6 +50,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -68,6 +71,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
@@ -117,9 +121,18 @@ public class TestYarnCLI {
     for (int i = 0; i < 2; ++i) {
       ApplicationCLI cli = createAndGetAppCLI();
       ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+      Map<String, Long> resourceSecondsMap = new HashMap<>();
+      Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+      resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 123456L);
+      resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 4567L);
+      preemptedResoureSecondsMap
+          .put(ResourceInformation.MEMORY_MB.getName(), 1111L);
+      preemptedResoureSecondsMap
+          .put(ResourceInformation.VCORES.getName(), 2222L);
       ApplicationResourceUsageReport usageReport = i == 0 ? null :
-          ApplicationResourceUsageReport.newInstance(
-              2, 0, null, null, null, 123456, 4567, 0, 0, 1111, 2222);
+          ApplicationResourceUsageReport
+              .newInstance(2, 0, null, null, null, resourceSecondsMap, 0, 0,
+                  preemptedResoureSecondsMap);
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
@@ -2012,49 +2025,121 @@ public class TestYarnCLI {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("usage: application");
-    pw.println(" -appId <Application ID>         Specify Application Id to be operated");
-    pw.println(" -appStates <States>             Works with -list to filter applications");
-    pw.println("                                 based on input comma-separated list of");
-    pw.println("                                 application states. The valid application");
-    pw.println("                                 state can be one of the following:");
-    pw.println("                                 ALL,NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUN");
-    pw.println("                                 NING,FINISHED,FAILED,KILLED");
-    pw.println(" -appTags <Tags>                 Works with -list to filter applications");
-    pw.println("                                 based on input comma-separated list of");
-    pw.println("                                 application tags.");
-    pw.println(" -appTypes <Types>               Works with -list to filter applications");
-    pw.println("                                 based on input comma-separated list of");
-    pw.println("                                 application types.");
-    pw.println(" -changeQueue <Queue Name>       Moves application to a new queue.");
-    pw.println("                                 ApplicationId can be passed using 'appId'");
-    pw.println("                                 option. 'movetoqueue' command is");
-    pw.println("                                 deprecated, this new command");
-    pw.println("                                 'changeQueue' performs same");
-    pw.println("                                 functionality.");
-    pw.println(" -help                           Displays help for all commands.");
-    pw.println(" -kill <Application ID>          Kills the application. Set of");
-    pw.println("                                 applications can be provided separated");
-    pw.println("                                 with space");
-    pw.println(" -list                           List applications. Supports optional use");
-    pw.println("                                 of -appTypes to filter applications based");
-    pw.println("                                 on application type, -appStates to filter");
-    pw.println("                                 applications based on application state");
-    pw.println("                                 and -appTags to filter applications based");
-    pw.println("                                 on application tag.");
-    pw.println(" -movetoqueue <Application ID>   Moves the application to a different");
-    pw.println("                                 queue. Deprecated command. Use");
-    pw.println("                                 'changeQueue' instead.");
-    pw.println(" -queue <Queue Name>             Works with the movetoqueue command to");
-    pw.println("                                 specify which queue to move an");
-    pw.println("                                 application to.");
-    pw.println(" -status <Application ID>        Prints the status of the application.");
-    pw.println(" -updateLifetime <Timeout>       update timeout of an application from");
-    pw.println("                                 NOW. ApplicationId can be passed using");
-    pw.println("                                 'appId' option. Timeout value is in");
-    pw.println("                                 seconds.");
-    pw.println(" -updatePriority <Priority>      update priority of an application.");
-    pw.println("                                 ApplicationId can be passed using 'appId'");
-    pw.println("                                 option.");
+    pw.println(" -appId <Application ID>                  Specify Application Id to be");
+    pw.println("                                          operated");
+    pw.println(" -appStates <States>                      Works with -list to filter");
+    pw.println("                                          applications based on input");
+    pw.println("                                          comma-separated list of");
+    pw.println("                                          application states. The valid");
+    pw.println("                                          application state can be one of");
+    pw.println("                                          the following:");
+    pw.println("                                          ALL,NEW,NEW_SAVING,SUBMITTED,ACC");
+    pw.println("                                          EPTED,RUNNING,FINISHED,FAILED,KI");
+    pw.println("                                          LLED");
+    pw.println(" -appTags <Tags>                          Works with -list to filter");
+    pw.println("                                          applications based on input");
+    pw.println("                                          comma-separated list of");
+    pw.println("                                          application tags.");
+    pw.println(" -appTypes <Types>                        Works with -list to filter");
+    pw.println("                                          applications based on input");
+    pw.println("                                          comma-separated list of");
+    pw.println("                                          application types.");
+    pw.println(" -changeQueue <Queue Name>                Moves application to a new");
+    pw.println("                                          queue. ApplicationId can be");
+    pw.println("                                          passed using 'appId' option.");
+    pw.println("                                          'movetoqueue' command is");
+    pw.println("                                          deprecated, this new command");
+    pw.println("                                          'changeQueue' performs same");
+    pw.println("                                          functionality.");
+    pw.println(" -component <Component Name> <Count>      Works with -flex option to");
+    pw.println("                                          change the number of");
+    pw.println("                                          components/containers running");
+    pw.println("                                          for an application /");
+    pw.println("                                          long-running service. Supports");
+    pw.println("                                          absolute or relative changes,");
+    pw.println("                                          such as +1, 2, or -3.");
+    pw.println(" -destroy <Application Name>              Destroys a saved application");
+    pw.println("                                          specification and removes all");
+    pw.println("                                          application data permanently.");
+    pw.println("                                          Supports -appTypes option to");
+    pw.println("                                          specify which client");
+    pw.println("                                          implementation to use.");
+    pw.println(" -enableFastLaunch                        Uploads AM dependencies to HDFS");
+    pw.println("                                          to make future launches faster.");
+    pw.println("                                          Supports -appTypes option to");
+    pw.println("                                          specify which client");
+    pw.println("                                          implementation to use.");
+    pw.println(" -flex <Application Name or ID>           Changes number of running");
+    pw.println("                                          containers for a component of an");
+    pw.println("                                          application / long-running");
+    pw.println("                                          service. Requires -component");
+    pw.println("                                          option. If name is provided,");
+    pw.println("                                          appType must be provided unless");
+    pw.println("                                          it is the default yarn-service.");
+    pw.println("                                          If ID is provided, the appType");
+    pw.println("                                          will be looked up. Supports");
+    pw.println("                                          -appTypes option to specify");
+    pw.println("                                          which client implementation to");
+    pw.println("                                          use.");
+    pw.println(" -help                                    Displays help for all commands.");
+    pw.println(" -kill <Application ID>                   Kills the application. Set of");
+    pw.println("                                          applications can be provided");
+    pw.println("                                          separated with space");
+    pw.println(" -launch <Application Name> <File Name>   Launches application from");
+    pw.println("                                          specification file (saves");
+    pw.println("                                          specification and starts");
+    pw.println("                                          application). Options");
+    pw.println("                                          -updateLifetime and -changeQueue");
+    pw.println("                                          can be specified to alter the");
+    pw.println("                                          values provided in the file.");
+    pw.println("                                          Supports -appTypes option to");
+    pw.println("                                          specify which client");
+    pw.println("                                          implementation to use.");
+    pw.println(" -list                                    List applications. Supports");
+    pw.println("                                          optional use of -appTypes to");
+    pw.println("                                          filter applications based on");
+    pw.println("                                          application type, -appStates to");
+    pw.println("                                          filter applications based on");
+    pw.println("                                          application state and -appTags");
+    pw.println("                                          to filter applications based on");
+    pw.println("                                          application tag.");
+    pw.println(" -movetoqueue <Application ID>            Moves the application to a");
+    pw.println("                                          different queue. Deprecated");
+    pw.println("                                          command. Use 'changeQueue'");
+    pw.println("                                          instead.");
+    pw.println(" -queue <Queue Name>                      Works with the movetoqueue");
+    pw.println("                                          command to specify which queue");
+    pw.println("                                          to move an application to.");
+    pw.println(" -save <Application Name> <File Name>     Saves specification file for an");
+    pw.println("                                          application. Options");
+    pw.println("                                          -updateLifetime and -changeQueue");
+    pw.println("                                          can be specified to alter the");
+    pw.println("                                          values provided in the file.");
+    pw.println("                                          Supports -appTypes option to");
+    pw.println("                                          specify which client");
+    pw.println("                                          implementation to use.");
+    pw.println(" -start <Application Name>                Starts a previously saved");
+    pw.println("                                          application. Supports -appTypes");
+    pw.println("                                          option to specify which client");
+    pw.println("                                          implementation to use.");
+    pw.println(" -status <Application ID>                 Prints the status of the");
+    pw.println("                                          application.");
+    pw.println(" -stop <Application Name or ID>           Stops application gracefully");
+    pw.println("                                          (may be started again later). If");
+    pw.println("                                          name is provided, appType must");
+    pw.println("                                          be provided unless it is the");
+    pw.println("                                          default yarn-service. If ID is");
+    pw.println("                                          provided, the appType will be");
+    pw.println("                                          looked up. Supports -appTypes");
+    pw.println("                                          option to specify which client");
+    pw.println("                                          implementation to use.");
+    pw.println(" -updateLifetime <Timeout>                update timeout of an application");
+    pw.println("                                          from NOW. ApplicationId can be");
+    pw.println("                                          passed using 'appId' option.");
+    pw.println("                                          Timeout value is in seconds.");
+    pw.println(" -updatePriority <Priority>               update priority of an");
+    pw.println("                                          application. ApplicationId can");
+    pw.println("                                          be passed using 'appId' option.");
     pw.close();
     String appsHelpStr = baos.toString("UTF-8");
     return appsHelpStr;
@@ -2148,17 +2233,16 @@ public class TestYarnCLI {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 6);
 
-    ApplicationReport appReport = ApplicationReport.newInstance(applicationId,
-        ApplicationAttemptId.newInstance(applicationId, 1), "user", "queue",
-        "appname", "host", 124, null, YarnApplicationState.RUNNING,
-        "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
-        "N/A", 0.53789f, "YARN", null);
-    ApplicationTimeout timeout = ApplicationTimeout
-        .newInstance(ApplicationTimeoutType.LIFETIME, "N/A", -1);
-    appReport.setApplicationTimeouts(
-        Collections.singletonMap(timeout.getTimeoutType(), timeout));
-    when(client.getApplicationReport(any(ApplicationId.class)))
-        .thenReturn(appReport);
+    UpdateApplicationTimeoutsResponse response =
+        mock(UpdateApplicationTimeoutsResponse.class);
+    String formatISO8601 =
+        Times.formatISO8601(System.currentTimeMillis() + 5 * 1000);
+    when(response.getApplicationTimeouts()).thenReturn(Collections
+        .singletonMap(ApplicationTimeoutType.LIFETIME, formatISO8601));
+
+    when(client
+        .updateApplicationTimeouts(any(UpdateApplicationTimeoutsRequest.class)))
+            .thenReturn(response);
 
     int result = cli.run(new String[] { "application", "-appId",
         applicationId.toString(), "-updateLifetime", "10" });

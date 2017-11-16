@@ -40,10 +40,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 
-
 /**
  * This is a ContainerLaunch which has been recovered after an NM restart (for
- * rolling upgrades)
+ * rolling upgrades).
  */
 public class RecoveredContainerLaunch extends ContainerLaunch {
 
@@ -73,7 +72,7 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
     String containerIdStr = containerId.toString();
 
     dispatcher.getEventHandler().handle(new ContainerEvent(containerId,
-        ContainerEventType.CONTAINER_LAUNCHED));
+        ContainerEventType.RECOVER_PAUSED_CONTAINER));
 
     boolean notInterrupted = true;
     try {

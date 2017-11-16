@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.tools.ECAdmin;
@@ -60,12 +59,11 @@ public class TestDistCpUtils {
   
   @BeforeClass
   public static void create() throws IOException {
-    config.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        "XOR-2-1-1024k");
     cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(2)
         .format(true)
-        .build(); 
+        .build();
+    cluster.getFileSystem().enableErasureCodingPolicy("XOR-2-1-1024k");
   }
 
   @AfterClass

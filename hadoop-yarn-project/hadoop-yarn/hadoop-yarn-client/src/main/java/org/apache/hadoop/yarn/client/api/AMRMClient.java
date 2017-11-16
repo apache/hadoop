@@ -20,10 +20,9 @@ package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.function.Supplier;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -38,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
@@ -45,14 +45,16 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     AbstractService {
-  private static final Log LOG = LogFactory.getLog(AMRMClient.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(AMRMClient.class);
 
   private TimelineV2Client timelineV2Client;
 
@@ -117,7 +119,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     private String nodeLabelsExpression;
     private ExecutionTypeRequest executionTypeRequest =
         ExecutionTypeRequest.newInstance();
-    
+    private String resourceProfile = ProfileCapability.DEFAULT_PROFILE;
+
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints and
      * locality relaxation enabled.
@@ -163,6 +166,26 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       this(capability, nodes, racks, priority, allocationRequestId, true, null,
           ExecutionTypeRequest.newInstance());
     }
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints and
+     * locality relaxation enabled.
+     *
+     * @param capability
+     *          The {@link ProfileCapability} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     */
+    public ContainerRequest(ProfileCapability capability, String[] nodes,
+        String[] racks, Priority priority) {
+      this(capability, nodes, racks, priority, 0, true, null);
+    }
     
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints.
@@ -185,6 +208,29 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority, boolean relaxLocality) {
       this(capability, nodes, racks, priority, relaxLocality, null);
+    }
+
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints.
+     *
+     * @param capability
+     *          The {@link ProfileCapability} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param relaxLocality
+     *          If true, containers for this request may be assigned on hosts
+     *          and racks other than the ones explicitly requested.
+     */
+    public ContainerRequest(ProfileCapability capability, String[] nodes,
+        String[] racks, Priority priority, boolean relaxLocality) {
+      this(capability, nodes, racks, priority, 0, relaxLocality, null);
     }
 
     /**
@@ -277,10 +323,18 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
           relaxLocality, nodeLabelsExpression,
           ExecutionTypeRequest.newInstance());
     }
-          
+
+    public ContainerRequest(ProfileCapability capability, String[] nodes,
+        String[] racks, Priority priority, long allocationRequestId,
+        boolean relaxLocality, String nodeLabelsExpression) {
+      this(capability, nodes, racks, priority, allocationRequestId,
+          relaxLocality, nodeLabelsExpression,
+          ExecutionTypeRequest.newInstance());
+    }
+
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints.
-     * 
+     *
      * @param capability
      *          The {@link Resource} to be requested for each container.
      * @param nodes
@@ -309,6 +363,53 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
         Priority priority, long allocationRequestId, boolean relaxLocality,
         String nodeLabelsExpression,
         ExecutionTypeRequest executionTypeRequest) {
+      this(capability, nodes, racks, priority, allocationRequestId,
+          relaxLocality, nodeLabelsExpression, executionTypeRequest,
+          ProfileCapability.DEFAULT_PROFILE);
+    }
+
+    public ContainerRequest(ProfileCapability capability, String[] nodes,
+        String[] racks, Priority priority, long allocationRequestId,
+        boolean relaxLocality, String nodeLabelsExpression,
+        ExecutionTypeRequest executionTypeRequest) {
+      this(capability.getProfileCapabilityOverride(), nodes, racks, priority,
+          allocationRequestId, relaxLocality, nodeLabelsExpression,
+          executionTypeRequest, capability.getProfileName());
+    }
+          
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints.
+     * 
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param allocationRequestId
+     *          The allocationRequestId of the request. To be used as a tracking
+     *          id to match Containers allocated against this request. Will
+     *          default to 0 if not specified.
+     * @param relaxLocality
+     *          If true, containers for this request may be assigned on hosts
+     *          and racks other than the ones explicitly requested.
+     * @param nodeLabelsExpression
+     *          Set node labels to allocate resource, now we only support
+     *          asking for only a single node label
+     * @param executionTypeRequest
+     *          Set the execution type of the container request.
+     * @param profile
+     *          Set the resource profile for the container request
+     */
+    public ContainerRequest(Resource capability, String[] nodes, String[] racks,
+        Priority priority, long allocationRequestId, boolean relaxLocality,
+        String nodeLabelsExpression,
+        ExecutionTypeRequest executionTypeRequest, String profile) {
       this.allocationRequestId = allocationRequestId;
       this.capability = capability;
       this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
@@ -317,6 +418,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       this.relaxLocality = relaxLocality;
       this.nodeLabelsExpression = nodeLabelsExpression;
       this.executionTypeRequest = executionTypeRequest;
+      this.resourceProfile = profile;
       sanityCheck();
     }
 
@@ -368,6 +470,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       return executionTypeRequest;
     }
 
+    public String getResourceProfile() {
+      return resourceProfile;
+    }
+
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("Capability[").append(capability).append("]");
@@ -375,6 +481,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       sb.append("AllocationRequestId[").append(allocationRequestId).append("]");
       sb.append("ExecutionTypeRequest[").append(executionTypeRequest)
           .append("]");
+      sb.append("Resource Profile[").append(resourceProfile).append("]");
       return sb.toString();
     }
 
@@ -431,6 +538,11 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       public ContainerRequestBuilder executionTypeRequest(
           ExecutionTypeRequest executionTypeRequest) {
         containerRequest.executionTypeRequest = executionTypeRequest;
+        return this;
+      }
+
+      public ContainerRequestBuilder resourceProfile(String resourceProfile) {
+        containerRequest.resourceProfile = resourceProfile;
         return this;
       }
 
@@ -627,6 +739,15 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
         " AMRMClient is expected to implement this !!");
   }
 
+
+  @InterfaceStability.Evolving
+  public List<? extends Collection<T>> getMatchingRequests(
+      Priority priority, String resourceName, ExecutionType executionType,
+      ProfileCapability capability) {
+    throw new UnsupportedOperationException("The sub-class extending" +
+        " AMRMClient is expected to implement this !!");
+  }
+
   /**
    * Get outstanding <code>ContainerRequest</code>s matching the given
    * allocationRequestId. These ContainerRequests should have been added via
@@ -702,8 +823,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
 
   /**
    * Wait for <code>check</code> to return true for each 1000 ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int)}
-   * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int)}
+   * and {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check the condition for which it should wait
    */
   public void waitFor(Supplier<Boolean> check) throws InterruptedException {
@@ -713,7 +834,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   /**
    * Wait for <code>check</code> to return true for each
    * <code>checkEveryMillis</code> ms.
-   * See also {@link #waitFor(com.google.common.base.Supplier, int, int)}
+   * See also {@link #waitFor(java.util.function.Supplier, int, int)}
    * @param check user defined checker
    * @param checkEveryMillis interval to call <code>check</code>
    */

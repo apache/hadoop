@@ -33,6 +33,9 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,27 +177,29 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    int memoryMb = NodeManagerHardwareUtils.getContainerMemoryMB(conf);
+    this.totalResource = NodeManagerHardwareUtils.getNodeResources(conf);
+    long memoryMb = totalResource.getMemorySize();
     float vMemToPMem =
         conf.getFloat(
-            YarnConfiguration.NM_VMEM_PMEM_RATIO, 
-            YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO); 
-    int virtualMemoryMb = (int)Math.ceil(memoryMb * vMemToPMem);
-    
-    int virtualCores = NodeManagerHardwareUtils.getVCores(conf);
-    LOG.info("Nodemanager resources: memory set to " + memoryMb + "MB.");
-    LOG.info("Nodemanager resources: vcores set to " + virtualCores + ".");
+            YarnConfiguration.NM_VMEM_PMEM_RATIO,
+            YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
+    long virtualMemoryMb = (long)Math.ceil(memoryMb * vMemToPMem);
+    int virtualCores = totalResource.getVirtualCores();
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores);
+    // Update configured resources via plugins.
+    updateConfiguredResourcesViaPlugins(totalResource);
+
+    LOG.info("Nodemanager resources is set to: " + totalResource);
+
     metrics.addResource(totalResource);
 
     // Get actual node physical resources
-    int physicalMemoryMb = memoryMb;
+    long physicalMemoryMb = memoryMb;
     int physicalCores = virtualCores;
     ResourceCalculatorPlugin rcp =
         ResourceCalculatorPlugin.getNodeResourceMonitorPlugin(conf);
     if (rcp != null) {
-      physicalMemoryMb = (int) (rcp.getPhysicalMemorySize() / (1024 * 1024));
+      physicalMemoryMb = rcp.getPhysicalMemorySize() / (1024 * 1024);
       physicalCores = rcp.getNumProcessors();
     }
     this.physicalResource =
@@ -341,12 +346,27 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return ServerRMProxy.createRMProxy(conf, ResourceTracker.class);
   }
 
+  private void updateConfiguredResourcesViaPlugins(
+      Resource configuredResource) throws YarnException {
+    ResourcePluginManager pluginManager = context.getResourcePluginManager();
+    if (pluginManager != null && pluginManager.getNameToPlugins() != null) {
+      // Update configured resource
+      for (ResourcePlugin resourcePlugin : pluginManager.getNameToPlugins()
+          .values()) {
+        if (resourcePlugin.getNodeResourceHandlerInstance() != null) {
+          resourcePlugin.getNodeResourceHandlerInstance()
+              .updateConfiguredResource(configuredResource);
+        }
+      }
+    }
+  }
+
   @VisibleForTesting
   protected void registerWithRM()
       throws YarnException, IOException {
     RegisterNodeManagerResponse regNMResponse;
     Set<NodeLabel> nodeLabels = nodeLabelsHandler.getNodeLabelsForRegistration();
- 
+
     // Synchronize NM-RM registration with
     // ContainerManagerImpl#increaseContainersResource and
     // ContainerManagerImpl#startContainers to avoid race condition
@@ -357,6 +377,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
               nodeManagerVersionId, containerReports, getRunningApplications(),
               nodeLabels, physicalResource);
+
       if (containerReports != null) {
         LOG.info("Registering with RM using containers :" + containerReports);
       }
@@ -405,7 +426,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     if (masterKey != null) {
       this.context.getContainerTokenSecretManager().setMasterKey(masterKey);
     }
-    
+
     masterKey = regNMResponse.getNMTokenMasterKey();
     if (masterKey != null) {
       this.context.getNMTokenSecretManager().setMasterKey(masterKey);
@@ -731,7 +752,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       }
     }
   }
-  
+
   @Override
   public long getRMIdentifier() {
     return this.rmIdentifier;

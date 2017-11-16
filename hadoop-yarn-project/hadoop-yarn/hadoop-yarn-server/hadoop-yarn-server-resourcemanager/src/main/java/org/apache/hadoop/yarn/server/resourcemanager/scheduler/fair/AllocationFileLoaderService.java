@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.Clock;
@@ -227,12 +226,12 @@ public class AllocationFileLoaderService extends AbstractService {
     // Create some temporary hashmaps to hold the new allocs, and we only save
     // them in our fields if we have parsed the entire allocs file successfully.
     Map<String, Resource> minQueueResources = new HashMap<>();
-    Map<String, Resource> maxQueueResources = new HashMap<>();
-    Map<String, Resource> maxChildQueueResources = new HashMap<>();
+    Map<String, ConfigurableResource> maxQueueResources = new HashMap<>();
+    Map<String, ConfigurableResource> maxChildQueueResources = new HashMap<>();
     Map<String, Integer> queueMaxApps = new HashMap<>();
     Map<String, Integer> userMaxApps = new HashMap<>();
     Map<String, Float> queueMaxAMShares = new HashMap<>();
-    Map<String, ResourceWeights> queueWeights = new HashMap<>();
+    Map<String, Float> queueWeights = new HashMap<>();
     Map<String, SchedulingPolicy> queuePolicies = new HashMap<>();
     Map<String, Long> minSharePreemptionTimeouts = new HashMap<>();
     Map<String, Long> fairSharePreemptionTimeouts = new HashMap<>();
@@ -245,7 +244,8 @@ public class AllocationFileLoaderService extends AbstractService {
     Set<String> nonPreemptableQueues = new HashSet<>();
     int userMaxAppsDefault = Integer.MAX_VALUE;
     int queueMaxAppsDefault = Integer.MAX_VALUE;
-    Resource queueMaxResourcesDefault = Resources.unbounded();
+    ConfigurableResource queueMaxResourcesDefault =
+        new ConfigurableResource(Resources.unbounded());
     float queueMaxAMShareDefault = 0.5f;
     long defaultFairSharePreemptionTimeout = Long.MAX_VALUE;
     long defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
@@ -306,7 +306,7 @@ public class AllocationFileLoaderService extends AbstractService {
           }
         } else if ("queueMaxResourcesDefault".equals(element.getTagName())) {
           String text = ((Text)element.getFirstChild()).getData().trim();
-          Resource val =
+          ConfigurableResource val =
               FairSchedulerConfiguration.parseResourceConfigValue(text);
           queueMaxResourcesDefault = val;
         } else if ("userMaxAppsDefault".equals(element.getTagName())) {
@@ -449,12 +449,12 @@ public class AllocationFileLoaderService extends AbstractService {
    */
   private void loadQueue(String parentName, Element element,
       Map<String, Resource> minQueueResources,
-      Map<String, Resource> maxQueueResources,
-      Map<String, Resource> maxChildQueueResources,
+      Map<String, ConfigurableResource> maxQueueResources,
+      Map<String, ConfigurableResource> maxChildQueueResources,
       Map<String, Integer> queueMaxApps,
       Map<String, Integer> userMaxApps,
       Map<String, Float> queueMaxAMShares,
-      Map<String, ResourceWeights> queueWeights,
+      Map<String, Float> queueWeights,
       Map<String, SchedulingPolicy> queuePolicies,
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Long> fairSharePreemptionTimeouts,
@@ -497,17 +497,17 @@ public class AllocationFileLoaderService extends AbstractService {
       Element field = (Element) fieldNode;
       if ("minResources".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
-        Resource val =
+        ConfigurableResource val =
             FairSchedulerConfiguration.parseResourceConfigValue(text);
-        minQueueResources.put(queueName, val);
+        minQueueResources.put(queueName, val.getResource());
       } else if ("maxResources".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
-        Resource val =
+        ConfigurableResource val =
             FairSchedulerConfiguration.parseResourceConfigValue(text);
         maxQueueResources.put(queueName, val);
       } else if ("maxChildResources".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
-        Resource val =
+        ConfigurableResource val =
             FairSchedulerConfiguration.parseResourceConfigValue(text);
         maxChildQueueResources.put(queueName, val);
       } else if ("maxRunningApps".equals(field.getTagName())) {
@@ -522,7 +522,7 @@ public class AllocationFileLoaderService extends AbstractService {
       } else if ("weight".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         double val = Double.parseDouble(text);
-        queueWeights.put(queueName, new ResourceWeights((float)val));
+        queueWeights.put(queueName, (float)val);
       } else if ("minSharePreemptionTimeout".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         long val = Long.parseLong(text) * 1000L;
@@ -607,14 +607,24 @@ public class AllocationFileLoaderService extends AbstractService {
 
     queueAcls.put(queueName, acls);
     resAcls.put(queueName, racls);
-    if (maxQueueResources.containsKey(queueName) &&
-        minQueueResources.containsKey(queueName)
-        && !Resources.fitsIn(minQueueResources.get(queueName),
-            maxQueueResources.get(queueName))) {
-      LOG.warn(
-          String.format("Queue %s has max resources %s less than "
-              + "min resources %s", queueName, maxQueueResources.get(queueName),
-              minQueueResources.get(queueName)));
+    checkMinAndMaxResource(minQueueResources, maxQueueResources, queueName);
+  }
+
+  private void checkMinAndMaxResource(Map<String, Resource> minResources,
+      Map<String, ConfigurableResource> maxResources, String queueName) {
+
+    ConfigurableResource maxConfigurableResource = maxResources.get(queueName);
+    Resource minResource = minResources.get(queueName);
+
+    if (maxConfigurableResource != null && minResource != null) {
+      Resource maxResource = maxConfigurableResource.getResource();
+
+      // check whether max resource is bigger or equals to min resource when max
+      // resource are absolute values
+      if (maxResource != null && !Resources.fitsIn(minResource, maxResource)) {
+        LOG.warn(String.format("Queue %s has max resources %s less than "
+            + "min resources %s", queueName, maxResource, minResource));
+      }
     }
   }
 

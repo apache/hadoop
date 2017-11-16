@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.security.AccessRequest;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -58,6 +57,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   private Resource fairShare = Resources.createResource(0, 0);
   private Resource steadyFairShare = Resources.createResource(0, 0);
   private Resource reservedResource = Resources.createResource(0, 0);
+  private final Resource resourceUsage = Resource.newInstance(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final YarnAuthorizationProvider authorizer;
@@ -70,11 +70,11 @@ public abstract class FSQueue implements Queue, Schedulable {
   
   protected SchedulingPolicy policy = SchedulingPolicy.DEFAULT_POLICY;
 
-  protected ResourceWeights weights;
+  protected float weights;
   protected Resource minShare;
-  protected Resource maxShare;
+  private ConfigurableResource maxShare;
   protected int maxRunningApps;
-  protected Resource maxChildQueueResource;
+  private ConfigurableResource maxChildQueueResource;
 
   // maxAMShare is a value between 0 and 1.
   protected float maxAMShare;
@@ -106,7 +106,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    *
    * @param recursive whether child queues should be reinitialized recursively
    */
-  public void reinit(boolean recursive) {
+  public final void reinit(boolean recursive) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
     allocConf.initFSQueue(this);
     updatePreemptionVariables();
@@ -140,12 +140,12 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.policy = policy;
   }
 
-  public void setWeights(ResourceWeights weights){
+  public void setWeights(float weights) {
     this.weights = weights;
   }
 
   @Override
-  public ResourceWeights getWeights() {
+  public float getWeight() {
     return weights;
   }
 
@@ -158,8 +158,22 @@ public abstract class FSQueue implements Queue, Schedulable {
     return minShare;
   }
 
-  public void setMaxShare(Resource maxShare){
+  public void setMaxShare(ConfigurableResource maxShare){
     this.maxShare = maxShare;
+  }
+
+  @Override
+  public Resource getMaxShare() {
+    Resource maxResource = maxShare.getResource(scheduler.getClusterResource());
+
+    // Max resource should be greater than or equal to min resource
+    Resource result = Resources.componentwiseMax(maxResource, minShare);
+
+    if (!Resources.equals(maxResource, result)) {
+      LOG.warn(String.format("Queue %s has max resources %s less than "
+          + "min resources %s", getName(), maxResource, minShare));
+    }
+    return result;
   }
 
   public Resource getReservedResource() {
@@ -168,16 +182,11 @@ public abstract class FSQueue implements Queue, Schedulable {
     return reservedResource;
   }
 
-  @Override
-  public Resource getMaxShare() {
-    return maxShare;
-  }
-
-  public void setMaxChildQueueResource(Resource maxChildShare){
+  public void setMaxChildQueueResource(ConfigurableResource maxChildShare){
     this.maxChildQueueResource = maxChildShare;
   }
 
-  public Resource getMaxChildQueueResource() {
+  public ConfigurableResource getMaxChildQueueResource() {
     return maxChildQueueResource;
   }
 
@@ -416,7 +425,7 @@ public abstract class FSQueue implements Queue, Schedulable {
             + " because it has reserved containers.");
       }
       return false;
-    } else if (!Resources.fitsIn(getResourceUsage(), maxShare)) {
+    } else if (!Resources.fitsIn(getResourceUsage(), getMaxShare())) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Assigning container failed on node '" + node.getNodeName()
             + " because queue resource usage is larger than MaxShare: "
@@ -439,7 +448,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public String toString() {
     return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
-        getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
+        getName(), getDemand(), getResourceUsage(), fairShare, getWeight());
   }
   
   @Override
@@ -468,6 +477,39 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   @Override
   public void decReservedResource(String nodeLabel, Resource resourceToDec) {
+  }
+
+  @Override
+  public Resource getResourceUsage() {
+    return resourceUsage;
+  }
+
+  /**
+   * Increase resource usage for this queue and all parent queues.
+   *
+   * @param res the resource to increase
+   */
+  protected void incUsedResource(Resource res) {
+    synchronized (resourceUsage) {
+      Resources.addTo(resourceUsage, res);
+      if (parent != null) {
+        parent.incUsedResource(res);
+      }
+    }
+  }
+
+  /**
+   * Decrease resource usage for this queue and all parent queues.
+   *
+   * @param res the resource to decrease
+   */
+  protected void decUsedResource(Resource res) {
+    synchronized (resourceUsage) {
+      Resources.subtractFrom(resourceUsage, res);
+      if (parent != null) {
+        parent.decUsedResource(res);
+      }
+    }
   }
 
   @Override

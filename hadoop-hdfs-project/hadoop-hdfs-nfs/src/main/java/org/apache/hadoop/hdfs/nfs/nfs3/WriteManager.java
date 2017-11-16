@@ -139,7 +139,8 @@ public class WriteManager {
     FileHandle fileHandle = request.getHandle();
     OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
     if (openFileCtx == null) {
-      LOG.info("No opened stream for fileId: " + fileHandle.getFileId());
+      LOG.info("No opened stream for fileHandle: "
+          + fileHandle.dumpFileHandle());
 
       String fileIdPath = Nfs3Utils.getFileIdPath(fileHandle.getFileId());
       HdfsDataOutputStream fos = null;
@@ -188,7 +189,8 @@ public class WriteManager {
         try {
           fos.close();
         } catch (IOException e) {
-          LOG.error("Can't close stream for fileId: " + handle.getFileId(), e);
+          LOG.error("Can't close stream for fileHandle: "
+              + handle.dumpFileHandle(), e);
         }
         // Notify client to retry
         WccData fileWcc = new WccData(latestAttr.getWccAttr(), latestAttr);
@@ -201,7 +203,8 @@ public class WriteManager {
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Opened stream for appending file: " + fileHandle.getFileId());
+        LOG.debug("Opened stream for appending file: "
+            + fileHandle.dumpFileHandle());
       }
     }
 
@@ -220,7 +223,7 @@ public class WriteManager {
 
     if (openFileCtx == null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("No opened stream for fileId: " + fileHandle.getFileId()
+        LOG.debug("No opened stream for fileId: " + fileHandle.dumpFileHandle()
             + " commitOffset=" + commitOffset
             + ". Return success in this case.");
       }
@@ -263,13 +266,14 @@ public class WriteManager {
   }
   
   void handleCommit(DFSClient dfsClient, FileHandle fileHandle,
-      long commitOffset, Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
+      long commitOffset, Channel channel, int xid, Nfs3FileAttributes preOpAttr,
+      int namenodeId) {
     long startTime = System.nanoTime();
     int status;
     OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
 
     if (openFileCtx == null) {
-      LOG.info("No opened stream for fileId: " + fileHandle.getFileId()
+      LOG.info("No opened stream for fileId: " + fileHandle.dumpFileHandle()
           + " commitOffset=" + commitOffset + ". Return success in this case.");
       status = Nfs3Status.NFS3_OK;
       
@@ -304,7 +308,9 @@ public class WriteManager {
     // Send out the response
     Nfs3FileAttributes postOpAttr = null;
     try {
-      postOpAttr = getFileAttr(dfsClient, new FileHandle(preOpAttr.getFileId()), iug);
+      postOpAttr =
+          getFileAttr(dfsClient, new FileHandle(preOpAttr.getFileId(),
+              namenodeId), iug);
     } catch (IOException e1) {
       LOG.info("Can't get postOpAttr for fileId: " + preOpAttr.getFileId(), e1);
     }
@@ -334,13 +340,13 @@ public class WriteManager {
   }
 
   Nfs3FileAttributes getFileAttr(DFSClient client, FileHandle dirHandle,
-      String fileName) throws IOException {
+      String fileName, int namenodeId) throws IOException {
     String fileIdPath = Nfs3Utils.getFileIdPath(dirHandle) + "/" + fileName;
     Nfs3FileAttributes attr = Nfs3Utils.getFileAttr(client, fileIdPath, iug);
 
     if ((attr != null) && (attr.getType() == NfsFileType.NFSREG.toValue())) {
       OpenFileCtx openFileCtx = fileContextCache.get(new FileHandle(attr
-          .getFileId()));
+          .getFileId(), namenodeId));
 
       if (openFileCtx != null) {
         attr.setSize(openFileCtx.getNextOffset());

@@ -489,9 +489,9 @@ function dockermode
     echo "RUN mkdir -p /maven"
     echo "RUN chown -R ${user_name} /maven"
 
-    # we always force build with the Oracle JDK
+    # we always force build with the OpenJDK JDK
     # but with the correct version
-    echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-oracle"
+    echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"
     echo "USER ${user_name}"
     printf "\n\n"
   ) | docker build -t "${imgname}" -
@@ -564,6 +564,7 @@ function makearelease
     "${MVN}" "${MVN_ARGS[@]}" install \
       site site:stage \
       -DskipTests \
+      -DskipShade \
       -Pdist,src \
       "${DOCFLAGS}"
 

@@ -24,8 +24,6 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.Job;
@@ -37,6 +35,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A OutputFormat that sends the reduce output to a SQL table.
@@ -51,7 +51,8 @@ import org.apache.hadoop.util.StringUtils;
 public class DBOutputFormat<K  extends DBWritable, V> 
 extends OutputFormat<K,V> {
 
-  private static final Log LOG = LogFactory.getLog(DBOutputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DBOutputFormat.class);
   public String dbProductName = "DEFAULT";
 
   public void checkOutputSpecs(JobContext context) 

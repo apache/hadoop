@@ -605,7 +605,7 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3N, S3A, Swift and potentially other Object Stores do not currently change the FS state
+* S3A, Swift and potentially other Object Stores do not currently change the FS state
 until the output stream `close()` operation is completed.
 This MAY be a bug, as it allows >1 client to create a file with `overwrite==false`,
  and potentially confuse file/directory logic
@@ -702,6 +702,121 @@ symbolic links
 exists in the metadata, but no copies of any its blocks can be located;
 -`FileNotFoundException` would seem more accurate and useful.
 
+### `PathHandle getPathHandle(FileStatus stat, HandleOpt... options)`
+
+Implementaions without a compliant call MUST throw `UnsupportedOperationException`
+
+#### Preconditions
+
+    let stat = getFileStatus(Path p)
+    let FS' where:
+      (FS.Directories', FS.Files', FS.Symlinks')
+      p' in paths(FS') where:
+        exists(FS, stat.path) implies exists(FS', p')
+
+The referent of a `FileStatus` instance, at the time it was resolved, is the
+same referent as the result of `getPathHandle(FileStatus)`. The `PathHandle`
+may be used in subsequent operations to ensure invariants hold between
+calls.
+
+The `options` parameter specifies whether a subsequent call e.g.,
+`open(PathHandle)` will succeed if the referent data or location changed. By
+default, any modification results in an error. The caller MAY specify
+relaxations that allow operations to succeed even if the referent exists at
+a different path and/or its data are changed.
+
+An implementation MUST throw `UnsupportedOperationException` if it cannot
+support the semantics specified by the caller. The default set of options
+are as follows.
+
+|            | Unmoved  | Moved     |
+|-----------:|:--------:|:---------:|
+| Unchanged  | EXACT    | CONTENT   |
+| Changed    | PATH     | REFERENCE |
+
+Changes to ownership, extended attributes, and other metadata are not
+required to match the `PathHandle`. Implementations can extend the set of
+`HandleOpt` parameters with custom constraints.
+
+##### Examples
+
+A client specifies that the `PathHandle` should track the entity across
+renames using `REFERENCE`. The implementation MUST throw an
+`UnsupportedOperationException` when creating the `PathHandle` unless
+failure to resolve the reference implies the entity no longer exists.
+
+A client specifies that the `PathHandle` should resolve only if the entity
+is unchanged using `PATH`. The implementation MUST throw an
+`UnsupportedOperationException` when creating the `PathHandle` unless it can
+distinguish between an identical entity located subsequently at the same
+path.
+
+#### Postconditions
+
+    result = PathHandle(p')
+
+#### Implementation notes
+
+The referent of a `PathHandle` is the namespace when the `FileStatus`
+instance was created, _not_ its state when the `PathHandle` is created. An
+implementation MAY reject attempts to create or resolve `PathHandle`
+instances that are valid, but expensive to service.
+
+Object stores that implement rename by copying objects MUST NOT claim to
+support `CONTENT` and `REFERENCE` unless the lineage of the object is
+resolved.
+
+It MUST be possible to serialize a `PathHandle` instance and reinstantiate
+it in one or more processes, on another machine, and arbitrarily far into
+the future without changing its semantics. The implementation MUST refuse to
+resolve instances if it can no longer guarantee its invariants.
+
+#### HDFS implementation notes
+
+HDFS does not support `PathHandle` references to directories or symlinks.
+Support for `CONTENT` and `REFERENCE` looks up files by INode. INodes are
+not unique across NameNodes, so federated clusters SHOULD include enough
+metadata in the `PathHandle` to detect references from other namespaces.
+
+### `FSDataInputStream open(PathHandle handle, int bufferSize)`
+
+Implementaions without a compliant call MUST throw `UnsupportedOperationException`
+
+#### Preconditions
+
+    let fd = getPathHandle(FileStatus stat)
+    if stat.isdir : raise IOException
+    let FS' where:
+      (FS.Directories', FS.Files', FS.Symlinks')
+      p' in FS.Files' where:
+        FS.Files'[p'] = fd
+    if not exists(FS', p') : raise FileNotFoundException
+
+The implementation MUST resolve the referent of the `PathHandle` following
+the constraints specified at its creation by `getPathHandle(FileStatus)`.
+
+Metadata necessary for the `FileSystem` to satisfy this contract MAY be
+encoded in the `PathHandle`.
+
+#### Postconditions
+
+    result = FSDataInputStream(0, FS.Files'[p'])
+
+The stream returned is subject to the constraints of a stream returned by
+`open(Path)`. Constraints checked on open MAY hold to hold for the stream, but
+this is not guaranteed.
+
+For example, a `PathHandle` created with `CONTENT` constraints MAY return a
+stream that ignores updates to the file after it is opened, if it was
+unmodified when `open(PathHandle)` was resolved.
+
+#### Implementation notes
+
+An implementation MAY check invariants either at the server or before
+returning the stream to the client. For example, an implementation may open
+the file, then verify the invariants in the `PathHandle` using
+`getFileStatus(Path)` to implement `CONTENT`. This could yield false
+positives and it requires additional RPC traffic.
 
 ### `boolean delete(Path p, boolean recursive)`
 
@@ -961,7 +1076,7 @@ The outcome is no change to FileSystem state, with a return value of false.
 
     FS' = FS; result = False
 
-*Local Filesystem, S3N*
+*Local Filesystem*
 
 The outcome is as a normal rename, with the additional (implicit) feature
 that the parent directories of the destination also exist.
@@ -1244,7 +1359,8 @@ problems were not considered during the implementation of these loops.
 ## <a name="StreamCapability"></a> interface `StreamCapabilities`
 
 The `StreamCapabilities` provides a way to programmatically query the
-capabilities that an `OutputStream` supports.
+capabilities that `OutputStream`, `InputStream`, or other FileSystem class
+supports.
 
 ```java
 public interface StreamCapabilities {
@@ -1254,12 +1370,16 @@ public interface StreamCapabilities {
 
 ### `boolean hasCapability(capability)`
 
-Return true if the `OutputStream` has the desired capability.
+Return true if the `OutputStream`, `InputStream`, or other FileSystem class
+has the desired capability.
 
 The caller can query the capabilities of a stream using a string value.
-It currently supports to query:
+Here is a table of possible string values:
 
- * `StreamCapabilties.HFLUSH` ("*hflush*"): the capability to flush out the data
- in client's buffer.
- * `StreamCapabilities.HSYNC` ("*hsync*"): capability to flush out the data in
- client's buffer and the disk device.
+String       | Constant   | Implements       | Description
+-------------|------------|------------------|-------------------------------
+hflush       | HFLUSH     | Syncable         | Flush out the data in client's user buffer. After the return of this call, new readers will see the data.
+hsync        | HSYNC      | Syncable         | Flush out the data in client's user buffer all the way to the disk device (but the disk may have it in its cache). Similar to POSIX fsync.
+in:readahead | READAHEAD  | CanSetReadahead  | Set the readahead on the input stream.
+dropbehind   | DROPBEHIND | CanSetDropBehind | Drop the cache.
+in:unbuffer  | UNBUFFER   | CanUnbuffer      | Reduce the buffering on the input stream.

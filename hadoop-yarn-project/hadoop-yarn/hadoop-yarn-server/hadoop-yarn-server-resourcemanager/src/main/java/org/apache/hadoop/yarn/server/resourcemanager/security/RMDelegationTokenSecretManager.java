@@ -34,6 +34,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 
@@ -52,7 +53,7 @@ public class RMDelegationTokenSecretManager extends
   private static final Log LOG = LogFactory
       .getLog(RMDelegationTokenSecretManager.class);
 
-  protected final RMContext rmContext;
+  private final ResourceManager rm;
 
   /**
    * Create a secret manager
@@ -73,7 +74,7 @@ public class RMDelegationTokenSecretManager extends
                                       RMContext rmContext) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
           delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
-    this.rmContext = rmContext;
+    this.rm = rmContext.getResourceManager();
   }
 
   @Override
@@ -85,7 +86,7 @@ public class RMDelegationTokenSecretManager extends
   protected void storeNewMasterKey(DelegationKey newKey) {
     try {
       LOG.info("storing master key with keyID " + newKey.getKeyId());
-      rmContext.getStateStore().storeRMDTMasterKey(newKey);
+      rm.getRMContext().getStateStore().storeRMDTMasterKey(newKey);
     } catch (Exception e) {
       LOG.error("Error in storing master key with KeyID: " + newKey.getKeyId());
       ExitUtil.terminate(1, e);
@@ -96,7 +97,7 @@ public class RMDelegationTokenSecretManager extends
   protected void removeStoredMasterKey(DelegationKey key) {
     try {
       LOG.info("removing master key with keyID " + key.getKeyId());
-      rmContext.getStateStore().removeRMDTMasterKey(key);
+      rm.getRMContext().getStateStore().removeRMDTMasterKey(key);
     } catch (Exception e) {
       LOG.error("Error in removing master key with KeyID: " + key.getKeyId());
       ExitUtil.terminate(1, e);
@@ -109,7 +110,8 @@ public class RMDelegationTokenSecretManager extends
     try {
       LOG.info("storing RMDelegation token with sequence number: "
           + identifier.getSequenceNumber());
-      rmContext.getStateStore().storeRMDelegationToken(identifier, renewDate);
+      rm.getRMContext().getStateStore().storeRMDelegationToken(identifier,
+          renewDate);
     } catch (Exception e) {
       LOG.error("Error in storing RMDelegationToken with sequence number: "
           + identifier.getSequenceNumber());
@@ -123,7 +125,7 @@ public class RMDelegationTokenSecretManager extends
     try {
       LOG.info("updating RMDelegation token with sequence number: "
           + id.getSequenceNumber());
-      rmContext.getStateStore().updateRMDelegationToken(id, renewDate);
+      rm.getRMContext().getStateStore().updateRMDelegationToken(id, renewDate);
     } catch (Exception e) {
       LOG.error("Error in updating persisted RMDelegationToken" +
                 " with sequence number: " + id.getSequenceNumber());
@@ -137,7 +139,7 @@ public class RMDelegationTokenSecretManager extends
     try {
       LOG.info("removing RMDelegation token with sequence number: "
           + ident.getSequenceNumber());
-      rmContext.getStateStore().removeRMDelegationToken(ident);
+      rm.getRMContext().getStateStore().removeRMDelegationToken(ident);
     } catch (Exception e) {
       LOG.error("Error in removing RMDelegationToken with sequence number: "
           + ident.getSequenceNumber());

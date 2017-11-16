@@ -78,10 +78,10 @@ public class TestCorruptReplicaInfo {
     assertEquals("Unexpected total corrupt blocks count!",
         totalExpectedCorruptBlocks, corruptReplicasMap.size());
     assertEquals("Unexpected replica blocks count!",
-        expectedReplicaCount, corruptReplicasMap.getCorruptBlocksStat());
+        expectedReplicaCount, corruptReplicasMap.getCorruptBlocks());
     assertEquals("Unexpected striped blocks count!",
         expectedStripedBlockCount,
-        corruptReplicasMap.getCorruptECBlockGroupsStat());
+        corruptReplicasMap.getCorruptECBlockGroups());
   }
   
   @Test
@@ -93,9 +93,9 @@ public class TestCorruptReplicaInfo {
     assertEquals("Total number of corrupt blocks must initially be 0!",
         0, crm.size());
     assertEquals("Number of corrupt replicas must initially be 0!",
-        0, crm.getCorruptBlocksStat());
+        0, crm.getCorruptBlocks());
     assertEquals("Number of corrupt striped block groups must initially be 0!",
-        0, crm.getCorruptECBlockGroupsStat());
+        0, crm.getCorruptECBlockGroups());
     assertNull("Param n cannot be less than 0",
         crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, -1, null));
     assertNull("Param n cannot be greater than 100",

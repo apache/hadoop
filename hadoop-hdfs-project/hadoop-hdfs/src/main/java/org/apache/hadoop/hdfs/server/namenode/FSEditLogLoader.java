@@ -96,6 +96,14 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TruncateOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .AddErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .RemoveErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .EnableErasureCodingPolicyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp
+    .DisableErasureCodingPolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -958,6 +966,41 @@ public class FSEditLogLoader {
           setStoragePolicyOp.policyId);
       break;
     }
+    case OP_ADD_ERASURE_CODING_POLICY:
+      AddErasureCodingPolicyOp addOp = (AddErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().addPolicy(
+          addOp.getEcPolicy());
+
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId,
+            addOp.getEcPolicy());
+      }
+      break;
+    case OP_ENABLE_ERASURE_CODING_POLICY:
+      EnableErasureCodingPolicyOp enableOp = (EnableErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().enablePolicy(
+          enableOp.getEcPolicy());
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    case OP_DISABLE_ERASURE_CODING_POLICY:
+      DisableErasureCodingPolicyOp disableOp =
+          (DisableErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().disablePolicy(
+          disableOp.getEcPolicy());
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    case OP_REMOVE_ERASURE_CODING_POLICY:
+      RemoveErasureCodingPolicyOp removeOp = (RemoveErasureCodingPolicyOp) op;
+      fsNamesys.getErasureCodingPolicyManager().removePolicy(
+          removeOp.getEcPolicy());
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
     default:
       throw new IOException("Invalid operation read " + op.opCode);
     }

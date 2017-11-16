@@ -111,7 +111,9 @@ public class OptionsParser {
         .withCRC(
             command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch()))
         .withBlocking(
-            !command.hasOption(DistCpOptionSwitch.BLOCKING.getSwitch()));
+            !command.hasOption(DistCpOptionSwitch.BLOCKING.getSwitch()))
+        .withVerboseLog(
+            command.hasOption(DistCpOptionSwitch.VERBOSE_LOG.getSwitch()));
 
     if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
       String[] snapshots = getVals(command,

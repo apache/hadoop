@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -34,7 +35,9 @@ import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -43,6 +46,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.Assert;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -241,11 +246,11 @@ public class TestFSImage {
   @Test
   public void testSaveAndLoadStripedINodeFile() throws IOException{
     Configuration conf = new Configuration();
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
+      DFSTestUtil.enableAllECPolicies(cluster.getFileSystem());
       testSaveAndLoadStripedINodeFile(cluster.getNamesystem(), conf, false);
     } finally {
       if (cluster != null) {
@@ -262,11 +267,11 @@ public class TestFSImage {
   public void testSaveAndLoadStripedINodeFileUC() throws IOException {
     // construct a INode with StripedBlock for saving and loading
     Configuration conf = new Configuration();
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
+      DFSTestUtil.enableAllECPolicies(cluster.getFileSystem());
       testSaveAndLoadStripedINodeFile(cluster.getNamesystem(), conf, true);
     } finally {
       if (cluster != null) {
@@ -462,13 +467,13 @@ public class TestFSImage {
     final int BLOCK_SIZE = 8 * 1024 * 1024;
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
           .build();
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.enableAllECPolicies(fs);
       Path parentDir = new Path("/ec-10-4");
       Path childDir = new Path(parentDir, "ec-3-2");
       ErasureCodingPolicy ec32Policy = SystemErasureCodingPolicies
@@ -732,13 +737,13 @@ public class TestFSImage {
   public void testSaveAndLoadFileUnderReplicationPolicyDir()
       throws IOException {
     Configuration conf = new Configuration();
-    DFSTestUtil.enableAllECPolicies(conf);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
       FSNamesystem fsn = cluster.getNamesystem();
       DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.enableAllECPolicies(fs);
       ErasureCodingPolicy replicaPolicy =
           SystemErasureCodingPolicies.getReplicationPolicy();
       ErasureCodingPolicy defaultEcPolicy =
@@ -809,5 +814,153 @@ public class TestFSImage {
         cluster.shutdown();
       }
     }
+  }
+
+  /**
+   * Test persist and load erasure coding policies.
+   */
+  @Test
+  public void testSaveAndLoadErasureCodingPolicies() throws IOException{
+    Configuration conf = new Configuration();
+    final int blockSize = 16 * 1024 * 1024;
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    try (MiniDFSCluster cluster =
+             new MiniDFSCluster.Builder(conf).numDataNodes(10).build()) {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.enableAllECPolicies(fs);
+
+      // Save namespace and restart NameNode
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      cluster.restartNameNodes();
+      cluster.waitActive();
+
+      assertEquals("Erasure coding policy number should match",
+          SystemErasureCodingPolicies.getPolicies().size(),
+          ErasureCodingPolicyManager.getInstance().getPolicies().length);
+
+      // Add new erasure coding policy
+      ECSchema newSchema = new ECSchema("rs", 5, 4);
+      ErasureCodingPolicy newPolicy =
+          new ErasureCodingPolicy(newSchema, 2 * 1024, (byte) 254);
+      ErasureCodingPolicy[] policies = new ErasureCodingPolicy[]{newPolicy};
+      AddErasureCodingPolicyResponse[] ret =
+          fs.addErasureCodingPolicies(policies);
+      assertEquals(1, ret.length);
+      assertEquals(true, ret[0].isSucceed());
+      newPolicy = ret[0].getPolicy();
+
+      // Save namespace and restart NameNode
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      cluster.restartNameNodes();
+      cluster.waitActive();
+
+      assertEquals("Erasure coding policy number should match",
+          SystemErasureCodingPolicies.getPolicies().size() + 1,
+          ErasureCodingPolicyManager.getInstance().getPolicies().length);
+      ErasureCodingPolicy ecPolicy =
+          ErasureCodingPolicyManager.getInstance().getByID(newPolicy.getId());
+      assertEquals("Newly added erasure coding policy is not found",
+          newPolicy, ecPolicy);
+      assertEquals(
+          "Newly added erasure coding policy should be of disabled state",
+          ErasureCodingPolicyState.DISABLED,
+          DFSTestUtil.getECPolicyState(ecPolicy));
+
+      // Test enable/disable/remove user customized erasure coding policy
+      testChangeErasureCodingPolicyState(cluster, blockSize, newPolicy);
+      // Test enable/disable built-in erasure coding policy
+      testChangeErasureCodingPolicyState(cluster, blockSize,
+          SystemErasureCodingPolicies.getByID((byte) 1));
+    }
+  }
+
+  private void testChangeErasureCodingPolicyState(MiniDFSCluster cluster,
+      int blockSize, ErasureCodingPolicy targetPolicy) throws IOException {
+    DistributedFileSystem fs = cluster.getFileSystem();
+
+    // 1. Enable an erasure coding policy
+    fs.enableErasureCodingPolicy(targetPolicy.getName());
+    // Create file, using the new policy
+    final Path dirPath = new Path("/striped");
+    final Path filePath = new Path(dirPath, "file");
+    final int fileLength = blockSize * targetPolicy.getNumDataUnits();
+    fs.mkdirs(dirPath);
+    fs.setErasureCodingPolicy(dirPath, targetPolicy.getName());
+    final byte[] bytes = StripedFileTestUtil.generateBytes(fileLength);
+    DFSTestUtil.writeFile(fs, filePath, bytes);
+
+
+    // Save namespace and restart NameNode
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.restartNameNodes();
+    cluster.waitActive();
+    ErasureCodingPolicy ecPolicy =
+        ErasureCodingPolicyManager.getInstance().getByID(targetPolicy.getId());
+    assertEquals("The erasure coding policy is not found",
+        targetPolicy, ecPolicy);
+    assertEquals("The erasure coding policy should be of enabled state",
+        ErasureCodingPolicyState.ENABLED,
+        DFSTestUtil.getECPolicyState(ecPolicy));
+    // Read file regardless of the erasure coding policy state
+    DFSTestUtil.readFileAsBytes(fs, filePath);
+
+    // 2. Disable an erasure coding policy
+    fs.disableErasureCodingPolicy(ecPolicy.getName());
+    // Save namespace and restart NameNode
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.restartNameNodes();
+    cluster.waitActive();
+    ecPolicy =
+        ErasureCodingPolicyManager.getInstance().getByID(targetPolicy.getId());
+    assertEquals("The erasure coding policy is not found",
+        targetPolicy, ecPolicy);
+    assertEquals("The erasure coding policy should be of disabled state",
+        ErasureCodingPolicyState.DISABLED,
+        DFSTestUtil.getECPolicyState(ecPolicy));
+    // Read file regardless of the erasure coding policy state
+    DFSTestUtil.readFileAsBytes(fs, filePath);
+
+    // 3. Remove an erasure coding policy
+    try {
+      fs.removeErasureCodingPolicy(ecPolicy.getName());
+    } catch (RemoteException e) {
+      // built-in policy cannot been removed
+      assertTrue("Built-in policy cannot be removed",
+          ecPolicy.isSystemPolicy());
+      assertExceptionContains("System erasure coding policy", e);
+      return;
+    }
+
+    fs.removeErasureCodingPolicy(ecPolicy.getName());
+    // Save namespace and restart NameNode
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.restartNameNodes();
+    cluster.waitActive();
+    ecPolicy = ErasureCodingPolicyManager.getInstance().getByID(
+        targetPolicy.getId());
+    assertEquals("The erasure coding policy saved into and loaded from " +
+        "fsImage is bad", targetPolicy, ecPolicy);
+    assertEquals("The erasure coding policy should be of removed state",
+        ErasureCodingPolicyState.REMOVED,
+        DFSTestUtil.getECPolicyState(ecPolicy));
+    // Read file regardless of the erasure coding policy state
+    DFSTestUtil.readFileAsBytes(fs, filePath);
+    fs.delete(dirPath, true);
   }
 }
