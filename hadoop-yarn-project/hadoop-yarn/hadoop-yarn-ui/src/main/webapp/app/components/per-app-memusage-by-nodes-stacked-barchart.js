@@ -74,7 +74,7 @@ export default StackedBarchart.extend({
   didInsertElement: function() {
     this.initChart(true);
 
-    this.colors = ["Orange", "Grey", "LimeGreen"];
+    this.colors = ["lightsalmon", "Grey", "mediumaquamarine"];
 
     var containers = this.get("rmContainers");
     var nodes = this.get("nodes");
