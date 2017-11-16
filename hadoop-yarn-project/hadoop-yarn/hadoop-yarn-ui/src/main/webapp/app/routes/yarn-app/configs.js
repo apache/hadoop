@@ -21,7 +21,8 @@ import AbstractRoute from '../abstract';
 
 export default AbstractRoute.extend({
   model(param, transition) {
-    const { app_id, service } = this.paramsFor('yarn-app');
+    const { app_id } = this.paramsFor('yarn-app');
+    const { service } = param;
     transition.send('updateBreadcrumbs', app_id, service, [{text: "Configurations & Metrics"}]);
     return Ember.RSVP.hash({
       appId: app_id,

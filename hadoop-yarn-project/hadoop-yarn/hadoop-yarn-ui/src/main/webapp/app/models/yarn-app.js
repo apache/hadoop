@@ -65,6 +65,10 @@ export default DS.Model.extend({
     return this.get("finishedTime");
   }.property("finishedTime"),
 
+  hasFinishedTime: function() {
+    return this.get("finishedTime") >= this.get("startTime");
+  }.property("hasFinishedTime"),
+
   formattedElapsedTime: function() {
     return Converter.msToElapsedTimeUnit(this.get('elapsedTime'));
   }.property('elapsedTime'),

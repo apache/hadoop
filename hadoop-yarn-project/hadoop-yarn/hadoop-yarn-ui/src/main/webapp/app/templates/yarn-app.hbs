@@ -43,17 +43,24 @@
             {{/if}}
           </div>
           <div title="Application id" class="muted-text">{{model.app.id}}</div>
-          <div>{{em-table-simple-status-cell content=model.app.state}}</div>
+          {{em-table-simple-status-cell content=model.app.state}}
           <div class="flex">
             <div class="tail-2">
-              <i class="glyphicon glyphicon-user glyphicon-gray"/> 
-              {{model.app.user}}
+              <i class="glyphicon glyphicon-user glyphicon-gray" /> {{model.app.user}}
             </div>
-            <div><i class="glyphicon glyphicon-time glyphicon-gray" /> 
-              Started at {{model.app.startTime}} 
-            </div>
+            {{#if model.app.hasFinishedTime}}
+              <div title="Started at {{model.app.startTime}}. &#10; Ran for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
+                <i class="glyphicon glyphicon-time glyphicon-gray" />
+                Finished at {{model.app.validatedFinishedTs}}
+              </div>
+            {{else}}
+              <div title="Running for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
+                <i class="glyphicon glyphicon-time glyphicon-gray" />
+                Started at {{model.app.startTime}}
+              </div>
+            {{/if}}
           </div>
-          
+
           {{#unless model.app.serviceName}} {{!--
           <div>Progress: =>
             <div class="progress" style="margin-bottom: 0;">
@@ -62,18 +69,16 @@
               </div>
             </div>
           </div> --}}
-          
+
           {{/unless}}
         </div>
-        
+
         <div class="flex-right">
           <div class="links">
             <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
-            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a> 
+            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a>
           </div>
           <div title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</div>
-          <div title="Elapsed time" class="yarn-tooltip"><i class="glyphicon glyphicon-dashboard glyphicon-gray" /> Runtime {{model.app.formattedElapsedTime}}</div>
-          <div>Finished Time {{model.app.validatedFinishedTs}}</div>
           <div>Priority {{model.app.priority}}</div>
         </div>
       </div>

@@ -22,7 +22,8 @@ import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
 export default AbstractRoute.extend(AppAttemptMixin, {
   model(param, transition) {
-    const { app_id, service } = this.paramsFor('yarn-app');
+    const { app_id } = this.paramsFor('yarn-app');
+    const { service } = param;
     transition.send('updateBreadcrumbs', app_id, service);
 
     return Ember.RSVP.hash({
