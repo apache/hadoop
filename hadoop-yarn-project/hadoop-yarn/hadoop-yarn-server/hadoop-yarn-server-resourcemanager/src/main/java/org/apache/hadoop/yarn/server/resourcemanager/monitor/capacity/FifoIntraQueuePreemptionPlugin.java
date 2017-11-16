@@ -203,6 +203,12 @@ public class FifoIntraQueuePreemptionPlugin
       Resources.subtractFromNonNegative(preemtableFromApp, tmpApp.selected);
       Resources.subtractFromNonNegative(preemtableFromApp, tmpApp.getAMUsed());
 
+      if (context.getIntraQueuePreemptionOrderPolicy()
+            .equals(IntraQueuePreemptionOrderPolicy.USERLIMIT_FIRST)) {
+        Resources.subtractFromNonNegative(preemtableFromApp,
+          tmpApp.getFiCaSchedulerApp().getCSLeafQueue().getMinimumAllocation());
+      }
+
       // Calculate toBePreempted from apps as follows:
       // app.preemptable = min(max(app.used - app.selected - app.ideal, 0),
       // intra_q_preemptable)
