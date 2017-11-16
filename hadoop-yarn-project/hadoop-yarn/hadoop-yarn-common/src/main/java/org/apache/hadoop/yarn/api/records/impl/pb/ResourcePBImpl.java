@@ -151,6 +151,17 @@ public class ResourcePBImpl extends Resource {
         .newInstance(ResourceInformation.VCORES);
     this.setMemorySize(p.getMemory());
     this.setVirtualCores(p.getVirtualCores());
+
+    // Update missing resource information on respective index.
+    updateResourceInformationMap(types);
+  }
+
+  private void updateResourceInformationMap(ResourceInformation[] types) {
+    for (int i = 0; i < types.length; i++) {
+      if (resources[i] == null) {
+        resources[i] = ResourceInformation.newInstance(types[i]);
+      }
+    }
   }
 
   private static ResourceInformation newDefaultInformation(
