@@ -35,31 +35,13 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractManagedParentQueue.class);
 
-  private int maxAppsForAutoCreatedQueues;
-  private int maxAppsPerUserForAutoCreatedQueues;
-  private int userLimit;
-  private float userLimitFactor;
+  protected AutoCreatedLeafQueueTemplate leafQueueTemplate;
 
   public AbstractManagedParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
 
     super.setupQueueConfigs(csContext.getClusterResource());
-    initializeLeafQueueConfigs();
-
-    StringBuffer queueInfo = new StringBuffer();
-    queueInfo.append("Created Managed Parent Queue: ").append(queueName)
-        .append("\nof type : [" + getClass())
-        .append("]\nwith capacity: [")
-        .append(super.getCapacity()).append("]\nwith max capacity: [")
-        .append(super.getMaximumCapacity()).append("\nwith max apps: [")
-        .append(getMaxApplicationsForAutoCreatedQueues())
-        .append("]\nwith max apps per user: [")
-        .append(getMaxApplicationsPerUserForAutoCreatedQueues())
-        .append("]\nwith user limit: [").append(getUserLimit())
-        .append("]\nwith user limit factor: [")
-        .append(getUserLimitFactor()).append("].");
-    LOG.info(queueInfo.toString());
   }
 
   @Override
@@ -70,8 +52,6 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
 
       // Set new configs
       setupQueueConfigs(clusterResource);
-
-      initializeLeafQueueConfigs();
 
       // run reinitialize on each existing queue, to trigger absolute cap
       // recomputations
@@ -87,72 +67,29 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
    * Initialize leaf queue configs from template configurations specified on
    * parent queue.
    */
-  protected void initializeLeafQueueConfigs() {
+  protected AutoCreatedLeafQueueTemplate.Builder initializeLeafQueueConfigs
+    (String queuePath) {
 
     CapacitySchedulerConfiguration conf = csContext.getConfiguration();
 
-    final String queuePath = super.getQueuePath();
+    AutoCreatedLeafQueueTemplate.Builder leafQueueTemplateBuilder = new
+        AutoCreatedLeafQueueTemplate.Builder();
     int maxApps = conf.getMaximumApplicationsPerQueue(queuePath);
     if (maxApps < 0) {
       maxApps = (int) (
           CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS
               * getAbsoluteCapacity());
     }
-    userLimit = conf.getUserLimit(queuePath);
-    userLimitFactor = conf.getUserLimitFactor(queuePath);
-    maxAppsForAutoCreatedQueues = maxApps;
-    maxAppsPerUserForAutoCreatedQueues =
-        (int) (maxApps * (userLimit / 100.0f) * userLimitFactor);
 
-  }
+    int userLimit = conf.getUserLimit(queuePath);
+    float userLimitFactor = conf.getUserLimitFactor(queuePath);
+    leafQueueTemplateBuilder.userLimit(userLimit)
+          .userLimitFactor(userLimitFactor)
+          .maxApps(maxApps)
+          .maxAppsPerUser(
+              (int) (maxApps * (userLimit / 100.0f) * userLimitFactor));
 
-  /**
-   * Number of maximum applications for each of the auto created leaf queues.
-   *
-   * @return maxAppsForAutoCreatedQueues
-   */
-  public int getMaxApplicationsForAutoCreatedQueues() {
-    return maxAppsForAutoCreatedQueues;
-  }
-
-  /**
-   * Number of maximum applications per user for each of the auto created
-   * leaf queues.
-   *
-   * @return maxAppsPerUserForAutoCreatedQueues
-   */
-  public int getMaxApplicationsPerUserForAutoCreatedQueues() {
-    return maxAppsPerUserForAutoCreatedQueues;
-  }
-
-  /**
-   * User limit value for each of the  auto created leaf queues.
-   *
-   * @return userLimit
-   */
-  public int getUserLimitForAutoCreatedQueues() {
-    return userLimit;
-  }
-
-  /**
-   * User limit factor value for each of the  auto created leaf queues.
-   *
-   * @return userLimitFactor
-   */
-  public float getUserLimitFactor() {
-    return userLimitFactor;
-  }
-
-  public int getMaxAppsForAutoCreatedQueues() {
-    return maxAppsForAutoCreatedQueues;
-  }
-
-  public int getMaxAppsPerUserForAutoCreatedQueues() {
-    return maxAppsPerUserForAutoCreatedQueues;
-  }
-
-  public int getUserLimit() {
-    return userLimit;
+    return leafQueueTemplateBuilder;
   }
 
   /**
@@ -228,5 +165,112 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
       writeLock.unlock();
     }
     return childQueue;
+  }
+
+  protected float sumOfChildCapacities() {
+    try {
+      writeLock.lock();
+      float ret = 0;
+      for (CSQueue l : childQueues) {
+        ret += l.getCapacity();
+      }
+      return ret;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  protected float sumOfChildAbsCapacities() {
+    try {
+      writeLock.lock();
+      float ret = 0;
+      for (CSQueue l : childQueues) {
+        ret += l.getAbsoluteCapacity();
+      }
+      return ret;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public static class AutoCreatedLeafQueueTemplate {
+
+    private QueueCapacities queueCapacities;
+
+    private int maxApps;
+    private int maxAppsPerUser;
+    private int userLimit;
+    private float userLimitFactor;
+
+    AutoCreatedLeafQueueTemplate(Builder builder) {
+      this.maxApps = builder.maxApps;
+      this.maxAppsPerUser = builder.maxAppsPerUser;
+      this.userLimit = builder.userLimit;
+      this.userLimitFactor = builder.userLimitFactor;
+      this.queueCapacities = builder.queueCapacities;
+    }
+
+    public static class Builder {
+      private int maxApps;
+      private int maxAppsPerUser;
+
+      private int userLimit;
+      private float userLimitFactor;
+
+      private QueueCapacities queueCapacities;
+
+      Builder maxApps(int maxApplications) {
+        this.maxApps =  maxApplications;
+        return this;
+      }
+
+      Builder maxAppsPerUser(int maxApplicationsPerUser) {
+        this.maxAppsPerUser = maxApplicationsPerUser;
+        return this;
+      }
+
+      Builder userLimit(int usrLimit) {
+        this.userLimit = usrLimit;
+        return this;
+      }
+
+      Builder userLimitFactor(float ulf) {
+        this.userLimitFactor = ulf;
+        return this;
+      }
+
+      Builder capacities(QueueCapacities capacities) {
+        this.queueCapacities = capacities;
+        return this;
+      }
+
+      AutoCreatedLeafQueueTemplate build() {
+        return new AutoCreatedLeafQueueTemplate(this);
+      }
+    }
+
+    public int getUserLimit() {
+      return userLimit;
+    }
+
+    public float getUserLimitFactor() {
+      return userLimitFactor;
+    }
+
+    public QueueCapacities getQueueCapacities() {
+      return queueCapacities;
+    }
+
+    public int getMaxApps() {
+      return maxApps;
+    }
+
+    public int getMaxAppsPerUser() {
+      return maxAppsPerUser;
+    }
+  }
+
+  public AutoCreatedLeafQueueTemplate getLeafQueueTemplate() {
+    return leafQueueTemplate;
   }
 }

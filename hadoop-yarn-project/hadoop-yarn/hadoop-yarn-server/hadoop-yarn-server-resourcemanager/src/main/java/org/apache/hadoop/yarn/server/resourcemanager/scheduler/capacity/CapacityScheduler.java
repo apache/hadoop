@@ -41,7 +41,6 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -64,10 +63,10 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
@@ -145,6 +144,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.SettableFuture;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -560,44 +561,17 @@ public class CapacityScheduler extends
   }
 
   @VisibleForTesting
-  public UserGroupMappingPlacementRule
-      getUserGroupMappingPlacementRule() throws IOException {
+  public PlacementRule getUserGroupMappingPlacementRule() throws IOException {
     try {
       readLock.lock();
-      boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
-      LOG.info(
-          "Initialized queue mappings, override: " + overrideWithQueueMappings);
-
-      // Get new user/group mappings
-      List<QueueMapping> newMappings = conf.getQueueMappings();
-      // check if mappings refer to valid queues
-      for (QueueMapping mapping : newMappings) {
-        String mappingQueue = mapping.getQueue();
-        if (!mappingQueue.equals(
-            UserGroupMappingPlacementRule.CURRENT_USER_MAPPING) && !mappingQueue
-            .equals(UserGroupMappingPlacementRule.PRIMARY_GROUP_MAPPING)) {
-          CSQueue queue = getQueue(mappingQueue);
-          if (queue == null || !(queue instanceof LeafQueue)) {
-            throw new IOException(
-                "mapping contains invalid or non-leaf queue " + mappingQueue);
-          }
-        }
-      }
-
-      // initialize groups if mappings are present
-      if (newMappings.size() > 0) {
-        Groups groups = new Groups(conf);
-        return new UserGroupMappingPlacementRule(overrideWithQueueMappings,
-            newMappings, groups);
-      }
-
-      return null;
+      return UserGroupMappingPlacementRule.get(this);
     } finally {
       readLock.unlock();
     }
   }
 
-  private void updatePlacementRules() throws IOException {
+  @VisibleForTesting
+  void updatePlacementRules() throws IOException {
     // Initialize placement rules
     Collection<String> placementRuleStrs = conf.getStringCollection(
         YarnConfiguration.QUEUE_PLACEMENT_RULES);
@@ -731,37 +705,92 @@ public class CapacityScheduler extends
     }
   }
 
-  private void addApplication(ApplicationId applicationId,
-      String queueName, String user, Priority priority) {
+  private void addApplication(ApplicationId applicationId, String queueName,
+      String user, Priority priority,
+      ApplicationPlacementContext placementContext) {
     try {
       writeLock.lock();
       if (isSystemAppsLimitReached()) {
         String message = "Maximum system application limit reached,"
             + "cannot accept submission of application: " + applicationId;
-        this.rmContext.getDispatcher().getEventHandler().handle(new RMAppEvent(
-            applicationId, RMAppEventType.APP_REJECTED, message));
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
+                message));
         return;
       }
       // Sanity checks.
       CSQueue queue = getQueue(queueName);
+
+      if (queue == null && placementContext != null) {
+        //Could be a potential auto-created leaf queue
+        try {
+          queue = autoCreateLeafQueue(placementContext);
+        } catch (YarnException | IOException e) {
+          LOG.error("Could not auto-create leaf queue due to : ", e);
+          final String message =
+              "Application " + applicationId + " submission by user : " + user
+                  + " to  queue : " + queueName + " failed : " + e.getMessage();
+          this.rmContext.getDispatcher().getEventHandler().handle(
+              new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
+                  message));
+        }
+      }
+
       if (queue == null) {
-        String message =
+        final String message =
             "Application " + applicationId + " submitted by user " + user
                 + " to unknown queue: " + queueName;
+
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
                 message));
         return;
       }
+
       if (!(queue instanceof LeafQueue)) {
         String message =
-            "Application " + applicationId + " submitted by user " + user
-                + " to non-leaf queue: " + queueName;
+            "Application " + applicationId + " submitted by user : " + user
+                + " to non-leaf queue : " + queueName;
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
                 message));
         return;
+      } else if (queue instanceof AutoCreatedLeafQueue && queue
+          .getParent() instanceof ManagedParentQueue) {
+
+        //If queue already exists and auto-queue creation was not required,
+        //placement context should not be null
+        if (placementContext == null) {
+          String message =
+              "Application " + applicationId + " submission by user : " + user
+                  + " to specified queue : " + queueName + "  is prohibited. "
+                  + "Verify automatic queue mapping for user exists in " +
+                  QUEUE_MAPPING;
+          this.rmContext.getDispatcher().getEventHandler().handle(
+              new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
+                  message));
+          return;
+          // For a queue which exists already and
+          // not auto-created above, then its parent queue should match
+          // the parent queue specified in queue mapping
+        } else if (!queue.getParent().getQueueName().equals(
+            placementContext.getParentQueue())) {
+          String message =
+              "Auto created Leaf queue " + placementContext.getQueue() + " "
+                  + "already exists under queue : " + queue
+                  .getParent().getQueuePath()
+                  + ".But Queue mapping configuration " +
+                   CapacitySchedulerConfiguration.QUEUE_MAPPING + " has been "
+                  + "updated to a different parent queue : "
+                  + placementContext.getParentQueue()
+                  + " for the specified user : " + user;
+          this.rmContext.getDispatcher().getEventHandler().handle(
+              new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
+                  message));
+          return;
+        }
       }
+
       // Submit to the queue
       try {
         queue.submitApplication(applicationId, user, queueName);
@@ -1483,7 +1512,8 @@ public class CapacityScheduler extends
       if (queueName != null) {
         if (!appAddedEvent.getIsAppRecovering()) {
           addApplication(appAddedEvent.getApplicationId(), queueName,
-              appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority());
+              appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
+              appAddedEvent.getPlacementContext());
         } else {
           addApplicationOnRecovery(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority());
@@ -2001,7 +2031,8 @@ public class CapacityScheduler extends
     try {
       writeLock.lock();
       LeafQueue queue = this.queueManager.getAndCheckLeafQueue(inQueue);
-      ParentQueue parent = (ParentQueue) queue.getParent();
+      AbstractManagedParentQueue parent = (AbstractManagedParentQueue) queue
+          .getParent();
 
       if (!(queue instanceof AutoCreatedLeafQueue)) {
         throw new SchedulerDynamicEditException(
@@ -2010,7 +2041,8 @@ public class CapacityScheduler extends
       }
 
       if (parent == null
-          || !(AbstractManagedParentQueue.class.isAssignableFrom(parent.getClass()))) {
+          || !(AbstractManagedParentQueue.class.isAssignableFrom(
+              parent.getClass()))) {
         throw new SchedulerDynamicEditException(
             "The parent of AutoCreatedLeafQueue " + inQueue
                 + " must be a PlanQueue/ManagedParentQueue");
@@ -2654,5 +2686,44 @@ public class CapacityScheduler extends
       return (MutableConfigurationProvider) csConfProvider;
     }
     return null;
+  }
+
+  private LeafQueue autoCreateLeafQueue(
+      ApplicationPlacementContext placementContext)
+      throws IOException, YarnException {
+
+    AutoCreatedLeafQueue autoCreatedLeafQueue = null;
+
+    String leafQueueName = placementContext.getQueue();
+    String parentQueueName = placementContext.getParentQueue();
+
+    if (!StringUtils.isEmpty(parentQueueName)) {
+      CSQueue parentQueue = getQueue(parentQueueName);
+
+      if (parentQueue != null && conf.isAutoCreateChildQueueEnabled(
+          parentQueue.getQueuePath())) {
+
+        ManagedParentQueue autoCreateEnabledParentQueue =
+            (ManagedParentQueue) parentQueue;
+        autoCreatedLeafQueue = new AutoCreatedLeafQueue(this, leafQueueName,
+            autoCreateEnabledParentQueue);
+
+        addQueue(autoCreatedLeafQueue);
+
+        //TODO - Set entitlement through capacity management policy
+      } else{
+        throw new SchedulerDynamicEditException(
+            "Could not auto-create leaf queue for " + leafQueueName
+                + ". Queue mapping specifies an invalid parent queue "
+                + "which does not exist "
+                + parentQueueName);
+      }
+    } else{
+      throw new SchedulerDynamicEditException(
+          "Could not auto-create leaf queue for " + leafQueueName
+              + ". Queue mapping does not specify"
+              + " which parent queue it needs to be created under.");
+    }
+    return autoCreatedLeafQueue;
   }
 }

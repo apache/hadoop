@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .AbstractManagedParentQueue.AutoCreatedLeafQueueTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,17 +44,18 @@ public class AutoCreatedLeafQueue extends LeafQueue {
       AbstractManagedParentQueue parent) throws IOException {
     super(cs, queueName, parent, null);
 
-    updateApplicationAndUserLimits(parent.getUserLimitForAutoCreatedQueues(),
-        parent.getUserLimitFactor(),
-        parent.getMaxApplicationsForAutoCreatedQueues(),
-        parent.getMaxApplicationsPerUserForAutoCreatedQueues());
-
+    AutoCreatedLeafQueueTemplate leafQueueTemplate =
+        parent.getLeafQueueTemplate();
+    updateApplicationAndUserLimits(leafQueueTemplate.getUserLimit(),
+        leafQueueTemplate.getUserLimitFactor(),
+        leafQueueTemplate.getMaxApps(),
+        leafQueueTemplate.getMaxAppsPerUser());
     this.parent = parent;
   }
 
   @Override
-  public void reinitialize(CSQueue newlyParsedQueue,
-      Resource clusterResource) throws IOException {
+  public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
+      throws IOException {
     try {
       writeLock.lock();
 
@@ -62,10 +65,12 @@ public class AutoCreatedLeafQueue extends LeafQueue {
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
 
-      updateApplicationAndUserLimits(parent.getUserLimitForAutoCreatedQueues(),
-          parent.getUserLimitFactor(),
-          parent.getMaxApplicationsForAutoCreatedQueues(),
-          parent.getMaxApplicationsPerUserForAutoCreatedQueues());
+      AutoCreatedLeafQueueTemplate leafQueueTemplate =
+          parent.getLeafQueueTemplate();
+      updateApplicationAndUserLimits(leafQueueTemplate.getUserLimit(),
+          leafQueueTemplate.getUserLimitFactor(),
+          leafQueueTemplate.getMaxApps(),
+          leafQueueTemplate.getMaxAppsPerUser());
 
     } finally {
       writeLock.unlock();

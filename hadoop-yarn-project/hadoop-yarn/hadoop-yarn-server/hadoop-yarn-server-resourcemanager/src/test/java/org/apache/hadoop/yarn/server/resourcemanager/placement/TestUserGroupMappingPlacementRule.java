@@ -52,14 +52,14 @@ public class TestUserGroupMappingPlacementRule {
   private void verifyQueueMapping(QueueMapping queueMapping, String inputUser,
       String inputQueue, String expectedQueue, boolean overwrite) throws YarnException {
     Groups groups = new Groups(conf);
-    UserGroupMappingPlacementRule rule =
-        new UserGroupMappingPlacementRule(overwrite, Arrays.asList(queueMapping),
-            groups);
-    ApplicationSubmissionContext asc =
-        Records.newRecord(ApplicationSubmissionContext.class);
+    UserGroupMappingPlacementRule rule = new UserGroupMappingPlacementRule(
+        overwrite, Arrays.asList(queueMapping), groups);
+    ApplicationSubmissionContext asc = Records.newRecord(
+        ApplicationSubmissionContext.class);
     asc.setQueue(inputQueue);
-    String queue = rule.getQueueForApp(asc, inputUser);
-    Assert.assertEquals(expectedQueue, queue);
+    ApplicationPlacementContext ctx = rule.getPlacementForApp(asc, inputUser);
+    Assert.assertEquals(expectedQueue,
+        ctx != null ? ctx.getQueue() : inputQueue);
   }
 
   @Test
