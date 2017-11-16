@@ -20,31 +20,59 @@
 
 <div class="panel-group">
   <div class="panel panel-default">
-    <div>
-      <div>Application ID:{{model.app.id}}</div>
-      <div>Name:{{model.app.appName}}</div>
-      <div>User:{{model.app.user}}</div>
-      <div>Queue:{{model.app.queue}}</div>
-      <div>State:{{model.app.state}}</div>
-      <div>Final Status: =>
-        <span class={{model.app.finalStatusStyle}}>
-          {{model.app.finalStatus}}
-        </span>
-      </div>
-      <div>Start Time:{{model.app.startTime}}</div>
-      <div>Elapsed Time:{{model.app.formattedElapsedTime}}</div>
-      <div>Finished Time:{{model.app.validatedFinishedTs}}</div>
-      <div>Priority:{{model.app.priority}}</div>
-      {{#unless model.app.serviceName}}
-      <div>Progress: =>
-        <div class="progress" style="margin-bottom: 0;">
-          <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style={{model.app.app.progressStyle}}>
-            {{model.app.progress}}%
+    <div class="yarn-app-header">
+      <div class="flex">
+        <div>
+          <div class="flex">
+            <div>
+              <h3 class="yarn-app-name">
+                {{#if model.app.unmanagedApplication}}
+                  <span title="This is an unmanaged application" class="yarn-tooltip">
+                    <i class="glyphicon glyphicon-exclamation-sign glyphicon-gray" />
+                  </span>
+                {{/if}}
+                {{model.app.appName}}
+              </h3>
+            </div>
+            {{#if model.app.finalStatus}}
+            <div title="Final status: {{model.app.finalStatus}}" class="yarn-tooltip yarn-app-final-status offset-1">
+              <span class={{model.app.finalStatusStyle}}>
+                {{model.app.finalStatus}}
+              </span>
+            </div>
+            {{/if}}
           </div>
+          <div title="Application id" class="muted-text">{{model.app.id}}</div>
+          <div>{{em-table-simple-status-cell content=model.app.state}}</div>
+          <div class="flex">
+            <div class="tail-2">
+              <i class="glyphicon glyphicon-user glyphicon-gray"/> 
+              {{model.app.user}}
+            </div>
+            <div><i class="glyphicon glyphicon-time glyphicon-gray" /> 
+              Started at {{model.app.startTime}} 
+            </div>
+          </div>
+          
+          {{#unless model.app.serviceName}} {{!--
+          <div>Progress: =>
+            <div class="progress" style="margin-bottom: 0;">
+              <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style={{model.app.app.progressStyle}}>
+                {{model.app.progress}}%
+              </div>
+            </div>
+          </div> --}}
+          
+          {{/unless}}
+        </div>
+        
+        <div class="flex-right">
+          <div title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</div>
+          <div title="Elapsed time" class="yarn-tooltip"><i class="glyphicon glyphicon-dashboard glyphicon-gray" /> Runtime {{model.app.formattedElapsedTime}}</div>
+          <div>Finished Time:{{model.app.validatedFinishedTs}}</div>
+          <div>Priority {{model.app.priority}}</div>
         </div>
       </div>
-      <div>Is Unmanaged AM:{{model.app.unmanagedApplication}}</div>
-      {{/unless}}
     </div>
     <div class="panel-heading">
       <div class="clearfix">

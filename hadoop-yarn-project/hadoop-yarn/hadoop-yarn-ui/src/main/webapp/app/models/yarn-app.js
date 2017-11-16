@@ -33,7 +33,7 @@ export default DS.Model.extend({
   amContainerLogs: DS.attr('string'),
   amHostHttpAddress: DS.attr('string'),
   logAggregationStatus: DS.attr('string'),
-  unmanagedApplication: DS.attr('string'),
+  unmanagedApplication: DS.attr('boolean'),
   amNodeLabelExpression: DS.attr('string'),
   applicationTags: DS.attr('string'),
   applicationType: DS.attr('string'),
