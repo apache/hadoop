@@ -76,7 +76,21 @@
         <div class="flex-right">
           <div class="links">
             <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
-            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a>
+            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a> 
+            {{#if model.serviceName}}
+              {{#if model.quicklinks}}
+              <div class="btn-group offset-2">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="glyphicon" />
+                </button>
+                <ul class="dropdown-menu">
+                  {{#each model.quicklinks as |link|}}
+                    <li><a href="{{link.value}}" target="_blank">{{link.name}}</a></li>
+                  {{/each}}
+                </ul>
+              </div>
+              {{/if}}
+            {{/if}}
           </div>
           <div title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</div>
           <div>Priority {{model.app.priority}}</div>
