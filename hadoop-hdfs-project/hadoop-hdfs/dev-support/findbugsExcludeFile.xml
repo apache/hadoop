@@ -260,10 +260,11 @@
         <Method name="visitFile" />
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
     </Match>
-    <!-- BlockLocations are user-facing, but LocatedBlocks are not. -->
+    <!-- HdfsFileStatus is user-facing, but HdfsLocatedFileStatus is not.
+         Defensible compatibility choices over time create odd corners. -->
     <Match>
-        <Class name="org.apache.hadoop.hdfs.protocol.HdfsFileStatus" />
-        <Field name="hdfsloc" />
+        <Class name="org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus" />
+        <Field name="locations" />
         <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED" />
     </Match>
     <Match>

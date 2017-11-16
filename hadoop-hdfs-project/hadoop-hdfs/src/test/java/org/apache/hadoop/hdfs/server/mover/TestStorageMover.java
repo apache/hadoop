@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
@@ -311,17 +312,18 @@ public class TestStorageMover {
 
     private void verifyFile(final Path parent, final HdfsFileStatus status,
         final Byte expectedPolicyId) throws Exception {
-      byte policyId = status.getStoragePolicy();
+      HdfsLocatedFileStatus fileStatus = (HdfsLocatedFileStatus) status;
+      byte policyId = fileStatus.getStoragePolicy();
       BlockStoragePolicy policy = policies.getPolicy(policyId);
       if (expectedPolicyId != null) {
         Assert.assertEquals((byte)expectedPolicyId, policy.getId());
       }
       final List<StorageType> types = policy.chooseStorageTypes(
           status.getReplication());
-      for(LocatedBlock lb : status.getLocatedBlocks().getLocatedBlocks()) {
+      for(LocatedBlock lb : fileStatus.getBlockLocations().getLocatedBlocks()) {
         final Mover.StorageTypeDiff diff = new Mover.StorageTypeDiff(types,
             lb.getStorageTypes());
-        Assert.assertTrue(status.getFullName(parent.toString())
+        Assert.assertTrue(fileStatus.getFullName(parent.toString())
             + " with policy " + policy + " has non-empty overlap: " + diff
             + ", the corresponding block is " + lb.getBlock().getLocalBlock(),
             diff.removeOverlap(true));
