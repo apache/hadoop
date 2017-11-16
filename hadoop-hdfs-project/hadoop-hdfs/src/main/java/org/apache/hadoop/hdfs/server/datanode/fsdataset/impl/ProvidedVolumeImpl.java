@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -89,6 +90,30 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
     return suffix;
   }
 
+  /**
+   * Class to keep track of the capacity usage statistics for provided volumes.
+   */
+  public static class ProvidedVolumeDF {
+
+    private AtomicLong used = new AtomicLong();
+
+    public long getSpaceUsed() {
+      return used.get();
+    }
+
+    public void decDfsUsed(long value) {
+      used.addAndGet(-value);
+    }
+
+    public void incDfsUsed(long value) {
+      used.addAndGet(value);
+    }
+
+    public long getCapacity() {
+      return getSpaceUsed();
+    }
+  }
+
   static class ProvidedBlockPoolSlice {
     private ProvidedVolumeImpl providedVolume;
 
@@ -96,6 +121,8 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
     private Configuration conf;
     private String bpid;
     private ReplicaMap bpVolumeMap;
+    private ProvidedVolumeDF df;
+    private AtomicLong numOfBlocks = new AtomicLong();
 
     ProvidedBlockPoolSlice(String bpid, ProvidedVolumeImpl volume,
         Configuration conf) {
@@ -107,6 +134,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
       aliasMap = ReflectionUtils.newInstance(fmt, conf);
       this.conf = conf;
       this.bpid = bpid;
+      this.df = new ProvidedVolumeDF();
       bpVolumeMap.initBlockPool(bpid);
       LOG.info("Created alias map using class: " + aliasMap.getClass());
     }
@@ -155,12 +183,18 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
           if (oldReplica == null) {
             volumeMap.add(bpid, newReplica);
             bpVolumeMap.add(bpid, newReplica);
+            incrNumBlocks();
+            incDfsUsed(region.getBlock().getNumBytes());
           } else {
             throw new IOException("A block with id " + newReplica.getBlockId()
                 + " already exists in the volumeMap");
           }
         }
       }
+    }
+
+    private void incrNumBlocks() {
+      numOfBlocks.incrementAndGet();
     }
 
     public boolean isEmpty() {
@@ -199,6 +233,18 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
         }
       }
     }
+
+    public long getNumOfBlocks() {
+      return numOfBlocks.get();
+    }
+
+    long getDfsUsed() throws IOException {
+      return df.getSpaceUsed();
+    }
+
+    void incDfsUsed(long value) {
+      df.incDfsUsed(value);
+    }
   }
 
   private URI baseURI;
@@ -217,10 +263,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
       "Only provided storages must use ProvidedVolume";
 
     baseURI = getStorageLocation().getUri();
-    Class<? extends ProvidedVolumeDF> dfClass =
-        conf.getClass(DFSConfigKeys.DFS_PROVIDER_DF_CLASS,
-            DefaultProvidedVolumeDF.class, ProvidedVolumeDF.class);
-    df = ReflectionUtils.newInstance(dfClass, conf);
+    df = new ProvidedVolumeDF();
     remoteFS = FileSystem.get(baseURI, conf);
   }
 
@@ -231,39 +274,67 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
 
   @Override
   public long getCapacity() {
-    if (configuredCapacity < 0) {
-      return df.getCapacity();
+    try {
+      // default to whatever is the space used!
+      return getDfsUsed();
+    } catch (IOException e) {
+      LOG.warn("Exception when trying to get capacity of ProvidedVolume: {}",
+          e);
     }
-    return configuredCapacity;
+    return 0L;
   }
 
   @Override
   public long getDfsUsed() throws IOException {
-    return df.getSpaceUsed();
+    long dfsUsed = 0;
+    synchronized(getDataset()) {
+      for(ProvidedBlockPoolSlice s : bpSlices.values()) {
+        dfsUsed += s.getDfsUsed();
+      }
+    }
+    return dfsUsed;
   }
 
   @Override
   long getBlockPoolUsed(String bpid) throws IOException {
-    if (bpSlices.containsKey(bpid)) {
-      return df.getBlockPoolUsed(bpid);
-    } else {
-      throw new IOException("block pool " + bpid + " is not found");
-    }
+    return getProvidedBlockPoolSlice(bpid).getDfsUsed();
   }
 
   @Override
   public long getAvailable() throws IOException {
-    return df.getAvailable();
+    long remaining = getCapacity() - getDfsUsed();
+    // do not report less than 0 remaining space for PROVIDED storage
+    // to prevent marking it as over capacity on NN
+    if (remaining < 0L) {
+      LOG.warn("Volume {} has less than 0 available space", this);
+      return 0L;
+    }
+    return remaining;
   }
 
   @Override
   long getActualNonDfsUsed() throws IOException {
-    return df.getSpaceUsed();
+    return 0L;
   }
 
   @Override
   public long getNonDfsUsed() throws IOException {
     return 0L;
+  }
+
+  @Override
+  long getNumBlocks() {
+    long numBlocks = 0;
+    for (ProvidedBlockPoolSlice s : bpSlices.values()) {
+      numBlocks += s.getNumOfBlocks();
+    }
+    return numBlocks;
+  }
+
+  @Override
+  void incDfsUsedAndNumBlocks(String bpid, long value) {
+    throw new UnsupportedOperationException(
+        "ProvidedVolume does not yet support writes");
   }
 
   @Override

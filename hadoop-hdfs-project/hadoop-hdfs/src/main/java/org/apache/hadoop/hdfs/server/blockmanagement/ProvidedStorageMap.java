@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.common.BlockAlias;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
@@ -72,6 +71,7 @@ public class ProvidedStorageMap {
   private final ProvidedDescriptor providedDescriptor;
   private final DatanodeStorageInfo providedStorageInfo;
   private boolean providedEnabled;
+  private long capacity;
 
   ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf)
       throws IOException {
@@ -112,14 +112,13 @@ public class ProvidedStorageMap {
   /**
    * @param dn datanode descriptor
    * @param s data node storage
-   * @param context the block report context
    * @return the {@link DatanodeStorageInfo} for the specified datanode.
    * If {@code s} corresponds to a provided storage, the storage info
    * representing provided storage is returned.
    * @throws IOException
    */
-  DatanodeStorageInfo getStorage(DatanodeDescriptor dn, DatanodeStorage s,
-      BlockReportContext context) throws IOException {
+  DatanodeStorageInfo getStorage(DatanodeDescriptor dn, DatanodeStorage s)
+      throws IOException {
     if (providedEnabled && storageId.equals(s.getStorageID())) {
       if (StorageType.PROVIDED.equals(s.getStorageType())) {
         if (providedStorageInfo.getState() == State.FAILED
@@ -127,8 +126,10 @@ public class ProvidedStorageMap {
           providedStorageInfo.setState(State.NORMAL);
           LOG.info("Provided storage transitioning to state " + State.NORMAL);
         }
-        processProvidedStorageReport(context);
-        dn.injectStorage(providedStorageInfo);
+        if (dn.getStorageInfo(s.getStorageID()) == null) {
+          dn.injectStorage(providedStorageInfo);
+        }
+        processProvidedStorageReport();
         return providedDescriptor.getProvidedStorage(dn, s);
       }
       LOG.warn("Reserved storage {} reported as non-provided from {}", s, dn);
@@ -136,7 +137,7 @@ public class ProvidedStorageMap {
     return dn.getStorageInfo(s.getStorageID());
   }
 
-  private void processProvidedStorageReport(BlockReportContext context)
+  private void processProvidedStorageReport()
       throws IOException {
     assert lock.hasWriteLock() : "Not holding write lock";
     if (providedStorageInfo.getBlockReportCount() == 0
@@ -170,6 +171,26 @@ public class ProvidedStorageMap {
         providedStorageInfo.setBlockReportCount(0);
       }
     }
+  }
+
+  public long getCapacity() {
+    if (providedStorageInfo == null) {
+      return 0;
+    }
+    return providedStorageInfo.getCapacity();
+  }
+
+  public void updateStorage(DatanodeDescriptor node, DatanodeStorage storage) {
+    if (providedEnabled && storageId.equals(storage.getStorageID())) {
+      if (StorageType.PROVIDED.equals(storage.getStorageType())) {
+        node.injectStorage(providedStorageInfo);
+        return;
+      } else {
+        LOG.warn("Reserved storage {} reported as non-provided from {}",
+            storage, node);
+      }
+    }
+    node.updateStorage(storage);
   }
 
   /**
@@ -295,10 +316,12 @@ public class ProvidedStorageMap {
    * An abstract DatanodeDescriptor to track datanodes with provided storages.
    * NOTE: never resolved through registerDatanode, so not in the topology.
    */
-  static class ProvidedDescriptor extends DatanodeDescriptor {
+  public static class ProvidedDescriptor extends DatanodeDescriptor {
 
     private final NavigableMap<String, DatanodeDescriptor> dns =
         new ConcurrentSkipListMap<>();
+    public final static String NETWORK_LOCATION = "/REMOTE";
+    public final static String NAME = "PROVIDED";
 
     ProvidedDescriptor() {
       super(new DatanodeID(
@@ -444,6 +467,21 @@ public class ProvidedStorageMap {
     public int hashCode() {
       return super.hashCode();
     }
+
+    @Override
+    public String toString() {
+      return "PROVIDED-LOCATION";
+    }
+
+    @Override
+    public String getNetworkLocation() {
+      return NETWORK_LOCATION;
+    }
+
+    @Override
+    public String getName() {
+      return NAME;
+    }
   }
 
   /**
@@ -480,7 +518,13 @@ public class ProvidedStorageMap {
         super.setState(state);
       }
     }
+
+    @Override
+    public String toString() {
+      return "PROVIDED-STORAGE";
+    }
   }
+
   /**
    * Used to emulate block reports for provided blocks.
    */
