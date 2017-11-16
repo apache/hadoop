@@ -48,13 +48,12 @@ public class JavaCommandLineBuilder extends CommandLineBuilder {
   }
 
   /**
-   * Set the size of the heap if a non-empty heap is passed in. 
-   * @param heap empty string or something like "128M" ,"1G" etc. The value is
-   * trimmed.
+   * Set JVM opts.
+   * @param jvmOpts JVM opts
    */
-  public void setJVMHeap(String heap) {
-    if (ServiceUtils.isSet(heap)) {
-      add("-Xmx" + heap.trim());
+  public void setJVMOpts(String jvmOpts) {
+    if (ServiceUtils.isSet(jvmOpts)) {
+      add(jvmOpts);
     }
   }
 

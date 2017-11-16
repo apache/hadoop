@@ -86,6 +86,11 @@ public class YarnServiceConf {
   public static final int DEFAULT_READINESS_CHECK_INTERVAL = 30; // seconds
 
   /**
+   * JVM opts.
+   */
+  public static final String JVM_OPTS = "yarn.service.am.java.opts";
+
+  /**
    * Get long value for the property. First get from the userConf, if not
    * present, get from systemConf.
    *
