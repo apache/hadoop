@@ -19,6 +19,8 @@ package org.apache.hadoop.io.retry;
 
 import java.io.IOException;
 
+import javax.security.sasl.SaslException;
+
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -29,6 +31,7 @@ class UnreliableImplementation implements UnreliableInterface {
     failsOnceIOExceptionInvocationCount,
     failsOnceRemoteExceptionInvocationCount,
     failsTenTimesInvocationCount,
+    failsWithSASLExceptionTenTimesInvocationCount,
     succeedsOnceThenFailsCount,
     succeedsOnceThenFailsIdempotentCount,
     succeedsTenTimesThenFailsCount;
@@ -110,6 +113,13 @@ class UnreliableImplementation implements UnreliableInterface {
   public void failsTenTimesThenSucceeds() throws UnreliableException {
     if (failsTenTimesInvocationCount++ < 10) {
       throw new UnreliableException();
+    }
+  }
+
+  @Override
+  public void failsWithSASLExceptionTenTimes() throws SaslException {
+    if (failsWithSASLExceptionTenTimesInvocationCount ++ < 10) {
+      throw new SaslException();
     }
   }
 
