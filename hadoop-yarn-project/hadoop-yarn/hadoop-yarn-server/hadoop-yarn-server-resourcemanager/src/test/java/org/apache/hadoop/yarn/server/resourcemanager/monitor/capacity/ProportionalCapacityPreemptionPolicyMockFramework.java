@@ -358,6 +358,9 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
       queue = (LeafQueue) nameToCSQueues.get(queueName);
       queue.getApplications().add(app);
       queue.getAllApplications().add(app);
+      when(queue.getMinimumAllocation())
+      .thenReturn(Resource.newInstance(1,1));
+      when(app.getCSLeafQueue()).thenReturn(queue);
 
       HashSet<String> users = userMap.get(queueName);
       if (null == users) {
