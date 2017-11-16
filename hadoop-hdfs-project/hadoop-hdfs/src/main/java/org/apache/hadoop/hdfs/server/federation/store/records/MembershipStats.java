@@ -45,6 +45,10 @@ public abstract class MembershipStats extends BaseRecord {
 
   public abstract long getAvailableSpace();
 
+  public abstract void setProvidedSpace(long capacity);
+
+  public abstract long getProvidedSpace();
+
   public abstract void setNumOfFiles(long files);
 
   public abstract long getNumOfFiles();

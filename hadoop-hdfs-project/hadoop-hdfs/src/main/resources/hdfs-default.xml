@@ -4630,14 +4630,6 @@
   </property>
 
   <property>
-    <name>dfs.provided.df.class</name>
-    <value>org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.DefaultProvidedVolumeDF</value>
-    <description>
-      The class that is used to measure usage statistics of provided stores.
-    </description>
-  </property>
-
-  <property>
     <name>dfs.provided.storage.id</name>
     <value>DS-PROVIDED</value>
     <description>

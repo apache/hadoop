@@ -63,15 +63,15 @@ public class TestProvidedStorageMap {
 
   private DatanodeDescriptor createDatanodeDescriptor(int port) {
     return DFSTestUtil.getDatanodeDescriptor("127.0.0.1", port, "defaultRack",
-            "localhost");
+        "localhost");
   }
 
   @Test
   public void testProvidedStorageMap() throws IOException {
     ProvidedStorageMap providedMap = new ProvidedStorageMap(
-            nameSystemLock, bm, conf);
+        nameSystemLock, bm, conf);
     DatanodeStorageInfo providedMapStorage =
-            providedMap.getProvidedStorageInfo();
+        providedMap.getProvidedStorageInfo();
     //the provided storage cannot be null
     assertNotNull(providedMapStorage);
 
@@ -80,41 +80,40 @@ public class TestProvidedStorageMap {
 
     //associate two storages to the datanode
     DatanodeStorage dn1ProvidedStorage = new DatanodeStorage(
-            providedStorageID,
-            DatanodeStorage.State.NORMAL,
-            StorageType.PROVIDED);
+        providedStorageID,
+        DatanodeStorage.State.NORMAL,
+        StorageType.PROVIDED);
     DatanodeStorage dn1DiskStorage = new DatanodeStorage(
-            "sid-1", DatanodeStorage.State.NORMAL, StorageType.DISK);
+        "sid-1", DatanodeStorage.State.NORMAL, StorageType.DISK);
 
     when(nameSystemLock.hasWriteLock()).thenReturn(true);
-    DatanodeStorageInfo dns1Provided = providedMap.getStorage(dn1,
-            dn1ProvidedStorage, null);
-    DatanodeStorageInfo dns1Disk = providedMap.getStorage(dn1,
-            dn1DiskStorage, null);
+    DatanodeStorageInfo dns1Provided =
+        providedMap.getStorage(dn1, dn1ProvidedStorage);
+    DatanodeStorageInfo dns1Disk = providedMap.getStorage(dn1, dn1DiskStorage);
 
     assertTrue("The provided storages should be equal",
-            dns1Provided == providedMapStorage);
+        dns1Provided == providedMapStorage);
     assertTrue("Disk storage has not yet been registered with block manager",
-            dns1Disk == null);
+        dns1Disk == null);
     //add the disk storage to the datanode.
     DatanodeStorageInfo dnsDisk = new DatanodeStorageInfo(dn1, dn1DiskStorage);
     dn1.injectStorage(dnsDisk);
     assertTrue("Disk storage must match the injected storage info",
-            dnsDisk == providedMap.getStorage(dn1, dn1DiskStorage, null));
+        dnsDisk == providedMap.getStorage(dn1, dn1DiskStorage));
 
     //create a 2nd datanode
     DatanodeDescriptor dn2 = createDatanodeDescriptor(5010);
     //associate a provided storage with the datanode
     DatanodeStorage dn2ProvidedStorage = new DatanodeStorage(
-            providedStorageID,
-            DatanodeStorage.State.NORMAL,
-            StorageType.PROVIDED);
+        providedStorageID,
+        DatanodeStorage.State.NORMAL,
+        StorageType.PROVIDED);
 
     DatanodeStorageInfo dns2Provided = providedMap.getStorage(
-            dn2, dn2ProvidedStorage, null);
+        dn2, dn2ProvidedStorage);
     assertTrue("The provided storages should be equal",
-            dns2Provided == providedMapStorage);
+        dns2Provided == providedMapStorage);
     assertTrue("The DatanodeDescriptor should contain the provided storage",
-            dn2.getStorageInfo(providedStorageID) == providedMapStorage);
+        dn2.getStorageInfo(providedStorageID) == providedMapStorage);
   }
 }

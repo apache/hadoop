@@ -46,7 +46,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
@@ -102,6 +101,7 @@ public class TestProvidedImpl {
   private FsDatasetImpl dataset;
   private static Map<Long, String> blkToPathMap;
   private static List<FsVolumeImpl> providedVolumes;
+  private static long spaceUsed = 0;
 
   /**
    * A simple FileRegion iterator for tests.
@@ -142,6 +142,7 @@ public class TestProvidedImpl {
             }
             writer.flush();
             writer.close();
+            spaceUsed += BLK_LEN;
           } catch (IOException e) {
             e.printStackTrace();
           }
@@ -237,39 +238,6 @@ public class TestProvidedImpl {
 
     public void setBlockCount(int numBlocks) {
       this.numBlocks = numBlocks;
-    }
-  }
-
-  public static class TestProvidedVolumeDF
-      implements ProvidedVolumeDF, Configurable {
-
-    @Override
-    public void setConf(Configuration conf) {
-    }
-
-    @Override
-    public Configuration getConf() {
-      return null;
-    }
-
-    @Override
-    public long getCapacity() {
-      return Long.MAX_VALUE;
-    }
-
-    @Override
-    public long getSpaceUsed() {
-      return -1;
-    }
-
-    @Override
-    public long getBlockPoolUsed(String bpid) {
-      return -1;
-    }
-
-    @Override
-    public long getAvailable() {
-      return Long.MAX_VALUE;
     }
   }
 
@@ -370,6 +338,8 @@ public class TestProvidedImpl {
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
     when(datanode.getDnConf()).thenReturn(dnConf);
+    // reset the space used
+    spaceUsed = 0;
 
     final BlockScanner disabledBlockScanner = new BlockScanner(datanode, conf);
     when(datanode.getBlockScanner()).thenReturn(disabledBlockScanner);
@@ -379,8 +349,6 @@ public class TestProvidedImpl {
 
     this.conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         TestFileRegionBlockAliasMap.class, BlockAliasMap.class);
-    conf.setClass(DFSConfigKeys.DFS_PROVIDER_DF_CLASS,
-        TestProvidedVolumeDF.class, ProvidedVolumeDF.class);
 
     blkToPathMap = new HashMap<Long, String>();
     providedVolumes = new LinkedList<FsVolumeImpl>();
@@ -410,8 +378,6 @@ public class TestProvidedImpl {
     assertEquals(NUM_PROVIDED_INIT_VOLUMES, providedVolumes.size());
     assertEquals(0, dataset.getNumFailedVolumes());
 
-    TestProvidedVolumeDF df = new TestProvidedVolumeDF();
-
     for (int i = 0; i < providedVolumes.size(); i++) {
       //check basic information about provided volume
       assertEquals(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT,
@@ -419,18 +385,17 @@ public class TestProvidedImpl {
       assertEquals(StorageType.PROVIDED,
           providedVolumes.get(i).getStorageType());
 
+      long space = providedVolumes.get(i).getBlockPoolUsed(
+              BLOCK_POOL_IDS[CHOSEN_BP_ID]);
       //check the df stats of the volume
-      assertEquals(df.getAvailable(), providedVolumes.get(i).getAvailable());
-      assertEquals(df.getBlockPoolUsed(BLOCK_POOL_IDS[CHOSEN_BP_ID]),
-          providedVolumes.get(i).getBlockPoolUsed(
-              BLOCK_POOL_IDS[CHOSEN_BP_ID]));
+      assertEquals(spaceUsed, space);
+      assertEquals(NUM_PROVIDED_BLKS, providedVolumes.get(i).getNumBlocks());
 
       providedVolumes.get(i).shutdownBlockPool(
           BLOCK_POOL_IDS[1 - CHOSEN_BP_ID], null);
       try {
-        assertEquals(df.getBlockPoolUsed(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]),
-            providedVolumes.get(i).getBlockPoolUsed(
-                BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]));
+        assertEquals(0, providedVolumes.get(i)
+            .getBlockPoolUsed(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]));
         //should not be triggered
         assertTrue(false);
       } catch (IOException e) {
