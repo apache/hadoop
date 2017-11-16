@@ -8,6 +8,7 @@
 *.sdf
 *.suo
 *.vcxproj.user
+*.patch
 .idea
 .svn
 .classpath
@@ -45,3 +46,5 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/tmp
 yarnregistry.pdf
 patchprocess/
 .history/
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/package-lock.json
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/yarn-error.log
