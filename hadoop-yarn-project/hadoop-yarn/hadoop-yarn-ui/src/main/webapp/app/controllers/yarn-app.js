@@ -58,5 +58,13 @@ export default Ember.Controller.extend({
       breadcrumbs.pushObjects(tailCrumbs);
     }
     this.set('breadcrumbs', breadcrumbs);
-  }
+  },
+
+  amHostHttpAddressFormatted: Ember.computed('model.app.amHostHttpAddress', function () {
+    var amHostAddress = this.get('model.app.amHostHttpAddress');
+    if (amHostAddress && amHostAddress.indexOf('://') < 0) {
+      amHostAddress = 'http://' + amHostAddress;
+    }
+    return amHostAddress;
+  })
 });

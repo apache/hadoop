@@ -16,24 +16,20 @@
  * limitations under the License.
  */
 
-// Colors
-$color-ghost-white: #f1f2f8;
-$color-white: #fff;
+.yarn-app-header {
+  padding: 20px;
+  line-height: 2em;
 
-$color-gray-20: #333;
-$color-gray-40: #666666;
-$color-gray-60: #999999;
-$color-gray-97: #f7f7f7;
-$color-light-gray: #d5d5d5;
+  h3 {
+    margin: 0px;
+  }
 
-$color-green-primary: #60cea5;
-$color-green-secondary: #43b135;
+  i.glyphicon {
+    vertical-align: text-top;
+    margin-right: 3px;
+  }
 
-$color-red-primary: #ef6162;
-$color-red-secondary: #b04b4e;
-
-$color-blue-primary: #26bbf0;
-$color-blue-secondary:#1c95c0;
-
-$color-yellow-primary: #ffbc0b;
-$color-yellow-secondary: #dca41b;
+  .yarn-app-final-status .label {
+    vertical-align: middle;
+  }
+}

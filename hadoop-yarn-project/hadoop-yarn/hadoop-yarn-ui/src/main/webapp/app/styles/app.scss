@@ -1,4 +1,6 @@
 @import 'variables.scss';
+@import 'layout.scss';
+@import 'yarn-app.scss';
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -722,53 +724,10 @@ div.service-action-mask img {
   border-bottom: 1px solid $yarn-border-color;
 }
 
-
-.flex {
-  display: flex;
-}
-/** Pushes the flex element to the right corner **/
-.flex-right {
-  margin-left: auto;
-}
-
 .muted-text {
-  color: #999;
-}
-
-.yarn-app-header {
-  padding: 20px;
-  line-height: 2em;
-}
-
-.yarn-app-header h3 {
-  margin: 0px;
-}
-
-.yarn-app-header i.glyphicon {
-  vertical-align: text-top;
-  margin-right: 3px;
+  color: $yarn-muted-text;
 }
 
 .glyphicon-gray {
-  color: #666;
-}
-
-.yarn-app-final-status .label {
-  vertical-align: middle;
-}
-
-.offset-1 {
-  margin-left: 5px
-}
-
-.offset-2 {
-  margin-left: 10px
-}
-
-.tail-1 {
-  margin-right: 5px
-}
-
-.tail-2 {
-  margin-right: 10px
+  color: $yarn-gray-icon;
 }

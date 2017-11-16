@@ -35,7 +35,7 @@
               </h3>
             </div>
             {{#if model.app.finalStatus}}
-            <div title="Final status: {{model.app.finalStatus}}" class="yarn-tooltip yarn-app-final-status offset-1">
+            <div title="Final status" class="yarn-tooltip yarn-app-final-status offset-1">
               <span class={{model.app.finalStatusStyle}}>
                 {{model.app.finalStatus}}
               </span>
@@ -67,9 +67,13 @@
         </div>
         
         <div class="flex-right">
+          <div class="links">
+            <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
+            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a> 
+          </div>
           <div title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</div>
           <div title="Elapsed time" class="yarn-tooltip"><i class="glyphicon glyphicon-dashboard glyphicon-gray" /> Runtime {{model.app.formattedElapsedTime}}</div>
-          <div>Finished Time:{{model.app.validatedFinishedTs}}</div>
+          <div>Finished Time {{model.app.validatedFinishedTs}}</div>
           <div>Priority {{model.app.priority}}</div>
         </div>
       </div>
