@@ -135,16 +135,7 @@ public class LocatedFileStatus extends FileStatus {
   public BlockLocation[] getBlockLocations() {
     return locations;
   }
-
-  /**
-   * Hook for subclasses to lazily set block locations. The {@link #locations}
-   * field should be null before this is called.
-   * @param locations Block locations for this instance.
-   */
-  protected void setBlockLocations(BlockLocation[] locations) {
-    this.locations = locations;
-  }
-
+  
   /**
    * Compare this FileStatus to another FileStatus
    * @param   o the FileStatus to be compared.
