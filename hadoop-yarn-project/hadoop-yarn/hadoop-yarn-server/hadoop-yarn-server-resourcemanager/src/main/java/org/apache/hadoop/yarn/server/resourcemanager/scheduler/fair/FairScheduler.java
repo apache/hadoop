@@ -368,21 +368,8 @@ public class FairScheduler extends
     return rmContext.getContainerTokenSecretManager();
   }
 
-  public float getAppWeight(FSAppAttempt app) {
-    double weight = 1.0;
-
-    if (sizeBasedWeight) {
-      readLock.lock();
-
-      try {
-        // Set weight based on current memory demand
-        weight = Math.log1p(app.getDemand().getMemorySize()) / Math.log(2);
-      } finally {
-        readLock.unlock();
-      }
-    }
-
-    return (float)weight * app.getPriority().getPriority();
+  public boolean isSizeBasedWeight() {
+    return sizeBasedWeight;
   }
 
   public Resource getIncrementResourceCapability() {

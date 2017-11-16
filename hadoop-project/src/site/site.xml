@@ -52,7 +52,8 @@
       <item name="Cluster Setup" href="hadoop-project-dist/hadoop-common/ClusterSetup.html"/>
       <item name="Commands Reference" href="hadoop-project-dist/hadoop-common/CommandsManual.html"/>
       <item name="FileSystem Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
-      <item name="Compatibility" href="hadoop-project-dist/hadoop-common/Compatibility.html"/>
+      <item name="Compatibility Specification" href="hadoop-project-dist/hadoop-common/Compatibility.html"/>
+      <item name="Downstream Developer's Guide" href="hadoop-project-dist/hadoop-common/DownstreamDev.html"/>
       <item name="Interface Classification" href="hadoop-project-dist/hadoop-common/InterfaceClassification.html"/>
       <item name="FileSystem Specification"
         href="hadoop-project-dist/hadoop-common/filesystem/index.html"/>

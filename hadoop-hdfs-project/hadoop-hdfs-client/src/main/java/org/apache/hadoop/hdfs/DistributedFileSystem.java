@@ -85,6 +85,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -1211,7 +1212,8 @@ public class DistributedFileSystem extends FileSystem {
         T next;
         HdfsFileStatus fileStat = thisListing.getPartialListing()[i++];
         if (needLocation) {
-          next = (T)fileStat.makeQualifiedLocated(getUri(), p);
+          next = (T)((HdfsLocatedFileStatus)fileStat)
+              .makeQualifiedLocated(getUri(), p);
         } else {
           next = (T)fileStat.makeQualified(getUri(), p);
         }
