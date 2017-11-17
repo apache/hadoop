@@ -45,6 +45,8 @@ import org.apache.hadoop.ozone.web.ozShell.bucket.InfoBucketHandler;
 import org.apache.hadoop.ozone.web.ozShell.bucket.ListBucketHandler;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -56,6 +58,7 @@ import java.net.URISyntaxException;
  * to appropriate handlers that execute the ozone functions.
  */
 public class Shell extends Configured implements Tool {
+  private static final Logger LOG = LoggerFactory.getLogger(Shell.class);
 
   // General options
   public static final int DEFAULT_OZONE_PORT = 50070;
@@ -402,7 +405,7 @@ public class Shell extends Configured implements Tool {
       System.err.printf("Command Failed : %s%n", ex.getMessage());
     } catch (OzoneException ex) {
       System.err.printf("Command Failed : %s%n", ex.toJsonString());
-      ex.printStackTrace(System.err);
+      LOG.debug("Command Failed.", ex);
     } catch (IllegalArgumentException ex) {
       System.err.printf("Illegal argument: %s%n", ex.getMessage());
     }
