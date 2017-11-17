@@ -25,7 +25,8 @@ public class RMAppNodeUpdateEvent extends RMAppEvent {
 
   public enum RMAppNodeUpdateType {
     NODE_USABLE, 
-    NODE_UNUSABLE
+    NODE_UNUSABLE,
+    NODE_DECOMMISSIONING
   }
 
   private final RMNode node;

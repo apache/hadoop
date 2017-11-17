@@ -1164,7 +1164,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // could take any required actions.
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
-              NodesListManagerEventType.NODE_USABLE, rmNode));
+              NodesListManagerEventType.NODE_DECOMMISSIONING, rmNode));
       if (rmNode.originalTotalCapability == null){
         rmNode.originalTotalCapability =
             Resources.clone(rmNode.totalCapability);

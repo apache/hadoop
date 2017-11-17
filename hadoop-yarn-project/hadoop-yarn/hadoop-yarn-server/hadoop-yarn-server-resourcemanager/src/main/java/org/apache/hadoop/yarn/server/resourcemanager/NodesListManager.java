@@ -470,6 +470,20 @@ public class NodesListManager extends CompositeService implements
         .contains(ip))
         && !(excludeList.contains(hostName) || excludeList.contains(ip));
   }
+  
+  private void sendRMAppNodeUpdateEventToNonFinalizedApps(
+      RMNode eventNode, RMAppNodeUpdateType appNodeUpdateType) {
+    for(RMApp app : rmContext.getRMApps().values()) {
+      if (!app.isAppFinalStateStored()) {
+        this.rmContext
+            .getDispatcher()
+            .getEventHandler()
+            .handle(
+                new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
+                    appNodeUpdateType));
+      }
+    }
+  }
 
   @Override
   public void handle(NodesListManagerEvent event) {
@@ -477,30 +491,18 @@ public class NodesListManager extends CompositeService implements
     switch (event.getType()) {
     case NODE_UNUSABLE:
       LOG.debug(eventNode + " reported unusable");
-      for(RMApp app: rmContext.getRMApps().values()) {
-        if (!app.isAppFinalStateStored()) {
-          this.rmContext
-              .getDispatcher()
-              .getEventHandler()
-              .handle(
-                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                      RMAppNodeUpdateType.NODE_UNUSABLE));
-        }
-      }
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode, RMAppNodeUpdateType.NODE_UNUSABLE);
       break;
     case NODE_USABLE:
       LOG.debug(eventNode + " reported usable");
-      for (RMApp app : rmContext.getRMApps().values()) {
-        if (!app.isAppFinalStateStored()) {
-          this.rmContext
-              .getDispatcher()
-              .getEventHandler()
-              .handle(
-                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                      RMAppNodeUpdateType.NODE_USABLE));
-        }
-      }
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode, RMAppNodeUpdateType.NODE_USABLE);
       break;
+    case NODE_DECOMMISSIONING:
+      LOG.debug(eventNode + " reported decommissioning");
+      sendRMAppNodeUpdateEventToNonFinalizedApps(
+          eventNode, RMAppNodeUpdateType.NODE_DECOMMISSIONING);
+      break;
+      
     default:
       LOG.error("Ignoring invalid eventtype " + event.getType());
     }
