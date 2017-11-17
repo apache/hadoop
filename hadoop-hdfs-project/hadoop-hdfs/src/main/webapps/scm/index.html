@@ -30,14 +30,14 @@
     <link href="/static/hadoop.css" rel="stylesheet">
     <link href="/static/nvd3-1.8.5.min.css" rel="stylesheet">
 
-    <link href="/main.css" rel="stylesheet">
+    <link href="/static/ozone.css" rel="stylesheet">
 
 </head>
 
 <body ng-app="scm">
 
 <header class="navbar navbar-inverse navbar-fixed-top bs-docs-nav">
-    <div class="container">
+    <div class="container-fluid">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
                     aria-expanded="false" aria-controls="navbar">
@@ -48,18 +48,18 @@
             </button>
             <a class="navbar-brand" href="#">HDFS SCM</a>
         </div>
-        <common-tools></common-tools>
+
+
+        <navmenu
+                metrics="{ 'Rpc metrics' : '/#!/metrics/rpc'}"></navmenu>
+
+
     </div>
 </header>
 
-<div class="container">
+<div class="container-fluid" style="margin: 12pt">
 
-    <overview>
-        <scm-overview>
-        </scm-overview>
-    </overview>
-    <rpc-metrics></rpc-metrics>
-
+    <ng-view></ng-view>
 
 </div><!-- /.container -->
 

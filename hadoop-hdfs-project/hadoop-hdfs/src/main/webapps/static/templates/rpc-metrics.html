@@ -25,8 +25,9 @@
     <p>Quantiles based on a fixed {{window}} window. Calculated once at every
         {{window}}</p>
 
-    <div class="container">
-        <div class="col-md-6" ng-repeat="(metric,percentiles) in windowed">
+    <div class="row">
+        <div class="col-md-6 col-lg-4"
+             ng-repeat="(metric,percentiles) in windowed">
             <h3>{{metric}}</h3>
             <p>{{percentiles.numOps}} sample</p>
             <nvd3 options="$ctrl.percentileGraphOptions"
