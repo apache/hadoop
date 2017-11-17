@@ -589,8 +589,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       if (other.getExecutionTypeRequest() != null) {
         return false;
       }
-    } else if (!execTypeRequest.getExecutionType()
-        .equals(other.getExecutionTypeRequest().getExecutionType())) {
+    } else if (!execTypeRequest.equals(other.getExecutionTypeRequest())) {
       return false;
     }
 
