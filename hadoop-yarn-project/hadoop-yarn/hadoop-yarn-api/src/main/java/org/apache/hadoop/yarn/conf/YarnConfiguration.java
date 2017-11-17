@@ -1737,7 +1737,7 @@ public class YarnConfiguration extends Configuration {
       DOCKER_CONTAINER_RUNTIME_PREFIX + "enable-userremapping.allowed";
 
   /** Set enable user remapping as false by default. */
-  public static final boolean DEFAULT_NM_DOCKER_ENABLE_USER_REMAPPING = false;
+  public static final boolean DEFAULT_NM_DOCKER_ENABLE_USER_REMAPPING = true;
 
   /** lower limit for acceptable uids of user remapped user. */
   public static final String NM_DOCKER_USER_REMAPPING_UID_THRESHOLD =
