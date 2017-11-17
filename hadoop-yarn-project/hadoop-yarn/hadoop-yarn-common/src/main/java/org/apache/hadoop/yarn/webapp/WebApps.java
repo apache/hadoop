@@ -394,15 +394,21 @@ public class WebApps {
     }
 
     public WebApp start(WebApp webapp) {
-      return start(webapp, null);
+      return start(webapp, null, null);
     }
 
-    public WebApp start(WebApp webapp, WebAppContext ui2Context) {
+    public WebApp start(WebApp webapp, WebAppContext ui2Context,
+        Map<String, String> services) {
       WebApp webApp = build(webapp);
       HttpServer2 httpServer = webApp.httpServer();
       if (ui2Context != null) {
         addFiltersForNewContext(ui2Context);
         httpServer.addHandlerAtFront(ui2Context);
+      }
+      if (services!=null) {
+        String packageName = services.get("PackageName");
+        String pathSpec = services.get("PathSpec");
+        httpServer.addJerseyResourcePackage(packageName, pathSpec);
       }
       try {
         httpServer.start();
