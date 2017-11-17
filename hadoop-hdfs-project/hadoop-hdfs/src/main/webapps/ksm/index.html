@@ -30,14 +30,14 @@
     <link href="/static/hadoop.css" rel="stylesheet">
     <link href="/static/nvd3-1.8.5.min.css" rel="stylesheet">
 
-    <link href="/main.css" rel="stylesheet">
+    <link href="/static/ozone.css" rel="stylesheet">
 
 </head>
 
 <body ng-app="ksm">
 
 <header class="navbar navbar-inverse navbar-fixed-top bs-docs-nav">
-    <div class="container">
+    <div class="container-fluid">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
                     aria-expanded="false" aria-controls="navbar">
@@ -48,17 +48,13 @@
             </button>
             <a class="navbar-brand" href="#">HDFS KSM</a>
         </div>
-        <common-tools></common-tools>
+        <navmenu
+                metrics="{ 'Ksm metrics' : '/#!/metrics/ksm', 'Rpc metrics' : '/#!/metrics/rpc'}"></navmenu>
     </div>
 </header>
 
-<div class="container">
-
-    <overview></overview>
-    <ksm-metrics></ksm-metrics>
-    <rpc-metrics></rpc-metrics>
-
-
+<div class="container-fluid">
+    <ng-view></ng-view>
 </div><!-- /.container -->
 
 <script src="/static/jquery-1.10.2.min.js"></script>

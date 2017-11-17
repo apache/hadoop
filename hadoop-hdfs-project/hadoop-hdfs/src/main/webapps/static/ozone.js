@@ -22,7 +22,19 @@
         return key == 'name' || key == 'modelerType' || key == "$$hashKey" ||
             key.match(/tag.*/);
     };
-    angular.module('ozone', ['nvd3'])
+    angular.module('ozone', ['nvd3', 'ngRoute']);
+    angular.module('ozone').config(function ($routeProvider) {
+        $routeProvider
+            .when("/", {
+                templateUrl: "main.html"
+            })
+            .when("/metrics/rpc", {
+                template: "<rpc-metrics></rpc-metrics>"
+            })
+            .when("/config", {
+                template: "<config></config>"
+            })
+    });
     angular.module('ozone').component('overview', {
         templateUrl: 'static/templates/overview.html',
         transclude: true,
@@ -37,13 +49,13 @@
     angular.module('ozone').component('jvmParameters', {
         templateUrl: 'static/templates/jvm.html',
         controller: function ($http) {
-            var ctrl = this
+            var ctrl = this;
             $http.get("/jmx?qry=java.lang:type=Runtime")
                 .then(function (result) {
                     ctrl.jmx = result.data.beans[0];
 
                     //convert array to a map
-                    var systemProperties = {}
+                    var systemProperties = {};
                     for (var idx in ctrl.jmx.SystemProperties) {
                         var item = ctrl.jmx.SystemProperties[idx];
                         systemProperties[item.key.replace(/\./g, "_")] = item.value;
@@ -208,7 +220,8 @@
                     ctrl.select(pane);
                 }
             },
-            template: '<div class="nav navtabs"><div class="container"><ul class="nav nav-pills">' +
+            template: '<div class="nav navtabs"><div class="row"><ul' +
+            ' class="nav nav-pills">' +
             '<li ng-repeat="pane in $ctrl.panes" ng-class="{active:pane.selected}">' +
             '<a href="" ng-click="$ctrl.click(pane)">{{pane.title}}</a> ' +
             '</li> </ul></div><br/><div class="tab-content" ng-transclude></div> </div>'
@@ -229,8 +242,11 @@
             template: '<div class="tab-pane" ng-if="$ctrl.selected" ng-transclude></div>'
         });
 
-    angular.module('ozone').component('commonTools', {
-        templateUrl: '/static/templates/tools.html',
+    angular.module('ozone').component('navmenu', {
+        bindings: {
+            metrics: '<'
+        },
+        templateUrl: '/static/templates/menu.html',
         controller: function ($http) {
             var ctrl = this;
             ctrl.docs = false;
@@ -242,4 +258,98 @@
                 });
         }
     });
+
+    angular.module('ozone').component('config', {
+        templateUrl: '/static/templates/config.html',
+        controller: function ($scope, $http) {
+            var ctrl = this;
+            ctrl.selectedTags = [];
+
+            $http.get("/conf?cmd=getOzoneTags&group=ozone")
+                .then(function (response) {
+                    ctrl.tags = response.data;
+
+                    var excludedTags = ['CBLOCK', 'KSM', 'SCM'];
+                    for (var i = 0; i < excludedTags.length; i++) {
+                        var idx = ctrl.tags.indexOf(excludedTags[i]);
+                        // Remove CBLOCK related properties
+                        if (idx > -1) {
+                            ctrl.tags.splice(idx, 1);
+                        }
+                    }
+                    ctrl.loadAll();
+                });
+
+
+
+            ctrl.loadAll = function () {
+                console.log("Displaying all configs");
+                $http.get("/conf?cmd=getPropertyByTag&tags=" + ctrl.tags + "&group=ozone").then(function (response) {
+                    ctrl.configs = response.data;
+                    console.log(ctrl.configs)
+                    for (var idx in ctrl.configs) {
+                        var tags = []
+                        var parsedTags = ctrl.configs[idx].tag.split(",");
+                        for (var t in parsedTags) {
+                            tags.push(parsedTags[t].trim())
+                        }
+                        ctrl.configs[idx].tag = tags;
+
+                    };
+                    ctrl.sortBy('name');
+                });
+            };
+
+            ctrl.tagFilter = function (value, index, array) {
+                if (!ctrl.selectedTags) {
+                    return true;
+                }
+                var selected = true;
+                for (var idx in ctrl.selectedTags) {
+                    selected = selected && (value.tag.indexOf(ctrl.selectedTags[idx]) > -1);
+                }
+                return selected;
+            };
+            ctrl.configFilter = function (config) {
+                return false;
+            };
+            ctrl.selected = function (tag) {
+                return ctrl.selectedTags.includes(tag);
+            };
+
+            ctrl.allSelected = function () {
+                return ctrl.selectedTags.indexOf('SCM') == -1
+                    && ctrl.selectedTags.indexOf('KSM') == -1
+            };
+
+            ctrl.switchto = function (tag) {
+                var tags = ctrl.selectedTags.filter(function (item) {
+                    return item != 'KSM' && item != 'SCM';
+                });
+                if (tag) {
+                    tags.push(tag);
+                }
+                ctrl.selectedTags = tags;
+            };
+
+            ctrl.select = function (tag) {
+                var tagIdx = ctrl.selectedTags.indexOf(tag);
+                if (tagIdx > -1) {
+                    ctrl.selectedTags = ctrl.selectedTags.filter(function (item) {
+                        return item != tag;
+                    });
+                } else {
+                    ctrl.selectedTags.push(tag);
+                }
+                console.log("Tags selected:" + ctrl.selectedTags);
+            };
+
+            ctrl.sortBy = function (propertyName) {
+                ctrl.reverse = (ctrl.propertyName === propertyName) ? !ctrl.reverse : false;
+                ctrl.propertyName = propertyName;
+            };
+
+        }
+    });
+
 })();

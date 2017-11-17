@@ -23,7 +23,12 @@
     };
 
     angular.module('ksm', ['ozone', 'nvd3']);
-
+    angular.module('ksm').config(function ($routeProvider) {
+        $routeProvider
+            .when("/metrics/ksm", {
+                template: "<ksm-metrics></ksm-metrics>"
+            });
+    });
     angular.module('ksm').component('ksmMetrics', {
         templateUrl: 'ksm-metrics.html',
         controller: function ($http) {

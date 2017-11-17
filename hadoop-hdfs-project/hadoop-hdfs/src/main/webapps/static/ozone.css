@@ -15,9 +15,46 @@
  *  limitations under the License.
 */
 body {
-  padding-top: 50px;
+    padding: 40px;
+    padding-top: 60px;
 }
 .starter-template {
-  padding: 40px 15px;
-  text-align: center;
+    padding: 40px 15px;
+    text-align: center;
+}
+
+
+.btn {
+    border: 0 none;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.btn:focus, .btn:active:focus, .btn.active:focus {
+    outline: 0 none;
+}
+
+.table-striped > tbody > tr:nth-child(2n+1).selectedtag > td:hover {
+    background-color: #3276b1;
+}
+.table-striped > tbody > tr:nth-child(2n+1).selectedtag > td {
+    background-color: #3276b1;
+}
+.tagPanel tr.selectedtag td {
+    background-color: #3276b1;
+}
+.top-buffer { margin-top:4px; }
+
+
+.sortorder:after {
+    content: '\25b2';   // BLACK UP-POINTING TRIANGLE
+}
+.sortorder.reverse:after {
+    content: '\25bc';   // BLACK DOWN-POINTING TRIANGLE
+}
+
+.wrap-table{
+    word-wrap: break-word;
+    table-layout: fixed;
 }
