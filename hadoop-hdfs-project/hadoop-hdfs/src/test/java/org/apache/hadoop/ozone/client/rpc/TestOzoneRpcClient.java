@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.client.rpc;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
@@ -90,7 +89,7 @@ public class TestOzoneRpcClient {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf)
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(5)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     conf.set("ozone.client.protocol",
         "org.apache.hadoop.ozone.client.rpc.RpcClient");
