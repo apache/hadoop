@@ -98,7 +98,7 @@ public class TestFSSchedulerNode {
     ApplicationAttemptId appAttemptId =
         mock(ApplicationAttemptId.class);
     when(starvingApp.getApplicationAttemptId()).thenReturn(appAttemptId);
-    when(starvingApp.assignContainer(schedulerNode)).thenAnswer(
+    when(starvingApp.assignContainer(schedulerNode, false)).thenAnswer(
         new Answer<Resource>() {
           @Override
           public Resource answer(InvocationOnMock invocationOnMock)
@@ -142,7 +142,7 @@ public class TestFSSchedulerNode {
   }
 
   private void allocateContainers(FSSchedulerNode schedulerNode) {
-    FairScheduler.assignPreemptedContainers(schedulerNode);
+    FairScheduler.attemptToAssignPreemptedResources(schedulerNode);
   }
 
   /**

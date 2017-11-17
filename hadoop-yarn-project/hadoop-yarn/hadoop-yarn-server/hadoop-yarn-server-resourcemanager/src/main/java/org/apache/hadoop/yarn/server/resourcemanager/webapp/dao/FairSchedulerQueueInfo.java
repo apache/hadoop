@@ -88,7 +88,7 @@ public class FairSchedulerQueueInfo {
     amMaxResources = new ResourceInfo(Resource.newInstance(
         queue.getMetrics().getMaxAMShareMB(),
         queue.getMetrics().getMaxAMShareVCores()));
-    usedResources = new ResourceInfo(queue.getResourceUsage());
+    usedResources = new ResourceInfo(queue.getGuaranteedResourceUsage());
     demandResources = new ResourceInfo(queue.getDemand());
     fractionMemUsed = (float)usedResources.getMemorySize() /
         clusterResources.getMemorySize();

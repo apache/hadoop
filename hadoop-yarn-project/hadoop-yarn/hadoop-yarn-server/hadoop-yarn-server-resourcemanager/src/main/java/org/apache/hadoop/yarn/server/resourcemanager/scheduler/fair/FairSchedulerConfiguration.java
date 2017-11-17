@@ -348,6 +348,11 @@ public class FairSchedulerConfiguration extends Configuration {
         DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);
   }
 
+  public boolean isOversubscriptionEnabled() {
+    return getBoolean(YarnConfiguration.RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED);
+  }
+
   /**
    * Delay in milliseconds for locality fallback node to rack.
    * @deprecated linked to {@link #CONTINUOUS_SCHEDULING_ENABLED} deprecation

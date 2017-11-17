@@ -58,8 +58,17 @@ public interface Schedulable {
    */
   Resource getDemand();
 
-  /** Get the aggregate amount of resources consumed by the schedulable. */
-  Resource getResourceUsage();
+  /**
+   * Get the aggregate amount of guaranteed resources consumed by the
+   * schedulable.
+   */
+  Resource getGuaranteedResourceUsage();
+
+  /**
+   * Get the aggregate amount of opportunistic resources consumed by the
+   * schedulable.
+   */
+  Resource getOpportunisticResourceUsage();
 
   /** Minimum Resource share assigned to the schedulable. */
   Resource getMinShare();
@@ -89,8 +98,10 @@ public interface Schedulable {
   /**
    * Assign a container on this node if possible, and return the amount of
    * resources assigned.
+   * @param node the node to assign containers on
+   * @param opportunistic whether to assign OPPORTUNISTIC containers or not
    */
-  Resource assignContainer(FSSchedulerNode node);
+  Resource assignContainer(FSSchedulerNode node, boolean opportunistic);
 
   /** Get the fair share assigned to this Schedulable. */
   Resource getFairShare();

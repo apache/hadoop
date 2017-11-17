@@ -222,7 +222,8 @@ public class TestAppRunnability extends FairSchedulerTestBase {
     scheduler.handle(nodeEvent);
     scheduler.handle(updateEvent);
 
-    assertEquals(Resource.newInstance(1024, 1), oldQueue.getResourceUsage());
+    assertEquals(Resource.newInstance(1024, 1),
+        oldQueue.getGuaranteedResourceUsage());
     scheduler.update();
     assertEquals(Resource.newInstance(3072, 3), oldQueue.getDemand());
 
@@ -231,8 +232,10 @@ public class TestAppRunnability extends FairSchedulerTestBase {
     assertSame(targetQueue, app.getQueue());
     assertFalse(oldQueue.isRunnableApp(app));
     assertTrue(targetQueue.isRunnableApp(app));
-    assertEquals(Resource.newInstance(0, 0), oldQueue.getResourceUsage());
-    assertEquals(Resource.newInstance(1024, 1), targetQueue.getResourceUsage());
+    assertEquals(Resource.newInstance(0, 0),
+        oldQueue.getGuaranteedResourceUsage());
+    assertEquals(Resource.newInstance(1024, 1),
+        targetQueue.getGuaranteedResourceUsage());
     assertEquals(0, oldQueue.getNumRunnableApps());
     assertEquals(1, targetQueue.getNumRunnableApps());
     assertEquals(1, queueMgr.getRootQueue().getNumRunnableApps());

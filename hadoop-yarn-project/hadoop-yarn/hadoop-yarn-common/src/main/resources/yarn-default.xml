@@ -429,6 +429,19 @@
   </property>
 
   <property>
+    <description>
+      If set to true, the scheduler will try to over-allocate resources on the
+      nodes that allow overallocation. To enable overallocatin on a node, set
+      {code}yarn.nodemanager.overallocation.memory-utilization-threshold{code}
+      and
+      {code}yarn.nodemanager.overallocation.cpu-utilization-threshold{code}
+      to a number in the range (0.0, 1.0)
+    </description>
+    <name>yarn.resourcemanager.scheduler.oversubscription.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Enable RM to recover state after starting. If true, then
       yarn.resourcemanager.store.class must be specified. </description>
     <name>yarn.resourcemanager.recovery.enabled</name>

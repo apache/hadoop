@@ -84,7 +84,7 @@ public class FakeSchedulable implements Schedulable {
   }
   
   @Override
-  public Resource assignContainer(FSSchedulerNode node) {
+  public Resource assignContainer(FSSchedulerNode node, boolean opportunistic) {
     return null;
   }
 
@@ -114,8 +114,13 @@ public class FakeSchedulable implements Schedulable {
   }
 
   @Override
-  public Resource getResourceUsage() {
+  public Resource getGuaranteedResourceUsage() {
     return usage;
+  }
+
+  @Override
+  public Resource getOpportunisticResourceUsage() {
+    return Resource.newInstance(0, 0);
   }
 
   @Override

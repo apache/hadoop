@@ -169,8 +169,8 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
       extends DominantResourceFairnessComparator {
     @Override
     public int compare(Schedulable s1, Schedulable s2) {
-      Resource usage1 = s1.getResourceUsage();
-      Resource usage2 = s2.getResourceUsage();
+      Resource usage1 = s1.getGuaranteedResourceUsage();
+      Resource usage2 = s2.getGuaranteedResourceUsage();
       Resource minShare1 = s1.getMinShare();
       Resource minShare2 = s2.getMinShare();
       Resource clusterCapacity = fsContext.getClusterResource();
@@ -370,9 +370,9 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
     @Override
     public int compare(Schedulable s1, Schedulable s2) {
       ResourceInformation[] resourceInfo1 =
-          s1.getResourceUsage().getResources();
+          s1.getGuaranteedResourceUsage().getResources();
       ResourceInformation[] resourceInfo2 =
-          s2.getResourceUsage().getResources();
+          s2.getGuaranteedResourceUsage().getResources();
       ResourceInformation[] minShareInfo1 = s1.getMinShare().getResources();
       ResourceInformation[] minShareInfo2 = s2.getMinShare().getResources();
       ResourceInformation[] clusterInfo =

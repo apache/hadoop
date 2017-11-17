@@ -88,7 +88,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(maxResource);
-    Mockito.when(app.getResourceUsage()).thenReturn(Resources.none());
+    Mockito.when(app.getGuaranteedResourceUsage()).thenReturn(Resources.none());
 
     schedulable.addApp(app, true);
     schedulable.addApp(app, true);
@@ -176,7 +176,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
       @Override
       public void run() {
         for (int i=0; i < 500; i++) {
-          schedulable.getResourceUsage();
+          schedulable.getGuaranteedResourceUsage();
         }
       }
     });

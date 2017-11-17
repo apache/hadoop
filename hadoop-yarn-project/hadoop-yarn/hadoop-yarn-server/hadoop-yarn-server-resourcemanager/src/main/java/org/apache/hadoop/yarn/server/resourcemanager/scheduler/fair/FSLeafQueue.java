@@ -97,7 +97,7 @@ public class FSLeafQueue extends FSQueue {
       // when an appAttempt is created for an application, we'd like to move
       // it over from assignedApps to either runnableApps or nonRunnableApps
       assignedApps.remove(app.getApplicationId());
-      incUsedResource(app.getResourceUsage());
+      incUsedGuaranteedResource(app.getGuaranteedResourceUsage());
     } finally {
       writeLock.unlock();
     }
@@ -132,7 +132,7 @@ public class FSLeafQueue extends FSQueue {
       getMetrics().setAMResourceUsage(amResourceUsage);
     }
 
-    decUsedResource(app.getResourceUsage());
+    decUsedGuaranteedResource(app.getGuaranteedResourceUsage());
     return runnable;
   }
 
@@ -302,6 +302,42 @@ public class FSLeafQueue extends FSQueue {
     return demand;
   }
 
+  @Override
+  public Resource getGuaranteedResourceUsage() {
+    Resource guaranteedResource = Resources.createResource(0);
+    readLock.lock();
+    try {
+      for (FSAppAttempt app : runnableApps) {
+        Resources.addTo(guaranteedResource, app.getGuaranteedResourceUsage());
+      }
+      for (FSAppAttempt app : nonRunnableApps) {
+        Resources.addTo(guaranteedResource, app.getGuaranteedResourceUsage());
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return guaranteedResource;
+  }
+
+  @Override
+  public Resource getOpportunisticResourceUsage() {
+    Resource opportunisticResource = Resource.newInstance(0, 0);
+    readLock.lock();
+    try {
+      for (FSAppAttempt app : runnableApps) {
+        Resources.addTo(opportunisticResource,
+            app.getOpportunisticResourceUsage());
+      }
+      for (FSAppAttempt app : nonRunnableApps) {
+        Resources.addTo(opportunisticResource,
+            app.getOpportunisticResourceUsage());
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return opportunisticResource;
+  }
+
   Resource getAmResourceUsage() {
     return amResourceUsage;
   }
@@ -335,14 +371,14 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
-  public Resource assignContainer(FSSchedulerNode node) {
+  public Resource assignContainer(FSSchedulerNode node, boolean opportunistic) {
     Resource assigned = none();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Node " + node.getNodeName() + " offered to queue: " +
           getName() + " fairShare: " + getFairShare());
     }
 
-    if (!assignContainerPreCheck(node)) {
+    if (!assignContainerPreCheck(node, opportunistic)) {
       return assigned;
     }
 
@@ -350,7 +386,7 @@ public class FSLeafQueue extends FSQueue {
       if (SchedulerAppUtils.isPlaceBlacklisted(sched, node, LOG)) {
         continue;
       }
-      assigned = sched.assignContainer(node);
+      assigned = sched.assignContainer(node, opportunistic);
       if (!assigned.equals(none())) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Assigned container in queue:" + getName() + " " +
@@ -557,7 +593,7 @@ public class FSLeafQueue extends FSQueue {
     Resource starvation =
         Resources.componentwiseMin(getMinShare(), getDemand());
 
-    Resources.subtractFromNonNegative(starvation, getResourceUsage());
+    Resources.subtractFromNonNegative(starvation, getGuaranteedResourceUsage());
 
     boolean starved = !Resources.isNone(starvation);
     long now = scheduler.getClock().getTime();
@@ -616,7 +652,7 @@ public class FSLeafQueue extends FSQueue {
         ", SteadyFairShare: " + getSteadyFairShare() +
         ", MaxShare: " + getMaxShare() +
         ", MinShare: " + minShare +
-        ", ResourceUsage: " + getResourceUsage() +
+        ", ResourceUsage: " + getGuaranteedResourceUsage() +
         ", Demand: " + getDemand() +
         ", Runnable: " + getNumRunnableApps() +
         ", NumPendingApps: " + getNumPendingApps() +

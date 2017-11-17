@@ -119,6 +119,34 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
+  public Resource getGuaranteedResourceUsage() {
+    Resource guaranteedResource = Resources.createResource(0);
+    readLock.lock();
+    try {
+      for (FSQueue child : childQueues) {
+        Resources.addTo(guaranteedResource, child.getGuaranteedResourceUsage());
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return guaranteedResource;
+  }
+
+  @Override
+  public Resource getOpportunisticResourceUsage() {
+    Resource opportunisticResource = Resource.newInstance(0, 0);
+    readLock.lock();
+    try {
+      for (FSQueue child : childQueues) {
+        Resources.addTo(opportunisticResource,
+            child.getOpportunisticResourceUsage());
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return opportunisticResource;
+  }
+
   public void updateDemand() {
     // Compute demand by iterating through apps in the queue
     // Limit demand to maxResources
@@ -177,11 +205,11 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public Resource assignContainer(FSSchedulerNode node) {
+  public Resource assignContainer(FSSchedulerNode node, boolean opportunistic) {
     Resource assigned = Resources.none();
 
     // If this queue is over its limit, reject
-    if (!assignContainerPreCheck(node)) {
+    if (!assignContainerPreCheck(node, opportunistic)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Assign container precheck on node " + node + " failed");
       }
@@ -201,7 +229,7 @@ public class FSParentQueue extends FSQueue {
     try {
       sortedChildQueues.addAll(childQueues);
       for (FSQueue child : sortedChildQueues) {
-        assigned = child.assignContainer(node);
+        assigned = child.assignContainer(node, opportunistic);
         if (!Resources.equals(assigned, Resources.none())) {
           break;
         }
@@ -285,7 +313,7 @@ public class FSParentQueue extends FSQueue {
         ", SteadyFairShare: " + getSteadyFairShare() +
         ", MaxShare: " + getMaxShare() +
         ", MinShare: " + minShare +
-        ", ResourceUsage: " + getResourceUsage() +
+        ", Guaranteed ResourceUsage: " + getGuaranteedResourceUsage() +
         ", Demand: " + getDemand() +
         ", MaxAMShare: " + maxAMShare +
         ", Runnable: " + getNumRunnableApps() +

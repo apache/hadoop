@@ -173,7 +173,6 @@ public class FairScheduler extends
 
   private float reservableNodesRatio; // percentage of available nodes
                                       // an app can be reserved on
-
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs
   // Continuous Scheduling enabled or not
   @Deprecated
@@ -195,6 +194,8 @@ public class FairScheduler extends
   @VisibleForTesting
   boolean maxAssignDynamic;
   protected int maxAssign; // Max containers to assign per heartbeat
+
+  protected boolean oversubscriptionEnabled;
 
   @VisibleForTesting
   final MaxRunningAppsEnforcer maxRunningEnforcer;
@@ -1075,13 +1076,13 @@ public class FairScheduler extends
    * resources for preempted containers.
    * @param node Node to check
    */
-  static void assignPreemptedContainers(FSSchedulerNode node) {
+  static void attemptToAssignPreemptedResources(FSSchedulerNode node) {
     for (Entry<FSAppAttempt, Resource> entry :
         node.getPreemptionList().entrySet()) {
       FSAppAttempt app = entry.getKey();
       Resource preemptionPending = Resources.clone(entry.getValue());
       while (!app.isStopped() && !Resources.isNone(preemptionPending)) {
-        Resource assigned = app.assignContainer(node);
+        Resource assigned = app.assignContainer(node, false);
         if (Resources.isNone(assigned) ||
             assigned.equals(FairScheduler.CONTAINER_RESERVED)) {
           // Fail to assign, let's not try further
@@ -1113,46 +1114,82 @@ public class FairScheduler extends
       // Assign new containers...
       // 1. Ensure containers are assigned to the apps that preempted
       // 2. Check for reserved applications
-      // 3. Schedule if there are no reservations
+      // 3. Schedule GUARANTEED containers if there are no reservations
+      // 4. Schedule OPPORTUNISTIC containers if possible
 
       // Apps may wait for preempted containers
       // We have to satisfy these first to avoid cases, when we preempt
       // a container for A from B and C gets the preempted containers,
       // when C does not qualify for preemption itself.
-      assignPreemptedContainers(node);
-      FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
-      boolean validReservation = false;
-      if (reservedAppSchedulable != null) {
-        validReservation = reservedAppSchedulable.assignReservedContainer(node);
-      }
+      attemptToAssignPreemptedResources(node);
+
+      boolean validReservation =  attemptToAssignReservedResources(node);
       if (!validReservation) {
-        // No reservation, schedule at queue which is farthest below fair share
-        int assignedContainers = 0;
-        Resource assignedResource = Resources.clone(Resources.none());
-        Resource maxResourcesToAssign = Resources.multiply(
-            node.getUnallocatedResource(), 0.5f);
-
-        while (node.getReservedContainer() == null) {
-          Resource assignment = queueMgr.getRootQueue().assignContainer(node);
-
-          if (assignment.equals(Resources.none())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("No container is allocated on node " + node);
-            }
-            break;
-          }
-
-          assignedContainers++;
-          Resources.addTo(assignedResource, assignment);
-          if (!shouldContinueAssigning(assignedContainers, maxResourcesToAssign,
-              assignedResource)) {
-            break;
-          }
-        }
+        // only attempt to assign GUARANTEED containers if there is no
+        // reservation on the node because
+        attemptToAssignResourcesAsGuaranteedContainers(node);
       }
+
+      // attempt to assign OPPORTUNISTIC containers regardless of whether
+      // we have made a reservation or assigned a GUARANTEED container
+      if (oversubscriptionEnabled) {
+        attemptToAssignResourcesAsOpportunisticContainers(node);
+      }
+
       updateRootQueueMetrics();
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  /**
+   * Assign the reserved resource to the application that have reserved it.
+   */
+  private boolean attemptToAssignReservedResources(FSSchedulerNode node) {
+    boolean success = false;
+    FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
+    if (reservedAppSchedulable != null) {
+      success = reservedAppSchedulable.assignReservedContainer(node);
+    }
+    return success;
+  }
+
+  private void attemptToAssignResourcesAsGuaranteedContainers(
+      FSSchedulerNode node) {
+    // No reservation, schedule at queue which is farthest below fair share
+    int assignedContainers = 0;
+    Resource assignedResource = Resources.clone(Resources.none());
+    Resource maxResourcesToAssign = Resources.multiply(
+        node.getUnallocatedResource(), 0.5f);
+    while (node.getReservedContainer() == null) {
+      Resource assignment =
+          queueMgr.getRootQueue().assignContainer(node, false);
+      if (assignment.equals(Resources.none())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No container is allocated on node " + node);
+        }
+        break;
+      }
+      assignedContainers++;
+      Resources.addTo(assignedResource, assignment);
+
+      if (!shouldContinueAssigning(assignedContainers, maxResourcesToAssign,
+          assignedResource)) {
+        break;
+      }
+    }
+  }
+
+  /**
+   * Try to assign OPPORTUNISTIC containers as long as there is resources
+   * to.
+   * @param node the node to assign OPPORTUNISTIC containers on
+   */
+  private void attemptToAssignResourcesAsOpportunisticContainers(
+      FSSchedulerNode node) {
+    while (!Resources.none().equals(
+        queueMgr.getRootQueue().assignContainer(node, true))) {
+      // nothing to do here
     }
   }
 
@@ -1398,6 +1435,7 @@ public class FairScheduler extends
       sizeBasedWeight = this.conf.getSizeBasedWeight();
       usePortForNodeName = this.conf.getUsePortForNodeName();
       reservableNodesRatio = this.conf.getReservableNodes();
+      oversubscriptionEnabled = this.conf.isOversubscriptionEnabled();
 
       updateInterval = this.conf.getUpdateInterval();
       if (updateInterval < 0) {
@@ -1801,7 +1839,8 @@ public class FairScheduler extends
       }
       
       // maxShare
-      if (!Resources.fitsIn(Resources.add(cur.getResourceUsage(), consumption),
+      if (!Resources.fitsIn(
+          Resources.add(cur.getGuaranteedResourceUsage(), consumption),
           cur.getMaxShare())) {
         throw new YarnException("Moving app attempt " + appAttId + " to queue "
             + queueName + " would violate queue maxShare constraints on"

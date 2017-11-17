@@ -75,7 +75,7 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       case DEMAND:
         return schedulable.getDemand().getMemorySize();
       case USAGE:
-        return schedulable.getResourceUsage().getMemorySize();
+        return schedulable.getGuaranteedResourceUsage().getMemorySize();
       case MINSHARE:
         return schedulable.getMinShare().getMemorySize();
       case MAXSHARE:
@@ -96,7 +96,7 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       case DEMAND:
         return schedulable.getDemand().getVirtualCores();
       case USAGE:
-        return schedulable.getResourceUsage().getVirtualCores();
+        return schedulable.getGuaranteedResourceUsage().getVirtualCores();
       case MINSHARE:
         return schedulable.getMinShare().getVirtualCores();
       case MAXSHARE:

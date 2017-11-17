@@ -253,7 +253,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
       final long value) {
     try {
       Method incUsedResourceMethod = queue.getClass().getSuperclass()
-          .getDeclaredMethod("incUsedResource", Resource.class);
+          .getDeclaredMethod("incUsedGuaranteedResource", Resource.class);
       incUsedResourceMethod.setAccessible(true);
 
       Map<String, Long> customResources =

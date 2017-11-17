@@ -223,7 +223,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
 
     Mockito.when(mockQueue.getMaxShare()).thenReturn(queueMaxResources);
     Mockito.when(mockQueue.getFairShare()).thenReturn(queueFairShare);
-    Mockito.when(mockQueue.getResourceUsage()).thenReturn(queueUsage);
+    Mockito.when(mockQueue.getGuaranteedResourceUsage()).thenReturn(queueUsage);
     Mockito.when(mockScheduler.getClusterResource()).thenReturn
         (clusterResource);
     Mockito.when(fakeRootQueueMetrics.getAllocatedResources()).thenReturn
@@ -305,7 +305,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             getApplicationId()));
     FSAppAttempt app = scheduler.getSchedulerApp(id11);
     assertNotNull(app);
-    Resource queueUsage = app.getQueue().getResourceUsage();
+    Resource queueUsage = app.getQueue().getGuaranteedResourceUsage();
     assertEquals(0, queueUsage.getMemorySize());
     assertEquals(0, queueUsage.getVirtualCores());
     SchedulerNode n1 = scheduler.getSchedulerNode(node1.getNodeID());

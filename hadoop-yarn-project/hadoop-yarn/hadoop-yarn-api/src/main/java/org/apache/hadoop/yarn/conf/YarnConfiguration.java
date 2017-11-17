@@ -278,6 +278,11 @@ public class YarnConfiguration extends Configuration {
 
   public static final String APP_NAME_PLACEMENT_RULE = "app-name";
 
+  public static final String RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED =
+      RM_PREFIX + "scheduler.oversubscription.enabled";
+  public static final boolean DEFAULT_RM_SCHEDULER_OVERSUBSCRIPTION_ENABLED
+      = false;
+
   /** Enable Resource Manager webapp ui actions */
   public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =
     RM_PREFIX + "webapp.ui-actions.enabled";

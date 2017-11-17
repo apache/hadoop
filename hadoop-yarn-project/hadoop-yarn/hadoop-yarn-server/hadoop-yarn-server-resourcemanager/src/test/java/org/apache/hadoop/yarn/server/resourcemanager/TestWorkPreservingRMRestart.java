@@ -508,7 +508,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     FSParentQueue root = scheduler.getQueueManager().getRootQueue();
     // ************ check cluster used Resources ********
     assertTrue(root.getPolicy() instanceof DominantResourceFairnessPolicy);
-    assertEquals(usedResources,root.getResourceUsage());
+    assertEquals(usedResources, root.getGuaranteedResourceUsage());
 
     // ************ check app headroom ****************
     FSAppAttempt schedulerAttempt =

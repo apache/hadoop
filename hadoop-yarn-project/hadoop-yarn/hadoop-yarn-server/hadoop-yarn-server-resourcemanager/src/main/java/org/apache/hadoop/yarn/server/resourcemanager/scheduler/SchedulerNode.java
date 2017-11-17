@@ -42,6 +42,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.api.records.OverAllocationInfo;
+import org.apache.hadoop.yarn.server.api.records.ResourceThresholds;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -62,6 +64,10 @@ public abstract class SchedulerNode {
   private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
 
   private Resource capacity;
+  // The resource available within the node's capacity that can be given out
+  // to run GUARANTEED containers, including reserved, preempted and any
+  // remaining free resources. Resources allocated to OPPORTUNISTIC containers
+  // are tracked in allocatedResourceOpportunistic
   private Resource unallocatedResource = Resource.newInstance(0, 0);
 
   private RMContainer reservedContainer;
@@ -661,6 +667,48 @@ public abstract class SchedulerNode {
 
   public void updateNodeAttributes(Set<NodeAttribute> attributes) {
     this.nodeAttributes = attributes;
+  }
+
+  /**
+   * Get the amount of resources that can be allocated to opportunistic
+   * containers in the case of overallocation. It is calculated as
+   * node capacity - (node utilization + resources of allocated-yet-not-started
+   * containers).
+   * @return the amount of resources that are available to be allocated to
+   *         opportunistic containers
+   */
+  public synchronized Resource allowedResourceForOverAllocation() {
+    OverAllocationInfo overAllocationInfo = rmNode.getOverAllocationInfo();
+    if (overAllocationInfo == null) {
+      LOG.debug("Overallocation is disabled on node: " + rmNode.getHostName());
+      return Resources.none();
+    }
+
+    ResourceUtilization projectedNodeUtilization = ResourceUtilization.
+        newInstance(getNodeUtilization());
+    // account for resources allocated in this heartbeat
+    projectedNodeUtilization.addTo(
+        (int) (resourceAllocatedPendingLaunch.getMemorySize()), 0,
+        (float) resourceAllocatedPendingLaunch.getVirtualCores() /
+            capacity.getVirtualCores());
+
+    ResourceThresholds thresholds =
+        overAllocationInfo.getOverAllocationThresholds();
+    Resource overAllocationThreshold = Resources.createResource(
+        (long) (capacity.getMemorySize() * thresholds.getMemoryThreshold()),
+        (int) (capacity.getVirtualCores() * thresholds.getCpuThreshold()));
+    long allowedMemory = Math.max(0, overAllocationThreshold.getMemorySize()
+        - projectedNodeUtilization.getPhysicalMemory());
+    int allowedCpu = Math.max(0, (int)
+        (overAllocationThreshold.getVirtualCores() -
+            projectedNodeUtilization.getCPU() * capacity.getVirtualCores()));
+
+    Resource resourceAllowedForOpportunisticContainers =
+        Resources.createResource(allowedMemory, allowedCpu);
+
+    // TODO cap the resources allocated to OPPORTUNISTIC containers on a node
+    // in terms of its capacity. i.e. return min(max_ratio * capacity, allowed)
+    return resourceAllowedForOpportunisticContainers;
   }
 
   private static class ContainerInfo {

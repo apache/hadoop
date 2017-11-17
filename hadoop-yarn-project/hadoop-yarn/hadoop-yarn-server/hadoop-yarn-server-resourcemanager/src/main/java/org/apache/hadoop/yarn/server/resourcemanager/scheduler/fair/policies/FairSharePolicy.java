@@ -93,8 +93,8 @@ public class FairSharePolicy extends SchedulingPolicy {
       Resource resourceUsage2 = null;
 
       if (res == 0) {
-        resourceUsage1 = s1.getResourceUsage();
-        resourceUsage2 = s2.getResourceUsage();
+        resourceUsage1 = s1.getGuaranteedResourceUsage();
+        resourceUsage2 = s2.getGuaranteedResourceUsage();
         res = compareMinShareUsage(s1, s2, resourceUsage1, resourceUsage2);
       }
 

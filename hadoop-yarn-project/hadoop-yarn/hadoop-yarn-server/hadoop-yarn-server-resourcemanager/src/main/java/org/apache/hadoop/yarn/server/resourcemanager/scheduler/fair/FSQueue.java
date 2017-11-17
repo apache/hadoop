@@ -57,7 +57,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   private Resource fairShare = Resources.createResource(0, 0);
   private Resource steadyFairShare = Resources.createResource(0, 0);
   private Resource reservedResource = Resources.createResource(0, 0);
-  private final Resource resourceUsage = Resource.newInstance(0, 0);
+  private final Resource guaranteedResourceUsage = Resource.newInstance(0, 0);
   private final String name;
   protected final FairScheduler scheduler;
   private final YarnAuthorizationProvider authorizer;
@@ -235,7 +235,8 @@ public abstract class FSQueue implements Queue, Schedulable {
     if (getFairShare().getMemorySize() == 0) {
       queueInfo.setCurrentCapacity(0.0f);
     } else {
-      queueInfo.setCurrentCapacity((float) getResourceUsage().getMemorySize() /
+      queueInfo.setCurrentCapacity(
+          (float) getGuaranteedResourceUsage().getMemorySize() /
           getFairShare().getMemorySize());
     }
 
@@ -419,14 +420,17 @@ public abstract class FSQueue implements Queue, Schedulable {
    * 
    * @return true if check passes (can assign) or false otherwise
    */
-  boolean assignContainerPreCheck(FSSchedulerNode node) {
-    if (node.getReservedContainer() != null) {
+  boolean assignContainerPreCheck(FSSchedulerNode node, boolean opportunistic) {
+    if (opportunistic) {
+      // always pre-approve OPPORTUNISTIC containers to be assigned on the node
+      return true;
+    } else if (node.getReservedContainer() != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Assigning container failed on node '" + node.getNodeName()
             + " because it has reserved containers.");
       }
       return false;
-    } else if (!Resources.fitsIn(getResourceUsage(), getMaxShare())) {
+    } else if (!Resources.fitsIn(getGuaranteedResourceUsage(), getMaxShare())) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Assigning container failed on node '" + node.getNodeName()
             + " because queue resource usage is larger than MaxShare: "
@@ -449,7 +453,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public String toString() {
     return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
-        getName(), getDemand(), getResourceUsage(), fairShare, getWeight());
+        getName(), getDemand(), getGuaranteedResourceUsage(), fairShare,
+        getWeight());
   }
   
   @Override
@@ -481,8 +486,8 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   @Override
-  public Resource getResourceUsage() {
-    return resourceUsage;
+  public Resource getGuaranteedResourceUsage() {
+    return guaranteedResourceUsage;
   }
 
   /**
@@ -490,11 +495,11 @@ public abstract class FSQueue implements Queue, Schedulable {
    *
    * @param res the resource to increase
    */
-  protected void incUsedResource(Resource res) {
-    synchronized (resourceUsage) {
-      Resources.addTo(resourceUsage, res);
+  protected void incUsedGuaranteedResource(Resource res) {
+    synchronized (guaranteedResourceUsage) {
+      Resources.addTo(guaranteedResourceUsage, res);
       if (parent != null) {
-        parent.incUsedResource(res);
+        parent.incUsedGuaranteedResource(res);
       }
     }
   }
@@ -504,11 +509,11 @@ public abstract class FSQueue implements Queue, Schedulable {
    *
    * @param res the resource to decrease
    */
-  protected void decUsedResource(Resource res) {
-    synchronized (resourceUsage) {
-      Resources.subtractFrom(resourceUsage, res);
+  protected void decUsedGuaranteedResource(Resource res) {
+    synchronized (guaranteedResourceUsage) {
+      Resources.subtractFrom(guaranteedResourceUsage, res);
       if (parent != null) {
-        parent.decUsedResource(res);
+        parent.decUsedGuaranteedResource(res);
       }
     }
   }
@@ -521,7 +526,7 @@ public abstract class FSQueue implements Queue, Schedulable {
 
   boolean fitsInMaxShare(Resource additionalResource) {
     Resource usagePlusAddition =
-        Resources.add(getResourceUsage(), additionalResource);
+        Resources.add(getGuaranteedResourceUsage(), additionalResource);
 
     if (!Resources.fitsIn(usagePlusAddition, getMaxShare())) {
       if (LOG.isDebugEnabled()) {
