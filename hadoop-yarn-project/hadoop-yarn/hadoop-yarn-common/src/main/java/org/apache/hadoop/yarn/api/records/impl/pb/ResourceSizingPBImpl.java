@@ -112,6 +112,6 @@ public class ResourceSizingPBImpl extends ResourceSizing {
   }
 
   private ResourceProto convertToProtoFormat(Resource r) {
-    return ((ResourcePBImpl) r).getProto();
+    return ProtoUtils.convertToProtoFormat(r);
   }
 }

@@ -49,6 +49,7 @@ public abstract class SchedulingRequest {
     return SchedulingRequest.newBuilder()
         .allocationRequestId(allocationRequestId).priority(priority)
         .executionType(executionType).allocationTags(allocationTags)
+        .resourceSizing(resourceSizing)
         .placementConstraintExpression(placementConstraintExpression).build();
   }
 
