@@ -61,4 +61,31 @@ public abstract class ResourceSizing {
   @Public
   @Unstable
   public abstract void setResources(Resource resources);
+
+  @Override
+  public int hashCode() {
+    int result = getResources().hashCode();
+    result = 31 * result + getNumAllocations();
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if(obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+
+    ResourceSizing that = (ResourceSizing) obj;
+
+    if(getNumAllocations() != that.getNumAllocations()) {
+      return  false;
+    }
+    if(!getResources().equals(that.getResources())) {
+      return false;
+    }
+    return true;
+  }
 }
