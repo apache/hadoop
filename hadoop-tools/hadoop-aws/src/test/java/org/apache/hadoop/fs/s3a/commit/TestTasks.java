@@ -423,7 +423,7 @@ public class TestTasks extends HadoopTestBase {
      * @param action optional action to invoke after the increment,
      * before limit check
      */
-    private BaseCounter(String name,
+    BaseCounter(String name,
         int limit,
         Function<Item, Boolean> action) {
       this.name = name;
@@ -450,11 +450,11 @@ public class TestTasks extends HadoopTestBase {
       return item;
     }
 
-    public void assertInvoked(String text, int expected) {
+    void assertInvoked(String text, int expected) {
       assertEquals(toString() + ": " + text, expected, getCount());
     }
 
-    public void assertInvokedAtLeast(String text, int expected) {
+    void assertInvokedAtLeast(String text, int expected) {
       int actual = getCount();
       assertTrue(toString() + ": " + text
               + "-expected " + expected

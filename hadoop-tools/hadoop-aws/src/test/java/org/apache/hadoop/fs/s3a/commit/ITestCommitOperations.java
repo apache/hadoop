@@ -50,6 +50,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.*;
 
@@ -398,7 +399,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
         persisted.getSaved() > 0);
     List<String> etags = persisted.getEtags();
     assertEquals("etag list " + persisted, 1, etags.size());
-    List<PartETag> partList = CommitUtils.toPartEtags(etags);
+    List<PartETag> partList = CommitOperations.toPartEtags(etags);
     assertEquals("part list " + persisted, 1, partList.size());
     return pendingDataPath;
   }

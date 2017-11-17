@@ -26,7 +26,12 @@ import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
 /**
- * Full integration test for the Magic committer.
+ * Full integration test for the Magic Committer.
+ *
+ * There's no need to disable the committer setting for the filesystem here,
+ * because the committers are being instantiated in their own processes;
+ * the settings in {@link #applyCustomConfigOptions(Configuration)} are
+ * passed down to these processes.
  */
 public class ITMagicCommitMRJob extends AbstractITCommitMRJob {
 

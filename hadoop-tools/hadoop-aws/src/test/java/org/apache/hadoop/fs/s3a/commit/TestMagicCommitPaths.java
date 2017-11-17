@@ -29,13 +29,13 @@ import org.junit.Test;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.test.LambdaTestUtils.*;
-import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
 /**
- * Tests for {@link CommitUtils} methods.
+ * Tests for {@link MagicCommitPaths} path operations.
  */
-public class TestCommitUtils extends Assert {
+public class TestMagicCommitPaths extends Assert {
 
   private static final List<String> MAGIC_AT_ROOT =
       list(MAGIC);
@@ -58,81 +58,81 @@ public class TestCommitUtils extends Assert {
   }
 
   @Test
-  public void testSplitPathDoubleBackslash() throws Throwable {
+  public void testSplitPathDoubleBackslash() {
     assertPathSplits("//", EMPTY);
   }
 
   @Test
-  public void testSplitRootPath() throws Throwable {
+  public void testSplitRootPath() {
     assertPathSplits("/", EMPTY);
   }
 
   @Test
-  public void testSplitBasic() throws Throwable {
+  public void testSplitBasic() {
     assertPathSplits("/a/b/c",
         new String[]{"a", "b", "c"});
   }
 
   @Test
-  public void testSplitTrailingSlash() throws Throwable {
+  public void testSplitTrailingSlash() {
     assertPathSplits("/a/b/c/",
         new String[]{"a", "b", "c"});
   }
 
   @Test
-  public void testSplitShortPath() throws Throwable {
+  public void testSplitShortPath() {
     assertPathSplits("/a",
         new String[]{"a"});
   }
 
   @Test
-  public void testSplitShortPathTrailingSlash() throws Throwable {
+  public void testSplitShortPathTrailingSlash() {
     assertPathSplits("/a/",
         new String[]{"a"});
   }
 
   @Test
-  public void testParentsMagicRoot() throws Throwable {
+  public void testParentsMagicRoot() {
     assertParents(EMPTY, MAGIC_AT_ROOT);
   }
 
   @Test
-  public void testChildrenMagicRoot() throws Throwable {
+  public void testChildrenMagicRoot() {
     assertChildren(EMPTY, MAGIC_AT_ROOT);
   }
 
   @Test
-  public void testParentsMagicRootWithChild() throws Throwable {
+  public void testParentsMagicRootWithChild() {
     assertParents(EMPTY, MAGIC_AT_ROOT_WITH_CHILD);
   }
 
   @Test
-  public void testChildMagicRootWithChild() throws Throwable {
+  public void testChildMagicRootWithChild() {
     assertChildren(a("child"), MAGIC_AT_ROOT_WITH_CHILD);
   }
 
   @Test
-  public void testChildrenMagicWithoutChild() throws Throwable {
+  public void testChildrenMagicWithoutChild() {
     assertChildren(EMPTY, MAGIC_AT_WITHOUT_CHILD);
   }
 
   @Test
-  public void testChildMagicWithChild() throws Throwable {
+  public void testChildMagicWithChild() {
     assertChildren(a("child"), MAGIC_WITH_CHILD);
   }
 
   @Test
-  public void testParentMagicWithChild() throws Throwable {
+  public void testParentMagicWithChild() {
     assertParents(a("parent"), MAGIC_WITH_CHILD);
   }
 
   @Test
-  public void testParentDeepMagic() throws Throwable {
+  public void testParentDeepMagic() {
     assertParents(a("parent1", "parent2"), DEEP_MAGIC);
   }
 
   @Test
-  public void testChildrenDeepMagic() throws Throwable {
+  public void testChildrenDeepMagic() {
     assertChildren(a("child1", "child2"), DEEP_MAGIC);
   }
 
@@ -143,56 +143,56 @@ public class TestCommitUtils extends Assert {
   }
 
   @Test
-  public void testLastElementSingle() throws Throwable {
+  public void testLastElementSingle() {
     assertEquals("first", lastElement(l("first")));
   }
 
   @Test
-  public void testLastElementDouble() throws Throwable {
+  public void testLastElementDouble() {
     assertEquals("2", lastElement(l("first", "2")));
   }
 
   @Test
-  public void testFinalDestinationNoMagic() throws Throwable {
+  public void testFinalDestinationNoMagic() {
     assertEquals(l("first", "2"),
         finalDestination(l("first", "2")));
   }
 
   @Test
-  public void testFinalDestinationMagic1() throws Throwable {
+  public void testFinalDestinationMagic1() {
     assertEquals(l("first", "2"),
         finalDestination(l("first", MAGIC, "2")));
   }
 
   @Test
-  public void testFinalDestinationMagic2() throws Throwable {
+  public void testFinalDestinationMagic2() {
     assertEquals(l("first", "3.txt"),
         finalDestination(l("first", MAGIC, "2", "3.txt")));
   }
 
   @Test
-  public void testFinalDestinationRootMagic2() throws Throwable {
+  public void testFinalDestinationRootMagic2() {
     assertEquals(l("3.txt"),
         finalDestination(l(MAGIC, "2", "3.txt")));
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testFinalDestinationMagicNoChild() throws Throwable {
+  public void testFinalDestinationMagicNoChild() {
     finalDestination(l(MAGIC));
   }
 
   @Test
-  public void testFinalDestinationBaseDirectChild() throws Throwable {
+  public void testFinalDestinationBaseDirectChild() {
     finalDestination(l(MAGIC, BASE, "3.txt"));
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testFinalDestinationBaseNoChild() throws Throwable {
+  public void testFinalDestinationBaseNoChild() {
     assertEquals(l(), finalDestination(l(MAGIC, BASE)));
   }
 
   @Test
-  public void testFinalDestinationBaseSubdirsChild() throws Throwable {
+  public void testFinalDestinationBaseSubdirsChild() {
     assertEquals(l("2", "3.txt"),
         finalDestination(l(MAGIC, "4", BASE, "2", "3.txt")));
   }
@@ -201,7 +201,7 @@ public class TestCommitUtils extends Assert {
    * If the base is above the magic dir, it's ignored.
    */
   @Test
-  public void testFinalDestinationIgnoresBaseBeforeMagic() throws Throwable {
+  public void testFinalDestinationIgnoresBaseBeforeMagic() {
     assertEquals(l(BASE, "home", "3.txt"),
         finalDestination(l(BASE, "home", MAGIC, "2", "3.txt")));
   }

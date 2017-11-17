@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
 
-import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 
 /**
  * Adds the code needed for S3A to support magic committers.
@@ -40,6 +40,9 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
  *   <li>{@link #createTracker(Path, String)} will always return an instance
  *   of {@link PutTracker}.</li>
  * </ol>
+ *
+ * <p>Important</p>: must not directly or indirectly import a class which
+ * uses any datatype in hadoop-mapreduce.
  */
 public class MagicCommitIntegration {
   private static final Logger LOG =
@@ -85,18 +88,27 @@ public class MagicCommitIntegration {
   public PutTracker createTracker(Path path, String key) {
     final List<String> elements = splitPathToElements(path);
     PutTracker tracker;
-    if (isMagicCommitPath(elements)) {
-      final String destKey = keyOfFinalDestination(elements, key);
-      String pendingObject = key + CommitConstants.PENDING_SUFFIX;
-      owner.getInstrumentation()
-          .incrementCounter(Statistic.COMMITTER_MAGIC_FILES_CREATED, 1);
-      tracker = new MagicCommitTracker(path,
-          owner.getBucket(),
-          key,
-          destKey,
-          pendingObject,
-          owner.createWriteOperationHelper());
-      LOG.debug("Created {}", tracker);
+
+    if(isMagicFile(elements)) {
+      // path is of a magic file
+      if (isMagicCommitPath(elements)) {
+        final String destKey = keyOfFinalDestination(elements, key);
+        String pendingsetPath = key + CommitConstants.PENDING_SUFFIX;
+        owner.getInstrumentation()
+            .incrementCounter(Statistic.COMMITTER_MAGIC_FILES_CREATED, 1);
+        tracker = new MagicCommitTracker(path,
+            owner.getBucket(),
+            key,
+            destKey,
+            pendingsetPath,
+            owner.createWriteOperationHelper());
+        LOG.debug("Created {}", tracker);
+      } else {
+        LOG.warn("File being created has a \"magic\" path, but the filesystem"
+            + " has magic file support disabled: {}", path);
+        // downgrade to standard multipart tracking
+        tracker = new PutTracker(key);
+      }
     } else {
       // standard multipart tracking
       tracker = new PutTracker(key);
@@ -113,7 +125,7 @@ public class MagicCommitIntegration {
    */
   private List<String> finalDestination(List<String> elements) {
     return magicCommitEnabled ?
-        CommitUtils.finalDestination(elements)
+        MagicCommitPaths.finalDestination(elements)
         : elements;
   }
 
@@ -139,10 +151,20 @@ public class MagicCommitIntegration {
    * True if magic commit is enabled, the path is magic
    * and the path is not actually a commit metadata file.
    * @param elements element list
-   * @return true if the path represents a magic file
+   * @return true if writing path is to be uprated to a magic file write
    */
   private boolean isMagicCommitPath(List<String> elements) {
-    return magicCommitEnabled && isMagicPath(elements) &&
+    return magicCommitEnabled && isMagicFile(elements);
+  }
+
+  /**
+   * Is the file a magic file: this predicate doesn't check
+   * for the FS actually having the magic bit being set.
+   * @param elements path elements
+   * @return true if the path is one a magic file write expects.
+   */
+  private boolean isMagicFile(List<String> elements) {
+    return isMagicPath(elements) &&
         !isCommitMetadataFile(elements);
   }
 

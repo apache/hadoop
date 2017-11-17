@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
@@ -102,6 +104,17 @@ public class CommitOperations {
     writeOperations = fs.createWriteOperationHelper();
   }
 
+  /**
+   * Convert an ordered list of strings to a list of index etag parts.
+   * @param tagIds list of tags
+   * @return same list, now in numbered tuples
+   */
+  public static List<PartETag> toPartEtags(List<String> tagIds) {
+    return IntStream.range(0, tagIds.size())
+        .mapToObj(i -> new PartETag(i + 1, tagIds.get(i)))
+        .collect(Collectors.toList());
+  }
+
   @Override
   public String toString() {
     return "CommitOperations{" + fs.getUri() + '}';
@@ -166,7 +179,7 @@ public class CommitOperations {
     writeOperations.completeMPUwithRetries(
         commit.getDestinationKey(),
               commit.getUploadId(),
-              CommitUtils.toPartEtags(commit.getEtags()),
+              toPartEtags(commit.getEtags()),
               commit.getLength(),
               new AtomicInteger(0));
     return commit.getLength();

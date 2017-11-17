@@ -697,6 +697,21 @@ S3A Client
 
 ```
 
+## Error message: "File being created has a magic path, but the filesystem has magic file support disabled: 
+
+A file is being written to a path which is used for "magic" files,
+files which are actually written to a different destination than their stated path
+*but the filesystem doesn't support "magic" files*
+
+This message should not appear through the committer itself &mdash;it will
+fail with the error message in the previous section, but may arise
+if other applications are attempting to create files under the path `/__magic/`.
+
+Make sure the filesytem meets the requirements of the magic committer
+(a consistent S3A filesystem through S3Guard or the S3 service itself),
+and set the `fs.s3a.committer.magic.enabled` flag to indicate that magic file
+writes are supported.
+
 
 ### `FileOutputCommitter` appears to be still used (from logs or delays in commits)
 
@@ -742,7 +757,7 @@ the committer used.
 1. The job has overridden the property `mapreduce.outputcommitter.factory.class`
 with a new factory class for all committers. This takes priority over
 all committers registered for the s3a:// schema.
-!. The property `mapreduce.outputcommitter.factory.scheme.s3a` is unset.
+1. The property `mapreduce.outputcommitter.factory.scheme.s3a` is unset.
 1. The output format has overridden `FileOutputFormat.getOutputCommitter()`
 and is returning its own committer -one which is a subclass of `FileOutputCommitter`.
 

@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.Tasks;
@@ -57,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
 
 /**
  * Committer based on the contributed work of the
@@ -396,10 +396,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @param relative the path of a file relative to the task attempt path
    * @param context the JobContext or TaskAttemptContext for this job
    * @return the S3 key where the file will be uploaded
-   * @throws IOException on a failure
    */
-  protected String getFinalKey(String relative, JobContext context)
-      throws IOException {
+  protected String getFinalKey(String relative, JobContext context) {
     if (uniqueFilenames) {
       return getS3KeyPrefix(context) + "/" + Paths.addUUID(relative, uuid);
     } else {
@@ -415,7 +413,6 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @param relative the path of a file relative to the task attempt path
    * @param context the JobContext or TaskAttemptContext for this job
    * @return the S3 Path where the file will be uploaded
-   * @throws IOException on a failure
    */
   protected final Path getFinalPath(String relative, JobContext context)
       throws IOException {
@@ -552,7 +549,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     String r = getRole();
     boolean failed = false;
     try (DurationInfo d = new DurationInfo(LOG,
-        "%s: aborting job in state %s ", r, CommitUtils.jobIdString(context))) {
+        "%s: aborting job in state %s ", r, jobIdString(context))) {
       List<SinglePendingCommit> pending = listPendingUploadsToAbort(context);
       abortPendingUploads(context, pending, suppressExceptions);
     } catch (FileNotFoundException e) {
@@ -806,9 +803,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * Get the key of the destination "directory" of the job/task.
    * @param context job context
    * @return key to write to
-   * @throws IOException failure to load the filesystem
    */
-  private String getS3KeyPrefix(JobContext context) throws IOException {
+  private String getS3KeyPrefix(JobContext context) {
     return s3KeyPrefix;
   }
 

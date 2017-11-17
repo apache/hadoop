@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
+import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles;
@@ -96,6 +97,7 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
   @Override
   public void setup() throws Exception {
     super.setup();
+    CommitUtils.verifyIsMagicCommitFS(getFileSystem());
 
     // set up the paths for the commit operation
     Path finalDirectory = new Path(getScaleTestDir(), "commit");
@@ -105,11 +107,6 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     setHugefile(new Path(finalDirectory, filename));
     magicOutputFile = new Path(jobDir, filename);
     pendingDataFile = new Path(jobDir, filename + PENDING_SUFFIX);
-  }
-
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
   }
 
   /**

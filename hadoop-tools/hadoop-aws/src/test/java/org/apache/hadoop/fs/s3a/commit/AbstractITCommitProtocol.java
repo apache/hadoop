@@ -210,8 +210,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    // turn this on if you are trying to debug things.
-//    disableFilesystemCaching(conf);
+    disableFilesystemCaching(conf);
     bindCommitter(conf);
     return conf;
   }

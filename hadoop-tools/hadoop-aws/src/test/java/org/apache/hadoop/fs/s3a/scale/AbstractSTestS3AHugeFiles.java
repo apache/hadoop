@@ -26,6 +26,7 @@ import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -109,6 +110,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     conf.setInt(MULTIPART_SIZE, partitionSize);
     conf.set(USER_AGENT_PREFIX, "STestS3AHugeFileCreate");
     conf.set(FAST_UPLOAD_BUFFER, getBlockOutputBufferName());
+    S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
   }
 

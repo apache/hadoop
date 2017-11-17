@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitUtils;
+import org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR;
 import org.apache.hadoop.fs.s3a.commit.DurationInfo;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -43,8 +43,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.deleteQuietly;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
 
 /**
  * This is a dedicated committer which requires the "magic" directory feature
@@ -281,7 +282,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @return a path for temporary data.
    */
   public Path getTempTaskAttemptPath(TaskAttemptContext context) {
-    return CommitUtils.getTempTaskAttemptPath(context, getOutputPath());
+    return CommitUtilsWithMR.getTempTaskAttemptPath(context, getOutputPath());
   }
 
 }

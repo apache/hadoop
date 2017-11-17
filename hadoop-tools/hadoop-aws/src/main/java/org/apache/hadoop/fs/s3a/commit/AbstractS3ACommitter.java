@@ -53,6 +53,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
 
 /**
  * Abstract base class for S3A committers; allows for any commonality
@@ -497,7 +498,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   public void abortJob(JobContext context, JobStatus.State state)
       throws IOException {
     LOG.info("{}: aborting job {} in state {}",
-        getRole(), CommitUtils.jobIdString(context), state);
+        getRole(), jobIdString(context), state);
     // final cleanup operations
     abortJobInternal(context, false);
   }

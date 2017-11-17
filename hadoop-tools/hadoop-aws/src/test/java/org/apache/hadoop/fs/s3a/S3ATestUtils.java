@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBLocalClientFactory;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
@@ -840,6 +841,15 @@ public final class S3ATestUtils {
             upload.getUploadId(),
             LISTING_FORMAT.format(upload.getInitiated())))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Skip a test if the FS isn't marked as supporting magic commits.
+   * @param fs filesystem
+   */
+  public void assumeMagicCommitEnabled(S3AFileSystem fs) {
+    assume("Magic commit option disabled on " + fs,
+        fs.hasCapability(CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
   }
 
 }

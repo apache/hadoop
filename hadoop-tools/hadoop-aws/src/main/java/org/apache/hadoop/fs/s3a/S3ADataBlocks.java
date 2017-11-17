@@ -401,7 +401,7 @@ final class S3ADataBlocks {
     }
 
     /**
-     * InputStream backed by the internal byte array
+     * InputStream backed by the internal byte array.
      *
      * @return
      */

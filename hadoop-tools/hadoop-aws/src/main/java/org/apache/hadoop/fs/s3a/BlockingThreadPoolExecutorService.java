@@ -45,7 +45,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 final class BlockingThreadPoolExecutorService
     extends SemaphoredDelegatingExecutor {
 
-  private static Logger LOG = LoggerFactory
+  private static final Logger LOG = LoggerFactory
       .getLogger(BlockingThreadPoolExecutorService.class);
 
   private static final AtomicInteger POOLNUMBER = new AtomicInteger(1);

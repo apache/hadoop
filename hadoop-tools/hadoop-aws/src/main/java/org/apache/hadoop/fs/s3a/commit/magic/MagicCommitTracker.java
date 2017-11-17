@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 
 /**
  * Put tracker for Magic commits.
+ * <p>Important</p>: must not directly or indirectly import a class which
+ * uses any datatype in hadoop-mapreduce.
  */
 @InterfaceAudience.Private
 public class MagicCommitTracker extends PutTracker {
@@ -56,21 +58,23 @@ public class MagicCommitTracker extends PutTracker {
    * @param bucket dest bucket
    * @param originalDestKey the original key, in the magic directory.
    * @param destKey key for the destination
-   * @param pendingPartKey key of the pending part
+   * @param pendingsetKey key of the pendingset file
    * @param writer writer instance to use for operations
    */
   public MagicCommitTracker(Path path,
       String bucket,
       String originalDestKey,
       String destKey,
-      String pendingPartKey,
+      String pendingsetKey,
       WriteOperationHelper writer) {
     super(destKey);
     this.bucket = bucket;
     this.path = path;
     this.originalDestKey = originalDestKey;
-    this.pendingPartKey = pendingPartKey;
+    this.pendingPartKey = pendingsetKey;
     this.writer = writer;
+    LOG.info("File {} is written as magic file to path {}",
+        path, destKey);
   }
 
   /**
@@ -137,7 +141,8 @@ public class MagicCommitTracker extends PutTracker {
     // now put a 0-byte file with the name of the original under-magic path
     PutObjectRequest originalDestPut = writer.createPutObjectRequest(
         originalDestKey,
-        new ByteArrayInputStream(EMPTY), 0);
+        new ByteArrayInputStream(EMPTY),
+        0);
     writer.uploadObject(originalDestPut);
     return false;
   }

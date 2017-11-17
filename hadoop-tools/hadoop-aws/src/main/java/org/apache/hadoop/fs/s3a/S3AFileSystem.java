@@ -1679,7 +1679,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   private boolean innerDelete(S3AFileStatus status, boolean recursive)
       throws IOException, AmazonClientException {
     Path f = status.getPath();
-    LOG.debug("Delete path {} - recursive {}", f , recursive);
+    LOG.debug("Delete path {} - recursive {}", f, recursive);
 
     String key = pathToKey(f);
 
@@ -2789,6 +2789,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     sb.append(", metastore=").append(metadataStore);
     sb.append(", authoritative=").append(allowAuthoritative);
     sb.append(", useListV1=").append(useListV1);
+    sb.append(", magicCommitter=").append(isMagicCommitEnabled());
     sb.append(", boundedExecutor=").append(boundedThreadPool);
     sb.append(", unboundedExecutor=").append(unboundedThreadPool);
     sb.append(", statistics {")
@@ -3143,7 +3144,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
-   * Return the capabilities of this filesystem instance
+   * Return the capabilities of this filesystem instance.
    * @param capability string to query the stream support for.
    * @return whether the FS instance has the capability.
    */
