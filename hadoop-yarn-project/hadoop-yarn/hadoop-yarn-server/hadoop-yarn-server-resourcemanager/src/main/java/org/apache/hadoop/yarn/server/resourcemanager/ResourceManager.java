@@ -127,7 +127,9 @@ import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -1070,7 +1072,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected void startWepApp() {
-
+    Map<String, String> serviceConfig = null;
     Configuration conf = getConfig();
 
     RMWebAppUtil.setupSecurityAndFilters(conf,
@@ -1136,7 +1138,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
     }
 
-    webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+    if (getConfig().getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
+        false)) {
+      serviceConfig = new HashMap<String, String>();
+      String apiPackages = "org.apache.hadoop.yarn.service.webapp;" +
+          "org.apache.hadoop.yarn.webapp";
+      serviceConfig.put("PackageName", apiPackages);
+      serviceConfig.put("PathSpec", "/app/*");
+    }
+    webApp = builder.start(new RMWebApp(this), uiWebAppContext, serviceConfig);
   }
 
   private String getWebAppsPath(String appName) {

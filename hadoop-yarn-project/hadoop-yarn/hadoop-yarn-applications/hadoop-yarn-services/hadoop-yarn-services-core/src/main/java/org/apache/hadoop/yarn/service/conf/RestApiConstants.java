@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.service.conf;
 public interface RestApiConstants {
 
   // Rest endpoints
-  String CONTEXT_ROOT = "/ws/v1";
+  String CONTEXT_ROOT = "/v1";
   String VERSION = "/services/version";
   String SERVICE_ROOT_PATH = "/services";
   String SERVICE_PATH = "/services/{service_name}";

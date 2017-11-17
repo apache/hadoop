@@ -62,8 +62,8 @@ public class TestApiServer {
         this.apiServer.getClass().isAnnotationPresent(Path.class));
     final Path path = this.apiServer.getClass()
         .getAnnotation(Path.class);
-    assertEquals("The path has /ws/v1 annotation", path.value(),
-        "/ws/v1");
+    assertEquals("The path has /v1 annotation", path.value(),
+        "/v1");
   }
 
   @Test
