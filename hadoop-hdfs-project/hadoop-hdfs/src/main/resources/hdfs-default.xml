@@ -4883,7 +4883,7 @@
 
   <property>
     <name>dfs.federation.router.file.resolver.client.class</name>
-    <value>org.apache.hadoop.hdfs.server.federation.MockResolver</value>
+    <value>org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver</value>
     <description>
       Class to resolve files to subclusters.
     </description>
