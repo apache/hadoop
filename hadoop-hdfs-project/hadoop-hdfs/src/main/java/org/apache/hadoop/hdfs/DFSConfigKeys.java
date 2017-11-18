@@ -426,6 +426,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_HOSTS_KEY = "dfs.namenode.hosts";
   public static final String  DFS_NAMENODE_HOSTS_EXCLUDE_KEY = "dfs.namenode.hosts.exclude";
   public static final String  DFS_CLIENT_SOCKET_TIMEOUT_KEY = "dfs.client.socket-timeout";
+  public static final String  DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY =
+      "dfs.client.socket.send.buffer.size";
+  public static final int     DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT =
+      HdfsConstants.DEFAULT_DATA_SOCKET_SIZE;
   public static final String  DFS_NAMENODE_CHECKPOINT_DIR_KEY = "dfs.namenode.checkpoint.dir";
   public static final String  DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY = "dfs.namenode.checkpoint.edits.dir";
   public static final String  DFS_HOSTS = "dfs.hosts";

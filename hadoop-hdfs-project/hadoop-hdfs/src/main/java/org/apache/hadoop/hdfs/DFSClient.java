@@ -51,6 +51,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPAC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
@@ -299,6 +301,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final int writeMaxPackets;
     final ByteArrayManager.Conf writeByteArrayManagerConf;
     final int socketTimeout;
+    private final int socketSendBufferSize;
     final int socketCacheCapacity;
     final long socketCacheExpiry;
     final long excludedNodesCacheExpiry;
@@ -369,6 +372,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       defaultChecksumOpt = getChecksumOptFromConf(conf);
       socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
           HdfsServerConstants.READ_TIMEOUT);
+      socketSendBufferSize = conf.getInt(DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY,
+          DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
       /** dfs.write.packet.size is an internal config variable */
       writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
           DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
@@ -509,6 +514,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       keyProviderCacheExpiryMs = conf.getLong(
           DFSConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS,
           DFSConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT);
+    }
+
+    public int getSocketSendBufferSize() {
+      return socketSendBufferSize;
     }
 
     public boolean isUseLegacyBlockReaderLocal() {

@@ -2216,6 +2216,18 @@
 </property>
 
 <property>
+  <name>dfs.client.socket.send.buffer.size</name>
+  <value>131072</value>
+  <description>
+    Socket send buffer size for a write pipeline in DFSClient side.
+    This may affect TCP connection throughput.
+    If it is set to zero or negative value,
+    no buffer size will be set explicitly,
+    thus enable tcp auto-tuning on some system.
+  </description>
+</property>
+
+<property>
   <name>dfs.domain.socket.path</name>
   <value></value>
   <description>

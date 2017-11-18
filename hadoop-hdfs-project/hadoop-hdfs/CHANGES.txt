@@ -20,6 +20,10 @@ Release 2.7.5 - UNRELEASED
     
     HDFS-10984. Expose nntop output as metrics. (Siddharth Wagle via xyao, zhz)
 
+    HDFS-9259. Make SO_SNDBUF size configurable at DFSClient side for hdfs write
+    scenario. (original patch Mingliang Liu via Ming Ma, branch-2.7 backport done
+    under HDFS-12823, Erik Krogen via zhz).
+
   OPTIMIZATIONS
 
     HDFS-10711. Optimize FSPermissionChecker group membership check.
