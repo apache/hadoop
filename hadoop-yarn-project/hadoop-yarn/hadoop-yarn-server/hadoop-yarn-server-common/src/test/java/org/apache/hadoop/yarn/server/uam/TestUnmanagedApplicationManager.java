@@ -65,7 +65,7 @@ public class TestUnmanagedApplicationManager {
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1);
 
     uam = new TestableUnmanagedApplicationManager(conf,
-        attemptId.getApplicationId(), null, "submitter", "appNameSuffix");
+        attemptId.getApplicationId(), null, "submitter", "appNameSuffix", true);
   }
 
   protected void waitForCallBackCountAndCheckZeroPending(
@@ -88,7 +88,8 @@ public class TestUnmanagedApplicationManager {
   public void testBasicUsage()
       throws YarnException, IOException, InterruptedException {
 
-    createAndRegisterApplicationMaster(
+    launchUAM(attemptId);
+    registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance(null, 0, null), attemptId);
 
     allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
@@ -102,11 +103,48 @@ public class TestUnmanagedApplicationManager {
         attemptId);
   }
 
+  /*
+   * Test re-attaching of an existing UAM. This is for HA of UAM client.
+   */
+  @Test(timeout = 5000)
+  public void testUAMReAttach()
+      throws YarnException, IOException, InterruptedException {
+
+    launchUAM(attemptId);
+    registerApplicationMaster(
+        RegisterApplicationMasterRequest.newInstance(null, 0, null), attemptId);
+
+    allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
+        attemptId);
+    // Wait for outstanding async allocate callback
+    waitForCallBackCountAndCheckZeroPending(callback, 1);
+
+    MockResourceManagerFacade rmProxy = uam.getRMProxy();
+    uam = new TestableUnmanagedApplicationManager(conf,
+        attemptId.getApplicationId(), null, "submitter", "appNameSuffix", true);
+    uam.setRMProxy(rmProxy);
+
+    reAttachUAM(null, attemptId);
+    registerApplicationMaster(
+        RegisterApplicationMasterRequest.newInstance(null, 0, null), attemptId);
+
+    allocateAsync(AllocateRequest.newInstance(0, 0, null, null, null), callback,
+        attemptId);
+
+    // Wait for outstanding async allocate callback
+    waitForCallBackCountAndCheckZeroPending(callback, 2);
+
+    finishApplicationMaster(
+        FinishApplicationMasterRequest.newInstance(null, null, null),
+        attemptId);
+  }
+
   @Test(timeout = 5000)
   public void testReRegister()
       throws YarnException, IOException, InterruptedException {
 
-    createAndRegisterApplicationMaster(
+    launchUAM(attemptId);
+    registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance(null, 0, null), attemptId);
 
     uam.setShouldReRegisterNext();
@@ -137,7 +175,8 @@ public class TestUnmanagedApplicationManager {
       @Override
       public void run() {
         try {
-          createAndRegisterApplicationMaster(
+          launchUAM(attemptId);
+          registerApplicationMaster(
               RegisterApplicationMasterRequest.newInstance(null, 1001, null),
               attemptId);
         } catch (Exception e) {
@@ -221,7 +260,8 @@ public class TestUnmanagedApplicationManager {
   @Test
   public void testForceKill()
       throws YarnException, IOException, InterruptedException {
-    createAndRegisterApplicationMaster(
+    launchUAM(attemptId);
+    registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance(null, 0, null), attemptId);
     uam.forceKillApplication();
 
@@ -241,19 +281,40 @@ public class TestUnmanagedApplicationManager {
     return ugi;
   }
 
-  protected RegisterApplicationMasterResponse
-      createAndRegisterApplicationMaster(
-          final RegisterApplicationMasterRequest request,
-          ApplicationAttemptId appAttemptId)
-          throws YarnException, IOException, InterruptedException {
+  protected Token<AMRMTokenIdentifier> launchUAM(
+      ApplicationAttemptId appAttemptId)
+      throws IOException, InterruptedException {
+    return getUGIWithToken(appAttemptId)
+        .doAs(new PrivilegedExceptionAction<Token<AMRMTokenIdentifier>>() {
+          @Override
+          public Token<AMRMTokenIdentifier> run() throws Exception {
+            return uam.launchUAM();
+          }
+        });
+  }
+
+  protected void reAttachUAM(final Token<AMRMTokenIdentifier> uamToken,
+      ApplicationAttemptId appAttemptId)
+      throws IOException, InterruptedException {
+    getUGIWithToken(appAttemptId).doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Token<AMRMTokenIdentifier> run() throws Exception {
+        uam.reAttachUAM(uamToken);
+        return null;
+      }
+    });
+  }
+
+  protected RegisterApplicationMasterResponse registerApplicationMaster(
+      final RegisterApplicationMasterRequest request,
+      ApplicationAttemptId appAttemptId)
+      throws YarnException, IOException, InterruptedException {
     return getUGIWithToken(appAttemptId).doAs(
         new PrivilegedExceptionAction<RegisterApplicationMasterResponse>() {
           @Override
           public RegisterApplicationMasterResponse run()
               throws YarnException, IOException {
-            RegisterApplicationMasterResponse response =
-                uam.createAndRegisterApplicationMaster(request);
-            return response;
+            return uam.registerApplicationMaster(request);
           }
         });
   }
@@ -311,8 +372,9 @@ public class TestUnmanagedApplicationManager {
 
     public TestableUnmanagedApplicationManager(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
-        String appNameSuffix) {
-      super(conf, appId, queueName, submitter, appNameSuffix);
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
+      super(conf, appId, queueName, submitter, appNameSuffix,
+          keepContainersAcrossApplicationAttempts);
     }
 
     @SuppressWarnings("unchecked")
@@ -329,6 +391,14 @@ public class TestUnmanagedApplicationManager {
       if (rmProxy != null) {
         rmProxy.setShouldReRegisterNext();
       }
+    }
+
+    public MockResourceManagerFacade getRMProxy() {
+      return rmProxy;
+    }
+
+    public void setRMProxy(MockResourceManagerFacade proxy) {
+      this.rmProxy = proxy;
     }
   }
 

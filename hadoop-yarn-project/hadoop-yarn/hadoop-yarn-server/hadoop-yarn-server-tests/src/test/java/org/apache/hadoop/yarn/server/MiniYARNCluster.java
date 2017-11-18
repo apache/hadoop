@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
@@ -962,9 +963,10 @@ public class MiniYARNCluster extends CompositeService {
     protected void initializePipeline(ApplicationAttemptId applicationAttemptId,
         String user, Token<AMRMTokenIdentifier> amrmToken,
         Token<AMRMTokenIdentifier> localToken,
-        Map<String, byte[]> recoveredDataMap, boolean isRecovery) {
+        Map<String, byte[]> recoveredDataMap, boolean isRecovery,
+        Credentials credentials) {
       super.initializePipeline(applicationAttemptId, user, amrmToken,
-          localToken, recoveredDataMap, isRecovery);
+          localToken, recoveredDataMap, isRecovery, credentials);
       RequestInterceptor rt = getPipelines()
           .get(applicationAttemptId.getApplicationId()).getRootInterceptor();
       // The DefaultRequestInterceptor will generally be the last
