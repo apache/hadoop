@@ -19,16 +19,20 @@
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.hadoop.registry.client.api.RegistryOperations;
+import org.apache.hadoop.registry.client.impl.FSRegistryOperationsService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -59,6 +63,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -79,7 +87,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
   private TestableFederationInterceptor interceptor;
   private MemoryFederationStateStore stateStore;
+  private NMStateStoreService nmStateStore;
+  private RegistryOperations registry;
 
+  private Context nmContext;
   private int testAppId;
   private ApplicationAttemptId attemptId;
 
@@ -93,15 +104,28 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     FederationStateStoreFacade.getInstance().reinitialize(stateStore,
         getConf());
 
+    nmStateStore = new NMMemoryStateStoreService();
+    nmStateStore.init(getConf());
+    nmStateStore.start();
+
+    registry = new FSRegistryOperationsService();
+    registry.init(getConf());
+    registry.start();
+
     testAppId = 1;
     attemptId = getApplicationAttemptId(testAppId);
-    interceptor.init(new AMRMProxyApplicationContextImpl(null, getConf(),
-        attemptId, "test-user", null, null));
+    nmContext =
+        new NMContext(null, null, null, null, nmStateStore, false, getConf());
+    interceptor.init(new AMRMProxyApplicationContextImpl(nmContext, getConf(),
+        attemptId, "test-user", null, null, null, registry));
+    interceptor.cleanupRegistry();
   }
 
   @Override
   public void tearDown() {
+    interceptor.cleanupRegistry();
     interceptor.shutdown();
+    registry.stop();
     super.tearDown();
   }
 
@@ -207,18 +231,17 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     AllocateResponse allocateResponse = interceptor.allocate(allocateRequest);
     Assert.assertNotNull(allocateResponse);
 
-    // The way the mock resource manager is setup, it will return the containers
-    // that were released in the allocated containers. The release request will
-    // be split and handled by the corresponding UAM. The release containers
-    // returned by the mock resource managers will be aggregated and returned
-    // back to us and we can check if total request size and returned size are
-    // the same
-    List<Container> containersForReleasedContainerIds =
-        new ArrayList<Container>();
-    containersForReleasedContainerIds
-        .addAll(allocateResponse.getAllocatedContainers());
+    // The release request will be split and handled by the corresponding UAM.
+    // The release containers returned by the mock resource managers will be
+    // aggregated and returned back to us and we can check if total request size
+    // and returned size are the same
+    List<ContainerId> containersForReleasedContainerIds =
+        new ArrayList<ContainerId>();
+    List<ContainerId> newlyFinished = getCompletedContainerIds(
+        allocateResponse.getCompletedContainersStatuses());
+    containersForReleasedContainerIds.addAll(newlyFinished);
     LOG.info("Number of containers received in the original request: "
-        + Integer.toString(allocateResponse.getAllocatedContainers().size()));
+        + Integer.toString(newlyFinished.size()));
 
     // Send max 10 heart beats to receive all the containers. If not, we will
     // fail the test
@@ -228,11 +251,12 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       allocateResponse =
           interceptor.allocate(Records.newRecord(AllocateRequest.class));
       Assert.assertNotNull(allocateResponse);
-      containersForReleasedContainerIds
-          .addAll(allocateResponse.getAllocatedContainers());
+      newlyFinished = getCompletedContainerIds(
+          allocateResponse.getCompletedContainersStatuses());
+      containersForReleasedContainerIds.addAll(newlyFinished);
 
       LOG.info("Number of containers received in this request: "
-          + Integer.toString(allocateResponse.getAllocatedContainers().size()));
+          + Integer.toString(newlyFinished.size()));
       LOG.info("Total number of containers received: "
           + Integer.toString(containersForReleasedContainerIds.size()));
       Thread.sleep(10);
@@ -547,4 +571,74 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     Assert.assertEquals(1, response.getUpdatedContainers().size());
     Assert.assertEquals(1, response.getUpdateErrors().size());
   }
+
+  @Test
+  public void testSecondAttempt() throws Exception {
+    ApplicationUserInfo userInfo = getApplicationUserInfo(testAppId);
+    userInfo.getUser().doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        // Register the application
+        RegisterApplicationMasterRequest registerReq =
+            Records.newRecord(RegisterApplicationMasterRequest.class);
+        registerReq.setHost(Integer.toString(testAppId));
+        registerReq.setRpcPort(testAppId);
+        registerReq.setTrackingUrl("");
+
+        RegisterApplicationMasterResponse registerResponse =
+            interceptor.registerApplicationMaster(registerReq);
+        Assert.assertNotNull(registerResponse);
+
+        Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+
+        // Allocate one batch of containers
+        registerSubCluster(SubClusterId.newInstance("SC-1"));
+        registerSubCluster(SubClusterId.newInstance(HOME_SC_ID));
+
+        int numberOfContainers = 3;
+        List<Container> containers =
+            getContainersAndAssert(numberOfContainers, numberOfContainers * 2);
+        for (Container c : containers) {
+          System.out.println(c.getId() + " ha");
+        }
+        Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+
+        // Preserve the mock RM instances for secondaries
+        ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
+            interceptor.getSecondaryRMs();
+
+        // Increase the attemptId and create a new intercepter instance for it
+        attemptId = ApplicationAttemptId.newInstance(
+            attemptId.getApplicationId(), attemptId.getAttemptId() + 1);
+
+        interceptor = new TestableFederationInterceptor(null, secondaries);
+        interceptor.init(new AMRMProxyApplicationContextImpl(nmContext,
+            getConf(), attemptId, "test-user", null, null, null, registry));
+        registerResponse = interceptor.registerApplicationMaster(registerReq);
+
+        // Should re-attach secondaries and get the three running containers
+        Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+        Assert.assertEquals(numberOfContainers,
+            registerResponse.getContainersFromPreviousAttempts().size());
+
+        // Release all containers
+        releaseContainersAndAssert(
+            registerResponse.getContainersFromPreviousAttempts());
+
+        // Finish the application
+        FinishApplicationMasterRequest finishReq =
+            Records.newRecord(FinishApplicationMasterRequest.class);
+        finishReq.setDiagnostics("");
+        finishReq.setTrackingUrl("");
+        finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+
+        FinishApplicationMasterResponse finshResponse =
+            interceptor.finishApplicationMaster(finishReq);
+        Assert.assertNotNull(finshResponse);
+        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        return null;
+      }
+    });
+  }
+
 }
