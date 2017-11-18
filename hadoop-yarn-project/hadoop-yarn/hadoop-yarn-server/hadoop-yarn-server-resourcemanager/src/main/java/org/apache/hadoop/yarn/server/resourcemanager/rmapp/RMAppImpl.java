@@ -1611,35 +1611,39 @@ public class RMAppImpl implements RMApp, Recoverable {
     int numNonAMContainerPreempted = 0;
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     Map<String, Long> preemptedSecondsMap = new HashMap<>();
-
-    for (RMAppAttempt attempt : attempts.values()) {
-      if (null != attempt) {
-        RMAppAttemptMetrics attemptMetrics =
-            attempt.getRMAppAttemptMetrics();
-        Resources.addTo(resourcePreempted,
-            attemptMetrics.getResourcePreempted());
-        numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
-        numNonAMContainerPreempted +=
-            attemptMetrics.getNumNonAMContainersPreempted();
-        // getAggregateAppResourceUsage() will calculate resource usage stats
-        // for both running and finished containers.
-        AggregateAppResourceUsage resUsage =
-            attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
-        for (Map.Entry<String, Long> entry : resUsage
-            .getResourceUsageSecondsMap().entrySet()) {
-          long value = RMServerUtils
-              .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
-          value += entry.getValue();
-          resourceSecondsMap.put(entry.getKey(), value);
-        }
-        for (Map.Entry<String, Long> entry : attemptMetrics
-            .getPreemptedResourceSecondsMap().entrySet()) {
-          long value = RMServerUtils
-              .getOrDefault(preemptedSecondsMap, entry.getKey(), 0L);
-          value += entry.getValue();
-          preemptedSecondsMap.put(entry.getKey(), value);
+    this.readLock.lock();
+    try {
+      for (RMAppAttempt attempt : attempts.values()) {
+        if (null != attempt) {
+          RMAppAttemptMetrics attemptMetrics =
+              attempt.getRMAppAttemptMetrics();
+          Resources.addTo(resourcePreempted,
+              attemptMetrics.getResourcePreempted());
+          numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
+          numNonAMContainerPreempted +=
+              attemptMetrics.getNumNonAMContainersPreempted();
+          // getAggregateAppResourceUsage() will calculate resource usage stats
+          // for both running and finished containers.
+          AggregateAppResourceUsage resUsage =
+              attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
+          for (Map.Entry<String, Long> entry : resUsage
+              .getResourceUsageSecondsMap().entrySet()) {
+            long value = RMServerUtils
+                .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
+            value += entry.getValue();
+            resourceSecondsMap.put(entry.getKey(), value);
+          }
+          for (Map.Entry<String, Long> entry : attemptMetrics
+              .getPreemptedResourceSecondsMap().entrySet()) {
+            long value = RMServerUtils
+                .getOrDefault(preemptedSecondsMap, entry.getKey(), 0L);
+            value += entry.getValue();
+            preemptedSecondsMap.put(entry.getKey(), value);
+          }
         }
       }
+    } finally {
+      this.readLock.unlock();
     }
 
     return new RMAppMetrics(resourcePreempted, numNonAMContainerPreempted,
