@@ -118,7 +118,7 @@
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>2.17</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>2.20.1</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
@@ -1602,6 +1602,7 @@
             <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</DYLD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
+          <trimStackTrace>false</trimStackTrace>
           <systemPropertyVariables>
 
             <hadoop.log.dir>${project.build.directory}/log</hadoop.log.dir>
@@ -1612,7 +1613,7 @@
             <test.build.data>${test.build.data}</test.build.data>
             <test.build.webapps>${test.build.webapps}</test.build.webapps>
             <test.cache.data>${test.cache.data}</test.cache.data>
-            <test.build.classes>${test.build.classes}</test.build.classes>
+            <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
 
             <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
