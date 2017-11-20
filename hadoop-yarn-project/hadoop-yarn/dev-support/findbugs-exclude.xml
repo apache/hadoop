@@ -71,6 +71,16 @@
     <Bug pattern="VO_VOLATILE_INCREMENT" />
   </Match>
   <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode" />
+    <Field name="numOpportunisticContainers" />
+    <Bug pattern="VO_VOLATILE_INCREMENT" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode" />
+    <Field name="numGuaranteedContainers" />
+    <Bug pattern="VO_VOLATILE_INCREMENT" />
+  </Match>
+  <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl$AppRejectedTransition" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
