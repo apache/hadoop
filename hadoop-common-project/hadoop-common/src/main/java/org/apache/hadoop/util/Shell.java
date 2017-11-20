@@ -94,7 +94,8 @@ public abstract class Shell {
     int major = 0;
     try {
       // 1.8.0 -> 1, 10-ea+30 -> 10, 18.03 -> 18, 11 -> 11 etc.
-      major = Integer.parseInt(System.getProperty("java.version").split("\\.")[0].split("-")[0]);
+      String version = System.getProperty("java.version");
+      major = Integer.parseInt(version.split("\\.")[0].split("-")[0]);
     } catch (NumberFormatException ignored) {
     }
     IS_JAVA9_OR_ABOVE = major >= 9;

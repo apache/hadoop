@@ -79,7 +79,11 @@ public class DataChecksum implements Checksum {
     MethodHandle newCRC32C = null;
     if (Shell.isJava9OrAbove()) {
       try {
-        newCRC32C = MethodHandles.publicLookup().findConstructor(Class.forName("java.util.zip.CRC32C"), MethodType.methodType(void.class));
+        newCRC32C = MethodHandles.publicLookup()
+        		.findConstructor(
+        				Class.forName("java.util.zip.CRC32C"),
+        				MethodType.methodType(void.class)
+        		);
       } catch (Exception e) {
         // Should not reach here.
         throw new RuntimeException(e);
@@ -98,7 +102,8 @@ public class DataChecksum implements Checksum {
 
   public static Checksum newCrc32C() {
     try {
-      return Shell.isJava9OrAbove() ? (Checksum) NEW_CRC32C_MH.invoke() : new PureJavaCrc32C();
+      return Shell.isJava9OrAbove() ? (Checksum) NEW_CRC32C_MH.invoke()
+    		  : new PureJavaCrc32C();
     } catch (Throwable e) {
       // Should not reach here.
       throw new RuntimeException(e);
