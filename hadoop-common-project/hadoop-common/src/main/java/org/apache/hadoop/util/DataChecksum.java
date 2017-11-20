@@ -80,10 +80,10 @@ public class DataChecksum implements Checksum {
     if (Shell.isJava9OrAbove()) {
       try {
         newCRC32C = MethodHandles.publicLookup()
-        		.findConstructor(
-        				Class.forName("java.util.zip.CRC32C"),
-        				MethodType.methodType(void.class)
-        		);
+                .findConstructor(
+                        Class.forName("java.util.zip.CRC32C"),
+                        MethodType.methodType(void.class)
+                );
       } catch (Exception e) {
         // Should not reach here.
         throw new RuntimeException(e);
