@@ -66,17 +66,17 @@
           <div class="links">
             <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
             <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a>  &nbsp;|&nbsp;
-            {{#if isRunningService}} 
+            {{#if isRunningService}}
               <div class="btn-group">
                 <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                   <i class="glyphicon glyphicon-cog" />
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
-                  <li> 
-                    <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop offset-2" /> Stop Service</a>
-                  </li> 
-                  <li> 
-                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash offset-2" /> Delete Service </a>
+                  <li>
+                    <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service</a>
+                  </li>
+                  <li>
+                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service </a>
                   </li>
                 </ul>
               </div>
@@ -108,9 +108,6 @@
       <div class="clearfix">
         <ul class="nav nav-pills">
           <ul class="nav nav-pills collapse in">
-            {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
-              {{#link-to 'yarn-app.info' appId (query-params service=model.serviceName)}}Information{{/link-to}}
-            {{/link-to}}
             {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
               {{#link-to 'yarn-app.attempts' appId (query-params service=model.serviceName)}}Attempts List{{/link-to}}
             {{/link-to}}
@@ -125,11 +122,14 @@
                 {{#link-to 'yarn-app.configs' appId (query-params service=model.serviceName)}}Configurations &amp; Metrics{{/link-to}}
               {{/link-to}}
             {{/if}}
+            {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
+              {{#link-to 'yarn-app.info' appId (query-params service=model.serviceName)}}Diagnostics{{/link-to}}
+            {{/link-to}}
           </ul>
         </ul>
       </div>
     </div>
-    <div class="panel-body">
+    <div class="panel-body yarn-app-body">
       {{outlet}}
     </div>
   </div>

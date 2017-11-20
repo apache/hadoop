@@ -499,6 +499,9 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
 .align-center {
   text-align: center !important;
 }
+.align-right {
+  text-align: right;
+}
 
 .bold-text {
   font-weight: bold !important;
@@ -717,6 +720,10 @@ div.service-action-mask img {
     top: -36px;
     font-size: 42px;
     line-height: 2em;
+}
+
+.yarn-app-body > div:not(:first-child) {
+  margin-top: 15px;
 }
 
 .em-table .table-column .table-header-cell {

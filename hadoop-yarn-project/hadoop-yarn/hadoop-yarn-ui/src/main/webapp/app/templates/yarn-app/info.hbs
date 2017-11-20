@@ -126,55 +126,6 @@
   </div>
 </div>
 
-
-<div class="clearfix">
-  <div class="col-md-6">
-    <div class="panel panel-default">
-      <div class="panel-heading">Application Master Info</div>
-      <table class="display table table-striped table-bordered"
-             cellspacing="0" width="100%">
-        <thead>
-        <tr>
-          <th>Master Container Log</th>
-          <th>Master Node</th>
-          <th>Master Node Label Expression</th>
-        </tr>
-        </thead>
-
-        <tbody>
-        <tr>
-          <td><a href="{{model.app.amContainerLogs}}" target="_blank">Link</a></td>
-          <td><a href="{{amHostHttpAddressFormatted}}" target="_blank">Link</a></td>
-          <td>{{model.app.amNodeLabelExpression}}</td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  {{#if model.serviceName}}
-    <div class="col-md-6">
-      <div class="panel panel-default">
-        <div class="panel-heading">Quick Links</div>
-        <table class="display table table-striped table-bordered">
-          <tbody>
-            {{#each model.quicklinks as |link|}}
-              <tr>
-                <td>{{link.name}}</td>
-                <td><a href="{{link.value}}" target="_blank">{{link.value}}</a></td>
-              </tr>
-            {{else}}
-              <tr class="align-center">
-                <td colspan="2">No quicklinks available!</td>
-              </tr>
-            {{/each}}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  {{/if}}
-</div>
-
 {{confirm-dialog
   dialogId="stopServiceConfirmDialog"
   message=(concat 'Are you sure you want to stop service "' model.serviceName '" ?')
