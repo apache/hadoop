@@ -43,7 +43,7 @@ import org.apache.hadoop.ozone.protocol
     .proto.StorageContainerDatanodeProtocolProtos.SCMNodeReport;
 import org.apache.hadoop.ozone.protocol
     .proto.StorageContainerDatanodeProtocolProtos.SCMStorageReport;
-
+import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.scm.VersionInfo;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMNodeStat;
@@ -121,7 +121,7 @@ public class SCMNodeManager
   private final AtomicInteger staleNodeCount;
   private final AtomicInteger deadNodeCount;
   private final AtomicInteger totalNodes;
-  private final long staleNodeIntervalMs;
+  private long staleNodeIntervalMs;
   private final long deadNodeIntervalMs;
   private final long heartbeatCheckerIntervalMs;
   private final long datanodeHBIntervalSeconds;
@@ -150,12 +150,13 @@ public class SCMNodeManager
 
   // Node pool manager.
   private final SCMNodePoolManager nodePoolManager;
+  private final StorageContainerManager scmManager;
 
   /**
    * Constructs SCM machine Manager.
    */
-  public SCMNodeManager(OzoneConfiguration conf, String clusterID)
-      throws IOException {
+  public SCMNodeManager(OzoneConfiguration conf, String clusterID,
+      StorageContainerManager scmManager) throws IOException {
     heartbeatQueue = new ConcurrentLinkedQueue<>();
     healthyNodes = new ConcurrentHashMap<>();
     deadNodes = new ConcurrentHashMap<>();
@@ -197,6 +198,7 @@ public class SCMNodeManager
     registerMXBean();
 
     this.nodePoolManager = new SCMNodePoolManager(conf);
+    this.scmManager = scmManager;
   }
 
   private void registerMXBean() {
@@ -551,6 +553,11 @@ public class SCMNodeManager
     healthyNodeCount.decrementAndGet();
     staleNodes.put(entry.getKey(), entry.getValue());
     staleNodeCount.incrementAndGet();
+
+    if (scmManager != null) {
+      // remove stale node's container report
+      scmManager.removeContainerReport(entry.getKey());
+    }
   }
 
   /**
@@ -862,5 +869,10 @@ public class SCMNodeManager
   @Override
   public void addDatanodeCommand(DatanodeID id, SCMCommand command) {
     this.commandQueue.addCommand(id, command);
+  }
+
+  @VisibleForTesting
+  public void setStaleNodeIntervalMs(long interval) {
+    this.staleNodeIntervalMs = interval;
   }
 }

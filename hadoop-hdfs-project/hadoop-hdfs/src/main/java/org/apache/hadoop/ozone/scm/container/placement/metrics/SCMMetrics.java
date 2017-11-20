@@ -21,6 +21,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 /**
@@ -42,6 +43,14 @@ public class SCMMetrics {
   @Metric private MutableGaugeLong lastContainerReportWriteBytes;
   @Metric private MutableGaugeLong lastContainerReportReadCount;
   @Metric private MutableGaugeLong lastContainerReportWriteCount;
+
+  @Metric private MutableCounterLong containerReportSize;
+  @Metric private MutableCounterLong containerReportUsed;
+  @Metric private MutableCounterLong containerReportKeyCount;
+  @Metric private MutableCounterLong containerReportReadBytes;
+  @Metric private MutableCounterLong containerReportWriteBytes;
+  @Metric private MutableCounterLong containerReportReadCount;
+  @Metric private MutableCounterLong containerReportWriteCount;
 
   public SCMMetrics() {
   }
@@ -78,6 +87,64 @@ public class SCMMetrics {
 
   public void setLastContainerReportWriteCount(long writeCount) {
     this.lastContainerReportWriteCount.set(writeCount);
+  }
+
+  public void incrContainerReportSize(long size) {
+    this.containerReportSize.incr(size);
+  }
+
+  public void incrContainerReportUsed(long used) {
+    this.containerReportUsed.incr(used);
+  }
+
+  public void incrContainerReportKeyCount(long keyCount) {
+    this.containerReportKeyCount.incr(keyCount);
+  }
+
+  public void incrContainerReportReadBytes(long readBytes) {
+    this.containerReportReadBytes.incr(readBytes);
+  }
+
+  public void incrContainerReportWriteBytes(long writeBytes) {
+    this.containerReportWriteBytes.incr(writeBytes);
+  }
+
+  public void incrContainerReportReadCount(long readCount) {
+    this.containerReportReadCount.incr(readCount);
+  }
+
+  public void incrContainerReportWriteCount(long writeCount) {
+    this.containerReportWriteCount.incr(writeCount);
+  }
+
+  public void setLastContainerStat(ContainerStat newStat) {
+    this.lastContainerReportSize.set(newStat.getSize().get());
+    this.lastContainerReportUsed.set(newStat.getUsed().get());
+    this.lastContainerReportKeyCount.set(newStat.getKeyCount().get());
+    this.lastContainerReportReadBytes.set(newStat.getReadBytes().get());
+    this.lastContainerReportWriteBytes.set(newStat.getWriteBytes().get());
+    this.lastContainerReportReadCount.set(newStat.getReadCount().get());
+    this.lastContainerReportWriteCount.set(newStat.getWriteCount().get());
+  }
+
+  public void incrContainerStat(ContainerStat deltaStat) {
+    this.containerReportSize.incr(deltaStat.getSize().get());
+    this.containerReportUsed.incr(deltaStat.getUsed().get());
+    this.containerReportKeyCount.incr(deltaStat.getKeyCount().get());
+    this.containerReportReadBytes.incr(deltaStat.getReadBytes().get());
+    this.containerReportWriteBytes.incr(deltaStat.getWriteBytes().get());
+    this.containerReportReadCount.incr(deltaStat.getReadCount().get());
+    this.containerReportWriteCount.incr(deltaStat.getWriteCount().get());
+  }
+
+  public void decrContainerStat(ContainerStat deltaStat) {
+    this.containerReportSize.incr(-1 * deltaStat.getSize().get());
+    this.containerReportUsed.incr(-1 * deltaStat.getUsed().get());
+    this.containerReportKeyCount.incr(-1 * deltaStat.getKeyCount().get());
+    this.containerReportReadBytes.incr(-1 * deltaStat.getReadBytes().get());
+    this.containerReportWriteBytes.incr(-1 * deltaStat.getWriteBytes().get());
+    this.containerReportReadCount.incr(-1 * deltaStat.getReadCount().get());
+    this.containerReportWriteCount.incr(-1 * deltaStat.getWriteCount().get());
   }
 
   public void unRegister() {

@@ -19,6 +19,10 @@ package org.apache.hadoop.ozone.scm;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -104,6 +108,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
@@ -204,6 +210,9 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
 
   /** SCM metrics. */
   private static SCMMetrics metrics;
+  /** Key = DatanodeUuid, value = ContainerStat. */
+  private Cache<String, ContainerStat> containerReportCache;
+
 
   private static final String USAGE =
       "Usage: \n hdfs scm [ " + StartupOption.INIT.getName() + " [ "
@@ -225,13 +234,15 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
 
     StorageContainerManager.initMetrics();
+    initContainerReportCache(conf);
+
     scmStorage = new SCMStorage(conf);
     String clusterId = scmStorage.getClusterID();
     if (clusterId == null) {
       throw new SCMException("clusterId not found",
           ResultCodes.SCM_NOT_INITIALIZED);
     }
-    scmNodeManager = new SCMNodeManager(conf, scmStorage.getClusterID());
+    scmNodeManager = new SCMNodeManager(conf, scmStorage.getClusterID(), this);
     scmContainerManager = new ContainerMapping(conf, scmNodeManager, cacheSize);
     scmBlockManager = new BlockManagerImpl(conf, scmNodeManager,
         scmContainerManager, cacheSize);
@@ -295,6 +306,31 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     httpServer = new StorageContainerManagerHttpServer(conf);
 
     registerMXBean();
+  }
+
+  /**
+   * Initialize container reports cache that sent from datanodes.
+   *
+   * @param conf
+   */
+  private void initContainerReportCache(OzoneConfiguration conf) {
+    containerReportCache = CacheBuilder.newBuilder()
+        .expireAfterAccess(Long.MAX_VALUE, TimeUnit.MILLISECONDS)
+        .maximumSize(Integer.MAX_VALUE)
+        .removalListener(new RemovalListener<String, ContainerStat>() {
+          @Override
+          public void onRemoval(
+              RemovalNotification<String, ContainerStat> removalNotification) {
+            synchronized (containerReportCache) {
+              ContainerStat stat = removalNotification.getValue();
+              // remove invalid container report
+              metrics.decrContainerStat(stat);
+              LOG.debug(
+                  "Remove expired container stat entry for datanode: {}.",
+                  removalNotification.getKey());
+            }
+          }
+        }).build();
   }
 
   /**
@@ -836,7 +872,15 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       LOG.error("SCM block manager service stop failed.", ex);
     }
 
-    metrics.unRegister();
+    if (containerReportCache != null) {
+      containerReportCache.invalidateAll();
+      containerReportCache.cleanUp();
+    }
+
+    if (metrics != null) {
+      metrics.unRegister();
+    }
+
     unregisterMXBean();
     IOUtils.cleanupWithLogger(LOG, scmContainerManager);
     IOUtils.cleanupWithLogger(LOG, scmBlockManager);
@@ -917,33 +961,44 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   @Override
   public ContainerReportsResponseProto sendContainerReport(
       ContainerReportsRequestProto reports) throws IOException {
-    // TODO: We should update the logic once incremental container report
-    // type is supported.
-    if (reports.getType() ==
-        ContainerReportsRequestProto.reportType.fullReport) {
-      ContainerStat stat = new ContainerStat();
-      for (StorageContainerDatanodeProtocolProtos.ContainerInfo info : reports
-          .getReportsList()) {
-        stat.add(new ContainerStat(info.getSize(), info.getUsed(),
-            info.getKeyCount(), info.getReadBytes(), info.getWriteBytes(),
-            info.getReadCount(), info.getWriteCount()));
-      }
-
-      // update container metrics
-      metrics.setLastContainerReportSize(stat.getSize().get());
-      metrics.setLastContainerReportUsed(stat.getUsed().get());
-      metrics.setLastContainerReportKeyCount(stat.getKeyCount().get());
-      metrics.setLastContainerReportReadBytes(stat.getReadBytes().get());
-      metrics.setLastContainerReportWriteBytes(stat.getWriteBytes().get());
-      metrics.setLastContainerReportReadCount(stat.getReadCount().get());
-      metrics.setLastContainerReportWriteCount(stat.getWriteCount().get());
-    }
+    updateContainerReportMetrics(reports);
 
     // should we process container reports async?
     scmContainerManager.processContainerReports(
         DatanodeID.getFromProtoBuf(reports.getDatanodeID()),
         reports.getType(), reports.getReportsList());
     return ContainerReportsResponseProto.newBuilder().build();
+  }
+
+  private void updateContainerReportMetrics(
+      ContainerReportsRequestProto reports) {
+    ContainerStat newStat = null;
+    // TODO: We should update the logic once incremental container report
+    // type is supported.
+    if (reports
+        .getType() == ContainerReportsRequestProto.reportType.fullReport) {
+      newStat = new ContainerStat();
+      for (StorageContainerDatanodeProtocolProtos.ContainerInfo info : reports
+          .getReportsList()) {
+        newStat.add(new ContainerStat(info.getSize(), info.getUsed(),
+            info.getKeyCount(), info.getReadBytes(), info.getWriteBytes(),
+            info.getReadCount(), info.getWriteCount()));
+      }
+
+      // update container metrics
+      metrics.setLastContainerStat(newStat);
+    }
+
+    // Update container stat entry, this will trigger a removal operation if it
+    // exists in cache.
+    synchronized (containerReportCache) {
+      String datanodeUuid = reports.getDatanodeID().getDatanodeUuid();
+      if (datanodeUuid != null && newStat != null) {
+        containerReportCache.put(datanodeUuid, newStat);
+        // update global view container metrics
+        metrics.incrContainerStat(newStat);
+      }
+    }
   }
 
   /**
@@ -1123,5 +1178,54 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   public static SCMMetrics getMetrics() {
     return metrics == null ? SCMMetrics.create() : metrics;
+  }
+
+  /**
+   * Invalidate container stat entry for given datanode.
+   *
+   * @param datanodeUuid
+   */
+  public void removeContainerReport(String datanodeUuid) {
+    synchronized (containerReportCache) {
+      containerReportCache.invalidate(datanodeUuid);
+    }
+  }
+
+  /**
+   * Get container stat of specified datanode.
+   *
+   * @param datanodeUuid
+   * @return
+   */
+  public ContainerStat getContainerReport(String datanodeUuid) {
+    ContainerStat stat = null;
+    synchronized (containerReportCache) {
+      stat = containerReportCache.getIfPresent(datanodeUuid);
+    }
+
+    return stat;
+  }
+
+  /**
+   * Returns a view of the container stat entries. Modifications made to the
+   * map will directly affect the cache.
+   *
+   * @return
+   */
+  public ConcurrentMap<String, ContainerStat> getContainerReportCache() {
+    return containerReportCache.asMap();
+  }
+
+  @Override
+  public Map<String, String> getContainerReport() {
+    Map<String, String> id2StatMap = new HashMap<>();
+    synchronized (containerReportCache) {
+      ConcurrentMap<String, ContainerStat> map = containerReportCache.asMap();
+      for (Map.Entry<String, ContainerStat> entry : map.entrySet()) {
+        id2StatMap.put(entry.getKey(), entry.getValue().toJsonString());
+      }
+    }
+
+    return id2StatMap;
   }
 }

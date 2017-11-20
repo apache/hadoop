@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.scm;
 
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.jmx.ServiceRuntimeInfo;
 
@@ -39,4 +41,10 @@ public interface SCMMXBean extends ServiceRuntimeInfo {
    * @return SCM client RPC server port
    */
   String getClientRpcPort();
+
+  /**
+   * Get container report info that includes container IO stats of nodes.
+   * @return The datanodeUUid to report json string mapping
+   */
+  Map<String, String> getContainerReport();
 }

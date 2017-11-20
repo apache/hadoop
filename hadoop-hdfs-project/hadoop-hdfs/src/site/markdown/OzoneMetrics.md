@@ -110,13 +110,20 @@ Following are the counters for containers:
 
 | Name | Description |
 |:---- |:---- |
-| `LastContainerReportSize` | Total size in bytes of all containers |
-| `LastContainerReportUsed` | Total number of bytes used by all containers |
-| `LastContainerReportKeyCount` | Total number of keys in all containers |
-| `LastContainerReportReadBytes` | Total number of bytes have been read from all containers |
-| `LastContainerReportWriteBytes` | Total number of bytes have been written into all containers |
-| `LastContainerReportReadCount` | Total number of times containers have been read from |
-| `LastContainerReportWriteCount` | Total number of times containers have been written to |
+| `LastContainerReportSize` | Total size in bytes of all containers in latest container report that SCM received from datanode |
+| `LastContainerReportUsed` | Total number of bytes used by all containers in latest container report that SCM received from datanode |
+| `LastContainerReportKeyCount` | Total number of keys in all containers in latest container report that SCM received from datanode |
+| `LastContainerReportReadBytes` | Total number of bytes have been read from all containers in latest container report that SCM received from datanode |
+| `LastContainerReportWriteBytes` | Total number of bytes have been written into all containers in latest container report that SCM received from datanode |
+| `LastContainerReportReadCount` | Total number of times containers have been read from in latest container report that SCM received from datanode |
+| `LastContainerReportWriteCount` | Total number of times containers have been written to in latest container report that SCM received from datanode |
+| `ContainerReportSize` | Total size in bytes of all containers over whole cluster |
+| `ContainerReportUsed` | Total number of bytes used by all containers over whole cluster |
+| `ContainerReportKeyCount` | Total number of keys in all containers over whole cluster |
+| `ContainerReportReadBytes` | Total number of bytes have been read from all containers over whole cluster |
+| `ContainerReportWriteBytes` | Total number of bytes have been written into all containers over whole cluster |
+| `ContainerReportReadCount` | Total number of times containers have been read from over whole cluster |
+| `ContainerReportWriteCount` | Total number of times containers have been written to over whole cluster |
 
 ### Key Space Metrics
 

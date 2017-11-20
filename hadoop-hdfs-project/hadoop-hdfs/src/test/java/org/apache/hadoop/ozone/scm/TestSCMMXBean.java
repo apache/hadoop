@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.scm.container.placement.metrics.ContainerStat;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
@@ -40,6 +41,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 
 import javax.management.openmbean.CompositeData;
@@ -91,6 +93,24 @@ public class TestSCMMXBean {
     String clientRpcPort = (String)mbs.getAttribute(bean,
         "ClientRpcPort");
     assertEquals(scm.getClientRpcPort(), clientRpcPort);
+
+    ConcurrentMap<String, ContainerStat> map = scm.getContainerReportCache();
+    ContainerStat stat = new ContainerStat(1, 2, 3, 4, 5, 6, 7);
+    map.put("nodeID", stat);
+    TabularData data = (TabularData) mbs.getAttribute(
+        bean, "ContainerReport");
+
+    // verify report info
+    assertEquals(1, data.values().size());
+    for (Object obj : data.values()) {
+      assertTrue(obj instanceof CompositeData);
+      CompositeData d = (CompositeData) obj;
+      Iterator<?> it = d.values().iterator();
+      String key = it.next().toString();
+      String value = it.next().toString();
+      assertEquals("nodeID", key);
+      assertEquals(stat.toJsonString(), value);
+    }
   }
 
   @Test

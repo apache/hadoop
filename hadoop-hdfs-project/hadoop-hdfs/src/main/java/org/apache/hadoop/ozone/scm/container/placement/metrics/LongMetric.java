@@ -16,9 +16,13 @@
  */
 package org.apache.hadoop.ozone.scm.container.placement.metrics;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+
 /**
  * An helper class for all metrics based on Longs.
  */
+@JsonAutoDetect(fieldVisibility = Visibility.ANY)
 public class LongMetric implements DatanodeMetric<Long, Long> {
   private Long value;
 
