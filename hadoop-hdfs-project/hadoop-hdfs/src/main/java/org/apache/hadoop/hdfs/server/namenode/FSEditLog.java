@@ -29,8 +29,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -114,6 +112,8 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -122,9 +122,7 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FSEditLog implements LogsPurgeable {
-
-  public static final Log LOG = LogFactory.getLog(FSEditLog.class);
-
+  public static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);
   /**
    * State machine for edit log.
    * 
@@ -329,7 +327,8 @@ public class FSEditLog implements LogsPurgeable {
       String error = String.format("Cannot start writing at txid %s " +
         "when there is a stream available for read: %s",
         segmentTxId, streams.get(0));
-      IOUtils.cleanup(LOG, streams.toArray(new EditLogInputStream[0]));
+      IOUtils.cleanupWithLogger(LOG,
+          streams.toArray(new EditLogInputStream[0]));
       throw new IllegalStateException(error);
     }
     
@@ -689,9 +688,9 @@ public class FSEditLog implements LogsPurgeable {
                 "Could not sync enough journals to persistent storage " +
                 "due to " + e.getMessage() + ". " +
                 "Unsynced transactions: " + (txid - synctxid);
-            LOG.fatal(msg, new Exception());
+            LOG.error(msg, new Exception());
             synchronized(journalSetLock) {
-              IOUtils.cleanup(LOG, journalSet);
+              IOUtils.cleanupWithLogger(LOG, journalSet);
             }
             terminate(1, msg);
           }
@@ -715,9 +714,9 @@ public class FSEditLog implements LogsPurgeable {
           final String msg =
               "Could not sync enough journals to persistent storage. "
               + "Unsynced transactions: " + (txid - synctxid);
-          LOG.fatal(msg, new Exception());
+          LOG.error(msg, new Exception());
           synchronized(journalSetLock) {
-            IOUtils.cleanup(LOG, journalSet);
+            IOUtils.cleanupWithLogger(LOG, journalSet);
           }
           terminate(1, msg);
         }
@@ -772,7 +771,7 @@ public class FSEditLog implements LogsPurgeable {
     buf.append(editLogStream.getNumSync());
     buf.append(" SyncTimes(ms): ");
     buf.append(journalSet.getSyncTimes());
-    LOG.info(buf);
+    LOG.info(buf.toString());
   }
 
   /** Record the RPC IDs if necessary */
@@ -1711,7 +1710,7 @@ public class FSEditLog implements LogsPurgeable {
       if (recovery != null) {
         // If recovery mode is enabled, continue loading even if we know we
         // can't load up to toAtLeastTxId.
-        LOG.error(e);
+        LOG.error("Exception while selecting input streams", e);
       } else {
         closeAllStreams(streams);
         throw e;
