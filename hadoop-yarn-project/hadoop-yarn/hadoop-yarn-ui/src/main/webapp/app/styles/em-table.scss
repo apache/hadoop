@@ -88,4 +88,29 @@
      background-color: $yarn-header-bg;
      border-bottom: 1px solid $yarn-border-color;
  }
+
+ .em-table-facet-panel ul.field-list .em-table-facet-panel-values {
+     .field-name {
+         cursor: default;
+         &::before {
+             display: none;
+         }
+         .all-button {
+             display: block;
+             cursor: pointer;
+         }
+     }
+     &.hide-values {
+         .value-list,
+         .more-less,
+         .field-name .all-button {
+             display: block;
+         }
+         &.hide-select-all {
+             .field-name .all-button {
+                 display: none;
+             }
+         }
+     }
+ }
  
