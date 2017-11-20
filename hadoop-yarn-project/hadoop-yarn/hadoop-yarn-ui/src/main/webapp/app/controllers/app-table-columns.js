@@ -50,6 +50,7 @@ export default Ember.Controller.extend({
       }, {
           id: 'appName',
           headerTitle: 'Application Name',
+          cellComponentName: 'em-table-tooltip-text',
           contentPath: 'appName',
           facetType: null,
       }, {
@@ -66,6 +67,7 @@ export default Ember.Controller.extend({
       }, {
           id: 'queue',
           headerTitle: 'Queue',
+          cellComponentName: 'em-table-tooltip-text',
           contentPath: 'queue',
       }, {
           id: 'progress',
@@ -128,6 +130,7 @@ export default Ember.Controller.extend({
       headerTitle: 'Application ID',
       contentPath: 'id',
       facetType: null,
+      cellComponentName: 'em-table-tooltip-text',
       minWidth: "250px"
     }, {
       id: 'state',
@@ -160,6 +163,7 @@ export default Ember.Controller.extend({
         id: 'queue',
         headerTitle: 'Queue',
         contentPath: 'queue',
+        cellComponentName: 'em-table-tooltip-text',
     }, {
       id: 'stTime',
       headerTitle: 'Started Time',
