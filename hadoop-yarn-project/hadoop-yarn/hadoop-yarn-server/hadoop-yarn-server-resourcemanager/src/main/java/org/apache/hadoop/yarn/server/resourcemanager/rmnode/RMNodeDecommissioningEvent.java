@@ -25,17 +25,17 @@ import org.apache.hadoop.yarn.api.records.NodeId;
  *
  */
 public class RMNodeDecommissioningEvent extends RMNodeEvent {
-  // decommissioning timeout in second.
-  private final int decommissioningTimeout;
+  // Optional decommissioning timeout in second.
+  private final Integer decommissioningTimeout;
 
   // Create instance with optional timeout
   // (timeout could be null which means use default).
-  public RMNodeDecommissioningEvent(NodeId nodeId, int timeout) {
+  public RMNodeDecommissioningEvent(NodeId nodeId, Integer timeout) {
     super(nodeId, RMNodeEventType.GRACEFUL_DECOMMISSION);
     this.decommissioningTimeout = timeout;
   }
 
-  public int getDecommissioningTimeout() {
+  public Integer getDecommissioningTimeout() {
     return this.decommissioningTimeout;
   }
 }
