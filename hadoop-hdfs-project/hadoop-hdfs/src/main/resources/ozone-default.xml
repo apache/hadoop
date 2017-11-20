@@ -491,7 +491,7 @@
   </property>
   <property>
     <name>ozone.ksm.handler.count.key</name>
-    <value>200</value>
+    <value>20</value>
     <tag>KSM, PERFORMANCE</tag>
     <description>
       The number of RPC handler threads for KSM service endpoints.
@@ -754,7 +754,7 @@
   </property>
   <property>
     <name>ozone.scm.container.provision_batch_size</name>
-    <value>1</value>
+    <value>20</value>
     <tag>OZONE, PERFORMANCE</tag>
     <description>Pre-provision specified number of containers for block
       allocation.
