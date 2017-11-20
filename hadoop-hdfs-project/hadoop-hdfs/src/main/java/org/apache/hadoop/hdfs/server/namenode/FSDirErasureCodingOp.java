@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
@@ -366,10 +367,10 @@ final class FSDirErasureCodingOp {
    * Get available erasure coding polices.
    *
    * @param fsn namespace
-   * @return {@link ErasureCodingPolicy} array
+   * @return {@link ErasureCodingPolicyInfo} array
    */
-  static ErasureCodingPolicy[] getErasureCodingPolicies(final FSNamesystem fsn)
-      throws IOException {
+  static ErasureCodingPolicyInfo[] getErasureCodingPolicies(
+      final FSNamesystem fsn) throws IOException {
     assert fsn.hasReadLock();
     return fsn.getErasureCodingPolicyManager().getPolicies();
   }

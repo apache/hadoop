@@ -28,10 +28,10 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ReservationQueue;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
@@ -92,8 +92,8 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
       String planQueueName, Queue queue, String currResId) {
     PlanQueue planQueue = (PlanQueue)queue;
     try {
-      ReservationQueue resQueue =
-          new ReservationQueue(cs, currResId, planQueue);
+      AutoCreatedLeafQueue resQueue =
+          new AutoCreatedLeafQueue(cs, currResId, planQueue);
       cs.addQueue(resQueue);
     } catch (SchedulerDynamicEditException e) {
       LOG.warn(
@@ -112,8 +112,8 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
     PlanQueue planQueue = (PlanQueue)queue;
     if (cs.getQueue(defReservationId) == null) {
       try {
-        ReservationQueue defQueue =
-            new ReservationQueue(cs, defReservationId, planQueue);
+        AutoCreatedLeafQueue defQueue =
+            new AutoCreatedLeafQueue(cs, defReservationId, planQueue);
         cs.addQueue(defQueue);
       } catch (SchedulerDynamicEditException e) {
         LOG.warn(

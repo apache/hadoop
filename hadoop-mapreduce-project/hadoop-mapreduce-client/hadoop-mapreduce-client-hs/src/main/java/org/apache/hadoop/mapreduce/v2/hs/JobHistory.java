@@ -27,8 +27,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -56,12 +54,14 @@ import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Loads and manages the Job history cache.
  */
 public class JobHistory extends AbstractService implements HistoryContext {
-  private static final Log LOG = LogFactory.getLog(JobHistory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobHistory.class);
 
   public static final Pattern CONF_FILENAME_REGEX = Pattern.compile("("
       + JobID.JOBID_REGEX + ")_conf.xml(?:\\.[0-9]+\\.old)?");

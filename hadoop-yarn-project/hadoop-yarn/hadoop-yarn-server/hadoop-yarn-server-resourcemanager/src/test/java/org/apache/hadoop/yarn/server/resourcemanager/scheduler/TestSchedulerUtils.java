@@ -803,6 +803,7 @@ public class TestSchedulerUtils {
           Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>> applications,
           EventHandler<SchedulerEvent> handler, String queueName)
           throws Exception {
+
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppAddedSchedulerEvent appAddedEvent =

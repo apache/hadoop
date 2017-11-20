@@ -65,6 +65,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -1303,5 +1304,47 @@ public class TestDockerContainerRuntime {
         dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter++));
+  }
+
+  @Test
+  public void testDockerCapabilities()
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    try {
+      conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+          "none", "CHOWN", "DAC_OVERRIDE");
+      runtime.initialize(conf, null);
+      Assert.fail("Initialize didn't fail with invalid capabilities " +
+          "'none', 'CHOWN', 'DAC_OVERRIDE'");
+    } catch (ContainerExecutionException e) {
+    }
+
+    try {
+      conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+          "CHOWN", "DAC_OVERRIDE", "NONE");
+      runtime.initialize(conf, null);
+      Assert.fail("Initialize didn't fail with invalid capabilities " +
+          "'CHOWN', 'DAC_OVERRIDE', 'NONE'");
+    } catch (ContainerExecutionException e) {
+    }
+
+    conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+        "NONE");
+    runtime.initialize(conf, null);
+    Assert.assertEquals(0, runtime.getCapabilities().size());
+
+    conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+        "none");
+    runtime.initialize(conf, null);
+    Assert.assertEquals(0, runtime.getCapabilities().size());
+
+    conf.setStrings(YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
+        "CHOWN", "DAC_OVERRIDE");
+    runtime.initialize(conf, null);
+    Iterator<String> it = runtime.getCapabilities().iterator();
+    Assert.assertEquals("CHOWN", it.next());
+    Assert.assertEquals("DAC_OVERRIDE", it.next());
   }
 }

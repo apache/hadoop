@@ -1,0 +1,76 @@
+{
+  "name": "app-1",
+  "lifetime": "3600",
+  "configuration": {
+    "properties": {
+      "g1": "a",
+      "g2": "b"
+    },
+    "files": [
+      {
+        "type": "PROPERTIES",
+        "dest_file": "file1",
+        "properties": {
+          "k1": "v1",
+          "k2": "v2"
+        }
+      },
+      {
+        "type": "XML",
+        "dest_file": "file2",
+        "properties": {
+          "k3": "v3"
+        }
+      }
+    ]
+  },
+  "resource": {
+    "cpus": 1,
+    "memory": "512"
+  },
+  "components": [
+    {
+      "name": "simple",
+      "launch_command": "sleep 3600",
+      "number_of_containers": 2,
+      "configuration": {
+        "files": [
+          {
+            "type": "PROPERTIES",
+            "dest_file": "file1",
+            "properties": {
+              "k1": "overridden"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "master",
+      "launch_command": "sleep 3600",
+      "number_of_containers": 2,
+      "configuration": {
+        "properties": {
+          "name": "m",
+          "g1": "overridden"
+        }
+      }
+    },
+    {
+      "name": "worker",
+      "number_of_containers": 2,
+      "launch_command": "sleep 3600",
+      "resource": {
+        "cpus": 1,
+        "memory": "1024"
+      },
+      "configuration": {
+        "properties": {
+          "name": "worker",
+          "g1": "overridden-by-worker",
+          "timeout": "1000"
+        }
+      }
+    }
+  ]
+}

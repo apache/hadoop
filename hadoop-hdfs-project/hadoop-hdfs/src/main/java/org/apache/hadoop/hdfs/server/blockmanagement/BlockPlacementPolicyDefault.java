@@ -614,7 +614,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Failed to choose from local rack (location = " + localRack
-            + "); the second replica is not found, retry choosing ramdomly", e);
+            + "); the second replica is not found, retry choosing randomly", e);
       }
       //the second replica is not found, randomly choose one from the network
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
@@ -636,7 +636,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     } catch(NotEnoughReplicasException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Failed to choose from the next rack (location = " + nextRack
-            + "), retry choosing ramdomly", e);
+            + "), retry choosing randomly", e);
       }
       //otherwise randomly choose one from the network
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -27,8 +26,7 @@ import java.io.IOException;
 /**
  * Value denotes the possible states of an ErasureCodingPolicy.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public enum ErasureCodingPolicyState {
 
   /** Policy is disabled. It's policy default state. */

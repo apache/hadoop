@@ -164,4 +164,16 @@ final public class AliyunOSSUtils {
       return key;
     }
   }
+
+  /**
+   * Check if OSS object represents a directory.
+   *
+   * @param name object key
+   * @param size object content length
+   * @return true if object represents a directory
+   */
+  public static boolean objectRepresentsDirectory(final String name,
+      final long size) {
+    return StringUtils.isNotEmpty(name) && name.endsWith("/") && size == 0L;
+  }
 }

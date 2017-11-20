@@ -1019,7 +1019,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         }
 
         if (offswitchAsk.getCount() > 0) {
-          if (getSchedulingPlacementSet(schedulerKey).getUniqueLocationAsks()
+          if (getAppPlacementAllocator(schedulerKey).getUniqueLocationAsks()
               <= 1 || allowedLocality.equals(NodeType.OFF_SWITCH)) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Assign container on " + node.getNodeName()
@@ -1304,7 +1304,20 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public float getWeight() {
-    return scheduler.getAppWeight(this);
+    double weight = 1.0;
+
+    if (scheduler.isSizeBasedWeight()) {
+      scheduler.getSchedulerReadLock().lock();
+
+      try {
+        // Set weight based on current memory demand
+        weight = Math.log1p(getDemand().getMemorySize()) / Math.log(2);
+      } finally {
+        scheduler.getSchedulerReadLock().unlock();
+      }
+    }
+
+    return (float)weight * this.getPriority().getPriority();
   }
 
   @Override

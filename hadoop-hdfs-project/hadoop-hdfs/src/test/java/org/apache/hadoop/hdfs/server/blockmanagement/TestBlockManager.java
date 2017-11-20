@@ -1318,8 +1318,9 @@ public class TestBlockManager {
       assertTrue("Unexpected text in metasave," +
               "was expecting corrupt blocks section!", foundIt);
       corruptBlocksLine = reader.readLine();
-      String regex = "Block=[0-9]+\\tNode=.*\\tStorageID=.*StorageState.*" +
-          "TotalReplicas=.*Reason=GENSTAMP_MISMATCH";
+      String regex = "Block=blk_[0-9]+_[0-9]+\\tSize=.*\\tNode=.*" +
+          "\\tStorageID=.*\\tStorageState.*" +
+          "\\tTotalReplicas=.*\\tReason=GENSTAMP_MISMATCH";
       assertTrue("Unexpected corrupt block section in metasave!",
           corruptBlocksLine.matches(regex));
       corruptBlocksLine = reader.readLine();

@@ -58,6 +58,7 @@ export default DS.JSONAPISerializer.extend({
           allocatedMB: payload.allocatedMB,
           allocatedVCores: payload.allocatedVCores,
           runningContainers: payload.runningContainers,
+          resourceRequests: payload.resourceRequests,
           memorySeconds: payload.memorySeconds,
           vcoreSeconds: payload.vcoreSeconds,
           preemptedResourceMB: payload.preemptedResourceMB,

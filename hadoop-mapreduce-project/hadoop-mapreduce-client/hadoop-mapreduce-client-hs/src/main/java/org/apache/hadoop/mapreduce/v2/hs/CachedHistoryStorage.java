@@ -30,8 +30,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.Weigher;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -45,13 +43,16 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages an in memory cache of parsed Job History files.
  */
 public class CachedHistoryStorage extends AbstractService implements
     HistoryStorage {
-  private static final Log LOG = LogFactory.getLog(CachedHistoryStorage.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CachedHistoryStorage.class);
 
   private LoadingCache<JobId, Job> loadedJobCache = null;
   private int loadedJobCacheSize;

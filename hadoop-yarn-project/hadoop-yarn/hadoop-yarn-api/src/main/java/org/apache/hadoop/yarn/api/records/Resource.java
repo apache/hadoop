@@ -28,9 +28,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 /**
@@ -75,34 +75,27 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores) {
-    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
-      Resource ret = Records.newRecord(Resource.class);
-      ret.setMemorySize(memory);
-      ret.setVirtualCores(vCores);
-      return ret;
-    }
     return new LightWeightResource(memory, vCores);
   }
 
   @Public
   @Stable
   public static Resource newInstance(long memory, int vCores) {
-    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
-      Resource ret = Records.newRecord(Resource.class);
-      ret.setMemorySize(memory);
-      ret.setVirtualCores(vCores);
-      return ret;
-    }
     return new LightWeightResource(memory, vCores);
   }
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static Resource newInstance(Resource resource) {
-    Resource ret = Resource.newInstance(resource.getMemorySize(),
-        resource.getVirtualCores());
-    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
-      Resource.copy(resource, ret);
+    Resource ret;
+    int numberOfKnownResourceTypes = ResourceUtils
+        .getNumberOfKnownResourceTypes();
+    if (numberOfKnownResourceTypes > 2) {
+      ret = new LightWeightResource(resource.getMemorySize(),
+          resource.getVirtualCores(), resource.getResources());
+    } else {
+      ret = new LightWeightResource(resource.getMemorySize(),
+          resource.getVirtualCores());
     }
     return ret;
   }
@@ -364,7 +357,7 @@ public abstract class Resource implements Comparable<Resource> {
     }
   }
 
-  private void throwExceptionWhenArrayOutOfBound(int index) {
+  protected void throwExceptionWhenArrayOutOfBound(int index) {
     String exceptionMsg = String.format(
         "Trying to access ResourceInformation for given index=%d. "
             + "Acceptable index range is [0,%d), please check double check "
@@ -411,7 +404,7 @@ public abstract class Resource implements Comparable<Resource> {
     int arrLenOther = otherResources.length;
 
     // compare memory and vcores first(in that order) to preserve
-    // existing behaviour
+    // existing behavior.
     for (int i = 0; i < arrLenThis; i++) {
       ResourceInformation otherEntry;
       try {
@@ -482,5 +475,24 @@ public abstract class Resource implements Comparable<Resource> {
       return Integer.MAX_VALUE;
     }
     return Long.valueOf(value).intValue();
+  }
+
+  /**
+   * Create ResourceInformation with basic fields.
+   * @param name Resource Type Name
+   * @param unit Default unit of provided resource type
+   * @param value Value associated with giveb resource
+   * @return ResourceInformation object
+   */
+  protected static ResourceInformation newDefaultInformation(String name,
+      String unit, long value) {
+    ResourceInformation ri = new ResourceInformation();
+    ri.setName(name);
+    ri.setValue(value);
+    ri.setResourceType(ResourceTypes.COUNTABLE);
+    ri.setUnitsWithoutValidation(unit);
+    ri.setMinimumAllocation(0);
+    ri.setMaximumAllocation(Long.MAX_VALUE);
+    return ri;
   }
 }

@@ -315,6 +315,54 @@ The SYNTH mode of SLS is very convenient to generate very large loads without th
 files. This allows to easily explore wide range of use cases (e.g., imagine simulating 100k jobs, and in different
 runs simply tune the average number of mappers, or average task duration), in an efficient and compact way.
 
+Resource Type in SLS
+------------------------
+This section talks about how to use resource type in SLS.
+
+## Configure Resource Manager
+This is the same to how to configure resource type for a real cluster. Configure
+item `yarn.resource-types` in yarn-site.xml as the following example does.
+
+     <property>
+       <name>yarn.resource-types</name>
+       <value>resource-type1, resource-type2</value>
+     </property>
+
+## Configure Node Manager
+Specify the size of resource in each node by adding relevant items into
+sls-runner.xml like the following example does. The values apply for every node
+in SLS. The default values for resources other than memory and vcores are 0.
+
+     <property>
+       <name>yarn.sls.nm.resource-type1</name>
+       <value>10</value>
+     </property>
+     <property>
+       <name>yarn.sls.nm.resource-type2</name>
+       <value>10</value>
+     </property>
+
+## Specify Resource in SLS JSON input
+Resource Type is supported in SLS JSON input format, but not in other two
+formats(SYNTH and RUMEN). To make it work in SLS JSON input format, you can
+specify resource sizes for both task containers and the AM container. Here is an
+example.
+
+    {
+      "job.start.ms" : 0,
+      "am.memory-mb": 2048,
+      "am.vcores": 2,
+      "am.resource-type1": 2,
+      "am.resource-type2": 2,
+      "job.tasks" : [ {
+        "container.duration.ms":  5000
+        "container.memory-mb": 1024,
+        "container.vcores": 1,
+        "container.resource-type1": 1,
+        "container.resource-type2": 1
+      }
+    }
+
 Appendix
 --------
 

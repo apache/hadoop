@@ -15,14 +15,10 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --}}
-
 {{#if model.nodes}}
-
-  <div class="row">
-    <div class="col-lg-12 container-fluid" id="nodes-heatmap-chart">
-      {{nodes-heatmap model=model.nodes parentId="nodes-heatmap-chart"
-        title="Node Heatmap Chart (Usage of "}}
-    </div>
+  <div id="nodes-heatmap-chart">
+    {{nodes-heatmap model=model.nodes parentId="nodes-heatmap-chart"
+      title="Node Heatmap Chart (Usage of "}}
   </div>
 
 {{/if}}

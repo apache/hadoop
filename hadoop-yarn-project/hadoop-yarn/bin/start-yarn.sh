@@ -65,7 +65,7 @@ else
       RMHOSTS="${RMHOSTS} ${rmhost}"
   done
   echo "Starting resourcemanagers on [${RMHOSTS}]"
-  hadoop_uservar_su yarn "${HADOOP_YARN_HOME}/bin/yarn" \
+  hadoop_uservar_su yarn resourcemanager "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
       --daemon start \
       --workers \

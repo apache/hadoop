@@ -22,6 +22,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import java.net.InetSocketAddress;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.RMHAUtils;
@@ -38,6 +40,8 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
  */
 public class RMWebApp extends WebApp implements YarnWebParams {
 
+  private static final Log LOG =
+      LogFactory.getLog(RMWebApp.class.getName());
   private final ResourceManager rm;
   private boolean standby = false;
 

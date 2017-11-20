@@ -52,10 +52,11 @@
     "ember-truth-helpers": "1.3.0",
     "loader.js": "4.2.3",
     "select2": "4.0.0",
-    "testem": "0.9.11"
+    "testem": "0.9.11",
+    "ember-cli-sass": "=7.0.0"
   },
   "dependencies": {
     "em-helpers": "^0.8.0",
-    "em-table": "^0.7.0"
+    "em-table": "0.11.3"
   }
 }

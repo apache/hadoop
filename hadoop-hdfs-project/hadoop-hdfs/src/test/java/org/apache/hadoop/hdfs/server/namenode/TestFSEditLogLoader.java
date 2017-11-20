@@ -748,7 +748,8 @@ public class TestFSEditLogLoader {
       // check if new policy is reapplied through edit log
       ErasureCodingPolicy ecPolicy =
           ErasureCodingPolicyManager.getInstance().getByID(newPolicy.getId());
-      assertEquals(ErasureCodingPolicyState.DISABLED, ecPolicy.getState());
+      assertEquals(ErasureCodingPolicyState.DISABLED,
+          DFSTestUtil.getECPolicyState(ecPolicy));
 
       // 2. enable policy
       fs.enableErasureCodingPolicy(newPolicy.getName());
@@ -756,7 +757,8 @@ public class TestFSEditLogLoader {
       cluster.waitActive();
       ecPolicy =
           ErasureCodingPolicyManager.getInstance().getByID(newPolicy.getId());
-      assertEquals(ErasureCodingPolicyState.ENABLED, ecPolicy.getState());
+      assertEquals(ErasureCodingPolicyState.ENABLED,
+          DFSTestUtil.getECPolicyState(ecPolicy));
 
       // create a new file, use the policy
       final Path dirPath = new Path("/striped");
@@ -773,7 +775,8 @@ public class TestFSEditLogLoader {
       cluster.waitActive();
       ecPolicy =
           ErasureCodingPolicyManager.getInstance().getByID(newPolicy.getId());
-      assertEquals(ErasureCodingPolicyState.DISABLED, ecPolicy.getState());
+      assertEquals(ErasureCodingPolicyState.DISABLED,
+          DFSTestUtil.getECPolicyState(ecPolicy));
       // read file
       DFSTestUtil.readFileAsBytes(fs, filePath);
 
@@ -783,7 +786,8 @@ public class TestFSEditLogLoader {
       cluster.waitActive();
       ecPolicy =
           ErasureCodingPolicyManager.getInstance().getByID(newPolicy.getId());
-      assertEquals(ErasureCodingPolicyState.REMOVED, ecPolicy.getState());
+      assertEquals(ErasureCodingPolicyState.REMOVED,
+          DFSTestUtil.getECPolicyState(ecPolicy));
       // read file
       DFSTestUtil.readFileAsBytes(fs, filePath);
 

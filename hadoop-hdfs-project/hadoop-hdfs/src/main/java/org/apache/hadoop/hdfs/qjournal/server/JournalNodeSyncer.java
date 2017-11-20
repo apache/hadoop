@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos
@@ -51,6 +52,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -263,23 +266,61 @@ public class JournalNodeSyncer {
   }
 
   private List<InetSocketAddress> getOtherJournalNodeAddrs() {
-    URI uri = null;
+    String uriStr = "";
     try {
-      String uriStr = conf.get(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+      uriStr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+
       if (uriStr == null || uriStr.isEmpty()) {
-        LOG.warn("Could not construct Shared Edits Uri");
-        return null;
+        if (nameServiceId != null) {
+          uriStr = conf.getTrimmed(DFSConfigKeys
+              .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + "." + nameServiceId);
+        }
       }
-      uri = new URI(uriStr);
-      return Util.getLoggerAddresses(uri,
-          Sets.newHashSet(jn.getBoundIpcAddress()));
+
+      if (uriStr == null || uriStr.isEmpty()) {
+        HashSet<String> sharedEditsUri = Sets.newHashSet();
+        if (nameServiceId != null) {
+          Collection<String> nnIds = DFSUtilClient.getNameNodeIds(
+              conf, nameServiceId);
+          for (String nnId : nnIds) {
+            String suffix = nameServiceId + "." + nnId;
+            uriStr = conf.getTrimmed(DFSConfigKeys
+                .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + "." + suffix);
+            sharedEditsUri.add(uriStr);
+          }
+          if (sharedEditsUri.size() > 1) {
+            uriStr = null;
+            LOG.error("The conf property " + DFSConfigKeys
+                .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + " not set properly, " +
+                "it has been configured with different journalnode values " +
+                sharedEditsUri.toString() + " for a" +
+                " single nameserviceId" + nameServiceId);
+          }
+        }
+      }
+
+      if (uriStr == null || uriStr.isEmpty()) {
+        LOG.error("Could not construct Shared Edits Uri");
+        return null;
+      } else {
+        return getJournalAddrList(uriStr);
+      }
+
     } catch (URISyntaxException e) {
       LOG.error("The conf property " + DFSConfigKeys
           .DFS_NAMENODE_SHARED_EDITS_DIR_KEY + " not set properly.");
     } catch (IOException e) {
-      LOG.error("Could not parse JournalNode addresses: " + uri);
+      LOG.error("Could not parse JournalNode addresses: " + uriStr);
     }
     return null;
+  }
+
+  private List<InetSocketAddress> getJournalAddrList(String uriStr) throws
+      URISyntaxException,
+      IOException {
+    URI uri = new URI(uriStr);
+    return Util.getLoggerAddresses(uri,
+        Sets.newHashSet(jn.getBoundIpcAddress()));
   }
 
   private JournalIdProto convertJournalId(String journalId) {

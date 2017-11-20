@@ -571,6 +571,7 @@ public abstract class AbstractYarnScheduler
           status.getPriority(), null);
     container.setVersion(status.getVersion());
     container.setExecutionType(status.getExecutionType());
+    container.setAllocationRequestId(status.getAllocationRequestId());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
     RMContainer rmContainer = new RMContainerImpl(container,
@@ -1359,6 +1360,14 @@ public abstract class AbstractYarnScheduler
   public long getMaximumApplicationLifetime(String queueName) {
     return -1;
   }
+
+  /**
+   * Kill a RMContainer. This is meant to be called in tests only to simulate
+   * AM container failures.
+   * @param container the container to kill
+   */
+  @VisibleForTesting
+  public abstract void killContainer(RMContainer container);
 
   /**
    * Update internal state of the scheduler.  This can be useful for scheduler

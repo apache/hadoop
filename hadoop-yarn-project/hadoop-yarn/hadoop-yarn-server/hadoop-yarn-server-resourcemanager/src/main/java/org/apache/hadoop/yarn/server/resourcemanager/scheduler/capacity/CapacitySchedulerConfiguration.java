@@ -296,7 +296,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       "reservation-enforcement-window";
 
   @Private
-  public static final String LAZY_PREEMPTION_ENALBED = PREFIX + "lazy-preemption-enabled";
+  public static final String LAZY_PREEMPTION_ENABLED =
+      PREFIX + "lazy-preemption-enabled";
 
   @Private
   public static final boolean DEFAULT_LAZY_PREEMPTION_ENABLED = false;
@@ -906,6 +907,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         DEFAULT_ENABLE_QUEUE_MAPPING_OVERRIDE);
   }
 
+  @Private
+  @VisibleForTesting
+  public void setOverrideWithQueueMappings(boolean overrideWithQueueMappings) {
+    setBoolean(ENABLE_QUEUE_MAPPING_OVERRIDE, overrideWithQueueMappings);
+  }
+
   /**
    * Returns a collection of strings, trimming leading and trailing whitespeace
    * on each value
@@ -978,6 +985,31 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     return mappings;
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setQueuePlacementRules(Collection<String> queuePlacementRules) {
+    if (queuePlacementRules == null) {
+      return;
+    }
+    String str = StringUtils.join(",", queuePlacementRules);
+    setStrings(YarnConfiguration.QUEUE_PLACEMENT_RULES, str);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setQueueMappings(List<QueueMapping> queueMappings) {
+    if (queueMappings == null) {
+      return;
+    }
+
+    List<String> queueMappingStrs = new ArrayList<>();
+    for (QueueMapping mapping : queueMappings) {
+      queueMappingStrs.add(mapping.toString());
+    }
+
+    setStrings(QUEUE_MAPPING, StringUtils.join(",", queueMappingStrs));
   }
 
   public boolean isReservable(String queue) {
@@ -1166,7 +1198,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public boolean getLazyPreemptionEnabled() {
-    return getBoolean(LAZY_PREEMPTION_ENALBED, DEFAULT_LAZY_PREEMPTION_ENABLED);
+    return getBoolean(LAZY_PREEMPTION_ENABLED, DEFAULT_LAZY_PREEMPTION_ENABLED);
   }
 
   private static final String PREEMPTION_CONFIG_PREFIX =
@@ -1207,7 +1239,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * completions) it might prevent convergence to guaranteed capacity. */
   public static final String PREEMPTION_MAX_IGNORED_OVER_CAPACITY =
       PREEMPTION_CONFIG_PREFIX + "max_ignored_over_capacity";
-  public static final float DEFAULT_PREEMPTION_MAX_IGNORED_OVER_CAPACITY = 0.1f;
+  public static final double DEFAULT_PREEMPTION_MAX_IGNORED_OVER_CAPACITY = 0.1;
   /**
    * Given a computed preemption target, account for containers naturally
    * expiring and preempt only this percentage of the delta. This determines
@@ -1217,8 +1249,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * #PREEMPTION_WAIT_TIME_BEFORE_KILL}, even absent natural termination. */
   public static final String PREEMPTION_NATURAL_TERMINATION_FACTOR =
       PREEMPTION_CONFIG_PREFIX + "natural_termination_factor";
-  public static final float DEFAULT_PREEMPTION_NATURAL_TERMINATION_FACTOR =
-      0.2f;
+  public static final double DEFAULT_PREEMPTION_NATURAL_TERMINATION_FACTOR =
+      0.2;
 
   /**
    * By default, reserved resource will be excluded while balancing capacities
@@ -1521,5 +1553,127 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setDefaultLifetimePerQueue(String queue, long defaultLifetime) {
     setLong(getQueuePrefix(queue) + DEFAULT_LIFETIME_SUFFIX, defaultLifetime);
+  }
+
+  @Private
+  public static final boolean DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED = false;
+
+  @Private
+  public static final String AUTO_CREATE_CHILD_QUEUE_ENABLED =
+      "auto-create-child-queue.enabled";
+
+  @Private
+  public static final String AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX =
+      "leaf-queue-template";
+
+  @Private
+  public static final String AUTO_CREATE_QUEUE_MAX_QUEUES =
+      "auto-create-child-queue.max-queues";
+
+  @Private
+  public static final int DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES = 1000;
+
+  /**
+   * If true, this queue will be created as a Parent Queue which Auto Created
+   * leaf child queues
+   *
+   * @param queuePath The queues path
+   * @return true if auto create is enabled for child queues else false. Default
+   * is false
+   */
+  @Private
+  public boolean isAutoCreateChildQueueEnabled(String queuePath) {
+    boolean isAutoCreateEnabled = getBoolean(
+        getQueuePrefix(queuePath) + AUTO_CREATE_CHILD_QUEUE_ENABLED,
+        DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED);
+    return isAutoCreateEnabled;
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreateChildQueueEnabled(String queuePath,
+      boolean autoCreationEnabled) {
+    setBoolean(getQueuePrefix(queuePath) +
+            AUTO_CREATE_CHILD_QUEUE_ENABLED,
+        autoCreationEnabled);
+  }
+
+  /**
+   * Get the auto created leaf queue's template configuration prefix
+   * Leaf queue's template capacities are configured at the parent queue
+   *
+   * @param queuePath parent queue's path
+   * @return Config prefix for leaf queue template configurations
+   */
+  @Private
+  public String getAutoCreatedQueueTemplateConfPrefix(String queuePath) {
+    return queuePath + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX;
+  }
+
+  @Private
+  public static final String FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY =
+      "auto-create-child-queue.fail-on-exceeding-parent-capacity";
+
+  @Private
+  public static final boolean DEFAULT_FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY =
+      false;
+
+  /**
+   * Fail further auto leaf queue creation when parent's guaranteed capacity is
+   * exceeded.
+   *
+   * @param queuePath the parent queue's path
+   * @return true if configured to fail else false
+   */
+  @Private
+  public boolean getShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
+      String queuePath) {
+    boolean shouldFailAutoQueueCreationOnExceedingGuaranteedCapacity =
+        getBoolean(getQueuePrefix(queuePath)
+                + FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY,
+            DEFAULT_FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY);
+    return shouldFailAutoQueueCreationOnExceedingGuaranteedCapacity;
+  }
+
+  @VisibleForTesting
+  @Private
+  public void setShouldFailAutoQueueCreationWhenGuaranteedCapacityExceeded(
+      String queuePath, boolean autoCreationEnabled) {
+    setBoolean(
+        getQueuePrefix(queuePath) +
+            FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY,
+        autoCreationEnabled);
+  }
+
+  /**
+   * Get the max number of leaf queues that are allowed to be created under
+   * a parent queue
+   *
+   * @param queuePath the paret queue's path
+   * @return the max number of leaf queues allowed to be auto created
+   */
+  @Private
+  public int getAutoCreatedQueuesMaxChildQueuesLimit(String queuePath) {
+    return getInt(getQueuePrefix(queuePath) +
+            AUTO_CREATE_QUEUE_MAX_QUEUES,
+        DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueTemplateCapacity(String queuePath,
+      float val) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setCapacity(leafQueueConfPrefix, val);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueTemplateMaxCapacity(String queuePath,
+      float val) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setMaximumCapacity(leafQueueConfPrefix, val);
   }
 }

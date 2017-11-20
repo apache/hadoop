@@ -135,20 +135,21 @@ public class RMAppAttemptMetrics {
     // Only add in the running containers if this is the active attempt.
     RMApp rmApp = rmContext.getRMApps().get(attemptId.getApplicationId());
     if (rmApp != null) {
-      RMAppAttempt currentAttempt = rmContext.getRMApps().get(attemptId.getApplicationId()).getCurrentAppAttempt();
-      if (currentAttempt.getAppAttemptId().equals(attemptId)) {
+      RMAppAttempt currentAttempt = rmApp.getCurrentAppAttempt();
+      if (currentAttempt != null
+          && currentAttempt.getAppAttemptId().equals(attemptId)) {
         ApplicationResourceUsageReport appResUsageReport =
             rmContext.getScheduler().getAppResourceUsageReport(attemptId);
         if (appResUsageReport != null) {
           Map<String, Long> tmp = appResUsageReport.getResourceSecondsMap();
           for (Map.Entry<String, Long> entry : tmp.entrySet()) {
-            if (resourcesUsed.containsKey(entry.getKey())) {
-              Long value = resourcesUsed.get(entry.getKey());
+            Long value = resourcesUsed.get(entry.getKey());
+            if (value != null) {
               value += entry.getValue();
-              resourcesUsed.put(entry.getKey(), value);
-            } else{
-              resourcesUsed.put(entry.getKey(), entry.getValue());
+            } else {
+              value = entry.getValue();
             }
+            resourcesUsed.put(entry.getKey(), value);
           }
         }
       }

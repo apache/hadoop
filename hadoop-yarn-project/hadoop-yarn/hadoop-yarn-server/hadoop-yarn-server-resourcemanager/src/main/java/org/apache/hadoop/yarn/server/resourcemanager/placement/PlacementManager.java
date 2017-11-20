@@ -23,7 +23,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -53,36 +52,33 @@ public class PlacementManager {
     }
   }
 
-  public void placeApplication(ApplicationSubmissionContext asc, String user)
-      throws YarnException {
+  public ApplicationPlacementContext placeApplication(
+      ApplicationSubmissionContext asc, String user) throws YarnException {
+
     try {
       readLock.lock();
+
       if (null == rules || rules.isEmpty()) {
-        return;
+        return null;
       }
-      
-      String newQueueName = null;
+
+      ApplicationPlacementContext placement = null;
       for (PlacementRule rule : rules) {
-        newQueueName = rule.getQueueForApp(asc, user);
-        if (newQueueName != null) {
+        placement = rule.getPlacementForApp(asc, user);
+        if (placement != null) {
           break;
         }
       }
-      
+
       // Failed to get where to place application
-      if (null == newQueueName && null == asc.getQueue()) {
-        String msg = "Failed to get where to place application="
-            + asc.getApplicationId();
+      if (null == placement && null == asc.getQueue()) {
+        String msg = "Failed to get where to place application=" + asc
+            .getApplicationId();
         LOG.error(msg);
         throw new YarnException(msg);
       }
-      
-      // Set it to ApplicationSubmissionContext
-      if (!StringUtils.equals(asc.getQueue(), newQueueName)) {
-        LOG.info("Placed application=" + asc.getApplicationId() + " to queue="
-            + newQueueName + ", original queue=" + asc.getQueue());
-        asc.setQueue(newQueueName);
-      }
+
+      return placement;
     } finally {
       readLock.unlock();
     }

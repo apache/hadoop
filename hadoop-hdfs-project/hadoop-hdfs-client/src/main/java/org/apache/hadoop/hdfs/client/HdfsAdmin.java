@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
@@ -537,7 +538,8 @@ public class HdfsAdmin {
    *
    * @throws IOException
    */
-  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+  public ErasureCodingPolicyInfo[] getErasureCodingPolicies()
+      throws IOException {
     return dfs.getClient().getErasureCodingPolicies();
   }
 

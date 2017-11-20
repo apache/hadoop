@@ -564,7 +564,7 @@ public class OpportunisticContainerAllocator {
             tokenSecretManager.getCurrentKey().getKeyId(), rmIdentifier,
             schedulerKey.getPriority(), currTime,
             null, CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK,
-            ExecutionType.OPPORTUNISTIC);
+            ExecutionType.OPPORTUNISTIC, schedulerKey.getAllocationRequestId());
     byte[] pwd =
         tokenSecretManager.createPassword(containerTokenIdentifier);
     Token containerToken = newContainerToken(node.getNodeId(), pwd,

@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -925,11 +926,11 @@ public class TestDFSIO implements Tool {
 
   private boolean checkErasureCodePolicy(String erasureCodePolicyName,
       FileSystem fs, TestType testType) throws IOException {
-    Collection<ErasureCodingPolicy> list =
+    Collection<ErasureCodingPolicyInfo> list =
         ((DistributedFileSystem) fs).getAllErasureCodingPolicies();
     boolean isValid = false;
-    for (ErasureCodingPolicy ec : list) {
-      if (erasureCodePolicyName.equals(ec.getName())) {
+    for (ErasureCodingPolicyInfo ec : list) {
+      if (erasureCodePolicyName.equals(ec.getPolicy().getName())) {
         isValid = true;
         break;
       }
@@ -939,8 +940,8 @@ public class TestDFSIO implements Tool {
       System.out.println("Invalid erasure code policy: " +
           erasureCodePolicyName);
       System.out.println("Current supported erasure code policy list: ");
-      for (ErasureCodingPolicy ec : list) {
-        System.out.println(ec.getName());
+      for (ErasureCodingPolicyInfo ec : list) {
+        System.out.println(ec.getPolicy().getName());
       }
       return false;
     }
@@ -999,9 +1000,10 @@ public class TestDFSIO implements Tool {
         getConf().get(ERASURE_CODE_POLICY_NAME_KEY, null);
 
     fs.mkdirs(path);
-    Collection<ErasureCodingPolicy> list =
+    Collection<ErasureCodingPolicyInfo> list =
         ((DistributedFileSystem) fs).getAllErasureCodingPolicies();
-    for (ErasureCodingPolicy ec : list) {
+    for (ErasureCodingPolicyInfo info : list) {
+      final ErasureCodingPolicy ec = info.getPolicy();
       if (erasureCodePolicyName.equals(ec.getName())) {
         ((DistributedFileSystem) fs).setErasureCodingPolicy(path, ec.getName());
         LOG.info("enable erasureCodePolicy = " + erasureCodePolicyName  +

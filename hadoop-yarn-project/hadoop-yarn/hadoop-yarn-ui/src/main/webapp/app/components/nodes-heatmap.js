@@ -122,8 +122,8 @@ export default BaseChartComponent.extend({
     var xOffset = layout.margin;
     var yOffset = layout.margin * 3;
 
-    var gradientStartColor = "#2ca02c";
-    var gradientEndColor = "#ffb014";
+    var gradientStartColor = "#60cea5";
+    var gradientEndColor = "#ffbc0b";
 
     var colorFunc = d3.interpolateRgb(d3.rgb(gradientStartColor), d3.rgb(gradientEndColor));
 
@@ -138,7 +138,7 @@ export default BaseChartComponent.extend({
       var rect = g.append("rect")
         .attr("x", sampleXOffset)
         .attr("y", sampleYOffset)
-        .attr("fill", this.selectedCategory === i ? "#2c7bb6" : colorFunc(ratio))
+        .attr("fill", this.selectedCategory === i ? "#26bbf0" : colorFunc(ratio))
         .attr("width", this.SAMPLE_CELL_WIDTH)
         .attr("height", this.SAMPLE_HEIGHT)
         .attr("class", "hyperlink");

@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
@@ -1782,17 +1783,17 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+  public ErasureCodingPolicyInfo[] getErasureCodingPolicies()
+      throws IOException {
     try {
       GetErasureCodingPoliciesResponseProto response = rpcProxy
           .getErasureCodingPolicies(null, VOID_GET_EC_POLICIES_REQUEST);
-      ErasureCodingPolicy[] ecPolicies =
-          new ErasureCodingPolicy[response.getEcPoliciesCount()];
+      ErasureCodingPolicyInfo[] ecPolicies =
+          new ErasureCodingPolicyInfo[response.getEcPoliciesCount()];
       int i = 0;
-      for (ErasureCodingPolicyProto ecPolicyProto :
-          response.getEcPoliciesList()) {
+      for (ErasureCodingPolicyProto proto : response.getEcPoliciesList()) {
         ecPolicies[i++] =
-            PBHelperClient.convertErasureCodingPolicy(ecPolicyProto);
+            PBHelperClient.convertErasureCodingPolicyInfo(proto);
       }
       return ecPolicies;
     } catch (ServiceException e) {

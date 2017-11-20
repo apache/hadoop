@@ -103,6 +103,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -140,7 +141,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimplePlacementSet;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -904,7 +905,7 @@ public class TestCapacityScheduler {
         (B3_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
   }
 
-  private void checkQueueCapacity(CSQueue q, float expectedCapacity,
+  void checkQueueCapacity(CSQueue q, float expectedCapacity,
       float expectedAbsCapacity, float expectedMaxCapacity,
       float expectedAbsMaxCapacity) {
     final float epsilon = 1e-5f;
@@ -917,7 +918,7 @@ public class TestCapacityScheduler {
         q.getAbsoluteMaximumCapacity(), epsilon);
   }
 
-  private CSQueue findQueue(CSQueue root, String queuePath) {
+  CSQueue findQueue(CSQueue root, String queuePath) {
     if (root.getQueuePath().equals(queuePath)) {
       return root;
     }
@@ -1396,7 +1397,6 @@ public class TestCapacityScheduler {
     AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode> cs =
         (AbstractYarnScheduler<SchedulerApplicationAttempt, SchedulerNode>) rm
           .getResourceScheduler();
-
     SchedulerApplication<SchedulerApplicationAttempt> app =
         TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
           cs.getSchedulerApplications(), cs, "a1");
@@ -4199,7 +4199,8 @@ public class TestCapacityScheduler {
     scheduler.handle(new NodeRemovedSchedulerEvent(
         rm.getRMContext().getRMNodes().get(nm2.getNodeId())));
     // schedulerNode is removed, try allocate a container
-    scheduler.allocateContainersToNode(new SimplePlacementSet<>(node), true);
+    scheduler.allocateContainersToNode(new SimpleCandidateNodeSet<>(node),
+        true);
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
         new AppAttemptRemovedSchedulerEvent(

@@ -90,6 +90,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
@@ -7418,16 +7419,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Get available erasure coding polices
+   * Get all erasure coding polices.
    */
-  ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException {
+  ErasureCodingPolicyInfo[] getErasureCodingPolicies() throws IOException {
     final String operationName = "getErasureCodingPolicies";
     boolean success = false;
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      final ErasureCodingPolicy[] ret =
+      final ErasureCodingPolicyInfo[] ret =
           FSDirErasureCodingOp.getErasureCodingPolicies(this);
       success = true;
       return ret;

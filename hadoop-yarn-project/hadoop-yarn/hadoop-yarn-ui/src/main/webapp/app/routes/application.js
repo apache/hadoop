@@ -17,8 +17,13 @@
  */
 
 import Ember from 'ember';
+import AbstractRoute from './abstract';
 
-export default Ember.Route.extend({
+export default AbstractRoute.extend({
+  model() {
+    return this.store.findAll('ClusterInfo', {reload: true});
+  },
+
   actions: {
     /**
      * Base error handler for the application.
@@ -35,5 +40,9 @@ export default Ember.Route.extend({
         this.intermediateTransitionTo('/error');
       }
     }
-  }
+  },
+
+  unloadAll: function() {
+    this.store.unloadAll('ClusterInfo');
+  },
 });
