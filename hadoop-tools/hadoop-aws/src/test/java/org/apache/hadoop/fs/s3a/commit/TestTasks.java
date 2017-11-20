@@ -49,8 +49,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 @RunWith(Parameterized.class)
 public class TestTasks extends HadoopTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestTasks.class);
-  public static final int ITEM_COUNT = 4;
-  private static final int FAILPOINT = 2;
+  public static final int ITEM_COUNT = 16;
+  private static final int FAILPOINT = 8;
 
   private final int numThreads;
   /**
@@ -58,7 +58,7 @@ public class TestTasks extends HadoopTestBase {
    */
   private ExecutorService threadPool;
   private final CounterTask failingTask
-      = new CounterTask("runner", FAILPOINT, Item::commit);
+      = new CounterTask("failing committer", FAILPOINT, Item::commit);
 
   private final FailureCounter failures
       = new FailureCounter("failures", 0, null);
@@ -79,6 +79,8 @@ public class TestTasks extends HadoopTestBase {
         {0},
         {1},
         {3},
+        {8},
+        {16},
     });
   }
 
@@ -105,7 +107,8 @@ public class TestTasks extends HadoopTestBase {
   @Before
   public void setup() {
     items = IntStream.rangeClosed(1, ITEM_COUNT)
-        .mapToObj((i) -> new Item(i))
+        .mapToObj(i -> new Item(i,
+            String.format("With %d threads", numThreads)))
         .collect(Collectors.toList());
 
     if (numThreads > 0) {
@@ -145,7 +148,12 @@ public class TestTasks extends HadoopTestBase {
     boolean b = builder.run(task);
     assertFalse("Run of " + task + " unexpectedly succeeded", b);
   }
-  
+
+  private String itemsToString() {
+    return "[" + items.stream().map(Item::toString)
+        .collect(Collectors.joining("\n")) +"]";
+  }
+
   @Test
   public void testSimpleInvocation() throws Throwable {
     CounterTask t = new CounterTask("simple", 0, Item::commit);
@@ -154,10 +162,10 @@ public class TestTasks extends HadoopTestBase {
   }
 
   @Test
-  public void testFailOnFourNoStoppingSuppressed() throws Throwable {
+  public void testFailNoStoppingSuppressed() throws Throwable {
     assertFailed(builder().suppressExceptions(), failingTask);
-    failingTask.assertInvoked("continued through operations", ITEM_COUNT);
-    items.forEach(Item::assertCommitted);
+    failingTask.assertInvoked("Continued through operations", ITEM_COUNT);
+    items.forEach(Item::assertCommittedOrFailed);
   }
 
   @Test
@@ -184,10 +192,10 @@ public class TestTasks extends HadoopTestBase {
     if (!isParallel()) {
       aborter.assertInvokedAtLeast("abort", 1);
       // all uncommitted items were aborted
-      items.stream().filter((i) -> !i.committed)
+      items.stream().filter(i -> !i.committed)
           .map(Item::assertAborted);
-      items.stream().filter((i) -> i.committed)
-          .forEach((i) -> assertFalse(i.toString(), i.aborted));
+      items.stream().filter(i -> i.committed)
+          .forEach(i -> assertFalse(i.toString(), i.aborted));
     }
   }
 
@@ -215,14 +223,15 @@ public class TestTasks extends HadoopTestBase {
     if (!isParallel()) {
       aborter.assertInvokedAtLeast("abort", 1);
       // all uncommitted items were aborted
-      items.stream().filter((i) -> !i.committed)
+      items.stream().filter(i -> !i.committed)
+          .filter(i -> !i.failed)
           .forEach(Item::assertAborted);
     }
     // all committed were reverted
-    items.stream().filter((i) -> i.committed && i.id != FAILPOINT)
+    items.stream().filter(i -> i.committed && !i.failed)
         .forEach(Item::assertReverted);
     // all reverted items are committed
-    items.stream().filter((i) -> i.reverted)
+    items.stream().filter(i -> i.reverted)
         .forEach(Item::assertCommitted);
 
     // only one failure was triggered
@@ -241,11 +250,11 @@ public class TestTasks extends HadoopTestBase {
     // identify which task failed from the set
     int failing = failures.getItem().id;
     items.stream()
-        .filter((i) -> i.id != failing)
-        .filter((i) -> i.committed)
+        .filter(i -> i.id != failing)
+        .filter(i -> i.committed)
         .forEach(Item::assertReverted);
     // all reverted items are committed
-    items.stream().filter((i) -> i.reverted)
+    items.stream().filter(i -> i.reverted)
         .forEach(Item::assertCommitted);
 
     // only one failure was triggered
@@ -271,7 +280,7 @@ public class TestTasks extends HadoopTestBase {
         () -> builder()
             .run(failingTask));
     failingTask.assertInvoked("continued through operations", ITEM_COUNT);
-    items.forEach(Item::assertCommitted);
+    items.forEach(Item::assertCommittedOrFailed);
   }
 
   @Test
@@ -329,15 +338,15 @@ public class TestTasks extends HadoopTestBase {
     int failing = failures.getItem().id;
     // all committed were reverted
     items.stream()
-        .filter((i) -> i.id != failing)
-        .filter((i) -> i.committed)
+        .filter(i -> i.id != failing)
+        .filter(i -> i.committed)
         .forEach(Item::assertReverted);
     items.stream()
-        .filter((i) -> i.id != failing)
-        .filter((i) -> !i.committed)
+        .filter(i -> i.id != failing)
+        .filter(i -> !i.committed)
         .forEach(Item::assertAborted);
     // all reverted items are committed
-    items.stream().filter((i) -> i.reverted)
+    items.stream().filter(i -> i.reverted)
         .forEach(Item::assertCommitted);
 
     // only one failure was triggered
@@ -348,17 +357,15 @@ public class TestTasks extends HadoopTestBase {
   /**
    * The Item which tasks process.
    */
-  private static final class Item {
+  private final class Item {
     private final int id;
+    private final String text;
 
-    private boolean committed;
+    private volatile boolean committed, aborted, reverted, failed;
 
-    private boolean aborted;
-
-    private boolean reverted;
-
-    private Item(int item) {
+    private Item(int item, String text) {
       this.id = item;
+      this.text = text;
     }
 
     boolean commit() {
@@ -376,40 +383,55 @@ public class TestTasks extends HadoopTestBase {
       return true;
     }
 
+    boolean fail() {
+      failed = true;
+      return true;
+    }
+
     public Item assertCommitted() {
-      assertTrue(toString() + " was not committed", committed);
+      assertTrue(toString() + " was not committed in\n" +  itemsToString(),
+          committed);
+      return this;
+    }
+
+    public Item assertCommittedOrFailed() {
+      assertTrue(toString() + " was not committed nor failed in\n" +  itemsToString(),
+          committed || failed);
       return this;
     }
 
     public Item assertAborted() {
-      assertTrue(toString() + " was not aborted", aborted);
+      assertTrue(toString() + " was not aborted in\n" + itemsToString(),
+          aborted);
       return this;
     }
 
     public Item assertReverted() {
-      assertTrue(toString() + " was not reverted", reverted);
+      assertTrue(toString() + " was not reverted in\n" + itemsToString(),
+          reverted);
       return this;
     }
 
     @Override
     public String toString() {
-      final StringBuilder sb = new StringBuilder("Operation{");
-      sb.append("id=").append(id);
+      final StringBuilder sb = new StringBuilder("Item{");
+      sb.append(String.format("[%02d]", id));
       sb.append(", committed=").append(committed);
       sb.append(", aborted=").append(aborted);
       sb.append(", reverted=").append(reverted);
+      sb.append(", failed=").append(failed);
+      sb.append(", text=").append(text);
       sb.append('}');
       return sb.toString();
     }
   }
-
 
   /**
    * Class which can count invocations and, if limit > 0, will raise
    * an exception on the specific invocation of {@link #note(Object)}
    * whose count == limit.
    */
-  private static class BaseCounter {
+  private class BaseCounter {
     private final AtomicInteger counter = new AtomicInteger(0);
     private final int limit;
     private final String name;
@@ -431,15 +453,24 @@ public class TestTasks extends HadoopTestBase {
       this.action = Optional.ofNullable(action);
     }
 
+    /**
+     * Apply the action to an item; log at info afterwards with both the
+     * before and after string values of the item.
+     * @param i item to process.
+     * @throws IOException failure in the action
+     */
     void process(Item i) throws IOException {
       this.item = i;
-      action.map(a -> a.apply(i));
       int count = counter.incrementAndGet();
-      LOG.info("{}: processed({})", this, i);
       if (limit == count) {
+        i.fail();
+        LOG.info("{}: Failed {}", this, i);
         throw new IOException(String.format("%s: Limit %d reached for %s",
             this, limit, i));
       }
+      String before = i.toString();
+      action.map(a -> a.apply(i));
+      LOG.info("{}: {} -> {}", this, before, i);
     }
 
     int getCount() {
@@ -458,7 +489,8 @@ public class TestTasks extends HadoopTestBase {
       int actual = getCount();
       assertTrue(toString() + ": " + text
               + "-expected " + expected
-              + " invocations, but got " + actual,
+              + " invocations, but got " + actual
+              + " in " + itemsToString(),
           expected <= actual);
     }
 
@@ -475,7 +507,7 @@ public class TestTasks extends HadoopTestBase {
     }
   }
 
-  private static final class CounterTask
+  private final class CounterTask
       extends BaseCounter implements Tasks.Task<Item, IOException> {
 
     private CounterTask(String name, int limit,
@@ -490,7 +522,7 @@ public class TestTasks extends HadoopTestBase {
 
   }
 
-  private static final class FailureCounter
+  private final class FailureCounter
       extends BaseCounter implements Tasks.FailureTask<Item, IOException> {
     private Exception exception;
 

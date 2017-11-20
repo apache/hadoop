@@ -260,7 +260,7 @@ public final class Tasks {
               } catch (Exception e) {
                 taskFailed.set(true);
                 exceptions.add(e);
-                LOG.debug("Task failed");
+                LOG.info("Task failed", e);
 
                 if (onFailure != null) {
                   try {
@@ -284,6 +284,7 @@ public final class Tasks {
 
               boolean failed = true;
               try {
+                LOG.info("Aborting task");
                 abortTask.run(item);
                 failed = false;
               } catch (Exception e) {
@@ -301,11 +302,13 @@ public final class Tasks {
 
       // let the above tasks complete (or abort)
       waitFor(futures);
+      int futureCount = futures.size();
       futures.clear();
 
       if (taskFailed.get() && revertTask != null) {
         // at least one task failed, revert any that succeeded
-        LOG.debug("Reverting all succeeded tasks");
+        LOG.info("Reverting all {} succeeded tasks from {} futures",
+            succeeded.size(), futureCount);
         for (final I item : succeeded) {
           futures.add(service.submit(() -> {
             if (stopRevertsOnFailure && revertFailed.get()) {
@@ -339,12 +342,24 @@ public final class Tasks {
     }
   }
 
+  /**
+   * Wait for all the futures to complete; there's a small sleep between
+   * each iteration; enough to yield the CPU.
+   * @param futures futures.
+   */
   private static void waitFor(Collection<Future<?>> futures) {
-    LOG.debug("Waiting for {} tasks to complete", futures.size());
+    int size = futures.size();
+    LOG.debug("Waiting for {} tasks to complete", size);
+    int oldNumFinished = 0;
     while (true) {
       int numFinished = (int) futures.stream().filter(Future::isDone).count();
 
-      if (numFinished == futures.size()) {
+      if (oldNumFinished != numFinished) {
+        LOG.debug("Finished count -> {}/{}", numFinished, size);
+        oldNumFinished = numFinished;
+      }
+
+      if (numFinished == size) {
         // all of the futures are done, stop looping
         break;
       } else {
