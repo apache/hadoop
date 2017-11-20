@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.ozone.scm.container.placement.metrics;
 
+import java.io.IOException;
+
+import org.apache.hadoop.ozone.web.utils.JsonUtils;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 /**
@@ -26,36 +31,43 @@ public class ContainerStat {
   /**
    * The maximum container size.
    */
+  @JsonProperty("Size")
   private LongMetric size;
 
   /**
    * The number of bytes used by the container.
    */
+  @JsonProperty("Used")
   private LongMetric used;
 
   /**
    * The number of keys in the container.
    */
+  @JsonProperty("KeyCount")
   private LongMetric keyCount;
 
   /**
    * The number of bytes read from the container.
    */
+  @JsonProperty("ReadBytes")
   private LongMetric readBytes;
 
   /**
    * The number of bytes write into the container.
    */
+  @JsonProperty("WriteBytes")
   private LongMetric writeBytes;
 
   /**
    * The number of times the container is read.
    */
+  @JsonProperty("ReadCount")
   private LongMetric readCount;
 
   /**
-   * The number of times the container is written into .
+   * The number of times the container is written into.
    */
+  @JsonProperty("WriteCount")
   private LongMetric writeCount;
 
   public ContainerStat() {
@@ -117,6 +129,10 @@ public class ContainerStat {
   }
 
   public void add(ContainerStat stat) {
+    if (stat == null) {
+      return;
+    }
+
     this.size.add(stat.getSize().get());
     this.used.add(stat.getUsed().get());
     this.keyCount.add(stat.getKeyCount().get());
@@ -124,5 +140,27 @@ public class ContainerStat {
     this.writeBytes.add(stat.getWriteBytes().get());
     this.readCount.add(stat.getReadCount().get());
     this.writeCount.add(stat.getWriteCount().get());
+  }
+
+  public void subtract(ContainerStat stat) {
+    if (stat == null) {
+      return;
+    }
+
+    this.size.subtract(stat.getSize().get());
+    this.used.subtract(stat.getUsed().get());
+    this.keyCount.subtract(stat.getKeyCount().get());
+    this.readBytes.subtract(stat.getReadBytes().get());
+    this.writeBytes.subtract(stat.getWriteBytes().get());
+    this.readCount.subtract(stat.getReadCount().get());
+    this.writeCount.subtract(stat.getWriteCount().get());
+  }
+
+  public String toJsonString() {
+    try {
+      return JsonUtils.toJsonString(this);
+    } catch (IOException ignored) {
+      return null;
+    }
   }
 }

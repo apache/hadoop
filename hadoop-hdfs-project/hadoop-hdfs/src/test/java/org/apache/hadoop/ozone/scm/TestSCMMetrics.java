@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.scm;
 
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
@@ -25,9 +26,10 @@ import java.util.UUID;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerReport;
@@ -35,13 +37,23 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.ContainerStat;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMMetrics;
+import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * This class tests the metrics of Storage Container Manager.
  */
 public class TestSCMMetrics {
-  private static MiniOzoneCluster cluster = null;
+  /**
+   * Set the timeout for each test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(90000);
+
+  private static MiniOzoneClassicCluster cluster = null;
 
   @Test
   public void testContainerMetrics() throws Exception {
@@ -64,7 +76,11 @@ public class TestSCMMetrics {
       ContainerStat stat = new ContainerStat(size, used, keyCount, readBytes,
           writeBytes, readCount, writeCount);
       StorageContainerManager scmManager = cluster.getStorageContainerManager();
-      scmManager.sendContainerReport(createContainerReport(numReport, stat));
+
+      ContainerReportsRequestProto request = createContainerReport(numReport,
+          stat, null);
+      String fstDatanodeID = request.getDatanodeID().getDatanodeUuid();
+      scmManager.sendContainerReport(request);
 
       // verify container stat metrics
       MetricsRecordBuilder scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
@@ -83,6 +99,117 @@ public class TestSCMMetrics {
           getLongGauge("LastContainerReportReadCount", scmMetrics));
       assertEquals(writeCount * numReport,
           getLongGauge("LastContainerReportWriteCount", scmMetrics));
+
+      // add one new report
+      request = createContainerReport(1, stat, null);
+      String sndDatanodeID = request.getDatanodeID().getDatanodeUuid();
+      scmManager.sendContainerReport(request);
+
+      scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
+      assertEquals(size * (numReport + 1),
+          getLongCounter("ContainerReportSize", scmMetrics));
+      assertEquals(used * (numReport + 1),
+          getLongCounter("ContainerReportUsed", scmMetrics));
+      assertEquals(readBytes * (numReport + 1),
+          getLongCounter("ContainerReportReadBytes", scmMetrics));
+      assertEquals(writeBytes * (numReport + 1),
+          getLongCounter("ContainerReportWriteBytes", scmMetrics));
+
+      assertEquals(keyCount * (numReport + 1),
+          getLongCounter("ContainerReportKeyCount", scmMetrics));
+      assertEquals(readCount * (numReport + 1),
+          getLongCounter("ContainerReportReadCount", scmMetrics));
+      assertEquals(writeCount * (numReport + 1),
+          getLongCounter("ContainerReportWriteCount", scmMetrics));
+
+      // Re-send reports but with different value for validating
+      // the aggregation.
+      stat = new ContainerStat(100, 50, 3, 50, 60, 5, 6);
+      scmManager.sendContainerReport(createContainerReport(1, stat,
+          fstDatanodeID));
+
+      stat = new ContainerStat(1, 1, 1, 1, 1, 1, 1);
+      scmManager.sendContainerReport(createContainerReport(1, stat,
+          sndDatanodeID));
+
+      // the global container metrics value should be updated
+      scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
+      assertEquals(101, getLongCounter("ContainerReportSize", scmMetrics));
+      assertEquals(51, getLongCounter("ContainerReportUsed", scmMetrics));
+      assertEquals(51, getLongCounter("ContainerReportReadBytes", scmMetrics));
+      assertEquals(61, getLongCounter("ContainerReportWriteBytes", scmMetrics));
+
+      assertEquals(4, getLongCounter("ContainerReportKeyCount", scmMetrics));
+      assertEquals(6, getLongCounter("ContainerReportReadCount", scmMetrics));
+      assertEquals(7, getLongCounter("ContainerReportWriteCount", scmMetrics));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testStaleNodeContainerReport() throws Exception {
+    int nodeCount = 2;
+    int numReport = 2;
+    long size = OzoneConsts.GB * 5;
+    long used = OzoneConsts.GB * 2;
+    long readBytes = OzoneConsts.GB * 1;
+    long writeBytes = OzoneConsts.GB * 2;
+    int keyCount = 1000;
+    int readCount = 100;
+    int writeCount = 50;
+    OzoneConfiguration conf = new OzoneConfiguration();
+
+    try {
+      cluster = new MiniOzoneClassicCluster.Builder(conf)
+          .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+          .numDataNodes(nodeCount).build();
+
+      ContainerStat stat = new ContainerStat(size, used, keyCount, readBytes,
+          writeBytes, readCount, writeCount);
+      StorageContainerManager scmManager = cluster.getStorageContainerManager();
+
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      String datanodeUuid = dataNode.getDatanodeId().getDatanodeUuid();
+      ContainerReportsRequestProto request = createContainerReport(numReport,
+          stat, datanodeUuid);
+      scmManager.sendContainerReport(request);
+
+      MetricsRecordBuilder scmMetrics = getMetrics(SCMMetrics.SOURCE_NAME);
+      assertEquals(size * numReport,
+          getLongCounter("ContainerReportSize", scmMetrics));
+      assertEquals(used * numReport,
+          getLongCounter("ContainerReportUsed", scmMetrics));
+      assertEquals(readBytes * numReport,
+          getLongCounter("ContainerReportReadBytes", scmMetrics));
+      assertEquals(writeBytes * numReport,
+          getLongCounter("ContainerReportWriteBytes", scmMetrics));
+
+      assertEquals(keyCount * numReport,
+          getLongCounter("ContainerReportKeyCount", scmMetrics));
+      assertEquals(readCount * numReport,
+          getLongCounter("ContainerReportReadCount", scmMetrics));
+      assertEquals(writeCount * numReport,
+          getLongCounter("ContainerReportWriteCount", scmMetrics));
+
+      // reset stale interval time to move node from healthy to stale
+      SCMNodeManager nodeManager = (SCMNodeManager) cluster
+          .getStorageContainerManager().getScmNodeManager();
+      nodeManager.setStaleNodeIntervalMs(100);
+
+      // verify the metrics when node becomes stale
+      GenericTestUtils.waitFor(() -> {
+        MetricsRecordBuilder metrics = getMetrics(SCMMetrics.SOURCE_NAME);
+        return 0 == getLongCounter("ContainerReportSize", metrics)
+            && 0 == getLongCounter("ContainerReportUsed", metrics)
+            && 0 == getLongCounter("ContainerReportReadBytes", metrics)
+            && 0 == getLongCounter("ContainerReportWriteBytes", metrics)
+            && 0 == getLongCounter("ContainerReportKeyCount", metrics)
+            && 0 == getLongCounter("ContainerReportReadCount", metrics)
+            && 0 == getLongCounter("ContainerReportWriteCount", metrics);
+      }, 1000, 60000);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -91,7 +218,7 @@ public class TestSCMMetrics {
   }
 
   private ContainerReportsRequestProto createContainerReport(int numReport,
-      ContainerStat stat) {
+      ContainerStat stat, String datanodeUuid) {
     StorageContainerDatanodeProtocolProtos.ContainerReportsRequestProto.Builder
         reportsBuilder = StorageContainerDatanodeProtocolProtos
         .ContainerReportsRequestProto.newBuilder();
@@ -108,8 +235,15 @@ public class TestSCMMetrics {
       report.setWriteBytes(stat.getWriteBytes().get());
       reportsBuilder.addReports(report.getProtoBufMessage());
     }
-    reportsBuilder.setDatanodeID(SCMTestUtils.getDatanodeID()
-        .getProtoBufMessage());
+
+    DatanodeID datanodeID;
+    if (datanodeUuid == null) {
+      datanodeID = SCMTestUtils.getDatanodeID();
+    } else {
+      datanodeID = new DatanodeID("null", "null", datanodeUuid, 0, 0, 0, 0);
+    }
+
+    reportsBuilder.setDatanodeID(datanodeID.getProtoBufMessage());
     reportsBuilder.setType(StorageContainerDatanodeProtocolProtos
         .ContainerReportsRequestProto.reportType.fullReport);
     return reportsBuilder.build();

@@ -125,7 +125,7 @@ public class TestNodeManager {
   SCMNodeManager createNodeManager(OzoneConfiguration config)
       throws IOException {
     SCMNodeManager nodeManager = new SCMNodeManager(config,
-        UUID.randomUUID().toString());
+        UUID.randomUUID().toString(), null);
     assertFalse("Node manager should be in chill mode",
         nodeManager.isOutOfChillMode());
     return nodeManager;
