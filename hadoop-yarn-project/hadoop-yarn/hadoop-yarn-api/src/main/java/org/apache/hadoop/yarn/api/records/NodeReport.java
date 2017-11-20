@@ -233,10 +233,12 @@ public abstract class NodeReport {
    * Optional decommissioning timeout in seconds (null indicates absent timeout).
    * @return the decommissioning timeout in second.
    */
-  public abstract Integer getDecommissioningTimeout();
+  public Integer getDecommissioningTimeout() {
+    return null;
+  }
 
   /**
    * Set the decommissioning timeout in seconds (null indicates absent timeout).
    * */
-  public abstract void setDecommissioningTimeout(Integer decommissioningTimeout);
+  public void setDecommissioningTimeout(Integer decommissioningTimeout) {}
 }
