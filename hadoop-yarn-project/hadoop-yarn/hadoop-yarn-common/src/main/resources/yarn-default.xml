@@ -2815,7 +2815,20 @@
    <value>300</value>
   </property>
 
+  <property>
+    <description>The registry base directory for federation.</description>
+    <name>yarn.federation.registry.base-dir</name>
+    <value>yarnfederation/</value>
+  </property>
+
   <!-- Other Configuration -->
+
+  <property>
+    <description>The registry implementation to use.</description>
+    <name>yarn.registry.class</name>
+    <value>org.apache.hadoop.registry.client.impl.FSRegistryOperationsService</value>
+  </property>
+
   <property>
     <description>The interval that the yarn client library uses to poll the
     completion status of the asynchronous API of application client protocol.
@@ -2974,6 +2987,14 @@
     </description>
     <name>yarn.nodemanager.amrmproxy.interceptor-class.pipeline</name>
     <value>org.apache.hadoop.yarn.server.nodemanager.amrmproxy.DefaultRequestInterceptor</value>
+  </property>
+
+  <property>
+    <description>
+    Whether AMRMProxy HA is enabled.
+    </description>
+    <name>yarn.nodemanager.amrmproxy.ha.enable</name>
+    <value>false</value>
   </property>
 
   <property>
