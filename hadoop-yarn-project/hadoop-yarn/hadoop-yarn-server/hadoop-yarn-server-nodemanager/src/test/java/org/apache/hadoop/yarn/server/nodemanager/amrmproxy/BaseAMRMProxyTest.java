@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -177,6 +178,15 @@ public abstract class BaseAMRMProxyTest {
     stateStore.init(this.conf);
     stateStore.start();
     return new NMContext(null, null, null, null, stateStore, false, this.conf);
+  }
+
+  protected List<ContainerId> getCompletedContainerIds(
+      List<ContainerStatus> containerStatus) {
+    List<ContainerId> ret = new ArrayList<>();
+    for (ContainerStatus status : containerStatus) {
+      ret.add(status.getContainerId());
+    }
+    return ret;
   }
 
   /**
@@ -623,7 +633,7 @@ public abstract class BaseAMRMProxyTest {
      */
     public void initApp(ApplicationAttemptId applicationId, String user) {
       super.initializePipeline(applicationId, user,
-          new Token<AMRMTokenIdentifier>(), null, null, false);
+          new Token<AMRMTokenIdentifier>(), null, null, false, null);
     }
 
     public void stopApp(ApplicationId applicationId) {
