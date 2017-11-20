@@ -22,10 +22,12 @@ import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
 export default AbstractRoute.extend(AppAttemptMixin, {
   model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service);
+    const {service} = transition.queryParams;
+    transition.send('updateBreadcrumbs', param.app_id, service);
+    
     return Ember.RSVP.hash({
       appId: param.app_id,
-      serviceName: param.service,
+      serviceName: service,
       app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
 
       quicklinks: this.store.queryRecord('yarn-service-info', { appId: param.app_id }).then(function (info) {

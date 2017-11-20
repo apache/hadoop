@@ -60,30 +60,35 @@
               </div>
             {{/if}}
           </div>
-
-          {{#unless model.app.serviceName}} {{!--
-          <div>Progress: =>
-            <div class="progress" style="margin-bottom: 0;">
-              <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style={{model.app.app.progressStyle}}>
-                {{model.app.progress}}%
-              </div>
-            </div>
-          </div> --}}
-
-          {{/unless}}
         </div>
 
         <div class="flex-right">
           <div class="links">
             <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
-            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a> 
+            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a>  &nbsp;|&nbsp;
+            {{#if isRunningService}} 
+              <div class="btn-group">
+                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="glyphicon glyphicon-cog" />
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right">
+                  <li> 
+                    <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop offset-2" /> Stop Service</a>
+                  </li> 
+                  <li> 
+                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash offset-2" /> Delete Service </a>
+                  </li>
+                </ul>
+              </div>
+            {{/if}}
+
             {{#if model.serviceName}}
               {{#if model.quicklinks}}
-              <div class="btn-group offset-2">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  <i class="glyphicon" />
+              <div class="btn-group">
+                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Quick links" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="glyphicon glyphicon-option-vertical" />
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu dropdown-menu-right">
                   {{#each model.quicklinks as |link|}}
                     <li><a href="{{link.value}}" target="_blank">{{link.name}}</a></li>
                   {{/each}}
@@ -92,7 +97,9 @@
               {{/if}}
             {{/if}}
           </div>
-          <div title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</div>
+          <div>
+            <span title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</span>
+          </div>
           <div>Priority {{model.app.priority}}</div>
         </div>
       </div>
@@ -102,20 +109,20 @@
         <ul class="nav nav-pills">
           <ul class="nav nav-pills collapse in">
             {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
-              {{#link-to 'yarn-app.info' appId (query-params service=serviceName)}}Information{{/link-to}}
+              {{#link-to 'yarn-app.info' appId (query-params service=model.serviceName)}}Information{{/link-to}}
             {{/link-to}}
             {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
-              {{#link-to 'yarn-app.attempts' appId (query-params service=serviceName)}}Attempts List{{/link-to}}
+              {{#link-to 'yarn-app.attempts' appId (query-params service=model.serviceName)}}Attempts List{{/link-to}}
             {{/link-to}}
             {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
-              {{#link-to 'yarn-app.charts' appId (query-params service=serviceName)}}Resource Usage{{/link-to}}
+              {{#link-to 'yarn-app.charts' appId (query-params service=model.serviceName)}}Resource Usage{{/link-to}}
             {{/link-to}}
-            {{#if serviceName}}
+            {{#if model.serviceName}}
               {{#link-to 'yarn-app.components' tagName="li" class=(if (eq target.currentPath 'yarn-app.components') "active")}}
-                {{#link-to 'yarn-app.components' appId (query-params service=serviceName)}}Components{{/link-to}}
+                {{#link-to 'yarn-app.components' appId (query-params service=model.serviceName)}}Components{{/link-to}}
               {{/link-to}}
               {{#link-to 'yarn-app.configs' tagName="li" class=(if (eq target.currentPath 'yarn-app.configs') "active")}}
-                {{#link-to 'yarn-app.configs' appId (query-params service=serviceName)}}Configurations &amp; Metrics{{/link-to}}
+                {{#link-to 'yarn-app.configs' appId (query-params service=model.serviceName)}}Configurations &amp; Metrics{{/link-to}}
               {{/link-to}}
             {{/if}}
           </ul>
@@ -128,4 +135,15 @@
   </div>
 </div>
 
+{{confirm-dialog
+  dialogId="stopServiceConfirmDialog"
+  message=(concat 'Are you sure you want to stop service "' model.serviceName '" ?')
+  action="stopService"
+}}
+
+{{confirm-dialog
+  dialogId="deleteServiceConfirmDialog"
+  message=(concat 'Are you sure you want to delete service "' model.serviceName '" ?')
+  action="deleteService"
+}}
 

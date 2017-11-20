@@ -731,3 +731,10 @@ div.service-action-mask img {
 .glyphicon-gray {
   color: $yarn-gray-icon;
 }
+
+.btn.btn-unstyled {
+  padding: 5px;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
