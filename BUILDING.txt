@@ -4,7 +4,7 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.8+
+* JDK 1.8
 * Maven 3.3 or later
 * ProtocolBuffer 2.5.0
 * CMake 3.1 or newer (if compiling native code)
@@ -344,7 +344,7 @@ Building on Windows
 Requirements:
 
 * Windows System
-* JDK 1.8+
+* JDK 1.8
 * Maven 3.0 or later
 * ProtocolBuffer 2.5.0
 * CMake 3.1 or newer
