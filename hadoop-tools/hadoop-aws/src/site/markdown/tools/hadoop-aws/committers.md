@@ -690,11 +690,10 @@ Filesystem s3a://landsat-pds is not using S3Guard
 The "magic" committer is not supported
 
 S3A Client
-	Endpoint: fs.s3a.endpoint=(unset)
-	Encryption: fs.s3a.server-side-encryption-algorithm=none
-	Input seek policy: fs.s3a.experimental.input.fadvise=normal
+  Endpoint: fs.s3a.endpoint=(unset)
+  Encryption: fs.s3a.server-side-encryption-algorithm=none
+  Input seek policy: fs.s3a.experimental.input.fadvise=normal
 2017-09-27 19:18:57,917 INFO util.ExitUtil: Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
-
 ```
 
 ## Error message: "File being created has a magic path, but the filesystem has magic file support disabled: 
