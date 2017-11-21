@@ -389,25 +389,29 @@ public class TestTasks extends HadoopTestBase {
     }
 
     public Item assertCommitted() {
-      assertTrue(toString() + " was not committed in\n" +  itemsToString(),
+      assertTrue(toString() + " was not committed in\n"
+              +  itemsToString(),
           committed);
       return this;
     }
 
     public Item assertCommittedOrFailed() {
-      assertTrue(toString() + " was not committed nor failed in\n" +  itemsToString(),
+      assertTrue(toString() + " was not committed nor failed in\n"
+              +  itemsToString(),
           committed || failed);
       return this;
     }
 
     public Item assertAborted() {
-      assertTrue(toString() + " was not aborted in\n" + itemsToString(),
+      assertTrue(toString() + " was not aborted in\n"
+              + itemsToString(),
           aborted);
       return this;
     }
 
     public Item assertReverted() {
-      assertTrue(toString() + " was not reverted in\n" + itemsToString(),
+      assertTrue(toString() + " was not reverted in\n"
+              + itemsToString(),
           reverted);
       return this;
     }
