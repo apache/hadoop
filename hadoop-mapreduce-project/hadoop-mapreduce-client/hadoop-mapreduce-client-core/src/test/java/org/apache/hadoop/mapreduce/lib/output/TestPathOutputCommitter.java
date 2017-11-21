@@ -109,13 +109,33 @@ public class TestPathOutputCommitter extends Assert {
     public void abortTask(TaskAttemptContext taskContext) throws IOException {
 
     }
+
+    @Override
+    public Path getOutputPath() {
+      return null;
+    }
   }
 
   /**
    * Stub task context.
+   * The {@link #getConfiguration()} method returns the configuration supplied
+   * in the constructor; while {@link #setOutputCommitter(OutputCommitter)}
+   * sets the committer returned in {@link #getOutputCommitter()}.
+   * Otherwise, the methods are all no-ops.
    */
-  public class TaskContext
+  public static class TaskContext
       implements TaskInputOutputContext<String, String, String, String> {
+
+    private final Configuration configuration;
+
+    public TaskContext() {
+      this(new Configuration());
+    }
+
+    public TaskContext(Configuration conf) {
+      this.configuration = conf;
+    }
+
 
     private OutputCommitter outputCommitter;
 
@@ -180,7 +200,7 @@ public class TestPathOutputCommitter extends Assert {
 
     @Override
     public Configuration getConfiguration() {
-      return null;
+      return configuration;
     }
 
     @Override

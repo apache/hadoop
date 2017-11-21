@@ -537,7 +537,7 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   @Test
-  public void testDeleteTable() throws IOException {
+  public void testDeleteTable() throws Exception {
     final String tableName = "testDeleteTable";
     final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
@@ -553,7 +553,6 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
       // delete table once more; be ResourceNotFoundException swallowed silently
       ddbms.destroy();
       verifyTableNotExist(tableName);
-
       try {
         // we can no longer list the destroyed table
         ddbms.listChildren(new Path(S3URI));
@@ -582,13 +581,9 @@ public class TestDynamoDBMetadataStore extends MetadataStoreTestBase {
    *
    * This should not rely on the {@link DynamoDBMetadataStore} implementation.
    */
-  private static void verifyTableNotExist(String tableName) {
-    final Table table = dynamoDB.getTable(tableName);
-    try {
-      table.describe();
-      fail("Expecting ResourceNotFoundException for table '" + tableName + "'");
-    } catch (ResourceNotFoundException ignored) {
-    }
+  private static void verifyTableNotExist(String tableName) throws Exception{
+    intercept(ResourceNotFoundException.class,
+        () -> dynamoDB.getTable(tableName).describe());
   }
 
 }

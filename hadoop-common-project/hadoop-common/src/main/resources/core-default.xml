@@ -1123,7 +1123,8 @@
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge.
+  <description>Minimum age in seconds of multipart uploads to purge
+    on startup if "fs.s3a.multipart.purge" is true
   </description>
 </property>
 
@@ -1341,6 +1342,120 @@
     pruning metadata.  Prevents prune operations (which can typically be low
     priority background operations) from overly interfering with other I/O
     operations.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.limit</name>
+  <value>${fs.s3a.attempts.maximum}</value>
+  <description>
+    Number of times to retry any repeatable S3 client request on failure,
+    excluding throttling requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.interval</name>
+  <value>500ms</value>
+  <description>
+    Interval between attempts to retry operations for any reason other
+    than S3 throttle errors.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.throttle.limit</name>
+  <value>${fs.s3a.attempts.maximum}</value>
+  <description>
+    Number of times to retry any throttled request.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.throttle.interval</name>
+  <value>1000ms</value>
+  <description>
+    Interval between retry attempts on throttled requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.name</name>
+  <value>file</value>
+  <description>
+    Committer to create for output to S3A, one of:
+    "file", "directory", "partitioned", "magic".
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.magic.enabled</name>
+  <value>false</value>
+  <description>
+    Enable support in the filesystem for the S3 "Magic" committer.
+    When working with AWS S3, S3Guard must be enabled for the destination
+    bucket, as consistent metadata listings are required.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.threads</name>
+  <value>8</value>
+  <description>
+    Number of threads in committers for parallel operations on files
+    (upload, commit, abort, delete...)
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.tmp.path</name>
+  <value>tmp/staging</value>
+  <description>
+    Path in the cluster filesystem for temporary data.
+    This is for HDFS, not the local filesystem.
+    It is only for the summary data of each file, not the actual
+    data being committed.
+    Using an unqualified path guarantees that the full path will be
+    generated relative to the home directory of the user creating the job,
+    hence private (assuming home directory permissions are secure).
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.unique-filenames</name>
+  <value>true</value>
+  <description>
+    Option for final files to have a unique name through job attempt info,
+    or the value of fs.s3a.committer.staging.uuid
+    When writing data with the "append" conflict option, this guarantees
+    that new data will not overwrite any existing data.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.conflict-mode</name>
+  <value>fail</value>
+  <description>
+    Staging committer conflict resolution policy.
+    Supported: "fail", "append", "replace".
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.abort.pending.uploads</name>
+  <value>true</value>
+  <description>
+    Should the staging committers abort all pending uploads to the destination
+    directory?
+
+    Changing this if more than one partitioned committer is
+    writing to the same destination tree simultaneously; otherwise
+    the first job to complete will cancel all outstanding uploads from the
+    others. However, it may lead to leaked outstanding uploads from failed
+    tasks. If disabled, configure the bucket lifecycle to remove uploads
+    after a time period, and/or set up a workflow to explicitly delete
+    entries. Otherwise there is a risk that uncommitted uploads may run up
+    bills.
   </description>
 </property>
 
