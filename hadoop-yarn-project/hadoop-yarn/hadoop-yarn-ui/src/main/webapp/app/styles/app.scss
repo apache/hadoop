@@ -722,3 +722,7 @@ div.service-action-mask img {
   background-color: $yarn-header-bg;
   border-bottom: 1px solid $yarn-border-color;
 }
+
+#tree-selector-container {
+  width: calc(100% - #{$compose-box-width});
+}
