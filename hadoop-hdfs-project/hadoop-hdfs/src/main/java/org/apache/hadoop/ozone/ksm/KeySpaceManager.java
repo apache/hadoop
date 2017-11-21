@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.ksm;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -42,6 +43,7 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocolPB
     .KeySpaceManagerProtocolServerSideTranslatorPB;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -137,6 +139,10 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
     return scmBlockLocationClient;
   }
 
+  @VisibleForTesting
+  public ScmInfo getScmInfo(OzoneConfiguration conf) throws IOException {
+    return getScmBlockClient(conf).getScmInfo();
+  }
   /**
    * Starts an RPC server, if configured.
    *

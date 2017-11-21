@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
+import org.apache.hadoop.scm.ScmInfo;
 
 /**
  * ScmBlockLocationProtocol is used by an HDFS node to find the set of nodes
@@ -63,4 +64,9 @@ public interface ScmBlockLocationProtocol {
    */
   List<DeleteBlockGroupResult>
       deleteKeyBlocks(List<BlockGroup> keyBlocksInfoList) throws IOException;
+
+  /**
+   * Gets the Clusterid and SCM Id from SCM.
+   */
+  ScmInfo getScmInfo() throws IOException;
 }

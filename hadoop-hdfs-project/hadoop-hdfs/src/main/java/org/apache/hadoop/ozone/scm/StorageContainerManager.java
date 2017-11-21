@@ -77,6 +77,7 @@ import org.apache.hadoop.ozone.scm.container.Mapping;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.ContainerStat;
 import org.apache.hadoop.ozone.scm.container.placement.metrics.SCMMetrics;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.ozone.scm.node.SCMNodeManager;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
@@ -1102,7 +1103,16 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     return scmBlockManager.allocateBlock(size, type, factor);
   }
 
-
+  /**
+   * Get the clusterId and SCM Id from the version file in SCM.
+   */
+  @Override
+  public ScmInfo getScmInfo() throws IOException {
+    ScmInfo.Builder builder = new ScmInfo.Builder()
+        .setClusterId(scmStorage.getClusterID())
+        .setScmId(scmStorage.getScmId());
+    return builder.build();
+  }
   /**
    * Delete blocks for a set of object keys.
    *

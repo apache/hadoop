@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.DeleteKeyBlocksResultProto;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -43,6 +44,10 @@ import org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.GetScmBlockLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.ScmLocatedBlockProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .ScmBlockLocationProtocolProtos.GetScmInfoRequestProto;
+import org.apache.hadoop.ozone.protocol.proto
+    .ScmBlockLocationProtocolProtos.GetScmInfoRespsonseProto;
 
 import java.io.IOException;
 import java.util.List;
@@ -147,5 +152,20 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
       throw new ServiceException(ex);
     }
     return resp.build();
+  }
+
+  @Override
+  public GetScmInfoRespsonseProto getScmInfo(RpcController controller,
+      GetScmInfoRequestProto req) throws ServiceException {
+    ScmInfo scmInfo;
+    try {
+      scmInfo = impl.getScmInfo();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+    return GetScmInfoRespsonseProto.newBuilder()
+        .setClusterId(scmInfo.getClusterId())
+        .setScmId(scmInfo.getScmId())
+        .build();
   }
 }

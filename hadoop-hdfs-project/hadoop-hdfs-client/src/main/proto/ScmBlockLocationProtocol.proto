@@ -132,6 +132,20 @@ message AllocateScmBlockResponseProto {
 }
 
 /**
+ * Request for cluster Id and SCM Id from SCM.
+ */
+message GetScmInfoRequestProto {
+}
+
+/**
+ * Response from SCM for cluster Id and SCM ID.
+ */
+message GetScmInfoRespsonseProto {
+    required string clusterId = 1;
+    required string scmId = 2;
+}
+
+/**
  * Protocol used from KeySpaceManager to StorageContainerManager.
  * See request and response messages for details of the RPC calls.
  */
@@ -156,4 +170,10 @@ service ScmBlockLocationProtocolService {
    */
   rpc deleteScmKeyBlocks(DeleteScmKeyBlocksRequestProto)
       returns (DeleteScmKeyBlocksResponseProto);
+
+  /**
+   * Gets the scmInfo from SCM.
+   */
+  rpc getScmInfo(GetScmInfoRequestProto)
+      returns (GetScmInfoRespsonseProto);
 }

@@ -44,11 +44,11 @@ public class SCMStorage extends Storage {
     super(NodeType.SCM, OzoneUtils.getScmMetadirPath(conf), STORAGE_DIR);
   }
 
-  public void setScmUuid(String scmUuid) throws IOException {
+  public void setScmId(String scmId) throws IOException {
     if (getState() == StorageState.INITIALIZED) {
       throw new IOException("SCM is already initialized.");
     } else {
-      getStorageInfo().setProperty(SCM_ID, scmUuid);
+      getStorageInfo().setProperty(SCM_ID, scmId);
     }
   }
 
@@ -56,18 +56,18 @@ public class SCMStorage extends Storage {
    * Retrieves the SCM ID from the version file.
    * @return SCM_ID
    */
-  public String getscmUuid() {
+  public String getScmId() {
     return getStorageInfo().getProperty(SCM_ID);
   }
 
   @Override
   protected Properties getNodeProperties() {
-    String scmUuid = getscmUuid();
-    if (scmUuid == null) {
-      scmUuid = UUID.randomUUID().toString();
+    String scmId = getScmId();
+    if (scmId == null) {
+      scmId = UUID.randomUUID().toString();
     }
     Properties scmProperties = new Properties();
-    scmProperties.setProperty(SCM_ID, scmUuid);
+    scmProperties.setProperty(SCM_ID, scmId);
     return scmProperties;
   }
 

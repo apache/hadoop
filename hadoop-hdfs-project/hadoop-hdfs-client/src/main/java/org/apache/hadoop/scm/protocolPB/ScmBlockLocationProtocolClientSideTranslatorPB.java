@@ -33,8 +33,11 @@ import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.Del
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmBlockLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmBlockLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.ScmLocatedBlockProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmInfoRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmInfoRespsonseProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
@@ -173,6 +176,27 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
                 .convertBlockResultProto(result.getBlockResultsList())))
         .collect(Collectors.toList()));
     return results;
+  }
+
+  /**
+   * Gets the cluster Id and Scm Id from SCM.
+   * @return ScmInfo
+   * @throws IOException
+   */
+  @Override
+  public ScmInfo getScmInfo() throws IOException {
+    GetScmInfoRequestProto request =
+        GetScmInfoRequestProto.getDefaultInstance();
+    GetScmInfoRespsonseProto resp;
+    try {
+      resp = rpcProxy.getScmInfo(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+    ScmInfo.Builder builder = new ScmInfo.Builder()
+        .setClusterId(resp.getClusterId())
+        .setScmId(resp.getScmId());
+    return builder.build();
   }
 
   @Override
