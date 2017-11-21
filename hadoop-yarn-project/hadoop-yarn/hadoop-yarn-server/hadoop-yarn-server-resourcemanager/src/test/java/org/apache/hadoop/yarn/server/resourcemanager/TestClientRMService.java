@@ -214,8 +214,9 @@ public class TestClientRMService {
     List<NodeReport> nodeReports = client.getClusterNodes(
         GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.DECOMMISSIONING))).getNodeReports();
     Assert.assertEquals(1, nodeReports.size());
-    Assert.assertEquals(decommissioningTimeout,
-        nodeReports.iterator().next().getDecommissioningTimeout());
+    NodeReport nr = nodeReports.iterator().next();
+    Assert.assertEquals(decommissioningTimeout, nr.getDecommissioningTimeout());
+    Assert.assertNull(nr.getNodeUpdateType());
     
     rpc.stopProxy(client, conf);
     rm.close();
@@ -270,6 +271,7 @@ public class TestClientRMService {
     // Check node's label = x
     Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("x"));
     Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
+    Assert.assertNull(nodeReports.get(0).getNodeUpdateType());
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
@@ -294,6 +296,7 @@ public class TestClientRMService {
     
     Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("y"));
     Assert.assertNull(nodeReports.get(0).getDecommissioningTimeout());
+    Assert.assertNull(nodeReports.get(0).getNodeUpdateType());
     
     // Remove labels of host1
     map = new HashMap<NodeId, Set<String>>();
@@ -311,6 +314,7 @@ public class TestClientRMService {
       Assert.assertTrue(report.getNodeLabels() != null
           && report.getNodeLabels().isEmpty());
       Assert.assertNull(report.getDecommissioningTimeout());
+      Assert.assertNull(report.getNodeUpdateType());
     }
 
     rpc.stopProxy(client, conf);

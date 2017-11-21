@@ -918,7 +918,6 @@ public class MockRM extends ResourceManager {
         node.getState());
   }
   
-  
   public void sendNodeGracefulDecommission(MockNM nm, int timeout) throws Exception {
     RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(nm.getNodeId());
     Assert.assertNotNull("node shouldn't be null", node);
