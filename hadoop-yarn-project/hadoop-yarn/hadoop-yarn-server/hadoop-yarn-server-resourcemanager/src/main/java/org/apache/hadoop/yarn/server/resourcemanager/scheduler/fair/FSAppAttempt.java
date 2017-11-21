@@ -1304,20 +1304,14 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public float getWeight() {
-    double weight = 1.0;
+    float weight = 1.0F;
 
     if (scheduler.isSizeBasedWeight()) {
-      scheduler.getSchedulerReadLock().lock();
-
-      try {
-        // Set weight based on current memory demand
-        weight = Math.log1p(getDemand().getMemorySize()) / Math.log(2);
-      } finally {
-        scheduler.getSchedulerReadLock().unlock();
-      }
+      // Set weight based on current memory demand
+      weight = (float)(Math.log1p(demand.getMemorySize()) / Math.log(2));
     }
 
-    return (float)weight * this.getPriority().getPriority();
+    return weight * appPriority.getPriority();
   }
 
   @Override
