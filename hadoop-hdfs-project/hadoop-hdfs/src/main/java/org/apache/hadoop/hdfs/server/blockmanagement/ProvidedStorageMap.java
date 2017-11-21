@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -72,6 +71,7 @@ public class ProvidedStorageMap {
   private final DatanodeStorageInfo providedStorageInfo;
   private boolean providedEnabled;
   private long capacity;
+  private int defaultReplication;
 
   ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf)
       throws IOException {
@@ -95,6 +95,8 @@ public class ProvidedStorageMap {
         storageId, State.NORMAL, StorageType.PROVIDED);
     providedDescriptor = new ProvidedDescriptor();
     providedStorageInfo = providedDescriptor.createProvidedStorage(ds);
+    this.defaultReplication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+        DFSConfigKeys.DFS_REPLICATION_DEFAULT);
 
     this.bm = bm;
     this.lock = lock;
@@ -198,63 +200,72 @@ public class ProvidedStorageMap {
    */
   class ProvidedBlocksBuilder extends LocatedBlockBuilder {
 
-    private ShadowDatanodeInfoWithStorage pending;
-    private boolean hasProvidedLocations;
-
     ProvidedBlocksBuilder(int maxBlocks) {
       super(maxBlocks);
-      pending = new ShadowDatanodeInfoWithStorage(
-          providedDescriptor, storageId);
-      hasProvidedLocations = false;
+    }
+
+    private DatanodeDescriptor chooseProvidedDatanode(
+        Set<String> excludedUUids) {
+      DatanodeDescriptor dn = providedDescriptor.choose(null, excludedUUids);
+      if (dn == null) {
+        dn = providedDescriptor.choose(null);
+      }
+      return dn;
     }
 
     @Override
     LocatedBlock newLocatedBlock(ExtendedBlock eb,
         DatanodeStorageInfo[] storages, long pos, boolean isCorrupt) {
 
-      DatanodeInfoWithStorage[] locs =
-        new DatanodeInfoWithStorage[storages.length];
-      String[] sids = new String[storages.length];
-      StorageType[] types = new StorageType[storages.length];
+      List<DatanodeInfoWithStorage> locs = new ArrayList<>();
+      List<String> sids = new ArrayList<>();
+      List<StorageType> types = new ArrayList<>();
+      boolean isProvidedBlock = false;
+      Set<String> excludedUUids = new HashSet<>();
+
       for (int i = 0; i < storages.length; ++i) {
-        sids[i] = storages[i].getStorageID();
-        types[i] = storages[i].getStorageType();
-        if (StorageType.PROVIDED.equals(storages[i].getStorageType())) {
-          locs[i] = pending;
-          hasProvidedLocations = true;
+        DatanodeStorageInfo currInfo = storages[i];
+        StorageType storageType = currInfo.getStorageType();
+        sids.add(currInfo.getStorageID());
+        types.add(storageType);
+        if (StorageType.PROVIDED.equals(storageType)) {
+          DatanodeDescriptor dn = chooseProvidedDatanode(excludedUUids);
+          locs.add(
+              new DatanodeInfoWithStorage(
+                  dn, currInfo.getStorageID(), currInfo.getStorageType()));
+          excludedUUids.add(dn.getDatanodeUuid());
+          isProvidedBlock = true;
         } else {
-          locs[i] = new DatanodeInfoWithStorage(
-              storages[i].getDatanodeDescriptor(), sids[i], types[i]);
+          locs.add(new DatanodeInfoWithStorage(
+              currInfo.getDatanodeDescriptor(),
+              currInfo.getStorageID(), storageType));
+          excludedUUids.add(currInfo.getDatanodeDescriptor().getDatanodeUuid());
         }
       }
-      return new LocatedBlock(eb, locs, sids, types, pos, isCorrupt, null);
+
+      int numLocations = locs.size();
+      if (isProvidedBlock) {
+        // add more replicas until we reach the defaultReplication
+        for (int count = numLocations + 1;
+            count <= defaultReplication && count <= providedDescriptor
+                .activeProvidedDatanodes(); count++) {
+          DatanodeDescriptor dn = chooseProvidedDatanode(excludedUUids);
+          locs.add(new DatanodeInfoWithStorage(
+              dn, storageId, StorageType.PROVIDED));
+          sids.add(storageId);
+          types.add(StorageType.PROVIDED);
+          excludedUUids.add(dn.getDatanodeUuid());
+        }
+      }
+      return new LocatedBlock(eb,
+          locs.toArray(new DatanodeInfoWithStorage[locs.size()]),
+          sids.toArray(new String[sids.size()]),
+          types.toArray(new StorageType[types.size()]),
+          pos, isCorrupt, null);
     }
 
     @Override
     LocatedBlocks build(DatanodeDescriptor client) {
-      // TODO: to support multiple provided storages, need to pass/maintain map
-      if (hasProvidedLocations) {
-        // set all fields of pending DatanodeInfo
-        List<String> excludedUUids = new ArrayList<String>();
-        for (LocatedBlock b : blocks) {
-          DatanodeInfo[] infos = b.getLocations();
-          StorageType[] types = b.getStorageTypes();
-
-          for (int i = 0; i < types.length; i++) {
-            if (!StorageType.PROVIDED.equals(types[i])) {
-              excludedUUids.add(infos[i].getDatanodeUuid());
-            }
-          }
-        }
-
-        DatanodeDescriptor dn =
-                providedDescriptor.choose(client, excludedUUids);
-        if (dn == null) {
-          dn = providedDescriptor.choose(client);
-        }
-        pending.replaceInternal(dn);
-      }
-
       return new LocatedBlocks(
           flen, isUC, blocks, last, lastComplete, feInfo, ecPolicy);
     }
@@ -262,53 +273,6 @@ public class ProvidedStorageMap {
     @Override
     LocatedBlocks build() {
       return build(providedDescriptor.chooseRandom());
-    }
-  }
-
-  /**
-   * An abstract {@link DatanodeInfoWithStorage} to represent provided storage.
-   */
-  static class ShadowDatanodeInfoWithStorage extends DatanodeInfoWithStorage {
-    private String shadowUuid;
-
-    ShadowDatanodeInfoWithStorage(DatanodeDescriptor d, String storageId) {
-      super(d, storageId, StorageType.PROVIDED);
-    }
-
-    @Override
-    public String getDatanodeUuid() {
-      return shadowUuid;
-    }
-
-    public void setDatanodeUuid(String uuid) {
-      shadowUuid = uuid;
-    }
-
-    void replaceInternal(DatanodeDescriptor dn) {
-      updateRegInfo(dn); // overwrite DatanodeID (except UUID)
-      setDatanodeUuid(dn.getDatanodeUuid());
-      setCapacity(dn.getCapacity());
-      setDfsUsed(dn.getDfsUsed());
-      setRemaining(dn.getRemaining());
-      setBlockPoolUsed(dn.getBlockPoolUsed());
-      setCacheCapacity(dn.getCacheCapacity());
-      setCacheUsed(dn.getCacheUsed());
-      setLastUpdate(dn.getLastUpdate());
-      setLastUpdateMonotonic(dn.getLastUpdateMonotonic());
-      setXceiverCount(dn.getXceiverCount());
-      setNetworkLocation(dn.getNetworkLocation());
-      adminState = dn.getAdminState();
-      setUpgradeDomain(dn.getUpgradeDomain());
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      return super.equals(obj);
-    }
-
-    @Override
-    public int hashCode() {
-      return super.hashCode();
     }
   }
 
@@ -336,6 +300,7 @@ public class ProvidedStorageMap {
 
     DatanodeStorageInfo getProvidedStorage(
         DatanodeDescriptor dn, DatanodeStorage s) {
+      LOG.info("XXXXX adding Datanode " + dn.getDatanodeUuid());
       dns.put(dn.getDatanodeUuid(), dn);
       // TODO: maintain separate RPC ident per dn
       return storageMap.get(s.getStorageID());
@@ -352,7 +317,7 @@ public class ProvidedStorageMap {
     DatanodeDescriptor choose(DatanodeDescriptor client) {
       // exact match for now
       DatanodeDescriptor dn = client != null ?
-              dns.get(client.getDatanodeUuid()) : null;
+          dns.get(client.getDatanodeUuid()) : null;
       if (null == dn) {
         dn = chooseRandom();
       }
@@ -360,10 +325,10 @@ public class ProvidedStorageMap {
     }
 
     DatanodeDescriptor choose(DatanodeDescriptor client,
-        List<String> excludedUUids) {
+        Set<String> excludedUUids) {
       // exact match for now
       DatanodeDescriptor dn = client != null ?
-              dns.get(client.getDatanodeUuid()) : null;
+          dns.get(client.getDatanodeUuid()) : null;
 
       if (null == dn || excludedUUids.contains(client.getDatanodeUuid())) {
         dn = null;

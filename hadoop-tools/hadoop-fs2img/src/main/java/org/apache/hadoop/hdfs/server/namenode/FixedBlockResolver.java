@@ -34,6 +34,7 @@ public class FixedBlockResolver extends BlockResolver implements Configurable {
       "hdfs.image.writer.resolver.fixed.block.size";
   public static final String START_BLOCK =
       "hdfs.image.writer.resolver.fixed.block.start";
+  public static final long BLOCKSIZE_DEFAULT = 256 * (1L << 20);
 
   private Configuration conf;
   private long blocksize = 256 * (1L << 20);
@@ -42,7 +43,7 @@ public class FixedBlockResolver extends BlockResolver implements Configurable {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
-    blocksize = conf.getLong(BLOCKSIZE, 256 * (1L << 20));
+    blocksize = conf.getLong(BLOCKSIZE, BLOCKSIZE_DEFAULT);
     blockIds.set(conf.getLong(START_BLOCK, (1L << 30)));
   }
 
