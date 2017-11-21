@@ -103,7 +103,7 @@ public class DataChecksum implements Checksum {
   public static Checksum newCrc32C() {
     try {
       return Shell.isJava9OrAbove() ? (Checksum) NEW_CRC32C_MH.invoke()
-    		  : new PureJavaCrc32C();
+              : new PureJavaCrc32C();
     } catch (Throwable e) {
       // Should not reach here.
       throw new RuntimeException(e);
