@@ -335,6 +335,8 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
     private Optional<Integer> hbSeconds = Optional.empty();
     private Optional<Integer> hbProcessorInterval = Optional.empty();
     private Optional<String> scmMetadataDir = Optional.empty();
+    private Optional<String> clusterId = Optional.empty();
+    private Optional<String> scmId = Optional.empty();
     private Boolean ozoneEnabled = true;
     private Boolean waitForChillModeFinish = true;
     private Boolean randomContainerPort = true;
@@ -423,6 +425,16 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       return this;
     }
 
+    public Builder setClusterId(String cId) {
+      clusterId = Optional.of(cId);
+      return this;
+    }
+
+    public Builder setScmId(String sId) {
+      scmId = Optional.of(sId);
+      return this;
+    }
+
     public String getPath() {
       return path;
     }
@@ -439,6 +451,7 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       configureTrace();
       configureSCMheartbeat();
       configScmMetadata();
+      initializeScm();
 
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
@@ -456,8 +469,6 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
           randomContainerPort);
 
-      SCMStorage scmStorage = new SCMStorage(conf);
-      scmStorage.initialize();
       StorageContainerManager scm = StorageContainerManager.createSCM(
           null, conf);
       scm.start();
@@ -511,6 +522,13 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       // datanodes in the cluster.
       conf.setStrings(ScmConfigKeys.OZONE_SCM_DATANODE_ID,
           scmPath.toString() + "/datanode.id");
+    }
+
+    private void initializeScm() throws IOException {
+      SCMStorage scmStore = new SCMStorage(conf);
+      scmStore.setClusterId(clusterId.orElse(runID.toString()));
+      scmStore.setScmId(scmId.orElse(UUID.randomUUID().toString()));
+      scmStore.initialize();
     }
 
     private void configureHandler() {

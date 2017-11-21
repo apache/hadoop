@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
@@ -66,6 +67,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
@@ -78,6 +80,8 @@ public class TestKeySpaceManager {
   private static UserArgs userArgs;
   private static KSMMetrics ksmMetrics;
   private static OzoneConfiguration conf;
+  private static String clusterId;
+  private static String scmId;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -93,10 +97,15 @@ public class TestKeySpaceManager {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
+    clusterId = UUID.randomUUID().toString();
+    scmId = UUID.randomUUID().toString();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     cluster = new MiniOzoneClassicCluster.Builder(conf)
-        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
+        .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
+        .setClusterId(clusterId)
+        .setScmId(scmId)
+        .build();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
     userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
         null, null, null, null);
@@ -1032,5 +1041,16 @@ public class TestKeySpaceManager {
       in.read(data1);
     }
     Assert.assertEquals(dataString, DFSUtil.bytes2String(data1));
+  }
+
+  /**
+   * Tests the RPC call for getting scmId and clusterId from SCM.
+   * @throws IOException
+   */
+  @Test
+  public void testGetScmInfo() throws IOException {
+    ScmInfo info = cluster.getKeySpaceManager().getScmInfo(conf);
+    Assert.assertEquals(clusterId, info.getClusterId());
+    Assert.assertEquals(scmId, info.getScmId());
   }
 }

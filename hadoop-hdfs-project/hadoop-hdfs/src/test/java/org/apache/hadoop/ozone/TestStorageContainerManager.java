@@ -37,6 +37,7 @@ import org.apache.hadoop.ozone.scm.block.SCMBlockDeletingService;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.ScmInfo;
 import org.junit.Rule;
 import org.junit.Assert;
 import org.junit.Test;
@@ -395,5 +396,27 @@ public class TestStorageContainerManager {
     SCMStorage scmStore = new SCMStorage(conf);
     Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
     Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
+  }
+
+  @Test
+  public void testScmInfo() throws Exception {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    final String path =
+        GenericTestUtils.getTempPath(UUID.randomUUID().toString());
+    Path scmPath = Paths.get(path, "scm-meta");
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    SCMStorage scmStore = new SCMStorage(conf);
+    String clusterId = UUID.randomUUID().toString();
+    String scmId = UUID.randomUUID().toString();
+    scmStore.setClusterId(clusterId);
+    scmStore.setScmId(scmId);
+    // writes the version file properties
+    scmStore.initialize();
+    StorageContainerManager scm = StorageContainerManager.createSCM(null, conf);
+    //Reads the SCM Info from SCM instance
+    ScmInfo scmInfo = scm.getScmInfo();
+    Assert.assertEquals(clusterId, scmInfo.getClusterId());
+    Assert.assertEquals(scmId, scmInfo.getScmId());
   }
 }
