@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 public class RMAppNodeUpdateEvent extends RMAppEvent {
@@ -26,7 +27,11 @@ public class RMAppNodeUpdateEvent extends RMAppEvent {
   public enum RMAppNodeUpdateType {
     NODE_USABLE, 
     NODE_UNUSABLE,
-    NODE_DECOMMISSIONING
+    NODE_DECOMMISSIONING;
+  
+    public static NodeUpdateType convertToNodeUpdateType(RMAppNodeUpdateType rmAppNodeUpdateType) {
+      return NodeUpdateType.valueOf(rmAppNodeUpdateType.name());
+    }
   }
 
   private final RMNode node;

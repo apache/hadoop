@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeUpdateType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
@@ -402,5 +403,22 @@ public class NodeReportPBImpl extends NodeReport {
       return;
     }
     builder.setDecommissioningTimeout(decommissioningTimeout);
+  }
+  
+  @Override
+  public NodeUpdateType getNodeUpdateType() {
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasNodeUpdateType()) ?
+        ProtoUtils.convertFromProtoFormat(p.getNodeUpdateType()) : null;
+  }
+  
+  @Override
+  public void setNodeUpdateType(NodeUpdateType nodeUpdateType) {
+    maybeInitBuilder();
+    if (nodeUpdateType == null) {
+      builder.clearNodeUpdateType();
+      return;
+    }
+    builder.setNodeUpdateType(ProtoUtils.convertToProtoFormat(nodeUpdateType));
   }
 }

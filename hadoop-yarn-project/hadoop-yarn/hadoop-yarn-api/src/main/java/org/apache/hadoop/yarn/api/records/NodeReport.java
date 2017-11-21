@@ -53,7 +53,7 @@ public abstract class NodeReport {
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime) {
     return newInstance(nodeId, nodeState, httpAddress, rackName, used,
-        capability, numContainers, healthReport, lastHealthReportTime, null, null);
+        capability, numContainers, healthReport, lastHealthReportTime, null, null, null);
   }
 
   @Private
@@ -61,7 +61,7 @@ public abstract class NodeReport {
   public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime,
-      Set<String> nodeLabels, Integer decommissioningTimeout) {
+      Set<String> nodeLabels, Integer decommissioningTimeout, NodeUpdateType nodeUpdateType) {
     NodeReport nodeReport = Records.newRecord(NodeReport.class);
     nodeReport.setNodeId(nodeId);
     nodeReport.setNodeState(nodeState);
@@ -74,6 +74,7 @@ public abstract class NodeReport {
     nodeReport.setLastHealthReportTime(lastHealthReportTime);
     nodeReport.setNodeLabels(nodeLabels);
     nodeReport.setDecommissioningTimeout(decommissioningTimeout);
+    nodeReport.setNodeUpdateType(nodeUpdateType);
     return nodeReport;
   }
 
@@ -241,4 +242,17 @@ public abstract class NodeReport {
    * Set the decommissioning timeout in seconds (null indicates absent timeout).
    * */
   public void setDecommissioningTimeout(Integer decommissioningTimeout) {}
+  
+  /**
+   * Optional node update type (null indicates absent update type).
+   * @return the node update.
+   */
+  public NodeUpdateType getNodeUpdateType() {
+    return NodeUpdateType.NODE_UNUSABLE;
+  }
+  
+  /**
+   * Set the node update type (null indicates absent node update type).
+   * */
+  public void setNodeUpdateType(NodeUpdateType nodeUpdateType) {}
 }
