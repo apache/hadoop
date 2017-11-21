@@ -111,6 +111,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
@@ -177,10 +178,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       LoggerFactory.getLogger(MockResourceManagerFacade.class);
 
   private HashSet<ApplicationId> applicationMap = new HashSet<>();
-  private HashMap<String, List<ContainerId>> applicationContainerIdMap =
-      new HashMap<String, List<ContainerId>>();
-  private HashMap<ContainerId, Container> allocatedContainerMap =
-      new HashMap<ContainerId, Container>();
+  private HashSet<ApplicationId> keepContainerOnUams = new HashSet<>();
+  private HashMap<ApplicationAttemptId, List<ContainerId>>
+      applicationContainerIdMap = new HashMap<>();
   private AtomicInteger containerIndex = new AtomicInteger(0);
   private Configuration conf;
   private int subClusterId;
@@ -221,7 +221,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     this.isRunning = mode;
   }
 
-  private static String getAppIdentifier() throws IOException {
+  private static ApplicationAttemptId getAppIdentifier() throws IOException {
     AMRMTokenIdentifier result = null;
     UserGroupInformation remoteUgi = UserGroupInformation.getCurrentUser();
     Set<TokenIdentifier> tokenIds = remoteUgi.getTokenIdentifiers();
@@ -231,7 +231,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         break;
       }
     }
-    return result != null ? result.getApplicationAttemptId().toString() : "";
+    return result != null ? result.getApplicationAttemptId()
+        : ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 0), 0);
   }
 
   private void validateRunning() throws ConnectException {
@@ -246,19 +247,32 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
       throws YarnException, IOException {
 
     validateRunning();
-
-    String amrmToken = getAppIdentifier();
-    LOG.info("Registering application attempt: " + amrmToken);
+    ApplicationAttemptId attemptId = getAppIdentifier();
+    LOG.info("Registering application attempt: " + attemptId);
 
     shouldReRegisterNext = false;
 
+    List<Container> containersFromPreviousAttempt = null;
+
     synchronized (applicationContainerIdMap) {
-      if (applicationContainerIdMap.containsKey(amrmToken)) {
-        throw new InvalidApplicationMasterRequestException(
-            AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE);
+      if (applicationContainerIdMap.containsKey(attemptId)) {
+        if (keepContainerOnUams.contains(attemptId.getApplicationId())) {
+          // For UAM with the keepContainersFromPreviousAttempt flag, return all
+          // running containers
+          containersFromPreviousAttempt = new ArrayList<>();
+          for (ContainerId containerId : applicationContainerIdMap
+              .get(attemptId)) {
+            containersFromPreviousAttempt.add(Container.newInstance(containerId,
+                null, null, null, null, null));
+          }
+        } else {
+          throw new InvalidApplicationMasterRequestException(
+              AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE);
+        }
+      } else {
+        // Keep track of the containers that are returned to this application
+        applicationContainerIdMap.put(attemptId, new ArrayList<ContainerId>());
       }
-      // Keep track of the containers that are returned to this application
-      applicationContainerIdMap.put(amrmToken, new ArrayList<ContainerId>());
     }
 
     // Make sure we wait for certain test cases last in the method
@@ -278,7 +292,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     }
 
     return RegisterApplicationMasterResponse.newInstance(null, null, null, null,
-        null, request.getHost(), null);
+        containersFromPreviousAttempt, request.getHost(), null);
   }
 
   @Override
@@ -288,8 +302,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     validateRunning();
 
-    String amrmToken = getAppIdentifier();
-    LOG.info("Finishing application attempt: " + amrmToken);
+    ApplicationAttemptId attemptId = getAppIdentifier();
+    LOG.info("Finishing application attempt: " + attemptId);
 
     if (shouldReRegisterNext) {
       String message = "AM is not registered, should re-register.";
@@ -299,12 +313,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     synchronized (applicationContainerIdMap) {
       // Remove the containers that were being tracked for this application
-      Assert.assertTrue("The application id is NOT registered: " + amrmToken,
-          applicationContainerIdMap.containsKey(amrmToken));
-      List<ContainerId> ids = applicationContainerIdMap.remove(amrmToken);
-      for (ContainerId c : ids) {
-        allocatedContainerMap.remove(c);
-      }
+      Assert.assertTrue("The application id is NOT registered: " + attemptId,
+          applicationContainerIdMap.containsKey(attemptId));
+      applicationContainerIdMap.remove(attemptId);
     }
 
     return FinishApplicationMasterResponse.newInstance(
@@ -334,8 +345,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
           + "askList and releaseList in the same heartbeat");
     }
 
-    String amrmToken = getAppIdentifier();
-    LOG.info("Allocate from application attempt: " + amrmToken);
+    ApplicationAttemptId attemptId = getAppIdentifier();
+    LOG.info("Allocate from application attempt: " + attemptId);
 
     if (shouldReRegisterNext) {
       String message = "AM is not registered, should re-register.";
@@ -367,16 +378,16 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
             // will need it in future
             Assert.assertTrue(
                 "The application id is Not registered before allocate(): "
-                    + amrmToken,
-                applicationContainerIdMap.containsKey(amrmToken));
-            List<ContainerId> ids = applicationContainerIdMap.get(amrmToken);
+                    + attemptId,
+                applicationContainerIdMap.containsKey(attemptId));
+            List<ContainerId> ids = applicationContainerIdMap.get(attemptId);
             ids.add(containerId);
-            this.allocatedContainerMap.put(containerId, container);
           }
         }
       }
     }
 
+    List<ContainerStatus> completedList = new ArrayList<>();
     if (request.getReleaseList() != null
         && request.getReleaseList().size() > 0) {
       LOG.info("Releasing containers: " + request.getReleaseList().size());
@@ -384,9 +395,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         Assert
             .assertTrue(
                 "The application id is not registered before allocate(): "
-                    + amrmToken,
-                applicationContainerIdMap.containsKey(amrmToken));
-        List<ContainerId> ids = applicationContainerIdMap.get(amrmToken);
+                    + attemptId,
+                applicationContainerIdMap.containsKey(attemptId));
+        List<ContainerId> ids = applicationContainerIdMap.get(attemptId);
 
         for (ContainerId id : request.getReleaseList()) {
           boolean found = false;
@@ -402,18 +413,8 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
               + conf.get("AMRMTOKEN"), found);
 
           ids.remove(id);
-
-          // Return the released container back to the AM with new fake Ids. The
-          // test case does not care about the IDs. The IDs are faked because
-          // otherwise the LRM will throw duplication identifier exception. This
-          // returning of fake containers is ONLY done for testing purpose - for
-          // the test code to get confirmation that the sub-cluster resource
-          // managers received the release request
-          ContainerId fakeContainerId = ContainerId.newInstance(
-              getApplicationAttemptId(1), containerIndex.incrementAndGet());
-          Container fakeContainer = allocatedContainerMap.get(id);
-          fakeContainer.setId(fakeContainerId);
-          containerList.add(fakeContainer);
+          completedList.add(
+              ContainerStatus.newInstance(id, ContainerState.COMPLETE, "", 0));
         }
       }
     }
@@ -424,9 +425,9 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     // Always issue a new AMRMToken as if RM rolled master key
     Token newAMRMToken = Token.newInstance(new byte[0], "", new byte[0], "");
 
-    return AllocateResponse.newInstance(0, new ArrayList<ContainerStatus>(),
-        containerList, new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC,
-        1, null, new ArrayList<NMToken>(), newAMRMToken,
+    return AllocateResponse.newInstance(0, completedList, containerList,
+        new ArrayList<NodeReport>(), null, AMCommand.AM_RESYNC, 1, null,
+        new ArrayList<NMToken>(), newAMRMToken,
         new ArrayList<UpdatedContainer>());
   }
 
@@ -443,6 +444,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     report.setApplicationId(request.getApplicationId());
     report.setCurrentApplicationAttemptId(
         ApplicationAttemptId.newInstance(request.getApplicationId(), 1));
+    report.setAMRMToken(Token.newInstance(new byte[0], "", new byte[0], ""));
     response.setApplicationReport(report);
     return response;
   }
@@ -486,6 +488,12 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     }
     LOG.info("Application submitted: " + appId);
     applicationMap.add(appId);
+
+    if (request.getApplicationSubmissionContext().getUnmanagedAM()
+        || request.getApplicationSubmissionContext()
+            .getKeepContainersAcrossApplicationAttempts()) {
+      keepContainerOnUams.add(appId);
+    }
     return SubmitApplicationResponse.newInstance();
   }
 
@@ -502,6 +510,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         throw new ApplicationNotFoundException(
             "Trying to kill an absent application: " + appId);
       }
+      keepContainerOnUams.remove(appId);
     }
     LOG.info("Force killing application: " + appId);
     return KillApplicationResponse.newInstance(true);

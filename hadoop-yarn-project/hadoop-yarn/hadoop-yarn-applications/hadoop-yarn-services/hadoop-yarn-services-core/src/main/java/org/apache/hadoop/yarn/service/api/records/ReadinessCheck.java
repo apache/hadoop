@@ -25,7 +25,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,6 +47,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 @ApiModel(description = "A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every service is different. Hence the need for a simple interface, with scope to support advanced usecases.")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class ReadinessCheck implements Serializable {
   private static final long serialVersionUID = -3836839816887186801L;
 
@@ -68,8 +74,14 @@ public class ReadinessCheck implements Serializable {
     }
   }
 
+  @JsonProperty("type")
+  @XmlElement(name = "type")
   private TypeEnum type = null;
+  @JsonProperty("properties")
+  @XmlElement(name = "properties")
   private Map<String, String> properties = new HashMap<String, String>();
+  @JsonProperty("artifact")
+  @XmlElement(name = "artifact")
   private Artifact artifact = null;
 
   /**
@@ -82,7 +94,6 @@ public class ReadinessCheck implements Serializable {
   }
 
   @ApiModelProperty(example = "null", value = "E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).")
-  @JsonProperty("type")
   public TypeEnum getType() {
     return type;
   }
@@ -129,7 +140,6 @@ public class ReadinessCheck implements Serializable {
   }
 
   @ApiModelProperty(example = "null", value = "Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits service owners who can run services without any packaging modifications. Note, artifacts of type docker only is supported for now.")
-  @JsonProperty("artifact")
   public Artifact getArtifact() {
     return artifact;
   }

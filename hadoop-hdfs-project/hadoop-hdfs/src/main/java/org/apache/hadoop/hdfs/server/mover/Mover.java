@@ -364,7 +364,7 @@ public class Mover {
           if (!isSnapshotPathInCurrent(fullPath)) {
             // the full path is a snapshot path but it is also included in the
             // current directory tree, thus ignore it.
-            processFile(fullPath, status, result);
+            processFile(fullPath, (HdfsLocatedFileStatus) status, result);
           }
         } catch (IOException e) {
           LOG.warn("Failed to check the status of " + parent
@@ -374,7 +374,7 @@ public class Mover {
     }
 
     /** @return true if it is necessary to run another round of migration */
-    private void processFile(String fullPath, HdfsFileStatus status,
+    private void processFile(String fullPath, HdfsLocatedFileStatus status,
         Result result) {
       byte policyId = status.getStoragePolicy();
       if (policyId == HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
@@ -395,7 +395,7 @@ public class Mover {
           status.getReplication());
 
       final ErasureCodingPolicy ecPolicy = status.getErasureCodingPolicy();
-      final LocatedBlocks locatedBlocks = status.getLocatedBlocks();
+      final LocatedBlocks locatedBlocks = status.getBlockLocations();
       final boolean lastBlkComplete = locatedBlocks.isLastBlockComplete();
       List<LocatedBlock> lbs = locatedBlocks.getLocatedBlocks();
       for (int i = 0; i < lbs.size(); i++) {

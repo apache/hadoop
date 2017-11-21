@@ -1092,11 +1092,11 @@ public class TestBlockStoragePolicy {
     return types;
   }
 
-  private void checkLocatedBlocks(HdfsFileStatus status, int blockNum,
+  private void checkLocatedBlocks(HdfsLocatedFileStatus status, int blockNum,
                                   int replicaNum, StorageType... types) {
     List<StorageType> typeList = Lists.newArrayList();
     Collections.addAll(typeList, types);
-    LocatedBlocks lbs = status.getLocatedBlocks();
+    LocatedBlocks lbs = status.getBlockLocations();
     Assert.assertEquals(blockNum, lbs.getLocatedBlocks().size());
     for (LocatedBlock lb : lbs.getLocatedBlocks()) {
       Assert.assertEquals(replicaNum, lb.getStorageTypes().length);
@@ -1127,7 +1127,7 @@ public class TestBlockStoragePolicy {
       HdfsFileStatus[] status = fs.getClient().listPaths(foo.toString(),
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
       checkDirectoryListing(status, policyId);
-      HdfsFileStatus fooStatus = status[0];
+      HdfsLocatedFileStatus fooStatus = (HdfsLocatedFileStatus) status[0];
       checkLocatedBlocks(fooStatus, 1, 3, before);
 
       // change the replication factor to 5
@@ -1140,7 +1140,7 @@ public class TestBlockStoragePolicy {
       status = fs.getClient().listPaths(foo.toString(),
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
       checkDirectoryListing(status, policyId);
-      fooStatus = status[0];
+      fooStatus = (HdfsLocatedFileStatus) status[0];
       checkLocatedBlocks(fooStatus, 1, numDataNodes, after);
 
       // change the replication factor back to 3
@@ -1157,7 +1157,7 @@ public class TestBlockStoragePolicy {
       status = fs.getClient().listPaths(foo.toString(),
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
       checkDirectoryListing(status, policyId);
-      fooStatus = status[0];
+      fooStatus = (HdfsLocatedFileStatus) status[0];
       checkLocatedBlocks(fooStatus, 1, REPLICATION, before);
     } finally {
       cluster.shutdown();

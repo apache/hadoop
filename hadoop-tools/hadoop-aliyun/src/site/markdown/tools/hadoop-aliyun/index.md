@@ -274,7 +274,7 @@ XInclude inclusion. Here is an example of `contract-test-options.xml`:
 
       <property>
         <name>fs.oss.impl</name>
-        <value>org.apache.hadoop.fs.aliyun.AliyunOSSFileSystem</value>
+        <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
       </property>
 
       <property>

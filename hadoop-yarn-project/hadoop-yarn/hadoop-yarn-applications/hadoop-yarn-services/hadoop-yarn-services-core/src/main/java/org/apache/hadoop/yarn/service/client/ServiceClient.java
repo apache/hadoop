@@ -559,7 +559,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     Map<String, String> env = addAMEnv();
 
     // create AM CLI
-    String cmdStr = buildCommandLine(serviceName, conf, appRootDir, hasAMLog4j);
+    String cmdStr = buildCommandLine(app, conf, appRootDir, hasAMLog4j);
     submissionContext.setResource(Resource.newInstance(YarnServiceConf
         .getLong(YarnServiceConf.AM_RESOURCE_MEM,
             YarnServiceConf.DEFAULT_KEY_AM_RESOURCE_MEM, app.getConfiguration(),
@@ -624,12 +624,12 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     LOG.debug(builder.toString());
   }
 
-  private String buildCommandLine(String serviceName, Configuration conf,
+  private String buildCommandLine(Service app, Configuration conf,
       Path appRootDir, boolean hasSliderAMLog4j) throws BadConfigException {
     JavaCommandLineBuilder CLI = new JavaCommandLineBuilder();
     CLI.forceIPv4().headless();
-    //TODO CLI.setJVMHeap
-    //TODO CLI.addJVMOPTS
+    CLI.setJVMOpts(YarnServiceConf.get(YarnServiceConf.JVM_OPTS, null,
+        app.getConfiguration(), conf));
     if (hasSliderAMLog4j) {
       CLI.sysprop(SYSPROP_LOG4J_CONFIGURATION, YARN_SERVICE_LOG4J_FILENAME);
       CLI.sysprop(SYSPROP_LOG_DIR, ApplicationConstants.LOG_DIR_EXPANSION_VAR);
@@ -637,7 +637,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     CLI.add(ServiceMaster.class.getCanonicalName());
     //TODO debugAM CLI.add(Arguments.ARG_DEBUG)
     CLI.add("-" + ServiceMaster.YARNFILE_OPTION, new Path(appRootDir,
-        serviceName + ".json"));
+        app.getName() + ".json"));
     // pass the registry binding
     CLI.addConfOptionToCLI(conf, RegistryConstants.KEY_REGISTRY_ZK_ROOT,
         RegistryConstants.DEFAULT_ZK_REGISTRY_ROOT);

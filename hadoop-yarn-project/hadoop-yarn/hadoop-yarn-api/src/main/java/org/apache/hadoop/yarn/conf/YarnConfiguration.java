@@ -1735,7 +1735,7 @@ public class YarnConfiguration extends Configuration {
       DOCKER_CONTAINER_RUNTIME_PREFIX + "enable-userremapping.allowed";
 
   /** Set enable user remapping as false by default. */
-  public static final boolean DEFAULT_NM_DOCKER_ENABLE_USER_REMAPPING = false;
+  public static final boolean DEFAULT_NM_DOCKER_ENABLE_USER_REMAPPING = true;
 
   /** lower limit for acceptable uids of user remapped user. */
   public static final String NM_DOCKER_USER_REMAPPING_UID_THRESHOLD =
@@ -2096,6 +2096,9 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE =
       "org.apache.hadoop.yarn.server.nodemanager.amrmproxy."
           + "DefaultRequestInterceptor";
+  public static final String AMRM_PROXY_HA_ENABLED = NM_PREFIX
+      + "amrmproxy.ha.enable";
+  public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
 
   /**
    * Default platform-agnostic CLASSPATH for YARN applications. A
@@ -2930,6 +2933,11 @@ public class YarnConfiguration extends Configuration {
   public static final String FEDERATION_CACHE_TIME_TO_LIVE_SECS =
       FEDERATION_PREFIX + "cache-ttl.secs";
 
+  public static final String FEDERATION_REGISTRY_BASE_KEY =
+      FEDERATION_PREFIX + "registry.base-dir";
+  public static final String DEFAULT_FEDERATION_REGISTRY_BASE_KEY =
+      "yarnfederation/";
+
   // 5 minutes
   public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
 
@@ -3086,6 +3094,11 @@ public class YarnConfiguration extends Configuration {
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
+
+  public static final String YARN_REGISTRY_CLASS =
+      YARN_PREFIX + "registry.class";
+  public static final String DEFAULT_YARN_REGISTRY_CLASS =
+      "org.apache.hadoop.registry.client.impl.FSRegistryOperationsService";
 
   /**
    * Use YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS instead.

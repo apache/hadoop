@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
@@ -187,7 +188,8 @@ public class Hdfs extends AbstractFileSystem {
 
       @Override
       public LocatedFileStatus next() throws IOException {
-        return getNext().makeQualifiedLocated(getUri(), p);
+        return ((HdfsLocatedFileStatus)getNext()).makeQualifiedLocated(
+            getUri(), p);
       }
     };
   }

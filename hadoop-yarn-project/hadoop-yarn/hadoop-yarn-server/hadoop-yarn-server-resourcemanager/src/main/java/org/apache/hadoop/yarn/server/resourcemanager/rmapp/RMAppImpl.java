@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
@@ -83,6 +84,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.DisabledBlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.SimpleBlacklistManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
@@ -157,6 +160,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private Clock systemClock;
 
   private boolean isNumAttemptsBeyondThreshold = false;
+
+
 
   // Mutable fields
   private long startTime;
@@ -1073,38 +1078,51 @@ public class RMAppImpl implements RMApp, Recoverable {
                   app.getUser(),
                   BuilderUtils.parseTokensConf(app.submissionContext));
         } catch (Exception e) {
-          String msg = "Failed to fetch user credentials from application:"
-              + e.getMessage();
+          String msg = "Failed to fetch user credentials from application:" + e
+              .getMessage();
           app.diagnostics.append(msg);
           LOG.error(msg, e);
         }
       }
 
-      for (Map.Entry<ApplicationTimeoutType, Long> timeout :
-        app.applicationTimeouts.entrySet()) {
+      for (Map.Entry<ApplicationTimeoutType, Long> timeout : app.applicationTimeouts
+          .entrySet()) {
         app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
             timeout.getKey(), timeout.getValue());
         if (LOG.isDebugEnabled()) {
           long remainingTime = timeout.getValue() - app.systemClock.getTime();
           LOG.debug("Application " + app.applicationId
               + " is registered for timeout monitor, type=" + timeout.getKey()
-              + " remaining timeout="
-              + (remainingTime > 0 ? remainingTime / 1000 : 0) + " seconds");
+              + " remaining timeout=" + (remainingTime > 0 ?
+              remainingTime / 1000 :
+              0) + " seconds");
         }
+      }
+
+      ApplicationPlacementContext placementContext = null;
+      try {
+        placementContext = placeApplication(app.rmContext,
+            app.submissionContext, app.user);
+      } catch (Exception e) {
+        String msg = "Failed to place application to queue :" + e.getMessage();
+        app.diagnostics.append(msg);
+        LOG.error(msg, e);
       }
 
       // No existent attempts means the attempt associated with this app was not
       // started or started but not yet saved.
       if (app.attempts.isEmpty()) {
-        app.scheduler.handle(new AppAddedSchedulerEvent(app.user,
-            app.submissionContext, false, app.applicationPriority));
+        app.scheduler.handle(
+            new AppAddedSchedulerEvent(app.user, app.submissionContext, false,
+                app.applicationPriority, placementContext));
         return RMAppState.SUBMITTED;
       }
 
       // Add application to scheduler synchronously to guarantee scheduler
       // knows applications before AM or NM re-registers.
-      app.scheduler.handle(new AppAddedSchedulerEvent(app.user,
-          app.submissionContext, true, app.applicationPriority));
+      app.scheduler.handle(
+          new AppAddedSchedulerEvent(app.user, app.submissionContext, true,
+              app.applicationPriority, placementContext));
 
       // recover attempts
       app.recoverAppAttempts();
@@ -1120,8 +1138,20 @@ public class RMAppImpl implements RMApp, Recoverable {
       RMAppTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.handler.handle(new AppAddedSchedulerEvent(app.user,
-          app.submissionContext, false, app.applicationPriority));
+      ApplicationPlacementContext placementContext = null;
+      try {
+        placementContext = placeApplication(app.rmContext,
+            app.submissionContext, app.user);
+        replaceQueueFromPlacementContext(placementContext,
+            app.submissionContext);
+      } catch (YarnException e) {
+        String msg = "Failed to place application to queue :" + e.getMessage();
+        app.diagnostics.append(msg);
+        LOG.error(msg, e);
+      }
+      app.handler.handle(
+          new AppAddedSchedulerEvent(app.user, app.submissionContext, false,
+              app.applicationPriority, placementContext));
       // send the ATS create Event
       app.sendATSCreateEvent();
     }
@@ -1611,35 +1641,39 @@ public class RMAppImpl implements RMApp, Recoverable {
     int numNonAMContainerPreempted = 0;
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     Map<String, Long> preemptedSecondsMap = new HashMap<>();
-
-    for (RMAppAttempt attempt : attempts.values()) {
-      if (null != attempt) {
-        RMAppAttemptMetrics attemptMetrics =
-            attempt.getRMAppAttemptMetrics();
-        Resources.addTo(resourcePreempted,
-            attemptMetrics.getResourcePreempted());
-        numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
-        numNonAMContainerPreempted +=
-            attemptMetrics.getNumNonAMContainersPreempted();
-        // getAggregateAppResourceUsage() will calculate resource usage stats
-        // for both running and finished containers.
-        AggregateAppResourceUsage resUsage =
-            attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
-        for (Map.Entry<String, Long> entry : resUsage
-            .getResourceUsageSecondsMap().entrySet()) {
-          long value = RMServerUtils
-              .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
-          value += entry.getValue();
-          resourceSecondsMap.put(entry.getKey(), value);
-        }
-        for (Map.Entry<String, Long> entry : attemptMetrics
-            .getPreemptedResourceSecondsMap().entrySet()) {
-          long value = RMServerUtils
-              .getOrDefault(preemptedSecondsMap, entry.getKey(), 0L);
-          value += entry.getValue();
-          preemptedSecondsMap.put(entry.getKey(), value);
+    this.readLock.lock();
+    try {
+      for (RMAppAttempt attempt : attempts.values()) {
+        if (null != attempt) {
+          RMAppAttemptMetrics attemptMetrics =
+              attempt.getRMAppAttemptMetrics();
+          Resources.addTo(resourcePreempted,
+              attemptMetrics.getResourcePreempted());
+          numAMContainerPreempted += attemptMetrics.getIsPreempted() ? 1 : 0;
+          numNonAMContainerPreempted +=
+              attemptMetrics.getNumNonAMContainersPreempted();
+          // getAggregateAppResourceUsage() will calculate resource usage stats
+          // for both running and finished containers.
+          AggregateAppResourceUsage resUsage =
+              attempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
+          for (Map.Entry<String, Long> entry : resUsage
+              .getResourceUsageSecondsMap().entrySet()) {
+            long value = RMServerUtils
+                .getOrDefault(resourceSecondsMap, entry.getKey(), 0L);
+            value += entry.getValue();
+            resourceSecondsMap.put(entry.getKey(), value);
+          }
+          for (Map.Entry<String, Long> entry : attemptMetrics
+              .getPreemptedResourceSecondsMap().entrySet()) {
+            long value = RMServerUtils
+                .getOrDefault(preemptedSecondsMap, entry.getKey(), 0L);
+            value += entry.getValue();
+            preemptedSecondsMap.put(entry.getKey(), value);
+          }
         }
       }
+    } finally {
+      this.readLock.unlock();
     }
 
     return new RMAppMetrics(resourcePreempted, numNonAMContainerPreempted,
@@ -2013,4 +2047,37 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.submissionContext.setAMContainerSpec(null);
     this.submissionContext.setLogAggregationContext(null);
   }
+
+  @VisibleForTesting
+  static ApplicationPlacementContext placeApplication(RMContext rmContext,
+      ApplicationSubmissionContext context, String user) throws YarnException {
+
+    ApplicationPlacementContext placementContext = null;
+    PlacementManager placementManager = rmContext.getQueuePlacementManager();
+
+    if (placementManager != null) {
+      placementContext = placementManager.placeApplication(context, user);
+    } else{
+      LOG.error(
+          "Queue Placement Manager is null. Cannot place application :" + " "
+              + context.getApplicationId() + " to queue ");
+    }
+
+    return placementContext;
+  }
+
+  static void replaceQueueFromPlacementContext(
+      ApplicationPlacementContext placementContext,
+      ApplicationSubmissionContext context) {
+    // Set it to ApplicationSubmissionContext
+    //apply queue mapping only to new application submissions
+    if (placementContext != null && !StringUtils.equals(context.getQueue(),
+        placementContext.getQueue())) {
+      LOG.info("Placed application=" + context.getApplicationId() + " to queue="
+          + placementContext.getQueue() + ", original queue=" + context
+          .getQueue());
+      context.setQueue(placementContext.getQueue());
+    }
+  }
+
 }

@@ -1,3 +1,5 @@
+@import 'variables.scss';
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,7 +21,8 @@
 body, html, body > .ember-view {
   height: 100%;
   overflow: visible;
-  background: #f6f6f8;
+  background: $yarn-bg;
+  color: $yarn-primary-color;
   font-family: "Open Sans","Helvetica Neue", sans-serif!important;
 }
 body, html {
@@ -186,7 +189,7 @@ table.dataTable thead .sorting_desc_disabled {
 
 .breadcrumb {
   padding-bottom: 3px;
-  background-color: #f6f6f8;
+  background-color: none;
 }
 
 .navbar-default .navbar-nav > li > a {
@@ -201,7 +204,7 @@ table.dataTable thead .sorting_desc_disabled {
 }
 
 .node circle {
-  fill: #fff;
+  fill: $yarn-panel-bg;
   stroke: steelblue;
   stroke-width: 3px;
 }
@@ -221,8 +224,8 @@ table.dataTable thead .sorting_desc_disabled {
 }
 
 .footer {
-  background-color: @white;
-  color: @text-color;
+  background-color: $yarn-panel-bg;
+  color: $yarn-primary-color;
 
   padding: 10px 0px;
   margin: 0px;
@@ -246,7 +249,7 @@ table.dataTable thead .sorting_desc_disabled {
 .dataTables_wrapper .table {
   border: 1px solid lightgrey;
   border-bottom: 1px solid lightgrey !important;
-  border-radious: 5px;
+  border-radius: 5px;
 }
 
 .dataTables_wrapper .table-bordered > thead > tr > th, .table-bordered > tbody > tr > th, .table-bordered > tfoot > tr > th, .table-bordered > thead > tr > td, .table-bordered > tbody > tr > td, .table-bordered > tfoot > tr > td {
@@ -272,9 +275,9 @@ td {
 }
 
 .panel {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 15px;
+  background-color: $yarn-panel-bg;
+  border: 1px solid $yarn-border-color;
+  border-radius: 3px;
   -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -287,8 +290,9 @@ td {
 
 .panel-default > .panel-heading {
   background-image: none;
-  background-color: #f5f5f5 !important;
-  border-radius: 15px 15px 0px 0px;
+  background-color: $yarn-header-bg !important;
+  border-color: $yarn-border-color;
+  border-radius: 3px;
 }
 
 
@@ -356,7 +360,7 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
 
 #sequence text, #legend text {
   font-weight: 600;
-  fill: #fff;
+  fill: $yarn-panel-bg;
 }
 
 #chart {
@@ -364,7 +368,7 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
 }
 
 #chart path {
-  stroke: #fff;
+  stroke: $yarn-panel-bg;
 }
 
 #explanation {
@@ -441,23 +445,25 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
 
 .yarn-cluster-status i.started,
 .em-table-simple-status-cell i.finished {
-  border-color: #43b135;
-  background-color: #60cea5;
+  border-color: $yarn-success-border;
+  background-color: $yarn-success-bg;
 }
+
 .yarn-cluster-status i.stopped,
-.em-table-simple-status-cell i.killed {
-  border-color: #b04b4e;
-  background-color: #ef6162;
+.em-table-simple-status-cell i.killed,
+.em-table-simple-status-cell i.failed {
+  border-color: $yarn-error-border;
+  background-color: $yarn-error-bg;
 }
 .yarn-cluster-status i.inited,
 .em-table-simple-status-cell i.running {
-  border-color: #1c95c0;
-  background-color: #26bbf0;
+  border-color: $yarn-info-border;
+  background-color: $yarn-info-bg;
 }
 .yarn-cluster-status i.notinited,
 .em-table-simple-status-cell i.accepted {
-    border-color: #dca41b;
-    background-color: #ffbc0b;
+    border-color: $yarn-warn-border;
+    background-color: $yarn-warn-bg;
 }
 .yarn-cluster-info {
   display: flex;
@@ -546,7 +552,7 @@ table.table-custom-action > thead > tr > th:last-of-type, table.table-custom-act
 }
 
 .deploy-service .toggle-btn.active {
-  color: #fff;
+  color: $yarn-panel-bg;
   background-color: #337ab7;
   border-color: #337ab7;
   text-shadow: none;
@@ -657,13 +663,13 @@ div.service-action-mask img {
 .yarn-applications-container .table-panel-left .em-table-facet-panel .field-list > li .em-table-facet-panel-values{
   margin-top: 0px;
   margin-bottom: -4px;
-  background: #fff;
-  border: 1px solid #d5d5d5;
+  background: $yarn-panel-bg;
+  border: 1px solid $yarn-border-color;
 }
 
 .yarn-applications-container .table-panel-left .em-table-facet-panel .field-name {
-  background-color: #f7f7f7;
-  border-bottom: 1px solid #d5d5d5;
+  background-color: $yarn-header-bg;
+  border-bottom: 1px solid $yarn-border-color;
   padding: 10px 15px;
 }
 
@@ -712,6 +718,6 @@ div.service-action-mask img {
 }
 
 .em-table .table-column .table-header-cell {
-  background-color: #f7f7f7;
-  border-bottom: 1px solid #d5d5d5;
+  background-color: $yarn-header-bg;
+  border-bottom: 1px solid $yarn-border-color;
 }

@@ -44,7 +44,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.MockApps;
@@ -70,6 +69,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
@@ -84,7 +84,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptI
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -856,28 +855,32 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
     Assert.assertTrue(msg.contains("applicationType=MAPREDUCE"));
  }
-  
+
   @Test
   public void testRMAppSubmitWithQueueChanged() throws Exception {
     // Setup a PlacementManager returns a new queue
     PlacementManager placementMgr = mock(PlacementManager.class);
-    doAnswer(new Answer<Void>() {
+    doAnswer(new Answer<ApplicationPlacementContext>() {
 
       @Override
-      public Void answer(InvocationOnMock invocation) throws Throwable {
-        ApplicationSubmissionContext ctx =
-            (ApplicationSubmissionContext) invocation.getArguments()[0];
-        ctx.setQueue("newQueue");
-        return null;
+      public ApplicationPlacementContext answer(InvocationOnMock invocation)
+          throws Throwable {
+        return new ApplicationPlacementContext("newQueue");
       }
-      
-    }).when(placementMgr).placeApplication(any(ApplicationSubmissionContext.class),
-            any(String.class));
+
+    }).when(placementMgr).placeApplication(
+        any(ApplicationSubmissionContext.class), any(String.class));
     rmContext.setQueuePlacementManager(placementMgr);
-    
+
     asContext.setQueue("oldQueue");
     appMonitor.submitApplication(asContext, "test");
+
     RMApp app = rmContext.getRMApps().get(appId);
+    RMAppEvent event = new RMAppEvent(appId, RMAppEventType.START);
+    rmContext.getRMApps().get(appId).handle(event);
+    event = new RMAppEvent(appId, RMAppEventType.APP_NEW_SAVED);
+    rmContext.getRMApps().get(appId).handle(event);
+
     Assert.assertNotNull("app is null", app);
     Assert.assertEquals("newQueue", asContext.getQueue());
 

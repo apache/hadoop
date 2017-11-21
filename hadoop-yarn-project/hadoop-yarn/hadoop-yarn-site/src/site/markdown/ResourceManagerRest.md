@@ -2107,8 +2107,7 @@ With the Nodes API, you can obtain a collection of resources, each of which repr
 
 ### Query Parameters Supported
 
-      * state - the state of the node
-      * healthy - true or false
+      * states - the states of the node, specified as a comma-separated list, valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONING, DECOMMISSIONED, LOST, REBOOTED, SHUTDOWN
 
 ### Elements of the *nodes* object
 
@@ -2286,7 +2285,7 @@ Use the following URI to obtain a Node Object, from a node identified by the nod
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | rack | string | The rack location of this node |
-| state | string | State of the node - valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONING, DECOMMISSIONED, LOST, REBOOTED |
+| state | string | State of the node - valid values are: NEW, RUNNING, UNHEALTHY, DECOMMISSIONING, DECOMMISSIONED, LOST, REBOOTED, SHUTDOWN |
 | id | string | The node id |
 | nodeHostName | string | The host name of the node |
 | nodeHTTPAddress | string | The nodes HTTP address |

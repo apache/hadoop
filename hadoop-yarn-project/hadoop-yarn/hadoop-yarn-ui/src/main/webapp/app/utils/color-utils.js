@@ -23,10 +23,10 @@ export default {
     "#dbdb8d", "#17becf", "#9edae5"],
 
   colorMap: {
-    "warn": "#ff7f0e",
-    "good": "#2ca02c",
-    "error": "#d62728",
-    "others": "#7f7f7f",
+    "warn": "#ffbc0b",
+    "good": "#60cea5",
+    "error": "#cc6164",
+    "others": "#26bbf0",
   },
 
   getColors: function(nColors, colorsTarget, reverse = false) {

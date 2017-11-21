@@ -52,7 +52,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -67,7 +67,7 @@ import org.mockito.stubbing.Answer;
 @RunWith(Parameterized.class)
 public class TestEditLogRace {
   static {
-    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.DEBUG);
   }
 
   @Parameters

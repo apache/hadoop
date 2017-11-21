@@ -87,7 +87,7 @@ public class ContainerLaunchService extends AbstractService{
       AbstractLauncher launcher = new AbstractLauncher(fs, null);
       try {
         provider.buildContainerLaunchContext(launcher, service,
-            instance, fs, getConfig());
+            instance, fs, getConfig(), container);
         instance.getComponent().getScheduler().getNmClient()
             .startContainerAsync(container,
                 launcher.completeContainerLaunch());
