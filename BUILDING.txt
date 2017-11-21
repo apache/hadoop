@@ -4,7 +4,7 @@ Build instructions for Hadoop
 Requirements:
 
 * Unix System
-* JDK 1.8+
+* JDK 1.7 or 1.8
 * Maven 3.0 or later
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
@@ -14,7 +14,6 @@ Requirements:
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 * python (for releasedocs)
-* bats (for shell code testing)
 * Node.js / bower / Ember-cli (for YARN UI v2 building)
 
 ----------------------------------------------------------------------------------
@@ -57,12 +56,12 @@ Known issues:
 ----------------------------------------------------------------------------------
 Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 
-* Oracle JDK 1.8 (preferred)
+* Oracle JDK 1.7 (preferred)
   $ sudo apt-get purge openjdk*
   $ sudo apt-get install software-properties-common
   $ sudo add-apt-repository ppa:webupd8team/java
   $ sudo apt-get update
-  $ sudo apt-get install oracle-java8-installer
+  $ sudo apt-get install oracle-java7-installer
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
@@ -74,9 +73,6 @@ Optional packages:
 
 * Snappy compression
   $ sudo apt-get install snappy libsnappy-dev
-* Intel ISA-L library for erasure coding
-  Please refer to https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
-  (OR https://github.com/01org/isa-l)
 * Bzip2
   $ sudo apt-get install bzip2 libbz2-dev
 * Jansson (C Library for JSON)
@@ -111,7 +107,7 @@ Maven build goals:
 
  * Clean                     : mvn clean [-Preleasedocs]
  * Compile                   : mvn compile [-Pnative]
- * Run tests                 : mvn test [-Pnative] [-Pshelltest]
+ * Run tests                 : mvn test [-Pnative]
  * Create JAR                : mvn package
  * Run findbugs              : mvn compile findbugs:findbugs
  * Run checkstyle            : mvn compile checkstyle:checkstyle
@@ -189,38 +185,6 @@ Maven build goals:
   For example, to run test_bulk_crc32, you would use:
   mvn test -Pnative -Dtest=test_bulk_crc32
 
- Intel ISA-L build options:
-
-   Intel ISA-L is an erasure coding library that can be utilized by the native code.
-   It is currently an optional component, meaning that Hadoop can be built with
-   or without this dependency. Note the library is used via dynamic module. Please
-   reference the official site for the library details.
-   https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
-   (OR https://github.com/01org/isa-l)
-
-  * Use -Drequire.isal to fail the build if libisal.so is not found.
-    If this option is not specified and the isal library is missing,
-    we silently build a version of libhadoop.so that cannot make use of ISA-L and
-    the native raw erasure coders.
-    This option is recommended if you plan on making use of native raw erasure
-    coders and want to get more repeatable builds.
-  * Use -Disal.prefix to specify a nonstandard location for the libisal
-    library files. You do not need this option if you have installed ISA-L to the
-    system library path.
-  * Use -Disal.lib to specify a nonstandard location for the libisal library
-    files.
-  * Use -Dbundle.isal to copy the contents of the isal.lib directory into
-    the final tar file. This option requires that -Disal.lib is also given,
-    and it ignores the -Disal.prefix option. If -Disal.lib isn't given, the
-    bundling and building will fail.
-
- Special plugins: OWASP's dependency-check:
-
-   OWASP's dependency-check plugin will scan the third party dependencies
-   of this project for known CVEs (security vulnerabilities against them).
-   It will produce a report in target/dependency-check-report.html. To
-   invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
-   requires maven 3.1.1 or greater.
 
 ----------------------------------------------------------------------------------
 Building components separately
@@ -316,8 +280,8 @@ Building on Windows
 Requirements:
 
 * Windows System
-* JDK 1.8+
-* Maven 3.3 or later
+* JDK 1.7 or 1.8
+* Maven 3.0 or later
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer
@@ -391,3 +355,14 @@ http://www.zlib.net/
 Building distributions:
 
  * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar]
+
+----------------------------------------------------------------------------------
+Running compatibility checks with checkcompatibility.py
+
+Invoke `./dev-support/bin/checkcompatibility.py` to run Java API Compliance Checker
+to compare the public Java APIs of two git objects. This can be used by release
+managers to compare the compatibility of a previous and current release.
+
+As an example, this invocation will check the compatibility of interfaces annotated as Public or LimitedPrivate:
+
+./dev-support/bin/checkcompatibility.py --annotation org.apache.hadoop.classification.InterfaceAudience.Public --annotation org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate --include "hadoop.*" branch-2.7.2 trunk
