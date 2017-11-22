@@ -83,13 +83,14 @@ public class TestAMRMRPCNodeUpdates {
     rm.drainEvents();
   }
   
-  private void syncNodeGracefulDecommission(MockNM nm, int timeout) throws Exception {
+  private void syncNodeGracefulDecommission(
+      MockNM nm, int timeout) throws Exception {
     rm.sendNodeGracefulDecommission(nm, timeout);
     rm.waitForState(nm.getNodeId(), NodeState.DECOMMISSIONING);
     rm.drainEvents();
   }
   
-    private AllocateResponse allocate(final ApplicationAttemptId attemptId,
+  private AllocateResponse allocate(final ApplicationAttemptId attemptId,
       final AllocateRequest req) throws Exception {
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(attemptId.toString());
@@ -132,8 +133,10 @@ public class TestAMRMRPCNodeUpdates {
     List<NodeReport> updatedNodes = response1.getUpdatedNodes();
     Assert.assertEquals(1, updatedNodes.size());
     NodeReport nr = updatedNodes.iterator().next();
-    Assert.assertEquals(decommissioningTimeout, nr.getDecommissioningTimeout());
-    Assert.assertEquals(NodeUpdateType.NODE_DECOMMISSIONING, nr.getNodeUpdateType());
+    Assert.assertEquals(
+        decommissioningTimeout, nr.getDecommissioningTimeout());
+    Assert.assertEquals(
+        NodeUpdateType.NODE_DECOMMISSIONING, nr.getNodeUpdateType());
   }
   
   

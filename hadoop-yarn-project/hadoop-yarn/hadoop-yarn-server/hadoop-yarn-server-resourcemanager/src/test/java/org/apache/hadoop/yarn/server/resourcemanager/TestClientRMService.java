@@ -180,13 +180,13 @@ public class TestClientRMService {
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
   
-  
   @Test
   public void testGetDecommissioningClusterNodes() throws Exception {
     MockRM rm = new MockRM() {
       protected ClientRMService createClientRMService() {
         return new ClientRMService(this.rmContext, scheduler,
-            this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
+            this.rmAppManager, this.applicationACLsManager,
+            this.queueACLsManager,
             this.getRMContext().getRMDelegationTokenSecretManager());
       };
     };
@@ -212,7 +212,9 @@ public class TestClientRMService {
     
     // Make call
     List<NodeReport> nodeReports = client.getClusterNodes(
-        GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.DECOMMISSIONING))).getNodeReports();
+        GetClusterNodesRequest.newInstance(
+            EnumSet.of(NodeState.DECOMMISSIONING)))
+        .getNodeReports();
     Assert.assertEquals(1, nodeReports.size());
     NodeReport nr = nodeReports.iterator().next();
     Assert.assertEquals(decommissioningTimeout, nr.getDecommissioningTimeout());

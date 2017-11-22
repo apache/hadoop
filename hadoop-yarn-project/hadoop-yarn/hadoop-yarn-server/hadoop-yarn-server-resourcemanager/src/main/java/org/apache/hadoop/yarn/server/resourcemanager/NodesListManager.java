@@ -493,11 +493,13 @@ public class NodesListManager extends CompositeService implements
     switch (event.getType()) {
     case NODE_UNUSABLE:
       LOG.debug(eventNode + " reported unusable");
-      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode, RMAppNodeUpdateType.NODE_UNUSABLE);
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
+          RMAppNodeUpdateType.NODE_UNUSABLE);
       break;
     case NODE_USABLE:
       LOG.debug(eventNode + " reported usable");
-      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode, RMAppNodeUpdateType.NODE_USABLE);
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
+          RMAppNodeUpdateType.NODE_USABLE);
       break;
     case NODE_DECOMMISSIONING:
       LOG.debug(eventNode + " reported decommissioning");
@@ -624,18 +626,20 @@ public class NodesListManager extends CompositeService implements
   }
   
   // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.
-  // This enables NodesListManager to pick up new value without ResourceManager restart.
-  private int readDecommissioningTimeout(Configuration conf) {
+  // This enables NodesListManager to pick up new value without
+  // ResourceManager restart.
+  private int readDecommissioningTimeout(Configuration pConf) {
     try {
-      if (conf == null) {
-        conf = new YarnConfiguration();
+      if (pConf == null) {
+        pConf = new YarnConfiguration();
       }
       int configuredDefaultDecTimeoutSecs =
-          conf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+          pConf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
               YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
       if (defaultDecTimeoutSecs != configuredDefaultDecTimeoutSecs) {
         defaultDecTimeoutSecs = configuredDefaultDecTimeoutSecs;
-        LOG.info("Use new decommissioningTimeoutSecs: " + defaultDecTimeoutSecs);
+        LOG.info("Use new decommissioningTimeoutSecs: "
+            + defaultDecTimeoutSecs);
       }
     } catch (Exception e) {
       LOG.warn("Error readDecommissioningTimeout " + e.getMessage());

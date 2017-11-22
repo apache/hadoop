@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -305,7 +304,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
   
   @Test
-  public void testGracefulDecommissionDefaultTimeoutResolution() throws Exception  {
+  public void testGracefulDecommissionDefaultTimeoutResolution()
+      throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeHostXmlFile
         .getAbsolutePath());
@@ -323,36 +323,45 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
     NodeHeartbeatResponse nodeHeartbeat3 = nm3.nodeHeartbeat(true);
 
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
+    Assert.assertTrue(
+        NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
+    Assert.assertTrue(
+        NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
+    Assert.assertTrue(
+        NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
 
     rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
     rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.waitForState(nm3.getNodeId(), NodeState.RUNNING);
 
-    // Graceful decommission both host1 and host2, with non default timeout for host1
+    // Graceful decommission both host1 and host2, with
+    // non default timeout for host1
     final Integer nm1DecommissionTimeout = 20;
     writeToHostsXmlFile(
-        excludeHostXmlFile, Pair.of(nm1.getNodeId().getHost(), nm1DecommissionTimeout),
+        excludeHostXmlFile,
+        Pair.of(nm1.getNodeId().getHost(), nm1DecommissionTimeout),
         Pair.of(nm2.getNodeId().getHost(), null));
     rm.getNodesListManager().refreshNodes(conf, true);
     rm.waitForState(nm1.getNodeId(), NodeState.DECOMMISSIONING);
     rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONING);
-    Assert.assertEquals(nm1DecommissionTimeout, rm.getDecommissioningTimeout(nm1.getNodeId()));
+    Assert.assertEquals(
+        nm1DecommissionTimeout, rm.getDecommissioningTimeout(nm1.getNodeId()));
     Integer defaultDecTimeout =
         conf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
             YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
-    Assert.assertEquals(defaultDecTimeout, rm.getDecommissioningTimeout(nm2.getNodeId()));
+    Assert.assertEquals(
+        defaultDecTimeout, rm.getDecommissioningTimeout(nm2.getNodeId()));
 
     // Graceful decommission host3 with a new default timeout
     final Integer newDefaultDecTimeout = defaultDecTimeout + 10;
-    writeToHostsXmlFile(excludeHostXmlFile, Pair.of(nm3.getNodeId().getHost(), null));
+    writeToHostsXmlFile(
+        excludeHostXmlFile, Pair.of(nm3.getNodeId().getHost(), null));
     conf.setInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
         newDefaultDecTimeout);
     rm.getNodesListManager().refreshNodes(conf, true);
     rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONING);
-    Assert.assertEquals(newDefaultDecTimeout, rm.getDecommissioningTimeout(nm3.getNodeId()));
+    Assert.assertEquals(
+        newDefaultDecTimeout, rm.getDecommissioningTimeout(nm3.getNodeId()));
   }
 
   /**
@@ -2060,8 +2069,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
   }
   
-  private void writeToHostsXmlFile(File file, Pair<String, Integer>... hostsAndTimeouts)
-      throws Exception {
+  private void writeToHostsXmlFile(
+      File file, Pair<String, Integer>... hostsAndTimeouts) throws Exception {
     ensureFileExists(file);
     DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
     Document doc = dbFactory.newDocumentBuilder().newDocument();
@@ -2076,7 +2085,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
       if (hostsAndTimeout.getRight() != null) {
         Element timeout = doc.createElement("timeout");
         host.appendChild(timeout);
-        timeout.appendChild(doc.createTextNode(hostsAndTimeout.getRight().toString()));
+        timeout.appendChild(
+            doc.createTextNode(hostsAndTimeout.getRight().toString())
+        );
       }
     }
     TransformerFactory transformerFactory = TransformerFactory.newInstance();

@@ -29,7 +29,8 @@ public class RMAppNodeUpdateEvent extends RMAppEvent {
     NODE_UNUSABLE,
     NODE_DECOMMISSIONING;
   
-    public static NodeUpdateType convertToNodeUpdateType(RMAppNodeUpdateType rmAppNodeUpdateType) {
+    public static NodeUpdateType convertToNodeUpdateType(
+        RMAppNodeUpdateType rmAppNodeUpdateType) {
       return NodeUpdateType.valueOf(rmAppNodeUpdateType.name());
     }
   }

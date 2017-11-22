@@ -1160,8 +1160,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // Update NM metrics during graceful decommissioning.
       rmNode.updateMetricsForGracefulDecommission(initState, finalState);
       rmNode.decommissioningTimeout = timeout;
-      // Notify NodesListManager to notify all RMApp so that each Application Master
-      // could take any required actions.
+      // Notify NodesListManager to notify all RMApp so that each
+      // Application Master could take any required actions.
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodesListManagerEvent(
               NodesListManagerEventType.NODE_DECOMMISSIONING, rmNode));

@@ -918,8 +918,10 @@ public class MockRM extends ResourceManager {
         node.getState());
   }
   
-  public void sendNodeGracefulDecommission(MockNM nm, int timeout) throws Exception {
-    RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(nm.getNodeId());
+  public void sendNodeGracefulDecommission(
+      MockNM nm, int timeout) throws Exception {
+    RMNodeImpl node = (RMNodeImpl)
+        getRMContext().getRMNodes().get(nm.getNodeId());
     Assert.assertNotNull("node shouldn't be null", node);
     node.handle(new RMNodeDecommissioningEvent(nm.getNodeId(), timeout));
   }
@@ -932,7 +934,8 @@ public class MockRM extends ResourceManager {
   }
   
   public Integer getDecommissioningTimeout(NodeId nodeid) {
-    return this.getRMContext().getRMNodes().get(nodeid).getDecommissioningTimeout();
+    return this.getRMContext().getRMNodes()
+        .get(nodeid).getDecommissioningTimeout();
   }
 
   public KillApplicationResponse killApp(ApplicationId appId) throws Exception {

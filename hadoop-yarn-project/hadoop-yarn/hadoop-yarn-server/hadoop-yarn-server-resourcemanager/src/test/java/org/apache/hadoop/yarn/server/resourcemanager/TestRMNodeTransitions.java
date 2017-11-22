@@ -100,8 +100,8 @@ public class TestRMNodeTransitions {
   }
 
   private NodesListManagerEvent nodesListManagerEvent = null;
-
-  private List<NodeState> nodesListManagerEventsNodeStateSequence = new LinkedList<>();
+  private List<NodeState> nodesListManagerEventsNodeStateSequence =
+      new LinkedList<>();
 
   private class TestNodeListManagerEventDispatcher implements
       EventHandler<NodesListManagerEvent> {

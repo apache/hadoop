@@ -188,7 +188,8 @@ public class BuilderUtils {
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime) {
     return newNodeReport(nodeId, nodeState, httpAddress, rackName, used,
-        capability, numContainers, healthReport, lastHealthReportTime, null, null, null);
+        capability, numContainers, healthReport, lastHealthReportTime,
+        null, null, null);
   }
 
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
