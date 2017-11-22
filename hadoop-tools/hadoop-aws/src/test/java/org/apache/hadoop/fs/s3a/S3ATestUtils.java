@@ -21,10 +21,13 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory;
 import org.apache.hadoop.fs.s3a.s3guard.DynamoDBLocalClientFactory;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
@@ -39,9 +42,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
@@ -59,6 +66,7 @@ public final class S3ATestUtils {
    * a property has been unset.
    */
   public static final String UNSET_PROPERTY = "unset";
+  public static final int PURGE_DELAY_SECONDS = 60 * 60;
 
   /**
    * Get S3A FS name.
@@ -120,13 +128,17 @@ public final class S3ATestUtils {
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
     if (purge) {
-      conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
-      // but a long delay so that parallel multipart tests don't
+      // purge with but a delay so that parallel multipart tests don't
       // suddenly start timing out
-      conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 30 * 60);
+      enableMultipartPurge(conf, PURGE_DELAY_SECONDS);
     }
     fs1.initialize(testURI, conf);
     return fs1;
+  }
+
+  public static void enableMultipartPurge(Configuration conf, int seconds) {
+    conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
+    conf.setInt(PURGE_EXISTING_MULTIPART_AGE, seconds);
   }
 
   /**
@@ -287,13 +299,13 @@ public final class S3ATestUtils {
    * @return the exception, if it is of the expected class
    * @throws Exception the exception passed in.
    */
-  public static Exception verifyExceptionClass(Class clazz,
+  public static <E extends Throwable> E verifyExceptionClass(Class<E> clazz,
       Exception ex)
       throws Exception {
     if (!(ex.getClass().equals(clazz))) {
       throw ex;
     }
-    return ex;
+    return (E)ex;
   }
 
   /**
@@ -302,7 +314,7 @@ public final class S3ATestUtils {
    * @param conf configuration to patch
    */
   public static void disableFilesystemCaching(Configuration conf) {
-    conf.setBoolean("fs.s3a.impl.disable.cache", true);
+    conf.setBoolean(FS_S3A_IMPL_DISABLE_CACHE, true);
   }
 
   /**
@@ -732,4 +744,112 @@ public final class S3ATestUtils {
         = (S3ABlockOutputStream) out.getWrappedStream();
     return blockOutputStream.getStatistics();
   }
+
+  /**
+   * Read in a file and convert to an ascii string.
+   * @param fs filesystem
+   * @param path path to read
+   * @return the bytes read and converted to a string
+   * @throws IOException IO problems
+   */
+  public static String read(FileSystem fs,
+      Path path) throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    try (FSDataInputStream in = fs.open(path)) {
+      byte[] buf = new byte[(int)status.getLen()];
+      in.readFully(0, buf);
+      return new String(buf);
+    }
+  }
+
+  /**
+   * List a directory.
+   * @param fileSystem FS
+   * @param path path
+   * @throws IOException failure.
+   */
+  public static void lsR(FileSystem fileSystem, Path path, boolean recursive)
+      throws Exception {
+    if (path == null) {
+      // surfaces when someone calls getParent() on something at the top
+      // of the path
+      LOG.info("Empty path");
+      return;
+    }
+    S3AUtils.applyLocatedFiles(fileSystem.listFiles(path, recursive),
+        (status) -> LOG.info("  {}", status));
+  }
+
+  /**
+   * Turn on the inconsistent S3A FS client in a configuration,
+   * with 100% probability of inconsistency, default delays.
+   * For this to go live, the paths must include the element
+   * {@link InconsistentAmazonS3Client#DEFAULT_DELAY_KEY_SUBSTRING}.
+   * @param conf configuration to patch
+   * @param delay delay in millis
+   */
+  public static void enableInconsistentS3Client(Configuration conf,
+      long delay) {
+    LOG.info("Enabling inconsistent S3 client");
+    conf.setClass(S3_CLIENT_FACTORY_IMPL, InconsistentS3ClientFactory.class,
+        S3ClientFactory.class);
+    conf.set(FAIL_INJECT_INCONSISTENCY_KEY, DEFAULT_DELAY_KEY_SUBSTRING);
+    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, delay);
+    conf.setFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY, 0.0f);
+    conf.setFloat(FAIL_INJECT_THROTTLE_PROBABILITY, 0.0f);
+  }
+
+  /**
+   * Is the filesystem using the inconsistent/throttling/unreliable client?
+   * @param fs filesystem
+   * @return true if the filesystem's client is the inconsistent one.
+   */
+  public static boolean isFaultInjecting(S3AFileSystem fs) {
+    return fs.getAmazonS3Client() instanceof InconsistentAmazonS3Client;
+  }
+
+  /**
+   * Skip a test because the client is using fault injection.
+   * This should only be done for those tests which are measuring the cost
+   * of operations or otherwise cannot handle retries.
+   * @param fs filesystem to check
+   */
+  public static void skipDuringFaultInjection(S3AFileSystem fs) {
+    Assume.assumeFalse("Skipping as filesystem has fault injection",
+        isFaultInjecting(fs));
+  }
+
+  /**
+   * Date format used for mapping upload initiation time to human string.
+   */
+  private static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
+      "yyyy-MM-dd HH:mm:ss");
+
+  /**
+   * Get a list of all pending uploads under a prefix, one which can be printed.
+   * @param prefix prefix to look under
+   * @return possibly empty list
+   * @throws IOException IO failure.
+   */
+  public static List<String> listMultipartUploads(S3AFileSystem fs,
+      String prefix) throws IOException {
+
+    return fs
+        .listMultipartUploads(prefix).stream()
+        .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
+            upload.getKey(),
+            upload.getUploadId(),
+            LISTING_FORMAT.format(upload.getInitiated())))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Skip a test if the FS isn't marked as supporting magic commits.
+   * @param fs filesystem
+   */
+  public void assumeMagicCommitEnabled(S3AFileSystem fs) {
+    assume("Magic commit option disabled on " + fs,
+        fs.hasCapability(CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
+  }
+
 }

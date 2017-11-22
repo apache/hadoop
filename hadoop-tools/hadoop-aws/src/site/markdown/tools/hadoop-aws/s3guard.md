@@ -426,7 +426,7 @@ hadoop s3guard diff s3a://ireland-1
 Prints and optionally checks the s3guard and encryption status of a bucket.
 
 ```bash
-hadoop s3guard bucket-info [ -guarded ] [-unguarded] [-auth] [-nonauth] [-encryption ENCRYPTION] s3a://BUCKET
+hadoop s3guard bucket-info [ -guarded ] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] s3a://BUCKET
 ```
 
 Options
@@ -437,6 +437,7 @@ Options
 | `-unguarded` | Require S3Guard to be disabled |
 | `-auth` | Require the S3Guard mode to be "authoritative" |
 | `-nonauth` | Require the S3Guard mode to be "non-authoritative" |
+| `-magic` | Require the S3 filesystem to be support the "magic" committer |
 | `-encryption <type>` | Require a specific server-side encryption algorithm  |
 
 The server side encryption options are not directly related to S3Guard, but
@@ -445,10 +446,11 @@ it is often convenient to check them at the same time.
 Example
 
 ```bash
-hadoop s3guard bucket-info -guarded s3a://ireland-1
+hadoop s3guard bucket-info -guarded -magic s3a://ireland-1
 ```
 
 List the details of bucket `s3a://ireland-1`, mandating that it must have S3Guard enabled
+("-guarded") and that support for the magic S3A committer is enabled ("-magic")
 
 ```
 Filesystem s3a://ireland-1
@@ -476,6 +478,7 @@ Metadata Store Diagnostics:
     TableSizeBytes: 12812,ItemCount: 91,
     TableArn: arn:aws:dynamodb:eu-west-1:00000000:table/ireland-1,}
   write-capacity=20
+The "magic" committer is supported
 
 S3A Client
   Endpoint: fs.s3a.endpoint=s3-eu-west-1.amazonaws.com

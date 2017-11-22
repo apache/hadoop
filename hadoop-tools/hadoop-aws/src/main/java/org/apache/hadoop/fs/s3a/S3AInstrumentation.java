@@ -24,7 +24,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
@@ -122,8 +127,23 @@ public class S3AInstrumentation {
       STREAM_WRITE_BLOCK_UPLOADS_ABORTED,
       STREAM_WRITE_TOTAL_TIME,
       STREAM_WRITE_TOTAL_DATA,
+      COMMITTER_COMMITS_CREATED,
+      COMMITTER_COMMITS_COMPLETED,
+      COMMITTER_JOBS_SUCCEEDED,
+      COMMITTER_JOBS_FAILED,
+      COMMITTER_TASKS_SUCCEEDED,
+      COMMITTER_TASKS_FAILED,
+      COMMITTER_BYTES_COMMITTED,
+      COMMITTER_BYTES_UPLOADED,
+      COMMITTER_COMMITS_FAILED,
+      COMMITTER_COMMITS_ABORTED,
+      COMMITTER_COMMITS_REVERTED,
+      COMMITTER_MAGIC_FILES_CREATED,
       S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
-      S3GUARD_METADATASTORE_INITIALIZATION
+      S3GUARD_METADATASTORE_INITIALIZATION,
+      S3GUARD_METADATASTORE_RETRY,
+      S3GUARD_METADATASTORE_THROTTLED,
+      STORE_IO_THROTTLED
   };
 
 
@@ -179,8 +199,11 @@ public class S3AInstrumentation {
       gauge(statistic.getSymbol(), statistic.getDescription());
     }
     //todo need a config for the quantiles interval?
+    int interval = 1;
     quantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-        "ops", "latency", 1);
+        "ops", "latency", interval);
+    quantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+        "events", "frequency (Hz)", interval);
   }
 
   /**
@@ -372,7 +395,7 @@ public class S3AInstrumentation {
   }
 
   /**
-   * Indicate that S3A deleted one or more file.s
+   * Indicate that S3A deleted one or more files.
    * @param count number of files.
    */
   public void fileDeleted(int count) {
@@ -506,6 +529,14 @@ public class S3AInstrumentation {
   }
 
   /**
+   * Create a new instance of the committer statistics.
+   * @return a new committer statistics instance
+   */
+  CommitterStatistics newCommitterStatistics() {
+    return new CommitterStatistics();
+  }
+
+  /**
    * Merge in the statistics of a single input stream into
    * the filesystem-wide statistics.
    * @param statistics stream statistics
@@ -584,9 +615,12 @@ public class S3AInstrumentation {
 
     /**
      * The inner stream was opened.
+     * @return the previous count
      */
-    public void streamOpened() {
+    public long streamOpened() {
+      long count = openOperations;
       openOperations++;
+      return count;
     }
 
     /**
@@ -810,10 +844,13 @@ public class S3AInstrumentation {
     }
 
     /**
-     * Note an exception in a multipart complete.
+     * Note exception in a multipart complete.
+     * @param count count of exceptions
      */
-    void exceptionInMultipartComplete() {
-      exceptionsInMultipartFinalize.incrementAndGet();
+    void exceptionInMultipartComplete(int count) {
+      if (count > 0) {
+        exceptionsInMultipartFinalize.addAndGet(count);
+      }
     }
 
     /**
@@ -829,6 +866,15 @@ public class S3AInstrumentation {
      */
     public long getBytesPendingUpload() {
       return bytesPendingUpload.get();
+    }
+
+    /**
+     * Data has been uploaded to be committed in a subsequent operation;
+     * to be called at the end of the write.
+     * @param size size in bytes
+     */
+    public void commitUploaded(long size) {
+      incrementCounter(COMMITTER_BYTES_UPLOADED, size);
     }
 
     /**
@@ -917,6 +963,177 @@ public class S3AInstrumentation {
 
     public void storeClosed() {
 
+    }
+
+    /**
+     * Throttled request.
+     */
+    public void throttled() {
+      incrementCounter(S3GUARD_METADATASTORE_THROTTLED, 1);
+      addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE, 1);
+    }
+
+    /**
+     * S3Guard is retrying after a (retryable) failure.
+     */
+    public void retrying() {
+      incrementCounter(S3GUARD_METADATASTORE_RETRY, 1);
+    }
+  }
+
+  /**
+   * Instrumentation exported to S3Guard Committers.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public final class CommitterStatistics {
+
+    /** A commit has been created. */
+    public void commitCreated() {
+      incrementCounter(COMMITTER_COMMITS_CREATED, 1);
+    }
+
+    /**
+     * Data has been uploaded to be committed in a subsequent operation.
+     * @param size size in bytes
+     */
+    public void commitUploaded(long size) {
+      incrementCounter(COMMITTER_BYTES_UPLOADED, size);
+    }
+
+    /**
+     * A commit has been completed.
+     * @param size size in bytes
+     */
+    public void commitCompleted(long size) {
+      incrementCounter(COMMITTER_COMMITS_COMPLETED, 1);
+      incrementCounter(COMMITTER_BYTES_COMMITTED, size);
+    }
+
+    /** A commit has been aborted. */
+    public void commitAborted() {
+      incrementCounter(COMMITTER_COMMITS_ABORTED, 1);
+    }
+
+    public void commitReverted() {
+      incrementCounter(COMMITTER_COMMITS_REVERTED, 1);
+    }
+
+    public void commitFailed() {
+      incrementCounter(COMMITTER_COMMITS_FAILED, 1);
+    }
+
+    public void taskCompleted(boolean success) {
+      incrementCounter(
+          success ? COMMITTER_TASKS_SUCCEEDED
+              : COMMITTER_TASKS_FAILED,
+          1);
+    }
+
+    public void jobCompleted(boolean success) {
+      incrementCounter(
+          success ? COMMITTER_JOBS_SUCCEEDED
+              : COMMITTER_JOBS_FAILED,
+          1);
+    }
+  }
+
+  /**
+   * Copy all the metrics to a map of (name, long-value).
+   * @return a map of the metrics
+   */
+  public Map<String, Long> toMap() {
+    MetricsToMap metricBuilder = new MetricsToMap(null);
+    registry.snapshot(metricBuilder, true);
+    for (Map.Entry<String, MutableCounterLong> entry :
+        streamMetrics.entrySet()) {
+      metricBuilder.tuple(entry.getKey(), entry.getValue().value());
+    }
+    return metricBuilder.getMap();
+  }
+
+  /**
+   * Convert all metrics to a map.
+   */
+  private static class MetricsToMap extends MetricsRecordBuilder {
+    private final MetricsCollector parent;
+    private final Map<String, Long> map =
+        new HashMap<>(COUNTERS_TO_CREATE.length * 2);
+
+    MetricsToMap(MetricsCollector parent) {
+      this.parent = parent;
+    }
+
+    @Override
+    public MetricsRecordBuilder tag(MetricsInfo info, String value) {
+      return this;
+    }
+
+    @Override
+    public MetricsRecordBuilder add(MetricsTag tag) {
+      return this;
+    }
+
+    @Override
+    public MetricsRecordBuilder add(AbstractMetric metric) {
+      return this;
+    }
+
+    @Override
+    public MetricsRecordBuilder setContext(String value) {
+      return this;
+    }
+
+    @Override
+    public MetricsRecordBuilder addCounter(MetricsInfo info, int value) {
+      return tuple(info, value);
+    }
+
+    @Override
+    public MetricsRecordBuilder addCounter(MetricsInfo info, long value) {
+      return tuple(info, value);
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo info, int value) {
+      return tuple(info, value);
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo info, long value) {
+      return tuple(info, value);
+    }
+
+    public MetricsToMap tuple(MetricsInfo info, long value) {
+      return tuple(info.name(), value);
+    }
+
+    public MetricsToMap tuple(String name, long value) {
+      map.put(name, value);
+      return this;
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo info, float value) {
+      return tuple(info, (long) value);
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo info, double value) {
+      return tuple(info, (long) value);
+    }
+
+    @Override
+    public MetricsCollector parent() {
+      return parent;
+    }
+
+    /**
+     * Get the map.
+     * @return the map of metrics
+     */
+    public Map<String, Long> getMap() {
+      return map;
     }
   }
 }

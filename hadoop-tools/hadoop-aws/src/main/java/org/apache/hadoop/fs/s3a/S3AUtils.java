@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
+import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
@@ -32,12 +38,18 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
 
 import com.google.common.collect.Lists;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -46,12 +58,15 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -63,8 +78,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 @InterfaceStability.Evolving
 public final class S3AUtils {
 
-  /** Reuse the S3AFileSystem log. */
-  private static final Logger LOG = S3AFileSystem.LOG;
+  private static final Logger LOG = LoggerFactory.getLogger(S3AUtils.class);
   static final String CONSTRUCTOR_EXCEPTION = "constructor exception";
   static final String INSTANTIATION_EXCEPTION
       = "instantiation exception";
@@ -95,6 +109,8 @@ public final class S3AUtils {
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
           + SERVER_SIDE_ENCRYPTION_KEY;
+  private static final String EOF_MESSAGE_IN_XML_PARSER
+      = "Failed to sanitize XML document destined for handler class";
 
 
   private S3AUtils() {
@@ -106,6 +122,10 @@ public final class S3AUtils {
    * {@link AmazonClientException} passed in, and any status codes included
    * in the operation. That is: HTTP error codes are examined and can be
    * used to build a more specific response.
+   *
+   * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
+   * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
+   * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
    * @param operation operation
    * @param path path operated on (must not be null)
    * @param exception amazon exception raised
@@ -131,19 +151,28 @@ public final class S3AUtils {
   @SuppressWarnings("ThrowableInstanceNeverThrown")
   public static IOException translateException(String operation,
       String path,
-      AmazonClientException exception) {
+      SdkBaseException exception) {
     String message = String.format("%s%s: %s",
         operation,
         path != null ? (" on " + path) : "",
         exception);
     if (!(exception instanceof AmazonServiceException)) {
-      if (containsInterruptedException(exception)) {
-        return (IOException)new InterruptedIOException(message)
-            .initCause(exception);
+      Exception innerCause = containsInterruptedException(exception);
+      if (innerCause != null) {
+        // interrupted IO, or a socket exception underneath that class
+        return translateInterruptedException(exception, innerCause, message);
+      }
+      if (signifiesConnectionBroken(exception)) {
+        // call considered an sign of connectivity failure
+        return (EOFException)new EOFException(message).initCause(exception);
       }
       return new AWSClientIOException(message, exception);
     } else {
-
+      if (exception instanceof AmazonDynamoDBException) {
+        // special handling for dynamo DB exceptions
+        return translateDynamoDBException(message,
+            (AmazonDynamoDBException)exception);
+      }
       IOException ioe;
       AmazonServiceException ase = (AmazonServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
@@ -151,9 +180,11 @@ public final class S3AUtils {
           ? (AmazonS3Exception) ase
           : null;
       int status = ase.getStatusCode();
+      message = message + ":" + ase.getErrorCode();
       switch (status) {
 
       case 301:
+      case 307:
         if (s3Exception != null) {
           if (s3Exception.getAdditionalDetails() != null &&
               s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
@@ -163,11 +194,16 @@ public final class S3AUtils {
                 + "the bucket.",
                 s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
           }
-          ioe = new AWSS3IOException(message, s3Exception);
+          ioe = new AWSRedirectException(message, s3Exception);
         } else {
-          ioe = new AWSServiceIOException(message, ase);
+          ioe = new AWSRedirectException(message, ase);
         }
         break;
+
+      case 400:
+        ioe = new AWSBadRequestException(message, ase);
+        break;
+
       // permissions
       case 401:
       case 403:
@@ -186,6 +222,25 @@ public final class S3AUtils {
       // a shorter one while it is being read.
       case 416:
         ioe = new EOFException(message);
+        ioe.initCause(ase);
+        break;
+
+      // this has surfaced as a "no response from server" message.
+      // so rare we haven't replicated it.
+      // Treating as an idempotent proxy error.
+      case 443:
+      case 444:
+        ioe = new AWSNoResponseException(message, ase);
+        break;
+
+      // throttling
+      case 503:
+        ioe = new AWSServiceThrottledException(message, ase);
+        break;
+
+      // internal error
+      case 500:
+        ioe = new AWSStatus500Exception(message, ase);
         break;
 
       default:
@@ -226,18 +281,96 @@ public final class S3AUtils {
    * Recurse down the exception loop looking for any inner details about
    * an interrupted exception.
    * @param thrown exception thrown
-   * @return true if down the execution chain the operation was an interrupt
+   * @return the actual exception if the operation was an interrupt
    */
-  static boolean containsInterruptedException(Throwable thrown) {
+  static Exception containsInterruptedException(Throwable thrown) {
     if (thrown == null) {
-      return false;
+      return null;
     }
     if (thrown instanceof InterruptedException ||
-        thrown instanceof InterruptedIOException) {
-      return true;
+        thrown instanceof InterruptedIOException ||
+        thrown instanceof AbortedException) {
+      return (Exception)thrown;
     }
     // tail recurse
     return containsInterruptedException(thrown.getCause());
+  }
+
+  /**
+   * Handles translation of interrupted exception. This includes
+   * preserving the class of the fault for better retry logic
+   * @param exception outer exception
+   * @param innerCause inner cause (which is guaranteed to be some form
+   * of interrupted exception
+   * @param message message for the new exception.
+   * @return an IOE which can be rethrown
+   */
+  private static InterruptedIOException translateInterruptedException(
+      SdkBaseException exception,
+      final Exception innerCause,
+      String message) {
+    InterruptedIOException ioe;
+    if (innerCause instanceof SocketTimeoutException) {
+      ioe = new SocketTimeoutException(message);
+    } else {
+      String name = innerCause.getClass().getName();
+      if (name.endsWith(".ConnectTimeoutException")
+          || name.endsWith("$ConnectTimeoutException")) {
+        // TCP connection http timeout from the shaded or unshaded filenames
+        // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException
+        ioe = new ConnectTimeoutException(message);
+      } else {
+        // any other exception
+        ioe = new InterruptedIOException(message);
+      }
+    }
+    ioe.initCause(exception);
+    return ioe;
+  }
+
+  /**
+   * Is the exception an instance of a throttling exception. That
+   * is an AmazonServiceException with a 503 response, any
+   * exception from DynamoDB for limits exceeded, or an
+   * {@link AWSServiceThrottledException}.
+   * @param ex exception to examine
+   * @return true if it is considered a throttling exception
+   */
+  public static boolean isThrottleException(Exception ex) {
+    return ex instanceof AWSServiceThrottledException
+        || ex instanceof ProvisionedThroughputExceededException
+        || ex instanceof LimitExceededException
+        || (ex instanceof AmazonServiceException
+            && 503  == ((AmazonServiceException)ex).getStatusCode());
+  }
+
+  /**
+   * Cue that an AWS exception is likely to be an EOF Exception based
+   * on the message coming back from an XML/JSON parser. This is likely
+   * to be brittle, so only a hint.
+   * @param ex exception
+   * @return true if this is believed to be a sign the connection was broken.
+   */
+  public static boolean signifiesConnectionBroken(SdkBaseException ex) {
+    return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER);
+  }
+
+  /**
+   * Translate a DynamoDB exception into an IOException.
+   * @param message preformatted message for the exception
+   * @param ex exception
+   * @return an exception to throw.
+   */
+  public static IOException translateDynamoDBException(String message,
+      AmazonDynamoDBException ex) {
+    if (isThrottleException(ex)) {
+      return new AWSServiceThrottledException(message, ex);
+    }
+    if (ex instanceof ResourceNotFoundException) {
+      return (FileNotFoundException) new FileNotFoundException(message)
+          .initCause(ex);
+    }
+    return new AWSServiceIOException(message, ex);
   }
 
   /**
@@ -587,7 +720,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get a long option >= the minimum allowed value, supporting memory
+   * Get a long option &gt;= the minimum allowed value, supporting memory
    * prefixes K,M,G,T,P.
    * @param conf configuration
    * @param key key to look up
@@ -596,7 +729,7 @@ public final class S3AUtils {
    * @return the value
    * @throws IllegalArgumentException if the value is below the minimum
    */
-  static long longBytesOption(Configuration conf,
+  public static long longBytesOption(Configuration conf,
                              String key,
                              long defVal,
                              long min) {
@@ -744,6 +877,133 @@ public final class S3AUtils {
       }
     }
     return dest;
+  }
+
+
+  /**
+   * Delete a path quietly: failures are logged at DEBUG.
+   * @param fs filesystem
+   * @param path path
+   * @param recursive recursive?
+   */
+  public static void deleteQuietly(FileSystem fs,
+      Path path,
+      boolean recursive) {
+    try {
+      fs.delete(path, recursive);
+    } catch (IOException e) {
+      LOG.debug("Failed to delete {}", path, e);
+    }
+  }
+
+  /**
+   * Delete a path: failures are logged at WARN.
+   * @param fs filesystem
+   * @param path path
+   * @param recursive recursive?
+   */
+  public static void deleteWithWarning(FileSystem fs,
+      Path path,
+      boolean recursive) {
+    try {
+      fs.delete(path, recursive);
+    } catch (IOException e) {
+      LOG.warn("Failed to delete {}", path, e);
+    }
+  }
+
+
+  /**
+   * An interface for use in lambda-expressions working with
+   * directory tree listings.
+   */
+  @FunctionalInterface
+  public interface CallOnLocatedFileStatus {
+    void call(LocatedFileStatus status) throws IOException;
+  }
+
+  /**
+   * An interface for use in lambda-expressions working with
+   * directory tree listings.
+   */
+  @FunctionalInterface
+  public interface LocatedFileStatusMap<T> {
+    T call(LocatedFileStatus status) throws IOException;
+  }
+
+  /**
+   * Apply an operation to every {@link LocatedFileStatus} in a remote
+   * iterator.
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static void applyLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      CallOnLocatedFileStatus eval) throws IOException {
+    while (iterator.hasNext()) {
+      eval.call(iterator.next());
+    }
+  }
+
+  /**
+   * Map an operation to every {@link LocatedFileStatus} in a remote
+   * iterator, returning a list of the results.
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static <T> List<T> mapLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      LocatedFileStatusMap<T> eval) throws IOException {
+    final List<T> results = new ArrayList<>();
+    applyLocatedFiles(iterator,
+        (s) -> results.add(eval.call(s)));
+    return results;
+  }
+
+  /**
+   * Map an operation to every {@link LocatedFileStatus} in a remote
+   * iterator, returning a list of the all results which were not empty.
+   * @param iterator iterator from a list
+   * @param eval closure to evaluate
+   * @throws IOException anything in the closure, or iteration logic.
+   */
+  public static <T> List<T> flatmapLocatedFiles(
+      RemoteIterator<LocatedFileStatus> iterator,
+      LocatedFileStatusMap<Optional<T>> eval) throws IOException {
+    final List<T> results = new ArrayList<>();
+    applyLocatedFiles(iterator,
+        (s) -> eval.call(s).map(r -> results.add(r)));
+    return results;
+  }
+
+  /**
+   * List located files and filter them as a classic listFiles(path, filter)
+   * would do.
+   * @param fileSystem filesystem
+   * @param path path to list
+   * @param recursive recursive listing?
+   * @param filter filter for the filename
+   * @return the filtered list of entries
+   * @throws IOException IO failure.
+   */
+  public static List<LocatedFileStatus> listAndFilter(FileSystem fileSystem,
+      Path path, boolean recursive, PathFilter filter) throws IOException {
+    return flatmapLocatedFiles(fileSystem.listFiles(path, recursive),
+        status -> maybe(filter.accept(status.getPath()), status));
+  }
+
+  /**
+   * Convert a value into a non-empty Optional instance if
+   * the value of {@code include} is true.
+   * @param include flag to indicate the value is to be included.
+   * @param value value to return
+   * @param <T> type of option.
+   * @return if include is false, Optional.empty. Otherwise, the value.
+   */
+  public static <T> Optional<T> maybe(boolean include, T value) {
+    return include ? Optional.of(value) : Optional.empty();
   }
 
   /**
@@ -936,5 +1196,37 @@ public final class S3AUtils {
         : genericKey;
     return conf.get(FS_S3A_BUCKET_PREFIX + bucket + '.' + baseKey);
   }
+
+
+  /**
+   * Path filter which ignores any file which starts with . or _.
+   */
+  public static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path path) {
+      String name = path.getName();
+      return !name.startsWith("_") && !name.startsWith(".");
+    }
+
+    @Override
+    public String toString() {
+      return "HIDDEN_FILE_FILTER";
+    }
+  };
+
+  /**
+   * A Path filter which accepts all filenames.
+   */
+  public static final PathFilter ACCEPT_ALL = new PathFilter() {
+    @Override
+    public boolean accept(Path file) {
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      return "ACCEPT_ALL";
+    }
+  };
 
 }
