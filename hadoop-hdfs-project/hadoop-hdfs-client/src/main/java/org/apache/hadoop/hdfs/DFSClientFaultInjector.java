@@ -63,4 +63,6 @@ public class DFSClientFaultInjector {
   }
 
   public void sleepBeforeHedgedGet() {}
+
+  public void delayWhenRenewLeaseTimeout() {}
 }
