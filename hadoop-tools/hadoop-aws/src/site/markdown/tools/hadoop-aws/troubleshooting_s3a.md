@@ -721,3 +721,127 @@ http.headers (LoggingManagedHttpClientConnection.java:onResponseReceived(127)) -
 http.headers (LoggingManagedHttpClientConnection.java:onResponseReceived(127)) - http-outgoing-0 << Server: AmazonS3
 execchain.MainClientExec (MainClientExec.java:execute(284)) - Connection can be kept alive for 60000 MILLISECONDS
 ```
+
+
+## <a name="retries"></a>  Reducing failures by configuring retry policy
+
+The S3A client can ba configured to rety those operations which are considered
+retriable. That can be because they are idempotent, or
+because there failure happened before the request was processed by S3.
+
+The number of retries and interval between each retry can be configured:
+
+```xml
+<property>
+  <name>fs.s3a.attempts.maximum</name>
+  <value>20</value>
+  <description>How many times we should retry commands on transient errors,
+  excluding throttling errors.</description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.interval</name>
+  <value>500ms</value>
+  <description>
+    Interval between retry attempts.
+  </description>
+</property>
+```
+
+Not all failures are retried. Specifically excluded are those considered
+unrecoverable:
+
+* Low-level networking: `UnknownHostException`, `NoRouteToHostException`.
+* 302 redirects
+* Missing resources, 404/`FileNotFoundException`
+* HTTP 416 response/`EOFException`. This can surface if the length of a file changes
+  while another client is reading it.
+* Failures during execution or result processing of non-idempotent operations where
+it is considered likely that the operation has already taken place.
+
+In future, others may be added to this list.
+
+When one of these failures arises in the S3/S3A client, the retry mechanism
+is bypassed and the operation will fail.
+
+*Warning*: the S3A client considers DELETE, PUT and COPY operations to
+be idempotent, and will retry them on failure. These are only really idempotent
+if no other client is attempting to manipulate the same objects, such as:
+renaming() the directory tree or uploading files to the same location.
+Please don't do that. Given that the emulated directory rename and delete operations
+aren't atomic, even without retries, multiple S3 clients working with the same
+paths can interfere with each other
+
+#### <a name="retries"></a> Throttling
+
+When many requests are made of a specific S3 bucket (or shard inside it),
+S3 will respond with a 503 "throttled" response.
+Throttling can be recovered from, provided overall load decreases.
+Furthermore, because it is sent before any changes are made to the object store,
+is inherently idempotent. For this reason, the client will always attempt to
+retry throttled requests.
+
+The limit of the number of times a throttled request can be retried,
+and the exponential interval increase between attempts, can be configured
+independently of the other retry limits.
+
+```xml
+<property>
+  <name>fs.s3a.retry.throttle.limit</name>
+  <value>20</value>
+  <description>
+    Number of times to retry any throttled request.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.throttle.interval</name>
+  <value>500ms</value>
+  <description>
+    Interval between retry attempts on throttled requests.
+  </description>
+</property>
+```
+
+If a client is failing due to `AWSServiceThrottledException` failures,
+increasing the interval and limit *may* address this. However, it
+it is a sign of AWS services being overloaded by the sheer number of clients
+and rate of requests. Spreading data across different buckets, and/or using
+a more balanced directory structure may be beneficial.
+Consult [the AWS documentation](http://docs.aws.amazon.com/AmazonS3/latest/dev/request-rate-perf-considerations.html).
+
+Reading or writing data encrypted with SSE-KMS forces S3 to make calls of
+the AWS KMS Key Management Service, which comes with its own
+[Request Rate Limits](http://docs.aws.amazon.com/kms/latest/developerguide/limits.html).
+These default to 1200/second for an account, across all keys and all uses of
+them, which, for S3 means: across all buckets with data encrypted with SSE-KMS.
+
+###### Tips to Keep Throttling down
+
+* If you are seeing a lot of throttling responses on a large scale
+operation like a `distcp` copy, *reduce* the number of processes trying
+to work with the bucket (for distcp: reduce the number of mappers with the
+`-m` option).
+
+* If you are reading or writing lists of files, if you can randomize
+the list so they are not processed in a simple sorted order, you may
+reduce load on a specific shard of S3 data, so potentially increase throughput.
+
+* An S3 Bucket is throttled by requests coming from all
+simultaneous clients. Different applications and jobs may interfere with
+each other: consider that when troubleshooting.
+Partitioning data into different buckets may help isolate load here.
+
+* If you are using data encrypted with SSE-KMS, then the
+will also apply: these are stricter than the S3 numbers.
+If you believe that you are reaching these limits, you may be able to
+get them increased.
+Consult [the KMS Rate Limit documentation](http://docs.aws.amazon.com/kms/latest/developerguide/limits.html).
+
+* S3Guard uses DynamoDB for directory and file lookups;
+it is rate limited to the amount of (guaranteed) IO purchased for a
+table. If significant throttling events/rate is observed here, the preallocated
+IOPs can be increased with the `s3guard set-capacity` command, or
+through the AWS Console. Throttling events in S3Guard are noted in logs, and
+also in the S3A metrics `s3guard_metadatastore_throttle_rate` and
+`s3guard_metadatastore_throttled`.

@@ -21,8 +21,10 @@ package org.apache.hadoop.fs.s3a;
 import static org.mockito.Mockito.*;
 
 import java.net.URI;
+import java.util.ArrayList;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.Region;
 
 /**
@@ -36,6 +38,12 @@ public class MockS3ClientFactory implements S3ClientFactory {
     String bucket = name.getHost();
     AmazonS3 s3 = mock(AmazonS3.class);
     when(s3.doesBucketExist(bucket)).thenReturn(true);
+    // this listing is used in startup if purging is enabled, so
+    // return a stub value
+    MultipartUploadListing noUploads = new MultipartUploadListing();
+    noUploads.setMultipartUploads(new ArrayList<>(0));
+    when(s3.listMultipartUploads(anyObject()))
+        .thenReturn(noUploads);
     when(s3.getBucketLocation(anyString()))
         .thenReturn(Region.US_West.toString());
     return s3;

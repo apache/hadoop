@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -960,6 +961,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String AUTH_FLAG = "auth";
     public static final String NONAUTH_FLAG = "nonauth";
     public static final String ENCRYPTION_FLAG = "encryption";
+    public static final String MAGIC_FLAG = "magic";
 
     public static final String PURPOSE = "provide/check S3Guard information"
         + " about a specific bucket";
@@ -967,11 +969,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
         + "\t" + PURPOSE + "\n\n"
         + "Common options:\n"
         + "  -" + GUARDED_FLAG + " - Require S3Guard\n"
+        + "  -" + UNGUARDED_FLAG + " - Require S3Guard to be disabled\n"
+        + "  -" + AUTH_FLAG + " - Require the S3Guard mode to be \"authoritative\"\n"
+        + "  -" + NONAUTH_FLAG + " - Require the S3Guard mode to be \"non-authoritative\"\n"
+        + "  -" + MAGIC_FLAG + " - Require the S3 filesystem to be support the \"magic\" committer\n"
         + "  -" + ENCRYPTION_FLAG
         + " -require {none, sse-s3, sse-kms} - Require encryption policy";
 
     BucketInfo(Configuration conf) {
-      super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG);
+      super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG, MAGIC_FLAG);
       CommandFormat format = getCommandFormat();
       format.addOptionWithValue(ENCRYPTION_FLAG);
     }
@@ -1014,6 +1020,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
       } else {
         println(out, "Filesystem %s is not using S3Guard", fsUri);
       }
+      boolean magic = fs.hasCapability(
+          CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER);
+      println(out, "The \"magic\" committer %s supported",
+          magic ? "is" : "is not");
+
       println(out, "%nS3A Client");
 
       String endpoint = conf.getTrimmed(ENDPOINT, "");
@@ -1042,6 +1053,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
         if (commands.getOpt(GUARDED_FLAG)) {
           throw badState("S3Guard is not enabled for %s", fsUri);
         }
+      }
+      if (commands.getOpt(MAGIC_FLAG) && !magic) {
+        throw badState("The magic committer is not enabled for %s", fsUri);
       }
 
       String desiredEncryption = getCommandFormat()

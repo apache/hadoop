@@ -385,8 +385,9 @@ public class Listing {
         status = statusBatchIterator.next();
         // We remove from provided list the file status listed by S3 so that
         // this does not return duplicate items.
-        LOG.debug("Removing the status from provided file status {}", status);
-        providedStatus.remove(status);
+        if (providedStatus.remove(status)) {
+          LOG.debug("Removed the status from provided file status {}", status);
+        }
       } else {
         if (providedStatusIterator.hasNext()) {
           status = providedStatusIterator.next();
@@ -540,10 +541,11 @@ public class Listing {
      * initial set of results/fail if there was a problem talking to the bucket.
      * @param listPath path of the listing
      * @param request initial request to make
-     * */
+     * @throws IOException if listObjects raises one.
+     */
     ObjectListingIterator(
         Path listPath,
-        S3ListRequest request) {
+        S3ListRequest request) throws IOException {
       this.listPath = listPath;
       this.maxKeys = owner.getMaxKeys();
       this.objects = owner.listObjects(request);
@@ -571,6 +573,7 @@ public class Listing {
      * @throws NoSuchElementException if there is no more data to list.
      */
     @Override
+    @Retries.RetryTranslated
     public S3ListResult next() throws IOException {
       if (firstListing) {
         // on the first listing, don't request more data.
@@ -813,20 +816,5 @@ public class Listing {
       return (status != null) && !status.getPath().equals(qualifiedPath);
     }
   }
-
-  /**
-   * A Path filter which accepts all filenames.
-   */
-  static final PathFilter ACCEPT_ALL = new PathFilter() {
-    @Override
-    public boolean accept(Path file) {
-      return true;
-    }
-
-    @Override
-    public String toString() {
-      return "ACCEPT_ALL";
-    }
-  };
 
 }
