@@ -49,7 +49,8 @@ public class NodeReportPBImpl extends NodeReport {
   private NodeReportProto.Builder builder = null;
   private boolean viaProto = false;
   private NodeId nodeId;
-  private Resource used;
+  private Resource guaranteedResourceUsed;
+  private Resource opportunisticResourceUsed;
   private Resource capability;
   private ResourceUtilization containersUtilization = null;
   private ResourceUtilization nodeUtilization = null;
@@ -114,9 +115,17 @@ public class NodeReportPBImpl extends NodeReport {
   }
 
   @Override
-  public int getNumContainers() {
+  public int getNumGuaranteedContainers() {
     NodeReportProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasNumContainers()) ? p.getNumContainers() : 0;
+    return (p.hasNumGuaranteedContainers()) ?
+        p.getNumGuaranteedContainers() : 0;
+  }
+
+  @Override
+  public int getNumOpportunisticContainers() {
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasNumOpportunisticContainers()) ?
+        p.getNumOpportunisticContainers() : 0;
   }
 
   @Override
@@ -125,18 +134,25 @@ public class NodeReportPBImpl extends NodeReport {
     return (p.hasRackName()) ? p.getRackName() : null;
   }
 
+  @Deprecated
   @Override
   public Resource getUsed() {
-    if (this.used != null) {
-      return this.used;
+    return getGuaranteedResourceUsed();
+  }
+
+  @Override
+  public Resource getOpportunisticResourceUsed() {
+    if (this.opportunisticResourceUsed != null) {
+      return this.opportunisticResourceUsed;
     }
 
     NodeReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasUsed()) {
+    if (!p.hasOpportunisticResourceUsed()) {
       return null;
     }
-    this.used = convertFromProtoFormat(p.getUsed());
-    return this.used;
+    this.opportunisticResourceUsed =
+        convertFromProtoFormat(p.getOpportunisticResourceUsed());
+    return this.opportunisticResourceUsed;
   }
 
   @Override
@@ -201,13 +217,24 @@ public class NodeReportPBImpl extends NodeReport {
   }
 
   @Override
-  public void setNumContainers(int numContainers) {
+  public void setNumGuaranteedContainers(int numContainers) {
     maybeInitBuilder();
     if (numContainers == 0) {
-      builder.clearNumContainers();
+      builder.clearNumGuaranteedContainers();
       return;
     }
-    builder.setNumContainers(numContainers);
+    builder.setNumGuaranteedContainers(numContainers);
+  }
+
+  @Override
+  public void setNumOpportunisticContainers(int numContainers) {
+    maybeInitBuilder();
+    if (numContainers == 0) {
+      builder.clearNumOpportunisticContainers();
+      return;
+    }
+    builder.setNumOpportunisticContainers(numContainers);
+
   }
 
   @Override
@@ -220,13 +247,43 @@ public class NodeReportPBImpl extends NodeReport {
     builder.setRackName(rackName);
   }
 
+  @Deprecated
   @Override
   public void setUsed(Resource used) {
-    maybeInitBuilder();
-    if (used == null) {
-      builder.clearUsed();
+    setGuaranteedResourceUsed(used);
+  }
+
+  @Override
+  public Resource getGuaranteedResourceUsed() {
+    if (this.guaranteedResourceUsed != null) {
+      return this.guaranteedResourceUsed;
     }
-    this.used = used;
+
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasGuaranteedResourceUsed()) {
+      return null;
+    }
+    this.guaranteedResourceUsed =
+        convertFromProtoFormat(p.getGuaranteedResourceUsed());
+    return this.guaranteedResourceUsed;
+  }
+
+  @Override
+  public void setGuaranteedResourceUsed(Resource guaranteed) {
+    maybeInitBuilder();
+    if (guaranteedResourceUsed == null) {
+      builder.clearGuaranteedResourceUsed();
+    }
+    this.guaranteedResourceUsed = guaranteed;
+  }
+
+  @Override
+  public void setOpportunisticResourceUsed(Resource opportunisticUsed) {
+    maybeInitBuilder();
+    if (opportunisticUsed == null) {
+      builder.clearOpportunisticResourceUsed();
+    }
+    this.opportunisticResourceUsed = opportunisticUsed;
   }
 
   public NodeReportProto getProto() {
@@ -263,8 +320,13 @@ public class NodeReportPBImpl extends NodeReport {
             builder.getNodeId())) {
       builder.setNodeId(convertToProtoFormat(this.nodeId));
     }
-    if (this.used != null) {
-      builder.setUsed(convertToProtoFormat(this.used));
+    if (this.guaranteedResourceUsed != null) {
+      builder.setGuaranteedResourceUsed(
+          convertToProtoFormat(this.guaranteedResourceUsed));
+    }
+    if (this.opportunisticResourceUsed != null) {
+      builder.setOpportunisticResourceUsed(
+          convertToProtoFormat(this.opportunisticResourceUsed));
     }
     if (this.capability != null) {
       builder.setCapability(convertToProtoFormat(this.capability));

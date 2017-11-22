@@ -43,6 +43,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 @Private
@@ -184,7 +185,7 @@ public class NodeCLI extends YarnCLI {
     for (NodeReport nodeReport : nodesReport) {
       writer.printf(NODES_PATTERN, nodeReport.getNodeId(), nodeReport
           .getNodeState(), nodeReport.getHttpAddress(), nodeReport
-          .getNumContainers());
+          .getNumGuaranteedContainers());
     }
     writer.flush();
   }
@@ -209,13 +210,18 @@ public class NodeCLI extends YarnCLI {
     for (NodeReport nodeReport : nodesReport) {
       writer.printf(NODES_PATTERN, nodeReport.getNodeId(),
           nodeReport.getNodeState(), nodeReport.getHttpAddress(),
-          nodeReport.getNumContainers());
+          nodeReport.getNumGuaranteedContainers());
       writer.println("Detailed Node Information :");
       writer.print("\tConfigured Resources : ");
       writer.println(nodeReport.getCapability());
-      writer.print("\tAllocated Resources : ");
-      if (nodeReport.getUsed() != null) {
-        writer.print(nodeReport.getUsed());
+      writer.print("\tAllocated Guaranteed Resources : ");
+      if (nodeReport.getGuaranteedResourceUsed() != null) {
+        writer.print(nodeReport.getGuaranteedResourceUsed());
+      }
+      writer.println();
+      writer.print("\tAllocated Opportunistic Resources : ");
+      if (nodeReport.getOpportunisticResourceUsed() != null) {
+        writer.print(nodeReport.getOpportunisticResourceUsed());
       }
       writer.println();
 
@@ -286,16 +292,32 @@ public class NodeCLI extends YarnCLI {
       nodeReportStr.print("\tHealth-Report : ");
       nodeReportStr
           .println(nodeReport.getHealthReport());
-      nodeReportStr.print("\tContainers : ");
-      nodeReportStr.println(nodeReport.getNumContainers());
-      nodeReportStr.print("\tMemory-Used : ");
-      nodeReportStr.println((nodeReport.getUsed() == null) ? "0MB"
-          : (nodeReport.getUsed().getMemorySize() + "MB"));
+      nodeReportStr.print("\tGuaranteed Containers : ");
+      nodeReportStr.println(nodeReport.getNumGuaranteedContainers());
+      nodeReportStr.print("\tOpportunistic Containers : ");
+      nodeReportStr.println(nodeReport.getNumOpportunisticContainers());
+      Resource guaranteedResourceUsed =
+          nodeReport.getGuaranteedResourceUsed();
+      Resource opportunisticResourceUsed =
+          nodeReport.getOpportunisticResourceUsed();
+      nodeReportStr.print("\tGuaranteed-Memory-Used : ");
+      nodeReportStr.println(
+          (guaranteedResourceUsed == null) ? "0MB" :
+              (guaranteedResourceUsed.getMemorySize() + "MB"));
+      nodeReportStr.print("\tOpportunistic-Memory-Used : ");
+      nodeReportStr.println(
+          (opportunisticResourceUsed == null) ? "0MB" :
+              (opportunisticResourceUsed.getMemorySize() + "MB"));
       nodeReportStr.print("\tMemory-Capacity : ");
       nodeReportStr.println(nodeReport.getCapability().getMemorySize() + "MB");
-      nodeReportStr.print("\tCPU-Used : ");
-      nodeReportStr.println((nodeReport.getUsed() == null) ? "0 vcores"
-          : (nodeReport.getUsed().getVirtualCores() + " vcores"));
+      nodeReportStr.print("\tGuaranteed-CPU-Used : ");
+      nodeReportStr.println(
+          (guaranteedResourceUsed == null) ? "0 vcores" :
+              (guaranteedResourceUsed.getVirtualCores() + " vcores"));
+      nodeReportStr.print("\tOpportunistic-CPU-Used : ");
+      nodeReportStr.println(
+          (opportunisticResourceUsed == null) ? "0 vcores" :
+              (opportunisticResourceUsed.getVirtualCores() + " vcores"));
       nodeReportStr.print("\tCPU-Capacity : ");
       nodeReportStr.println(nodeReport.getCapability().getVirtualCores() + " vcores");
       nodeReportStr.print("\tNode-Labels : ");

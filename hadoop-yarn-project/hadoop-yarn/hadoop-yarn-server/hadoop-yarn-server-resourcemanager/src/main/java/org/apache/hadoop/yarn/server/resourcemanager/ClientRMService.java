@@ -1045,18 +1045,27 @@ public class ClientRMService extends AbstractService implements
   private NodeReport createNodeReports(RMNode rmNode) {
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());
-    Resource used = BuilderUtils.newResource(0, 0);
-    int numContainers = 0;
+    Resource guaranteedResourceUsed = BuilderUtils.newResource(0, 0);
+    int numGuaranteedContainers = 0;
+    Resource opportunisticResourceUsed = BuilderUtils.newResource(0, 0);
+    int numOpportunisticContainers = 0;
     if (schedulerNodeReport != null) {
-      used = schedulerNodeReport.getUsedResource();
-      numContainers = schedulerNodeReport.getNumContainers();
-    }
+      guaranteedResourceUsed = schedulerNodeReport.getGuaranteedResourceUsed();
+      opportunisticResourceUsed =
+          schedulerNodeReport.getOpportunisticResourceUsed();
+      numGuaranteedContainers =
+          schedulerNodeReport.getNumGuaranteedContainers();
+      numOpportunisticContainers =
+          schedulerNodeReport.getNumOpportunisticContainers();
+    } 
 
     Set<NodeAttribute> attrs = rmNode.getAllNodeAttributes();
     NodeReport report =
         BuilderUtils.newNodeReport(rmNode.getNodeID(), rmNode.getState(),
-            rmNode.getHttpAddress(), rmNode.getRackName(), used,
-            rmNode.getTotalCapability(), numContainers,
+            rmNode.getHttpAddress(), rmNode.getRackName(),
+            guaranteedResourceUsed,
+            rmNode.getTotalCapability(), numGuaranteedContainers,
+            opportunisticResourceUsed, numOpportunisticContainers,
             rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
             rmNode.getNodeLabels(), rmNode.getAggregatedContainersUtilization(),
             rmNode.getNodeUtilization(), rmNode.getDecommissioningTimeout(),

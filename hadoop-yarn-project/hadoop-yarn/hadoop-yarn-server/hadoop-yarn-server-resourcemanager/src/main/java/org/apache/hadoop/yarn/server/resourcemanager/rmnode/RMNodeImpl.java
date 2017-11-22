@@ -142,7 +142,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /** Physical resources in the node. */
   private volatile Resource physicalResource;
 
-  /* Container Queue Information for the node.. Used by Distributed Scheduler */
+  /* Container Queue Information for the node..*/
   private OpportunisticContainersStatus opportunisticContainersStatus;
 
   private final ContainerAllocationExpirer containerAllocationExpirer;

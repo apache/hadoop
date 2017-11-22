@@ -36,9 +36,12 @@ import org.apache.hadoop.yarn.util.Records;
  *   <li>{@link NodeId} of the node.</li>
  *   <li>HTTP Tracking URL of the node.</li>
  *   <li>Rack name for the node.</li>
- *   <li>Used {@link Resource} on the node.</li>
+ *   <li>Used guaranteed {@link Resource} on the node.</li>
+ *   <li>Used opportunistic {@link Resource} on the node.</li>
  *   <li>Total available {@link Resource} of the node.</li>
- *   <li>Number of running containers on the node.</li>
+ *   <li>Number of total running containers on the node.</li>
+ *   <li>Number of running guaranteed containers on the node.</li>
+ *   <li>Number of running opportunistic containers on the node.</li>
  * </ul>
  *
  * @see ApplicationClientProtocol#getClusterNodes(org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest)
@@ -50,33 +53,37 @@ public abstract class NodeReport {
   @Private
   @Unstable
   public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
-      String httpAddress, String rackName, Resource used, Resource capability,
-      int numContainers, String healthReport, long lastHealthReportTime) {
-    return newInstance(nodeId, nodeState, httpAddress, rackName, used,
-        capability, numContainers, healthReport, lastHealthReportTime,
-        null, null, null);
+      String httpAddress, String rackName, Resource guaranteedUsed,
+      Resource capability, int numGuaranteedContainers, String healthReport,
+      long lastHealthReportTime) {
+    return newInstance(nodeId, nodeState, httpAddress, rackName, guaranteedUsed,
+        capability, numGuaranteedContainers, healthReport, lastHealthReportTime,
+        null, null, null, null, 0);
   }
 
   @Private
   @Unstable
   public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
-      String httpAddress, String rackName, Resource used, Resource capability,
-      int numContainers, String healthReport, long lastHealthReportTime,
-      Set<String> nodeLabels, Integer decommissioningTimeout,
-      NodeUpdateType nodeUpdateType) {
+      String httpAddress, String rackName, Resource guaranteedUsed,
+      Resource capability, int numGuaranteedContainers, String healthReport,
+      long lastHealthReportTime, Set<String> nodeLabels,
+      Integer decommissioningTimeout, NodeUpdateType nodeUpdateType,
+      Resource opportunisticUsed, int numOpportunisticContainers) {
     NodeReport nodeReport = Records.newRecord(NodeReport.class);
     nodeReport.setNodeId(nodeId);
     nodeReport.setNodeState(nodeState);
     nodeReport.setHttpAddress(httpAddress);
     nodeReport.setRackName(rackName);
-    nodeReport.setUsed(used);
     nodeReport.setCapability(capability);
-    nodeReport.setNumContainers(numContainers);
+    nodeReport.setGuaranteedResourceUsed(guaranteedUsed);
+    nodeReport.setNumGuaranteedContainers(numGuaranteedContainers);
     nodeReport.setHealthReport(healthReport);
     nodeReport.setLastHealthReportTime(lastHealthReportTime);
     nodeReport.setNodeLabels(nodeLabels);
     nodeReport.setDecommissioningTimeout(decommissioningTimeout);
     nodeReport.setNodeUpdateType(nodeUpdateType);
+    nodeReport.setOpportunisticResourceUsed(opportunisticUsed);
+    nodeReport.setNumOpportunisticContainers(numOpportunisticContainers);
     return nodeReport;
   }
 
@@ -129,17 +136,43 @@ public abstract class NodeReport {
   public abstract void setRackName(String rackName);
   
   /**
-   * Get <em>used</em> <code>Resource</code> on the node.
-   * @return <em>used</em> <code>Resource</code> on the node
+   * Get <em>guaranteed</em> <code>Resource</code> used on the node.
+   * @return <em>guaranteed</em> <code>Resource</code> used on the node
    */
   @Public
   @Stable
+  @Deprecated
   public abstract Resource getUsed();
   
   @Private
   @Unstable
+  @Deprecated
   public abstract void setUsed(Resource used);
-  
+
+  /**
+   * Get <em>guaranteed</em> <code>Resource</code> used on the node.
+   * @return <em>guaranteed</em> <code>Resource</code> used on the node
+   */
+  @Public
+  @Unstable
+  public abstract Resource getGuaranteedResourceUsed();
+
+  @Private
+  @Unstable
+  public abstract void setGuaranteedResourceUsed(Resource guaranteed);
+
+  /**
+   * Get <em>opportunistic</em> <code>Resource</code> used on the node.
+   * @return <em>opportunistic</em> <code>Resource</code> used on the node
+   */
+  @Public
+  @Unstable
+  public abstract Resource getOpportunisticResourceUsed();
+
+  @Private
+  @Unstable
+  public abstract void setOpportunisticResourceUsed(Resource opportunistic);
+
   /**
    * Get the <em>total</em> <code>Resource</code> on the node.
    * @return <em>total</em> <code>Resource</code> on the node
@@ -153,19 +186,40 @@ public abstract class NodeReport {
   public abstract void setCapability(Resource capability);
   
   /**
-   * Get the <em>number of allocated containers</em> on the node.
-   * @return <em>number of allocated containers</em> on the node
+   * Get the <em>number of guaranteed containers</em> allocated on the node.
+   * @return <em>number of guaranteed containers</em> allocated on the node
    */
   @Private
   @Unstable
-  public abstract int getNumContainers();
+  public abstract int getNumGuaranteedContainers();
   
   @Private
   @Unstable
-  public abstract void setNumContainers(int numContainers);
-  
+  public abstract void setNumGuaranteedContainers(int numContainers);
 
-  /** 
+  /**
+   * Get the <em>number of opportunistic containers</em> allocated on the node.
+   * @return <em>number of opportunistic containers</em> allocated on the node
+   */
+  @Private
+  @Unstable
+  public abstract int getNumOpportunisticContainers();
+
+  @Private
+  @Unstable
+  public abstract void setNumOpportunisticContainers(int numContainers);
+
+  /**
+   * Get the <em>number of containers</em> allocated on the node.
+   * @return <em>number of containers</em> allocated on the node
+   */
+  @Private
+  @Unstable
+  public int getNumTotalContainers() {
+    return getNumGuaranteedContainers() + getNumOpportunisticContainers();
+  }
+
+  /**
    * Get the <em>diagnostic health report</em> of the node.
    * @return <em>diagnostic health report</em> of the node
    */

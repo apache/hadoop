@@ -365,17 +365,27 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         RMNode rmNode = rmNodeEntry.getKey();
         SchedulerNodeReport schedulerNodeReport =
             getScheduler().getNodeReport(rmNode.getNodeID());
-        Resource used = BuilderUtils.newResource(0, 0);
-        int numContainers = 0;
+        Resource guaranteedResourceUsed = BuilderUtils.newResource(0, 0);
+        int numGuaranteedContainers = 0;
+        Resource opportunisticResourceUsed = BuilderUtils.newResource(0, 0);
+        int numOpportunisticContainers = 0;
         if (schedulerNodeReport != null) {
-          used = schedulerNodeReport.getUsedResource();
-          numContainers = schedulerNodeReport.getNumContainers();
+          opportunisticResourceUsed =
+              schedulerNodeReport.getOpportunisticResourceUsed();
+          guaranteedResourceUsed =
+              schedulerNodeReport.getGuaranteedResourceUsed();
+          numGuaranteedContainers =
+              schedulerNodeReport.getNumGuaranteedContainers();
+          numOpportunisticContainers =
+              schedulerNodeReport.getNumOpportunisticContainers();
         }
         NodeId nodeId = rmNode.getNodeID();
         NodeReport report =
             BuilderUtils.newNodeReport(nodeId, rmNode.getState(),
-                rmNode.getHttpAddress(), rmNode.getRackName(), used,
-                rmNode.getTotalCapability(), numContainers,
+                rmNode.getHttpAddress(), rmNode.getRackName(),
+                guaranteedResourceUsed, rmNode.getTotalCapability(),
+                numGuaranteedContainers, opportunisticResourceUsed,
+                numOpportunisticContainers,
                 rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
                 rmNode.getNodeLabels(), rmNode.getDecommissioningTimeout(),
                 rmNodeEntry.getValue());

@@ -28,34 +28,54 @@ import org.apache.hadoop.yarn.api.records.Resource;
 @Private
 @Stable
 public class SchedulerNodeReport {
-  private final Resource used;
-  private final Resource avail;
-  private final int num;
+  private final Resource guaranteedResourceUsage;
+  private final Resource opportunisticResourceUsage;
+  private final Resource guaranteedResourceAvail;
+  private final int numOfGuaranteedContainers;
+  private final int numOfOpportunisticContainers;
 
   public SchedulerNodeReport(SchedulerNode node) {
-    this.used = node.getAllocatedResource();
-    this.avail = node.getUnallocatedResource();
-    this.num = node.getNumGuaranteedContainers();
+    this.guaranteedResourceUsage = node.getAllocatedResource();
+    this.opportunisticResourceUsage = node.getOpportunisticResourceAllocated();
+    this.guaranteedResourceAvail = node.getUnallocatedResource();
+    this.numOfGuaranteedContainers = node.getNumGuaranteedContainers();
+    this.numOfOpportunisticContainers = node.getNumOpportunisticContainers();
   }
   
   /**
-   * @return the amount of resources currently used by the node.
+   * @return the amount of guaranteed resources currently used by the node.
    */
-  public Resource getUsedResource() {
-    return used;
+  public Resource getGuaranteedResourceUsed() {
+    return guaranteedResourceUsage;
   }
 
   /**
-   * @return the amount of resources currently available on the node
+   * @return the amount of opportunistic resources currently used by the node.
    */
-  public Resource getAvailableResource() {
-    return avail;
+  public Resource getOpportunisticResourceUsed() {
+    return opportunisticResourceUsage;
   }
 
   /**
-   * @return the number of containers currently running on this node.
+   * @return the amount of guaranteed resources currently available on the node
    */
-  public int getNumContainers() {
-    return num;
+  public Resource getAvailableGuaranteedResource() {
+    return guaranteedResourceAvail;
+  }
+
+  /**
+   * @return the number of guaranteed containers currently running on
+   *         this node.
+   */
+  public int getNumGuaranteedContainers() {
+    return numOfGuaranteedContainers;
+  }
+
+  /**
+   * @return the number of opportunistic containers currently running on
+   *         this node.
+   */
+  public int getNumOpportunisticContainers() {
+    return numOfOpportunisticContainers;
   }
 }

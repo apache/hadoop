@@ -75,14 +75,17 @@ public class NodeInfo {
     this.usedMemoryMB = 0;
     this.availMemoryMB = 0;
     if (report != null) {
-      this.numContainers = report.getNumContainers();
-      this.usedMemoryMB = report.getUsedResource().getMemorySize();
-      this.availMemoryMB = report.getAvailableResource().getMemorySize();
-      this.usedVirtualCores = report.getUsedResource().getVirtualCores();
+      this.numContainers = report.getNumGuaranteedContainers();
+      this.usedMemoryMB = report.getGuaranteedResourceUsed().getMemorySize();
+      this.availMemoryMB =
+          report.getAvailableGuaranteedResource().getMemorySize();
+      this.usedVirtualCores =
+          report.getGuaranteedResourceUsed().getVirtualCores();
       this.availableVirtualCores =
-          report.getAvailableResource().getVirtualCores();
-      this.usedResource = new ResourceInfo(report.getUsedResource());
-      this.availableResource = new ResourceInfo(report.getAvailableResource());
+          report.getAvailableGuaranteedResource().getVirtualCores();
+      this.usedResource = new ResourceInfo(report.getGuaranteedResourceUsed());
+      this.availableResource =
+          new ResourceInfo(report.getAvailableGuaranteedResource());
     }
     this.id = id.toString();
     this.rack = ni.getRackName();

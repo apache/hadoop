@@ -817,15 +817,16 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
     if (report != null) {
       assertEquals("numContainers doesn't match: " + numContainers,
-          report.getNumContainers(), numContainers);
+          report.getNumGuaranteedContainers(), numContainers);
       assertEquals("usedMemoryMB doesn't match: " + usedMemoryMB, report
-          .getUsedResource().getMemorySize(), usedMemoryMB);
+          .getGuaranteedResourceUsed().getMemorySize(), usedMemoryMB);
       assertEquals("availMemoryMB doesn't match: " + availMemoryMB, report
-          .getAvailableResource().getMemorySize(), availMemoryMB);
+          .getAvailableGuaranteedResource().getMemorySize(), availMemoryMB);
       assertEquals("usedVirtualCores doesn't match: " + usedVirtualCores, report
-          .getUsedResource().getVirtualCores(), usedVirtualCores);
-      assertEquals("availVirtualCores doesn't match: " + availVirtualCores, report
-          .getAvailableResource().getVirtualCores(), availVirtualCores);
+          .getGuaranteedResourceUsed().getVirtualCores(), usedVirtualCores);
+      assertEquals("availVirtualCores doesn't match: " + availVirtualCores,
+          report.getAvailableGuaranteedResource().getVirtualCores(),
+          availVirtualCores);
     }
 
     if (opportunisticStatus != null) {

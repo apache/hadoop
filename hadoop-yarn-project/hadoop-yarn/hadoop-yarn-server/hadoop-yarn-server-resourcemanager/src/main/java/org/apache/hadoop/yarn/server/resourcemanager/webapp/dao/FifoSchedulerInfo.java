@@ -79,10 +79,13 @@ public class FifoSchedulerInfo extends SchedulerInfo {
 
     for (RMNode ni : rmContext.getRMNodes().values()) {
       SchedulerNodeReport report = fs.getNodeReport(ni.getNodeID());
-      this.usedNodeCapacity += report.getUsedResource().getMemorySize();
-      this.availNodeCapacity += report.getAvailableResource().getMemorySize();
+      this.usedNodeCapacity +=
+          report.getGuaranteedResourceUsed().getMemorySize();
+      this.availNodeCapacity +=
+          report.getAvailableGuaranteedResource().getMemorySize();
       this.totalNodeCapacity += ni.getTotalCapability().getMemorySize();
-      this.numContainers += fs.getNodeReport(ni.getNodeID()).getNumContainers();
+      this.numContainers +=
+          fs.getNodeReport(ni.getNodeID()).getNumGuaranteedContainers();
     }
   }
 

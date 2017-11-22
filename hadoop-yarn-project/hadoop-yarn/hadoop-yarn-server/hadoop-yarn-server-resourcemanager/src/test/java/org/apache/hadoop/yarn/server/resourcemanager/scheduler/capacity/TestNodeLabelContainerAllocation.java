@@ -1947,15 +1947,17 @@ public class TestNodeLabelContainerAllocation {
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(5 * GB, reportNm1.getUsedResource().getMemorySize());
     Assert.assertEquals(5 * GB,
-        reportNm1.getAvailableResource().getMemorySize());
+        reportNm1.getGuaranteedResourceUsed().getMemorySize());
+    Assert.assertEquals(5 * GB,
+        reportNm1.getAvailableGuaranteedResource().getMemorySize());
 
     SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
         .getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
+    Assert.assertEquals(0 * GB,
+        reportNm2.getGuaranteedResourceUsed().getMemorySize());
     Assert.assertEquals(10 * GB,
-        reportNm2.getAvailableResource().getMemorySize());
+        reportNm2.getAvailableGuaranteedResource().getMemorySize());
 
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
     assertEquals(5 * GB, leafQueue.getMetrics().getAvailableMB());
@@ -2047,15 +2049,17 @@ public class TestNodeLabelContainerAllocation {
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(3 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(3 * GB,
+        reportNm1.getGuaranteedResourceUsed().getMemorySize());
     Assert.assertEquals(7 * GB,
-        reportNm1.getAvailableResource().getMemorySize());
+        reportNm1.getAvailableGuaranteedResource().getMemorySize());
 
     SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
         .getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(1 * GB, reportNm2.getUsedResource().getMemorySize());
+    Assert.assertEquals(1 * GB,
+        reportNm2.getGuaranteedResourceUsed().getMemorySize());
     Assert.assertEquals(9 * GB,
-        reportNm2.getAvailableResource().getMemorySize());
+        reportNm2.getAvailableGuaranteedResource().getMemorySize());
 
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
     double delta = 0.0001;
@@ -2177,9 +2181,10 @@ public class TestNodeLabelContainerAllocation {
 
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(6 * GB,
+        reportNm1.getGuaranteedResourceUsed().getMemorySize());
     Assert.assertEquals(14 * GB,
-        reportNm1.getAvailableResource().getMemorySize());
+        reportNm1.getAvailableGuaranteedResource().getMemorySize());
 
     // Try to launch app2 in a2, asked 2GB, should success
     // app2 -> a2
@@ -2196,9 +2201,10 @@ public class TestNodeLabelContainerAllocation {
 
     reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
     Assert.assertEquals(10 * GB,
-        reportNm1.getAvailableResource().getMemorySize());
+        reportNm1.getGuaranteedResourceUsed().getMemorySize());
+    Assert.assertEquals(10 * GB,
+        reportNm1.getAvailableGuaranteedResource().getMemorySize());
 
     // Kill all apps in queue a2
     cs.killAllAppsInQueue("a2");
@@ -2217,9 +2223,10 @@ public class TestNodeLabelContainerAllocation {
     checkNumOfContainersInAnAppOnGivenNode(4, nm1.getNodeId(),
         cs.getApplicationAttempt(am3.getApplicationAttemptId()));
 
-    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
     Assert.assertEquals(10 * GB,
-        reportNm1.getAvailableResource().getMemorySize());
+        reportNm1.getGuaranteedResourceUsed().getMemorySize());
+    Assert.assertEquals(10 * GB,
+        reportNm1.getAvailableGuaranteedResource().getMemorySize());
 
     // Kill all apps in queue a1
     cs.killAllAppsInQueue("a1");
@@ -2240,9 +2247,10 @@ public class TestNodeLabelContainerAllocation {
     checkNumOfContainersInAnAppOnGivenNode(6, nm1.getNodeId(),
         cs.getApplicationAttempt(am4.getApplicationAttemptId()));
 
-    Assert.assertEquals(10 * GB, reportNm1.getUsedResource().getMemorySize());
     Assert.assertEquals(10 * GB,
-        reportNm1.getAvailableResource().getMemorySize());
+        reportNm1.getGuaranteedResourceUsed().getMemorySize());
+    Assert.assertEquals(10 * GB,
+        reportNm1.getAvailableGuaranteedResource().getMemorySize());
 
     rm1.close();
   }

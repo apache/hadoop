@@ -186,26 +186,23 @@ public class BuilderUtils {
   }
 
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
-      String httpAddress, String rackName, Resource used, Resource capability,
-      int numContainers, String healthReport, long lastHealthReportTime) {
-    return newNodeReport(nodeId, nodeState, httpAddress, rackName, used,
-        capability, numContainers, healthReport, lastHealthReportTime,
-        null, null, null);
+      String httpAddress, String rackName, Resource guaranteedResourceUsed,
+      Resource capability, int numGuaranteedContainers,
+      Resource opportunisticResourceUsed, int numOpportunisticContainer,
+      String healthReport, long lastHealthReportTime, Set<String> nodeLabels,
+      Integer decommissioningTimeout, NodeUpdateType nodeUpdateType) {
+    return newNodeReport(nodeId, nodeState, httpAddress, rackName,
+        guaranteedResourceUsed, capability, numGuaranteedContainers,
+        opportunisticResourceUsed, numOpportunisticContainer, healthReport,
+        lastHealthReportTime, nodeLabels, null, null,
+        decommissioningTimeout, nodeUpdateType, null);
   }
 
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
-      String httpAddress, String rackName, Resource used, Resource capability,
-      int numContainers, String healthReport, long lastHealthReportTime,
-      Set<String> nodeLabels, Integer decommissioningTimeout,
-      NodeUpdateType nodeUpdateType) {
-    return newNodeReport(nodeId, nodeState, httpAddress, rackName, used,
-        capability, numContainers, healthReport, lastHealthReportTime,
-        nodeLabels, null, null, decommissioningTimeout, nodeUpdateType, null);
-  }
-
-  public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
-      String httpAddress, String rackName, Resource used, Resource capability,
-      int numContainers, String healthReport, long lastHealthReportTime,
+      String httpAddress, String rackName, Resource guaranteedResourceUsed,
+      Resource capability, int numGuaranteedContainers,
+      Resource opportunisticResourceUsed, int numOpportunisticContainers,
+      String healthReport, long lastHealthReportTime,
       Set<String> nodeLabels, ResourceUtilization containersUtilization,
       ResourceUtilization nodeUtilization, Integer decommissioningTimeout,
       NodeUpdateType nodeUpdateType, Set<NodeAttribute> attrs) {
@@ -214,9 +211,11 @@ public class BuilderUtils {
     nodeReport.setNodeState(nodeState);
     nodeReport.setHttpAddress(httpAddress);
     nodeReport.setRackName(rackName);
-    nodeReport.setUsed(used);
+    nodeReport.setGuaranteedResourceUsed(guaranteedResourceUsed);
     nodeReport.setCapability(capability);
-    nodeReport.setNumContainers(numContainers);
+    nodeReport.setNumGuaranteedContainers(numGuaranteedContainers);
+    nodeReport.setOpportunisticResourceUsed(opportunisticResourceUsed);
+    nodeReport.setNumOpportunisticContainers(numOpportunisticContainers);
     nodeReport.setHealthReport(healthReport);
     nodeReport.setLastHealthReportTime(lastHealthReportTime);
     nodeReport.setNodeLabels(nodeLabels);

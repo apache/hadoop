@@ -124,11 +124,17 @@ public class TestRMNMInfo {
       Assert.assertNotNull(n.get("NodeManagerVersion"));
       Assert.assertNotNull(n.get("NumContainers"));
       Assert.assertEquals(
-              n.get("NodeId") + ": Unexpected number of used containers",
-              0, n.get("NumContainers").asInt());
+          n.get("NodeId") + ": Unexpected number of guaranteed containers used",
+          0, n.get("NumContainers").asInt());
+      Assert.assertEquals(n.get("NodeId") +
+              ": Unexpected number of opportunistic containers used",
+          0, n.get("NumOpportunisticContainers").asInt());
       Assert.assertEquals(
-              n.get("NodeId") + ": Unexpected amount of used memory",
+              n.get("NodeId") + ": Unexpected amount of guaranteed memory used",
               0, n.get("UsedMemoryMB").asInt());
+      Assert.assertEquals(
+          n.get("NodeId") + ": Unexpected amount of used opportunistic memory",
+          0, n.get("UsedOpportunisticMemoryMB").asInt());
       Assert.assertNotNull(n.get("AvailableMemoryMB"));
     }
   }
@@ -161,6 +167,8 @@ public class TestRMNMInfo {
       Assert.assertNotNull(n.get("NodeManagerVersion"));
       Assert.assertNull(n.get("NumContainers"));
       Assert.assertNull(n.get("UsedMemoryMB"));
+      Assert.assertNull(n.get("NumOpportunisticContainers"));
+      Assert.assertNull(n.get("UsedOpportunisticMemoryMB"));
       Assert.assertNull(n.get("AvailableMemoryMB"));
     }
   }

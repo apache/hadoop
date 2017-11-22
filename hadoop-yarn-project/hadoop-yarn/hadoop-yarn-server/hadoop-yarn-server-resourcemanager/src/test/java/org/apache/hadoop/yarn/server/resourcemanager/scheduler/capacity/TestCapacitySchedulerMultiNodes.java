@@ -123,9 +123,10 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
 
     // check node report
-    Assert.assertEquals(2 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(2 * GB,
+        reportNm1.getGuaranteedResourceUsed().getMemorySize());
     Assert.assertEquals(8 * GB,
-        reportNm1.getAvailableResource().getMemorySize());
+        reportNm1.getAvailableGuaranteedResource().getMemorySize());
 
     // Ideally thread will invoke this, but thread operates every 1sec.
     // Hence forcefully recompute nodes.
@@ -137,9 +138,10 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
         rm.getResourceScheduler().getNodeReport(nm2.getNodeId());
 
     // check node report
-    Assert.assertEquals(1 * GB, reportNm2.getUsedResource().getMemorySize());
+    Assert.assertEquals(1 * GB,
+        reportNm2.getGuaranteedResourceUsed().getMemorySize());
     Assert.assertEquals(9 * GB,
-        reportNm2.getAvailableResource().getMemorySize());
+        reportNm2.getAvailableGuaranteedResource().getMemorySize());
 
     // Ideally thread will invoke this, but thread operates every 1sec.
     // Hence forcefully recompute nodes.

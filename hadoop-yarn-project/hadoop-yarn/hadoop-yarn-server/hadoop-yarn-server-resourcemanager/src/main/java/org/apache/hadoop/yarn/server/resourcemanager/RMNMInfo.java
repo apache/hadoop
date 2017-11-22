@@ -79,27 +79,32 @@ public class RMNMInfo implements RMNMInfoBeans {
     List<InfoMap> nodesInfo = new ArrayList<InfoMap>();
 
     for (final RMNode ni : nodes) {
-        SchedulerNodeReport report = scheduler.getNodeReport(ni.getNodeID());
-        InfoMap info = new InfoMap();
-        info.put("HostName", ni.getHostName());
-        info.put("Rack", ni.getRackName());
-        info.put("State", ni.getState().toString());
-        info.put("NodeId", ni.getNodeID());
-        info.put("NodeHTTPAddress", ni.getHttpAddress());
-        info.put("LastHealthUpdate",
-                        ni.getLastHealthReportTime());
-        info.put("HealthReport",
-                        ni.getHealthReport());
-        info.put("NodeManagerVersion",
-                ni.getNodeManagerVersion());
-        if(report != null) {
-          info.put("NumContainers", report.getNumContainers());
-          info.put("UsedMemoryMB", report.getUsedResource().getMemorySize());
-          info.put("AvailableMemoryMB",
-              report.getAvailableResource().getMemorySize());
-        }
+      SchedulerNodeReport report = scheduler.getNodeReport(ni.getNodeID());
+      InfoMap info = new InfoMap();
+      info.put("HostName", ni.getHostName());
+      info.put("Rack", ni.getRackName());
+      info.put("State", ni.getState().toString());
+      info.put("NodeId", ni.getNodeID());
+      info.put("NodeHTTPAddress", ni.getHttpAddress());
+      info.put("LastHealthUpdate",
+                      ni.getLastHealthReportTime());
+      info.put("HealthReport",
+                      ni.getHealthReport());
+      info.put("NodeManagerVersion",
+              ni.getNodeManagerVersion());
+      if(report != null) {
+        info.put("NumContainers", report.getNumGuaranteedContainers());
+        info.put("NumOpportunisticContainers",
+            report.getNumOpportunisticContainers());
+        info.put("UsedMemoryMB",
+            report.getGuaranteedResourceUsed().getMemorySize());
+        info.put("UsedOpportunisticMemoryMB",
+            report.getOpportunisticResourceUsed().getMemorySize());
+        info.put("AvailableMemoryMB",
+            report.getAvailableGuaranteedResource().getMemorySize());
+      }
 
-        nodesInfo.add(info);
+      nodesInfo.add(info);
     }
 
     return JSON.toString(nodesInfo);

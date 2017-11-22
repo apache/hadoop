@@ -647,7 +647,7 @@ public class Client {
           + ", nodeId=" + node.getNodeId() 
           + ", nodeAddress=" + node.getHttpAddress()
           + ", nodeRackName=" + node.getRackName()
-          + ", nodeNumContainers=" + node.getNumContainers());
+          + ", nodeNumContainers=" + node.getNumGuaranteedContainers());
     }
 
     QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);

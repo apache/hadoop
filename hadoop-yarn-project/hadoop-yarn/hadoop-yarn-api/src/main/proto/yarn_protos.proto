@@ -344,9 +344,9 @@ message NodeReportProto {
   optional NodeIdProto nodeId = 1;
   optional string httpAddress = 2;
   optional string rackName = 3;
-  optional ResourceProto used = 4;
+  optional ResourceProto guaranteedResourceUsed = 4;
   optional ResourceProto capability = 5;
-  optional int32 numContainers = 6;
+  optional int32 numGuaranteedContainers = 6;
   optional NodeStateProto node_state = 7;
   optional string health_report = 8;
   optional int64 last_health_report_time = 9;
@@ -356,6 +356,9 @@ message NodeReportProto {
   optional uint32 decommissioning_timeout = 13;
   optional NodeUpdateTypeProto node_update_type = 14;
   repeated NodeAttributeProto node_attributes = 15;
+  optional int32 numOpportunisticContainers = 16;
+  optional ResourceProto opportunisticResourceUsed = 17;
+  optional int32 numTotalContainers = 18;
 }
 
 message NodeIdToLabelsProto {
