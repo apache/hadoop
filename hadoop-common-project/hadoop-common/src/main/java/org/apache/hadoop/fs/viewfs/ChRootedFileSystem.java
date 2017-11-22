@@ -174,8 +174,8 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
   
   @Override
-  public void setWorkingDirectory(final Path new_dir) {
-    workingDir = new_dir.isAbsolute() ? new_dir : new Path(workingDir, new_dir);
+  public void setWorkingDirectory(final Path newDir) {
+    workingDir = newDir.isAbsolute() ? newDir : new Path(workingDir, newDir);
   }
 
   @Override
