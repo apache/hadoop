@@ -859,6 +859,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       FSSchedulerNode node, PendingAsk pendingAsk, NodeType type,
       boolean reserved, boolean opportunistic,
       SchedulerRequestKey schedulerKey) {
+    if (pendingAsk.isGuaranteedTypeEnforced() && opportunistic) {
+      // do not attempt to assign an OPPORTUNISTIC container to a resource
+      // request that has explicitly opted out of oversubscription
+      return Resources.none();
+    }
 
     // How much does this request need?
     Resource capability = pendingAsk.getPerAllocationResource();

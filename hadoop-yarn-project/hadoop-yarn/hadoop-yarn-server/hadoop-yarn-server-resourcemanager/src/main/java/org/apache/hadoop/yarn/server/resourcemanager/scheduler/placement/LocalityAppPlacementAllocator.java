@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
@@ -188,13 +190,16 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
 
           PendingAsk lastPendingAsk =
               lastRequest == null ? null : new PendingAsk(
-                  lastRequest.getCapability(), lastRequest.getNumContainers());
+                  lastRequest.getCapability(), lastRequest.getNumContainers(),
+                  enforceGuaranteedExecutionType(lastRequest));
           String lastRequestedNodePartition =
               lastRequest == null ? null : lastRequest.getNodeLabelExpression();
 
           updateResult = new PendingAskUpdateResult(lastPendingAsk,
               new PendingAsk(request.getCapability(),
-                  request.getNumContainers()), lastRequestedNodePartition,
+                  request.getNumContainers(),
+                  enforceGuaranteedExecutionType(request)),
+                  lastRequestedNodePartition,
               request.getNodeLabelExpression());
         }
       }
@@ -234,13 +239,29 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
       if (null == request) {
         return PendingAsk.ZERO;
       } else{
+        boolean guaranteedEnforced = enforceGuaranteedExecutionType(request);
         return new PendingAsk(request.getCapability(),
-            request.getNumContainers());
+            request.getNumContainers(), guaranteedEnforced);
       }
     } finally {
       readLock.unlock();
     }
 
+  }
+
+  /**
+   * Check for a given ResourceRequest, if its guaranteed execution type
+   * needs to be enforced.
+   * @param request resource request
+   * @return true if its guaranteed execution type is to be enforced.
+   *         false otherwise
+   */
+  private static boolean enforceGuaranteedExecutionType(
+      ResourceRequest request) {
+    ExecutionTypeRequest executionType = request.getExecutionTypeRequest();
+    return executionType != null &&
+        executionType.getExecutionType() == ExecutionType.GUARANTEED &&
+        executionType.getEnforceExecutionType();
   }
 
   @Override

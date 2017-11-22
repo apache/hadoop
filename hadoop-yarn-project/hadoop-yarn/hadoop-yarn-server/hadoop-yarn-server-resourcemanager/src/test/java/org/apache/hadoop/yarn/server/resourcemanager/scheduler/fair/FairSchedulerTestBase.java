@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -117,9 +119,15 @@ public class FairSchedulerTestBase {
         relaxLocality);
   }
 
+  protected ResourceRequest createResourceRequest(int memory, int vcores,
+      String host, int priority, int numContainers, boolean relaxLocality) {
+    return createResourceRequest(memory, vcores, host, priority,
+        numContainers, relaxLocality, false);
+  }
+
   protected ResourceRequest createResourceRequest(
       int memory, int vcores, String host, int priority, int numContainers,
-      boolean relaxLocality) {
+      boolean relaxLocality, boolean guaranteedExecutionEnforced) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
     request.setCapability(BuilderUtils.newResource(memory, vcores));
     request.setResourceName(host);
@@ -129,6 +137,11 @@ public class FairSchedulerTestBase {
     request.setPriority(prio);
     request.setRelaxLocality(relaxLocality);
     request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
+    if (guaranteedExecutionEnforced) {
+      ExecutionTypeRequest executionType = ExecutionTypeRequest.newInstance(
+          ExecutionType.GUARANTEED, true);
+      request.setExecutionTypeRequest(executionType);
+    }
     return request;
   }
 
@@ -152,6 +165,13 @@ public class FairSchedulerTestBase {
   }
 
   protected ApplicationAttemptId createSchedulingRequest(
+      int memory, String queueId, String userId,
+      int numContainers, boolean guaranteedExecutionEnforced) {
+    return createSchedulingRequest(memory, 1, queueId,
+        userId, numContainers, 1, guaranteedExecutionEnforced);
+  }
+
+  protected ApplicationAttemptId createSchedulingRequest(
       int memory, int vcores, String queueId, String userId, int numContainers) {
     return createSchedulingRequest(memory, vcores, queueId, userId, numContainers, 1);
   }
@@ -165,16 +185,24 @@ public class FairSchedulerTestBase {
   protected ApplicationAttemptId createSchedulingRequest(
       int memory, int vcores, String queueId, String userId, int numContainers,
       int priority) {
-    ResourceRequest request = createResourceRequest(memory, vcores,
-            ResourceRequest.ANY, priority, numContainers, true);
+    return createSchedulingRequest(memory, vcores, queueId,
+        userId, numContainers, priority, false);
+  }
+
+  protected ApplicationAttemptId createSchedulingRequest(
+      int memory, int vcores, String queueId, String userId, int numContainers,
+      int priority, boolean guaranteedExecutionEnforced) {
+    ResourceRequest request = createResourceRequest(
+        memory, vcores, ResourceRequest.ANY, priority,
+        numContainers, true, guaranteedExecutionEnforced);
     return createSchedulingRequest(Lists.newArrayList(request), queueId,
-            userId);
+        userId);
   }
 
   protected ApplicationAttemptId createSchedulingRequest(
       Collection<ResourceRequest> requests, String queueId, String userId) {
-    ApplicationAttemptId id =
-        createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    ApplicationAttemptId id = createAppAttemptId(this.APP_ID++,
+        this.ATTEMPT_ID++);
     scheduler.addApplication(id.getApplicationId(), queueId, userId, false);
     // This conditional is for testAclSubmitApplication where app is rejected
     // and no app is added.
