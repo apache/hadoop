@@ -221,7 +221,9 @@ public class NodesListManager extends CompositeService implements
           throws IOException, YarnException {
     // resolve the default timeout to the decommission timeout that is
     // configured at this moment
-    timeout = (timeout == null) ? readDecommissioningTimeout(yarnConf) : timeout;
+    if (null == timeout) {
+      timeout = readDecommissioningTimeout(yarnConf);
+    }
     if (null == yarnConf) {
       yarnConf = new YarnConfiguration();
     }
