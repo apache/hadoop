@@ -177,7 +177,6 @@ public class FairScheduler extends
   protected double rackLocalityThreshold; // Cluster threshold for rack locality
   protected long nodeLocalityDelayMs; // Delay for node locality
   protected long rackLocalityDelayMs; // Delay for rack locality
-  private FairSchedulerEventLog eventLog; // Machine-readable event log
   protected boolean assignMultiple; // Allocate multiple containers per
                                     // heartbeat
   @VisibleForTesting
@@ -402,10 +401,6 @@ public class FairScheduler extends
 
   public int getContinuousSchedulingSleepMs() {
     return continuousSchedulingSleepMs;
-  }
-
-  public FairSchedulerEventLog getEventLog() {
-    return eventLog;
   }
 
   /**
@@ -875,7 +870,6 @@ public class FairScheduler extends
     try {
       writeLock.lock();
       long start = getClock().getTime();
-      eventLog.log("HEARTBEAT", nm.getHostName());
       super.nodeUpdate(nm);
 
       FSSchedulerNode fsNode = getFSSchedulerNode(nm.getNodeID());
@@ -1284,8 +1278,6 @@ public class FairScheduler extends
 
       // This stores per-application scheduling information
       this.applications = new ConcurrentHashMap<>();
-      this.eventLog = new FairSchedulerEventLog();
-      eventLog.init(this.conf);
 
       allocConf = new AllocationConfiguration(conf);
       try {
