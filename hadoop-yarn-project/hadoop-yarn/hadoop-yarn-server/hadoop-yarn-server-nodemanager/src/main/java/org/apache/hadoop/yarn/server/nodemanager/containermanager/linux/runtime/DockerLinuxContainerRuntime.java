@@ -65,6 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
@@ -134,6 +135,16 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  *     source is an absolute path that is not a symlink and that points to a
  *     localized resource.
  *   </li>
+ *   <li>
+ *     {@code YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS} allows users to specify
+ +     additional volume mounts for the Docker container. The value of the
+ *     environment variable should be a comma-separated list of mounts.
+ *     All such mounts must be given as {@code source:dest:mode}, and the mode
+ *     must be "ro" (read-only) or "rw" (read-write) to specify the type of
+ *     access being requested. The requested mounts will be validated by
+ *     container-executor based on the values set in container-executor.cfg for
+ *     {@code docker.allowed.ro-mounts} and {@code docker.allowed.rw-mounts}.
+ *   </li>
  * </ul>
  */
 @InterfaceAudience.Private
@@ -151,6 +162,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       "^[a-zA-Z0-9][a-zA-Z0-9_.-]+$";
   private static final Pattern hostnamePattern = Pattern.compile(
       HOSTNAME_PATTERN);
+  private static final Pattern USER_MOUNT_PATTERN = Pattern.compile(
+      "(?<=^|,)([^:\\x00]+):([^:\\x00]+):([a-z]+)");
 
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
@@ -176,6 +189,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS";
+  @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_MOUNTS =
+      "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS";
 
   private Configuration conf;
   private Context nmContext;
@@ -671,6 +687,32 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           String src = validateMount(dir[0], localizedResources);
           String dst = dir[1];
           runCommand.addReadOnlyMountLocation(src, dst, true);
+        }
+      }
+    }
+
+    if (environment.containsKey(ENV_DOCKER_CONTAINER_MOUNTS)) {
+      Matcher parsedMounts = USER_MOUNT_PATTERN.matcher(
+          environment.get(ENV_DOCKER_CONTAINER_MOUNTS));
+      if (!parsedMounts.find()) {
+        throw new ContainerExecutionException(
+            "Unable to parse user supplied mount list: "
+                + environment.get(ENV_DOCKER_CONTAINER_MOUNTS));
+      }
+      parsedMounts.reset();
+      while (parsedMounts.find()) {
+        String src = parsedMounts.group(1);
+        String dst = parsedMounts.group(2);
+        String mode = parsedMounts.group(3);
+        if (!mode.equals("ro") && !mode.equals("rw")) {
+          throw new ContainerExecutionException(
+              "Invalid mount mode requested for mount: "
+                  + parsedMounts.group());
+        }
+        if (mode.equals("ro")) {
+          runCommand.addReadOnlyMountLocation(src, dst);
+        } else {
+          runCommand.addReadWriteMountLocation(src, dst);
         }
       }
     }
