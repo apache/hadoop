@@ -66,10 +66,15 @@ public class FSSchedulerNode extends SchedulerNode {
   // slated for preemption
   private Resource totalResourcesPreempted = Resource.newInstance(0, 0);
 
+  @VisibleForTesting
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     super(node, usePortForNodeName);
   }
 
+  public FSSchedulerNode(RMNode node, boolean usePortForNodeName,
+      float maxOverallocationRatio) {
+    super(node, usePortForNodeName, maxOverallocationRatio);
+  }
   /**
    * Total amount of reserved resources including reservations and preempted
    * containers.

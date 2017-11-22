@@ -3342,6 +3342,16 @@
 
   <property>
     <description>
+    The maximum amount of resources, specified as a ratio to node capacity,
+    that can be allocated to opportunistic containers on any given node in
+    the cluster.
+    </description>
+    <name>yarn.resourcemanager.overallocation.per-node-max-ratio</name>
+    <value>4.0</value>
+  </property>
+
+  <property>
+    <description>
     Frequency for computing least loaded NMs.
     </description>
     <name>yarn.resourcemanager.nm-container-queuing.sorting-nodes-interval-ms</name>

@@ -94,6 +94,10 @@ public abstract class SchedulerNode {
   protected Resource resourceAllocatedPendingLaunch =
       Resource.newInstance(0, 0);
 
+  // The max amount of resources that can be allocated to opportunistic
+  // containers on the node, specified as a ratio to its capacity
+  private final float maxOverAllocationRatio;
+
   private volatile Set<String> labels = null;
 
   private volatile Set<NodeAttribute> nodeAttributes = null;
@@ -102,7 +106,7 @@ public abstract class SchedulerNode {
   private volatile long lastHeartbeatMonotonicTime;
 
   public SchedulerNode(RMNode node, boolean usePortForNodeName,
-      Set<String> labels) {
+      Set<String> labels, float maxOverAllocationRatio) {
     this.rmNode = node;
     this.rmContext = node.getRMContext();
     this.unallocatedResource = Resources.clone(node.getTotalCapability());
@@ -114,10 +118,24 @@ public abstract class SchedulerNode {
     }
     this.labels = ImmutableSet.copyOf(labels);
     this.lastHeartbeatMonotonicTime = Time.monotonicNow();
+    this.maxOverAllocationRatio = maxOverAllocationRatio;
+  }
+
+  public SchedulerNode(RMNode node, boolean usePortForNodeName,
+      Set<String> labels) {
+    this(node, usePortForNodeName, labels,
+        YarnConfiguration.DEFAULT_PER_NODE_MAX_OVERALLOCATION_RATIO);
+  }
+
+  public SchedulerNode(RMNode node, boolean usePortForNodeName,
+      float maxOverAllocationRatio) {
+    this(node, usePortForNodeName, CommonNodeLabelsManager.EMPTY_STRING_SET,
+        maxOverAllocationRatio);
   }
 
   public SchedulerNode(RMNode node, boolean usePortForNodeName) {
-    this(node, usePortForNodeName, CommonNodeLabelsManager.EMPTY_STRING_SET);
+    this(node, usePortForNodeName, CommonNodeLabelsManager.EMPTY_STRING_SET,
+        YarnConfiguration.DEFAULT_PER_NODE_MAX_OVERALLOCATION_RATIO);
   }
 
   public RMNode getRMNode() {
@@ -671,9 +689,11 @@ public abstract class SchedulerNode {
 
   /**
    * Get the amount of resources that can be allocated to opportunistic
-   * containers in the case of overallocation. It is calculated as
+   * containers in the case of overallocation, calculated as
    * node capacity - (node utilization + resources of allocated-yet-not-started
-   * containers).
+   * containers), subject to the maximum amount of resources that can be
+   * allocated to opportunistic containers on the node specified as a ratio to
+   * its capacity.
    * @return the amount of resources that are available to be allocated to
    *         opportunistic containers
    */
@@ -706,9 +726,19 @@ public abstract class SchedulerNode {
     Resource resourceAllowedForOpportunisticContainers =
         Resources.createResource(allowedMemory, allowedCpu);
 
-    // TODO cap the resources allocated to OPPORTUNISTIC containers on a node
-    // in terms of its capacity. i.e. return min(max_ratio * capacity, allowed)
+    // cap the total amount of resources allocated to OPPORTUNISTIC containers
+    Resource maxOverallocation = getMaxOverallocationAllowed();
+    Resources.subtractFrom(maxOverallocation, allocatedResourceOpportunistic);
+    resourceAllowedForOpportunisticContainers = Resources.componentwiseMin(
+        maxOverallocation, resourceAllowedForOpportunisticContainers);
+
     return resourceAllowedForOpportunisticContainers;
+  }
+
+  private Resource getMaxOverallocationAllowed() {
+    long maxMemory = (long) (capacity.getMemorySize() * maxOverAllocationRatio);
+    int maxVcore = (int) (capacity.getVirtualCores() * maxOverAllocationRatio);
+    return Resource.newInstance(maxMemory, maxVcore);
   }
 
   private static class ContainerInfo {

@@ -119,6 +119,7 @@ public abstract class AbstractYarnScheduler
       new ClusterNodeTracker<>();
 
   protected Resource minimumAllocation;
+  protected float maxOverAllocationRatioPerNode;
 
   protected volatile RMContext rmContext;
 
@@ -201,6 +202,9 @@ public abstract class AbstractYarnScheduler
     nodeTracker.setConfiguredMaxAllocationWaitTime(
         configuredMaximumAllocationWaitTime);
     maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
+    maxOverAllocationRatioPerNode = conf.getFloat(
+        YarnConfiguration.PER_NODE_MAX_OVERALLOCATION_RATIO,
+        YarnConfiguration.DEFAULT_PER_NODE_MAX_OVERALLOCATION_RATIO);
     createReleaseCache();
     autoUpdateContainers =
         conf.getBoolean(YarnConfiguration.RM_AUTO_UPDATE_CONTAINERS,

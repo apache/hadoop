@@ -774,7 +774,7 @@ public class FairScheduler extends
     writeLock.lock();
     try {
       FSSchedulerNode schedulerNode = new FSSchedulerNode(node,
-          usePortForNodeName);
+          usePortForNodeName, maxOverAllocationRatioPerNode);
       nodeTracker.addNode(schedulerNode);
 
       triggerUpdate();

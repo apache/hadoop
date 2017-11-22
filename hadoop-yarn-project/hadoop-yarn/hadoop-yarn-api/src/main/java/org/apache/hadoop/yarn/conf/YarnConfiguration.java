@@ -398,6 +398,11 @@ public class YarnConfiguration extends Configuration {
   /** ACL used in case none is found. Allows nothing. */
   public static final String DEFAULT_YARN_APP_ACL = " ";
 
+  /** The global max overallocation per node in terms of their capacity. */
+  public static final String PER_NODE_MAX_OVERALLOCATION_RATIO =
+      RM_PREFIX + "overallocation.per-node-max-ratio";
+  public static final float DEFAULT_PER_NODE_MAX_OVERALLOCATION_RATIO = 4.0f;
+
   /** Setting that controls whether opportunistic container allocation
    *  is enabled or not. */
   @Unstable
