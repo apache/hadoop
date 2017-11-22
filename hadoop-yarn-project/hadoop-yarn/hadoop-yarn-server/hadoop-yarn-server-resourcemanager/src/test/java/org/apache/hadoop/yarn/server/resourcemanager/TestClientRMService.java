@@ -179,7 +179,7 @@ public class TestClientRMService {
   
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
-  
+
   @Test
   public void testGetDecommissioningClusterNodes() throws Exception {
     MockRM rm = new MockRM() {
@@ -191,7 +191,7 @@ public class TestClientRMService {
       };
     };
     rm.start();
-    
+
     int nodeMemory = 1024;
     MockNM nm1 = rm.registerNode("host1:1234", nodeMemory);
     rm.sendNodeStarted(nm1);
@@ -200,7 +200,7 @@ public class TestClientRMService {
     Integer decommissioningTimeout = 600;
     rm.sendNodeGracefulDecommission(nm1, decommissioningTimeout);
     rm.waitForState(nm1.getNodeId(), NodeState.DECOMMISSIONING);
-    
+
     // Create a client.
     Configuration conf = new Configuration();
     YarnRPC rpc = YarnRPC.create(conf);
@@ -209,7 +209,7 @@ public class TestClientRMService {
     ApplicationClientProtocol client =
         (ApplicationClientProtocol) rpc
             .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
-    
+
     // Make call
     List<NodeReport> nodeReports = client.getClusterNodes(
         GetClusterNodesRequest.newInstance(
@@ -219,11 +219,11 @@ public class TestClientRMService {
     NodeReport nr = nodeReports.iterator().next();
     Assert.assertEquals(decommissioningTimeout, nr.getDecommissioningTimeout());
     Assert.assertNull(nr.getNodeUpdateType());
-    
+
     rpc.stopProxy(client, conf);
     rm.close();
   }
-  
+
   @Test
   public void testGetClusterNodes() throws Exception {
     MockRM rm = new MockRM() {

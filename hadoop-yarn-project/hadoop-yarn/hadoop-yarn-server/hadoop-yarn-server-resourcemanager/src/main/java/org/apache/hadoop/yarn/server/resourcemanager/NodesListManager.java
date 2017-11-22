@@ -71,7 +71,7 @@ public class NodesListManager extends CompositeService implements
   private HostsFileReader hostsReader;
   private Configuration conf;
   private final RMContext rmContext;
-  
+
   // Default decommissioning timeout value in seconds.
   // Negative value indicates no timeout. 0 means immediate.
   private int defaultDecTimeoutSecs =
@@ -472,7 +472,7 @@ public class NodesListManager extends CompositeService implements
         .contains(ip))
         && !(excludeList.contains(hostName) || excludeList.contains(ip));
   }
-  
+
   private void sendRMAppNodeUpdateEventToNonFinalizedApps(
       RMNode eventNode, RMAppNodeUpdateType appNodeUpdateType) {
     for(RMApp app : rmContext.getRMApps().values()) {
@@ -506,7 +506,7 @@ public class NodesListManager extends CompositeService implements
       sendRMAppNodeUpdateEventToNonFinalizedApps(
           eventNode, RMAppNodeUpdateType.NODE_DECOMMISSIONING);
       break;
-      
+
     default:
       LOG.error("Ignoring invalid eventtype " + event.getType());
     }
@@ -624,7 +624,7 @@ public class NodesListManager extends CompositeService implements
       }
     }
   }
-  
+
   // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.
   // This enables NodesListManager to pick up new value without
   // ResourceManager restart.
@@ -646,7 +646,7 @@ public class NodesListManager extends CompositeService implements
     }
     return defaultDecTimeoutSecs;
   }
-  
+
   /**
    * A NodeId instance needed upon startup for populating inactive nodes Map.
    * It only knows the hostname/ip and marks the port to -1 or invalid.

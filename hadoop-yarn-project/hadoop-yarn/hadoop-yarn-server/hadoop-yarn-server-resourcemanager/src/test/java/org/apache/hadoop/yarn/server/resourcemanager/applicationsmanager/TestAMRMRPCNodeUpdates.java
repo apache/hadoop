@@ -82,14 +82,14 @@ public class TestAMRMRPCNodeUpdates {
     rm.sendNodeLost(nm);
     rm.drainEvents();
   }
-  
+
   private void syncNodeGracefulDecommission(
       MockNM nm, int timeout) throws Exception {
     rm.sendNodeGracefulDecommission(nm, timeout);
     rm.waitForState(nm.getNodeId(), NodeState.DECOMMISSIONING);
     rm.drainEvents();
   }
-  
+
   private AllocateResponse allocate(final ApplicationAttemptId attemptId,
       final AllocateRequest req) throws Exception {
     UserGroupInformation ugi =
@@ -105,27 +105,27 @@ public class TestAMRMRPCNodeUpdates {
       }
     });
   }
-  
+
   @Test
   public void testAMRMDecommissioningNodes() throws Exception {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
     rm.drainEvents();
-    
+
     RMApp app1 = rm.submitApp(2000);
-    
+
     // Trigger the scheduling so the AM gets 'launched' on nm1
     nm1.nodeHeartbeat(true);
-    
+
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
-    
+
     // register AM returns no unusable node
     am1.registerAppAttempt();
-    
+
     Integer decommissioningTimeout = 600;
     syncNodeGracefulDecommission(nm2, decommissioningTimeout);
-    
+
     AllocateRequest allocateRequest1 =
         AllocateRequest.newInstance(0, 0F, null, null, null);
     AllocateResponse response1 =
@@ -138,8 +138,7 @@ public class TestAMRMRPCNodeUpdates {
     Assert.assertEquals(
         NodeUpdateType.NODE_DECOMMISSIONING, nr.getNodeUpdateType());
   }
-  
-  
+
   @Test
   public void testAMRMUnusableNodes() throws Exception {
     

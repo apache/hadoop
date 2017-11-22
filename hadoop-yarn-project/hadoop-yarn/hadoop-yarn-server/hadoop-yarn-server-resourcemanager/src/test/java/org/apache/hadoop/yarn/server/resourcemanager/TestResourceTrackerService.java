@@ -302,7 +302,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat2.getNodeAction());
     Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
   }
-  
+
   @Test
   public void testGracefulDecommissionDefaultTimeoutResolution()
       throws Exception {
@@ -2046,11 +2046,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
       file.createNewFile();
     }
   }
-  
+
   private void writeToHostsFile(String... hosts) throws IOException {
     writeToHostsFile(hostFile, hosts);
   }
-  
+
   private void writeToHostsFile(File file, String... hosts)
       throws IOException {
     ensureFileExists(file);
@@ -2068,7 +2068,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
       }
     }
   }
-  
+
   private void writeToHostsXmlFile(
       File file, Pair<String, Integer>... hostsAndTimeouts) throws Exception {
     ensureFileExists(file);
@@ -2095,7 +2095,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     transformer.setOutputProperty(OutputKeys.INDENT, "yes");
     transformer.transform(new DOMSource(doc), new StreamResult(file));
   }
-  
+
   private void checkDecommissionedNMCount(MockRM rm, int count)
       throws InterruptedException {
     int waitCount = 0;
