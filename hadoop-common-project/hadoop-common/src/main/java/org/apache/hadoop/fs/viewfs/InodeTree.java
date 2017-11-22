@@ -43,7 +43,8 @@ import org.apache.hadoop.util.StringUtils;
  * InodeTree implements a mount-table as a tree of inodes.
  * It is used to implement ViewFs and ViewFileSystem.
  * In order to use it the caller must subclass it and implement
- * the abstract methods {@link #getTargetFileSystem(INodeDir)}, etc.
+ * the abstract methods {@link #getTargetFileSystem(
+ )}, etc.
  *
  * The mountable is initialized from the config variables as 
  * specified in {@link ViewFs}
@@ -63,7 +64,7 @@ abstract class InodeTree<T> {
     EXTERNAL_DIR
   }
 
-  static final Path SlashPath = new Path("/");
+  static final Path SLASH_PATH = new Path("/");
   // the root of the mount table
   private final INode<T> root;
   // the fallback filesystem
@@ -479,7 +480,7 @@ abstract class InodeTree<T> {
         String settings = null;
         if (src.startsWith(linkPrefix)) {
           src = src.substring(linkPrefix.length());
-          if (src.equals(SlashPath.toString())) {
+          if (src.equals(SLASH_PATH.toString())) {
             throw new UnsupportedFileSystemException("Unexpected mount table "
                 + "link entry '" + key + "'. Use "
                 + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH  + " instead!");
@@ -634,7 +635,7 @@ abstract class InodeTree<T> {
       T targetFs = root.isInternalDir() ?
           getRootDir().getInternalDirFs() : getRootLink().getTargetFileSystem();
       ResolveResult<T> res = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-          targetFs, root.fullPath, SlashPath);
+          targetFs, root.fullPath, SLASH_PATH);
       return res;
     }
 
@@ -681,7 +682,7 @@ abstract class InodeTree<T> {
         final INodeLink<T> link = (INodeLink<T>) nextInode;
         final Path remainingPath;
         if (i >= path.length - 1) {
-          remainingPath = SlashPath;
+          remainingPath = SLASH_PATH;
         } else {
           StringBuilder remainingPathStr = new StringBuilder("/" + path[i + 1]);
           for (int j = i + 2; j < path.length; ++j) {
@@ -701,7 +702,7 @@ abstract class InodeTree<T> {
     // We have resolved to an internal dir in mount table.
     Path remainingPath;
     if (resolveLastComponent) {
-      remainingPath = SlashPath;
+      remainingPath = SLASH_PATH;
     } else {
       // note we have taken care of when path is "/" above
       // for internal dirs rem-path does not start with / since the lookup
