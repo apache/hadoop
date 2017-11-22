@@ -13,6 +13,7 @@ Requirements:
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
+* python (for releasedocs)
 
 ----------------------------------------------------------------------------------
 The easiest way to get an environment with all the appropriate tools is by means
