@@ -68,7 +68,7 @@
     angular.module('ozone').component('rpcMetrics', {
         template: '<h1>Rpc metrics</h1><tabs>' +
         '<pane ng-repeat="metric in $ctrl.metrics" ' +
-        'title="Port {{metric[\'tag.port\']}}">' +
+        'title="{{metric[\'tag.serverName\']}} ({{metric[\'tag.port\']}})">' +
         '<rpc-metric jmxdata="metric"></rpc-metric></pane>' +
         '</tabs>',
         controller: function ($http) {
