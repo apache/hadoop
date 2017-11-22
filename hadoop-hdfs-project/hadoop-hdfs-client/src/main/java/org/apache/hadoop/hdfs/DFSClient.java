@@ -483,12 +483,21 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /** Get a lease and start automatic renewal */
   private void beginFileLease(final long inodeId, final DFSOutputStream out)
       throws IOException {
-    getLeaseRenewer().put(inodeId, out, this);
+    synchronized (filesBeingWritten) {
+      putFileBeingWritten(inodeId, out);
+      getLeaseRenewer().put(this);
+    }
   }
 
   /** Stop renewal of lease for the file. */
   void endFileLease(final long inodeId) {
-    getLeaseRenewer().closeFile(inodeId, this);
+    synchronized (filesBeingWritten) {
+      removeFileBeingWritten(inodeId);
+      // remove client from renewer if no files are open
+      if (filesBeingWritten.isEmpty()) {
+        getLeaseRenewer().closeClient(this);
+      }
+    }
   }
 
 
@@ -614,9 +623,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @Override
   public synchronized void close() throws IOException {
     if(clientRunning) {
+      // lease renewal stops when all files are closed
       closeAllFilesBeingWritten(false);
       clientRunning = false;
-      getLeaseRenewer().closeClient(this);
       // close connections to the namenode
       closeConnectionToNamenode();
     }

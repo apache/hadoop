@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -1251,6 +1252,85 @@ public class TestDFSClientRetries {
           getBlockWriteLocateFollowingInitialDelayMs(), 1000);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test(timeout=120000)
+  public void testLeaseRenewAndDFSOutputStreamDeadLock() throws Exception {
+    CountDownLatch testLatch = new CountDownLatch(1);
+    DFSClientFaultInjector.set(new DFSClientFaultInjector() {
+      public void delayWhenRenewLeaseTimeout() {
+        try {
+          testLatch.await();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    });
+    String file1 = "/testFile1";
+    // Set short retry timeouts so this test runs faster
+    conf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      final NamenodeProtocols spyNN = spy(cluster.getNameNodeRpc());
+
+      doAnswer(new SleepFixedTimeAnswer(1500, testLatch)).when(spyNN).complete(
+          anyString(), anyString(), any(ExtendedBlock.class), anyLong());
+      DFSClient client = new DFSClient(null, spyNN, conf, null);
+      // Get hold of the lease renewer instance used by the client
+      LeaseRenewer leaseRenewer = client.getLeaseRenewer();
+      leaseRenewer.setRenewalTime(100);
+      final OutputStream out1 = client.create(file1, false);
+
+      out1.write(new byte[256]);
+
+      Thread closeThread = new Thread(new Runnable() {
+        @Override public void run() {
+          try {
+            //1. trigger get LeaseRenewer lock
+            Mockito.doThrow(new SocketTimeoutException()).when(spyNN)
+                .renewLease(Mockito.anyString());
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
+      });
+      closeThread.start();
+
+      //2. trigger get DFSOutputStream lock
+      out1.close();
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private static class SleepFixedTimeAnswer implements Answer<Object> {
+    private final int sleepTime;
+    private final CountDownLatch testLatch;
+
+    SleepFixedTimeAnswer(int sleepTime, CountDownLatch latch) {
+      this.sleepTime = sleepTime;
+      this.testLatch = latch;
+    }
+
+    @Override
+    public Object answer(InvocationOnMock invocation) throws Throwable {
+      boolean interrupted = false;
+      try {
+        Thread.sleep(sleepTime);
+      } catch (InterruptedException ie) {
+        interrupted = true;
+      }
+      try {
+        return invocation.callRealMethod();
+      } finally {
+        testLatch.countDown();
+        if (interrupted) {
+          Thread.currentThread().interrupt();
+        }
+      }
     }
   }
 }
