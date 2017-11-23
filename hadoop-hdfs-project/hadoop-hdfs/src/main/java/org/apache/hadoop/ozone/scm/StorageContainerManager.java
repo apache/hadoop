@@ -238,9 +238,8 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
     initContainerReportCache(conf);
 
     scmStorage = new SCMStorage(conf);
-    String clusterId = scmStorage.getClusterID();
-    if (clusterId == null) {
-      throw new SCMException("clusterId not found",
+    if (scmStorage.getState() != StorageState.INITIALIZED) {
+      throw new SCMException("SCM not initialized.",
           ResultCodes.SCM_NOT_INITIALIZED);
     }
     scmNodeManager = new SCMNodeManager(conf, scmStorage.getClusterID(), this);
