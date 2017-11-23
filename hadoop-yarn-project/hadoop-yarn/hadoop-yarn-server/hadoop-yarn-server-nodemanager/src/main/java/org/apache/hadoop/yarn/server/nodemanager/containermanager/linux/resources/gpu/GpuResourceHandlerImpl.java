@@ -133,7 +133,6 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
     return ret;
   }
 
-  @VisibleForTesting
   public GpuResourceAllocator getGpuAllocator() {
     return gpuAllocator;
   }

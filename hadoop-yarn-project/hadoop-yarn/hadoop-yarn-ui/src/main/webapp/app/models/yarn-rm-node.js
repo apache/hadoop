@@ -32,6 +32,8 @@ export default DS.Model.extend({
   availableVirtualCores: DS.attr('number'),
   version: DS.attr('string'),
   nodeLabels: DS.attr('array'),
+  availableResource: DS.attr('object'),
+  usedResource: DS.attr('object'),
 
   nodeLabelsAsString: function() {
     var labels = this.get("nodeLabels");
@@ -89,6 +91,39 @@ export default DS.Model.extend({
     });
     return arr;
   }.property("availableVirtualCores", "usedVirtualCores"),
+
+  getGpuDataForDonutChart: function() {
+    var arr = [];
+    var used = 0;
+    var ri;
+
+    var resourceInformations = this.get("usedResource").resourcesInformations;
+    for (var i = 0; i < resourceInformations.length; i++) {
+      ri = resourceInformations[i];
+      if (ri.name === "yarn.io/gpu") {
+        used = ri.value;
+      }
+    }
+
+    var available = 0;
+    resourceInformations = this.get("availableResource").resourcesInformations;
+    for (i = 0; i < resourceInformations.length; i++) {
+      ri = resourceInformations[i];
+      if (ri.name === "yarn.io/gpu") {
+        available = ri.value;
+      }
+    }
+
+    arr.push({
+      label: "Used",
+      value: used
+    });
+    arr.push({
+      label: "Available",
+      value: available
+    });
+    return arr;
+  }.property("availableResource", "usedResource"),
 
   toolTipText: function() {
     return "<p>Rack: " + this.get("rack") + '</p>' +

@@ -25,7 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
 /**
- * All GPU Device Information in the system.
+ * All GPU Device Information in the system, fetched from nvidia-smi.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

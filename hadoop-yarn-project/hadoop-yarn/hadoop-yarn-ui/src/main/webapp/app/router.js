@@ -37,7 +37,10 @@ Router.map(function() {
     this.route('apps');
   });
   this.route('yarn-nodes-heatmap');
-  this.route('yarn-node', { path: '/yarn-node/:node_id/:node_addr' });
+  this.route('yarn-node', { path: '/yarn-node/:node_id/:node_addr' }, function() {
+    this.route("info");
+    this.route("yarn-nm-gpu");
+  });
   this.route('yarn-node-apps', { path: '/yarn-node-apps/:node_id/:node_addr' });
   this.route('yarn-node-app',
       { path: '/yarn-node-app/:node_id/:node_addr/:app_id' });

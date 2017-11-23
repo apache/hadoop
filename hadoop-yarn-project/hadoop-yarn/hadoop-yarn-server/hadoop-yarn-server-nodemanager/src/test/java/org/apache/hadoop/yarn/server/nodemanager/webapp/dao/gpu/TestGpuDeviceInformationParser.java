@@ -39,7 +39,7 @@ public class TestGpuDeviceInformationParser {
     Assert.assertEquals(2, info.getGpus().size());
     PerGpuDeviceInformation gpu1 = info.getGpus().get(1);
     Assert.assertEquals("Tesla P100-PCIE-12GB", gpu1.getProductName());
-    Assert.assertEquals(16384, gpu1.getGpuMemoryUsage().getTotalMemoryMiB());
+    Assert.assertEquals(12193, gpu1.getGpuMemoryUsage().getTotalMemoryMiB());
     Assert.assertEquals(10.3f,
         gpu1.getGpuUtilizations().getOverallGpuUtilization(), 1e-6);
     Assert.assertEquals(34f, gpu1.getTemperature().getCurrentGpuTemp(), 1e-6);

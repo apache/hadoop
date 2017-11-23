@@ -18,31 +18,20 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringReader;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.util.List;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-import org.apache.hadoop.http.JettyUtils;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import com.google.inject.Guice;
+import com.google.inject.servlet.ServletModule;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.ClientResponse.Status;
+import com.sun.jersey.api.client.GenericType;
+import com.sun.jersey.api.client.UniformInterfaceException;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -50,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
@@ -61,13 +51,22 @@ import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.PerGpuDeviceInformation;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -83,22 +82,36 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test the nodemanager node info web services api's
  */
 public class TestNMWebServices extends JerseyTestBase {
 
-  private static Context nmContext;
+  private static NodeManager.NMContext nmContext;
   private static ResourceView resourceView;
   private static ApplicationACLsManager aclsManager;
   private static LocalDirsHandlerService dirsHandler;
@@ -416,6 +429,116 @@ public class TestNMWebServices extends JerseyTestBase {
     assertTrue(redirectURL.contains(
         YarnWebServiceParams.REDIRECTED_FROM_NODE + "=true"));
     assertFalse(redirectURL.contains(YarnWebServiceParams.NM_ID));
+  }
+
+  @Test
+  public void testGetNMResourceInfo()
+      throws YarnException, InterruptedException, JSONException {
+    ResourcePluginManager rpm = mock(ResourcePluginManager.class);
+    Map<String, ResourcePlugin> namesToPlugins = new HashMap<>();
+    ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
+    NMResourceInfo nmResourceInfo1 = new NMResourceInfo() {
+      public long a = 1000L;
+    };
+    when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
+    namesToPlugins.put("resource-1", mockPlugin1);
+    namesToPlugins.put("yarn.io/resource-1", mockPlugin1);
+    ResourcePlugin mockPlugin2 = mock(ResourcePlugin.class);
+    namesToPlugins.put("resource-2", mockPlugin2);
+    when(rpm.getNameToPlugins()).thenReturn(namesToPlugins);
+
+    nmContext.setResourcePluginManager(rpm);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("node").path(
+        "resources").path("resource-2").accept(MediaType.APPLICATION_JSON).get(
+        ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+
+    // Access resource-2 should fail (null NMResourceInfo returned).
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertIncludesException(json);
+
+    // Access resource-3 should fail (unkown plugin)
+    response = r.path("ws").path("v1").path("node").path(
+        "resources").path("resource-3").accept(MediaType.APPLICATION_JSON).get(
+        ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    json = response.getEntity(JSONObject.class);
+    assertIncludesException(json);
+
+    // Access resource-1 should success
+    response = r.path("ws").path("v1").path("node").path(
+        "resources").path("resource-1").accept(MediaType.APPLICATION_JSON).get(
+        ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    json = response.getEntity(JSONObject.class);
+    Assert.assertEquals(1000, json.get("a"));
+
+    // Access resource-1 should success (encoded yarn.io/Fresource-1).
+    response = r.path("ws").path("v1").path("node").path("resources").path(
+        "yarn.io%2Fresource-1").accept(MediaType.APPLICATION_JSON).get(
+        ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    json = response.getEntity(JSONObject.class);
+    Assert.assertEquals(1000, json.get("a"));
+  }
+
+  private ContainerId createContainerId(int id) {
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
+    return containerId;
+  }
+
+  @Test
+  public void testGetYarnGpuResourceInfo()
+      throws YarnException, InterruptedException, JSONException {
+    ResourcePluginManager rpm = mock(ResourcePluginManager.class);
+    Map<String, ResourcePlugin> namesToPlugins = new HashMap<>();
+    ResourcePlugin mockPlugin1 = mock(ResourcePlugin.class);
+    GpuDeviceInformation gpuDeviceInformation = new GpuDeviceInformation();
+    gpuDeviceInformation.setDriverVersion("1.2.3");
+    gpuDeviceInformation.setGpus(Arrays.asList(new PerGpuDeviceInformation()));
+    NMResourceInfo nmResourceInfo1 = new NMGpuResourceInfo(gpuDeviceInformation,
+        Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 2),
+            new GpuDevice(3, 3)), Arrays
+        .asList(new AssignedGpuDevice(2, 2, createContainerId(1)),
+            new AssignedGpuDevice(3, 3, createContainerId(2))));
+    when(mockPlugin1.getNMResourceInfo()).thenReturn(nmResourceInfo1);
+    namesToPlugins.put("resource-1", mockPlugin1);
+    namesToPlugins.put("yarn.io/resource-1", mockPlugin1);
+    ResourcePlugin mockPlugin2 = mock(ResourcePlugin.class);
+    namesToPlugins.put("resource-2", mockPlugin2);
+    when(rpm.getNameToPlugins()).thenReturn(namesToPlugins);
+
+    nmContext.setResourcePluginManager(rpm);
+
+    WebResource r = resource();
+    ClientResponse response;
+    JSONObject json;
+
+    // Access resource-1 should success
+    response = r.path("ws").path("v1").path("node").path(
+        "resources").path("resource-1").accept(MediaType.APPLICATION_JSON).get(
+        ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    json = response.getEntity(JSONObject.class);
+    Assert.assertEquals("1.2.3",
+        json.getJSONObject("gpuDeviceInformation").get("driverVersion"));
+    Assert.assertEquals(3, json.getJSONArray("totalGpuDevices").length());
+    Assert.assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
+    Assert.assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
+  }
+
+  private void assertIncludesException(JSONObject json) {
+    Assert.assertTrue(json.has("RemoteException"));
   }
 
   private void testContainerLogs(WebResource r, ContainerId containerId)

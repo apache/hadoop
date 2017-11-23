@@ -15,64 +15,65 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
-import java.io.Serializable;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 /**
- * This class is used to represent GPU device while allocation.
+ * In addition to {@link GpuDevice}, this include container id and more runtime
+ * information related to who is using the GPU device if possible
  */
-public class GpuDevice implements Serializable, Comparable {
-  protected int index;
-  protected int minorNumber;
-  private static final long serialVersionUID = -6812314470754667710L;
+public class AssignedGpuDevice extends GpuDevice {
+  private static final long serialVersionUID = -12983712986315L;
 
-  public GpuDevice(int index, int minorNumber) {
-    this.index = index;
-    this.minorNumber = minorNumber;
+  String containerId;
+
+  public AssignedGpuDevice(int index, int minorNumber,
+      ContainerId containerId) {
+    super(index, minorNumber);
+    this.containerId = containerId.toString();
   }
 
-  public int getIndex() {
-    return index;
+  public String getContainerId() {
+    return containerId;
   }
 
-  public int getMinorNumber() {
-    return minorNumber;
+  public void setContainerId(String containerId) {
+    this.containerId = containerId;
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof GpuDevice)) {
+    if (obj == null || !(obj instanceof AssignedGpuDevice)) {
       return false;
     }
-    GpuDevice other = (GpuDevice) obj;
-    return index == other.index && minorNumber == other.minorNumber;
+    AssignedGpuDevice other = (AssignedGpuDevice) obj;
+    return index == other.index && minorNumber == other.minorNumber
+        && containerId.equals(other.containerId);
   }
 
   @Override
   public int compareTo(Object obj) {
-    if (obj == null || (!(obj instanceof  GpuDevice))) {
+    if (obj == null || (!(obj instanceof AssignedGpuDevice))) {
       return -1;
     }
 
-    GpuDevice other = (GpuDevice) obj;
+    AssignedGpuDevice other = (AssignedGpuDevice) obj;
 
     int result = Integer.compare(index, other.index);
     if (0 != result) {
       return result;
     }
-    return Integer.compare(minorNumber, other.minorNumber);
+    result = Integer.compare(minorNumber, other.minorNumber);
+    if (0 != result) {
+      return result;
+    }
+    return containerId.compareTo(other.containerId);
   }
 
   @Override
   public int hashCode() {
     final int prime = 47;
-    return prime * index + minorNumber;
-  }
-
-  @Override
-  public String toString() {
-    return "(index=" + index + ",minor_number=" + minorNumber + ")";
+    return prime * (prime * index + minorNumber) + containerId.hashCode();
   }
 }

@@ -633,4 +633,12 @@
     <Method name="getResources" />
     <Bug pattern="EI_EXPOSE_REP" />
   </Match>
+
+  <!-- EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice" />
+    <Method name="equals" />
+    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC" />
+  </Match>
+
 </FindBugsFilter>

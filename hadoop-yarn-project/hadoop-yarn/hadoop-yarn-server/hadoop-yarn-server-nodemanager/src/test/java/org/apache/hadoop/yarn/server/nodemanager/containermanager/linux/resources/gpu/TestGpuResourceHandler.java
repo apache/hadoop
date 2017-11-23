@@ -368,7 +368,7 @@ public class TestGpuResourceHandler {
     gpuResourceHandler.reacquireContainer(getContainerId(1));
 
     Map<GpuDevice, ContainerId> deviceAllocationMapping =
-        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
+        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
     Assert.assertEquals(2, deviceAllocationMapping.size());
     Assert.assertTrue(
         deviceAllocationMapping.keySet().contains(new GpuDevice(1, 1)));
@@ -402,7 +402,7 @@ public class TestGpuResourceHandler {
 
     // Make sure internal state not changed.
     deviceAllocationMapping =
-        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
+        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
     Assert.assertEquals(2, deviceAllocationMapping.size());
     Assert.assertTrue(deviceAllocationMapping.keySet()
         .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))));
@@ -434,7 +434,7 @@ public class TestGpuResourceHandler {
 
     // Make sure internal state not changed.
     deviceAllocationMapping =
-        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
+        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
     Assert.assertEquals(2, deviceAllocationMapping.size());
     Assert.assertTrue(deviceAllocationMapping.keySet()
         .containsAll(Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 3))));
