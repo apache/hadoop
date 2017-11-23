@@ -34,6 +34,7 @@ import org.apache.hadoop.ozone.scm.StorageContainerManager;
 import org.apache.hadoop.ozone.scm.StorageContainerManager.StartupOption;
 import org.apache.hadoop.ozone.scm.block.DeletedBlockLog;
 import org.apache.hadoop.ozone.scm.block.SCMBlockDeletingService;
+import org.apache.hadoop.ozone.scm.exceptions.SCMException;
 import org.apache.hadoop.ozone.scm.node.NodeManager;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -396,6 +397,19 @@ public class TestStorageContainerManager {
     SCMStorage scmStore = new SCMStorage(conf);
     Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
     Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
+  }
+
+  @Test
+  public void testSCMInitializationFailure() throws IOException {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    final String path =
+        GenericTestUtils.getTempPath(UUID.randomUUID().toString());
+    Path scmPath = Paths.get(path, "scm-meta");
+    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    exception.expect(SCMException.class);
+    exception.expectMessage("SCM not initialized.");
+    StorageContainerManager.createSCM(null, conf);
   }
 
   @Test
