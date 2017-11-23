@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
+import com.google.common.collect.Lists;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.curator.shaded.com.google.common.reflect.ClassPath;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -206,6 +211,22 @@ public abstract class Resource implements Comparable<Resource> {
   @InterfaceStability.Unstable
   public ResourceInformation[] getResources() {
     return resources;
+  }
+
+  /**
+   * Get list of resource information, this will be used by JAXB.
+   * @return list of resources copy.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public List<ResourceInformation> getAllResourcesListCopy() {
+    List<ResourceInformation> list = new ArrayList<>();
+    for (ResourceInformation i : resources) {
+      ResourceInformation ri = new ResourceInformation();
+      ResourceInformation.copy(i, ri);
+      list.add(ri);
+    }
+    return list;
   }
 
   /**

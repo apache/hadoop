@@ -30,11 +30,13 @@ import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -224,7 +226,20 @@ public class GpuResourceAllocator {
   }
 
   @VisibleForTesting
-  public synchronized Map<GpuDevice, ContainerId> getDeviceAllocationMapping() {
-     return new HashMap<>(usedDevices);
+  public synchronized Map<GpuDevice, ContainerId> getDeviceAllocationMappingCopy() {
+    return new HashMap<>(usedDevices);
+  }
+
+  public synchronized List<GpuDevice> getAllowedGpusCopy() {
+    return new ArrayList<>(allowedGpuDevices);
+  }
+
+  public synchronized List<AssignedGpuDevice> getAssignedGpusCopy() {
+    List<AssignedGpuDevice> assigns = new ArrayList<>();
+    for (Map.Entry<GpuDevice, ContainerId> entry : usedDevices.entrySet()) {
+      assigns.add(new AssignedGpuDevice(entry.getKey().getIndex(),
+          entry.getKey().getMinorNumber(), entry.getValue()));
+    }
+    return assigns;
   }
 }

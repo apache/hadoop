@@ -135,7 +135,7 @@ public class PerGpuDeviceInformation {
     this.gpuUtilizations = utilizations;
   }
 
-  @XmlElement(name = "bar1_memory_usage")
+  @XmlElement(name = "fb_memory_usage")
   public PerGpuMemoryUsage getGpuMemoryUsage() {
     return gpuMemoryUsage;
   }
