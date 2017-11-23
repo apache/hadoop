@@ -72,6 +72,11 @@ public class NodesListManager extends CompositeService implements
   private Configuration conf;
   private final RMContext rmContext;
 
+  // Default decommissioning timeout value in seconds.
+  // Negative value indicates no timeout. 0 means immediate.
+  private int defaultDecTimeoutSecs =
+      YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT;
+
   private String includesFile;
   private String excludesFile;
 
@@ -214,6 +219,11 @@ public class NodesListManager extends CompositeService implements
   private void refreshHostsReader(
       Configuration yarnConf, boolean graceful, Integer timeout)
           throws IOException, YarnException {
+    // resolve the default timeout to the decommission timeout that is
+    // configured at this moment
+    if (null == timeout) {
+      timeout = readDecommissioningTimeout(yarnConf);
+    }
     if (null == yarnConf) {
       yarnConf = new YarnConfiguration();
     }
@@ -252,7 +262,7 @@ public class NodesListManager extends CompositeService implements
   // Gracefully decommission excluded nodes that are not already
   // DECOMMISSIONED nor DECOMMISSIONING; Take no action for excluded nodes
   // that are already DECOMMISSIONED or DECOMMISSIONING.
-  private void handleExcludeNodeList(boolean graceful, Integer timeout) {
+  private void handleExcludeNodeList(boolean graceful, int timeout) {
     // DECOMMISSIONED/DECOMMISSIONING nodes need to be re-commissioned.
     List<RMNode> nodesToRecom = new ArrayList<RMNode>();
 
@@ -463,36 +473,40 @@ public class NodesListManager extends CompositeService implements
         && !(excludeList.contains(hostName) || excludeList.contains(ip));
   }
 
+  private void sendRMAppNodeUpdateEventToNonFinalizedApps(
+      RMNode eventNode, RMAppNodeUpdateType appNodeUpdateType) {
+    for(RMApp app : rmContext.getRMApps().values()) {
+      if (!app.isAppFinalStateStored()) {
+        this.rmContext
+            .getDispatcher()
+            .getEventHandler()
+            .handle(
+                new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
+                    appNodeUpdateType));
+      }
+    }
+  }
+
   @Override
   public void handle(NodesListManagerEvent event) {
     RMNode eventNode = event.getNode();
     switch (event.getType()) {
     case NODE_UNUSABLE:
       LOG.debug(eventNode + " reported unusable");
-      for(RMApp app: rmContext.getRMApps().values()) {
-        if (!app.isAppFinalStateStored()) {
-          this.rmContext
-              .getDispatcher()
-              .getEventHandler()
-              .handle(
-                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                      RMAppNodeUpdateType.NODE_UNUSABLE));
-        }
-      }
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
+          RMAppNodeUpdateType.NODE_UNUSABLE);
       break;
     case NODE_USABLE:
       LOG.debug(eventNode + " reported usable");
-      for (RMApp app : rmContext.getRMApps().values()) {
-        if (!app.isAppFinalStateStored()) {
-          this.rmContext
-              .getDispatcher()
-              .getEventHandler()
-              .handle(
-                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                      RMAppNodeUpdateType.NODE_USABLE));
-        }
-      }
+      sendRMAppNodeUpdateEventToNonFinalizedApps(eventNode,
+          RMAppNodeUpdateType.NODE_USABLE);
       break;
+    case NODE_DECOMMISSIONING:
+      LOG.debug(eventNode + " reported decommissioning");
+      sendRMAppNodeUpdateEventToNonFinalizedApps(
+          eventNode, RMAppNodeUpdateType.NODE_DECOMMISSIONING);
+      break;
+
     default:
       LOG.error("Ignoring invalid eventtype " + event.getType());
     }
@@ -609,6 +623,28 @@ public class NodesListManager extends CompositeService implements
             new RMNodeEvent(entry.getKey(), nodeEventType));
       }
     }
+  }
+
+  // Read possible new DECOMMISSIONING_TIMEOUT_KEY from yarn-site.xml.
+  // This enables NodesListManager to pick up new value without
+  // ResourceManager restart.
+  private int readDecommissioningTimeout(Configuration pConf) {
+    try {
+      if (pConf == null) {
+        pConf = new YarnConfiguration();
+      }
+      int configuredDefaultDecTimeoutSecs =
+          pConf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
+              YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
+      if (defaultDecTimeoutSecs != configuredDefaultDecTimeoutSecs) {
+        defaultDecTimeoutSecs = configuredDefaultDecTimeoutSecs;
+        LOG.info("Use new decommissioningTimeoutSecs: "
+            + defaultDecTimeoutSecs);
+      }
+    } catch (Exception e) {
+      LOG.warn("Error readDecommissioningTimeout " + e.getMessage());
+    }
+    return defaultDecTimeoutSecs;
   }
 
   /**
