@@ -323,6 +323,12 @@ message NodeIdProto {
   optional int32 port = 2;
 }
 
+enum NodeUpdateTypeProto {
+  NODE_USABLE = 0;
+  NODE_UNUSABLE = 1;
+  NODE_DECOMMISSIONING = 2;
+}
+
 message NodeReportProto {
   optional NodeIdProto nodeId = 1;
   optional string httpAddress = 2;
@@ -336,6 +342,8 @@ message NodeReportProto {
   repeated string node_labels = 10;
   optional ResourceUtilizationProto containers_utilization = 11;
   optional ResourceUtilizationProto node_utilization = 12;
+  optional uint32 decommissioning_timeout = 13;
+  optional NodeUpdateTypeProto node_update_type = 14;
 }
 
 message NodeIdToLabelsProto {

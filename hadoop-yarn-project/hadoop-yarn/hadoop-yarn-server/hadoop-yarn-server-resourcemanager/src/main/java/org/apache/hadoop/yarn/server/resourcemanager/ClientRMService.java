@@ -1016,7 +1016,7 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
-  private NodeReport createNodeReports(RMNode rmNode) {    
+  private NodeReport createNodeReports(RMNode rmNode) {
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());
     Resource used = BuilderUtils.newResource(0, 0);
@@ -1032,7 +1032,8 @@ public class ClientRMService extends AbstractService implements
             rmNode.getTotalCapability(), numContainers,
             rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
             rmNode.getNodeLabels(), rmNode.getAggregatedContainersUtilization(),
-            rmNode.getNodeUtilization());
+            rmNode.getNodeUtilization(), rmNode.getDecommissioningTimeout(),
+            null);
 
     return report;
   }

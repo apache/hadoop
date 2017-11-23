@@ -90,6 +90,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecommissioningEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
@@ -908,10 +909,24 @@ public class MockRM extends ResourceManager {
         node.getState());
   }
 
+  public void sendNodeGracefulDecommission(
+      MockNM nm, int timeout) throws Exception {
+    RMNodeImpl node = (RMNodeImpl)
+        getRMContext().getRMNodes().get(nm.getNodeId());
+    Assert.assertNotNull("node shouldn't be null", node);
+    node.handle(new RMNodeDecommissioningEvent(nm.getNodeId(), timeout));
+  }
+
   public void sendNodeEvent(MockNM nm, RMNodeEventType event) throws Exception {
     RMNodeImpl node = (RMNodeImpl)
         getRMContext().getRMNodes().get(nm.getNodeId());
+    Assert.assertNotNull("node shouldn't be null", node);
     node.handle(new RMNodeEvent(nm.getNodeId(), event));
+  }
+
+  public Integer getDecommissioningTimeout(NodeId nodeid) {
+    return this.getRMContext().getRMNodes()
+        .get(nodeid).getDecommissioningTimeout();
   }
 
   public KillApplicationResponse killApp(ApplicationId appId) throws Exception {
