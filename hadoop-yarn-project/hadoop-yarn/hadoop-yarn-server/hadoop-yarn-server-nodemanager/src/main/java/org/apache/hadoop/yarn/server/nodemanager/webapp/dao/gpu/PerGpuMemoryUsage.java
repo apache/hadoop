@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@XmlRootElement(name = "bar1_memory_usage")
+@XmlRootElement(name = "fb_memory_usage")
 public class PerGpuMemoryUsage {
   long usedMemoryMiB = -1L;
   long availMemoryMiB = -1L;

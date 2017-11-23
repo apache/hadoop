@@ -16,32 +16,28 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import DS from 'ember-data';
 
-import AbstractRoute from './abstract';
+export default DS.JSONAPISerializer.extend({
+  internalNormalizeSingleResponse(store, primaryModelClass, payload, id) {
+    if (payload.nodeInfo) {
+      payload = payload.nodeInfo;
+    }
 
-export default AbstractRoute.extend({
-  model() {
-    return Ember.RSVP.hash({
-      clusterMetrics: this.store.findAll('ClusterMetric', {reload: true}),
-      apps: this.store.query('yarn-app',
-        {
-          state: "RUNNING"
-        }),
-      queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
-        let type = model.get('firstObject').get('type');
-        return this.store.query("yarn-queue." + type + "-queue", {});
-      })
-    });
+    var fixedPayload = {
+      id: id,
+      type: primaryModelClass.modelName,
+      attributes: {
+        info: payload
+      }
+    };
+    return fixedPayload;
   },
 
-  afterModel() {
-    this.controllerFor("ClusterOverview").set("loading", false);
+  normalizeSingleResponse(store, primaryModelClass, payload, id/*, requestType*/) {
+    // payload is of the form {"nodeInfo":{}}
+    var p = this.internalNormalizeSingleResponse(store,
+      primaryModelClass, payload, id);
+    return { data: p };
   },
-
-  unloadAll() {
-    this.store.unloadAll('ClusterMetric');
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-queue.yarn-queue');
-  }
 });

@@ -16,32 +16,13 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+package org.apache.hadoop.yarn.server.nodemanager.webapp.dao;
 
-import AbstractRoute from './abstract';
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
-export default AbstractRoute.extend({
-  model() {
-    return Ember.RSVP.hash({
-      clusterMetrics: this.store.findAll('ClusterMetric', {reload: true}),
-      apps: this.store.query('yarn-app',
-        {
-          state: "RUNNING"
-        }),
-      queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
-        let type = model.get('firstObject').get('type');
-        return this.store.query("yarn-queue." + type + "-queue", {});
-      })
-    });
-  },
-
-  afterModel() {
-    this.controllerFor("ClusterOverview").set("loading", false);
-  },
-
-  unloadAll() {
-    this.store.unloadAll('ClusterMetric');
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-queue.yarn-queue');
-  }
-});
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
+public class NMResourceInfo {
+}

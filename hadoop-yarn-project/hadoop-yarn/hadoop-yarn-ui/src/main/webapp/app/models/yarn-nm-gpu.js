@@ -16,32 +16,12 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import DS from 'ember-data';
 
-import AbstractRoute from './abstract';
+export default DS.Model.extend({
+  info: DS.attr('object'),
 
-export default AbstractRoute.extend({
-  model() {
-    return Ember.RSVP.hash({
-      clusterMetrics: this.store.findAll('ClusterMetric', {reload: true}),
-      apps: this.store.query('yarn-app',
-        {
-          state: "RUNNING"
-        }),
-      queues: this.store.query("yarn-queue.yarn-queue", {}).then((model) => {
-        let type = model.get('firstObject').get('type');
-        return this.store.query("yarn-queue." + type + "-queue", {});
-      })
-    });
-  },
-
-  afterModel() {
-    this.controllerFor("ClusterOverview").set("loading", false);
-  },
-
-  unloadAll() {
-    this.store.unloadAll('ClusterMetric');
-    this.store.unloadAll('yarn-app');
-    this.store.unloadAll('yarn-queue.yarn-queue');
-  }
+  jsonString: function() {
+    return JSON.stringify(this.get("info"));
+  }.property(),
 });
