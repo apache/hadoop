@@ -188,7 +188,7 @@ public class JvmMetrics implements MetricsSource {
     }
 
     if (gcTimeMonitor != null) {
-      rb.addCounter(GcTimePercentage,
+      rb.addGauge(GcTimePercentage,
           gcTimeMonitor.getLatestGcData().getGcTimePercentage());
     }
   }
