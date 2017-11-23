@@ -19,47 +19,52 @@
 {{queue-navigator model=model.queues selected=model.selected
   used="usedCapacity" max="absMaxCapacity"}}
 
-<div class="yarn-compose-box">
-  <div class="panel-heading">
-    Queue Information: {{model.selected}}
+<div class="yarn-compose-box yarn-queues-container">
+  <div>
+    <h3>{{model.selected}}</h3>
+    {{#if model.selectedQueue.state}}
+      <div>
+        {{em-table-simple-status-cell content=model.selectedQueue.state}}
+      </div>
+    {{/if}}
+    <div class="top-1">
+      {{#each model.selectedQueue.capacitiesBarChartData as |item|}}
+        <span class="yarn-label">
+          <span class="label-key"> {{lower item.label}}</span>
+          <span class="label-value">{{item.value}}%</span>
+        </span>
+      {{/each}}
+    </div>
+    <div class="top-1">
+      <span class="yarn-label">
+        <span class="label-key">configured capacity</span>
+        <span class="label-value">{{model.selectedQueue.capacity}}%</span>
+      </span>
+      <span class="yarn-label">
+        <span class="label-key">configured max capacity</span>
+        <span class="label-value">{{model.selectedQueue.maxCapacity}}%</span>
+      </span>
+    </div>
+    {{#if model.selectedQueue.isLeafQueue}}
+      <div class="top-1">
+        <span class="yarn-label">
+          <span class="label-key">user limit</span>
+          <span class="label-value">{{model.selectedQueue.userLimit}}%</span>
+        </span>
+        <span class="yarn-label">
+          <span class="label-key">user limit factor</span>
+          <span class="label-value">{{model.selectedQueue.userLimitFactor}}</span>
+        </span>
+      </div>
+    {{/if}}
   </div>
-  <div class="panel-body">
-    <div class="container-fluid">
-      <div class="panel panel-default">
-          {{yarn-queue.capacity-queue-conf-table queue=model.selectedQueue}}
-      </div>
-    </div>
 
-    <div class="container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Queue Capacities: {{model.selected}}
-        </div>
-        <div class="container-fluid" id="capacity-bar-chart">
-          <br/>
-          {{bar-chart data=model.selectedQueue.capacitiesBarChartData
-          title=""
-          parentId="capacity-bar-chart"
-          textWidth=175
-          ratio=0.55
-          maxHeight=350}}
-        </div>
-      </div>
-    </div>
-
-    <div class="container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Running Apps: {{model.selected}}
-        </div>
-        <div class="container-fluid" id="numapplications-donut-chart">
-          {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
-          showLabels=true
-          parentId="numapplications-donut-chart"
-          ratio=0.6
-          maxHeight=350}}
-        </div>
-      </div>
-    </div>
+  <h5> Running Apps </h5>
+  <div id="numapplications-donut-chart">
+    {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
+    showLabels=true
+    parentId="numapplications-donut-chart"
+    ratio=0.6
+    maxHeight=350}}
   </div>
 </div>

@@ -749,4 +749,39 @@ div.service-action-mask img {
 
 #tree-selector-container {
   width: calc(100% - #{$compose-box-width});
+  overflow: scroll;
+}
+
+.flex {
+  display: flex;
+}
+
+.yarn-label {
+  border-radius: 3px;
+  margin-bottom: 5px;
+  border: 1px solid $yarn-panel-bg;
+  font-size: 12px;
+  display: inline-table;
+  > span {
+    padding: 5px;
+  }
+  .label-key {
+    color: $yarn-panel-bg;
+    background: #666;
+  }
+  .label-value {
+    color: $yarn-panel-bg;
+    background: $yarn-success-border;
+  }
+}
+
+.yarn-queues-container {
+  padding: 15px;
+  h3 {
+    margin-top: 0;
+  }
+}
+
+.top-1 {
+  margin-top: 5px;
 }

@@ -22,21 +22,18 @@
 .yarn-compose-box {
   position: fixed;
   bottom: 0;
-  top: 50px;
+  top: 0px;
   right: 0px;
   background-color: $yarn-panel-bg;
   border: 1px solid $yarn-border-color;
   border-radius: 3px;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  max-width: $compose-box-width;
+  overflow: scroll;
 
   .panel-heading {
     background-color: $yarn-header-bg !important;
     border-color: $yarn-border-color;
     border-radius: 3px;
-  }
-
-  .panel-body {
-    max-width: $compose-box-width;
-    overflow: scroll;
   }
 }
