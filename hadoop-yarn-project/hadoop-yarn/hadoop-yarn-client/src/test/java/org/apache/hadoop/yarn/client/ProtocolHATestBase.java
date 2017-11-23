@@ -618,7 +618,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     }
 
     public ApplicationReport createFakeAppReport() {
-      ApplicationId appId = ApplicationId.newInstance(1000l, 1);
+      ApplicationId appId = ApplicationId.newInstance(1000L, 1);
       ApplicationAttemptId attemptId =
           ApplicationAttemptId.newInstance(appId, 1);
       // create a fake application report
@@ -626,7 +626,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
           ApplicationReport.newInstance(appId, attemptId, "fakeUser",
               "fakeQueue", "fakeApplicationName", "localhost", 0, null,
               YarnApplicationState.FINISHED, "fake an application report", "",
-              1000l, 1200l, FinalApplicationStatus.FAILED, null, "", 50f,
+              1000L, 1200L, FinalApplicationStatus.FAILED, null, "", 50f,
               "fakeApplicationType", null);
       return report;
     }
@@ -638,7 +638,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     }
 
     public ApplicationId createFakeAppId() {
-      return ApplicationId.newInstance(1000l, 1);
+      return ApplicationId.newInstance(1000L, 1);
     }
 
     public ApplicationAttemptId createFakeApplicationAttemptId() {
@@ -657,7 +657,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
       NodeId nodeId = NodeId.newInstance("localhost", 0);
       NodeReport report =
           NodeReport.newInstance(nodeId, NodeState.RUNNING, "localhost",
-              "rack1", null, null, 4, null, 1000l, null);
+              "rack1", null, null, 4, null, 1000L);
       List<NodeReport> reports = new ArrayList<NodeReport>();
       reports.add(report);
       return reports;
@@ -680,8 +680,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     public ApplicationAttemptReport createFakeApplicationAttemptReport() {
       return ApplicationAttemptReport.newInstance(
           createFakeApplicationAttemptId(), "localhost", 0, "", "", "",
-          YarnApplicationAttemptState.RUNNING, createFakeContainerId(), 1000l,
-          1200l);
+          YarnApplicationAttemptState.RUNNING, createFakeContainerId(), 1000L,
+          1200L);
     }
 
     public List<ApplicationAttemptReport>
@@ -694,7 +694,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
 
     public ContainerReport createFakeContainerReport() {
       return ContainerReport.newInstance(createFakeContainerId(), null,
-          NodeId.newInstance("localhost", 0), null, 1000l, 1200l, "", "", 0,
+          NodeId.newInstance("localhost", 0), null, 1000L, 1200L, "", "", 0,
           ContainerState.COMPLETE,
           "http://" + NodeId.newInstance("localhost", 0).toString());
     }
