@@ -761,17 +761,31 @@ div.service-action-mask img {
   margin-bottom: 5px;
   border: 1px solid $yarn-panel-bg;
   font-size: 12px;
-  display: inline-table;
   > span {
     padding: 5px;
   }
-  .label-key {
-    color: $yarn-panel-bg;
-    background: #666;
-  }
-  .label-value {
-    color: $yarn-panel-bg;
-    background: $yarn-success-border;
+  &.primary {
+    display: inline-grid;
+    .label-key {
+      color: $yarn-panel-bg;
+      background: #666;
+    }
+    .label-value {
+      color: $yarn-panel-bg;
+      background: $yarn-success-border;
+    }
+  } 
+  &.secondary {
+    display: inline-table;
+    .label-key {
+      color: $yarn-panel-bg;
+      background: #999;
+    }
+
+    .label-value {
+      color: $yarn-panel-bg;
+      background: yellowgreen;
+    }
   }
 }
 
