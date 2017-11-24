@@ -180,8 +180,8 @@ class CSQueueUtils {
    * used resource for all partitions of this queue.
    */
   public static void updateUsedCapacity(final ResourceCalculator rc,
-      final Resource totalPartitionResource, Resource clusterResource,
-      String nodePartition, AbstractCSQueue childQueue) {
+      final Resource totalPartitionResource, String nodePartition,
+      AbstractCSQueue childQueue) {
     QueueCapacities queueCapacities = childQueue.getQueueCapacities();
     CSQueueMetrics queueMetrics = childQueue.getMetrics();
     ResourceUsage queueResourceUsage = childQueue.getQueueResourceUsage();
@@ -287,11 +287,11 @@ class CSQueueUtils {
       for (String partition : Sets.union(queueCapacities.getNodePartitionsSet(),
           queueResourceUsage.getNodePartitionsSet())) {
         updateUsedCapacity(rc, nlm.getResourceByLabel(partition, cluster),
-            cluster, partition, childQueue);
+            partition, childQueue);
       }
     } else {
       updateUsedCapacity(rc, nlm.getResourceByLabel(nodePartition, cluster),
-          cluster, nodePartition, childQueue);
+          nodePartition, childQueue);
     }
 
     // Update queue metrics w.r.t node labels. In a generic way, we can
