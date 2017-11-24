@@ -142,7 +142,6 @@ public class LeafQueue extends AbstractCSQueue {
   private Set<String> activeUsersSet =
       Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
   private float activeUsersTimesWeights = 0.0f;
-  private float allUsersTimesWeights = 0.0f;
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
@@ -307,7 +306,6 @@ public class LeafQueue extends AbstractCSQueue {
       ue.getValue().setWeight(getUserWeightFromQueue(ue.getKey()));
     }
     activeUsersTimesWeights = sumActiveUsersTimesWeights();
-    allUsersTimesWeights = sumAllUsersTimesWeights();
   }
 
   /**
@@ -450,7 +448,6 @@ public class LeafQueue extends AbstractCSQueue {
       user = new User(userName);
       users.put(userName, user);
       user.setWeight(getUserWeightFromQueue(userName));
-      allUsersTimesWeights = sumAllUsersTimesWeights();
     }
     return user;
   }
@@ -871,7 +868,6 @@ public class LeafQueue extends AbstractCSQueue {
     user.finishApplication(wasActive);
     if (user.getTotalApplications() == 0) {
       users.remove(application.getUser());
-      allUsersTimesWeights = sumAllUsersTimesWeights();
     }
 
     // Check if we can activate more applications
@@ -1298,18 +1294,20 @@ public class LeafQueue extends AbstractCSQueue {
     // Also, the queue's configured capacity should be higher than 
     // queue-hard-limit * ulMin
 
-    float usersSummedByWeight;
-    if (forActive) {
-      if (activeUsersManager.getActiveUsersChanged()) {
-        activeUsersSet = activeUsersManager.getActiveUsersSet();
-        activeUsersTimesWeights  = sumActiveUsersTimesWeights();
-        activeUsersManager.clearActiveUsersChanged();
-      }
-      usersSummedByWeight = activeUsersTimesWeights;
-    } else {
-      usersSummedByWeight = allUsersTimesWeights;
+    if (activeUsersManager.getActiveUsersChanged()) {
+      activeUsersSet = activeUsersManager.getActiveUsersSet();
+      activeUsersTimesWeights  = sumActiveUsersTimesWeights();
+      activeUsersManager.clearActiveUsersChanged();
     }
-    
+    float usersSummedByWeight = activeUsersTimesWeights;
+
+    // Align the preemption algorithm with the assignment algorithm.
+    // If calculating for preemption and the user is not active, calculate the
+    // limit as if the user will be preempted (since that will make it active).
+    if (!forActive && !activeUsersSet.contains(userName)) {
+      usersSummedByWeight = activeUsersTimesWeights + user.getWeight();
+    }
+
     // User limit resource is determined by:
     // max(currentCapacity / #activeUsers, currentCapacity *
     // user-limit-percentage%)
@@ -1391,15 +1389,6 @@ public class LeafQueue extends AbstractCSQueue {
       // Do the following instead of calling getUser to avoid synchronization.
       User user = users.get(userName);
       count += (user != null) ? user.getWeight() : 0.0f;
-    }
-    return count;
-  }
-
-  synchronized float sumAllUsersTimesWeights() {
-    float count = 0.0f;
-    for (String userName : users.keySet()) {
-      User user = getUser(userName);
-      count += user.getWeight();
     }
     return count;
   }

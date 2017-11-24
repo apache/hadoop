@@ -3503,4 +3503,101 @@ public class TestLeafQueue {
     assertEquals(1*GB,
         app_1.getTotalPendingRequestsPerPartition().get("").getMemorySize());
   }
+
+  @Test
+  public void testGetResourceLimitForAllUsers() throws Exception {
+    // Mock the queue
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    // Set minimum-user-limit-percent for queue "a" so 3 users can be active.
+    csConf.setUserLimit(a.getQueuePath(), 33);
+    // Make sure a single user can consume the entire cluster.
+    csConf.setUserLimitFactor(a.getQueuePath(), 15);
+    csConf.setMaximumCapacity(a.getQueuePath(), 100);
+
+    when(csContext.getClusterResource())
+        .thenReturn(Resources.createResource(100 * GB, 192));
+    a.reinitialize(a, csContext.getClusterResource());
+
+    // Users
+    final String user_0 = "user_0";
+    final String user_1 = "user_1";
+    final String user_2 = "user_2";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app_0 =
+        new FiCaSchedulerApp(appAttemptId_0, user_0, a,
+            a.getActiveUsersManager(), spyRMContext);
+    a.submitApplicationAttempt(app_0, user_0);
+
+    final ApplicationAttemptId appAttemptId_1 =
+        TestUtils.getMockApplicationAttemptId(1, 0);
+    FiCaSchedulerApp app_1 =
+        new FiCaSchedulerApp(appAttemptId_1, user_1, a,
+            a.getActiveUsersManager(), spyRMContext);
+    a.submitApplicationAttempt(app_1, user_1); // different user
+
+    final ApplicationAttemptId appAttemptId_2 =
+        TestUtils.getMockApplicationAttemptId(2, 0);
+    FiCaSchedulerApp app_2 =
+        new FiCaSchedulerApp(appAttemptId_2, user_2, a,
+            a.getActiveUsersManager(), spyRMContext);
+    a.submitApplicationAttempt(app_2, user_2); // different user
+
+    // Setup some nodes
+    String host_0 = "127.0.0.1";
+    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 100*GB);
+
+    final int numNodes = 1;
+    Resource clusterResource =
+        Resources.createResource(numNodes * (100*GB), numNodes * 128);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+
+    // user_0 consumes 65% of the queue
+    Priority priority = TestUtils.createMockPriority(1);
+    for (int i=0; i < 65; i++) {
+      app_0.updateResourceRequests(Collections.singletonList(
+          TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true,
+              priority, recordFactory)));
+      a.assignContainers(clusterResource, node_0,
+          new ResourceLimits(clusterResource),
+          SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    }
+    assertEquals(65*GB, app_0.getCurrentConsumption().getMemorySize());
+
+    // When the minimum user limit percent is set to 33%, the capacity scheduler
+    // will try to assign 35% of resources to each user. This is because the
+    // capacity scheduler leaves a slight buffer for each user.
+    for (int i=0; i < 35; i++) {
+      app_1.updateResourceRequests(Collections.singletonList(
+          TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true,
+              priority, recordFactory)));
+
+      a.assignContainers(clusterResource, node_0,
+          new ResourceLimits(clusterResource),
+          SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    }
+    assertEquals(35*GB, app_1.getCurrentConsumption().getMemorySize());
+    assertEquals(0, a.getActiveUsersManager().getNumActiveUsers());
+
+    app_0.updateResourceRequests(Collections.singletonList(
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 35, true,
+            priority, recordFactory)));
+    a.assignContainers(clusterResource, node_0,
+        new ResourceLimits(clusterResource),
+        SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    assertEquals(0*GB, app_2.getCurrentConsumption().getMemorySize());
+    assertEquals(1, a.getActiveUsersManager().getNumActiveUsers());
+
+    // With one active user requesting resources (user_2), one user exactly at
+    // the user limit guarantee (user_1) and one user over its user limit
+    // (uesr_0), preemption should calculate the user limit to be 50% of the
+    // resources. Since the capacity scheduler will leave a buffer of 1
+    // container, 51GB should be the amount of resources calculated for
+    // preemption.
+    Resource ulForallUsers = a.getResourceLimitForAllUsers(user_2,
+        clusterResource, "", SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    assertEquals(51*GB, ulForallUsers.getMemorySize());
+  }
 }
