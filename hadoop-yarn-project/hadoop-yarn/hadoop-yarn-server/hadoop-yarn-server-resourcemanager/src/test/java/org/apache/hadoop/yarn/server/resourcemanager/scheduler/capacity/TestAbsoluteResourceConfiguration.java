@@ -27,7 +27,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -233,7 +232,12 @@ public class TestAbsoluteResourceConfiguration {
   @Test
   public void testSimpleValidateAbsoluteResourceConfig() throws Exception {
     /**
-     * Queue structure is as follows. root / | \ a b c / \ | a1 a2 b1
+     * Queue structure is as follows.
+     *    root
+     *   / | \
+     *   a b c
+     *   / \ |
+     *  a1 a2 b1
      *
      * Test below cases 1) Configure percentage based capacity and absolute
      * resource together. 2) As per above tree structure, ensure all values
@@ -258,21 +262,15 @@ public class TestAbsoluteResourceConfiguration {
     // Get queue object to verify min/max resource configuration.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
-    // 1. Create a new config with capcity and min/max together. Ensure an
-    // exception is thrown.
+    // 1. Create a new config with min/max.
     CapacitySchedulerConfiguration csConf1 = setupSimpleQueueConfiguration(
         true);
     setupMinMaxResourceConfiguration(csConf1);
 
     try {
       cs.reinitialize(csConf1, rm.getRMContext());
-      Assert.fail();
     } catch (IOException e) {
-      Assert.assertTrue(e instanceof IOException);
-      Assert.assertEquals(
-          "Failed to re-init queues : Queue 'queueA' should use either"
-              + " percentage based capacity configuration or absolute resource.",
-          e.getMessage());
+      Assert.fail();
     }
     rm.stop();
 
@@ -368,7 +366,12 @@ public class TestAbsoluteResourceConfiguration {
   @Test
   public void testComplexValidateAbsoluteResourceConfig() throws Exception {
     /**
-     * Queue structure is as follows. root / | \ a b c / \ | a1 a2 b1
+     * Queue structure is as follows.
+     *   root
+     *  / | \
+     *  a b c
+     * / \ |
+     * a1 a2 b1
      *
      * Test below cases: 1) Parent and its child queues must use either
      * percentage based or absolute resource configuration. 2) Parent's min
@@ -395,11 +398,6 @@ public class TestAbsoluteResourceConfiguration {
     csConf.setCapacity(QUEUEA_FULL, 50f);
     csConf.setCapacity(QUEUEB_FULL, 25f);
     csConf.setCapacity(QUEUEC_FULL, 25f);
-
-    // Also unset resource based config.
-    csConf.setMinimumResourceRequirement("", QUEUEA_FULL, Resources.none());
-    csConf.setMinimumResourceRequirement("", QUEUEB_FULL, Resources.none());
-    csConf.setMinimumResourceRequirement("", QUEUEC_FULL, Resources.none());
 
     // Get queue object to verify min/max resource configuration.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
