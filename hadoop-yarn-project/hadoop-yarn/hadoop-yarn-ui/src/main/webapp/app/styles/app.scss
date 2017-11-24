@@ -1,4 +1,6 @@
 @import 'variables.scss';
+@import 'layout.scss';
+@import 'yarn-app.scss';
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -497,6 +499,9 @@ div.attempt-info-panel table > tbody > tr > td:last-of-type {
 .align-center {
   text-align: center !important;
 }
+.align-right {
+  text-align: right;
+}
 
 .bold-text {
   font-weight: bold !important;
@@ -717,7 +722,26 @@ div.service-action-mask img {
     line-height: 2em;
 }
 
+.yarn-app-body > div:not(:first-child) {
+  margin-top: 15px;
+}
+
 .em-table .table-column .table-header-cell {
   background-color: $yarn-header-bg;
   border-bottom: 1px solid $yarn-border-color;
+}
+
+.muted-text {
+  color: $yarn-muted-text;
+}
+
+.glyphicon-gray {
+  color: $yarn-gray-icon;
+}
+
+.btn.btn-unstyled {
+  padding: 5px;
+  background: none;
+  border: none;
+  box-shadow: none;
 }
