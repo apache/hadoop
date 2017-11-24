@@ -739,8 +739,8 @@ public class ParentQueue extends AbstractCSQueue {
         child.getQueueResourceUsage().getUsed(nodePartition));
 
     // Get child's max resource
-    Resource childConfiguredMaxResource = getEffectiveMaxCapacityDown(
-        nodePartition, minimumAllocation);
+    Resource childConfiguredMaxResource = child
+        .getEffectiveMaxCapacityDown(nodePartition, minimumAllocation);
 
     // Child's limit should be capped by child configured max resource
     childLimit =
