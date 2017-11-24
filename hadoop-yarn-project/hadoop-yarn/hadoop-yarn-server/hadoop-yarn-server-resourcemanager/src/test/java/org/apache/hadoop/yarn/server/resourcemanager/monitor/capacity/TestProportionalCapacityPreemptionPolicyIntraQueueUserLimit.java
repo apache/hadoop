@@ -931,4 +931,46 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
+
+  @Test
+  public void testSimpleIUserLimitntraQueuePreemptionNoOverPreemption()
+      throws IOException {
+    conf.setFloat(CapacitySchedulerConfiguration.
+        INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 0.5);
+
+    String labelsConfig = "=100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100 100 100 1 0]);" + // root
+            "-a(=[100 100 100 1 0])"; // a
+
+    // When preempting within a queue, it should preempt no more than what the
+    // LeafQueue will then re-assign. In this use case, containers will be
+    // preempted from app1, which will cause app1 and app2 to be active.
+    // LeafQueue will calculate MULP to be 50% because
+    // (100 resources / 2 active users) = 50. We expect 14 containers to be
+    // preempted.
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    //          \tMULP
+    String appsConfig =
+        "a\t" // app1 in a
+            + "(1,1,n1,,65,false,0,user1)\t50;" +
+            "a\t" // app2 in a
+            + "(1,1,n1,,35,false,0,user2)\t50;" +
+            "a\t" // app3 in a
+            + "(1,1,n1,,0,false,35,user3)\t50"
+            ;
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    // app2 is right at its user limit and app1 needs one resource. Should
+    // preempt 1 container.
+    verify(mDisp, times(14)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+  }
 }
