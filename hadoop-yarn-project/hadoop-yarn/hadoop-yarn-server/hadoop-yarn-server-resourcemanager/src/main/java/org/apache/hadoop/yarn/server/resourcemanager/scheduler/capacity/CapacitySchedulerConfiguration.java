@@ -329,7 +329,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final String DEFAULT_RESOURCE_TYPES = "memory,vcores";
 
-  public static final String PATTERN_FOR_ABSOLUTE_RESOURCE = "\\[([^\\]]+)";
+  public static final String PATTERN_FOR_ABSOLUTE_RESOURCE = "^\\[[\\w\\.,\\-_=\\ /]+\\]$";
+
+  private static final Pattern RESOURCE_PATTERN = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE);
 
   public enum AbsoluteResourceType {
     MEMORY, VCORES;
@@ -411,14 +413,29 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   public float getNonLabeledQueueCapacity(String queue) {
-    float capacity = queue.equals("root") ? 100.0f : getFloat(
-        getQueuePrefix(queue) + CAPACITY, 0f);
-    if (capacity < MINIMUM_CAPACITY_VALUE || capacity > MAXIMUM_CAPACITY_VALUE) {
-      throw new IllegalArgumentException("Illegal " +
-      		"capacity of " + capacity + " for queue " + queue);
+    String configuredCapacity = get(getQueuePrefix(queue) + CAPACITY);
+    boolean matcher = (configuredCapacity != null)
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    if (matcher) {
+      // Return capacity in percentage as 0 for non-root queues and 100 for
+      // root.From AbstractCSQueue, absolute resource will be parsed and
+      // updated. Once nodes are added/removed in cluster, capacity in
+      // percentage will also be re-calculated.
+      return queue.equals("root") ? 100.0f : 0f;
     }
-    LOG.debug("CSConf - getCapacity: queuePrefix=" + getQueuePrefix(queue) + 
-        ", capacity=" + capacity);
+
+    float capacity = queue.equals("root")
+        ? 100.0f
+        : (configuredCapacity == null)
+            ? 0f
+            : Float.parseFloat(configuredCapacity);
+    if (capacity < MINIMUM_CAPACITY_VALUE
+        || capacity > MAXIMUM_CAPACITY_VALUE) {
+      throw new IllegalArgumentException(
+          "Illegal " + "capacity of " + capacity + " for queue " + queue);
+    }
+    LOG.debug("CSConf - getCapacity: queuePrefix=" + getQueuePrefix(queue)
+        + ", capacity=" + capacity);
     return capacity;
   }
   
@@ -433,10 +450,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public float getNonLabeledQueueMaximumCapacity(String queue) {
-    float maxCapacity = getFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY,
-        MAXIMUM_CAPACITY_VALUE);
-    maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE) ? 
-        MAXIMUM_CAPACITY_VALUE : maxCapacity;
+    String configuredCapacity = get(getQueuePrefix(queue) + MAXIMUM_CAPACITY);
+    boolean matcher = (configuredCapacity != null)
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    if (matcher) {
+      // Return capacity in percentage as 0 for non-root queues and 100 for
+      // root.From AbstractCSQueue, absolute resource will be parsed and
+      // updated. Once nodes are added/removed in cluster, capacity in
+      // percentage will also be re-calculated.
+      return 100.0f;
+    }
+
+    float maxCapacity = (configuredCapacity == null)
+        ? MAXIMUM_CAPACITY_VALUE
+        : Float.parseFloat(configuredCapacity);
+    maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE)
+        ? MAXIMUM_CAPACITY_VALUE
+        : maxCapacity;
     return maxCapacity;
   }
   
@@ -590,6 +620,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private float internalGetLabeledQueueCapacity(String queue, String label, String suffix,
       float defaultValue) {
     String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
+    boolean matcher = (capacityPropertyName != null)
+        && RESOURCE_PATTERN.matcher(capacityPropertyName).find();
+    if (matcher) {
+      // Return capacity in percentage as 0 for non-root queues and 100 for
+      // root.From AbstractCSQueue, absolute resource will be parsed and
+      // updated. Once nodes are added/removed in cluster, capacity in
+      // percentage will also be re-calculated.
+      return defaultValue;
+    }
+
     float capacity = getFloat(capacityPropertyName, defaultValue);
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
@@ -1722,7 +1762,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public Resource getMinimumResourceRequirement(String label, String queue,
       Set<String> resourceTypes) {
     return internalGetLabeledResourceRequirementForQueue(queue, label,
-        resourceTypes, MINIMUM_RESOURCE);
+        resourceTypes, CAPACITY);
   }
 
   /**
@@ -1739,19 +1779,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public Resource getMaximumResourceRequirement(String label, String queue,
       Set<String> resourceTypes) {
     return internalGetLabeledResourceRequirementForQueue(queue, label,
-        resourceTypes, MAXIMUM_RESOURCE);
+        resourceTypes, MAXIMUM_CAPACITY);
   }
 
   @VisibleForTesting
   public void setMinimumResourceRequirement(String label, String queue,
       Resource resource) {
-    updateMinMaxResourceToConf(label, queue, resource, MINIMUM_RESOURCE);
+    updateMinMaxResourceToConf(label, queue, resource, CAPACITY);
   }
 
   @VisibleForTesting
   public void setMaximumResourceRequirement(String label, String queue,
       Resource resource) {
-    updateMinMaxResourceToConf(label, queue, resource, MAXIMUM_RESOURCE);
+    updateMinMaxResourceToConf(label, queue, resource, MAXIMUM_CAPACITY);
   }
 
   private void updateMinMaxResourceToConf(String label, String queue,
@@ -1786,8 +1826,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
     // Define resource here.
     Resource resource = Resource.newInstance(0l, 0);
-    Matcher matcher = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE)
-        .matcher(resourceString);
+    Matcher matcher = RESOURCE_PATTERN.matcher(resourceString);
+
     /*
      * Absolute resource configuration for a queue will be grouped by "[]".
      * Syntax of absolute resource config could be like below
@@ -1795,11 +1835,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
      */
     if (matcher.find()) {
       // Get the sub-group.
-      String subGroup = matcher.group(1);
+      String subGroup = matcher.group(0);
       if (subGroup.trim().isEmpty()) {
         return Resources.none();
       }
 
+      subGroup = subGroup.substring(1, subGroup.length() - 1);
       for (String kvPair : subGroup.trim().split(",")) {
         String[] splits = kvPair.split("=");
 
