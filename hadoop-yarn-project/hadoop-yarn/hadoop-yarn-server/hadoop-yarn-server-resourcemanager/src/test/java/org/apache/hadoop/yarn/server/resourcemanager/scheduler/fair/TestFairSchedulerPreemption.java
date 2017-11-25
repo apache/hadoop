@@ -278,11 +278,12 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     preemptHalfResources(queue2);
   }
 
-  private void verifyPreemption(int numStarvedAppContainers)
+  private void verifyPreemption(int numStarvedAppContainers,
+                                int numGreedyAppContainers)
       throws InterruptedException {
     // Sleep long enough for four containers to be preempted.
     for (int i = 0; i < 1000; i++) {
-      if (greedyApp.getLiveContainers().size() == 2 * numStarvedAppContainers) {
+      if (greedyApp.getLiveContainers().size() == numGreedyAppContainers) {
         break;
       }
       Thread.sleep(10);
@@ -290,12 +291,12 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
     // Post preemption, verify the greedyApp has the correct # of containers.
     assertEquals("Incorrect # of containers on the greedy app",
-        2 * numStarvedAppContainers, greedyApp.getLiveContainers().size());
+            numGreedyAppContainers, greedyApp.getLiveContainers().size());
 
     // Verify the queue metrics are set appropriately. The greedyApp started
     // with 8 1GB, 1vcore containers.
     assertEquals("Incorrect # of preempted containers in QueueMetrics",
-        8 - 2 * numStarvedAppContainers,
+        8 - numGreedyAppContainers,
         greedyApp.getQueue().getMetrics().getAggregatePreemptedContainers());
 
     // Verify the node is reserved for the starvingApp
@@ -340,7 +341,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     String queue = "root.preemptable.child-1";
     submitApps(queue, queue);
     if (fairsharePreemption) {
-      verifyPreemption(2);
+      verifyPreemption(2, 4);
     } else {
       verifyNoPreemption();
     }
@@ -349,13 +350,13 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   @Test
   public void testPreemptionBetweenTwoSiblingLeafQueues() throws Exception {
     submitApps("root.preemptable.child-1", "root.preemptable.child-2");
-    verifyPreemption(2);
+    verifyPreemption(2, 4);
   }
 
   @Test
   public void testPreemptionBetweenNonSiblingQueues() throws Exception {
     submitApps("root.preemptable.child-1", "root.nonpreemptable.child-1");
-    verifyPreemption(2);
+    verifyPreemption(2, 4);
   }
 
   @Test
@@ -389,7 +390,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     setNumAMContainersPerNode(2);
     preemptHalfResources("root.preemptable.child-2");
 
-    verifyPreemption(2);
+    verifyPreemption(2, 4);
 
     ArrayList<RMContainer> containers =
         (ArrayList<RMContainer>) starvingApp.getLiveContainers();
@@ -399,6 +400,22 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // the preemption happens on both nodes.
     assertTrue("Preempted containers should come from two different "
         + "nodes.", !host0.equals(host1));
+  }
+
+  @Test
+  public void testAppNotPreemptedBelowFairShare() throws Exception {
+    takeAllResources("root.preemptable.child-1");
+    tryPreemptMoreThanFairShare("root.preemptable.child-2");
+  }
+
+  private void tryPreemptMoreThanFairShare(String queueName)
+          throws InterruptedException {
+    ApplicationAttemptId appAttemptId
+            = createSchedulingRequest(3 * GB, 3, queueName, "default",
+            NODE_CAPACITY_MULTIPLE * rmNodes.size() / 2);
+    starvingApp = scheduler.getSchedulerApp(appAttemptId);
+
+    verifyPreemption(1, 5);
   }
 
   @Test
@@ -414,10 +431,10 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
 
     // Submit a job so half the resources go to parent's sibling
     preemptHalfResources("root.preemptable-sibling");
-    verifyPreemption(2);
+    verifyPreemption(2, 4);
 
     // Submit a job to the child's sibling to force preemption from the child
     preemptHalfResources("root.preemptable.child-2");
-    verifyPreemption(1);
+    verifyPreemption(1, 2);
   }
 }
