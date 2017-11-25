@@ -588,7 +588,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
   }
 
-  boolean canContainerBePreempted(RMContainer container) {
+  boolean canContainerBePreempted(RMContainer container,
+                                  Resource alreadyConsideringForPreemption) {
     if (!isPreemptable()) {
       return false;
     }
@@ -610,6 +611,15 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
     // Check if the app's allocation will be over its fairshare even
     // after preempting this container
+    Resource usageAfterPreemption = getUsageAfterPreemptingContainer(
+            container.getAllocatedResource(),
+            alreadyConsideringForPreemption);
+
+    return !isUsageBelowShare(usageAfterPreemption, getFairShare());
+  }
+
+  private Resource getUsageAfterPreemptingContainer(Resource containerResources,
+          Resource alreadyConsideringForPreemption) {
     Resource usageAfterPreemption = Resources.clone(getResourceUsage());
 
     // Subtract resources of containers already queued for preemption
@@ -617,10 +627,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       Resources.subtractFrom(usageAfterPreemption, resourcesToBePreempted);
     }
 
-    // Subtract this container's allocation to compute usage after preemption
-    Resources.subtractFrom(
-        usageAfterPreemption, container.getAllocatedResource());
-    return !isUsageBelowShare(usageAfterPreemption, getFairShare());
+    // Subtract resources of this container and other containers of this app
+    // that the FSPreemptionThread is already considering for preemption.
+    Resources.subtractFrom(usageAfterPreemption, containerResources);
+    Resources.subtractFrom(usageAfterPreemption,
+            alreadyConsideringForPreemption);
+
+    return usageAfterPreemption;
   }
 
   /**
