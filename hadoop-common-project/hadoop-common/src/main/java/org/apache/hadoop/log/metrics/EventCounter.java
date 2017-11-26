@@ -31,43 +31,37 @@ import org.apache.log4j.spi.LoggingEvent;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class EventCounter extends AppenderSkeleton {
-  private static final int FATAL = 0;
-  private static final int ERROR = 1;
-  private static final int WARN = 2;
-  private static final int INFO = 3;
 
-  private static class EventCounts {
-    private final long[] counts = {0, 0, 0, 0};
-
-    private synchronized void incr(int i) {
-      ++counts[i];
-    }
-
-    private synchronized long get(int i) {
-      return counts[i];
-    }
-  }
-
-  private static EventCounts counts = new EventCounts();
-
+  /**
+   * @deprecated Use EventCount.FATAL.get();
+   */
   @InterfaceAudience.Private
   public static long getFatal() {
-    return counts.get(FATAL);
+    return EventCount.FATAL.get();
   }
 
+  /**
+   * @deprecated Use EventCount.ERROR.get();
+   */
   @InterfaceAudience.Private
   public static long getError() {
-    return counts.get(ERROR);
+    return EventCount.ERROR.get();
   }
 
+  /**
+   * @deprecated Use EventCount.WARN.get();
+   */
   @InterfaceAudience.Private
   public static long getWarn() {
-    return counts.get(WARN);
+    return EventCount.WARN.get();
   }
 
+  /**
+   * @deprecated Use EventCount.INFO.get();
+   */
   @InterfaceAudience.Private
   public static long getInfo() {
-    return counts.get(INFO);
+    return EventCount.INFO.get();
   }
 
   @Override
@@ -76,16 +70,16 @@ public class EventCounter extends AppenderSkeleton {
     // depends on the api, == might not work
     // see HADOOP-7055 for details
     if (level.equals(Level.INFO)) {
-      counts.incr(INFO);
+      EventCount.INFO.incr();
     }
     else if (level.equals(Level.WARN)) {
-      counts.incr(WARN);
+      EventCount.WARN.incr();
     }
     else if (level.equals(Level.ERROR)) {
-      counts.incr(ERROR);
+      EventCount.ERROR.incr();
     }
     else if (level.equals(Level.FATAL)) {
-      counts.incr(FATAL);
+      EventCount.FATAL.incr();
     }
   }
 

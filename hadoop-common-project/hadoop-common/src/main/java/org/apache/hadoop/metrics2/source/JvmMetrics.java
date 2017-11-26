@@ -31,6 +31,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.log.metrics.EventCount;
 import org.apache.hadoop.log.metrics.EventCounter;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -236,9 +237,9 @@ public class JvmMetrics implements MetricsSource {
   }
 
   private void getEventCounters(MetricsRecordBuilder rb) {
-    rb.addCounter(LogFatal, EventCounter.getFatal())
-      .addCounter(LogError, EventCounter.getError())
-      .addCounter(LogWarn, EventCounter.getWarn())
-      .addCounter(LogInfo, EventCounter.getInfo());
+    rb.addCounter(LogFatal, EventCount.FATAL.get())
+      .addCounter(LogError, EventCount.ERROR.get())
+      .addCounter(LogWarn, EventCount.WARN.get())
+      .addCounter(LogInfo, EventCount.INFO.get());
   }
 }
