@@ -48,9 +48,14 @@ public final class ScmConfigKeys {
 
   // TODO : this is copied from OzoneConsts, may need to move to a better place
   public static final String OZONE_SCM_CHUNK_SIZE_KEY = "ozone.scm.chunk.size";
-  // 1 MB by default
-  public static final int OZONE_SCM_CHUNK_SIZE_DEFAULT = 1 * 1024 * 1024;
-  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 1 * 1024 * 1024;
+  // 16 MB by default
+  public static final int OZONE_SCM_CHUNK_SIZE_DEFAULT = 16 * 1024 * 1024;
+  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 32 * 1024 * 1024;
+
+  public static final String OZONE_SCM_RATIS_SEGMENT_SIZE_KEY =
+      "ozone.scm.ratis.segment.size";
+  public static final int OZONE_SCM_RATIS_SEGMENT_SIZE_DEFAULT =
+      128 * 1024 * 1024;
 
   public static final String OZONE_SCM_CLIENT_PORT_KEY =
       "ozone.scm.client.port";

@@ -102,7 +102,7 @@ public class Dispatcher implements ContainerDispatcher {
           (cmdType == Type.ListContainer) ||
           (cmdType == Type.UpdateContainer) ||
           (cmdType == Type.CloseContainer)) {
-        return containerProcessHandler(msg);
+        resp = containerProcessHandler(msg);
       }
 
       if ((cmdType == Type.PutKey) ||
