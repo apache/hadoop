@@ -413,6 +413,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @param relative the path of a file relative to the task attempt path
    * @param context the JobContext or TaskAttemptContext for this job
    * @return the S3 Path where the file will be uploaded
+   * @throws IOException IO problem
    */
   protected final Path getFinalPath(String relative, JobContext context)
       throws IOException {
