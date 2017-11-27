@@ -20,7 +20,6 @@ package org.apache.ratis;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
-import org.apache.ratis.client.ClientFactory;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.protocol.RaftGroup;
@@ -74,7 +73,7 @@ public interface RatisHelper {
    *       It should be changed to a unique id for each group.
    */
   RaftGroupId DUMMY_GROUP_ID =
-      RaftGroupId.valueOf(ByteString.copyFromUtf8("AOZONERATISGROUP"));
+      RaftGroupId.valueOf(ByteString.copyFromUtf8("AOzoneRatisGroup"));
 
   RaftGroup EMPTY_GROUP = new RaftGroup(DUMMY_GROUP_ID,
       Collections.emptyList());
@@ -113,10 +112,9 @@ public interface RatisHelper {
       RpcType rpcType, RaftPeerId leader, RaftGroup group) {
     LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, leader, group);
     final RaftProperties properties = new RaftProperties();
-    final ClientFactory factory = ClientFactory.cast(rpcType.newFactory(null));
+    RaftConfigKeys.Rpc.setType(properties, rpcType);
 
     return RaftClient.newBuilder()
-        .setClientRpc(factory.newRaftClientRpc())
         .setRaftGroup(group)
         .setLeaderId(leader)
         .setProperties(properties)

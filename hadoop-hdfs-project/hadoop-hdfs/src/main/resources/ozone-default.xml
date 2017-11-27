@@ -675,15 +675,23 @@
   </property>
   <property>
     <name>ozone.scm.chunk.size</name>
-    <value>1048576</value>
+    <value>16777216</value>
     <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>
     <description>
       The chunk size for reading/writing chunk operations in bytes.
 
-      The chunk size defaults to 1MB. If the value configured is more than the
-      maximum size (1MB), it will be reset to the maximum size. This maps to the
-      network packet sizes and file write operations in the client to datanode
-      protocol.
+      The chunk size defaults to 8MB. If the value configured is more than the
+      maximum size (16MB), it will be reset to the maximum size. This maps to
+      the network packet sizes and file write operations in the client to
+      datanode protocol.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.ratis.segment.size</name>
+    <value>134217728</value>
+    <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>
+    <description>
+      The size of the raft segment used by Apache Ratis on datanodes.
     </description>
   </property>
   <property>

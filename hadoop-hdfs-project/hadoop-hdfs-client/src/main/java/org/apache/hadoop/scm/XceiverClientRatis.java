@@ -144,6 +144,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
 
   @Override
   public void connect() throws Exception {
+    LOG.debug("Connecting to pipeline:{} leader:{}",
+        getPipeline().getPipelineName(),
+        RatisHelper.toRaftPeerId(pipeline.getLeader()));
     if (!client.compareAndSet(null,
         RatisHelper.newRaftClient(rpcType, getPipeline()))) {
       throw new IllegalStateException("Client is already connected.");
