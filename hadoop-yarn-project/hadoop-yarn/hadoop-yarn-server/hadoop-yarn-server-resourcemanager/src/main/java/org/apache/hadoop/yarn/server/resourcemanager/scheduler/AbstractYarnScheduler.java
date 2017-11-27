@@ -245,8 +245,8 @@ public abstract class AbstractYarnScheduler
     if (app == null) {
       return containerList;
     }
-    Collection<RMContainer> liveContainers =
-        app.getCurrentAppAttempt().getLiveContainers();
+    Collection<RMContainer> liveContainers = app.getCurrentAppAttempt()
+        .pullContainersToTransfer();
     ContainerId amContainerId = null;
     // For UAM, amContainer would be null
     if (rmContext.getRMApps().get(appId).getCurrentAppAttempt()
