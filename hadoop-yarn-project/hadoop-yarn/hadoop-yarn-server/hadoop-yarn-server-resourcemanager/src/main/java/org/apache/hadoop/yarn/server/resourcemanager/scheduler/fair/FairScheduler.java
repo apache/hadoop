@@ -862,7 +862,8 @@ public class FairScheduler extends
         preemptionContainerIds, null, null,
         application.pullUpdatedNMTokens(), null, null,
         application.pullNewlyPromotedContainers(),
-        application.pullNewlyDemotedContainers());
+        application.pullNewlyDemotedContainers(),
+        application.pullPreviousAttemptContainers());
   }
 
   @Override

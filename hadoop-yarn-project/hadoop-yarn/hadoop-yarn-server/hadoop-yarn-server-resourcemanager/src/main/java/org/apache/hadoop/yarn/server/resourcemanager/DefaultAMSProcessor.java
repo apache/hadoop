@@ -326,6 +326,9 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // Set application priority
     response.setApplicationPriority(app
         .getApplicationPriority());
+
+    response.setContainersFromPreviousAttempts(
+        allocation.getPreviousAttemptContainers());
   }
 
   private void handleNodeUpdates(RMApp app, AllocateResponse allocateResponse) {
