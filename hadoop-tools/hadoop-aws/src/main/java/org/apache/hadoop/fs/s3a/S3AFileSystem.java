@@ -1247,7 +1247,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @param request last list objects request to continue
    * @param prevResult last paged result to continue from
    * @return the next result object
-   * @throws IOException: none, just there for retryUntranslated.
+   * @throws IOException none, just there for retryUntranslated.
    */
   @Retries.RetryRaw
   protected S3ListResult continueListObjects(S3ListRequest request,

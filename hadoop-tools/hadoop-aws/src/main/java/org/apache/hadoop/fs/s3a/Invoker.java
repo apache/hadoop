@@ -55,7 +55,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
  *
  * The static {@link #quietly(String, String, VoidOperation)} and
  * {@link #quietlyEval(String, String, Operation)} calls exist to take any
- * operation and quietly catch & log at debug. The return value of
+ * operation and quietly catch and log at debug. The return value of
  * {@link #quietlyEval(String, String, Operation)} is a java 8 optional,
  * which can then be used in java8-expressions.
  */
@@ -390,9 +390,11 @@ public class Invoker {
    * Execute an operation; any exception raised is caught and
    * logged at debug.
    * The result is only non-empty if the operation succeeded
+   * @param <T> type to return
    * @param action action to execute
    * @param path path (for exception construction)
    * @param operation operation
+   * @return the result of a successful operation
    */
   public static <T> Optional<T> quietlyEval(String action,
       String path,

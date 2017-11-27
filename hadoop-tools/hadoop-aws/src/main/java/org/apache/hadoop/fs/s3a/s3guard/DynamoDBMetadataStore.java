@@ -745,7 +745,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
    * the call to {@link #processBatchWriteRequest(PrimaryKey[], Item[])}
    * is only tried once.
    * @param meta Directory listing metadata.
-   * @throws IOException
+   * @throws IOException IO problem
    */
   @Override
   @Retries.OnceTranslated("retry(listFullPaths); once(batchWrite)")
