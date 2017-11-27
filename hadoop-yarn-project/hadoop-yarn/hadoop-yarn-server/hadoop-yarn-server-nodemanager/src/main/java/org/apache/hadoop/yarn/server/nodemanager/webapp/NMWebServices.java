@@ -27,6 +27,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -494,6 +498,30 @@ public class NMWebServices {
     } catch (IOException ex) {
       return Response.serverError().entity(ex.getMessage()).build();
     }
+  }
+
+  @GET
+  @Path("/resources/{resourcename}")
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+                MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Object getNMResourceInfo(
+      @PathParam("resourcename")
+          String resourceName) throws YarnException {
+    init();
+    ResourcePluginManager rpm = this.nmContext.getResourcePluginManager();
+    if (rpm != null && rpm.getNameToPlugins() != null) {
+      ResourcePlugin plugin = rpm.getNameToPlugins().get(resourceName);
+      if (plugin != null) {
+        NMResourceInfo nmResourceInfo = plugin.getNMResourceInfo();
+        if (nmResourceInfo != null) {
+          return nmResourceInfo;
+        }
+      }
+    }
+
+    throw new YarnException(
+        "Could not get detailed resource information for given resource-name="
+            + resourceName);
   }
 
   private long parseLongParam(String bytes) {

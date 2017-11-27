@@ -97,6 +97,11 @@ public abstract class StorageStatistics {
     public long getValue() {
       return value;
     }
+
+    @Override
+    public String toString() {
+      return name + " = " + value;
+    }
   }
 
   private final String name;

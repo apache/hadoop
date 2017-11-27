@@ -28,6 +28,8 @@ See also:
 * [Encryption](./encryption.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
+* [Committing work to S3 with the "S3A Committers"](./committers.html)
+* [S3A Committers Architecture](./committer_architecture.html)
 * [Testing](./testing.html)
 
 ##<a name="overview"></a> Overview
@@ -82,7 +84,7 @@ the Hadoop project itself.
 1. Amazon EMR's `s3://` client. This is from the Amazon EMR team, who actively
 maintain it.
 1. Apache's Hadoop's [`s3n:` filesystem client](./s3n.html).
-   This connectore is no longer available: users must migrate to the newer `s3a:` client.
+   This connector is no longer available: users must migrate to the newer `s3a:` client.
 
 
 ##<a name="getting_started"></a> Getting Started
@@ -177,6 +179,7 @@ Parts of Hadoop relying on this can have unexpected behaviour. E.g. the
 `AggregatedLogDeletionService` of YARN will not remove the appropriate logfiles.
 * Directory listing can be slow. Use `listFiles(path, recursive)` for high
 performance recursive listings whenever possible.
+* It is possible to create files under files if the caller tries hard.
 * The time to rename a directory is proportional to the number of files
 underneath it (directory or indirectly) and the size of the files. (The copyis
 executed inside the S3 storage, so the time is independent of the bandwidth
@@ -184,8 +187,13 @@ from client to S3).
 * Directory renames are not atomic: they can fail partway through, and callers
 cannot safely rely on atomic renames as part of a commit algorithm.
 * Directory deletion is not atomic and can fail partway through.
-* It is possible to create files under files if the caller tries hard.
 
+The final three issues surface when using S3 as the immediate destination
+of work, as opposed to HDFS or other "real" filesystem.
+
+The [S3A committers](./committers.html) are the sole mechanism available
+to safely save the output of queries directly into S3 object stores
+through the S3A filesystem.
 
 
 ### Warning #3: Object stores have differerent authorization models
@@ -223,18 +231,6 @@ Do not inadvertently share these credentials through means such as
 
 If you do any of these: change your credentials immediately!
 
-### Warning #5: The S3A client cannot be used on Amazon EMR
-
-On Amazon EMR `s3a://` URLs are not supported; Amazon provide
-their own filesystem client, `s3://`.
-If you are using Amazon EMR, follow their instructions for use —and be aware
-that all issues related to S3 integration in EMR can only be addressed by Amazon
-themselves: please raise your issues with them.
-
-Equally importantly: much of this document does not apply to the EMR `s3://` client.
-Pleae consult
-[the EMR storage documentation](http://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-file-systems.html)
-instead.
 
 ## <a name="authenticating"></a> Authenticating with S3
 
@@ -616,7 +612,7 @@ Because the provider path is not itself a sensitive secret, there is no risk
 from placing its declaration on the command line.
 
 
-## <a name="general_configuration"></a>Genaral S3A Client configuration
+## <a name="general_configuration"></a>General S3A Client configuration
 
 All S3A client options are configured with options with the prefix `fs.s3a.`.
 
@@ -875,6 +871,166 @@ options are covered in [Testing](./testing.md).
 </property>
 ```
 
+## <a name="retry_and_recovery"></a>Retry and Recovery
+
+The S3A client makes a best-effort attempt at recovering from network failures;
+this section covers the details of what it does.
+
+The S3A divides exceptions returned by the AWS SDK into different categories,
+and chooses a differnt retry policy based on their type and whether or
+not the failing operation is idempotent.
+
+
+### Unrecoverable Problems: Fail Fast
+
+* No object/bucket store: `FileNotFoundException`
+* No access permissions: `AccessDeniedException`
+* Network errors considered unrecoverable (`UnknownHostException`,
+ `NoRouteToHostException`, `AWSRedirectException`).
+* Interruptions: `InterruptedIOException`, `InterruptedException`.
+* Rejected HTTP requests: `InvalidRequestException`
+
+These are all considered unrecoverable: S3A will make no attempt to recover
+from them.
+
+### Possibly Recoverable Problems: Retry
+
+* Connection timeout: `ConnectTimeoutException`. Timeout before
+setting up a connection to the S3 endpoint (or proxy).
+* HTTP response status code 400, "Bad Request"
+
+The status code 400, Bad Request usually means that the request
+is unrecoverable; it's the generic "No" response. Very rarely it
+does recover, which is why it is in this category, rather than that
+of unrecoverable failures.
+
+These failures will be retried with a fixed sleep interval set in
+`fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
+
+
+### Only retrible on idempotent operations
+
+Some network failures are considered to be retriable if they occur on
+idempotent operations; there's no way to know if they happened
+after the request was processed by S3.
+
+* `SocketTimeoutException`: general network failure.
+* `EOFException` : the connection was broken while reading data
+* "No response from Server" (443, 444) HTTP responses.
+* Any other AWS client, service or S3 exception.
+
+These failures will be retried with a fixed sleep interval set in
+`fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
+
+*Important*: DELETE is considered idempotent, hence: `FileSystem.delete()`
+and `FileSystem.rename()` will retry their delete requests on any
+of these failures.
+
+The issue of whether delete should be idempotent has been a source
+of historical controversy in Hadoop.
+
+1. In the absence of any other changes to the object store, a repeated
+DELETE request will eventually result in the named object being deleted;
+it's a no-op if reprocessed. As indeed, is `Filesystem.delete()`.
+1. If another client creates a file under the path, it will be deleted.
+1. Any filesystem supporting an atomic `FileSystem.create(path, overwrite=false)`
+operation to reject file creation if the path exists MUST NOT consider
+delete to be idempotent, because a `create(path, false)` operation will
+only succeed if the first `delete()` call has already succeded.
+1. And a second, retried `delete()` call could delete the new data.
+
+Because S3 is eventially consistent *and* doesn't support an
+atomic create-no-overwrite operation, the choice is more ambigious.
+
+Currently S3A considers delete to be
+idempotent because it is convenient for many workflows, including the
+commit protocols. Just be aware that in the presence of transient failures,
+more things may be deleted than expected. (For anyone who considers this to
+be the wrong decision: rebuild the `hadoop-aws` module with the constant
+`S3AFileSystem.DELETE_CONSIDERED_IDEMPOTENT` set to `false`).
+
+
+
+
+
+
+### Throttled requests from S3 and Dynamo DB
+
+
+When S3A or Dynamo DB returns a response indicating that requests
+from the caller are being throttled, an exponential back-off with
+an initial interval and a maximum number of requests.
+
+```xml
+<property>
+  <name>fs.s3a.retry.throttle.limit</name>
+  <value>${fs.s3a.attempts.maximum}</value>
+  <description>
+    Number of times to retry any throttled request.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.throttle.interval</name>
+  <value>1000ms</value>
+  <description>
+    Interval between retry attempts on throttled requests.
+  </description>
+</property>
+```
+
+Notes
+
+1. There is also throttling taking place inside the AWS SDK; this is managed
+by the value `fs.s3a.attempts.maximum`.
+1. Throttling events are tracked in the S3A filesystem metrics and statistics.
+1. Amazon KMS may thottle a customer based on the total rate of uses of
+KMS *across all user accounts and applications*.
+
+Throttling of S3 requests is all too common; it is caused by too many clients
+trying to access the same shard of S3 Storage. This generatlly
+happen if there are too many reads, those being the most common in Hadoop
+applications. This problem is exacerbated by Hive's partitioning
+strategy used when storing data, such as partitioning by year and then month.
+This results in paths with little or no variation at their start, which ends
+up in all the data being stored in the same shard(s).
+
+Here are some expensive operations; the more of these taking place
+against part of an S3 bucket, the more load it experiences.
+* Many clients trying to list directories or calling `getFileStatus` on
+paths (LIST and HEAD requests respectively)
+* The GET requests issued when reading data.
+* Random IO used when reading columnar data (ORC, Parquet) means that many
+more GET requests than a simple one-per-file read.
+* The number of active writes to that part of the S3 bucket.
+
+A special case is when enough data has been written into part of an S3 bucket
+that S3 decides to split the data across more than one shard: this
+is believed to be one by some copy operation which can take some time.
+While this is under way, S3 clients access data under these paths will
+be throttled more than usual.
+
+
+Mitigation strategies
+
+1. Use separate buckets for intermediate data/different applications/roles.
+1. Use significantly different paths for different datasets in the same bucket.
+1. Increase the value of `fs.s3a.retry.throttle.interval` to provide
+longer delays between attempts.
+1. Reduce the parallelism of the queries. The more tasks trying to access
+data in parallel, the more load.
+1. Reduce `fs.s3a.threads.max` to reduce the amount of parallel operations
+performed by clients.
+!. Maybe: increase `fs.s3a.readahead.range` to increase the minimum amount
+of data asked for in every GET request, as well as how much data is
+skipped in the existing stream before aborting it and creating a new stream.
+1. If the DynamoDB tables used by S3Guard are being throttled, increase
+the capacity through `hadoop s3guard set-capacity` (and pay more, obviously).
+1. KMS: "consult AWS about increating your capacity".
+
+
+
+
 ## <a name="per_bucket_configuration"></a>Configuring different S3 buckets with Per-Bucket Configuration
 
 Different S3 buckets can be accessed with different S3A client configurations.
@@ -1081,7 +1237,7 @@ The original S3A client implemented file writes by
 buffering all data to disk as it was written to the `OutputStream`.
 Only when the stream's `close()` method was called would the upload start.
 
-This can made output slow, especially on large uploads, and could even
+This made output slow, especially on large uploads, and could even
 fill up the disk space of small (virtual) disks.
 
 Hadoop 2.7 added the `S3AFastOutputStream` alternative, which Hadoop 2.8 expanded.

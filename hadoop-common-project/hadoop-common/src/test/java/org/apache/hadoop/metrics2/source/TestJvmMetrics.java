@@ -101,7 +101,7 @@ public class TestJvmMetrics {
     verify(rb).tag(SessionId, "test");
     for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
       if (info.name().equals("GcTimePercentage")) {
-        verify(rb).addCounter(eq(info), anyInt());
+        verify(rb).addGauge(eq(info), anyInt());
       }
     }
   }

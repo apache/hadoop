@@ -18,18 +18,26 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu.GpuResourceAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu.GpuResourceHandlerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.NodeResourceUpdaterPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
+
+import java.util.List;
+import java.util.Map;
 
 public class GpuResourcePlugin implements ResourcePlugin {
-  private ResourceHandler gpuResourceHandler = null;
+  private GpuResourceHandlerImpl gpuResourceHandler = null;
   private GpuNodeResourceUpdateHandler resourceDiscoverHandler = null;
   private DockerCommandPlugin dockerCommandPlugin = null;
 
@@ -66,5 +74,19 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
   public DockerCommandPlugin getDockerCommandPluginInstance() {
     return dockerCommandPlugin;
+  }
+
+  @Override
+  public NMResourceInfo getNMResourceInfo() throws YarnException {
+    GpuDeviceInformation gpuDeviceInformation =
+        GpuDiscoverer.getInstance().getGpuDeviceInformation();
+    GpuResourceAllocator gpuResourceAllocator =
+        gpuResourceHandler.getGpuAllocator();
+    List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpusCopy();
+    List<AssignedGpuDevice> assignedGpuDevices =
+        gpuResourceAllocator.getAssignedGpusCopy();
+
+    return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
+        assignedGpuDevices);
   }
 }

@@ -35,11 +35,14 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -233,6 +236,26 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
                 S3A_THIS_BUCKET_DOES_NOT_EXIST);
           }
         });
+  }
+
+  @Test
+  public void testProbeForMagic() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    String name = fs.getUri().toString();
+    S3GuardTool.BucketInfo cmd = new S3GuardTool.BucketInfo(
+        getConfiguration());
+    if (fs.hasCapability(
+        CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER)) {
+      // if the FS is magic, expect this to work
+      exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name);
+    } else {
+      // if the FS isn't magic, expect the probe to fail
+      ExitUtil.ExitException e = intercept(ExitUtil.ExitException.class,
+          () -> exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name));
+      if (e.getExitCode() != E_BAD_STATE) {
+        throw e;
+      }
+    }
   }
 
   /**

@@ -290,6 +290,7 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK` | Sets the network type to be used by the Docker container. It must be a valid value as determined by the yarn.nodemanager.runtime.linux.docker.allowed-container-networks property. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER` | Controls whether the Docker container is a privileged container. In order to use privileged containers, the yarn.nodemanager.runtime.linux.docker.privileged-containers.allowed property must be set to true, and the application owner must appear in the value of the yarn.nodemanager.runtime.linux.docker.privileged-containers.acl property. If this environment variable is set to true, a privileged Docker container will be used if allowed. No other value is allowed, so the environment variable should be left unset rather than setting it to false. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as "source:dest", where the source is an absolute path that is not a symlink and that points to a localized resource. Note that as of YARN-5298, localized directories are automatically mounted into the container as volumes. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` | Adds additional volume mounts to the Docker container. The value of the environment variable should be a comma-separated list of mounts. All such mounts must be given as "source:dest:mode" and the mode must be "ro" (read-only) or "rw" (read-write) to specify the type of access being requested. The requested mounts will be validated by container-executor based on the values set in container-executor.cfg for docker.allowed.ro-mounts and docker.allowed.rw-mounts. |
 
 The first two are required. The remainder can be set as needed. While
 controlling the container type through environment variables is somewhat less
@@ -301,6 +302,53 @@ Once an application has been submitted to be launched in a Docker container,
 the application will behave exactly as any other YARN application. Logs will be
 aggregated and stored in the relevant history server. The application life cycle
 will be the same as for a non-Docker application.
+
+Using Docker Bind Mounted Volumes
+---------------------------------
+
+**WARNING** Care should be taken when enabling this feature. Enabling access to
+directories such as, but not limited to, /, /etc, /run, or /home is not
+advisable and can result in containers negatively impacting the host or leaking
+sensitive information. **WARNING**
+
+Files and directories from the host are commonly needed within the Docker
+containers, which Docker provides through
+[volumes](https://docs.docker.com/engine/tutorials/dockervolumes/).
+Examples include localized resources, Apache Hadoop binaries, and sockets. To
+facilitate this need, YARN-6623 added the ability for administrators to set a
+whitelist of host directories that are allowed to be bind mounted as volumes
+into containers. YARN-5534 added the ability for users to supply a list of
+mounts that will be mounted into the containers, if allowed by the
+administrative whitelist.
+
+In order to make use of this feature, the following must be configured.
+
+* The administrator must define the volume whitelist in container-executor.cfg by setting `docker.allowed.ro-mounts` and `docker.allowed.rw-mounts` to the list of parent directories that are allowed to be mounted.
+* The application submitter requests the required volumes at application submission time using the `YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS` environment variable.
+
+The administrator supplied whitelist is defined as a comma separated list of
+directories that are allowed to be mounted into containers. The source directory
+supplied by the user must either match or be a child of the specified
+directory.
+
+The user supplied mount list is defined as a comma separated list in the form
+*source*:*destination*:*mode*. The source is the file or directory on the host.
+The destination is the path within the contatiner where the source will be bind
+mounted. The mode defines the mode the user expects for the mount, which can be
+ro (read-only) or rw (read-write).
+
+The following example outlines how to use this feature to mount the commonly
+needed /sys/fs/cgroup directory into the container running on YARN.
+
+The administrator sets docker.allowed.ro-mounts in container-executor.cfg to
+"/sys/fs/cgroup". Applications can now request that "/sys/fs/cgroup" be mounted
+from the host into the container in read-only mode.
+
+At application submission time, the YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS
+environment variable can then be set to request this mount. In this example,
+the environment variable would be set to "/sys/fs/cgroup:/sys/fs/cgroup:ro".
+The destination path is not restricted, "/sys/fs/cgroup:/cgroup:ro" would also
+be valid given the example admin whitelist.
 
 Connecting to a Secure Docker Repository
 ----------------------------------------

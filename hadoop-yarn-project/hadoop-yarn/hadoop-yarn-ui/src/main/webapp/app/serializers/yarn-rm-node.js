@@ -41,7 +41,9 @@ export default DS.JSONAPISerializer.extend({
         usedVirtualCores: payload.usedVirtualCores,
         availableVirtualCores: payload.availableVirtualCores,
         version: payload.version,
-        nodeLabels: payload.nodeLabels
+        nodeLabels: payload.nodeLabels,
+        usedResource: payload.used,
+        availableResource: payload.avail
       }
     };
     return fixedPayload;

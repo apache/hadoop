@@ -101,6 +101,15 @@ public class FSDataOutputStream extends DataOutputStream
     out.close(); // This invokes PositionCache.close()
   }
 
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "FSDataOutputStream{");
+    sb.append("wrappedStream=").append(wrappedStream);
+    sb.append('}');
+    return sb.toString();
+  }
+
   /**
    * Get a reference to the wrapped output stream.
    *
