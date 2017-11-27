@@ -1588,6 +1588,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
 
+  /** The log level of container localizer process. */
+  public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL=
+      NM_PREFIX + "container-localizer.log.level";
+  public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL_DEFAULT =
+      "INFO";
+
   /** Prefix for runtime configuration constants. */
   public static final String LINUX_CONTAINER_RUNTIME_PREFIX = NM_PREFIX +
       "runtime.linux.";

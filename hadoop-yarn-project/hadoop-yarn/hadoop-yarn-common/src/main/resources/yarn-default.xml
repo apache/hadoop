@@ -1141,6 +1141,14 @@
 
   <property>
     <description>
+      The log level for container localizer while it is an independent process.
+    </description>
+    <name>yarn.nodemanager.container-localizer.log.level</name>
+    <value>INFO</value>
+  </property>
+
+  <property>
+    <description>
       Where to store container logs. An application's localized log directory
       will be found in ${yarn.nodemanager.log-dirs}/application_${appid}.
       Individual containers' log directories will be below this, in directories 
