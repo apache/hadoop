@@ -1540,6 +1540,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
 
+  /** The log level of container localizer process. */
+  public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL=
+      NM_PREFIX + "container-localizer.log.level";
+  public static final String NM_CONTAINER_LOCALIZER_LOG_LEVEL_DEFAULT =
+      "INFO";
+
   /** The Docker image name(For DockerContainerExecutor).*/
   public static final String NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME =
     NM_PREFIX + "docker-container-executor.image-name";
