@@ -42,6 +42,10 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     });
   },
 
+  refresh() {
+    window.location.reload();
+  },
+
   unloadAll() {
     this.store.unloadAll('yarn-app');
     this.store.unloadAll('yarn-app-timeline');

@@ -46,6 +46,10 @@ export default AbstractRoute.extend({
     });
   },
 
+  refresh() {
+    window.location.reload();
+  },
+
   unloadAll() {
     this.store.unloadAll('yarn-app');
     this.store.unloadAll('yarn-app-attempt');

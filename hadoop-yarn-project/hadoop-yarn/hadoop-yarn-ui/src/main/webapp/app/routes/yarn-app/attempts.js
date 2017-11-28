@@ -31,6 +31,10 @@ export default AbstractRoute.extend(AppAttemptMixin, {
       serviceName: service,
       attempts: this.fetchAttemptListFromRMorATS(app_id, this.store)
     });
+  },  
+
+  refresh() {
+    window.location.reload();
   },
 
   unloadAll() {

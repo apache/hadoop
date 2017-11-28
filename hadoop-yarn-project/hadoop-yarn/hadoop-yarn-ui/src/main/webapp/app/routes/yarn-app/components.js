@@ -44,6 +44,10 @@ export default AbstractRoute.extend({
     });
   },
 
+  refresh() {
+    window.location.reload();
+  },
+
   unloadAll() {
     this.store.unloadAll('yarn-service-component');
     this.store.unloadAll('yarn-component-instance');
