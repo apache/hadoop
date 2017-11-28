@@ -20,38 +20,36 @@
   {{metrics-table metrics=model.metrics type="Service"}}
 </div>
 
-<div class="row">
-  {{#if model.configs}}
-    <div class="col-md-12">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <div class="panel-title">Service Configurations</div>
-        </div>
-        <div class="">
-          <table class="table table-hover table-custom-bordered table-custom-stripped table-radius-none table-border-none">
-            <thead>
+{{#if model.configs}}
+  <div class="col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <div class="panel-title">Service Configurations</div>
+      </div>
+      <div class="">
+        <table class="table table-hover table-custom-bordered table-custom-stripped table-radius-none table-border-none">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each model.configs as |config|}}
               <tr>
-                <th>Name</th>
-                <th>Value</th>
+                <td>{{config.name}}</td>
+                <td>{{config.value}}</td>
               </tr>
-            </thead>
-            <tbody>
-              {{#each model.configs as |config|}}
-                <tr>
-                  <td>{{config.name}}</td>
-                  <td>{{config.value}}</td>
-                </tr>
-              {{/each}}
-            </tbody>
-          </table>
-        </div>
+            {{/each}}
+          </tbody>
+        </table>
       </div>
     </div>
-  {{else}}
-    <div class="col-md-12">
-      <div class="panel panel-default">
-        <h4 class="text-center">No service configurations available!</h4>
-      </div>
+  </div>
+{{else}}
+  <div class="col-md-12">
+    <div class="panel panel-default">
+      <h4 class="text-center">No service configurations available!</h4>
     </div>
-  {{/if}}
-</div>
+  </div>
+{{/if}}
