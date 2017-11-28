@@ -153,7 +153,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       }
 
       Path p = new Path(path);
-      final FileSystem fs = FileSystem.get(conf);
+      final FileSystem fs = FileSystem.get(p.toUri(), conf);
       try {
         FileStatus status;
         try {
@@ -233,7 +233,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
         return 1;
       }
       Path p = new Path(path);
-      final FileSystem fs = FileSystem.get(conf);
+      final FileSystem fs = FileSystem.get(p.toUri(), conf);
       try {
         fs.setStoragePolicy(p, policyName);
         System.out.println("Set storage policy " + policyName + " on " + path);
@@ -279,7 +279,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
       }
 
       Path p = new Path(path);
-      final FileSystem fs = FileSystem.get(conf);
+      final FileSystem fs = FileSystem.get(p.toUri(), conf);
       try {
         fs.unsetStoragePolicy(p);
         System.out.println("Unset storage policy from " + path);
