@@ -91,6 +91,14 @@ public final class OzoneConfigKeys {
   public static final String OZONE_METADATA_STORE_IMPL_DEFAULT =
       OZONE_METADATA_STORE_IMPL_ROCKSDB;
 
+  public static final String OZONE_METADATA_STORE_ROCKSDB_STATISTICS =
+      "ozone.metastore.rocksdb.statistics";
+
+  public static final String  OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT =
+      "ALL";
+  public static final String OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF =
+      "OFF";
+
   public static final String OZONE_CONTAINER_CACHE_SIZE =
       "ozone.container.cache.size";
   public static final int OZONE_CONTAINER_CACHE_DEFAULT = 1024;
