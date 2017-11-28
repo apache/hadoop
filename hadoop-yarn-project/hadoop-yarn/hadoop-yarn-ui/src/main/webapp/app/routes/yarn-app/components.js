@@ -21,14 +21,16 @@ import AbstractRoute from '../abstract';
 
 export default AbstractRoute.extend({
   model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service, [{text: 'Components'}]);
+    const { app_id } = this.paramsFor('yarn-app');
+    const { service } = param;
+    transition.send('updateBreadcrumbs', app_id, service, [{text: 'Components'}]);
     return Ember.RSVP.hash({
-      appId: param.app_id,
-      serviceName: param.service,
-      components: this.store.query('yarn-service-component', {appId: param.app_id, type: 'COMPONENT'}).catch(function() {
+      appId: app_id,
+      serviceName: service,
+      components: this.store.query('yarn-service-component', {appId: app_id, type: 'COMPONENT'}).catch(function() {
         return [];
       }),
-      instances: this.store.query('yarn-component-instance', {appId: param.app_id}).catch(function() {
+      instances: this.store.query('yarn-component-instance', {appId: app_id}).catch(function() {
         return [];
       })
     });
@@ -40,6 +42,10 @@ export default AbstractRoute.extend({
       var num = instances.filterBy('component', component.get('name')).length;
       component.set('instances', num);
     });
+  },
+
+  refresh() {
+    window.location.reload();
   },
 
   unloadAll() {
