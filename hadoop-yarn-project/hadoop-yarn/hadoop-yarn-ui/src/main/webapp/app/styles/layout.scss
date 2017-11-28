@@ -16,24 +16,27 @@
  * limitations under the License.
  */
 
-// Colors
-$color-ghost-white: #f1f2f8;
-$color-white: #fff;
+.flex {
+  display: flex;
+}
 
-$color-gray-20: #333;
-$color-gray-40: #666666;
-$color-gray-60: #999999;
-$color-gray-97: #f7f7f7;
-$color-light-gray: #d5d5d5;
+/** Pushes the flex element to the right corner **/
+.flex-right {
+  margin-left: auto;
+}
 
-$color-green-primary: #60cea5;
-$color-green-secondary: #43b135;
+.offset-1 {
+  margin-left: 5px
+}
 
-$color-red-primary: #ef6162;
-$color-red-secondary: #b04b4e;
+.offset-2 {
+  margin-left: 10px
+}
 
-$color-blue-primary: #26bbf0;
-$color-blue-secondary:#1c95c0;
+.tail-1 {
+  margin-right: 5px
+}
 
-$color-yellow-primary: #ffbc0b;
-$color-yellow-secondary: #dca41b;
+.tail-2 {
+  margin-right: 10px
+}
