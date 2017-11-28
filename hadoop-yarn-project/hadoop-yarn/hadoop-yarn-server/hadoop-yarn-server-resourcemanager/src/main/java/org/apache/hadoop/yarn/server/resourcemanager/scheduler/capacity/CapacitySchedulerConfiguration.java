@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -320,7 +321,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = -1;
 
-  /** Configuring absolute min/max resources in a queue **/
+  /** Configuring absolute min/max resources in a queue. **/
   @Private
   public static final String MINIMUM_RESOURCE = "min-resource";
 
@@ -333,6 +334,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static final Pattern RESOURCE_PATTERN = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE);
 
+  /**
+   * Different resource types supported.
+   */
   public enum AbsoluteResourceType {
     MEMORY, VCORES;
   }
@@ -1825,7 +1829,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     // Define resource here.
-    Resource resource = Resource.newInstance(0l, 0);
+    Resource resource = Resource.newInstance(0L, 0);
     Matcher matcher = RESOURCE_PATTERN.matcher(resourceString);
 
     /*
@@ -1852,7 +1856,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     // Memory has to be configured always.
-    if (resource.getMemorySize() == 0l) {
+    if (resource.getMemorySize() == 0L) {
       return Resources.none();
     }
 
@@ -1884,14 +1888,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     AbsoluteResourceType resType = AbsoluteResourceType
         .valueOf(StringUtils.toUpperCase(splits[0].trim()));
     switch (resType) {
-      case MEMORY :
-        resource.setMemorySize(resourceValue);
-        break;
-      case VCORES :
-        resource.setVirtualCores(resourceValue.intValue());
-        break;
-      default :
-        break;
+    case MEMORY :
+      resource.setMemorySize(resourceValue);
+      break;
+    case VCORES :
+      resource.setVirtualCores(resourceValue.intValue());
+      break;
+    default :
+      resource.setResourceInformation(splits[0].trim(), ResourceInformation
+          .newInstance(splits[0].trim(), units, resourceValue));
+      break;
     }
   }
 }

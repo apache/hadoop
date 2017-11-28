@@ -366,10 +366,20 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public QueueResourceQuotas getQueueResourceQuotas();
 
   /**
-   * Get CapacityConfigType as PERCENTAGE or ABSOLUTE_RESOURCE
+   * Get CapacityConfigType as PERCENTAGE or ABSOLUTE_RESOURCE.
    * @return CapacityConfigType
    */
   public CapacityConfigType getCapacityConfigType();
+
+  /**
+   * Get effective capacity of queue. If min/max resource is configured,
+   * preference will be given to absolute configuration over normal capacity.
+   *
+   * @param label
+   *          partition
+   * @return effective queue capacity
+   */
+  Resource getEffectiveCapacity(String label);
 
   /**
    * Get effective capacity of queue. If min/max resource is configured,
@@ -378,10 +388,21 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    *
    * @param label
    *          partition
+   * @param factor
+   *          factor to normalize down 
    * @return effective queue capacity
    */
-  Resource getEffectiveCapacity(String label);
   Resource getEffectiveCapacityDown(String label, Resource factor);
+
+  /**
+   * Get effective max capacity of queue. If min/max resource is configured,
+   * preference will be given to absolute configuration over normal capacity.
+   *
+   * @param label
+   *          partition
+   * @return effective max queue capacity
+   */
+  Resource getEffectiveMaxCapacity(String label);
 
   /**
    * Get effective max capacity of queue. If min/max resource is configured,
@@ -390,8 +411,9 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    *
    * @param label
    *          partition
+   * @param factor
+   *          factor to normalize down 
    * @return effective max queue capacity
    */
-  Resource getEffectiveMaxCapacity(String label);
   Resource getEffectiveMaxCapacityDown(String label, Resource factor);
 }

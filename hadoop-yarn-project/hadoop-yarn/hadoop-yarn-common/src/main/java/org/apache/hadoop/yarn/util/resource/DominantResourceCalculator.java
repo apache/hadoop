@@ -515,7 +515,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
     }
     return ret;
   }
-  
+
   @Override
   public Resource multiplyAndNormalizeUp(Resource r, double by,
       Resource stepFactor) {
