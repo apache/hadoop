@@ -21,8 +21,13 @@ package org.apache.hadoop.utils;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.ratis.shaded.com.google.common.annotations.VisibleForTesting;
+import org.rocksdb.DBOptions;
 import org.rocksdb.RocksIterator;
 import org.rocksdb.Options;
+import org.rocksdb.Statistics;
+import org.rocksdb.StatsLevel;
 import org.rocksdb.WriteOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -31,8 +36,10 @@ import org.rocksdb.DbPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.ObjectName;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
@@ -51,8 +58,10 @@ public class RocksDBStore implements MetadataStore {
   private File dbLocation;
   private WriteOptions writeOptions;
   private Options dbOptions;
+  private ObjectName statMBeanName;
 
-  public RocksDBStore(File dbFile, Options options) throws IOException {
+  public RocksDBStore(File dbFile, Options options)
+      throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     RocksDB.loadLibrary();
     dbOptions = options;
@@ -61,10 +70,18 @@ public class RocksDBStore implements MetadataStore {
     writeOptions.setSync(true);
     writeOptions.setNoSlowdown(true);
     try {
+
       db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath());
+      if (dbOptions.statistics() != null) {
+
+        Map<String, String> jmxProperties = new HashMap<String, String>();
+        jmxProperties.put("dbName", dbFile.getName());
+        statMBeanName = MBeans.register("Ozone", "RocksDbStore", jmxProperties,
+            new RocksDBStoreMBean(dbOptions.statistics()));
+      }
     } catch (RocksDBException e) {
-      throw new IOException("Failed init RocksDB, db path : "
-          + dbFile.getAbsolutePath(), e);
+      throw new IOException(
+          "Failed init RocksDB, db path : " + dbFile.getAbsolutePath(), e);
     }
 
     if (LOG.isDebugEnabled()) {
@@ -349,8 +366,18 @@ public class RocksDBStore implements MetadataStore {
 
   @Override
   public void close() throws IOException {
+    if (statMBeanName != null) {
+      MBeans.unregister(statMBeanName);
+    }
     if (db != null) {
       db.close();
     }
+
   }
+
+  @VisibleForTesting
+  protected ObjectName getStatMBeanName() {
+    return statMBeanName;
+  }
+
 }

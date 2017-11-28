@@ -630,6 +630,20 @@
   </property>
 
   <property>
+    <name>ozone.metastore.rocksdb.statistics</name>
+    <value>ALL</value>
+    <tag>OZONE, KSM, SCM, STORAGE, PERFORMANCE</tag>
+    <description>
+      The statistics level of the rocksdb store. If you use any value from
+      org.rocksdb.StatsLevel (eg. ALL or EXCEPT_DETAILED_TIMERS), the rocksdb
+      statistics will be exposed over JMX bean with the choosed setting. Set
+      it to OFF to not initialize rocksdb statistics at all. Please note that
+      collection of statistics could have 5-10% performance penalty.
+      Check the rocksdb documentation for more details.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.scm.block.client.address</name>
     <value/>
     <tag>OZONE, SCM</tag>

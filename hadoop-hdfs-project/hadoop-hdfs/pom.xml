@@ -191,7 +191,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.rocksdb</groupId>
       <artifactId>rocksdbjni</artifactId>
-      <version>5.5.5</version>
+      <version>5.8.0</version>
     </dependency>
     <dependency>
       <groupId>io.swagger</groupId>

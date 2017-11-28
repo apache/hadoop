@@ -20,6 +20,12 @@ package org.apache.hadoop.utils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_METADATA_STORE_ROCKSDB_STATISTICS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF;
 import org.iq80.leveldb.Options;
 import org.rocksdb.BlockBasedTableConfig;
 
@@ -28,6 +34,9 @@ import java.io.IOException;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB;
+
+import org.rocksdb.Statistics;
+import org.rocksdb.StatsLevel;
 
 /**
  * Builder for metadata store.
@@ -90,6 +99,18 @@ public class MetadataStoreBuilder {
         BlockBasedTableConfig tableConfig = new BlockBasedTableConfig();
         tableConfig.setBlockCacheSize(cacheSize);
         opts.setTableFormatConfig(tableConfig);
+      }
+
+      String rocksDbStat = conf == null ?
+          OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT :
+          conf.getTrimmed(OZONE_METADATA_STORE_ROCKSDB_STATISTICS,
+              OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT);
+
+      if (!rocksDbStat.equals(OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF)) {
+        Statistics statistics = new Statistics();
+        statistics.setStatsLevel(StatsLevel.valueOf(rocksDbStat));
+        opts = opts.setStatistics(statistics);
+
       }
       store = new RocksDBStore(dbFile, opts);
     } else {
