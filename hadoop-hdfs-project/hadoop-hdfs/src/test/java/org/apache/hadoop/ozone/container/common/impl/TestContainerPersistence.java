@@ -322,14 +322,14 @@ public class TestContainerPersistence {
   }
 
   /**
-   * This test creates 1000 containers and reads them back 5 containers at a
+   * This test creates 50 containers and reads them back 5 containers at a
    * time and verifies that we did get back all containers.
    *
    * @throws IOException
    */
   @Test
   public void testListContainer() throws IOException {
-    final int count = 1000;
+    final int count = 50;
     final int step = 5;
 
     Map<String, ContainerData> testMap = new HashMap<>();
