@@ -117,6 +117,7 @@ message AllocateResponseProto {
   optional CollectorInfoProto collector_info = 14;
   repeated UpdateContainerErrorProto update_errors = 15;
   repeated UpdatedContainerProto updated_containers = 16;
+  repeated ContainerProto containers_from_previous_attempts = 17;
 }
 
 enum SchedulerResourceTypes {

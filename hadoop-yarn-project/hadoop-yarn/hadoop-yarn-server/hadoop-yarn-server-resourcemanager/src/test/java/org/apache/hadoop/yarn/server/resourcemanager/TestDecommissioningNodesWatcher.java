@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.DecommissioningNodesWatcher
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,7 +68,8 @@ public class TestDecommissioningNodesWatcher {
     MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
 
     // Setup nm1 as DECOMMISSIONING for DecommissioningNodesWatcher.
-    rm.sendNodeEvent(nm1, RMNodeEventType.GRACEFUL_DECOMMISSION);
+    rm.sendNodeGracefulDecommission(nm1,
+        YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
     rm.waitForState(id1, NodeState.DECOMMISSIONING);
 
     // Update status with decreasing number of running containers until 0.

@@ -24,8 +24,8 @@ import java.io.Serializable;
  * This class is used to represent GPU device while allocation.
  */
 public class GpuDevice implements Serializable, Comparable {
-  private int index;
-  private int minorNumber;
+  protected int index;
+  protected int minorNumber;
   private static final long serialVersionUID = -6812314470754667710L;
 
   public GpuDevice(int index, int minorNumber) {

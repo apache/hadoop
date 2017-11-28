@@ -643,4 +643,12 @@
     <Method name="serveNIOTCP" />
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
   </Match>
+
+  <!-- EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice" />
+    <Method name="equals" />
+    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC" />
+  </Match>
+
 </FindBugsFilter>

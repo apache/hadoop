@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Tristate;
@@ -83,6 +84,7 @@ public final class S3Guard {
    * @return Reference to new MetadataStore.
    * @throws IOException if the metadata store cannot be instantiated
    */
+  @Retries.OnceTranslated
   public static MetadataStore getMetadataStore(FileSystem fs)
       throws IOException {
     Preconditions.checkNotNull(fs);

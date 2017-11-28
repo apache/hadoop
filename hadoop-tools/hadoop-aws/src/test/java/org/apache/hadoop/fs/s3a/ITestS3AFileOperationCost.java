@@ -203,6 +203,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // before the internal behavior w/ or w/o metadata store.
     assumeFalse(fs.hasMetadataStore());
 
+    skipDuringFaultInjection(fs);
+
     Path srcBaseDir = path("src");
     mkdirs(srcBaseDir);
     MetricDiff deleteRequests =

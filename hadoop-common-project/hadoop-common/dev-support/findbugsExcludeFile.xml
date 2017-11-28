@@ -446,4 +446,11 @@
     <Method name="setInstance"/>
     <Bug pattern="ME_ENUM_FIELD_SETTER"/>
   </Match>
+
+  <!-- findbugs is complaining that a stream isn't closed. It will be. -->
+  <Match>
+    <Class name="org.apache.hadoop.util.JsonSerialization"/>
+    <Method name="save"/>
+    <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+  </Match>
 </FindBugsFilter>

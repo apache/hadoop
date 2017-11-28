@@ -72,6 +72,7 @@ export default DS.JSONAPISerializer.extend({
           preemptionDisabled: payload.preemptionDisabled,
           numPendingApplications: payload.numPendingApplications,
           numActiveApplications: payload.numActiveApplications,
+          resources: payload.resources,
           type: "capacity",
         },
         // Relationships

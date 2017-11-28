@@ -145,6 +145,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   protected List<UpdateContainerError> updateContainerErrors = new ArrayList<>();
 
+  //Keeps track of recovered containers from previous attempt which haven't
+  //been reported to the AM.
+  private List<Container> recoveredPreviousAttemptContainers =
+      new ArrayList<>();
+
   // This pendingRelease is used in work-preserving recovery scenario to keep
   // track of the AM's outstanding release requests. RM on recovery could
   // receive the release request form AM before it receives the container status
@@ -361,6 +366,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       ContainerId id, RMContainer rmContainer) {
     try {
       writeLock.lock();
+      if (!getApplicationAttemptId().equals(
+          rmContainer.getApplicationAttemptId()) &&
+          !liveContainers.containsKey(id)) {
+        LOG.info("recovered container " + id +
+            " from previous attempt " + rmContainer.getApplicationAttemptId());
+        recoveredPreviousAttemptContainers.add(rmContainer.getContainer());
+      }
       liveContainers.put(id, rmContainer);
       if (rmContainer.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
         this.attemptOpportunisticResourceUsage.incUsed(
@@ -711,6 +723,42 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
             getApplicationAttemptId(), container);
     if (nmToken != null) {
       updatedNMTokens.add(nmToken);
+    }
+  }
+
+  /**
+   * Called when AM registers. These containers are reported to the AM in the
+   * <code>
+   * RegisterApplicationMasterResponse#containersFromPreviousAttempts
+   * </code>.
+   */
+  List<RMContainer> pullContainersToTransfer() {
+    try {
+      writeLock.lock();
+      recoveredPreviousAttemptContainers.clear();
+      return new ArrayList<>(liveContainers.values());
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
+   * Called when AM heartbeats. These containers were recovered by the RM after
+   * the AM had registered. They are reported to the AM in the
+   * <code>AllocateResponse#containersFromPreviousAttempts</code>.
+   */
+  public List<Container> pullPreviousAttemptContainers() {
+    try {
+      writeLock.lock();
+      if (recoveredPreviousAttemptContainers.isEmpty()) {
+        return null;
+      }
+      List<Container> returnContainerList = new ArrayList<>
+          (recoveredPreviousAttemptContainers);
+      recoveredPreviousAttemptContainers.clear();
+      return returnContainerList;
+    } finally {
+      writeLock.unlock();
     }
   }
 

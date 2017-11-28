@@ -222,11 +222,10 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     //unencrypted can access until the final directory
     unencryptedFileSystem.listFiles(pathA, true);
     unencryptedFileSystem.listFiles(pathAB, true);
-    AWSS3IOException ex = intercept(AWSS3IOException.class,
+    AWSBadRequestException ex = intercept(AWSBadRequestException.class,
         () -> {
           unencryptedFileSystem.listFiles(pathABC, false);
         });
-    assertStatusCode(ex, 400);
   }
 
   /**
@@ -270,11 +269,10 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     unencryptedFileSystem.listStatus(pathA);
     unencryptedFileSystem.listStatus(pathAB);
 
-    AWSS3IOException ex = intercept(AWSS3IOException.class,
+    intercept(AWSBadRequestException.class,
         () -> {
           unencryptedFileSystem.listStatus(pathABC);
         });
-    assertStatusCode(ex, 400);
   }
 
   /**

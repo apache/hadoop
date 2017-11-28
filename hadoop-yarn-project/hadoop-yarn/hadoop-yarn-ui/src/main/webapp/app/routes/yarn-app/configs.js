@@ -21,12 +21,14 @@ import AbstractRoute from '../abstract';
 
 export default AbstractRoute.extend({
   model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service, [{text: "Configurations & Metrics"}]);
+    const { app_id } = this.paramsFor('yarn-app');
+    const { service } = param;
+    transition.send('updateBreadcrumbs', app_id, service, [{text: "Configurations & Metrics"}]);
     return Ember.RSVP.hash({
-      appId: param.app_id,
-      serviceName: param.service,
+      appId: app_id,
+      serviceName: service,
 
-      configs: this.store.queryRecord('yarn-service-info', {appId: param.app_id}).then(function(info) {
+      configs: this.store.queryRecord('yarn-service-info', {appId: app_id}).then(function(info) {
         if (info && info.get('configs')) {
           return info.get('configs');
         }
@@ -35,7 +37,7 @@ export default AbstractRoute.extend({
         return [];
       }),
 
-      metrics: this.store.queryRecord('yarn-service-info', {appId: param.app_id}).then(function(info) {
+      metrics: this.store.queryRecord('yarn-service-info', {appId: app_id}).then(function(info) {
         if (info && info.get('metrics')) {
           return info.get('metrics');
         }
@@ -44,6 +46,10 @@ export default AbstractRoute.extend({
         return null;
       })
     });
+  },
+
+  refresh() {
+    window.location.reload();
   },
 
   unloadAll() {

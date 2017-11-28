@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.SdkBaseException;
 import com.google.common.base.Preconditions;
 
 import java.io.IOException;
@@ -31,7 +32,7 @@ public class AWSClientIOException extends IOException {
   private final String operation;
 
   public AWSClientIOException(String operation,
-      AmazonClientException cause) {
+      SdkBaseException cause) {
     super(cause);
     Preconditions.checkArgument(operation != null, "Null 'operation' argument");
     Preconditions.checkArgument(cause != null, "Null 'cause' argument");

@@ -2043,4 +2043,26 @@
   <name>mapreduce.job.send-token-conf</name>
   <value></value>
 </property>
+
+<property>
+  <description>
+    The name of an output committer factory for MRv2 FileOutputFormat to use
+    for committing work. If set, overrides any per-filesystem committer
+    defined for the destination filesystem.
+  </description>
+  <name>mapreduce.outputcommitter.factory.class</name>
+  <value></value>
+</property>
+
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
+  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
+  <description>
+    The committer factory to use when writing data to S3A filesystems.
+    If mapreduce.outputcommitter.factory.class is set, it will
+    override this property.
+  </description>
+</property>
+
 </configuration>
