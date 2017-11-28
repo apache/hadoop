@@ -236,12 +236,12 @@ public class QueueConfigurationsPBImpl extends QueueConfigurations {
   }
 
   @Override
-  public void setConfiguredMinCapacity(Resource configuredMinResource) {
+  public void setConfiguredMinCapacity(Resource minResource) {
     maybeInitBuilder();
-    if (configuredMinResource == null) {
+    if (minResource == null) {
       builder.clearConfiguredMinCapacity();
     }
-    this.configuredMinResource = configuredMinResource;
+    this.configuredMinResource = minResource;
   }
 
   @Override
@@ -259,11 +259,11 @@ public class QueueConfigurationsPBImpl extends QueueConfigurations {
   }
 
   @Override
-  public void setConfiguredMaxCapacity(Resource configuredMaxResource) {
+  public void setConfiguredMaxCapacity(Resource maxResource) {
     maybeInitBuilder();
     if (configuredMaxResource == null) {
       builder.clearConfiguredMaxCapacity();
     }
-    this.configuredMaxResource = configuredMaxResource;
+    this.configuredMaxResource = maxResource;
   }
 }
