@@ -721,3 +721,9 @@ div.service-action-mask img {
   background-color: $yarn-header-bg;
   border-bottom: 1px solid $yarn-border-color;
 }
+
+.yarn-metrics-json {
+  white-space: pre-wrap;
+  word-wrap: nowrap;
+  overflow: scroll;
+}
