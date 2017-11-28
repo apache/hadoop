@@ -412,6 +412,29 @@ Usage:
 
 Runs a HDFS dfsadmin client.
 
+### `dfsrouter`
+
+Usage: `hdfs dfsrouter`
+
+Runs the DFS router. See [Router](./HDFSRouterFederation.html#Router) for more info.
+
+### `dfsrouteradmin`
+
+Usage:
+
+      hdfs dfsrouteradmin
+          [-add <source> <nameservice> <destination>]
+          [-rm <source>]
+          [-ls <path>]
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-add` *source* *nameservice* *destination* | Add a mount table entry or update if it exists. |
+| `-rm` *source* | Remove mount point of specified path. |
+| `-ls` *path* | List mount points under specified path. |
+
+The commands for managing Router-based federation. See [Mount table management](./HDFSRouterFederation.html#Mount_table_management) for more info.
+
 ### `diskbalancer`
 
 Usage:
