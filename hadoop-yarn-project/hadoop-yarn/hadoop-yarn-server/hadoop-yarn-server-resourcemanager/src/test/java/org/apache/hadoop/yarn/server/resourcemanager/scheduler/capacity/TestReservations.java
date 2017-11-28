@@ -904,11 +904,10 @@ public class TestReservations {
     String host_1 = "host_1";
     FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0,
         8 * GB);
-    
+
     Resource clusterResource = Resources.createResource(2 * 8 * GB);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-
 
     // Setup resource-requests
     Priority p = TestUtils.createMockPriority(5);

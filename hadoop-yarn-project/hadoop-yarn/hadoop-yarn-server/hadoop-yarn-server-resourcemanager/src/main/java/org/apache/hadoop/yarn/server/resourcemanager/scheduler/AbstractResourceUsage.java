@@ -55,7 +55,10 @@ public class AbstractResourceUsage {
     usages.put(CommonNodeLabelsManager.NO_LABEL, noLabelUsages);
   }
 
-  // Usage enum here to make implement cleaner
+  /**
+   * Use enum here to make implementation more cleaner and readable.
+   * Indicates array index for each resource usage type.
+   */
   public enum ResourceType {
     // CACHED_USED and CACHED_PENDING may be read by anyone, but must only
     // be written by ordering policies
@@ -70,6 +73,9 @@ public class AbstractResourceUsage {
     }
   }
 
+  /**
+   * UsageByLabel stores resource array for all resource usage types.
+   */
   public static class UsageByLabel {
     // usage by label, contains all UsageType
     private final AtomicReferenceArray<Resource> resArr;

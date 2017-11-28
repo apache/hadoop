@@ -127,12 +127,12 @@ public abstract class ResourceCalculator {
       Resource r, double by, Resource stepFactor);
 
   /**
-   * Multiply resource <code>r</code> by factor <code>by</code> 
+   * Multiply resource <code>r</code> by factor <code>by</code>
    * and normalize up using step-factor <code>stepFactor</code>.
-   * 
+   *
    * @param r resource to be multiplied
    * @param by multiplier array for all resource types
-   * @param stepFactor factor by which to normalize up 
+   * @param stepFactor factor by which to normalize up
    * @return resulting normalized resource
    */
   public abstract Resource multiplyAndNormalizeUp(
@@ -149,7 +149,7 @@ public abstract class ResourceCalculator {
    */
   public abstract Resource multiplyAndNormalizeDown(
       Resource r, double by, Resource stepFactor);
-  
+
   /**
    * Normalize resource <code>r</code> given the base 
    * <code>minimumResource</code> and verify against max allowed
@@ -162,9 +162,7 @@ public abstract class ResourceCalculator {
    * @return normalized resource
    */
   public abstract Resource normalize(Resource r, Resource minimumResource,
-                                     Resource maximumResource, 
-                                     Resource stepFactor);
-
+      Resource maximumResource, Resource stepFactor);
 
   /**
    * Round-up resource <code>r</code> given factor <code>stepFactor</code>.

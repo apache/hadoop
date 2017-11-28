@@ -1171,16 +1171,16 @@ public class StringUtils {
    * @return <code>true</code> if only contains letters, and is non-null
    */
   public static boolean isAlpha(String str) {
-      if (str == null) {
-          return false;
+    if (str == null) {
+      return false;
+    }
+    int sz = str.length();
+    for (int i = 0; i < sz; i++) {
+      if (!Character.isLetter(str.charAt(i))) {
+        return false;
       }
-      int sz = str.length();
-      for (int i = 0; i < sz; i++) {
-          if (Character.isLetter(str.charAt(i)) == false) {
-              return false;
-          }
-      }
-      return true;
+    }
+    return true;
   }
 
 }
