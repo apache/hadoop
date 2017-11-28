@@ -27,8 +27,11 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.Set;
+
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -480,16 +483,31 @@ public class TestNameNodeProvidedImplementation {
     // given the start and length in the above call,
     // only one LocatedBlock in LocatedBlocks
     assertEquals(expectedBlocks, locatedBlocks.getLocatedBlocks().size());
-    LocatedBlock locatedBlock = locatedBlocks.getLocatedBlocks().get(0);
-    assertEquals(expectedLocations, locatedBlock.getLocations().length);
-    return locatedBlock.getLocations();
+    DatanodeInfo[] locations =
+        locatedBlocks.getLocatedBlocks().get(0).getLocations();
+    assertEquals(expectedLocations, locations.length);
+    checkUniqueness(locations);
+    return locations;
+  }
+
+  /**
+   * verify that the given locations are all unique.
+   * @param locations
+   */
+  private void checkUniqueness(DatanodeInfo[] locations) {
+    Set<String> set = new HashSet<>();
+    for (DatanodeInfo info: locations) {
+      assertFalse("All locations should be unique",
+          set.contains(info.getDatanodeUuid()));
+      set.add(info.getDatanodeUuid());
+    }
   }
 
   /**
    * Tests setting replication of provided files.
    * @throws Exception
    */
-  @Test(timeout=30000)
+  @Test(timeout=50000)
   public void testSetReplicationForProvidedFiles() throws Exception {
     createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
         FixedBlockResolver.class);
