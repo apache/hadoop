@@ -516,8 +516,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       if (amReqs == null || amReqs.isEmpty()) {
         if (submissionContext.getResource() != null) {
           amReqs = Collections.singletonList(BuilderUtils
-              .newResourceRequest(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
-                  ResourceRequest.ANY, submissionContext.getResource(), 1));
+              .newAMResourceRequest(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
+                  ResourceRequest.ANY, submissionContext.getResource()));
         } else {
           throw new InvalidResourceRequestException("Invalid resource request, "
               + "no resources requested");
@@ -548,7 +548,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         for (ResourceRequest amReq : amReqs) {
           amReq.setCapability(anyReq.getCapability());
           amReq.setExecutionTypeRequest(
-              ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED));
+              ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED, true));
           amReq.setNumContainers(1);
           amReq.setPriority(RMAppAttemptImpl.AM_CONTAINER_PRIORITY);
         }

@@ -351,15 +351,28 @@ public class BuilderUtils {
     return priority;
   }
 
+  public static ResourceRequest newAMResourceRequest(Priority priority,
+      String hostName, Resource capability) {
+    return newResourceRequest(priority, hostName, capability, 1,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED, true));
+  }
+
   public static ResourceRequest newResourceRequest(Priority priority,
       String hostName, Resource capability, int numContainers) {
+    return newResourceRequest(priority, hostName, capability,
+        numContainers, ExecutionTypeRequest.newInstance());
+  }
+
+  public static ResourceRequest newResourceRequest(Priority priority,
+      String hostName, Resource capability, int numContainers,
+      ExecutionTypeRequest executionTypeRequest) {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);
     request.setPriority(priority);
     request.setResourceName(hostName);
     request.setCapability(capability);
     request.setNumContainers(numContainers);
-    request.setExecutionTypeRequest(ExecutionTypeRequest.newInstance());
+    request.setExecutionTypeRequest(executionTypeRequest);
     return request;
   }
 

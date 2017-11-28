@@ -839,15 +839,45 @@ public class TestAppManager{
   public void testRMAppSubmitAMContainerResourceRequests() throws Exception {
     asContext.setResource(Resources.createResource(1024));
     asContext.setAMContainerResourceRequest(
-        ResourceRequest.newInstance(Priority.newInstance(0),
-            ResourceRequest.ANY, Resources.createResource(1024), 1, true));
+        ResourceRequest.newBuilder().priority(Priority.newInstance(0))
+            .resourceName(ResourceRequest.ANY)
+            .capability(Resources.createResource(1024))
+            .numContainers(1)
+            .relaxLocality(true)
+            .executionTypeRequest(ExecutionTypeRequest.newInstance(
+                ExecutionType.GUARANTEED, true))
+        .build());
     List<ResourceRequest> reqs = new ArrayList<>();
-    reqs.add(ResourceRequest.newInstance(Priority.newInstance(0),
-        ResourceRequest.ANY, Resources.createResource(1025), 1, false));
-    reqs.add(ResourceRequest.newInstance(Priority.newInstance(0),
-        "/rack", Resources.createResource(1025), 1, false));
-    reqs.add(ResourceRequest.newInstance(Priority.newInstance(0),
-        "/rack/node", Resources.createResource(1025), 1, true));
+    reqs.add(
+        ResourceRequest.newBuilder().priority(Priority.newInstance(0))
+            .resourceName(ResourceRequest.ANY)
+            .capability(Resources.createResource(1025))
+            .numContainers(1)
+            .relaxLocality(false)
+            .executionTypeRequest(ExecutionTypeRequest.newInstance(
+                ExecutionType.GUARANTEED, true))
+        .build()
+    );
+    reqs.add(
+        ResourceRequest.newBuilder().priority(Priority.newInstance(0))
+            .resourceName("/rack")
+            .capability(Resources.createResource(1025))
+            .numContainers(1)
+            .relaxLocality(false)
+            .executionTypeRequest(ExecutionTypeRequest.newInstance(
+                ExecutionType.GUARANTEED, true))
+        .build()
+    );
+    reqs.add(
+        ResourceRequest.newBuilder().priority(Priority.newInstance(0))
+            .resourceName("/rack/node")
+            .capability(Resources.createResource(1025))
+            .numContainers(1)
+            .relaxLocality(true)
+            .executionTypeRequest(ExecutionTypeRequest.newInstance(
+                ExecutionType.GUARANTEED, true))
+        .build()
+    );
     asContext.setAMContainerResourceRequests(cloneResourceRequests(reqs));
     // getAMContainerResourceRequest uses the first entry of
     // getAMContainerResourceRequests
@@ -869,9 +899,15 @@ public class TestAppManager{
     asContext.setResource(Resources.createResource(1024));
     asContext.setAMContainerResourceRequests(null);
     ResourceRequest req =
-        ResourceRequest.newInstance(Priority.newInstance(0),
-            ResourceRequest.ANY, Resources.createResource(1025), 1, true);
-    req.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
+        ResourceRequest.newBuilder().priority(Priority.newInstance(0))
+            .resourceName(ResourceRequest.ANY)
+            .capability(Resources.createResource(1025))
+            .numContainers(1)
+            .relaxLocality(true)
+            .nodeLabelExpression(RMNodeLabelsManager.NO_LABEL)
+            .executionTypeRequest(ExecutionTypeRequest.newInstance(
+                ExecutionType.GUARANTEED, true))
+        .build();
     asContext.setAMContainerResourceRequest(ResourceRequest.clone(req));
     // getAMContainerResourceRequests uses a singleton list of
     // getAMContainerResourceRequest
@@ -892,9 +928,16 @@ public class TestAppManager{
 
     // setResource
     Assert.assertEquals(Collections.singletonList(
-        ResourceRequest.newInstance(RMAppAttemptImpl.AM_CONTAINER_PRIORITY,
-        ResourceRequest.ANY, Resources.createResource(1024), 1, true,
-            "")),
+        ResourceRequest.newBuilder()
+            .priority(RMAppAttemptImpl.AM_CONTAINER_PRIORITY)
+            .resourceName(ResourceRequest.ANY)
+            .capability(Resources.createResource(1024))
+            .numContainers(1)
+            .relaxLocality(true)
+            .nodeLabelExpression("")
+            .executionTypeRequest(ExecutionTypeRequest.newInstance(
+                ExecutionType.GUARANTEED, true))
+        .build()),
         app.getAMResourceRequests());
   }
 
@@ -936,7 +979,7 @@ public class TestAppManager{
     for (ResourceRequest req : reqs) {
       req.setCapability(anyReq.getCapability());
       req.setExecutionTypeRequest(
-          ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED));
+          ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED, true));
       req.setNumContainers(1);
       req.setPriority(Priority.newInstance(0));
     }
