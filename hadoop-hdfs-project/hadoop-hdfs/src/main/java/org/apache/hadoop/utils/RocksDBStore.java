@@ -67,8 +67,6 @@ public class RocksDBStore implements MetadataStore {
     dbOptions = options;
     dbLocation = dbFile;
     writeOptions = new WriteOptions();
-    writeOptions.setSync(true);
-    writeOptions.setNoSlowdown(true);
     try {
 
       db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath());
