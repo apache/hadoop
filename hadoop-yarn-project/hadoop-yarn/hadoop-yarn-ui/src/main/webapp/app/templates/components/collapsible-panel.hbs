@@ -1,4 +1,4 @@
-/**
+{{!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,33 +14,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+}}
 
-import Ember from 'ember';
-import AbstractRoute from '../abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
-
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param, transition) {
-    const {app_id} = this.paramsFor('yarn-app');
-    const {service} = param;
-
-    transition.send('updateBreadcrumbs', app_id, service, [{text: 'Attempts'}]);
-    return Ember.RSVP.hash({
-      appId: app_id,
-      serviceName: service,
-      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
-        return Ember.A();
-      })
-    });
-  },
-
-  refresh() {
-    window.location.reload();
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-timeline-appattempt');
-  }
-});
+<a class="pull-right toggle_switch" href="#" {{action "togglePanelCollapse"}}>
+  <span class="glyphicon glyphicon-chevron-up"></span>
+</a>

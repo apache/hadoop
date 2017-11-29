@@ -16,31 +16,18 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import AbstractRoute from '../abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
+import { moduleForModel, test } from 'ember-qunit';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param, transition) {
-    const {app_id} = this.paramsFor('yarn-app');
-    const {service} = param;
+moduleForModel('yarn-log', 'Unit | Serializer | yarn log', {
+  // Specify the other units that are required for this test.
+  needs: ['serializer:yarn-log']
+});
 
-    transition.send('updateBreadcrumbs', app_id, service, [{text: 'Attempts'}]);
-    return Ember.RSVP.hash({
-      appId: app_id,
-      serviceName: service,
-      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
-        return Ember.A();
-      })
-    });
-  },
+// Replace this with your real tests.
+test('it serializes records', function(assert) {
+  let record = this.subject();
 
-  refresh() {
-    window.location.reload();
-  },
+  let serializedRecord = record.serialize();
 
-  unloadAll() {
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-timeline-appattempt');
-  }
+  assert.ok(serializedRecord);
 });

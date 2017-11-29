@@ -3,8 +3,8 @@
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * to you under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -22,25 +22,24 @@ import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
 export default AbstractRoute.extend(AppAttemptMixin, {
   model(param, transition) {
-    const {app_id} = this.paramsFor('yarn-app');
-    const {service} = param;
-
-    transition.send('updateBreadcrumbs', app_id, service, [{text: 'Attempts'}]);
+    transition.send('updateBreadcrumbs', param.app_id, param.service, [{text: 'Logs'}]);
     return Ember.RSVP.hash({
-      appId: app_id,
-      serviceName: service,
-      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
-        return Ember.A();
+      appId: param.app_id,
+      serviceName: param.service,
+      attempts: this.fetchAttemptListFromRMorATS(param.app_id, this.store).catch(function() {
+        return [];
       })
     });
-  },
-
-  refresh() {
-    window.location.reload();
   },
 
   unloadAll() {
     this.store.unloadAll('yarn-app-attempt');
     this.store.unloadAll('yarn-timeline-appattempt');
+    this.store.unloadAll('yarn-container');
+    this.store.unloadAll('yarn-timeline-container');
+    this.store.unloadAll('yarn-log');
+    if (this.controller) {
+      this.controller.resetAfterRefresh();
+    }
   }
 });
