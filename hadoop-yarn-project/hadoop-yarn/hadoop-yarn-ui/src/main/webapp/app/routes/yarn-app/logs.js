@@ -22,11 +22,13 @@ import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
 export default AbstractRoute.extend(AppAttemptMixin, {
   model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service, [{text: 'Logs'}]);
+    const { app_id } = this.paramsFor('yarn-app');
+    const { service } = param;
+    transition.send('updateBreadcrumbs', app_id, service, [{text: 'Logs'}]);
     return Ember.RSVP.hash({
-      appId: param.app_id,
-      serviceName: param.service,
-      attempts: this.fetchAttemptListFromRMorATS(param.app_id, this.store).catch(function() {
+      appId: app_id,
+      serviceName: service,
+      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
         return [];
       })
     });
