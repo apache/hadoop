@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY;
@@ -38,6 +39,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.doReturn;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -51,6 +53,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -175,6 +178,106 @@ public class TestFileCreation {
       assertEquals(7, serverDefaults.getDefaultStoragePolicyId());
     } finally {
       fs.close();
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test that server default values are cached on the client size
+   * and are stale after namenode update.
+   */
+  @Test
+  public void testServerDefaultsWithCaching()
+      throws IOException, InterruptedException {
+    // Create cluster with an explicit block size param
+    Configuration clusterConf = new HdfsConfiguration();
+    long originalBlockSize = DFS_BLOCK_SIZE_DEFAULT * 2;
+    clusterConf.setLong(DFS_BLOCK_SIZE_KEY, originalBlockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(clusterConf)
+        .numDataNodes(0)
+        .build();
+    cluster.waitActive();
+    // Set a spy namesystem inside the namenode and return it
+    FSNamesystem spyNamesystem =
+        NameNodeAdapter.spyOnNamesystem(cluster.getNameNode());
+    InetSocketAddress nameNodeAddr = cluster.getNameNode().getNameNodeAddress();
+    try {
+      // Create a dfs client and set a long enough validity interval
+      Configuration clientConf = new HdfsConfiguration();
+      clientConf.setLong(DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
+          TimeUnit.MINUTES.toMillis(1));
+      DFSClient dfsClient = new DFSClient(nameNodeAddr, clientConf);
+      FsServerDefaults defaults = dfsClient.getServerDefaults();
+      assertEquals(originalBlockSize, defaults.getBlockSize());
+
+      // Update the namenode with a new parameter
+      long updatedDefaultBlockSize = DFS_BLOCK_SIZE_DEFAULT * 3;
+      FsServerDefaults newDefaults =
+          new FsServerDefaults(updatedDefaultBlockSize,
+              defaults.getBytesPerChecksum(), defaults.getWritePacketSize(),
+              defaults.getReplication(), defaults.getFileBufferSize(),
+              defaults.getEncryptDataTransfer(), defaults.getTrashInterval(),
+              defaults.getChecksumType(), defaults.getKeyProviderUri(),
+              defaults.getDefaultStoragePolicyId());
+      doReturn(newDefaults).when(spyNamesystem).getServerDefaults();
+
+      // The value is stale
+      Thread.sleep(1);
+      defaults = dfsClient.getServerDefaults();
+      assertEquals(originalBlockSize, defaults.getBlockSize());
+
+      // Another client reads the updated value correctly
+      DFSClient newDfsClient = new DFSClient(nameNodeAddr, clientConf);
+      defaults = newDfsClient.getServerDefaults();
+      assertEquals(updatedDefaultBlockSize, defaults.getBlockSize());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test that server defaults are updated on the client after cache expiration.
+   */
+  @Test
+  public void testServerDefaultsWithMinimalCaching()
+      throws IOException, InterruptedException {
+    // Create cluster with an explicit block size param
+    Configuration clusterConf = new HdfsConfiguration();
+    long originalBlockSize = DFS_BLOCK_SIZE_DEFAULT * 2;
+    clusterConf.setLong(DFS_BLOCK_SIZE_KEY, originalBlockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(clusterConf)
+        .numDataNodes(0)
+        .build();
+    cluster.waitActive();
+    // Set a spy namesystem inside the namenode and return it
+    FSNamesystem spyNamesystem =
+        NameNodeAdapter.spyOnNamesystem(cluster.getNameNode());
+    InetSocketAddress nameNodeAddr = cluster.getNameNode().getNameNodeAddress();
+    try {
+      // Create a dfs client and set a minimal validity interval
+      Configuration clientConf = new HdfsConfiguration();
+      // Invalidate cache in at most 1 ms, see DfsClient#getServerDefaults
+      clientConf.setLong(DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY, 0L);
+      DFSClient dfsClient = new DFSClient(nameNodeAddr, clientConf);
+      FsServerDefaults defaults = dfsClient.getServerDefaults();
+      assertEquals(originalBlockSize, defaults.getBlockSize());
+
+      // Update the namenode with a new FsServerDefaults
+      long updatedDefaultBlockSize = DFS_BLOCK_SIZE_DEFAULT * 3;
+      FsServerDefaults newDefaults =
+          new FsServerDefaults(updatedDefaultBlockSize,
+              defaults.getBytesPerChecksum(), defaults.getWritePacketSize(),
+              defaults.getReplication(), defaults.getFileBufferSize(),
+              defaults.getEncryptDataTransfer(), defaults.getTrashInterval(),
+              defaults.getChecksumType(), defaults.getKeyProviderUri(),
+              defaults.getDefaultStoragePolicyId());
+      doReturn(newDefaults).when(spyNamesystem).getServerDefaults();
+
+      Thread.sleep(1);
+      defaults = dfsClient.getServerDefaults();
+      // Value is updated correctly
+      assertEquals(updatedDefaultBlockSize, defaults.getBlockSize());
+    } finally {
       cluster.shutdown();
     }
   }
