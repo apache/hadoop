@@ -80,7 +80,7 @@ public abstract class RecordStore<R extends BaseRecord> {
   /**
    * Build a state store API implementation interface.
    *
-   * @param interfaceClass The specific interface implementation to create
+   * @param clazz The specific interface implementation to create
    * @param driver The {@link StateStoreDriver} implementation in use.
    * @return An initialized instance of the specified state store API
    *         implementation.
