@@ -288,6 +288,16 @@ Capacity Scheduler leverages `Delay Scheduling` to honor task locality constrain
 
 Note, this feature should be disabled if YARN is deployed separately with the file system, as locality is meaningless. This can be done by setting `yarn.scheduler.capacity.node-locality-delay` to `-1`, in this case, request's locality constraint is ignored.
 
+  * Container Allocation per NodeManager Heartbeat
+
+  The `CapacityScheduler` supports the following parameters to control how many containers can be allocated in each NodeManager heartbeat.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled` | Whether to allow multiple container assignments in one NodeManager heartbeat. Defaults to true. |
+| `yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments` | If `multiple-assignments-enabled` is true, the maximum amount of containers that can be assigned in one NodeManager heartbeat. Defaults to -1, which sets no limit. |
+| `yarn.scheduler.capacity.per-node-heartbeat.maximum-offswitch-assignments` | If `multiple-assignments-enabled` is true, the maximum amount of off-switch containers that can be assigned in one NodeManager heartbeat. Defaults to 1, which represents only one off-switch allocation allowed in one heartbeat. |
+
 ###Reviewing the configuration of the CapacityScheduler
 
   Once the installation and configuration is completed, you can review it after starting the YARN cluster from the web-ui.
