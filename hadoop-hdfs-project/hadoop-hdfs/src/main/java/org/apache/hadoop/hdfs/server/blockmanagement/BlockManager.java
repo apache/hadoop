@@ -1592,8 +1592,6 @@ public class BlockManager implements BlockStatsMXBean {
       }
 
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
-      // It is costly to extract the filename for which chooseTargets is called,
-      // so for now we pass in the block collection itself.
       rw.chooseTargets(blockplacement, storagePolicySuite, excludedNodes);
     }
 
