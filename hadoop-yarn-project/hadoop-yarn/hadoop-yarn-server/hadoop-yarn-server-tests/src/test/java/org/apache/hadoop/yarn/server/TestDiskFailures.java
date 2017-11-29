@@ -210,7 +210,7 @@ public class TestDiskFailures {
     long time = lastDisksCheckTime;
     for (int i = 0; i < 10 && (time <= lastDisksCheckTime); i++) {
       try {
-        Thread.sleep(1000);
+        Thread.sleep(1500);
       } catch(InterruptedException e) {
         LOG.error(
             "Interrupted while waiting for NodeManager's disk health check.");
