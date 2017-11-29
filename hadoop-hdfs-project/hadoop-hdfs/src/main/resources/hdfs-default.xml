@@ -2283,6 +2283,16 @@
 </property>
 
 <property>
+  <name>dfs.client.server-defaults.validity.period.ms</name>
+  <value>3600000</value>
+  <description>
+    The amount of milliseconds after which cached server defaults are updated.
+
+    By default this parameter is set to 1 hour.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.enable.retrycache</name>
   <value>true</value>
   <description>
