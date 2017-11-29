@@ -32,7 +32,8 @@ import java.util.Set;
 abstract class BlockReconstructionWork {
   private final BlockInfo block;
 
-  private final BlockCollection bc;
+  private final String srcPath;
+  private final byte storagePolicyID;
 
   /**
    * An erasure coding reconstruction task has multiple source nodes.
@@ -57,7 +58,8 @@ abstract class BlockReconstructionWork {
       int additionalReplRequired,
       int priority) {
     this.block = block;
-    this.bc = bc;
+    this.srcPath = bc.getName();
+    this.storagePolicyID = bc.getStoragePolicyID();
     this.srcNodes = srcNodes;
     this.containingNodes = containingNodes;
     this.liveReplicaStorages = liveReplicaStorages;
@@ -94,8 +96,12 @@ abstract class BlockReconstructionWork {
     return srcNodes;
   }
 
-  BlockCollection getBc() {
-    return bc;
+  public String getSrcPath() {
+    return srcPath;
+  }
+
+  public byte getStoragePolicyID() {
+    return storagePolicyID;
   }
 
   List<DatanodeStorageInfo> getLiveReplicaStorages() {
