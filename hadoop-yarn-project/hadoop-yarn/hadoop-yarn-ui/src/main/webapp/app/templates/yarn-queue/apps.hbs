@@ -17,9 +17,20 @@
 }}
 
 <div class="row">
-  <div class="col-lg-12 container-fluid">
+  <div class="col-lg-12">
+    <div class="row">
+      {{#if (eq model.queues.firstObject.type "capacity")}}
+        {{yarn-queue.capacity-queue-info model=model}}
+      {{else if (eq model.queues.firstObject.type "fair")}}
+        {{yarn-queue.fair-queue-info model=model}}
+      {{else}}
+        {{yarn-queue.fifo-queue-info model=model}}
+      {{/if}}
+    </div>
+  </div>
+  <div class="col-lg-12 yarn-applications-container">
     {{#if model.apps}}
-      {{em-table columns=columns rows=model.apps}}
+      {{em-table columns=columns rows=model.apps  definition=tableDefinitio}}
     {{else}}
       <h4 align = "center">Could not find any applications from this cluster</h4>
     {{/if}}
