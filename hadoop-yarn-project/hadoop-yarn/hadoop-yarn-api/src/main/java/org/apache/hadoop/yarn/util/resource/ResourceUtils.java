@@ -609,7 +609,6 @@ public class ResourceUtils {
     return result;
   }
 
-
   /**
    * Reinitialize all resource types from external source (in case of client,
    * server will send the updated list and local resourceutils cache will be
@@ -629,5 +628,35 @@ public class ResourceUtils {
     }
     ResourceUtils
         .initializeResourcesFromResourceInformationMap(resourceInformationMap);
+  }
+
+  /**
+   * Create an array of {@link ResourceInformation} objects corresponding to
+   * the passed in map of names to values. The array will be ordered according
+   * to the order returned by {@link #getResourceTypesArray()}. The value of
+   * each resource type in the returned array will either be the value given for
+   * that resource in the {@code res} parameter or, if none is given, 0.
+   *
+   * @param res the map of resource type values
+   * @return an array of {@link ResourceInformation} instances
+   */
+  public static ResourceInformation[] createResourceTypesArray(Map<String,
+      Long> res) {
+    ResourceInformation[] info = new ResourceInformation[resourceTypes.size()];
+
+    for (Entry<String, Integer> entry : RESOURCE_NAME_TO_INDEX.entrySet()) {
+      int index = entry.getValue();
+      Long value = res.get(entry.getKey());
+
+      if (value == null) {
+        value = 0L;
+      }
+
+      info[index] = new ResourceInformation();
+      ResourceInformation.copy(resourceTypesArray[index], info[index]);
+      info[index].setValue(value);
+    }
+
+    return info;
   }
 }
