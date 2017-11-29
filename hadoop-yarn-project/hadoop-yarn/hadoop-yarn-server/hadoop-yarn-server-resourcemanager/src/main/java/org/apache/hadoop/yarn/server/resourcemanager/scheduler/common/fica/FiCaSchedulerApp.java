@@ -417,7 +417,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
           // Common part of check container allocation regardless if it is a
           // increase container or regular container
-          commonCheckContainerAllocation(allocation, schedulerContainer);
+          if (!commonCheckContainerAllocation(allocation, schedulerContainer)) {
+            return false;
+          }
         } else {
           // Container reserved first time will be NEW, after the container
           // accepted & confirmed, it will become RESERVED state
@@ -700,6 +702,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       ResourceRequest rr = ResourceRequest.newBuilder()
           .priority(Priority.UNDEFINED).resourceName(ResourceRequest.ANY)
           .capability(minimumAllocation).numContainers(numCont).build();
+      List<Container> previousAttemptContainers =
+          pullPreviousAttemptContainers();
       List<Container> newlyAllocatedContainers = pullNewlyAllocatedContainers();
       List<Container> newlyIncreasedContainers = pullNewlyIncreasedContainers();
       List<Container> newlyDecreasedContainers = pullNewlyDecreasedContainers();
@@ -711,7 +715,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       return new Allocation(newlyAllocatedContainers, headroom, null,
           currentContPreemption, Collections.singletonList(rr), updatedNMTokens,
           newlyIncreasedContainers, newlyDecreasedContainers,
-          newlyPromotedContainers, newlyDemotedContainers);
+          newlyPromotedContainers, newlyDemotedContainers,
+          previousAttemptContainers);
     } finally {
       writeLock.unlock();
     }

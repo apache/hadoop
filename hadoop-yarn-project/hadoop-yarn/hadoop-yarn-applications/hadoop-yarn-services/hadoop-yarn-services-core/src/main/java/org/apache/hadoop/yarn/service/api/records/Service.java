@@ -26,6 +26,8 @@ import io.swagger.annotations.ApiModelProperty;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
@@ -43,6 +45,7 @@ import java.util.Objects;
 @ApiModel(description = "An Service resource has the following attributes.")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({ "name", "state", "resource", "number_of_containers",
     "lifetime", "containers" })
@@ -53,9 +56,15 @@ public class Service extends BaseResource {
   private String id = null;
   private Artifact artifact = null;
   private Resource resource = null;
+  @JsonProperty("launch_time")
+  @XmlElement(name = "launch_time")
   private Date launchTime = null;
+  @JsonProperty("number_of_running_containers")
+  @XmlElement(name = "number_of_running_containers")
   private Long numberOfRunningContainers = null;
   private Long lifetime = null;
+  @JsonProperty("placement_policy")
+  @XmlElement(name = "placement_policy")
   private PlacementPolicy placementPolicy = null;
   private List<Component> components = new ArrayList<>();
   private Configuration configuration = new Configuration();
@@ -148,12 +157,10 @@ public class Service extends BaseResource {
   }
 
   @ApiModelProperty(example = "null", value = "The time when the service was created, e.g. 2016-03-16T01:01:49.000Z.")
-  @JsonProperty("launch_time")
   public Date getLaunchTime() {
     return launchTime == null ? null : (Date) launchTime.clone();
   }
 
-  @XmlElement(name = "launch_time")
   public void setLaunchTime(Date launchTime) {
     this.launchTime = launchTime == null ? null : (Date) launchTime.clone();
   }
@@ -171,12 +178,10 @@ public class Service extends BaseResource {
   }
 
   @ApiModelProperty(example = "null", value = "In get response this provides the total number of running containers for this service (across all components) at the time of request. Note, a subsequent request can return a different number as and when more containers get allocated until it reaches the total number of containers or if a flex request has been made between the two requests.")
-  @JsonProperty("number_of_running_containers")
   public Long getNumberOfRunningContainers() {
     return numberOfRunningContainers;
   }
 
-  @XmlElement(name = "number_of_running_containers")
   public void setNumberOfRunningContainers(Long numberOfRunningContainers) {
     this.numberOfRunningContainers = numberOfRunningContainers;
   }
@@ -215,12 +220,10 @@ public class Service extends BaseResource {
   }
 
   @ApiModelProperty(example = "null", value = "Advanced scheduling and placement policies (optional). If not specified, it defaults to the default placement policy of the service owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to service owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.")
-  @JsonProperty("placement_policy")
   public PlacementPolicy getPlacementPolicy() {
     return placementPolicy;
   }
 
-  @XmlElement(name = "placement_policy")
   public void setPlacementPolicy(PlacementPolicy placementPolicy) {
     this.placementPolicy = placementPolicy;
   }

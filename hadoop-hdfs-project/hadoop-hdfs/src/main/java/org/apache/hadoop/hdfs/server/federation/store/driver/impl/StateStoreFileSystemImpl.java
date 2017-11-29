@@ -98,7 +98,7 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
   /**
    * Get the folder path for the record class' data.
    *
-   * @param cls Data record class.
+   * @param clazz Data record class.
    * @return Path of the folder containing the record class' data files.
    */
   private Path getPathForClass(Class<? extends BaseRecord> clazz) {

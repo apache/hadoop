@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.service.component;
 
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
@@ -30,6 +31,16 @@ public class ComponentEvent extends AbstractEvent<ComponentEventType> {
   private Container container;
   private ComponentInstance instance;
   private ContainerStatus status;
+  private ContainerId containerId;
+
+  public ContainerId getContainerId() {
+    return containerId;
+  }
+
+  public ComponentEvent setContainerId(ContainerId containerId) {
+    this.containerId = containerId;
+    return this;
+  }
 
   public ComponentEvent(String name, ComponentEventType type) {
     super(type);

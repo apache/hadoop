@@ -128,6 +128,9 @@
                   <goal>integration-test</goal>
                   <goal>verify</goal>
                 </goals>
+                <configuration>
+                  <trimStackTrace>false</trimStackTrace>
+                </configuration>
               </execution>
             </executions>
           </plugin>

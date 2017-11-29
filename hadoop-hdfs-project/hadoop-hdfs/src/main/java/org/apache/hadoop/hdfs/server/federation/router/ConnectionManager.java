@@ -93,8 +93,6 @@ public class ConnectionManager {
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
-   * @param minPoolSize Min size of the connection pool.
-   * @param maxPoolSize Max size of the connection pool.
    */
   public ConnectionManager(Configuration config) {
     this.conf = config;

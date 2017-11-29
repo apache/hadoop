@@ -343,9 +343,9 @@ final class PageBlobInputStream extends InputStream {
 
     // Skip over whole pages as necessary without retrieving them from the
     // server.
-    long pagesToSkipOver = Math.min(
+    long pagesToSkipOver = Math.max(0, Math.min(
         n / PAGE_DATA_SIZE,
-        numberOfPagesRemaining - 1);
+        numberOfPagesRemaining - 1));
     numberOfPagesRemaining -= pagesToSkipOver;
     currentOffsetInBlob += pagesToSkipOver * PAGE_SIZE;
     skipped += pagesToSkipOver * PAGE_DATA_SIZE;

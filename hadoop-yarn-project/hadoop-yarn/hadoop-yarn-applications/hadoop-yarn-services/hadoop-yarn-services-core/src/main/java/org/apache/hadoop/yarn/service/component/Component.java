@@ -82,7 +82,8 @@ public class Component implements EventHandler<ComponentEvent> {
   private Map<String, ComponentInstance> compInstances =
       new ConcurrentHashMap<>();
   // component instances to be assigned with a container
-  private List<ComponentInstance> pendingInstances = new LinkedList<>();
+  private List<ComponentInstance> pendingInstances =
+      Collections.synchronizedList(new LinkedList<>());
   private ContainerFailureTracker failureTracker;
   private Probe probe;
   private final ReentrantReadWriteLock.ReadLock readLock;
@@ -94,7 +95,7 @@ public class Component implements EventHandler<ComponentEvent> {
 
   private StateMachine<ComponentState, ComponentEventType, ComponentEvent>
       stateMachine;
-  private AsyncDispatcher compInstanceDispatcher;
+  private AsyncDispatcher dispatcher;
   private static final StateMachineFactory<Component, ComponentState, ComponentEventType, ComponentEvent>
       stateMachineFactory =
       new StateMachineFactory<Component, ComponentState, ComponentEventType, ComponentEvent>(
@@ -149,7 +150,7 @@ public class Component implements EventHandler<ComponentEvent> {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
     this.stateMachine = stateMachineFactory.make(this);
-    compInstanceDispatcher = scheduler.getCompInstanceDispatcher();
+    dispatcher = scheduler.getDispatcher();
     failureTracker =
         new ContainerFailureTracker(context, this);
     probe = MonitorUtils.getProbe(componentSpec.getReadinessCheck());
@@ -256,30 +257,18 @@ public class Component implements EventHandler<ComponentEvent> {
         component.releaseContainer(container);
         return;
       }
-      if (instance.hasContainer()) {
-        LOG.info(
-            "[COMPONENT {}]: Instance {} already has container, release " +
-                "surplus container {}",
-            instance.getCompName(), instance.getCompInstanceId(), container
-                .getId());
-        component.releaseContainer(container);
-        return;
-      }
+
       component.pendingInstances.remove(instance);
-      LOG.info("[COMPONENT {}]: Recovered {} for component instance {} on " +
-              "host {}, num pending component instances reduced to {} ",
-          component.getName(), container.getId(), instance
-              .getCompInstanceName(), container.getNodeId(), component
-              .pendingInstances.size());
       instance.setContainer(container);
       ProviderUtils.initCompInstanceDir(component.getContext().fs, instance);
       component.getScheduler().addLiveCompInstance(container.getId(), instance);
-      LOG.info("[COMPONENT {}]: Marking {} as started for component " +
-          "instance {}", component.getName(), event.getContainer().getId(),
-          instance.getCompInstanceId());
-      component.compInstanceDispatcher.getEventHandler().handle(
-          new ComponentInstanceEvent(instance.getContainerId(),
-              START));
+      LOG.info("[COMPONENT {}]: Recovered {} for component instance {} on " +
+              "host {}, num pending component instances reduced to {} ",
+          component.getName(), container.getId(),
+          instance.getCompInstanceName(), container.getNodeId(),
+          component.pendingInstances.size());
+      component.dispatcher.getEventHandler().handle(
+          new ComponentInstanceEvent(container.getId(), START));
     }
   }
 
@@ -288,9 +277,8 @@ public class Component implements EventHandler<ComponentEvent> {
 
     @Override public ComponentState transition(Component component,
         ComponentEvent event) {
-      component.compInstanceDispatcher.getEventHandler().handle(
-          new ComponentInstanceEvent(event.getInstance().getContainerId(),
-              START));
+      component.dispatcher.getEventHandler().handle(
+          new ComponentInstanceEvent(event.getContainerId(), START));
       return checkIfStable(component);
     }
   }
@@ -313,14 +301,7 @@ public class Component implements EventHandler<ComponentEvent> {
     @Override
     public void transition(Component component, ComponentEvent event) {
       component.updateMetrics(event.getStatus());
-
-      // add back to pending list
-      component.pendingInstances.add(event.getInstance());
-      LOG.info(
-          "[COMPONENT {}]: {} completed, num pending comp instances increased to {}.",
-          component.getName(), event.getStatus().getContainerId(),
-          component.pendingInstances.size());
-      component.compInstanceDispatcher.getEventHandler().handle(
+      component.dispatcher.getEventHandler().handle(
           new ComponentInstanceEvent(event.getStatus().getContainerId(),
               STOP).setStatus(event.getStatus()));
       component.componentSpec.setState(
@@ -328,8 +309,8 @@ public class Component implements EventHandler<ComponentEvent> {
     }
   }
 
-  public ServiceMetrics getCompMetrics () {
-    return componentMetrics;
+  public void reInsertPendingInstance(ComponentInstance instance) {
+    pendingInstances.add(instance);
   }
 
   private void releaseContainer(Container container) {
@@ -580,5 +561,10 @@ public class Component implements EventHandler<ComponentEvent> {
 
   public ServiceContext getContext() {
     return context;
+  }
+
+  // Only for testing
+  public List<ComponentInstance> getPendingInstances() {
+    return pendingInstances;
   }
 }

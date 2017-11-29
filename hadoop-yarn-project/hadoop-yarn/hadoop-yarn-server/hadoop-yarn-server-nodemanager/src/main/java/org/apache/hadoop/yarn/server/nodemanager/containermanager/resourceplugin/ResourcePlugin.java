@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resource
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerChain;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 
 /**
  * {@link ResourcePlugin} is an interface for node manager to easier support
@@ -91,4 +92,14 @@ public interface ResourcePlugin {
    *         have requirement to update docker command.
    */
   DockerCommandPlugin getDockerCommandPluginInstance();
+
+  /**
+   * Get resource information from this plugin.
+   *
+   * @return NMResourceInfo, an example is
+   * {@link org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation}
+   *
+   * @throws YarnException when any issue occurs
+   */
+  NMResourceInfo getNMResourceInfo() throws YarnException;
 }

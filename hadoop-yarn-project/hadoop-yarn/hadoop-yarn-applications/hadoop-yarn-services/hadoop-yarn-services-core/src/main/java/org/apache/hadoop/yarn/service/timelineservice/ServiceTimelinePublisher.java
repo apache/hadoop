@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.service.timelineservice;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -178,10 +179,10 @@ public class ServiceTimelinePublisher extends CompositeService {
     putEntity(entity);
   }
 
-  public void componentInstanceFinished(ComponentInstance instance,
+  public void componentInstanceFinished(ContainerId containerId,
       int exitCode, String diagnostics) {
     TimelineEntity entity = createComponentInstanceEntity(
-        instance.getContainer().getId().toString());
+        containerId.toString());
 
     // create info keys
     Map<String, Object> entityInfos = new HashMap<String, Object>();

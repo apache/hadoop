@@ -19,11 +19,13 @@
 package org.apache.hadoop.test;
 
 import com.google.common.base.Preconditions;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.Time;
 
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 
@@ -43,7 +45,7 @@ import java.util.concurrent.TimeoutException;
  * check; useful when checking the contents of the exception.
  */
 public final class LambdaTestUtils {
-  public static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(LambdaTestUtils.class);
 
   private LambdaTestUtils() {
@@ -60,6 +62,7 @@ public final class LambdaTestUtils {
    * Interface to implement for converting a timeout into some form
    * of exception to raise.
    */
+  @FunctionalInterface
   public interface TimeoutHandler {
 
     /**
@@ -371,16 +374,11 @@ public final class LambdaTestUtils {
       Class<E> clazz,
       Callable<T> eval)
       throws Exception {
-    try {
-      T result = eval.call();
-      throw new AssertionError("Expected an exception, got "
-          + robustToString(result));
-    } catch (Throwable e) {
-      if (clazz.isAssignableFrom(e.getClass())) {
-        return (E)e;
-      }
-      throw e;
-    }
+    return intercept(clazz,
+        null,
+        "Expected a " + clazz.getName() + " to be thrown," +
+            " but got the result: ",
+        eval);
   }
 
   /**
@@ -451,6 +449,59 @@ public final class LambdaTestUtils {
   }
 
   /**
+   * Intercept an exception; throw an {@code AssertionError} if one not raised.
+   * The caught exception is rethrown if it is of the wrong class or
+   * does not contain the text defined in {@code contained}.
+   * <p>
+   * Example: expect deleting a nonexistent file to raise a
+   * {@code FileNotFoundException} with the {@code toString()} value
+   * containing the text {@code "missing"}.
+   * <pre>
+   * FileNotFoundException ioe = intercept(FileNotFoundException.class,
+   *   "missing",
+   *   "path should not be found",
+   *   () -> {
+   *     filesystem.delete(new Path("/missing"), false);
+   *   });
+   * </pre>
+   *
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param message any message tho include in exception/log messages
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @see GenericTestUtils#assertExceptionContains(String, Throwable)
+   */
+  public static <T, E extends Throwable> E intercept(
+      Class<E> clazz,
+      String contained,
+      String message,
+      Callable<T> eval)
+      throws Exception {
+    E ex;
+    try {
+      T result = eval.call();
+      throw new AssertionError(message + ": " + robustToString(result));
+    } catch (Throwable e) {
+      if (!clazz.isAssignableFrom(e.getClass())) {
+        throw e;
+      } else {
+        ex = (E) e;
+      }
+    }
+    GenericTestUtils.assertExceptionContains(contained, ex, message);
+    return ex;
+  }
+
+  /**
    * Variant of {@link #intercept(Class, Callable)} to simplify void
    * invocations.
    * @param clazz class of exception; the raised exception must be this class
@@ -468,9 +519,41 @@ public final class LambdaTestUtils {
       String contained,
       VoidCallable eval)
       throws Exception {
-    E ex = intercept(clazz, eval);
-    GenericTestUtils.assertExceptionContains(contained, ex);
-    return ex;
+    return intercept(clazz, contained,
+        "Expecting " + clazz.getName()
+        + (contained != null? (" with text " + contained) : "")
+        + " but got ",
+        () -> {
+          eval.call();
+          return "void";
+        });
+  }
+
+  /**
+   * Variant of {@link #intercept(Class, Callable)} to simplify void
+   * invocations.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contained string which must be in the {@code toString()} value
+   * of the exception
+   * @param message any message tho include in exception/log messages
+   * @param eval expression to eval
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   */
+  public static <E extends Throwable> E intercept(
+      Class<E> clazz,
+      String contained,
+      String message,
+      VoidCallable eval)
+      throws Exception {
+    return intercept(clazz, contained, message,
+        () -> {
+          eval.call();
+          return "void";
+        });
   }
 
   /**
@@ -491,6 +574,38 @@ public final class LambdaTestUtils {
         LOG.info("Exception calling toString()", e);
         return o.getClass().toString();
       }
+    }
+  }
+
+  /**
+   * Assert that an optional value matches an expected one;
+   * checks include null and empty on the actual value.
+   * @param message message text
+   * @param expected expected value
+   * @param actual actual optional value
+   * @param <T> type
+   */
+  public static <T> void assertOptionalEquals(String message,
+      T expected,
+      Optional<T> actual) {
+    Assert.assertNotNull(message, actual);
+    Assert.assertTrue(message +" -not present", actual.isPresent());
+    Assert.assertEquals(message, expected, actual.get());
+  }
+
+  /**
+   * Assert that an optional value matches an expected one;
+   * checks include null and empty on the actual value.
+   * @param message message text
+   * @param expected expected value
+   * @param actual actual optional value
+   * @param <T> type
+   */
+  public static <T> void assertOptionalUnset(String message,
+      Optional<T> actual) {
+    Assert.assertNotNull(message, actual);
+    if (actual.isPresent()) {
+      Assert.fail("Expected empty option, got " + actual.get().toString());
     }
   }
 
@@ -638,6 +753,7 @@ public final class LambdaTestUtils {
    * A simple interface for lambdas, which returns nothing; this exists
    * to simplify lambda tests on operations with no return value.
    */
+  @FunctionalInterface
   public interface VoidCallable {
     void call() throws Exception;
   }

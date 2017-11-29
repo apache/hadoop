@@ -16,15 +16,13 @@
  * limitations under the License.
 }}
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-md-6 container-fluid">
-      <input type="text" class="form-control" aria-label="..." placeholder="Enter part of host/rack to filter nodes"
-             onchange={{action "applyFilter"}}>
-    </div>
-    <div class="col-md-6 container-fluid">
-      <select id="heatmap-select" class="form-control"></select>
-    </div>
+<div class="row clearfix">
+  <div class="col-md-6">
+    <input type="text" class="form-control" aria-label="..." placeholder="Enter part of host/rack to filter nodes"
+            onchange={{action "applyFilter"}}>
+  </div>
+  <div class="col-md-6">
+    <select id="heatmap-select" class="form-control"></select>
   </div>
 </div>
 <p/>

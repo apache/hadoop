@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -75,7 +76,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public static final Log LOG = LogFactory.getLog(SnapshotManager.class);
 
   private final FSDirectory fsdir;
-  private final boolean captureOpenFiles;
+  private boolean captureOpenFiles;
   /**
    * If skipCaptureAccessTimeOnlyChange is set to true, if accessTime
    * of a file changed but there is no other modification made to the file,
@@ -119,6 +120,11 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         + skipCaptureAccessTimeOnlyChange
         + ", snapshotDiffAllowSnapRootDescendant: "
         + snapshotDiffAllowSnapRootDescendant);
+  }
+
+  @VisibleForTesting
+  void setCaptureOpenFiles(boolean captureOpenFiles) {
+    this.captureOpenFiles = captureOpenFiles;
   }
 
   /**

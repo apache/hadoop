@@ -29,6 +29,10 @@ export default Ember.Controller.extend({
     sortOrder: Ember.computed.alias('tableDefinition.sortOrder'),
     pageNum: Ember.computed.alias('tableDefinition.pageNum'),
     rowCount: Ember.computed.alias('tableDefinition.rowCount'),
+    tableDefinition: TableDefinition.create({
+        enableFaceting: true,
+        rowCount: 25
+    }),
     columns: function() {
         var colums = [];
         colums.push({
@@ -40,6 +44,7 @@ export default Ember.Controller.extend({
             id: 'rack',
             headerTitle: 'Rack',
             contentPath: 'rack',
+            facetType: null,
             minWidth: "100px"
         }, {
             id: 'state',
@@ -51,16 +56,18 @@ export default Ember.Controller.extend({
             id: 'address',
             headerTitle: 'Node Address',
             contentPath: 'id',
-            minWidth: "300px"
+            minWidth: "300px",
+            facetType: null,
         }, {
             id: 'nodeId',
             headerTitle: 'Node HTTP Address',
             contentPath: 'nodeHTTPAddress',
             cellComponentName: 'em-table-linked-cell',
+            facetType: null,
             getCellContent: function(row) {
               var node_id = row.get("id"),
                   node_addr = row.get("nodeHTTPAddress"),
-                  href = `#/yarn-node/${node_id}/${node_addr}`;
+                  href = `#/yarn-node/${node_id}/${node_addr}/info`;
                 switch(row.get("nodeState")) {
                 case "SHUTDOWN":
                 case "LOST":
@@ -76,10 +83,12 @@ export default Ember.Controller.extend({
             id: 'containers',
             headerTitle: 'Containers',
             contentPath: 'numContainers',
+            facetType: null,
         }, {
             id: 'memUsed',
             headerTitle: 'Mem Used',
             contentPath: 'usedMemoryBytes',
+            facetType: null,
             cellDefinition: {
               type: "memory"
             }
@@ -87,6 +96,7 @@ export default Ember.Controller.extend({
             id: 'memAvail',
             headerTitle: 'Mem Available',
             contentPath: 'availMemoryBytes',
+            facetType: null,
             cellDefinition: {
               type: "memory"
             }
@@ -94,22 +104,27 @@ export default Ember.Controller.extend({
             id: 'coresUsed',
             headerTitle: 'VCores Used',
             contentPath: 'usedVirtualCores',
+            facetType: null,
         }, {
             id: 'coresAvail',
             headerTitle: 'VCores Available',
             contentPath: 'availableVirtualCores',
+            facetType: null,
         }, {
             id: 'healthUpdate',
             headerTitle: 'Last Health Update',
             contentPath: 'lastHealthUpdate',
+            facetType: null,
         }, {
             id: 'healthReport',
             headerTitle: 'Health-Report',
             contentPath: 'healthReport',
+            facetType: null,
         }, {
             id: 'version',
             headerTitle: 'Version',
             contentPath: 'version',
+            facetType: null,
             observePath: true
         });
         return ColumnDef.make(colums);

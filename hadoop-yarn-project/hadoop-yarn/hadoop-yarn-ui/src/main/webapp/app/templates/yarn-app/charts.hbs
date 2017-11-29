@@ -16,28 +16,26 @@
  * limitations under the License.
 }}
 
-<div class="row">
-  <div class="col-md-12 container-fluid">
-    {{#if isRunningApp}}
-      <div class="row" id="stackd-bar-chart-mem">
-        {{per-app-memusage-by-nodes-stacked-barchart
-        nodes=model.nodes
-        rmContainers=model.rmContainers
-        parentId="stackd-bar-chart-mem"
-        title=(concat 'Memory usage by nodes for: [' model.appId ']')}}
-      </div>
-      <hr>
-      <div class="row" id="stackd-bar-chart-ncontainer">
-        {{per-app-ncontainers-by-nodes-stacked-barchart
-        nodes=model.nodes
-        rmContainers=model.rmContainers
-        parentId="stackd-bar-chart-ncontainer"
-        title=(concat 'Running #Containers by nodes for: [' model.appId ']')}}
-      </div>
-    {{else}}
-      <div class="panel panel-default">
-        <h4 class="text-center">No resource usage data is available for this application!</h4>
-      </div>
-    {{/if}}
-  </div>
+<div class="col-md-12">
+  {{#if isRunningApp}}
+    <div class="row" id="stackd-bar-chart-mem">
+      {{per-app-memusage-by-nodes-stacked-barchart
+      nodes=model.nodes
+      rmContainers=model.rmContainers
+      parentId="stackd-bar-chart-mem"
+      title=(concat 'Memory usage by nodes for: [' model.appId ']')}}
+    </div>
+    <hr>
+    <div class="row" id="stackd-bar-chart-ncontainer">
+      {{per-app-ncontainers-by-nodes-stacked-barchart
+      nodes=model.nodes
+      rmContainers=model.rmContainers
+      parentId="stackd-bar-chart-ncontainer"
+      title=(concat 'Running #Containers by nodes for: [' model.appId ']')}}
+    </div>
+  {{else}}
+    <div class="panel panel-default">
+      <h4 class="text-center">No resource usage data is available for this application!</h4>
+    </div>
+  {{/if}}
 </div>

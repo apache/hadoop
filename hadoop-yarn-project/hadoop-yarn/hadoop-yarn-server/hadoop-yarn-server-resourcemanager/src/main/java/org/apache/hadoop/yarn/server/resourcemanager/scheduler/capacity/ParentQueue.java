@@ -1081,17 +1081,4 @@ public class ParentQueue extends AbstractCSQueue {
   public QueueOrderingPolicy getQueueOrderingPolicy() {
     return queueOrderingPolicy;
   }
-
-  protected float sumOfChildCapacities() {
-    try {
-      writeLock.lock();
-      float ret = 0;
-      for (CSQueue l : childQueues) {
-        ret += l.getCapacity();
-      }
-      return ret;
-    } finally {
-      writeLock.unlock();
-    }
-  }
 }

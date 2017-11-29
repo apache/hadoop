@@ -289,9 +289,9 @@ public class NamenodeStatusReport {
    * @param numFiles Number of files.
    * @param numBlocks Total number of blocks.
    * @param numBlocksMissing Number of missing blocks.
-   * @param numOfBlocksPendingReplication Number of blocks pending replication.
-   * @param numOfBlocksUnderReplicated Number of blocks under replication.
-   * @param numOfBlocksPendingDeletion Number of blocks pending deletion.
+   * @param numBlocksPendingReplication Number of blocks pending replication.
+   * @param numBlocksUnderReplicated Number of blocks under replication.
+   * @param numBlocksPendingDeletion Number of blocks pending deletion.
    */
   public void setNamesystemInfo(long available, long total,
       long numFiles, long numBlocks, long numBlocksMissing,

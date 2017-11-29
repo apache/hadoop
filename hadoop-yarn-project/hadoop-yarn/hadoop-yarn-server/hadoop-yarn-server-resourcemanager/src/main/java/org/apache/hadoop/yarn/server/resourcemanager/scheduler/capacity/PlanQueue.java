@@ -40,6 +40,19 @@ public class PlanQueue extends AbstractManagedParentQueue {
   public PlanQueue(CapacitySchedulerContext cs, String queueName,
       CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
+    this.leafQueueTemplate = initializeLeafQueueConfigs(getQueuePath()).build();
+
+    StringBuffer queueInfo = new StringBuffer();
+    queueInfo.append("Created Plan Queue: ").append(queueName).append(
+        "]\nwith capacity: [").append(super.getCapacity()).append(
+        "]\nwith max capacity: [").append(super.getMaximumCapacity()).append(
+        "\nwith max apps: [").append(leafQueueTemplate.getMaxApps()).append(
+        "]\nwith max apps per user: [").append(
+        leafQueueTemplate.getMaxAppsPerUser()).append("]\nwith user limit: [")
+        .append(leafQueueTemplate.getUserLimit()).append(
+        "]\nwith user limit factor: [").append(
+        leafQueueTemplate.getUserLimitFactor()).append("].");
+    LOG.info(queueInfo.toString());
   }
 
   @Override
@@ -47,17 +60,21 @@ public class PlanQueue extends AbstractManagedParentQueue {
       throws IOException {
     validate(newlyParsedQueue);
     super.reinitialize(newlyParsedQueue, clusterResource);
+    this.leafQueueTemplate = initializeLeafQueueConfigs(getQueuePath()).build();
   }
 
   @Override
-  protected void initializeLeafQueueConfigs() {
-    String queuePath = super.getQueuePath();
+  protected AutoCreatedLeafQueueTemplate.Builder initializeLeafQueueConfigs
+      (String queuePath) {
+    AutoCreatedLeafQueueTemplate.Builder leafQueueTemplate = super
+        .initializeLeafQueueConfigs
+        (queuePath);
     showReservationsAsQueues = csContext.getConfiguration()
         .getShowReservationAsQueues(queuePath);
-    super.initializeLeafQueueConfigs();
+    return leafQueueTemplate;
   }
 
-  private void validate(final CSQueue newlyParsedQueue) throws IOException {
+  protected void validate(final CSQueue newlyParsedQueue) throws IOException {
     // Sanity check
     if (!(newlyParsedQueue instanceof PlanQueue) || !newlyParsedQueue
         .getQueuePath().equals(getQueuePath())) {

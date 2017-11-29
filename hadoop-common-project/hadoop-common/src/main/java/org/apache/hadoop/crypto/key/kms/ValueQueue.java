@@ -224,6 +224,9 @@ public class ValueQueue <E> {
     Preconditions.checkArgument(numValues > 0, "\"numValues\" must be > 0");
     Preconditions.checkArgument(((lowWatermark > 0)&&(lowWatermark <= 1)),
         "\"lowWatermark\" must be > 0 and <= 1");
+    final int watermarkValue = (int) (numValues * lowWatermark);
+    Preconditions.checkArgument(watermarkValue > 0,
+        "(int) (\"numValues\" * \"lowWatermark\") must be > 0");
     Preconditions.checkArgument(expiry > 0, "\"expiry\" must be > 0");
     Preconditions.checkArgument(numFillerThreads > 0,
         "\"numFillerThreads\" must be > 0");
@@ -243,8 +246,7 @@ public class ValueQueue <E> {
                       throws Exception {
                     LinkedBlockingQueue<E> keyQueue =
                         new LinkedBlockingQueue<E>();
-                    refiller.fillQueueForKey(keyName, keyQueue,
-                        (int)(lowWatermark * numValues));
+                    refiller.fillQueueForKey(keyName, keyQueue, watermarkValue);
                     return keyQueue;
                   }
                 });

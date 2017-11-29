@@ -65,6 +65,7 @@ public class ServiceTestUtils {
 
   private MiniYARNCluster yarnCluster = null;
   private MiniDFSCluster hdfsCluster = null;
+  TestingCluster zkCluster;
   private FileSystem fs = null;
   private Configuration conf = null;
   public static final int NUM_NMS = 1;
@@ -165,7 +166,6 @@ public class ServiceTestUtils {
     conf.setBoolean(NM_VMEM_CHECK_ENABLED, false);
     conf.setBoolean(NM_PMEM_CHECK_ENABLED, false);
     // setup zk cluster
-    TestingCluster zkCluster;
     zkCluster = new TestingCluster(1);
     zkCluster.start();
     conf.set(YarnConfiguration.RM_ZK_ADDRESS, zkCluster.getConnectString());
@@ -238,6 +238,9 @@ public class ServiceTestUtils {
       } finally {
         hdfsCluster = null;
       }
+    }
+    if (zkCluster != null) {
+      zkCluster.stop();
     }
     if (basedir != null) {
       FileUtils.deleteDirectory(basedir);

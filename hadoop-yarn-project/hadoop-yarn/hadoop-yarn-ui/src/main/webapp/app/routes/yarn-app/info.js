@@ -22,13 +22,16 @@ import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
 
 export default AbstractRoute.extend(AppAttemptMixin, {
   model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service);
-    return Ember.RSVP.hash({
-      appId: param.app_id,
-      serviceName: param.service,
-      app: this.fetchAppInfoFromRMorATS(param.app_id, this.store),
+    const { app_id } = this.paramsFor('yarn-app');
+    const { service } = param;
+    transition.send('updateBreadcrumbs', app_id, service);
 
-      quicklinks: this.store.queryRecord('yarn-service-info', {appId: param.app_id}).then(function(info) {
+    return Ember.RSVP.hash({
+      appId: app_id,
+      serviceName: service,
+      app: this.fetchAppInfoFromRMorATS(app_id, this.store),
+
+      quicklinks: this.store.queryRecord('yarn-service-info', {appId: app_id}).then(function(info) {
         if (info && info.get('quicklinks')) {
           return info.get('quicklinks');
         }
@@ -37,6 +40,10 @@ export default AbstractRoute.extend(AppAttemptMixin, {
         return [];
       })
     });
+  },
+
+  refresh() {
+    window.location.reload();
   },
 
   unloadAll() {

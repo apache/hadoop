@@ -629,6 +629,10 @@ Don't assume AWS S3 US-East only, do allow for working with external S3 implemen
 Those may be behind the latest S3 API features, not support encryption, session
 APIs, etc.
 
+They won't have the same CSV test files as some of the input tests rely on.
+Look at `ITestS3AInputStreamPerformance` to see how tests can be written
+to support the declaration of a specific large test file on alternate filesystems.
+
 
 ### Works Over Long-haul Links
 
@@ -662,6 +666,37 @@ listings, file status, ...), so help make failures easier to understand.
 At the very least, do not use `assertTrue()` or `assertFalse()` without
 including error messages.
 
+### Sets up its filesystem and checks for those settings
+
+Tests can overrun `createConfiguration()` to add new options to the configuration
+file for the S3A Filesystem instance used in their tests.
+
+However, filesystem caching may mean that a test suite may get a cached
+instance created with an differennnt configuration. For tests which don't need
+specific configurations caching is good: it reduces test setup time.
+
+For those tests which do need unique options (encryption, magic files),
+things can break, and they will do so in hard-to-replicate ways.
+
+Use `S3ATestUtils.disableFilesystemCaching(conf)` to disable caching when
+modifying the config. As an example from `AbstractTestS3AEncryption`:
+
+```java
+@Override
+protected Configuration createConfiguration() {
+  Configuration conf = super.createConfiguration();
+  S3ATestUtils.disableFilesystemCaching(conf);
+  conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
+          getSSEAlgorithm().getMethod());
+  return conf;
+}
+```
+
+Then verify in the setup method or test cases that their filesystem actually has
+the desired feature (`fs.getConf().getProperty(...)`). This not only
+catches filesystem reuse problems, it catches the situation where the
+filesystem configuration in `auth-keys.xml` has explicit per-bucket settings
+which override the test suite's general option settings.
 
 ### Cleans Up Afterwards
 
@@ -676,6 +711,31 @@ get called.
 ### Works Reliably
 
 We really appreciate this &mdash; you will too.
+
+### Runs in parallel unless this is unworkable.
+
+Tests must be designed to run in parallel with other tests, all working
+with the same shared S3 bucket. This means
+
+* Uses relative and JVM-fork-unique paths provided by the method
+  `AbstractFSContractTestBase.path(String filepath)`.
+* Doesn't manipulate the root directory or make assertions about its contents
+(for example: delete its contents and assert that it is now empty).
+* Doesn't have a specific requirement of all active clients of the bucket
+(example: SSE-C tests which require all files, even directory markers,
+to be encrypted with the same key).
+* Doesn't use so much bandwidth that all other tests will be starved of IO and
+start timing out (e.g. the scale tests).
+
+Tests such as these can only be run as sequential tests. When adding one,
+exclude it in the POM file. from the parallel failsafe run and add to the
+sequential one afterwards. The IO heavy ones must also be subclasses of
+`S3AScaleTestBase` and so only run if the system/maven property
+`fs.s3a.scale.test.enabled` is true.
+
+## Individual test cases can be run in an IDE
+
+This is invaluable for debugging test failures.
 
 
 ## <a name="tips"></a> Tips

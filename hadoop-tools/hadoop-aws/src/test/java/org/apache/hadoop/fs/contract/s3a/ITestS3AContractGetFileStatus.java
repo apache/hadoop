@@ -21,12 +21,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * S3A contract tests covering getFileStatus.
+ * Some of the tests can take too long when the fault injection rate is high,
+ * so the test timeout is extended.
  */
 public class ITestS3AContractGetFileStatus
     extends AbstractContractGetFileStatusTest {
@@ -51,5 +54,13 @@ public class ITestS3AContractGetFileStatus
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     return conf;
+  }
+
+  /**
+   * {@inheritDoc}
+   * @return S3A test timeout.
+   */
+  protected int getTestTimeoutMillis() {
+    return S3ATestConstants.S3A_TEST_TIMEOUT;
   }
 }

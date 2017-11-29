@@ -155,17 +155,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
    * @return the path where final output of the job should be placed.  This
    * could also be considered the committed application attempt path.
    */
-  private Path getOutputPath() {
+  @Override
+  public Path getOutputPath() {
     return this.outputPath;
   }
-  
-  /**
-   * @return true if we have an output path set, else false.
-   */
-  private boolean hasOutputPath() {
-    return this.outputPath != null;
-  }
-  
+
   /**
    * @return the path where the output of pending job attempts are
    * stored.

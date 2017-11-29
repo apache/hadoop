@@ -725,6 +725,8 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Read in "length" bytes, convert to an ascii string.
+   * This uses {@link #toChar(byte)} to escape bytes, so cannot be used
+   * for round trip operations.
    * @param fs filesystem
    * @param path path to read
    * @param length #of bytes to read.
@@ -738,6 +740,28 @@ public class ContractTestUtils extends Assert {
       byte[] buf = new byte[length];
       in.readFully(0, buf);
       return toChar(buf);
+    }
+  }
+
+  /**
+   * Read in "length" bytes, convert to UTF8 string.
+   * @param fs filesystem
+   * @param path path to read
+   * @param length #of bytes to read. If -1: use file length.
+   * @return the bytes read and converted to a string
+   * @throws IOException IO problems
+   */
+  public static String readUTF8(FileSystem fs,
+                                  Path path,
+                                  int length) throws IOException {
+    if (length < 0) {
+      FileStatus status = fs.getFileStatus(path);
+      length = (int) status.getLen();
+    }
+    try (FSDataInputStream in = fs.open(path)) {
+      byte[] buf = new byte[length];
+      in.readFully(0, buf);
+      return new String(buf, "UTF-8");
     }
   }
 
@@ -857,11 +881,30 @@ public class ContractTestUtils extends Assert {
    */
   public static void assertPathExists(FileSystem fileSystem, String message,
                                Path path) throws IOException {
-    if (!fileSystem.exists(path)) {
+    verifyPathExists(fileSystem, message, path);
+  }
+
+  /**
+   * Verify that a path exists, returning the file status of the path.
+   *
+   * @param fileSystem filesystem to examine
+   * @param message message to include in the assertion failure message
+   * @param path path in the filesystem
+   * @throws FileNotFoundException raised if the path is missing
+   * @throws IOException IO problems
+   */
+  public static FileStatus verifyPathExists(FileSystem fileSystem,
+      String message,
+      Path path) throws IOException {
+    try {
+      return fileSystem.getFileStatus(path);
+    } catch (FileNotFoundException e) {
       //failure, report it
-      ls(fileSystem, path.getParent());
-      throw new FileNotFoundException(message + ": not found " + path
-                                      + " in " + path.getParent());
+      LOG.error("{}: not found {}; parent listing is:\n{}",
+          message, path, ls(fileSystem, path.getParent()));
+      throw (IOException)new FileNotFoundException(
+          message + ": not found " + path + " in " + path.getParent())
+          .initCause(e);
     }
   }
 

@@ -176,7 +176,8 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     ServiceClient client = createClient();
     Service exampleApp = createExampleApplication();
     client.actionCreate(exampleApp);
-    waitForAllCompToBeReady(client, exampleApp);
+    Multimap<String, String> containersBeforeFailure =
+        waitForAllCompToBeReady(client, exampleApp);
 
     LOG.info("Restart the resource manager");
     getYarnCluster().restartResourceManager(
@@ -190,9 +191,6 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     ApplicationId exampleAppId = ApplicationId.fromString(exampleApp.getId());
     ApplicationAttemptId applicationAttemptId = client.getYarnClient()
         .getApplicationReport(exampleAppId).getCurrentApplicationAttemptId();
-
-    Multimap<String, String> containersBeforeFailure = getContainersForAllComp(
-        client, exampleApp);
 
     LOG.info("Fail the application attempt {}", applicationAttemptId);
     client.getYarnClient().failApplicationAttempt(applicationAttemptId);
@@ -208,7 +206,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       }
     }, 2000, 200000);
 
-    Multimap<String, String> containersAfterFailure = getContainersForAllComp(
+    Multimap<String, String> containersAfterFailure = waitForAllCompToBeReady(
         client, exampleApp);
     Assert.assertEquals("component container affected by restart",
         containersBeforeFailure, containersAfterFailure);
@@ -318,14 +316,26 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     }, 2000, 200000);
   }
 
-  // wait until all the containers for all components become ready state
-  private void waitForAllCompToBeReady(ServiceClient client,
+  /**
+   * Wait until all the containers for all components become ready state.
+   *
+   * @param client
+   * @param exampleApp
+   * @return all ready containers of a service.
+   * @throws TimeoutException
+   * @throws InterruptedException
+   */
+  private Multimap<String, String> waitForAllCompToBeReady(ServiceClient client,
       Service exampleApp) throws TimeoutException, InterruptedException {
     int expectedTotalContainers = countTotalContainers(exampleApp);
+
+    Multimap<String, String> allContainers = HashMultimap.create();
+
     GenericTestUtils.waitFor(() -> {
       try {
         Service retrievedApp = client.getStatus(exampleApp.getName());
         int totalReadyContainers = 0;
+        allContainers.clear();
         LOG.info("Num Components " + retrievedApp.getComponents().size());
         for (Component component : retrievedApp.getComponents()) {
           LOG.info("looking for  " + component.getName());
@@ -339,6 +349,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
                         + component.getName());
                 if (container.getState() == ContainerState.READY) {
                   totalReadyContainers++;
+                  allContainers.put(component.getName(), container.getId());
                   LOG.info("Found 1 ready container " + container.getId());
                 }
               }
@@ -358,23 +369,6 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         return false;
       }
     }, 2000, 200000);
-  }
-
-  /**
-   * Get all containers of a service.
-   */
-  private Multimap<String, String> getContainersForAllComp(ServiceClient client,
-      Service example) throws IOException, YarnException {
-
-    Multimap<String, String> allContainers = HashMultimap.create();
-    Service retrievedApp = client.getStatus(example.getName());
-    retrievedApp.getComponents().forEach(component -> {
-      if (component.getContainers() != null) {
-        component.getContainers().forEach(container -> {
-          allContainers.put(component.getName(), container.getId());
-        });
-      }
-    });
     return allContainers;
   }
 

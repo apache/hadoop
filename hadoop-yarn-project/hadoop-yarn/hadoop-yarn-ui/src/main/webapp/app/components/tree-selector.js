@@ -156,11 +156,11 @@ export default Ember.Component.extend({
         maxCap = maxCap === undefined ? 100 : maxCap;
         var usedCap = d.queueData.get(this.used) / maxCap * 100.0;
         if (usedCap <= 60.0) {
-          return "LimeGreen";
+          return "mediumaquamarine";
         } else if (usedCap <= 100.0) {
-          return "DarkOrange";
+          return "coral";
         } else {
-          return "LightCoral";
+          return "salmon";
         }
       }.bind(this));
 

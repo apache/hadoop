@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
 public abstract class PlacementRule {
+
   public String getName() {
     return this.getClass().getName();
   }
@@ -50,6 +51,6 @@ public abstract class PlacementRule {
    *         in the {@link PlacementManager} will take care
    *         </p>
    */
-  public abstract String getQueueForApp(ApplicationSubmissionContext asc,
-      String user) throws YarnException;
+  public abstract ApplicationPlacementContext getPlacementForApp(
+      ApplicationSubmissionContext asc, String user) throws YarnException;
 }

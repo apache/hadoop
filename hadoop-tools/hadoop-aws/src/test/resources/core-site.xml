@@ -27,13 +27,20 @@
     <name>hadoop.tmp.dir</name>
     <value>target/build/test</value>
     <description>A base for other temporary directories.</description>
-    <final>true</final>
+    <final>false</final>
   </property>
 
   <property>
     <name>fs.s3a.bucket.landsat-pds.endpoint</name>
     <value>${central.endpoint}</value>
     <description>The endpoint for s3a://landsat-pds URLs</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.multipart.purge</name>
+    <value>false</value>
+    <description>Don't try to purge uploads in the read-only bucket, as
+    it will only create log noise.</description>
   </property>
 
   <!-- Make sure S3Guard is disabled for read-only bucket tests. -->

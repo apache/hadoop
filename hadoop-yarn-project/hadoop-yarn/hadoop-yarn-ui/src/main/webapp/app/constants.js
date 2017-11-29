@@ -22,3 +22,16 @@
 export default {
   PARAM_SEPARATOR: '!',
 };
+
+const BASE_UNIT = 1024
+
+export const Type = 'type';
+export const Memory = 'memory';
+export const Resource = 'resource';
+export const Unit = 'unit';
+export const Entities = {
+  Type: 'type',
+  Memory:'memory',
+  Resource: 'resource',
+  Unit: 'unit'
+}

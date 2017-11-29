@@ -78,7 +78,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   final String queueName;
   private final String queuePath;
   volatile int numContainers;
-  
+
   final Resource minimumAllocation;
   volatile Resource maximumAllocation;
   private volatile QueueState state = null;

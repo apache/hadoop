@@ -360,13 +360,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
       String user, boolean isRecovery, long startTime) throws YarnException {
+
     if (!isRecovery) {
-      // Do queue mapping
-      if (rmContext.getQueuePlacementManager() != null) {
-        // We only do queue mapping when it's a new application
-        rmContext.getQueuePlacementManager().placeApplication(
-            submissionContext, user);
-      }
       // fail the submission if configured application timeout value is invalid
       RMServerUtils.validateApplicationTimeouts(
           submissionContext.getApplicationTimeouts());

@@ -46,7 +46,14 @@ import com.aliyun.oss.model.UploadPartResult;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +65,8 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
@@ -93,6 +102,9 @@ public class AliyunOSSFileSystemStore {
         ESTABLISH_TIMEOUT_DEFAULT));
     clientConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT_KEY,
         SOCKET_TIMEOUT_DEFAULT));
+    clientConf.setUserAgent(
+        conf.get(USER_AGENT_PREFIX, USER_AGENT_PREFIX_DEFAULT) + ", Hadoop/"
+            + VersionInfo.getVersion());
 
     String proxyHost = conf.getTrimmed(PROXY_HOST_KEY, "");
     int proxyPort = conf.getInt(PROXY_PORT_KEY, -1);
@@ -545,5 +557,103 @@ public class AliyunOSSFileSystemStore {
     } catch (OSSException | ClientException e) {
       LOG.error("Failed to purge " + prefix);
     }
+  }
+
+  public RemoteIterator<LocatedFileStatus> singleStatusRemoteIterator(
+      final FileStatus fileStatus, final BlockLocation[] locations) {
+    return new RemoteIterator<LocatedFileStatus>() {
+      private boolean hasNext = true;
+      @Override
+      public boolean hasNext() throws IOException {
+        return fileStatus != null && hasNext;
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        if (hasNext()) {
+          LocatedFileStatus s = new LocatedFileStatus(fileStatus,
+              fileStatus.isFile() ? locations : null);
+          hasNext = false;
+          return s;
+        } else {
+          throw new NoSuchElementException();
+        }
+      }
+    };
+  }
+
+  public RemoteIterator<LocatedFileStatus> createLocatedFileStatusIterator(
+      final String prefix, final int maxListingLength, FileSystem fs,
+      PathFilter filter, FileStatusAcceptor acceptor, String delimiter) {
+    return new RemoteIterator<LocatedFileStatus>() {
+      private String nextMarker = null;
+      private boolean firstListing = true;
+      private boolean meetEnd = false;
+      private ListIterator<FileStatus> batchIterator;
+
+      @Override
+      public boolean hasNext() throws IOException {
+        if (firstListing) {
+          requestNextBatch();
+          firstListing = false;
+        }
+        return batchIterator.hasNext() || requestNextBatch();
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        if (hasNext()) {
+          FileStatus status = batchIterator.next();
+          BlockLocation[] locations = fs.getFileBlockLocations(status,
+            0, status.getLen());
+          return new LocatedFileStatus(
+              status, status.isFile() ? locations : null);
+        } else {
+          throw new NoSuchElementException();
+        }
+      }
+
+      private boolean requestNextBatch() {
+        if (meetEnd) {
+          return false;
+        }
+        ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
+        listRequest.setPrefix(AliyunOSSUtils.maybeAddTrailingSlash(prefix));
+        listRequest.setMaxKeys(maxListingLength);
+        listRequest.setMarker(nextMarker);
+        listRequest.setDelimiter(delimiter);
+        ObjectListing listing = ossClient.listObjects(listRequest);
+        List<FileStatus> stats = new ArrayList<>(
+            listing.getObjectSummaries().size() +
+            listing.getCommonPrefixes().size());
+        for(OSSObjectSummary summary: listing.getObjectSummaries()) {
+          String key = summary.getKey();
+          Path path = fs.makeQualified(new Path("/" + key));
+          if (filter.accept(path) && acceptor.accept(path, summary)) {
+            FileStatus status = new FileStatus(summary.getSize(),
+                key.endsWith("/"), 1, fs.getDefaultBlockSize(path),
+                summary.getLastModified().getTime(), path);
+            stats.add(status);
+          }
+        }
+
+        for(String commonPrefix: listing.getCommonPrefixes()) {
+          Path path = fs.makeQualified(new Path("/" + commonPrefix));
+          if (filter.accept(path) && acceptor.accept(path, commonPrefix)) {
+            FileStatus status = new FileStatus(0, true, 1, 0, 0, path);
+            stats.add(status);
+          }
+        }
+
+        batchIterator = stats.listIterator();
+        if (listing.isTruncated()) {
+          nextMarker = listing.getNextMarker();
+        } else {
+          meetEnd = true;
+        }
+        statistics.incrementReadOps(1);
+        return batchIterator.hasNext();
+      }
+    };
   }
 }

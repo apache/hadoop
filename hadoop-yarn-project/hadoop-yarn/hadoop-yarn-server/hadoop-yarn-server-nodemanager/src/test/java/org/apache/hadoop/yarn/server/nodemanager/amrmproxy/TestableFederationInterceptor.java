@@ -44,6 +44,15 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   private AtomicInteger runningIndex = new AtomicInteger(0);
   private MockResourceManagerFacade mockRm;
 
+  public TestableFederationInterceptor() {
+  }
+
+  public TestableFederationInterceptor(MockResourceManagerFacade homeRM,
+      ConcurrentHashMap<String, MockResourceManagerFacade> secondaries) {
+    mockRm = homeRM;
+    secondaryResourceManagers = secondaries;
+  }
+
   @Override
   protected UnmanagedAMPoolManager createUnmanagedAMPoolManager(
       ExecutorService threadPool) {
@@ -68,7 +77,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     // We create one instance of the mock resource manager per sub cluster. Keep
     // track of the instances of the RMs in the map keyed by the sub cluster id
     synchronized (this.secondaryResourceManagers) {
-      if (this.secondaryResourceManagers.contains(subClusterId)) {
+      if (this.secondaryResourceManagers.containsKey(subClusterId)) {
         return (T) this.secondaryResourceManagers.get(subClusterId);
       } else {
         // The running index here is used to simulate different RM_EPOCH to
@@ -91,6 +100,15 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     }
   }
 
+  protected MockResourceManagerFacade getHomeRM() {
+    return mockRm;
+  }
+
+  protected ConcurrentHashMap<String, MockResourceManagerFacade>
+      getSecondaryRMs() {
+    return secondaryResourceManagers;
+  }
+
   /**
    * Extends the UnmanagedAMPoolManager and overrides methods to provide a
    * testable implementation of UnmanagedAMPoolManager.
@@ -104,9 +122,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     @Override
     public UnmanagedApplicationManager createUAM(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
-        String appNameSuffix) {
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
       return new TestableUnmanagedApplicationManager(conf, appId, queueName,
-          submitter, appNameSuffix);
+          submitter, appNameSuffix, keepContainersAcrossApplicationAttempts);
     }
   }
 
@@ -119,8 +137,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
 
     public TestableUnmanagedApplicationManager(Configuration conf,
         ApplicationId appId, String queueName, String submitter,
-        String appNameSuffix) {
-      super(conf, appId, queueName, submitter, appNameSuffix);
+        String appNameSuffix, boolean keepContainersAcrossApplicationAttempts) {
+      super(conf, appId, queueName, submitter, appNameSuffix,
+          keepContainersAcrossApplicationAttempts);
     }
 
     /**

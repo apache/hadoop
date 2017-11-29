@@ -20,6 +20,7 @@
 package org.apache.hadoop.yarn.service.monitor;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.MockServiceAM;
@@ -37,10 +38,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 
+import static org.apache.hadoop.registry.client.api.RegistryConstants
+    .KEY_REGISTRY_ZK_QUORUM;
+
 public class TestServiceMonitor extends ServiceTestUtils {
 
   private File basedir;
   YarnConfiguration conf = new YarnConfiguration();
+  TestingCluster zkCluster;
 
   @Before
   public void setup() throws Exception {
@@ -51,12 +56,19 @@ public class TestServiceMonitor extends ServiceTestUtils {
       basedir.mkdirs();
     }
     conf.setLong(YarnServiceConf.READINESS_CHECK_INTERVAL, 2);
+    zkCluster = new TestingCluster(1);
+    zkCluster.start();
+    conf.set(KEY_REGISTRY_ZK_QUORUM, zkCluster.getConnectString());
+    System.out.println("ZK cluster: " +  zkCluster.getConnectString());
   }
 
   @After
   public void tearDown() throws IOException {
     if (basedir != null) {
       FileUtils.deleteDirectory(basedir);
+    }
+    if (zkCluster != null) {
+      zkCluster.stop();
     }
   }
 
