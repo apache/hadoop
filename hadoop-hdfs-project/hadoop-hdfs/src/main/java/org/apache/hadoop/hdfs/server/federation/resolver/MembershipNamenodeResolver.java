@@ -270,8 +270,7 @@ public class MembershipNamenodeResolver
    * (if showStandby) 3) Most recently updated UNAVAILABLE registration (if
    * showUnavailable). EXPIRED registrations are ignored.
    *
-   * @param query The select query for NN registrations.
-   * @param excludes List of NNs to exclude from matching results.
+   * @param request The select query for NN registrations.
    * @param addUnavailable include UNAVAILABLE registrations.
    * @param addExpired include EXPIRED registrations.
    * @return List of memberships or null if no registrations that

@@ -267,8 +267,7 @@ public class MembershipStoreImpl
    * majority value 2) Otherwise the first sorted entry in the set of all
    * entries
    *
-   * @param entries - Collection of state store record objects of the same type
-   * @param fieldName - Field name for the value to compare
+   * @param records - Collection of state store record objects of the same type
    * @return record that is most representative of the field name
    */
   private MembershipState getRepresentativeQuorum(
