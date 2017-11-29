@@ -86,7 +86,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    *
    * @param clazz Class of the record to store.
    * @param driver State Store driver.
-   * @param override If the entries should be override if they expire
+   * @param over If the entries should be override if they expire
    */
   protected CachedRecordStore(
       Class<R> clazz, StateStoreDriver driver, boolean over) {
@@ -167,7 +167,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * expired state.
    *
    * @param query RecordQueryResult containing the data to be inspected.
-   * @param clazz Type of objects contained in the query.
    * @throws IOException
    */
   public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
@@ -194,9 +193,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * Updates the state store with any record overrides we detected, such as an
    * expired state.
    *
-   * @param driver State store driver for the data store.
    * @param record Record record to be updated.
-   * @param clazz Type of data record.
    * @throws IOException
    */
   public void overrideExpiredRecord(R record) throws IOException {

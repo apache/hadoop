@@ -192,7 +192,7 @@ public abstract class StateStoreFileBaseImpl
    * Read all lines from a file and deserialize into the desired record type.
    *
    * @param reader Open handle for the file.
-   * @param recordClass Record class to create.
+   * @param clazz Record class to create.
    * @param includeDates True if dateModified/dateCreated are serialized.
    * @return List of records.
    * @throws IOException
@@ -250,7 +250,7 @@ public abstract class StateStoreFileBaseImpl
   /**
    * Overwrite the existing data with a new data set.
    *
-   * @param list List of records to write.
+   * @param records List of records to write.
    * @param writer BufferedWriter stream to write to.
    * @return If the records were succesfully written.
    */
