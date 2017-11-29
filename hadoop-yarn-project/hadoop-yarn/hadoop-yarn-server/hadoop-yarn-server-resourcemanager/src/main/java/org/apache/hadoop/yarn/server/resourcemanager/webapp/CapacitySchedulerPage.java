@@ -161,10 +161,11 @@ class CapacitySchedulerPage extends RmView {
           .__("Configured Capacity:",
               capacities.getConfiguredMinResource().toString())
           .__("Configured Max Capacity:",
-              capacities.getConfiguredMaxResource().getResource()
-                  .equals(Resources.none())
-                      ? "unlimited"
-                      : capacities.getConfiguredMaxResource().toString())
+              (capacities.getConfiguredMaxResource() == null
+                  || capacities.getConfiguredMaxResource().getResource()
+                      .equals(Resources.none()))
+                          ? "unlimited"
+                          : capacities.getConfiguredMaxResource().toString())
           .__("Effective Capacity:",
               appendPercent(capacities.getEffectiveMinResource().toString(),
                   capacities.getCapacity() / 100))
