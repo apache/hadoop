@@ -25,7 +25,8 @@ import java.util.Set;
 
 class ReplicationWork {
   private final BlockInfo block;
-  private final BlockCollection bc;
+  private final String srcPath;
+  private final byte storagePolicyID;
   private final DatanodeDescriptor srcNode;
   private final int additionalReplRequired;
   private final int priority;
@@ -38,7 +39,8 @@ class ReplicationWork {
       List<DatanodeStorageInfo> liveReplicaStorages, int additionalReplRequired,
       int priority) {
     this.block = block;
-    this.bc = bc;
+    this.srcPath = bc.getName();
+    this.storagePolicyID = bc.getStoragePolicyID();
     this.srcNode = srcNode;
     this.srcNode.incrementPendingReplicationWithoutTargets();
     this.containingNodes = containingNodes;
@@ -52,10 +54,10 @@ class ReplicationWork {
       BlockStoragePolicySuite storagePolicySuite,
       Set<Node> excludedNodes) {
     try {
-      targets = blockplacement.chooseTarget(bc.getName(),
+      targets = blockplacement.chooseTarget(getSrcPath(),
           additionalReplRequired, srcNode, liveReplicaStorages, false,
           excludedNodes, block.getNumBytes(),
-          storagePolicySuite.getPolicy(bc.getStoragePolicyID()), null);
+          storagePolicySuite.getPolicy(getStoragePolicyID()), null);
     } finally {
       srcNode.decrementPendingReplicationWithoutTargets();
     }
@@ -83,5 +85,13 @@ class ReplicationWork {
 
   public DatanodeDescriptor getSrcNode() {
     return srcNode;
+  }
+
+  public String getSrcPath() {
+    return srcPath;
+  }
+
+  public byte getStoragePolicyID() {
+    return storagePolicyID;
   }
 }
