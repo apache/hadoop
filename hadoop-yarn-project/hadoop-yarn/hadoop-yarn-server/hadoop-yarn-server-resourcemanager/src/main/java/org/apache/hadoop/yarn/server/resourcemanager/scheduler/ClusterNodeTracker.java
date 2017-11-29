@@ -24,11 +24,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -60,11 +63,16 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       Resources.clone(Resources.none());
 
   // Max allocation
-  private long maxNodeMemory = -1;
-  private int maxNodeVCores = -1;
+  private final long[] maxAllocation;
   private Resource configuredMaxAllocation;
   private boolean forceConfiguredMaxAllocation = true;
   private long configuredMaxAllocationWaitTime;
+  private boolean reportedMaxAllocation = false;
+
+  public ClusterNodeTracker() {
+    maxAllocation = new long[ResourceUtils.getNumberOfKnownResourceTypes()];
+    Arrays.fill(maxAllocation, -1);
+  }
 
   public void addNode(N node) {
     writeLock.lock();
@@ -208,17 +216,18 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
         forceConfiguredMaxAllocation = false;
       }
 
-      if (forceConfiguredMaxAllocation
-          || maxNodeMemory == -1 || maxNodeVCores == -1) {
+      if (forceConfiguredMaxAllocation || !reportedMaxAllocation) {
         return configuredMaxAllocation;
       }
 
       Resource ret = Resources.clone(configuredMaxAllocation);
-      if (ret.getMemorySize() > maxNodeMemory) {
-        ret.setMemorySize(maxNodeMemory);
-      }
-      if (ret.getVirtualCores() > maxNodeVCores) {
-        ret.setVirtualCores(maxNodeVCores);
+
+      for (int i = 0; i < maxAllocation.length; i++) {
+        ResourceInformation info = ret.getResourceInformation(i);
+
+        if (info.getValue() > maxAllocation[i]) {
+          info.setValue(maxAllocation[i]);
+        }
       }
 
       return ret;
@@ -229,31 +238,51 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
 
   private void updateMaxResources(SchedulerNode node, boolean add) {
     Resource totalResource = node.getTotalResource();
+    ResourceInformation[] totalResources;
+
+    if (totalResource != null) {
+      totalResources = totalResource.getResources();
+    } else {
+      LOG.warn(node.getNodeName() + " reported in with null resources, which "
+          + "indicates a problem in the source code. Please file an issue at "
+          + "https://issues.apache.org/jira/secure/CreateIssue!default.jspa");
+
+      return;
+    }
+
     writeLock.lock();
+
     try {
       if (add) { // added node
-        long nodeMemory = totalResource.getMemorySize();
-        if (nodeMemory > maxNodeMemory) {
-          maxNodeMemory = nodeMemory;
-        }
-        int nodeVCores = totalResource.getVirtualCores();
-        if (nodeVCores > maxNodeVCores) {
-          maxNodeVCores = nodeVCores;
+        // If we add a node, we must have a max allocation for all resource
+        // types
+        reportedMaxAllocation = true;
+
+        for (int i = 0; i < maxAllocation.length; i++) {
+          long value = totalResources[i].getValue();
+
+          if (value > maxAllocation[i]) {
+            maxAllocation[i] = value;
+          }
         }
       } else {  // removed node
-        if (maxNodeMemory == totalResource.getMemorySize()) {
-          maxNodeMemory = -1;
+        boolean recalculate = false;
+
+        for (int i = 0; i < maxAllocation.length; i++) {
+          if (totalResources[i].getValue() == maxAllocation[i]) {
+            // No need to set reportedMaxAllocation to false here because we
+            // will recalculate before we release the lock.
+            maxAllocation[i] = -1;
+            recalculate = true;
+          }
         }
-        if (maxNodeVCores == totalResource.getVirtualCores()) {
-          maxNodeVCores = -1;
-        }
+
         // We only have to iterate through the nodes if the current max memory
         // or vcores was equal to the removed node's
-        if (maxNodeMemory == -1 || maxNodeVCores == -1) {
+        if (recalculate) {
           // Treat it like an empty cluster and add nodes
-          for (N n : nodes.values()) {
-            updateMaxResources(n, true);
-          }
+          reportedMaxAllocation = false;
+          nodes.values().forEach(n -> updateMaxResources(n, true));
         }
       }
     } finally {
