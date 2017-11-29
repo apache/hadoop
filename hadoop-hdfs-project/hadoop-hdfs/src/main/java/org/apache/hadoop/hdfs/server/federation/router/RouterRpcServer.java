@@ -1390,7 +1390,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   /**
    * Aggregate content summaries for each subcluster.
    *
-   * @param results Collection of individual summaries.
+   * @param summaries Collection of individual summaries.
    * @return Aggregated content summary.
    */
   private ContentSummary aggregateContentSummary(
@@ -1999,7 +1999,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    *
    * @param name Name of the mount point.
    * @param childrenNum Number of children.
-   * @param dates Map with the dates.
+   * @param date Map with the dates.
    * @return New HDFS file status representing a mount point.
    */
   private HdfsFileStatus getMountPointStatus(
