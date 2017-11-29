@@ -21,7 +21,11 @@
 
 <div class="yarn-compose-box yarn-queues-container">
   <div>
-    <h3>{{model.selected}}</h3>
+    <h3>
+      <a href="#/yarn-queue/{{model.selected}}/apps">
+        {{model.selected}}
+      </a>
+    </h3>
     {{#if model.selectedQueue.state}}
       <div>
         {{em-table-simple-status-cell content=model.selectedQueue.state}}

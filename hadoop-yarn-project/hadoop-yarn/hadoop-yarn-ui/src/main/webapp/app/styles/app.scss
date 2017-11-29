@@ -192,7 +192,7 @@ table.dataTable thead .sorting_desc_disabled {
 
 .breadcrumb {
   padding-bottom: 3px;
-  background-color: none;
+  background: none;
 }
 
 .navbar-default .navbar-nav > li > a {
@@ -747,8 +747,12 @@ div.service-action-mask img {
   box-shadow: none;
 }
 
+.queue-page-breadcrumb,
 #tree-selector-container {
   width: calc(100% - #{$compose-box-width});
+}
+
+#tree-selector-container {
   overflow: scroll;
 }
 
