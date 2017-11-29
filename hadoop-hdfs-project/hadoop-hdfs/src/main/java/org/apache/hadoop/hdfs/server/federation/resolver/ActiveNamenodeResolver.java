@@ -94,7 +94,7 @@ public interface ActiveNamenodeResolver {
    * @return True if the node was registered and successfully committed to the
    *         data store.
    * @throws IOException Throws exception if the namenode could not be
-   *           registered.
+   *         registered.
    */
   boolean registerNamenode(NamenodeStatusReport report) throws IOException;
 
@@ -103,7 +103,8 @@ public interface ActiveNamenodeResolver {
    * federation.
    *
    * @return List of name spaces in the federation
-   * @throws Throws exception if the namespace list is not available.
+   * @throws IOException Throws exception if the namespace list is not
+   *         available.
    */
   Set<FederationNamespaceInfo> getNamespaces() throws IOException;
 
@@ -111,7 +112,7 @@ public interface ActiveNamenodeResolver {
    * Assign a unique identifier for the parent router service.
    * Required to report the status to the namenode resolver.
    *
-   * @param router Unique string identifier for the router.
+   * @param routerId Unique string identifier for the router.
    */
   void setRouterId(String routerId);
 }

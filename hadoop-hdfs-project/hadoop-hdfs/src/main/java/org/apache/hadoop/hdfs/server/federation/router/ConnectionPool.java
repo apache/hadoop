@@ -171,7 +171,7 @@ public class ConnectionPool {
   /**
    * Add a connection to the current pool. It uses a Copy-On-Write approach.
    *
-   * @param conns New connections to add to the pool.
+   * @param conn New connection to add to the pool.
    */
   public synchronized void addConnection(ConnectionContext conn) {
     List<ConnectionContext> tmpConnections = new ArrayList<>(this.connections);
