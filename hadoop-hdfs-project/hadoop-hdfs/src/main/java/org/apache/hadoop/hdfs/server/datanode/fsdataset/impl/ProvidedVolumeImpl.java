@@ -148,7 +148,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
       this.aliasMap = blockAliasMap;
     }
 
-    public void getVolumeMap(ReplicaMap volumeMap,
+    void fetchVolumeMap(ReplicaMap volumeMap,
         RamDiskReplicaTracker ramDiskReplicaMap, FileSystem remoteFS)
         throws IOException {
       BlockAliasMap.Reader<FileRegion> reader = aliasMap.getReader(null);
@@ -157,21 +157,19 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
             + "; no blocks will be populated");
         return;
       }
-      Iterator<FileRegion> iter = reader.iterator();
       Path blockPrefixPath = new Path(providedVolume.getBaseURI());
-      while (iter.hasNext()) {
-        FileRegion region = iter.next();
+      for (FileRegion region : reader) {
         if (region.getBlockPoolId() != null
             && region.getBlockPoolId().equals(bpid)
             && containsBlock(providedVolume.baseURI,
-                region.getPath().toUri())) {
-          String blockSuffix =
-              getSuffix(blockPrefixPath, new Path(region.getPath().toUri()));
+                region.getProvidedStorageLocation().getPath().toUri())) {
+          String blockSuffix = getSuffix(blockPrefixPath,
+              new Path(region.getProvidedStorageLocation().getPath().toUri()));
           ReplicaInfo newReplica = new ReplicaBuilder(ReplicaState.FINALIZED)
               .setBlockId(region.getBlock().getBlockId())
               .setPathPrefix(blockPrefixPath)
               .setPathSuffix(blockSuffix)
-              .setOffset(region.getOffset())
+              .setOffset(region.getProvidedStorageLocation().getOffset())
               .setLength(region.getBlock().getNumBytes())
               .setGenerationStamp(region.getBlock().getGenerationStamp())
               .setFsVolume(providedVolume)
@@ -216,18 +214,12 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
        */
       aliasMap.refresh();
       BlockAliasMap.Reader<FileRegion> reader = aliasMap.getReader(null);
-      if (reader == null) {
-        LOG.warn("Got null reader from BlockAliasMap " + aliasMap
-            + "; no blocks will be populated in scan report");
-        return;
-      }
-      Iterator<FileRegion> iter = reader.iterator();
-      while(iter.hasNext()) {
+      for (FileRegion region : reader) {
         reportCompiler.throttle();
-        FileRegion region = iter.next();
         if (region.getBlockPoolId().equals(bpid)) {
           report.add(new ScanInfo(region.getBlock().getBlockId(),
-              providedVolume, region, region.getLength()));
+              providedVolume, region,
+              region.getProvidedStorageLocation().getLength()));
         }
       }
     }
@@ -522,7 +514,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
           throws IOException {
     LOG.info("Creating volumemap for provided volume " + this);
     for(ProvidedBlockPoolSlice s : bpSlices.values()) {
-      s.getVolumeMap(volumeMap, ramDiskReplicaMap, remoteFS);
+      s.fetchVolumeMap(volumeMap, ramDiskReplicaMap, remoteFS);
     }
   }
 
@@ -539,7 +531,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
   void getVolumeMap(String bpid, ReplicaMap volumeMap,
       final RamDiskReplicaTracker ramDiskReplicaMap)
           throws IOException {
-    getProvidedBlockPoolSlice(bpid).getVolumeMap(volumeMap, ramDiskReplicaMap,
+    getProvidedBlockPoolSlice(bpid).fetchVolumeMap(volumeMap, ramDiskReplicaMap,
         remoteFS);
   }
 
@@ -601,7 +593,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
   @Override
   public LinkedList<ScanInfo> compileReport(String bpid,
       LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
-          throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     LOG.info("Compiling report for volume: " + this + " bpid " + bpid);
     //get the report from the appropriate block pool.
     if(bpSlices.containsKey(bpid)) {
@@ -687,6 +679,12 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
     volumeURI = getAbsoluteURI(volumeURI);
     blockURI = getAbsoluteURI(blockURI);
     return !volumeURI.relativize(blockURI).equals(blockURI);
+  }
+
+  @VisibleForTesting
+  BlockAliasMap<FileRegion> getFileRegionProvider(String bpid) throws
+      IOException {
+    return getProvidedBlockPoolSlice(bpid).getBlockAliasMap();
   }
 
   @VisibleForTesting
