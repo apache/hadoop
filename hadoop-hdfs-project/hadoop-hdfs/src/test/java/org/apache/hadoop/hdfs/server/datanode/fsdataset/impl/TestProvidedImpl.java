@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.datanode.ProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
@@ -230,14 +231,6 @@ public class TestProvidedImpl {
     @Override
     public void refresh() throws IOException {
       // do nothing!
-    }
-
-    public void setMinBlkId(int minId) {
-      this.minId = minId;
-    }
-
-    public void setBlockCount(int numBlocks) {
-      this.numBlocks = numBlocks;
     }
   }
 
@@ -606,4 +599,14 @@ public class TestProvidedImpl {
       }
     }
   }
+
+  @Test
+  public void testScannerWithProvidedVolumes() throws Exception {
+    DirectoryScanner scanner = new DirectoryScanner(datanode, dataset, conf);
+    Map<String, FsVolumeSpi.ScanInfo[]> report = scanner.getDiskReport();
+    // no blocks should be reported for the Provided volume as long as
+    // the directoryScanner is disabled.
+    assertEquals(0, report.get(BLOCK_POOL_IDS[CHOSEN_BP_ID]).length);
+  }
+
 }
