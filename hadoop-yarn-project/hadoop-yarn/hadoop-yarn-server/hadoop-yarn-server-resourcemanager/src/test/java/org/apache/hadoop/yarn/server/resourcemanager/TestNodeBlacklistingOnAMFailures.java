@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -41,11 +42,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -53,6 +57,12 @@ import org.junit.Test;
  * an application because of AM failures.
  */
 public class TestNodeBlacklistingOnAMFailures {
+
+  @Before
+  public void setup() {
+    QueueMetrics.clearQueueMetrics();
+    DefaultMetricsSystem.setMiniClusterMode(true);
+  }
 
   @Test(timeout = 100000)
   public void testNodeBlacklistingOnAMFailure() throws Exception {
@@ -361,6 +371,7 @@ public class TestNodeBlacklistingOnAMFailures {
     // Now the AM container should be allocated
     RMAppAttempt attempt = MockRM.waitForAttemptScheduled(app, rm);
     node.nodeHeartbeat(true);
+    ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEvents();
     MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
     rm.sendAMLaunched(attempt.getAppAttemptId());
@@ -388,6 +399,7 @@ public class TestNodeBlacklistingOnAMFailures {
           .println("New AppAttempt launched " + attempt.getAppAttemptId());
 
       node.nodeHeartbeat(true);
+      ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
       rm.drainEvents();
 
       MockRM.waitForState(attempt, RMAppAttemptState.ALLOCATED, 20000);
@@ -413,11 +425,9 @@ public class TestNodeBlacklistingOnAMFailures {
   }
 
   private MockRM startRM(YarnConfiguration conf) {
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-
-    MockRM rm = new MockRM(conf, memStore);
-
+    conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    MockRM rm = new MockRM(conf);
     rm.start();
     return rm;
   }

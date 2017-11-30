@@ -30,11 +30,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Rule;
 import org.junit.Test;
@@ -89,8 +91,10 @@ public class TestFileSystemTimelineWriterImpl {
           outputRoot);
       fsi.init(conf);
       fsi.start();
-      fsi.write("cluster_id", "user_id", "flow_name", "flow_version", 12345678L,
-          "app_id", te);
+      fsi.write(
+          new TimelineCollectorContext("cluster_id", "user_id", "flow_name",
+              "flow_version", 12345678L, "app_id"),
+          te, UserGroupInformation.createRemoteUser("user_id"));
 
       String fileName = fsi.getOutputRoot() + File.separator + "entities" +
           File.separator + "cluster_id" + File.separator + "user_id" +

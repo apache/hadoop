@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha4-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server</artifactId>
-  <version>3.0.0-alpha4-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Server</name>
   <packaging>pom</packaging>
 
@@ -45,5 +45,6 @@
     <module>hadoop-yarn-server-timelineservice</module>
     <module>hadoop-yarn-server-timelineservice-hbase</module>
     <module>hadoop-yarn-server-timelineservice-hbase-tests</module>
+    <module>hadoop-yarn-server-router</module>
   </modules>
 </project>

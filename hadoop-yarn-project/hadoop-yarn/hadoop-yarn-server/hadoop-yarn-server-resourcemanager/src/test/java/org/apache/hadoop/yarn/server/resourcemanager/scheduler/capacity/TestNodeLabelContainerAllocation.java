@@ -656,7 +656,7 @@ public class TestNodeLabelContainerAllocation {
       if (key.getPriority().getPriority() == priority) {
         Assert.assertEquals("Expected partition is " + expectedPartition,
             expectedPartition,
-            info.getSchedulingPlacementSet(key)
+            info.getAppPlacementAllocator(key)
                 .getPrimaryRequestedNodePartition());
       }
     }
@@ -1958,8 +1958,8 @@ public class TestNodeLabelContainerAllocation {
         reportNm2.getAvailableResource().getMemorySize());
 
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
-    assertEquals(0 * GB, leafQueue.getMetrics().getAvailableMB());
-    assertEquals(5 * GB, leafQueue.getMetrics().getAllocatedMB());
+    assertEquals(5 * GB, leafQueue.getMetrics().getAvailableMB());
+    assertEquals(0 * GB, leafQueue.getMetrics().getAllocatedMB());
 
     // Kill all apps in queue a
     cs.killAllAppsInQueue("a");
@@ -2061,8 +2061,8 @@ public class TestNodeLabelContainerAllocation {
     double delta = 0.0001;
     // 3GB is used from label x quota. 1.5 GB is remaining from default label.
     // 2GB is remaining from label x.
-    assertEquals(3.5 * GB, leafQueue.getMetrics().getAvailableMB(), delta);
-    assertEquals(4 * GB, leafQueue.getMetrics().getAllocatedMB());
+    assertEquals(6.5 * GB, leafQueue.getMetrics().getAvailableMB(), delta);
+    assertEquals(1 * GB, leafQueue.getMetrics().getAllocatedMB());
 
     // app1 asks for 1 default partition container
     am1.allocate("*", 1 * GB, 5, new ArrayList<ContainerId>());
@@ -2079,7 +2079,7 @@ public class TestNodeLabelContainerAllocation {
     // 3GB is used from label x quota. 2GB used from default label.
     // So total 2.5 GB is remaining.
     assertEquals(2.5 * GB, leafQueue.getMetrics().getAvailableMB(), delta);
-    assertEquals(5 * GB, leafQueue.getMetrics().getAllocatedMB());
+    assertEquals(2 * GB, leafQueue.getMetrics().getAllocatedMB());
 
     rm1.close();
   }

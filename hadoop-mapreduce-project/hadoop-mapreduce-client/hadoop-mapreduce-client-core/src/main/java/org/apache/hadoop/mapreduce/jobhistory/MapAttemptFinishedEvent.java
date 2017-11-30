@@ -32,9 +32,10 @@ import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
- * Event to record successful completion of a map attempt
+ * Event to record successful completion of a map attempt.
  *
  */
 @InterfaceAudience.Private
@@ -58,9 +59,10 @@ public class MapAttemptFinishedEvent implements HistoryEvent {
   int[] cpuUsages;
   int[] vMemKbytes;
   int[] physMemKbytes;
+  private long startTime;
 
   /** 
-   * Create an event for successful completion of map attempts
+   * Create an event for successful completion of map attempts.
    * @param id Task Attempt ID
    * @param taskType Type of the task
    * @param taskStatus Status of the task
@@ -77,12 +79,13 @@ public class MapAttemptFinishedEvent implements HistoryEvent {
    *        virtual memory and physical memory. 
    *
    *        If you have no splits data, code {@code null} for this
-   *        parameter. 
+   *        parameter.
+   * @param startTs Task start time to be used for writing entity to ATSv2.
    */
-  public MapAttemptFinishedEvent
-      (TaskAttemptID id, TaskType taskType, String taskStatus, 
-       long mapFinishTime, long finishTime, String hostname, int port, 
-       String rackName, String state, Counters counters, int[][] allSplits) {
+  public MapAttemptFinishedEvent(TaskAttemptID id, TaskType taskType,
+      String taskStatus, long mapFinishTime, long finishTime, String hostname,
+      int port, String rackName, String state, Counters counters,
+      int[][] allSplits, long startTs) {
     this.attemptId = id;
     this.taskType = taskType;
     this.taskStatus = taskStatus;
@@ -98,6 +101,16 @@ public class MapAttemptFinishedEvent implements HistoryEvent {
     this.cpuUsages = ProgressSplitsBlock.arrayGetCPUTime(allSplits);
     this.vMemKbytes = ProgressSplitsBlock.arrayGetVMemKbytes(allSplits);
     this.physMemKbytes = ProgressSplitsBlock.arrayGetPhysMemKbytes(allSplits);
+    this.startTime = startTs;
+  }
+
+  public MapAttemptFinishedEvent(TaskAttemptID id, TaskType taskType,
+      String taskStatus, long mapFinishTime, long finishTime, String hostname,
+      int port, String rackName, String state, Counters counters,
+      int[][] allSplits) {
+    this(id, taskType, taskStatus, mapFinishTime, finishTime, hostname, port,
+        rackName, state, counters, allSplits,
+        SystemClock.getInstance().getTime());
   }
 
   /** 
@@ -117,15 +130,13 @@ public class MapAttemptFinishedEvent implements HistoryEvent {
    * @param counters Counters for the attempt
    */
   @Deprecated
-  public MapAttemptFinishedEvent
-      (TaskAttemptID id, TaskType taskType, String taskStatus, 
-       long mapFinishTime, long finishTime, String hostname,
-       String state, Counters counters) {
+  public MapAttemptFinishedEvent(TaskAttemptID id, TaskType taskType,
+      String taskStatus, long mapFinishTime, long finishTime, String hostname,
+      String state, Counters counters) {
     this(id, taskType, taskStatus, mapFinishTime, finishTime, hostname, -1, "",
         state, counters, null);
   }
-  
-  
+
   MapAttemptFinishedEvent() {}
 
   public Object getDatum() {
@@ -175,38 +186,56 @@ public class MapAttemptFinishedEvent implements HistoryEvent {
     this.physMemKbytes = AvroArrayUtils.fromAvro(datum.getPhysMemKbytes());
   }
 
-  /** Get the task ID */
-  public TaskID getTaskId() { return attemptId.getTaskID(); }
-  /** Get the attempt id */
+  /** Gets the task ID. */
+  public TaskID getTaskId() {
+    return attemptId.getTaskID();
+  }
+  /** Gets the attempt id. */
   public TaskAttemptID getAttemptId() {
     return attemptId;
   }
 
-  /** Get the task type */
+  /** Gets the task type. */
   public TaskType getTaskType() {
     return taskType;
   }
-  /** Get the task status */
+  /** Gets the task status. */
   public String getTaskStatus() { return taskStatus.toString(); }
-  /** Get the map phase finish time */
+  /** Gets the map phase finish time. */
   public long getMapFinishTime() { return mapFinishTime; }
-  /** Get the attempt finish time */
+  /** Gets the attempt finish time. */
   public long getFinishTime() { return finishTime; }
-  /** Get the host name */
+  /**
+   * Gets the task attempt start time.
+   * @return task attempt start time.
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+  /** Gets the host name. */
   public String getHostname() { return hostname.toString(); }
-  /** Get the tracker rpc port */
+  /** Gets the tracker rpc port. */
   public int getPort() { return port; }
   
-  /** Get the rack name */
+  /** Gets the rack name. */
   public String getRackName() {
     return rackName == null ? null : rackName.toString();
   }
-  
-  /** Get the state string */
-  public String getState() { return state.toString(); }
-  /** Get the counters */
-  Counters getCounters() { return counters; }
-  /** Get the event type */
+  /**
+   * Gets the attempt state string.
+   * @return map attempt state
+   */
+  public String getState() {
+    return state.toString();
+  }
+  /**
+   * Gets the counters.
+   * @return counters
+   */
+  Counters getCounters() {
+    return counters;
+  }
+  /** Gets the event type. */
    public EventType getEventType() {
     return EventType.MAP_ATTEMPT_FINISHED;
   }

@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage.application;
 
+import java.util.List;
+
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.AppIdKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverterToString;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 
@@ -33,7 +37,7 @@ public class ApplicationRowKey {
   private final String flowName;
   private final Long flowRunId;
   private final String appId;
-  private final KeyConverter<ApplicationRowKey> appRowKeyConverter =
+  private final ApplicationRowKeyConverter appRowKeyConverter =
       new ApplicationRowKeyConverter();
 
   public ApplicationRowKey(String clusterId, String userId, String flowName,
@@ -86,6 +90,24 @@ public class ApplicationRowKey {
   }
 
   /**
+   * Constructs a row key for the application table as follows:
+   * {@code clusterId!userName!flowName!flowRunId!AppId}.
+   * @return String representation of row key.
+   */
+  public String getRowKeyAsString() {
+    return appRowKeyConverter.encodeAsString(this);
+  }
+
+  /**
+   * Given the encoded row key as string, returns the row key as an object.
+   * @param encodedRowKey String representation of row key.
+   * @return A <cite>ApplicationRowKey</cite> object.
+   */
+  public static ApplicationRowKey parseRowKeyFromString(String encodedRowKey) {
+    return new ApplicationRowKeyConverter().decodeFromString(encodedRowKey);
+  }
+
+  /**
    * Encodes and decodes row key for application table. The row key is of the
    * form: clusterId!userName!flowName!flowRunId!appId. flowRunId is a long,
    * appId is encoded and decoded using {@link AppIdKeyConverter} and rest are
@@ -93,7 +115,7 @@ public class ApplicationRowKey {
    * <p>
    */
   final private static class ApplicationRowKeyConverter implements
-      KeyConverter<ApplicationRowKey> {
+      KeyConverter<ApplicationRowKey>, KeyConverterToString<ApplicationRowKey> {
 
     private final KeyConverter<String> appIDKeyConverter =
         new AppIdKeyConverter();
@@ -200,6 +222,29 @@ public class ApplicationRowKey {
       String appId = appIDKeyConverter.decode(rowKeyComponents[4]);
       return new ApplicationRowKey(clusterId, userId, flowName, flowRunId,
           appId);
+    }
+
+    @Override
+    public String encodeAsString(ApplicationRowKey key) {
+      if (key.clusterId == null || key.userId == null || key.flowName == null
+          || key.flowRunId == null || key.appId == null) {
+        throw new IllegalArgumentException();
+      }
+      return TimelineReaderUtils
+          .joinAndEscapeStrings(new String[] {key.clusterId, key.userId,
+              key.flowName, key.flowRunId.toString(), key.appId});
+    }
+
+    @Override
+    public ApplicationRowKey decodeFromString(String encodedRowKey) {
+      List<String> split = TimelineReaderUtils.split(encodedRowKey);
+      if (split == null || split.size() != 5) {
+        throw new IllegalArgumentException(
+            "Invalid row key for application table.");
+      }
+      Long flowRunId = Long.valueOf(split.get(3));
+      return new ApplicationRowKey(split.get(0), split.get(1), split.get(2),
+          flowRunId, split.get(4));
     }
   }
 

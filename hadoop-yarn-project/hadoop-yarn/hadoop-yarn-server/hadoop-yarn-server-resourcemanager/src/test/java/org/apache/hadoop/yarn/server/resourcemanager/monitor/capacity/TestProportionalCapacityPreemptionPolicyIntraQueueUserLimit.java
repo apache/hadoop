@@ -896,4 +896,39 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
+
+  @Test
+  public void testSimpleIntraQueuePreemptionOneUserUnderOneUserAtOneUserAbove()
+      throws IOException {
+    conf.setFloat(CapacitySchedulerConfiguration.
+        INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 0.5);
+
+    String labelsConfig = "=100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100 100 100 1 0]);" + // root
+            "-a(=[100 100 100 1 0])"; // a
+
+    String appsConfig =
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+        "a\t" // app1 in a
+            + "(1,1,n1,,65,false,0,user1);" +
+            "a\t" // app2 in a
+            + "(1,1,n1,,35,false,0,user2);" +
+            "a\t" // app3 in a
+            + "(1,1,n1,,0,false,1,user3)"
+            ;
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    // app2 is right at its user limit and app1 needs one resource. Should
+    // preempt 1 container.
+    verify(mDisp, times(1)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+  }
 }

@@ -19,7 +19,11 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -36,15 +40,22 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 
@@ -59,6 +70,8 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
 
   private TimelineEntityDispatcher entityDispatcher;
   private volatile String timelineServiceAddress;
+  @VisibleForTesting
+  volatile Token currentTimelineToken = null;
 
   // Retry parameters for identifying new timeline service
   // TODO consider to merge with connection retry
@@ -68,6 +81,8 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
   private TimelineConnector connector;
 
   private ApplicationId contextAppId;
+
+  private UserGroupInformation authUgi;
 
   public TimelineV2ClientImpl(ApplicationId appId) {
     super(TimelineV2ClientImpl.class.getName());
@@ -88,7 +103,6 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation realUgi = ugi.getRealUser();
     String doAsUser = null;
-    UserGroupInformation authUgi = null;
     if (realUgi != null) {
       authUgi = realUgi;
       doAsUser = ugi.getShortUserName();
@@ -96,7 +110,6 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
       authUgi = ugi;
       doAsUser = null;
     }
-
     // TODO need to add/cleanup filter retry later for ATSV2. similar to V1
     DelegationTokenAuthenticatedURL.Token token =
         new DelegationTokenAuthenticatedURL.Token();
@@ -140,8 +153,72 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
   }
 
   @Override
-  public void setTimelineServiceAddress(String address) {
-    this.timelineServiceAddress = address;
+  public void setTimelineCollectorInfo(CollectorInfo collectorInfo) {
+    if (collectorInfo == null) {
+      LOG.warn("Not setting collector info as it is null.");
+      return;
+    }
+    // First update the token so that it is available when collector address is
+    // used.
+    if (collectorInfo.getCollectorToken() != null) {
+      // Use collector address to update token service if its not available.
+      setTimelineDelegationToken(
+          collectorInfo.getCollectorToken(), collectorInfo.getCollectorAddr());
+    }
+    // Update timeline service address.
+    if (collectorInfo.getCollectorAddr() != null &&
+        !collectorInfo.getCollectorAddr().isEmpty() &&
+        !collectorInfo.getCollectorAddr().equals(timelineServiceAddress)) {
+      this.timelineServiceAddress = collectorInfo.getCollectorAddr();
+      LOG.info("Updated timeline service address to " + timelineServiceAddress);
+    }
+  }
+
+  private void setTimelineDelegationToken(Token delegationToken,
+      String collectorAddr) {
+    // Checks below are to ensure that an invalid token is not updated in UGI.
+    // This is required because timeline token is set via a public API.
+    if (!delegationToken.getKind().equals(
+        TimelineDelegationTokenIdentifier.KIND_NAME.toString())) {
+      LOG.warn("Timeline token to be updated should be of kind " +
+          TimelineDelegationTokenIdentifier.KIND_NAME);
+      return;
+    }
+    if (collectorAddr == null || collectorAddr.isEmpty()) {
+      collectorAddr = timelineServiceAddress;
+    }
+    // Token need not be updated if both address and token service do not exist.
+    String service = delegationToken.getService();
+    if ((service == null || service.isEmpty()) &&
+        (collectorAddr == null || collectorAddr.isEmpty())) {
+      LOG.warn("Timeline token does not have service and timeline service " +
+          "address is not yet set. Not updating the token");
+      return;
+    }
+    // No need to update a duplicate token.
+    if (currentTimelineToken != null &&
+        currentTimelineToken.equals(delegationToken)) {
+      return;
+    }
+    currentTimelineToken = delegationToken;
+    // Convert the token, sanitize the token service and add it to UGI.
+    org.apache.hadoop.security.token.
+        Token<TimelineDelegationTokenIdentifier> timelineToken =
+            new org.apache.hadoop.security.token.
+            Token<TimelineDelegationTokenIdentifier>(
+                delegationToken.getIdentifier().array(),
+                delegationToken.getPassword().array(),
+                new Text(delegationToken.getKind()),
+                service == null ? new Text() : new Text(service));
+    // Prefer timeline service address over service coming in the token for
+    // updating the token service.
+    InetSocketAddress serviceAddr =
+        (collectorAddr != null && !collectorAddr.isEmpty()) ?
+        NetUtils.createSocketAddr(collectorAddr) :
+        SecurityUtil.getTokenServiceAddr(timelineToken);
+    SecurityUtil.setTokenService(timelineToken, serviceAddr);
+    authUgi.addToken(timelineToken);
+    LOG.info("Updated timeline delegation token " + timelineToken);
   }
 
   @Private
@@ -192,19 +269,33 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     }
   }
 
+  private ClientResponse doPutObjects(URI base, String path,
+      MultivaluedMap<String, String> params, Object obj) {
+    return connector.getClient().resource(base).path(path).queryParams(params)
+        .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
+        .put(ClientResponse.class, obj);
+  }
+
   protected void putObjects(URI base, String path,
       MultivaluedMap<String, String> params, Object obj)
       throws IOException, YarnException {
-    ClientResponse resp;
+    ClientResponse resp = null;
     try {
-      resp = connector.getClient().resource(base).path(path).queryParams(params)
-          .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
-          .put(ClientResponse.class, obj);
-    } catch (RuntimeException re) {
-      // runtime exception is expected if the client cannot connect the server
-      String msg = "Failed to get the response from the timeline server.";
-      LOG.error(msg, re);
-      throw new IOException(re);
+      resp = authUgi.doAs(new PrivilegedExceptionAction<ClientResponse>() {
+        @Override
+        public ClientResponse run() throws Exception {
+          return doPutObjects(base, path, params, obj);
+        }
+      });
+    } catch (UndeclaredThrowableException ue) {
+      Throwable cause = ue.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException)cause;
+      } else {
+        throw new IOException(cause);
+      }
+    } catch (InterruptedException ie) {
+      throw (IOException) new InterruptedIOException().initCause(ie);
     }
     if (resp == null || resp.getStatusInfo()
         .getStatusCode() != ClientResponse.Status.OK.getStatusCode()) {

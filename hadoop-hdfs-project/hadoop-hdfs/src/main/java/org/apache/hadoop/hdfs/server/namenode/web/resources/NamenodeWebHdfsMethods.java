@@ -54,10 +54,10 @@ import javax.ws.rs.core.StreamingOutput;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -116,6 +116,7 @@ public class NamenodeWebHdfsMethods {
   private Principal userPrincipal;
   private String remoteAddr;
 
+  private static volatile String serverDefaultsResponse = null;
   private @Context ServletContext context;
   private @Context HttpServletResponse response;
 
@@ -993,21 +994,6 @@ public class NamenodeWebHdfsMethods {
         return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       }
     }
-    case GETFILEBLOCKLOCATIONS:
-    {
-      final long offsetValue = offset.getValue();
-      final Long lengthValue = length.getValue();
-
-      FileSystem fs = FileSystem.get(conf != null ?
-          conf : new Configuration());
-      BlockLocation[] locations = fs.getFileBlockLocations(
-          new org.apache.hadoop.fs.Path(fullpath),
-          offsetValue,
-          lengthValue != null? lengthValue: Long.MAX_VALUE);
-      final String js = JsonUtil.toJsonString("BlockLocations",
-          JsonUtil.toJsonMap(locations));
-      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-    }
     case GET_BLOCK_LOCATIONS:
     {
       final long offsetValue = offset.getValue();
@@ -1137,9 +1123,28 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(storagePolicy);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETSERVERDEFAULTS: {
+      // Since none of the server defaults values are hot reloaded, we can
+      // cache the output of serverDefaults.
+      if (serverDefaultsResponse == null) {
+        FsServerDefaults serverDefaults = np.getServerDefaults();
+        serverDefaultsResponse = JsonUtil.toJsonString(serverDefaults);
+      }
+      return Response.ok(serverDefaultsResponse)
+          .type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+  }
+
+  /*
+   * This is used only and only for testing.
+   * Please don't use it otherwise.
+   */
+  @VisibleForTesting
+  public static void resetServerDefaultsResponse() {
+    serverDefaultsResponse = null;
   }
 
   private static String getTrashRoot(String fullPath,

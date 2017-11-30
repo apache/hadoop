@@ -41,8 +41,6 @@ import java.util.regex.Pattern;
 import javax.crypto.KeyGenerator;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,7 +60,6 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.jobhistory.AMStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.EventReader;
 import org.apache.hadoop.mapreduce.jobhistory.EventType;
@@ -156,6 +153,8 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The Map-Reduce Application Master.
@@ -178,7 +177,7 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings("rawtypes")
 public class MRAppMaster extends CompositeService {
 
-  private static final Log LOG = LogFactory.getLog(MRAppMaster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MRAppMaster.class);
 
   /**
    * Priority of the MRAppMaster shutdown hook.
@@ -328,7 +327,7 @@ public class MRAppMaster extends CompositeService {
         errorHappenedShutDown = true;
         forcedState = JobStateInternal.ERROR;
         shutDownMessage = "Staging dir does not exist " + stagingDir;
-        LOG.fatal(shutDownMessage);
+        LOG.error(shutDownMessage);
       } else if (commitStarted) {
         //A commit was started so this is the last time, we just need to know
         // what result we will use to notify, and how we will unregister
@@ -646,6 +645,12 @@ public class MRAppMaster extends CompositeService {
     // note in a workflow scenario, this may lead to creation of a new
     // job (FIXME?)
 
+    JobEndNotifier notifier = null;
+    if (getConfig().get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL) != null) {
+      notifier = new JobEndNotifier();
+      notifier.setConf(getConfig());
+    }
+
     try {
       //if isLastAMRetry comes as true, should never set it to false
       if ( !isLastAMRetry){
@@ -660,28 +665,11 @@ public class MRAppMaster extends CompositeService {
       LOG.info("Calling stop for all the services");
       MRAppMaster.this.stop();
 
-      if (isLastAMRetry) {
+      if (isLastAMRetry && notifier != null) {
         // Send job-end notification when it is safe to report termination to
         // users and it is the last AM retry
-        if (getConfig().get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL) != null) {
-          try {
-            LOG.info("Job end notification started for jobID : "
-                + job.getReport().getJobId());
-            JobEndNotifier notifier = new JobEndNotifier();
-            notifier.setConf(getConfig());
-            JobReport report = job.getReport();
-            // If unregistration fails, the final state is unavailable. However,
-            // at the last AM Retry, the client will finally be notified FAILED
-            // from RM, so we should let users know FAILED via notifier as well
-            if (!context.hasSuccessfullyUnregistered()) {
-              report.setJobState(JobState.FAILED);
-            }
-            notifier.notify(report);
-          } catch (InterruptedException ie) {
-            LOG.warn("Job end notification interrupted for jobID : "
-                + job.getReport().getJobId(), ie);
-          }
-        }
+        sendJobEndNotify(notifier);
+        notifier = null;
       }
 
       try {
@@ -693,8 +681,30 @@ public class MRAppMaster extends CompositeService {
     } catch (Throwable t) {
       LOG.warn("Graceful stop failed. Exiting.. ", t);
       exitMRAppMaster(1, t);
+    } finally {
+      if (isLastAMRetry && notifier != null) {
+        sendJobEndNotify(notifier);
+      }
     }
     exitMRAppMaster(0, null);
+  }
+
+  private void sendJobEndNotify(JobEndNotifier notifier) {
+    try {
+      LOG.info("Job end notification started for jobID : "
+          + job.getReport().getJobId());
+      // If unregistration fails, the final state is unavailable. However,
+      // at the last AM Retry, the client will finally be notified FAILED
+      // from RM, so we should let users know FAILED via notifier as well
+      JobReport report = job.getReport();
+      if (!context.hasSuccessfullyUnregistered()) {
+        report.setJobState(JobState.FAILED);
+      }
+      notifier.notify(report);
+    } catch (InterruptedException ie) {
+      LOG.warn("Job end notification interrupted for jobID : "
+          + job.getReport().getJobId(), ie);
+    }
   }
 
   /** MRAppMaster exit method which has been instrumented for both runtime and
@@ -1068,6 +1078,7 @@ public class MRAppMaster extends CompositeService {
     private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
     private TimelineClient timelineClient = null;
     private TimelineV2Client timelineV2Client = null;
+    private String historyUrl = null;
 
     private final TaskAttemptFinishingMonitor taskAttemptFinishingMonitor;
 
@@ -1187,6 +1198,16 @@ public class MRAppMaster extends CompositeService {
     public TimelineV2Client getTimelineV2Client() {
       return timelineV2Client;
     }
+
+    @Override
+    public String getHistoryUrl() {
+      return historyUrl;
+    }
+
+    @Override
+    public void setHistoryUrl(String historyUrl) {
+      this.historyUrl = historyUrl;
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -1270,8 +1291,6 @@ public class MRAppMaster extends CompositeService {
 
     // finally set the job classloader
     MRApps.setClassLoader(jobClassLoader, getConfig());
-    // set job classloader if configured
-    Limits.init(getConfig());
 
     if (initFailed) {
       JobEvent initFailedEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT_FAILED);
@@ -1648,7 +1667,7 @@ public class MRAppMaster extends CompositeService {
       conf.set(MRJobConfig.USER_NAME, jobUserName);
       initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
-      LOG.fatal("Error starting MRAppMaster", t);
+      LOG.error("Error starting MRAppMaster", t);
       ExitUtil.terminate(1, t);
     }
   }
@@ -1697,10 +1716,7 @@ public class MRAppMaster extends CompositeService {
     // them
     Credentials credentials =
         UserGroupInformation.getCurrentUser().getCredentials();
-    LOG.info("Executing with tokens:");
-    for (Token<?> token : credentials.getAllTokens()) {
-      LOG.info(token);
-    }
+    LOG.info("Executing with tokens: {}", credentials.getAllTokens());
     
     UserGroupInformation appMasterUgi = UserGroupInformation
         .createRemoteUser(jobUserName);

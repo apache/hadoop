@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -137,7 +136,7 @@ public class TestFairSchedulerPlanFollower extends
   }
   @Override
   protected void verifyCapacity(Queue defQ) {
-    assertTrue(((FSQueue) defQ).getWeights().getWeight(ResourceType.MEMORY) > 0.9);
+    assertTrue(((FSQueue) defQ).getWeight() > 0.9);
   }
 
   @Override
@@ -173,8 +172,7 @@ public class TestFairSchedulerPlanFollower extends
             false);
     assertNotNull(q);
     // For now we are setting both to same weight
-    Assert.assertEquals(expectedCapacity,
-        q.getWeights().getWeight(ResourceType.MEMORY), 0.01);
+    Assert.assertEquals(expectedCapacity, q.getWeight(), 0.01);
   }
 
   @Override

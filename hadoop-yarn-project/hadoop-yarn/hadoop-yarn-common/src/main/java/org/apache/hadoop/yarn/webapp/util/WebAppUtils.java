@@ -129,6 +129,20 @@ public class WebAppUtils {
     return getRMWebAppURLWithoutScheme(conf, false);
   }
 
+  public static String getRouterWebAppURLWithScheme(Configuration conf) {
+    return getHttpSchemePrefix(conf) + getRouterWebAppURLWithoutScheme(conf);
+  }
+
+  public static String getRouterWebAppURLWithoutScheme(Configuration conf) {
+    if (YarnConfiguration.useHttps(conf)) {
+      return conf.get(YarnConfiguration.ROUTER_WEBAPP_HTTPS_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf.get(YarnConfiguration.ROUTER_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_ROUTER_WEBAPP_ADDRESS);
+    }
+  }
+
   public static List<String> getProxyHostsAndPortsForAmFilter(
       Configuration conf) {
     List<String> addrs = new ArrayList<String>();

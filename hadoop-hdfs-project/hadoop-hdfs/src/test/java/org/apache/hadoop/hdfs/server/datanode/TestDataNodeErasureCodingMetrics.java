@@ -72,13 +72,13 @@ public class TestDataNodeErasureCodingMetrics {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
     cluster.getFileSystem().getClient().setErasureCodingPolicy("/",
         StripedFileTestUtil.getDefaultECPolicy().getName());
     fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
   @After
@@ -90,6 +90,10 @@ public class TestDataNodeErasureCodingMetrics {
 
   @Test(timeout = 120000)
   public void testFullBlock() throws Exception {
+    Assert.assertEquals(0, getLongMetric("EcReconstructionReadTimeMillis"));
+    Assert.assertEquals(0, getLongMetric("EcReconstructionDecodingTimeMillis"));
+    Assert.assertEquals(0, getLongMetric("EcReconstructionWriteTimeMillis"));
+
     doTest("/testEcMetrics", blockGroupSize, 0);
 
     Assert.assertEquals("EcReconstructionTasks should be ",
@@ -103,6 +107,9 @@ public class TestDataNodeErasureCodingMetrics {
         blockSize, getLongMetric("EcReconstructionBytesWritten"));
     Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
         0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
+    Assert.assertTrue(getLongMetric("EcReconstructionReadTimeMillis") > 0);
+    Assert.assertTrue(getLongMetric("EcReconstructionDecodingTimeMillis") > 0);
+    Assert.assertTrue(getLongMetric("EcReconstructionWriteTimeMillis") > 0);
   }
 
   // A partial block, reconstruct the partial block

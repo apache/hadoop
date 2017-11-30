@@ -25,7 +25,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 public class CountersPage extends AppView {
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
 
     String tid = $(TASK_ID);
@@ -39,7 +39,7 @@ public class CountersPage extends AppView {
         "{bJQueryUI:true, sDom:'t', iDisplayLength:-1}");
   }
 
-  @Override protected void postHead(Page.HTML<_> html) {
+  @Override protected void postHead(Page.HTML<__> html) {
     html.
       style("#counters, .dt-counters { table-layout: fixed }",
             "#counters th { overflow: hidden; vertical-align: middle }",

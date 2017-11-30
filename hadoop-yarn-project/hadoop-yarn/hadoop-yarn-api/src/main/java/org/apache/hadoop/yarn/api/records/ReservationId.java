@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.api.records;
 
 import java.io.IOException;
-import java.text.NumberFormat;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.FastNumberFormat;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.util.Records;
  * {@link ReservationId} represents the <em>globally unique</em> identifier for
  * a reservation.
  * </p>
- * 
+ *
  * <p>
  * The globally unique nature of the identifier is achieved by using the
  * <em>cluster timestamp</em> i.e. start-time of the {@code ResourceManager}
@@ -62,7 +62,7 @@ public abstract class ReservationId implements Comparable<ReservationId> {
    * Get the long identifier of the {@link ReservationId} which is unique for
    * all Reservations started by a particular instance of the
    * {@code ResourceManager}.
-   * 
+   *
    * @return long identifier of the {@link ReservationId}
    */
   @Public
@@ -76,7 +76,7 @@ public abstract class ReservationId implements Comparable<ReservationId> {
   /**
    * Get the <em>start time</em> of the {@code ResourceManager} which is used to
    * generate globally unique {@link ReservationId}.
-   * 
+   *
    * @return <em>start time</em> of the {@code ResourceManager}
    */
   @Public
@@ -89,31 +89,25 @@ public abstract class ReservationId implements Comparable<ReservationId> {
 
   protected abstract void build();
 
-  static final ThreadLocal<NumberFormat> reservIdFormat =
-      new ThreadLocal<NumberFormat>() {
-        @Override
-        public NumberFormat initialValue() {
-          NumberFormat fmt = NumberFormat.getInstance();
-          fmt.setGroupingUsed(false);
-          fmt.setMinimumIntegerDigits(4);
-          return fmt;
-        }
-      };
+  private static final int RESERVATION_ID_MIN_DIGITS = 4;
 
   @Override
   public int compareTo(ReservationId other) {
     if (this.getClusterTimestamp() - other.getClusterTimestamp() == 0) {
-      return getId() > getId() ? 1 : getId() < getId() ? -1 : 0;
+      return Long.compare(getId(), other.getId());
     } else {
-      return this.getClusterTimestamp() > other.getClusterTimestamp() ? 1
-          : this.getClusterTimestamp() < other.getClusterTimestamp() ? -1 : 0;
+      return Long.compare(getClusterTimestamp(), other.getClusterTimestamp());
     }
   }
 
   @Override
   public String toString() {
-    return reserveIdStrPrefix + this.getClusterTimestamp() + "_"
-        + reservIdFormat.get().format(getId());
+    StringBuilder sb = new StringBuilder(64);
+    sb.append(reserveIdStrPrefix);
+    sb.append(getClusterTimestamp());
+    sb.append('_');
+    FastNumberFormat.format(sb, getId(), RESERVATION_ID_MIN_DIGITS);
+    return sb.toString();
   }
 
   /**

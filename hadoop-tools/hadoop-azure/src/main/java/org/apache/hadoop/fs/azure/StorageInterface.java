@@ -582,10 +582,17 @@ abstract class StorageInterface {
         throws StorageException;
 
     SelfRenewingLease acquireLease() throws StorageException;
-    
+
+    /**
+     * Gets the minimum read block size to use with this Blob.
+     *
+     * @return The minimum block size, in bytes, for reading from a block blob.
+     */
+    int getStreamMinimumReadSizeInBytes();
+
     /**
      * Sets the minimum read block size to use with this Blob.
-     * 
+     *
      * @param minimumReadSizeBytes
      *          The maximum block size, in bytes, for reading from a block blob
      *          while using a {@link BlobInputStream} object, ranging from 512
@@ -658,6 +665,7 @@ abstract class StorageInterface {
      *
      * @param blockId      A String that represents the Base-64 encoded block ID. Note for a given blob
      *                     the length of all Block IDs must be identical.
+     * @param accessCondition An {@link AccessCondition} object that represents the access conditions for the blob.
      * @param sourceStream An {@link InputStream} object that represents the input stream to write to the
      *                     block blob.
      * @param length       A long which represents the length, in bytes, of the stream data,
@@ -671,7 +679,7 @@ abstract class StorageInterface {
      * @throws IOException  If an I/O error occurred.
      * @throws StorageException If a storage service error occurred.
      */
-    void uploadBlock(String blockId, InputStream sourceStream,
+    void uploadBlock(String blockId, AccessCondition accessCondition, InputStream sourceStream,
         long length, BlobRequestOptions options,
         OperationContext opContext) throws IOException, StorageException;
 

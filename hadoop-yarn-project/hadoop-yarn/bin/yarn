@@ -31,27 +31,30 @@ function hadoop_usage
   hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
   hadoop_add_option "--workers" "turn on worker mode"
 
-  hadoop_add_subcommand "application" "prints application(s) report/kill application"
-  hadoop_add_subcommand "applicationattempt" "prints applicationattempt(s) report"
-  hadoop_add_subcommand "classpath" "prints the class path needed to get the hadoop jar and the required libraries"
-  hadoop_add_subcommand "cluster" "prints cluster information"
-  hadoop_add_subcommand "container" "prints container(s) report"
-  hadoop_add_subcommand "daemonlog" "get/set the log level for each daemon"
-  hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
-  hadoop_add_subcommand "jar <jar>" "run a jar file"
-  hadoop_add_subcommand "logs" "dump container logs"
-  hadoop_add_subcommand "node" "prints node report(s)"
-  hadoop_add_subcommand "nodemanager" "run a nodemanager on each worker"
-  hadoop_add_subcommand "proxyserver" "run the web app proxy server"
-  hadoop_add_subcommand "queue" "prints queue information"
-  hadoop_add_subcommand "resourcemanager" "run the ResourceManager"
-  hadoop_add_subcommand "rmadmin" "admin tools"
-  hadoop_add_subcommand "scmadmin" "SharedCacheManager admin tools"
-  hadoop_add_subcommand "sharedcachemanager" "run the SharedCacheManager daemon"
-  hadoop_add_subcommand "timelinereader" "run the timeline reader server"
-  hadoop_add_subcommand "timelineserver" "run the timeline server"
-  hadoop_add_subcommand "top" "view cluster information"
-  hadoop_add_subcommand "version" "print the version"
+  hadoop_add_subcommand "app|application" client "prints application(s) report/kill application/manage long running application"
+  hadoop_add_subcommand "applicationattempt" client "prints applicationattempt(s) report"
+  hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
+  hadoop_add_subcommand "cluster" client "prints cluster information"
+  hadoop_add_subcommand "container" client "prints container(s) report"
+  hadoop_add_subcommand "daemonlog" admin "get/set the log level for each daemon"
+  hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
+  hadoop_add_subcommand "jar <jar>" client "run a jar file"
+  hadoop_add_subcommand "logs" client "dump container logs"
+  hadoop_add_subcommand "node" admin "prints node report(s)"
+  hadoop_add_subcommand "nodemanager" daemon "run a nodemanager on each worker"
+  hadoop_add_subcommand "proxyserver" daemon "run the web app proxy server"
+  hadoop_add_subcommand "queue" client "prints queue information"
+  hadoop_add_subcommand "registrydns" daemon "run the registry DNS server"
+  hadoop_add_subcommand "resourcemanager" daemon "run the ResourceManager"
+  hadoop_add_subcommand "rmadmin" admin "admin tools"
+  hadoop_add_subcommand "router" daemon "run the Router daemon"
+  hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
+  hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
+  hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
+  hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
+  hadoop_add_subcommand "timelineserver" daemon "run the timeline server"
+  hadoop_add_subcommand "top" client "view cluster information"
+  hadoop_add_subcommand "version" client "print the version"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -66,10 +69,18 @@ function yarncmd_case
   shift
 
   case ${subcmd} in
-    application|applicationattempt|container)
+    app|application|applicationattempt|container)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.ApplicationCLI
       set -- "${subcmd}" "$@"
       HADOOP_SUBCMD_ARGS=("$@")
+      local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+      hadoop_translate_cygwin_path sld
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
@@ -126,6 +137,11 @@ function yarncmd_case
     queue)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.QueueCLI
     ;;
+    registrydns)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_SECURE_CLASSNAME='org.apache.hadoop.registry.server.dns.PrivilegedRegistryDNSStarter'
+      HADOOP_CLASSNAME='org.apache.hadoop.registry.server.dns.RegistryDNSServer'
+    ;;
     resourcemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
@@ -133,9 +149,24 @@ function yarncmd_case
       if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
         HADOOP_HEAPSIZE_MAX="${YARN_RESOURCEMANAGER_HEAPSIZE}"
       fi
+      local sld="${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+      hadoop_translate_cygwin_path sld
+      hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
     ;;
     rmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
+    ;;
+    router)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.router.Router'
+    ;;
+    schedulerconf)
+    HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'
     ;;
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'

@@ -26,9 +26,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -58,7 +58,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
-  static final Log LOG = LogFactory.getLog(LocalResourcesTrackerImpl.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(LocalResourcesTrackerImpl.class);
   private static final String RANDOM_DIR_REGEX = "-?\\d+";
   private static final Pattern RANDOM_DIR_PATTERN = Pattern
       .compile(RANDOM_DIR_REGEX);

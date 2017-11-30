@@ -284,7 +284,8 @@ class BlockReceiver implements Closeable {
       
       // check if there is a disk error
       IOException cause = DatanodeUtil.getCauseIfDiskError(ioe);
-      DataNode.LOG.warn("IOException in BlockReceiver constructor"
+      DataNode.LOG
+          .warn("IOException in BlockReceiver constructor :" + ioe.getMessage()
           + (cause == null ? "" : ". Cause is "), cause);
       if (cause != null) {
         ioe = cause;
@@ -433,7 +434,8 @@ class BlockReceiver implements Closeable {
     if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
       LOG.warn("Slow flushOrSync took " + duration + "ms (threshold="
           + datanodeSlowLogThresholdMs + "ms), isSync:" + isSync + ", flushTotalNanos="
-          + flushTotalNanos + "ns, volume=" + getVolumeBaseUri());
+          + flushTotalNanos + "ns, volume=" + getVolumeBaseUri()
+          + ", blockId=" + replicaInfo.getBlockId());
     }
   }
 
@@ -590,7 +592,8 @@ class BlockReceiver implements Closeable {
         if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
           LOG.warn("Slow BlockReceiver write packet to mirror took " + duration
               + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
-              + "downstream DNs=" + Arrays.toString(downstreamDNs));
+              + "downstream DNs=" + Arrays.toString(downstreamDNs)
+              + ", blockId=" + replicaInfo.getBlockId());
         }
       } catch (IOException e) {
         handleMirrorOutError(e);
@@ -724,7 +727,8 @@ class BlockReceiver implements Closeable {
           if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
             LOG.warn("Slow BlockReceiver write data to disk cost:" + duration
                 + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
-                + "volume=" + getVolumeBaseUri());
+                + "volume=" + getVolumeBaseUri()
+                + ", blockId=" + replicaInfo.getBlockId());
           }
 
           if (duration > maxWriteToDiskMs) {
@@ -916,7 +920,8 @@ class BlockReceiver implements Closeable {
         if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
           LOG.warn("Slow manageWriterOsCache took " + duration
               + "ms (threshold=" + datanodeSlowLogThresholdMs
-              + "ms), volume=" + getVolumeBaseUri());
+              + "ms), volume=" + getVolumeBaseUri()
+              + ", blockId=" + replicaInfo.getBlockId());
         }
       }
     } catch (Throwable t) {
@@ -1628,7 +1633,9 @@ class BlockReceiver implements Closeable {
       if (duration > datanodeSlowLogThresholdMs) {
         LOG.warn("Slow PacketResponder send ack to upstream took " + duration
             + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), " + myString
-            + ", replyAck=" + replyAck);
+            + ", replyAck=" + replyAck
+            + ", downstream DNs=" + Arrays.toString(downstreamDNs)
+            + ", blockId=" + replicaInfo.getBlockId());
       } else if (LOG.isDebugEnabled()) {
         LOG.debug(myString + ", replyAck=" + replyAck);
       }

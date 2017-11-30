@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -731,10 +732,19 @@ public interface ClientProtocol {
   @Idempotent
   boolean recoverLease(String src, String clientName) throws IOException;
 
+  /**
+   * Constants to index the array of aggregated stats returned by
+   * {@link #getStats()}.
+   */
   int GET_STATS_CAPACITY_IDX = 0;
   int GET_STATS_USED_IDX = 1;
   int GET_STATS_REMAINING_IDX = 2;
+  /**
+   * Use {@link #GET_STATS_LOW_REDUNDANCY_IDX} instead.
+   */
+  @Deprecated
   int GET_STATS_UNDER_REPLICATED_IDX = 3;
+  int GET_STATS_LOW_REDUNDANCY_IDX = 3;
   int GET_STATS_CORRUPT_BLOCKS_IDX = 4;
   int GET_STATS_MISSING_BLOCKS_IDX = 5;
   int GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX = 6;
@@ -743,25 +753,39 @@ public interface ClientProtocol {
   int STATS_ARRAY_LENGTH = 9;
 
   /**
-   * Get a set of statistics about the filesystem.
-   * Right now, only eight values are returned.
+   * Get an array of aggregated statistics combining blocks of both type
+   * {@link BlockType#CONTIGUOUS} and {@link BlockType#STRIPED} in the
+   * filesystem. Use public constants like {@link #GET_STATS_CAPACITY_IDX} in
+   * place of actual numbers to index into the array.
    * <ul>
    * <li> [0] contains the total storage capacity of the system, in bytes.</li>
    * <li> [1] contains the total used space of the system, in bytes.</li>
    * <li> [2] contains the available storage of the system, in bytes.</li>
-   * <li> [3] contains number of under replicated blocks in the system.</li>
-   * <li> [4] contains number of blocks with a corrupt replica. </li>
+   * <li> [3] contains number of low redundancy blocks in the system.</li>
+   * <li> [4] contains number of corrupt blocks. </li>
    * <li> [5] contains number of blocks without any good replicas left. </li>
    * <li> [6] contains number of blocks which have replication factor
    *          1 and have lost the only replica. </li>
-   * <li> [7] contains number of bytes  that are at risk for deletion. </li>
+   * <li> [7] contains number of bytes that are at risk for deletion. </li>
    * <li> [8] contains number of pending deletion blocks. </li>
    * </ul>
-   * Use public constants like {@link #GET_STATS_CAPACITY_IDX} in place of
-   * actual numbers to index into the array.
    */
   @Idempotent
   long[] getStats() throws IOException;
+
+  /**
+   * Get statistics pertaining to blocks of type {@link BlockType#CONTIGUOUS}
+   * in the filesystem.
+   */
+  @Idempotent
+  ReplicatedBlockStats getReplicatedBlockStats() throws IOException;
+
+  /**
+   * Get statistics pertaining to blocks of type {@link BlockType#STRIPED}
+   * in the filesystem.
+   */
+  @Idempotent
+  ECBlockGroupStats getECBlockGroupStats() throws IOException;
 
   /**
    * Get a report on the system's current datanodes.
@@ -1421,6 +1445,30 @@ public interface ClientProtocol {
       long prevId) throws IOException;
 
   /**
+   * Used to implement re-encryption of encryption zones.
+   *
+   * @param zone the encryption zone to re-encrypt.
+   * @param action the action for the re-encryption.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void reencryptEncryptionZone(String zone, ReencryptAction action)
+      throws IOException;
+
+  /**
+   * Used to implement cursor-based batched listing of
+   * {@ZoneReencryptionStatus}s.
+   *
+   * @param prevId ID of the last item in the previous batch. If there is no
+   *               previous batch, a negative value can be used.
+   * @return Batch of encryption zones.
+   * @throws IOException
+   */
+  @Idempotent
+  BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(long prevId)
+      throws IOException;
+
+  /**
    * Set xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
@@ -1536,16 +1584,42 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @AtMostOnce
-  AddECPolicyResponse[] addErasureCodingPolicies(
+  AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException;
 
   /**
-   * Get the erasure coding policies loaded in Namenode.
+   * Remove erasure coding policy.
+   * @param ecPolicyName The name of the policy to be removed.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void removeErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+  /**
+   * Enable erasure coding policy.
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void enableErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+  /**
+   * Disable erasure coding policy.
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  @AtMostOnce
+  void disableErasureCodingPolicy(String ecPolicyName) throws IOException;
+
+
+  /**
+   * Get the erasure coding policies loaded in Namenode, excluding REPLICATION
+   * policy.
    *
    * @throws IOException
    */
   @Idempotent
-  ErasureCodingPolicy[] getErasureCodingPolicies() throws IOException;
+  ErasureCodingPolicyInfo[] getErasureCodingPolicies() throws IOException;
 
   /**
    * Get the erasure coding codecs loaded in Namenode.
@@ -1553,10 +1627,11 @@ public interface ClientProtocol {
    * @throws IOException
    */
   @Idempotent
-  HashMap<String, String> getErasureCodingCodecs() throws IOException;
+  Map<String, String> getErasureCodingCodecs() throws IOException;
 
   /**
-   * Get the information about the EC policy for the path.
+   * Get the information about the EC policy for the path. Null will be returned
+   * if directory or file has REPLICATION policy.
    *
    * @param src path to get the info for
    * @throws IOException
@@ -1583,4 +1658,16 @@ public interface ClientProtocol {
    */
   @Idempotent
   QuotaUsage getQuotaUsage(String path) throws IOException;
+
+  /**
+   * List open files in the system in batches. INode id is the cursor and the
+   * open files returned in a batch will have their INode ids greater than
+   * the cursor INode id. Open files can only be requested by super user and
+   * the the list across batches are not atomic.
+   *
+   * @param prevId the cursor INode id.
+   * @throws IOException
+   */
+  @Idempotent
+  BatchedEntries<OpenFileEntry> listOpenFiles(long prevId) throws IOException;
 }

@@ -18,20 +18,31 @@
 
 package org.apache.hadoop.fs.azure.contract;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
+/**
+ * Azure Contract. Test paths are created using any maven fork
+ * identifier, if defined. This guarantees paths unique to tests
+ * running in parallel.
+ */
 public class NativeAzureFileSystemContract extends AbstractBondedFSContract {
 
   public static final String CONTRACT_XML = "wasb.xml";
 
-  protected NativeAzureFileSystemContract(Configuration conf) {
-    super(conf);
-    //insert the base features
+  public NativeAzureFileSystemContract(Configuration conf) {
+    super(conf); //insert the base features
     addConfResource(CONTRACT_XML);
   }
 
   @Override
   public String getScheme() {
     return "wasb";
+  }
+
+  @Override
+  public Path getTestPath() {
+    return AzureTestUtils.createTestPath(super.getTestPath());
   }
 }

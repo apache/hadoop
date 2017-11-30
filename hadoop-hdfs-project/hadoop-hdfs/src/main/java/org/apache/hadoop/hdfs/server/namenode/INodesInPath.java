@@ -18,9 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -336,17 +333,9 @@ public class INodesInPath {
    *         otherwise, i < 0, return the (length + i)-th inode.
    */
   public INode getINode(int i) {
-    if (inodes == null || inodes.length == 0) {
-      throw new NoSuchElementException("inodes is null or empty");
-    }
-    int index = i >= 0 ? i : inodes.length + i;
-    if (index < inodes.length && index >= 0) {
-      return inodes[index];
-    } else {
-      throw new NoSuchElementException("inodes.length == " + inodes.length);
-    }
+    return inodes[(i < 0) ? inodes.length + i : i];
   }
-  
+
   /** @return the last inode. */
   public INode getLastINode() {
     return getINode(-1);
@@ -382,10 +371,6 @@ public class INodesInPath {
 
   public int length() {
     return inodes.length;
-  }
-
-  public List<INode> getReadOnlyINodes() {
-    return Collections.unmodifiableList(Arrays.asList(inodes));
   }
 
   public INode[] getINodesArray() {

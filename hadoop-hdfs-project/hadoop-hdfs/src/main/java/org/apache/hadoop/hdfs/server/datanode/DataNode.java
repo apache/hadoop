@@ -1115,7 +1115,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * Shutdown disk balancer.
    */
-  private  void shutdownDiskBalancer() {
+  private void shutdownDiskBalancer() {
     if (this.diskBalancer != null) {
       this.diskBalancer.shutdown();
       this.diskBalancer = null;
@@ -1319,7 +1319,7 @@ public class DataNode extends ReconfigurableBase
 
   // used only for testing
   @VisibleForTesting
-  void setHeartbeatsDisabledForTests(
+  public void setHeartbeatsDisabledForTests(
       boolean heartbeatsDisabledForTests) {
     this.heartbeatsDisabledForTests = heartbeatsDisabledForTests;
   }
@@ -1415,7 +1415,7 @@ public class DataNode extends ReconfigurableBase
 
     metrics = DataNodeMetrics.create(getConf(), getDisplayName());
     peerMetrics = dnConf.peerStatsEnabled ?
-        DataNodePeerMetrics.create(getConf(), getDisplayName()) : null;
+        DataNodePeerMetrics.create(getDisplayName()) : null;
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     ecWorker = new ErasureCodingWorker(getConf(), this);
@@ -2077,6 +2077,10 @@ public class DataNode extends ReconfigurableBase
       ipcServer.stop();
     }
 
+    if (ecWorker != null) {
+      ecWorker.shutDown();
+    }
+
     if(blockPoolManager != null) {
       try {
         this.blockPoolManager.shutDownAll(bposArray);
@@ -2204,10 +2208,31 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
+   * Increments the xmitInProgress count by given value.
+   *
+   * @param delta the amount of xmitsInProgress to increase.
+   * @see #incrementXmitsInProgress()
+   */
+  public void incrementXmitsInProcess(int delta) {
+    Preconditions.checkArgument(delta >= 0);
+    xmitsInProgress.getAndAdd(delta);
+  }
+
+  /**
    * Decrements the xmitsInProgress count
    */
   public void decrementXmitsInProgress() {
     xmitsInProgress.getAndDecrement();
+  }
+
+  /**
+   * Decrements the xmitsInProgress count by given value.
+   *
+   * @see #decrementXmitsInProgress()
+   */
+  public void decrementXmitsInProgress(int delta) {
+    Preconditions.checkArgument(delta >= 0);
+    xmitsInProgress.getAndAdd(0 - delta);
   }
 
   private void reportBadBlock(final BPOfferService bpos,
@@ -2533,7 +2558,8 @@ public class DataNode extends ReconfigurableBase
         // disk check moved to FileIoProvider
         IOException cause = DatanodeUtil.getCauseIfDiskError(ie);
         if (cause != null) { // possible disk error
-          LOG.warn("IOException in DataTransfer#run(). Cause is ", cause);
+          LOG.warn("IOException in DataTransfer#run() "+ ie.getMessage() +". "
+                  + "Cause is ", cause);
         }
       } finally {
         decrementXmitsInProgress();
@@ -2978,8 +3004,16 @@ public class DataNode extends ReconfigurableBase
     b.setNumBytes(visible);
 
     if (targets.length > 0) {
-      new DataTransfer(targets, targetStorageTypes, targetStorageIds, b, stage,
-          client).run();
+      Daemon daemon = new Daemon(threadGroup,
+          new DataTransfer(targets, targetStorageTypes, targetStorageIds, b,
+              stage, client));
+      daemon.start();
+      try {
+        daemon.join();
+      } catch (InterruptedException e) {
+        throw new IOException(
+            "Pipeline recovery for " + b + " is interrupted.", e);
+      }
     }
   }
 
@@ -3061,6 +3095,14 @@ public class DataNode extends ReconfigurableBase
       }
     }
     return JSON.toString(info);
+  }
+
+ /**
+   * Return hostname of the datanode.
+   */
+  @Override // DataNodeMXBean
+  public String getDatanodeHostname() {
+    return this.hostName;
   }
 
   /**

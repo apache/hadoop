@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +34,8 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.webapp.SCMWebServer;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This service maintains the shared cache meta data. It handles claiming and
@@ -51,7 +51,8 @@ public class SharedCacheManager extends CompositeService {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  private static final Log LOG = LogFactory.getLog(SharedCacheManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SharedCacheManager.class);
 
   private SCMStore store;
 
@@ -156,7 +157,7 @@ public class SharedCacheManager extends CompositeService {
       sharedCacheManager.init(conf);
       sharedCacheManager.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting SharedCacheManager", t);
+      LOG.error("Error starting SharedCacheManager", t);
       System.exit(-1);
     }
   }

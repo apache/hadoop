@@ -82,7 +82,8 @@ public final class AppIdKeyConverter implements KeyConverter<String> {
         Bytes.toLong(appIdBytes, 0, Bytes.SIZEOF_LONG));
     int seqId = HBaseTimelineStorageUtils.invertInt(
         Bytes.toInt(appIdBytes, Bytes.SIZEOF_LONG, Bytes.SIZEOF_INT));
-    return ApplicationId.newInstance(clusterTs, seqId).toString();
+    return HBaseTimelineStorageUtils.convertApplicationIdToString(
+        ApplicationId.newInstance(clusterTs, seqId));
   }
 
   /**

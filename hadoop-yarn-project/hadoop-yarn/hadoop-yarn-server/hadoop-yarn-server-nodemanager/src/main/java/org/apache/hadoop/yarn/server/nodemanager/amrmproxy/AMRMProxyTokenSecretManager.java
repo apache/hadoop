@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,9 +27,9 @@ import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -37,6 +38,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -48,8 +52,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class AMRMProxyTokenSecretManager extends
     SecretManager<AMRMTokenIdentifier> {
 
-  private static final Log LOG = LogFactory
-      .getLog(AMRMProxyTokenSecretManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(AMRMProxyTokenSecretManager.class);
 
   private int serialNo = new SecureRandom().nextInt();
   private MasterKeyData nextMasterKey;
@@ -60,17 +64,24 @@ public class AMRMProxyTokenSecretManager extends
   private final Lock writeLock = readWriteLock.writeLock();
 
   private final Timer timer;
-  private final long rollingInterval;
-  private final long activationDelay;
+  private long rollingInterval;
+  private long activationDelay;
+
+  private NMStateStoreService nmStateStore;
 
   private final Set<ApplicationAttemptId> appAttemptSet =
       new HashSet<ApplicationAttemptId>();
 
   /**
    * Create an {@link AMRMProxyTokenSecretManager}.
+   * @param nmStateStoreService NM state store
    */
-  public AMRMProxyTokenSecretManager(Configuration conf) {
+  public AMRMProxyTokenSecretManager(NMStateStoreService nmStateStoreService) {
     this.timer = new Timer();
+    this.nmStateStore = nmStateStoreService;
+  }
+
+  public void init(Configuration conf) {
     this.rollingInterval =
         conf.getLong(
             YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
@@ -94,6 +105,14 @@ public class AMRMProxyTokenSecretManager extends
   public void start() {
     if (this.currentMasterKey == null) {
       this.currentMasterKey = createNewMasterKey();
+      if (this.nmStateStore != null) {
+        try {
+          this.nmStateStore.storeAMRMProxyCurrentMasterKey(
+              this.currentMasterKey.getMasterKey());
+        } catch (IOException e) {
+          LOG.error("Unable to update current master key in state store", e);
+        }
+      }
     }
     this.timer.scheduleAtFixedRate(new MasterKeyRoller(), rollingInterval,
         rollingInterval);
@@ -101,6 +120,11 @@ public class AMRMProxyTokenSecretManager extends
 
   public void stop() {
     this.timer.cancel();
+  }
+
+  @VisibleForTesting
+  public void setNMStateStoreService(NMStateStoreService nmStateStoreService) {
+    this.nmStateStore = nmStateStoreService;
   }
 
   public void applicationMasterFinished(ApplicationAttemptId appAttemptId) {
@@ -122,11 +146,21 @@ public class AMRMProxyTokenSecretManager extends
   }
 
   @Private
-  void rollMasterKey() {
+  @VisibleForTesting
+  public void rollMasterKey() {
     this.writeLock.lock();
     try {
       LOG.info("Rolling master-key for amrm-tokens");
       this.nextMasterKey = createNewMasterKey();
+      if (this.nmStateStore != null) {
+        try {
+          this.nmStateStore
+              .storeAMRMProxyNextMasterKey(this.nextMasterKey.getMasterKey());
+        } catch (IOException e) {
+          LOG.error("Unable to update next master key in state store", e);
+        }
+      }
+
       this.timer.schedule(new NextKeyActivator(), this.activationDelay);
     } finally {
       this.writeLock.unlock();
@@ -140,6 +174,8 @@ public class AMRMProxyTokenSecretManager extends
     }
   }
 
+  @Private
+  @VisibleForTesting
   public void activateNextMasterKey() {
     this.writeLock.lock();
     try {
@@ -147,6 +183,15 @@ public class AMRMProxyTokenSecretManager extends
           + this.nextMasterKey.getMasterKey().getKeyId());
       this.currentMasterKey = this.nextMasterKey;
       this.nextMasterKey = null;
+      if (this.nmStateStore != null) {
+        try {
+          this.nmStateStore.storeAMRMProxyCurrentMasterKey(
+              this.currentMasterKey.getMasterKey());
+          this.nmStateStore.storeAMRMProxyNextMasterKey(null);
+        } catch (IOException e) {
+          LOG.error("Unable to update current master key in state store", e);
+        }
+      }
     } finally {
       this.writeLock.unlock();
     }
@@ -239,6 +284,17 @@ public class AMRMProxyTokenSecretManager extends
 
   @Private
   @VisibleForTesting
+  public MasterKeyData getCurrentMasterKeyData() {
+    this.readLock.lock();
+    try {
+      return this.currentMasterKey;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Private
+  @VisibleForTesting
   public MasterKeyData getNextMasterKeyData() {
     this.readLock.lock();
     try {
@@ -262,4 +318,33 @@ public class AMRMProxyTokenSecretManager extends
       this.readLock.unlock();
     }
   }
+
+  /**
+   * Recover secretManager from state store. Called after serviceInit before
+   * serviceStart.
+   *
+   * @param state the state to recover from
+   */
+  public void recover(RecoveredAMRMProxyState state) {
+    if (state != null) {
+      // recover the current master key
+      MasterKey currentKey = state.getCurrentMasterKey();
+      if (currentKey != null) {
+        this.currentMasterKey = new MasterKeyData(currentKey,
+            createSecretKey(currentKey.getBytes().array()));
+      } else {
+        LOG.warn("No current master key recovered from NM StateStore"
+            + " for AMRMProxyTokenSecretManager");
+      }
+
+      // recover the next master key if not null
+      MasterKey nextKey = state.getNextMasterKey();
+      if (nextKey != null) {
+        this.nextMasterKey = new MasterKeyData(nextKey,
+            createSecretKey(nextKey.getBytes().array()));
+        this.timer.schedule(new NextKeyActivator(), this.activationDelay);
+      }
+    }
+  }
+
 }

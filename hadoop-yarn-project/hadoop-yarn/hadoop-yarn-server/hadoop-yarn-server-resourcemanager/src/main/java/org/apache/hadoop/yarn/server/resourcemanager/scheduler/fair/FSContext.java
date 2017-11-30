@@ -29,7 +29,7 @@ public class FSContext {
   private boolean preemptionEnabled = false;
   private float preemptionUtilizationThreshold;
   private FSStarvedApps starvedApps;
-  private FairScheduler scheduler;
+  private final FairScheduler scheduler;
 
   FSContext(FairScheduler scheduler) {
     this.scheduler = scheduler;

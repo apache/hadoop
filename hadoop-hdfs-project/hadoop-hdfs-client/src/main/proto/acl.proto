@@ -21,7 +21,12 @@ option java_outer_classname = "AclProtos";
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
-import "hdfs.proto";
+/**
+ * File or Directory permision - same spec as posix
+ */
+message FsPermissionProto {
+  required uint32 perm = 1;       // Actually a short - only 16bits used
+}
 
 message AclEntryProto {
   enum AclEntryScopeProto {

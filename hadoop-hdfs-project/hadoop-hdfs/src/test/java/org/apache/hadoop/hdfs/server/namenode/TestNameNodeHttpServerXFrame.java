@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpServer2;
@@ -32,6 +33,7 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URI;
 
 /**
  * A class to test the XFrameoptions of Namenode HTTP Server. We are not reusing
@@ -93,5 +95,25 @@ public class TestNameNodeHttpServerXFrame {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.connect();
     return conn;
+  }
+
+  @Test
+  public void testSecondaryNameNodeXFrame() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
+
+    SecondaryNameNode sn = new SecondaryNameNode(conf);
+    sn.startInfoServer();
+    InetSocketAddress httpAddress = SecondaryNameNode.getHttpAddress(conf);
+
+    URL url = URI.create("http://" + httpAddress.getHostName()
+        + ":" + httpAddress.getPort()).toURL();
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.connect();
+    String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
+    Assert.assertTrue("X-FRAME-OPTIONS is absent in the header",
+        xfoHeader != null);
+    Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption
+        .SAMEORIGIN.toString()));
   }
 }

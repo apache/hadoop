@@ -23,8 +23,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -32,29 +30,23 @@ import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
-import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 
 public class AllocationConfiguration extends ReservationSchedulerConfiguration {
-  private static final Log LOG = LogFactory.getLog(FSQueue.class.getName());
   private static final AccessControlList EVERYBODY_ACL = new AccessControlList("*");
   private static final AccessControlList NOBODY_ACL = new AccessControlList(" ");
-  private static final ResourceCalculator RESOURCE_CALCULATOR =
-      new DefaultResourceCalculator();
   // Minimum resource allocation for each queue
   private final Map<String, Resource> minQueueResources;
   // Maximum amount of resources per queue
   @VisibleForTesting
-  final Map<String, Resource> maxQueueResources;
+  final Map<String, ConfigurableResource> maxQueueResources;
   // Maximum amount of resources for each queue's ad hoc children
-  private final Map<String, Resource> maxChildQueueResources;
+  private final Map<String, ConfigurableResource> maxChildQueueResources;
   // Sharing weights for each queue
-  private final Map<String, ResourceWeights> queueWeights;
+  private final Map<String, Float> queueWeights;
   
   // Max concurrent running applications for each queue and for each user; in addition,
   // for users that have no max specified, we use the userMaxJobsDefault.
@@ -64,7 +56,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   final Map<String, Integer> userMaxApps;
   private final int userMaxAppsDefault;
   private final int queueMaxAppsDefault;
-  private final Resource queueMaxResourcesDefault;
+  private final ConfigurableResource queueMaxResourcesDefault;
 
   // Maximum resource share for each leaf queue that can be used to run AMs
   final Map<String, Float> queueMaxAMShares;
@@ -113,12 +105,14 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private final Set<String> nonPreemptableQueues;
 
   public AllocationConfiguration(Map<String, Resource> minQueueResources,
-      Map<String, Resource> maxQueueResources,
-      Map<String, Resource> maxChildQueueResources,
-      Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
-      Map<String, ResourceWeights> queueWeights,
+      Map<String, ConfigurableResource> maxQueueResources,
+      Map<String, ConfigurableResource> maxChildQueueResources,
+      Map<String, Integer> queueMaxApps,
+      Map<String, Integer> userMaxApps,
+      Map<String, Float> queueWeights,
       Map<String, Float> queueMaxAMShares, int userMaxAppsDefault,
-      int queueMaxAppsDefault, Resource queueMaxResourcesDefault,
+      int queueMaxAppsDefault,
+      ConfigurableResource queueMaxResourcesDefault,
       float queueMaxAMShareDefault,
       Map<String, SchedulingPolicy> schedulingPolicies,
       SchedulingPolicy defaultSchedulingPolicy,
@@ -167,7 +161,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     queueMaxAMShares = new HashMap<>();
     userMaxAppsDefault = Integer.MAX_VALUE;
     queueMaxAppsDefault = Integer.MAX_VALUE;
-    queueMaxResourcesDefault = Resources.unbounded();
+    queueMaxResourcesDefault = new ConfigurableResource(Resources.unbounded());
     queueMaxAMShareDefault = 0.5f;
     queueAcls = new HashMap<>();
     resAcls = new HashMap<>();
@@ -256,9 +250,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     return !nonPreemptableQueues.contains(queueName);
   }
 
-  private ResourceWeights getQueueWeight(String queue) {
-    ResourceWeights weight = queueWeights.get(queue);
-    return (weight == null) ? ResourceWeights.NEUTRAL : weight;
+  private float getQueueWeight(String queue) {
+    Float weight = queueWeights.get(queue);
+    return (weight == null) ? 1.0f : weight;
   }
 
   public int getUserMaxApps(String user) {
@@ -293,26 +287,18 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   /**
    * Get the maximum resource allocation for the given queue. If the max in not
-   * set, return the larger of the min and the default max.
+   * set, return the default max.
    *
    * @param queue the target queue's name
    * @return the max allocation on this queue
    */
   @VisibleForTesting
-  Resource getMaxResources(String queue) {
-    Resource maxQueueResource = maxQueueResources.get(queue);
+  ConfigurableResource getMaxResources(String queue) {
+    ConfigurableResource maxQueueResource = maxQueueResources.get(queue);
     if (maxQueueResource == null) {
-      Resource minQueueResource = minQueueResources.get(queue);
-      if (minQueueResource != null &&
-          Resources.greaterThan(RESOURCE_CALCULATOR, Resources.unbounded(),
-          minQueueResource, queueMaxResourcesDefault)) {
-        return minQueueResource;
-      } else {
-        return queueMaxResourcesDefault;
-      }
-    } else {
-      return maxQueueResource;
+      maxQueueResource = queueMaxResourcesDefault;
     }
+    return maxQueueResource;
   }
   
   /**
@@ -322,7 +308,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    * @return the max allocation on this queue or null if not set
    */
   @VisibleForTesting
-  Resource getMaxChildResources(String queue) {
+  ConfigurableResource getMaxChildResources(String queue) {
     return maxChildQueueResources.get(queue);
   }
 
@@ -420,9 +406,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     queue.setMaxChildQueueResource(getMaxChildResources(name));
 
     // Set queue metrics.
-    queue.getMetrics().setMinShare(getMinResources(name));
-    queue.getMetrics().setMaxShare(getMaxResources(name));
-    queue.getMetrics().setMaxApps(getQueueMaxApps(name));
+    queue.getMetrics().setMinShare(queue.getMinShare());
+    queue.getMetrics().setMaxShare(queue.getMaxShare());
+    queue.getMetrics().setMaxApps(queue.getMaxRunningApps());
     queue.getMetrics().setSchedulingPolicy(getSchedulingPolicy(name).getName());
   }
 }

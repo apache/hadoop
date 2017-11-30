@@ -19,13 +19,23 @@
 package org.apache.hadoop.registry.client.types.yarn;
 
 /**
- * YARN specific attributes in the registry
+ * YARN specific attributes in the registry.
  */
-public class YarnRegistryAttributes {
+public final class YarnRegistryAttributes {
 
   /**
-   * ID. For containers: container ID. For application instances, application ID.
+   * Hidden constructor.
+   */
+  private YarnRegistryAttributes() {
+  }
+
+  /**
+   * ID. For containers: container ID. For application instances,
+   * application ID.
    */
   public static final String YARN_ID = "yarn:id";
   public static final String YARN_PERSISTENCE = "yarn:persistence";
+  public static final String YARN_PATH = "yarn:path";
+  public static final String YARN_HOSTNAME = "yarn:hostname";
+  public static final String YARN_IP = "yarn:ip";
 }

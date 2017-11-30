@@ -22,6 +22,8 @@ import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -37,10 +39,12 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
@@ -55,7 +59,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public class SchedulerUtils {
-  
+
+  private static final Log LOG = LogFactory.getLog(SchedulerUtils.class);
+
   private static final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
@@ -93,6 +99,19 @@ public class SchedulerUtils {
       ContainerId containerId, String diagnostics) {
     return createAbnormalContainerStatus(containerId, 
         ContainerExitStatus.ABORTED, diagnostics);
+  }
+
+
+  /**
+   * Utility to create a {@link ContainerStatus} for killed containers.
+   * @param containerId {@link ContainerId} of the killed container.
+   * @param diagnostics diagnostic message
+   * @return <code>ContainerStatus</code> for a killed container
+   */
+  public static ContainerStatus createKilledContainerStatus(
+      ContainerId containerId, String diagnostics) {
+    return createAbnormalContainerStatus(containerId,
+        ContainerExitStatus.KILLED_BY_RESOURCEMANAGER, diagnostics);
   }
 
   /**
@@ -200,9 +219,14 @@ public class SchedulerUtils {
       String labelExp = resReq.getNodeLabelExpression();
       if (!(RMNodeLabelsManager.NO_LABEL.equals(labelExp)
           || null == labelExp)) {
-        throw new InvalidLabelResourceRequestException(
-            "Invalid resource request, node label not enabled "
-                + "but request contains label expression");
+        String message = "NodeLabel is not enabled in cluster, but resource"
+            + " request contains a label expression.";
+        LOG.warn(message);
+        if (!isRecovery) {
+          throw new InvalidLabelResourceRequestException(
+              "Invalid resource request, node label not enabled "
+                  + "but request contains label expression");
+        }
       }
     }
     if (null == queueInfo) {
@@ -244,6 +268,14 @@ public class SchedulerUtils {
   private static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
+    try {
+      RMServerUtils.convertProfileToResourceCapability(resReq,
+          rmContext.getYarnConfiguration(),
+          rmContext.getResourceProfilesManager());
+    } catch (YarnException ye) {
+      throw new InvalidResourceRequestException(ye);
+    }
+
     if (resReq.getCapability().getMemorySize() < 0 ||
         resReq.getCapability().getMemorySize() > maximumResource.getMemorySize()) {
       throw new InvalidResourceRequestException("Invalid resource request"
@@ -349,25 +381,7 @@ public class SchedulerUtils {
     }
     return null;
   }
-  
-  public static boolean checkResourceRequestMatchingNodePartition(
-      String requestedPartition, String nodePartition,
-      SchedulingMode schedulingMode) {
-    // We will only look at node label = nodeLabelToLookAt according to
-    // schedulingMode and partition of node.
-    String nodePartitionToLookAt = null;
-    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-      nodePartitionToLookAt = nodePartition;
-    } else {
-      nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
-    }
 
-    if (null == requestedPartition) {
-      requestedPartition = RMNodeLabelsManager.NO_LABEL;
-    }
-    return requestedPartition.equals(nodePartitionToLookAt);
-  }
-  
   private static boolean hasPendingResourceRequest(ResourceCalculator rc,
       ResourceUsage usage, String partitionToLookAt, Resource cluster) {
     if (Resources.greaterThan(rc, cluster,

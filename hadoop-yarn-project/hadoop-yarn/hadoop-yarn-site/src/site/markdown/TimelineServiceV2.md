@@ -73,12 +73,8 @@ The following diagram illustrates the design at a high level.
 
 ### <a name="Current_Status"></a>Current Status and Future Plans
 
-YARN Timeline Service v.2 is currently in alpha ("alpha 1"). It is very much work in progress, and
-many things can and will change rapidly. Users must enable Timeline Service v.2 only on a test or
-experimental cluster to test the feature.
-
-Most importantly, **security is not enabled**. Do not set up or use Timeline Service v.2 until
-security is implemented if security is a requirement.
+YARN Timeline Service v.2 is currently in alpha ("alpha 2"). It is a work in progress, and
+many things can and will change rapidly.
 
 A complete end-to-end flow of writes and reads is functional, with Apache HBase as the backend.
 You should be able to start generating data. When enabled, all YARN-generic events are
@@ -95,16 +91,19 @@ resource manager also has its dedicated in-process collector. The reader is curr
 instance. Currently, it is not possible to write to Timeline Service outside the context of a YARN
 application (i.e. no off-cluster client).
 
+Starting from alpha2, Timeline Service v.2 supports simple authorization in terms of a
+configurable whitelist of users and groups who can read timeline data. Cluster admins are
+allowed by default to read timeline data.
+
 When YARN Timeline Service v.2 is disabled, one can expect no functional or performance impact
 on any other existing functionality.
 
 The work to make it truly production-ready continues. Some key items include
 
 * More robust storage fault tolerance
-* Security
 * Support for off-cluster clients
-* More complete and integrated web UI
 * Better support for long-running apps
+* Support for ACLs
 * Offline (time-based periodic) aggregation for flows, users, and queues for reporting and
 analysis
 * Timeline collectors as separate instances from node managers
@@ -127,6 +126,7 @@ New configuration parameters that are introduced with v.2 are marked bold.
 | **`yarn.timeline-service.writer.class`** | The class for the backend storage writer. Defaults to HBase storage writer. |
 | **`yarn.timeline-service.reader.class`** | The class for the backend storage reader. Defaults to HBase storage reader. |
 | **`yarn.system-metrics-publisher.enabled`** | The setting that controls whether yarn system metrics is published on the Timeline service or not by RM And NM. Defaults to `false`. |
+| **`yarn.timeline-service.schema.prefix`** | The schema prefix for hbase tables. Defaults to "prod.". |
 
 #### Advanced configuration
 
@@ -136,11 +136,33 @@ New configuration parameters that are introduced with v.2 are marked bold.
 | `yarn.timeline-service.address` | Address for the Timeline server to start the RPC server. Defaults to `${yarn.timeline-service.hostname}:10200`. |
 | `yarn.timeline-service.webapp.address` | The http address of the Timeline service web application. Defaults to `${yarn.timeline-service.hostname}:8188`. |
 | `yarn.timeline-service.webapp.https.address` | The https address of the Timeline service web application. Defaults to `${yarn.timeline-service.hostname}:8190`. |
+| **`yarn.timeline-service.hbase.configuration.file`** | Optional URL to an hbase-site.xml configuration file to be used to connect to the timeline-service hbase cluster. If empty or not specified, then the HBase configuration will be loaded from the classpath. When specified the values in the specified configuration file will override those from the ones that are present on the classpath. Defaults to `null`. |
 | **`yarn.timeline-service.writer.flush-interval-seconds`** | The setting that controls how often the timeline collector flushes the timeline writer. Defaults to `60`. |
 | **`yarn.timeline-service.app-collector.linger-period.ms`** | Time period till which the application collector will be alive in NM, after the  application master container finishes. Defaults to `1000` (1 second). |
 | **`yarn.timeline-service.timeline-client.number-of-async-entities-to-merge`** | Time line V2 client tries to merge these many number of async entities (if available) and then call the REST ATS V2 API to submit. Defaults to `10`. |
 | **`yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds`** | The setting that controls how long the final value of a metric of a completed app is retained before merging into the flow sum. Defaults to `259200000` (3 days). This should be set in the HBase cluster. |
 | **`yarn.rm.system-metrics-publisher.emit-container-events`** | The setting that controls whether yarn container metrics is published to the timeline server or not by RM. This configuration setting is for ATS V2. Defaults to `false`. |
+
+#### Security Configuration
+
+
+Security can be enabled by setting `yarn.timeline-service.http-authentication.type`
+to `kerberos`, after which the following configuration options are available:
+
+
+| Configuration Property | Description |
+|:---- |:---- |
+| `yarn.timeline-service.http-authentication.type` | Defines authentication used for the timeline server(collector/reader) HTTP endpoint. Supported values are: `simple` / `kerberos` / #AUTHENTICATION_HANDLER_CLASSNAME#. Defaults to `simple`. |
+| `yarn.timeline-service.http-authentication.simple.anonymous.allowed` | Indicates if anonymous requests are allowed by the timeline server when using 'simple' authentication. Defaults to `true`. |
+| `yarn.timeline-service.http-authentication.kerberos.principal` | The Kerberos principal to be used for the Timeline Server(Collector/Reader) HTTP endpoint. |
+| `yarn.timeline-service.http-authentication.kerberos.keytab` | The Kerberos keytab to be used for the Timeline Server(Collector/Reader) HTTP endpoint.. |
+| `yarn.timeline-service.principal` | The Kerberos principal for the timeline reader. NM principal would be used for timeline collector as it runs as an auxiliary service inside NM. |
+| `yarn.timeline-service.keytab` | The Kerberos keytab for the timeline reader. NM keytab would be used for timeline collector as it runs as an auxiliary service inside NM. |
+| `yarn.timeline-service.delegation.key.update-interval` | Defaults to `86400000` (1 day). |
+| `yarn.timeline-service.delegation.token.renew-interval` | Defaults to `86400000` (1 day). |
+| `yarn.timeline-service.delegation.token.max-lifetime` | Defaults to `604800000` (7 days). |
+| `yarn.timeline-service.read.authentication.enabled` | Enables or disables authorization checks for reading timeline service v2 data. Default is `false` which is disabled. |
+| `yarn.timeline-service.read.allowed.users` | Comma separated list of user, followed by space, then comma separated list of groups. It will allow this list of users and groups to read the data and reject everyone else. Default value is set to none. If authorization is enabled, then this configuration is mandatory.  |
 
 #### Enabling CORS support
 To enable cross-origin support (CORS) for the Timeline Service v.2, please set the following configuration parameters:
@@ -156,39 +178,92 @@ For more configurations used for cross-origin support, refer to [HttpAuthenticat
 ### <a name="Enabling_Timeline_Service_v2"></a>Enabling Timeline Service v.2
 
 #### Preparing Apache HBase cluster for storage
+There are a few steps to be done for preparing the storage for Timeline Service v.2:
+
+Step 1) [Set up the HBase cluster](#Set_up_the_HBase_cluster)
+
+Step 2) [Enable the coprocessor](#Enable_the_coprocessor)
+
+Step 3) [Create the schema for Timeline Service v.2](#Create_schema)
+
+Each step is explained in more detail below.
+
+##### <a name="Set_up_the_HBase_cluster"> </a>Step 1) Set up the HBase cluster
 The first part is to set up or pick an Apache HBase cluster to use as the storage cluster. The
-version of Apache HBase that is supported with Timeline Service v.2 is 1.1.x. The 1.0.x versions
-do not work with Timeline Service v.2. The 1.2.x versions have not been tested.
+version of Apache HBase that is supported with Timeline Service v.2 is 1.2.6. The 1.0.x versions
+do not work with Timeline Service v.2. Later versions of HBase have not been tested with
+Timeline Service.
 
-Once you have an Apache HBase cluster ready to use for this purpose, perform the following steps.
+HBase has different deployment modes. Refer to the HBase book for understanding them and pick a
+mode that is suitable for your setup.
+(http://hbase.apache.org/book.html#standalone_dist)
 
-First, add the timeline service jar to the HBase classpath in all HBase machines in the cluster. It
-is needed for the coprocessor as well as the schema creator. For example,
+##### Simple deployment for HBase
+If you are intent on a simple deploy profile for the Apache HBase cluster
+where the data loading is light but the data needs to persist across node
+comings and goings, you could consider the "Standalone HBase over HDFS" deploy mode.
 
-    cp hadoop-yarn-server-timelineservice-hbase-3.0.0-alpha1-SNAPSHOT.jar /usr/hbase/lib/
+This is a useful variation on the standalone HBase setup and has all HBase daemons running inside
+one JVM but rather than persisting to the local filesystem, it persists to an HDFS instance.
+Writing to HDFS where data is replicated ensures that data is persisted across node
+comings and goings. To configure this standalone variant, edit your `hbase-site.xml` setting
+the `hbase.rootdir` to point at a directory in your HDFS instance but then set
+`hbase.cluster.distributed` to false. For example:
 
-Then, enable the coprocessor that handles the aggregation. To enable it, add the following entry in
-region servers' `hbase-site.xml` file (generally located in the `conf` directory) as follows:
+```
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://namenode.example.org:8020/hbase</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>false</value>
+  </property>
+</configuration>
+```
+
+For more details on this mode, refer to
+http://hbase.apache.org/book.html#standalone.over.hdfs .
+
+Once you have an Apache HBase cluster ready to use, perform the following steps.
+
+##### <a name="Enable_the_coprocessor"> </a>Step 2) Enable the coprocessor
+In this version, the coprocessor is loaded dynamically (table coprocessor for the `flowrun` table).
+
+Copy the timeline service jar to HDFS from where HBase can load it. It
+is needed for the `flowrun` table creation in the schema creator. The default HDFS location is `/hbase/coprocessor`.
+For example,
+
+    hadoop fs -mkdir /hbase/coprocessor
+    hadoop fs -put hadoop-yarn-server-timelineservice-hbase-3.0.0-alpha1-SNAPSHOT.jar
+           /hbase/coprocessor/hadoop-yarn-server-timelineservice.jar
+
+
+If you want to place the jar at a different location on hdfs, there also exists a yarn
+configuration setting called `yarn.timeline-service.hbase.coprocessor.jar.hdfs.location`.
+For example,
 
 ```
 <property>
-  <name>hbase.coprocessor.region.classes</name>
-  <value>org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunCoprocessor</value>
+  <name>yarn.timeline-service.hbase.coprocessor.jar.hdfs.location</name>
+  <value>/custom/hdfs/path/jarName</value>
 </property>
 ```
 
-Restart the region servers and the master to pick up the timeline service jar as well as the config
-change. In this version, the coprocessor is loaded statically (i.e. system coprocessor) as opposed
-to a dynamically (table coprocessor).
-
+##### <a name="Create_schema"> </a>Step 3) Create the timeline service schema
 Finally, run the schema creator tool to create the necessary tables:
 
     bin/hadoop org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator -create
 
 The `TimelineSchemaCreator` tool supports a few options that may come handy especially when you
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
+and continue to create other tables rather than failing the schema creation. By default, the tables
+will have a schema prefix of "prod.". When no option or '-help' ('-h' for short) is provided, the
+command usage is printed.
 and continue to create other tables rather than failing the schema creation. When no option or '-help'
-('-h' for short) is provided, the command usage is printed.
+('-h' for short) is provided, the command usage is printed. By default, the tables
+will have a schema prefix of "prod."
 
 #### Enabling Timeline Service v.2
 Following are the basic configurations to start Timeline service v.2:
@@ -241,7 +316,22 @@ are using multiple clusters to store data in the same Apache HBase storage:
 ```
 
 Also, add the `hbase-site.xml` configuration file to the client Hadoop cluster configuration so
-that it can write data to the Apache HBase cluster you are using.
+that it can write data to the Apache HBase cluster you are using, or set
+`yarn.timeline-service.hbase.configuration.file` to the file URL pointing to
+`hbase-site.xml` for the same. For example:
+
+```
+<property>
+  <description> Optional URL to an hbase-site.xml configuration file to be
+  used to connect to the timeline-service hbase cluster. If empty or not
+  specified, then the HBase configuration will be loaded from the classpath.
+  When specified the values in the specified configuration file will override
+  those from the ones that are present on the classpath.
+  </description>
+  <name>yarn.timeline-service.hbase.configuration.file</name>
+  <value>file:/etc/hbase/hbase-ats-dc1/hbase-site.xml</value>
+</property>
+```
 
 #### Running Timeline Service v.2
 Restart the resource manager as well as the node managers to pick up the new configuration. The
@@ -262,6 +352,15 @@ To write MapReduce framework data to Timeline Service v.2, enable the following 
   <value>true</value>
 </property>
 ```
+
+### Upgrade from alpha1 to alpha2
+If you are currently running Timeline Service v2 alpha1 version, we recommend the following:
+
+- Clear existing data in tables (truncate tables) since the row key for AppToFlow has changed.
+
+- The coprocessor is now a dynamically loaded table level coprocessor in alpha2. We
+recommend dropping the table, replacing the coprocessor jar on hdfs with the alpha2 one,
+restarting the Region servers and recreating the `flowrun` table.
 
 ### <a name="Publishing_of_application_specific_data"></a> Publishing application specific data
 
@@ -316,13 +415,13 @@ Service v.2. Note that currently you need to be on the cluster to be able to wri
 Service. For example, an application master or code in the container can write to the Timeline
 Service, while an off-cluster MapReduce job submitter cannot.
 
-After creating the timeline v2 client, user also needs to set the timeline collector address for the application. If `AMRMClient` is used then by registering the timeline client by calling `AMRMClient#registerTimelineV2Client` is sufficient.
+After creating the timeline v2 client, user also needs to set the timeline collector info which contains the collector address and collector token(only in secure mode) for the application. If `AMRMClient` is used then by registering the timeline client by calling `AMRMClient#registerTimelineV2Client` is sufficient.
 
     amRMClient.registerTimelineV2Client(timelineClient);
 
 Else address needs to be retrieved from the AM allocate response and need to be set in timeline client explicitly.
 
-    timelineClient.setTimelineServiceAddress(response.getCollectorAddr());
+    timelineClient.setTimelineCollectorInfo(response.getCollectorInfo());
 
 You can create and publish your own entities, events, and metrics as with previous versions.
 
@@ -447,6 +546,8 @@ predicates, an empty list will be returned.
   "daterange=20150711-20150714" returns flows active between these 2 dates.<br/>
   "daterange=20150711-" returns flows active on and after 20150711.<br/>
   "daterange=-20150711" returns flows active on and before 20150711.<br/>
+1. `fromid` -  If specified, retrieve the next set of flows from the given fromid. The set of entities retrieved is inclusive of specified fromid.
+   fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
 #### Example JSON Response:
 
@@ -492,6 +593,7 @@ predicates, an empty list will be returned.
         "info": {
           "SYSTEM_INFO_CLUSTER": "test-cluster",
           "UID": "test-cluster!sjlee!ds-date",
+          "FROM_ID": "test-cluster!1460419200000!sjlee!ds-date",
           "SYSTEM_INFO_FLOW_NAME": "ds-date",
           "SYSTEM_INFO_DATE": 1460419200000,
           "SYSTEM_INFO_USER": "sjlee"
@@ -543,6 +645,8 @@ predicates, an empty list will be returned.
 1. `fields` - Specifies which fields to retrieve. For querying flow runs, only `ALL` or `METRICS` are valid fields.
   Other fields will lead to HTTP 400 (Bad Request) response. If not specified, in response, id, type, createdtime and info fields
   will be returned.
+1. `fromid` -  If specified, retrieve the next set of flow run entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
+   fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
 #### Example JSON Response:
 
@@ -555,6 +659,7 @@ predicates, an empty list will be returned.
         "createdtime": 1460420587974,
         "info": {
           "UID": "test-cluster!sjlee!ds-date!1460420587974",
+          "FROM_ID": "test-cluster!sjlee!ds-date!1460420587974",
           "SYSTEM_INFO_FLOW_RUN_ID": 1460420587974,
           "SYSTEM_INFO_FLOW_NAME": "ds-date",
           "SYSTEM_INFO_FLOW_RUN_END_TIME": 1460420595198,
@@ -571,6 +676,7 @@ predicates, an empty list will be returned.
         "createdtime": 1460420305659,
         "info": {
           "UID": "test-cluster!sjlee!ds-date!1460420305659",
+          "FROM_ID": "test-cluster!sjlee!ds-date!1460420305659",
           "SYSTEM_INFO_FLOW_RUN_ID": 1460420305659,
           "SYSTEM_INFO_FLOW_NAME": "ds-date",
           "SYSTEM_INFO_FLOW_RUN_END_TIME": 1460420311966,
@@ -642,6 +748,7 @@ while querying individual flow runs.
       "isrelatedto": {},
       "info": {
         "UID":"yarn-cluster!varun!QuasiMonteCarlo!1465246348599",
+        "FROM_ID":"yarn-cluster!varun!QuasiMonteCarlo!1465246348599",
         "SYSTEM_INFO_FLOW_RUN_END_TIME":1465246378051,
         "SYSTEM_INFO_FLOW_NAME":"QuasiMonteCarlo",
         "SYSTEM_INFO_USER":"varun",
@@ -746,6 +853,10 @@ none of the apps match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
+1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `fromid` -  If specified, retrieve the next set of application entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
+   fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
 #### Example JSON Response:
 
@@ -760,6 +871,7 @@ none of the apps match the predicates, an empty list will be returned.
         "configs": { },
         "info": {
           "UID": "yarn-cluster!application_1465246237936_0001"
+          "FROM_ID": "yarn-cluster!varun!QuasiMonteCarlo!1465246348599!application_1465246237936_0001",
         },
         "relatesto": { }
       },
@@ -773,6 +885,7 @@ none of the apps match the predicates, an empty list will be returned.
         "configs": { },
         "info": {
           "UID": "yarn-cluster!application_1464983628730_0005"
+          "FROM_ID": "yarn-cluster!varun!QuasiMonteCarlo!1465246348599!application_1464983628730_0005",
         },
         "relatesto": { }
       }
@@ -873,6 +986,10 @@ match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
+1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `fromid` -  If specified, retrieve the next set of application entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
+   fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
 #### Example JSON Response:
 
@@ -885,6 +1002,7 @@ match the predicates, an empty list will be returned.
         "createdtime": 1460419580171,
         "info": {
           "UID": "test-cluster!sjlee!ds-date!1460419580171!application_1460419579913_0002"
+          "FROM_ID": "test-cluster!sjlee!ds-date!1460419580171!application_1460419579913_0002",
         },
         "configs": {},
         "isrelatedto": {},
@@ -949,6 +1067,8 @@ and app id.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
+1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
 
 #### Example JSON Response:
 
@@ -973,7 +1093,7 @@ and app id.
 1. If flow context information cannot be retrieved or application for the given app id cannot be found, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
-### <a name="REST_API_LIST_ENTITIES"></a>Query generic entities
+### <a name="REST_API_LIST_ENTITIES_WITH_IN_SCOPE_OF_APPLICATION"></a>Query generic entities with in the scope of Application
 
 With this API, you can query generic entities identified by cluster ID, application ID and
 per-framework entity type. If the REST endpoint without the cluster name is used, the cluster
@@ -1073,6 +1193,10 @@ If none of the entities match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
+1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `fromid` -  If specified, retrieve the next set of generic entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
+   fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
 #### Example JSON Response:
 
@@ -1087,6 +1211,7 @@ If none of the entities match the predicates, an empty list will be returned.
         "configs": { },
         "info": {
           "UID": "yarn-cluster!application_1465246237936_0001!YARN_APPLICATION_ATTEMPT!appattempt_1465246237936_0001_000001"
+          "FROM_ID": "yarn-cluster!sjlee!ds-date!1460419580171!application_1465246237936_0001!YARN_APPLICATION_ATTEMPT!0!appattempt_1465246237936_0001_000001"
         },
         "relatesto": { }
       },
@@ -1100,6 +1225,7 @@ If none of the entities match the predicates, an empty list will be returned.
         "configs": { },
         "info": {
           "UID": "yarn-cluster!application_1465246237936_0001!YARN_APPLICATION_ATTEMPT!appattempt_1465246237936_0001_000002"
+          "FROM_ID": "yarn-cluster!sjlee!ds-date!1460419580171!application_1465246237936_0001!YARN_APPLICATION_ATTEMPT!0!appattempt_1465246237936_0001_000002"
         },
         "relatesto": { }
       }
@@ -1112,7 +1238,142 @@ If none of the entities match the predicates, an empty list will be returned.
 1. If flow context information cannot be retrieved, HTTP 404 (Not Found) is returned.
 1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
 
-### <a name="REST_API_LIST_ENTITY"></a>Query generic entity
+### <a name="REST_API_LIST_ENTITIES"></a>Query generic entities.
+
+With this API, you can query generic entities per user identified by cluster ID, doAsUser and
+entity type. If the REST endpoint without the cluster name is used, the cluster
+specified by the configuration `yarn.resourcemanager.cluster-id` in `yarn-site.xml` is taken.
+If number of matching entities are more than the limit, the most recent
+entities up to the limit will be returned. This endpoint can be used to query generic entity which
+clients put into the backend. For instance, we can query user entities by specifying entity type as `TEZ_DAG_ID`.
+If none of the entities match the predicates, an empty list will be returned.
+**Note** : As of today, we can query only those entities which are published with doAsUser which is different from application owner.
+
+#### HTTP request:
+
+    GET /ws/v2/timeline/clusters/{cluster name}/users/{userid}/entities/{entitytype}
+
+    or
+
+    GET /ws/v2/timeline/users/{userid}/entities/{entitytype}
+
+#### Query Parameters Supported:
+
+1. `limit` - If specified, defines the number of entities to return. The maximum possible value for limit is maximum value of Long. If it is not specified
+  or has a value less than 0, then limit will be considered as 100.
+1. `createdtimestart` - If specified, then only entities created after this timestamp are returned.
+1. `createdtimeend` -  If specified, then only entities created before this timestamp are returned.
+1. `relatesto` - If specified, matched entities must relate to or not relate to given entities associated with a entity type.
+  relatesto is represented as an expression of the form :<br/>
+  "(&lt;entitytype&gt;:&lt;entityid&gt;:&lt;entityid&gt;...,&lt;entitytype&gt;:&lt;entityid&gt;:&lt;entityid&gt;...) &lt;op&gt; !(&lt;entitytype&gt;:&lt;entityid&gt;:&lt;entityid&gt;...,&lt;entitytype&gt;:&lt;entityid&gt;:&lt;entityid&gt;...)".<br/>
+  If relatesto expression has entity type - entity id(s) relations specified within enclosing brackets proceeding "!", this means entities with
+  these relations in its relatesto field, will not be returned. For expressions or subexpressions without "!", all entities which have the specified
+  relations in its relatesto field, will be returned. "op" is a logical operator and can be either AND or OR. entity type can be followed by any number
+  of entity id(s). And we can combine any number of ANDs' and ORs' to create complex expressions. Brackets can be used to club expressions together.<br/>
+  _For example_ : relatesto can be "(((type1:id1:id2:id3,type3:id9) AND !(type2:id7:id8)) OR (type1:id4))".<br/>
+  Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `isrelatedto` - If specified, matched entities must be related to or not related to given entities associated with a entity type. isrelatedto is
+  represented in the same form as relatesto.
+1. `infofilters` - If specified, matched entities must have exact matches to the given info key and must be either equal or not equal to
+  given value. The info key is a string but value can be any object. infofilters are represented as an expression of the form :<br/>
+  "(&lt;key&gt; &lt;compareop&gt; &lt;value&gt;) &lt;op&gt; (&lt;key&gt; &lt;compareop&gt; &lt;value&gt;)".<br/>
+  Here op can be either of AND or OR. And compareop can be either of "eq", "ne" or "ene".<br/>
+  "eq" means equals, "ne" means not equals and existence of key is not required for a match and "ene" means not equals but existence of key is
+  required. We can combine any number of ANDs' and ORs' to create complex expressions.  Brackets can be used to club expressions together.<br/>
+  _For example_ : infofilters can be "(((infokey1 eq value1) AND (infokey2 ne value1)) OR (infokey1 ene value3))".<br/>
+  Note : If value is an object then value can be given in the form of JSON format without any space.<br/>
+  _For example_ : infofilters can be (infokey1 eq {"&lt;key&gt;":"&lt;value&gt;","&lt;key&gt;":"&lt;value&gt;"...}).<br/>
+  Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `conffilters` - If specified, matched entities must have exact matches to the given config name and must be either equal or not equal
+  to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
+1. `metricfilters` - If specified, matched entities must have exact matches to the given metric and satisfy the specified relation with the
+  metric value. Metric id must be a string and and metric value must be an integral value.  metricfilters are represented as an expression of the form :<br/>
+  "(&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;) &lt;op&gt; (&lt;metricid&gt; &lt;compareop&gt; &lt;metricvalue&gt;)"<br/>
+  Here op can be either of AND or OR. And compareop can be either of "eq", "ne", "ene", "gt", "ge", "lt" and "le".<br/>
+  "eq" means equals, "ne" means not equals and existence of metric is not required for a match, "ene" means not equals but existence of metric is
+  required, "gt" means greater than, "ge" means greater than or equals, "lt" means less than and "le" means less than or equals. We can combine
+  any number of ANDs' and ORs' to create complex expressions.  Brackets can be used to club expressions together.<br/>
+  _For example_ : metricfilters can be "(((metric1 eq 50) AND (metric2 gt 40)) OR (metric1 lt 20))".<br/>
+  This in essence is an expression equivalent to "(metric1 == 50 AND metric2 &gt; 40) OR (metric1 &lt; 20)"<br/>
+  Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `eventfilters` - If specified, matched entities must contain or not contain the given events depending on the expression. eventfilters is
+  represented as an expression of the form :<br/>
+  "(&lt;eventid&gt;,&lt;eventid&gt;) &lt;op&gt; !(&lt;eventid&gt;,&lt;eventid&gt;,&lt;eventid&gt;)".<br/>
+  Here, "!" means none of the comma-separated list of events within the enclosed brackets proceeding "!" must exist for a match to occur.
+  If "!" is not specified, the specified events within the enclosed brackets must exist. op is a logical operator and can be either AND or OR.
+  We can combine any number of ANDs' and ORs' to create complex expressions. Brackets can be used to club expressions together.<br/>
+  _For example_ : eventfilters can be "(((event1,event2) AND !(event4)) OR (event3,event7,event5))".<br/>
+  Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `metricstoretrieve` - If specified, defines which metrics to retrieve or which ones not to retrieve and send back in response.
+  metricstoretrieve can be an expression of the form :<br/>
+  (&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;...)<br/>
+  This specifies a comma separated list of metric id prefixes. Only metrics matching any of the prefixes will be retrieved. Brackets are optional for
+  the simple expression. Alternatively, expressions can be of the form:<br/>
+  !(&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;...)<br/>
+  This specifies a comma separated list of metric id prefixes. Only metrics not matching any of the prefixes will be retrieved.<br/>
+  If metricstoretrieve is specified, metrics will be retrieved irrespective of whether `METRICS` is specified in fields query param
+  or not. Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `confstoretrieve` - If specified, defines which configs to retrieve or which ones not to retrieve and send back in response.
+  confstoretrieve can be an expression of the form :<br/>
+  (&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;...)<br/>
+  This specifies a comma separated list of config name prefixes. Only configs matching any of the prefixes will be retrieved. Brackets are optional for
+  the simple expression. Alternatively, expressions can be of the form:<br/>
+  !(&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;...)<br/>
+  This specifies a comma separated list of config name prefixes. Only configs not matching any of the prefixes will be retrieved.<br/>
+  If confstoretrieve is specified, configs will be retrieved irrespective of whether `CONFIGS` is specified in fields query param
+  or not. Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `fields` - Specifies which fields to retrieve. Possible values for fields can be `EVENTS`, `INFO`, `CONFIGS`, `METRICS`, `RELATES_TO`,
+ `IS_RELATED_TO` and `ALL`. All fields will be retrieved if `ALL` is specified. Multiple fields can be specified as a comma-separated list.
+  If fields is not specified, in response, entity id, entity type, createdtime and UID in info field will be returned.
+1. `metricslimit` - If specified, defines the number of metrics to return. Considered only if fields contains METRICS/ALL
+  or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
+  Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
+  considered as 1 i.e. latest single value of metric(s) will be returned.
+1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `fromid` -  If specified, retrieve the next set of generic entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
+   fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
+
+#### Example JSON Response:
+
+    [
+      {
+        "metrics": [ ],
+        "events": [ ],
+        "type": "TEZ_DAG_ID",
+        "id": "dag_1465246237936_0001_000001",
+        "createdtime": 1465246358873,
+        "isrelatedto": { },
+        "configs": { },
+        "info": {
+          "UID": "yarn-cluster!sjlee!TEZ_DAG_ID!0!dag_1465246237936_0001_000001"
+          "FROM_ID": "sjlee!yarn-cluster!TEZ_DAG_ID!0!dag_1465246237936_0001_000001"
+        },
+        "relatesto": { }
+      },
+      {
+        "metrics": [ ],
+        "events": [ ],
+        "type": "TEZ_DAG_ID",
+        "id": "dag_1465246237936_0001_000002",
+        "createdtime": 1465246359045,
+        "isrelatedto": { },
+        "configs": { },
+        "info": {
+          "UID": "yarn-cluster!sjlee!TEZ_DAG_ID!0!dag_1465246237936_0001_000002!userX"
+          "FROM_ID": "sjlee!yarn-cluster!TEZ_DAG_ID!0!dag_1465246237936_0001_000002!userX"
+        },
+        "relatesto": { }
+      }
+    ]
+
+#### Response Codes
+
+1. If successful, a HTTP 200(OK) response is returned.
+1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
+1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
+
+### <a name="REST_API_LIST_ENTITY"></a>Query generic entity with in the scope of Application
 
 With this API, you can query a specific generic entity identified by cluster ID, application ID,
 per-framework entity type and entity ID. If the REST endpoint without the cluster name is used, the
@@ -1166,6 +1427,9 @@ container ID. Similarly, application attempt can be queried by specifying entity
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
+1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `entityidprefix` Defines the id prefix for the entity to be fetched. If specified, then entity retrieval will be faster.
 
 #### Example JSON Response:
 
@@ -1178,9 +1442,124 @@ container ID. Similarly, application attempt can be queried by specifying entity
       "isrelatedto": { },
       "configs": { },
       "info": {
-        "UID": "yarn-cluster!application_1465246237936_0001!YARN_APPLICATION_ATTEMPT!appattempt_1465246237936_0001_000001"
+        "UID": "yarn-cluster!application_1465246237936_0001!YARN_APPLICATION_ATTEMPT!0!appattempt_1465246237936_0001_000001"
+        "FROM_ID": "yarn-cluster!sjlee!ds-date!1460419580171!application_1465246237936_0001!YARN_APPLICATION_ATTEMPT!0!appattempt_1465246237936_0001_000001"
       },
       "relatesto": { }
+    }
+
+#### Response Codes
+
+1. If successful, a HTTP 200 (OK) response is returned.
+1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
+1. If flow context information cannot be retrieved or entity for the given entity id cannot be found, HTTP 404 (Not Found) is returned.
+1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
+
+### <a name="REST_API_LIST_ENTITIES"></a>Query generic entity.
+
+With this API, you can query generic entity per user identified by cluster ID, doAsUser and
+entity type and entity ID. If the REST endpoint without the cluster name is used, the cluster
+specified by the configuration `yarn.resourcemanager.cluster-id` in `yarn-site.xml` is taken.
+If number of matching entities are more than the limit, the most recent
+entities up to the limit will be returned. This endpoint can be used to query generic entity which
+clients put into the backend. For instance, we can query user entities by specifying entity type as `TEZ_DAG_ID`.
+If none of the entities match the predicates, an empty list will be returned.
+**Note** : As of today, we can query only those entities which are published with doAsUser which is different from application owner.
+
+#### HTTP request:
+
+    GET /ws/v2/timeline/clusters/{cluster name}/users/{userid}/entities/{entitytype}/{entityid}
+
+    or
+
+    GET /ws/v2/timeline/users/{userid}/entities/{entitytype}/{entityid}
+
+#### Query Parameters Supported:
+
+1. `metricstoretrieve` - If specified, defines which metrics to retrieve or which ones not to retrieve and send back in response.
+  metricstoretrieve can be an expression of the form :<br/>
+  (&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;...)<br/>
+  This specifies a comma separated list of metric id prefixes. Only metrics matching any of the prefixes will be retrieved. Brackets are optional for
+  the simple expression. Alternatively, expressions can be of the form:<br/>
+  !(&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;,&lt;metricprefix&gt;...)<br/>
+  This specifies a comma separated list of metric id prefixes. Only metrics not matching any of the prefixes will be retrieved.<br/>
+  If metricstoretrieve is specified, metrics will be retrieved irrespective of whether `METRICS` is specified in fields query param
+  or not. Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `confstoretrieve` - If specified, defines which configs to retrieve or which ones not to retrieve and send back in response.
+  confstoretrieve can be an expression of the form :<br/>
+  (&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;...)<br/>
+  This specifies a comma separated list of config name prefixes. Only configs matching any of the prefixes will be retrieved. Brackets are optional for
+  the simple expression. Alternatively, expressions can be of the form:<br/>
+  !(&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;,&lt;config\_name\_prefix&gt;...)<br/>
+  This specifies a comma separated list of config name prefixes. Only configs not matching any of the prefixes will be retrieved.<br/>
+  If confstoretrieve is specified, configs will be retrieved irrespective of whether `CONFIGS` is specified in fields query param
+  or not. Please note that URL unsafe characters such as spaces will have to be suitably encoded.
+1. `fields` - Specifies which fields to retrieve. Possible values for fields can be `EVENTS`, `INFO`, `CONFIGS`, `METRICS`, `RELATES_TO`,
+ `IS_RELATED_TO` and `ALL`. All fields will be retrieved if `ALL` is specified. Multiple fields can be specified as a comma-separated list.
+  If fields is not specified, in response, entity id, entity type, createdtime and UID in info field will be returned.
+1. `metricslimit` - If specified, defines the number of metrics to return. Considered only if fields contains METRICS/ALL
+  or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
+  Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
+  considered as 1 i.e. latest single value of metric(s) will be returned.
+1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `fromid` -  If specified, retrieve the next set of generic entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
+   fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
+
+#### Example JSON Response:
+
+    [
+      {
+        "metrics": [ ],
+        "events": [ ],
+        "type": "TEZ_DAG_ID",
+        "id": "dag_1465246237936_0001_000001",
+        "createdtime": 1465246358873,
+        "isrelatedto": { },
+        "configs": { },
+        "info": {
+          "UID": "yarn-cluster!sjlee!TEZ_DAG_ID!0!dag_1465246237936_0001_000001!userX"
+          "FROM_ID": "sjlee!yarn-cluster!TEZ_DAG_ID!0!dag_1465246237936_0001_000001!userX"
+        },
+        "relatesto": { }
+      }
+    ]
+
+#### Response Codes
+
+1. If successful, a HTTP 200(OK) response is returned.
+1. If any problem occurs in parsing request, HTTP 400 (Bad Request) is returned.
+1. For non-recoverable errors while retrieving data, HTTP 500 (Internal Server Error) is returned.
+
+### <a name="REST_API_LIST_ENTITY_TYPES"></a>Query generic entity types
+
+With this API, you can query set of available entity types for a given app id. If the REST endpoint without the cluster name is used, the cluster specified by the configuration yarn.resourcemanager.cluster-id in yarn-site.xml is taken.  If userid, flow name and flow run id which are optional query parameters are not specified, they will be queried based on app id and cluster id from the flow context information stored in underlying storage implementation.
+
+#### HTTP request:
+
+    GET /ws/v2/timeline/apps/{appid}/entity-types
+
+    or
+
+    GET /ws/v2/timeline/clusters/{clusterid}/apps/{appid}/entity-types
+
+#### Query Parameters Supported:
+
+1. `userid` -  If specified, entity must belong to this user. This query param must be specified along with flowname and flowrunid query params, otherwise it will be ignored.
+  If userid, flowname and flowrunid are not specified then timeline reader will fetch flow context information based on cluster and appid while executing the query.
+1. `flowname` - If specified, entity must belong to this flow name. This query param must be specified along with userid and flowrunid query params, otherwise it will be ignored.
+  If userid, flowname and flowrunid are not specified, we would have to fetch flow context information based on cluster and appid while executing the query.
+1. `flowrunid` - If specified, entity must belong to this flow run id. This query param must be specified along with userid and flowname query params, otherwise it will be ignored.
+  If userid, flowname and flowrunid are not specified, we would have to fetch flow context information based on cluster and appid while executing the query.
+
+#### Example JSON Response:
+
+    {
+      YARN_APPLICATION_ATTEMPT,
+      YARN_CONTAINER,
+      MAPREDUCE_JOB,
+      MAPREDUCE_TASK,
+      MAPREDUCE_TASK_ATTEMPT
     }
 
 #### Response Codes

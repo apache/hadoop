@@ -19,17 +19,18 @@
 package org.apache.hadoop.conf;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import org.apache.commons.logging.*;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Utility base class for implementing the Reconfigurable interface.
@@ -41,8 +42,8 @@ import java.util.Map;
 public abstract class ReconfigurableBase 
   extends Configured implements Reconfigurable {
   
-  private static final Log LOG =
-    LogFactory.getLog(ReconfigurableBase.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReconfigurableBase.class);
   // Use for testing purpose.
   private ReconfigurationUtil reconfigurationUtil = new ReconfigurationUtil();
 
@@ -147,7 +148,7 @@ public abstract class ReconfigurableBase
         } catch (ReconfigurationException e) {
           errorMessage = e.getCause().getMessage();
         }
-        results.put(change, Optional.fromNullable(errorMessage));
+        results.put(change, Optional.ofNullable(errorMessage));
       }
 
       synchronized (parent.reconfigLock) {

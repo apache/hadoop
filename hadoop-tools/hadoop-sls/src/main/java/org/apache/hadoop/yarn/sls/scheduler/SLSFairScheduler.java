@@ -306,25 +306,6 @@ public class SLSFairScheduler extends FairScheduler
         queueName);
   }
 
-  private void initQueueMetrics(FSQueue queue) {
-    if (queue instanceof FSLeafQueue) {
-      schedulerMetrics.initQueueMetric(queue.getQueueName());
-      return;
-    }
-
-    for (FSQueue child : queue.getChildQueues()) {
-      initQueueMetrics(child);
-    }
-  }
-
-  @Override
-  public void serviceInit(Configuration conf) throws Exception {
-    super.serviceInit(conf);
-    if (metricsON) {
-      initQueueMetrics(getQueueManager().getRootQueue());
-    }
-  }
-
   @Override
   public void serviceStop() throws Exception {
     try {

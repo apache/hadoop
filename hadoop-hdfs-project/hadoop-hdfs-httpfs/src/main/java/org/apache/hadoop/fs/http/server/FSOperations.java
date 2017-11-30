@@ -73,15 +73,17 @@ public class FSOperations {
 
   /**
    * @param fileStatuses list of FileStatus objects
+   * @param isFile is the fileStatuses from a file path
    * @return JSON map suitable for wire transport
    */
   @SuppressWarnings({"unchecked"})
-  private static Map<String, Object> toJson(FileStatus[] fileStatuses) {
+  private static Map<String, Object> toJson(FileStatus[] fileStatuses,
+      boolean isFile) {
     Map<String, Object> json = new LinkedHashMap<>();
     Map<String, Object> inner = new LinkedHashMap<>();
     JSONArray statuses = new JSONArray();
     for (FileStatus f : fileStatuses) {
-      statuses.add(toJsonInner(f, false));
+      statuses.add(toJsonInner(f, isFile));
     }
     inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
     json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
@@ -127,13 +129,14 @@ public class FSOperations {
    * These two classes are slightly different, due to the impedance
    * mismatches between the WebHDFS and FileSystem APIs.
    * @param entries
+   * @param isFile is the entries from a file path
    * @return json
    */
   private static Map<String, Object> toJson(FileSystem.DirectoryEntries
-      entries) {
+      entries, boolean isFile) {
     Map<String, Object> json = new LinkedHashMap<>();
     Map<String, Object> inner = new LinkedHashMap<>();
-    Map<String, Object> fileStatuses = toJson(entries.getEntries());
+    Map<String, Object> fileStatuses = toJson(entries.getEntries(), isFile);
     inner.put(HttpFSFileSystem.PARTIAL_LISTING_JSON, fileStatuses);
     inner.put(HttpFSFileSystem.REMAINING_ENTRIES_JSON, entries.hasMore() ? 1
         : 0);
@@ -664,7 +667,7 @@ public class FSOperations {
     /**
      * Creates a list-status executor.
      *
-     * @param path the directory to retrieve the status of its contents.
+     * @param path the directory/file to retrieve the status of its contents.
      * @param filter glob filter to use.
      *
      * @throws IOException thrown if the filter expression is incorrect.
@@ -688,7 +691,7 @@ public class FSOperations {
     @Override
     public Map execute(FileSystem fs) throws IOException {
       FileStatus[] fileStatuses = fs.listStatus(path, filter);
-      return toJson(fileStatuses);
+      return toJson(fileStatuses, fs.getFileStatus(path).isFile());
     }
 
     @Override
@@ -733,7 +736,7 @@ public class FSOperations {
       WrappedFileSystem wrappedFS = new WrappedFileSystem(fs);
       FileSystem.DirectoryEntries entries =
           wrappedFS.listStatusBatch(path, token);
-      return toJson(entries);
+      return toJson(entries, wrappedFS.getFileStatus(path).isFile());
     }
   }
 
@@ -1449,6 +1452,110 @@ public class FSOperations {
     @Override
     public Void execute(FileSystem fs) throws IOException {
       fs.unsetStoragePolicy(path);
+      return null;
+    }
+  }
+
+  /**
+   *  Executor that performs a createSnapshot FileSystemAccess operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSCreateSnapshot implements
+      FileSystemAccess.FileSystemExecutor<String> {
+
+    private Path path;
+    private String snapshotName;
+
+    /**
+     * Creates a createSnapshot executor.
+     * @param path directory path to be snapshotted.
+     * @param snapshotName the snapshot name.
+     */
+    public FSCreateSnapshot(String path, String snapshotName) {
+      this.path = new Path(path);
+      this.snapshotName = snapshotName;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return <code>Path</code> the complete path for newly created snapshot
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      Path snapshotPath = fs.createSnapshot(path, snapshotName);
+      JSONObject json = toJSON(HttpFSFileSystem.HOME_DIR_JSON,
+          snapshotPath.toString());
+      return json.toJSONString().replaceAll("\\\\", "");
+    }
+  }
+
+  /**
+   *  Executor that performs a deleteSnapshot FileSystemAccess operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSDeleteSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+
+    private Path path;
+    private String snapshotName;
+
+    /**
+     * Creates a deleteSnapshot executor.
+     * @param path path for the snapshot to be deleted.
+     * @param snapshotName snapshot name.
+     */
+    public FSDeleteSnapshot(String path, String snapshotName) {
+      this.path = new Path(path);
+      this.snapshotName = snapshotName;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return void
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.deleteSnapshot(path, snapshotName);
+      return null;
+    }
+  }
+
+  /**
+   *  Executor that performs a renameSnapshot FileSystemAccess operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSRenameSnapshot implements
+      FileSystemAccess.FileSystemExecutor<Void> {
+    private Path path;
+    private String oldSnapshotName;
+    private String snapshotName;
+
+    /**
+     * Creates a renameSnapshot executor.
+     * @param path directory path of the snapshot to be renamed.
+     * @param oldSnapshotName current snapshot name.
+     * @param snapshotName new snapshot name to be set.
+     */
+    public FSRenameSnapshot(String path, String oldSnapshotName,
+                            String snapshotName) {
+      this.path = new Path(path);
+      this.oldSnapshotName = oldSnapshotName;
+      this.snapshotName = snapshotName;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return void
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.renameSnapshot(path, oldSnapshotName, snapshotName);
       return null;
     }
   }

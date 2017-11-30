@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.security;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -42,8 +42,8 @@ import java.util.List;
  */
 public class AuthenticationWithProxyUserFilter extends AuthenticationFilter {
 
-  public static final Log LOG =
-      LogFactory.getLog(AuthenticationWithProxyUserFilter.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(AuthenticationWithProxyUserFilter.class);
 
   /**
    * Constant used in URL's query string to perform a proxy user request, the

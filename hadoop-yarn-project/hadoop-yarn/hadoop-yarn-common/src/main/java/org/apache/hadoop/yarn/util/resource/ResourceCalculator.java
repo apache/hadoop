@@ -65,12 +65,26 @@ public abstract class ResourceCalculator {
     }
     return (a + (b - 1)) / b;
   }
+
+  public static int divideAndCeil(int a, float b) {
+    if (b == 0) {
+      return 0;
+    }
+    return (int) Math.ceil(a / b);
+  }
   
   public static long divideAndCeil(long a, long b) {
     if (b == 0) {
       return 0;
     }
     return (a + (b - 1)) / b;
+  }
+
+  public static long divideAndCeil(long a, float b) {
+    if (b == 0) {
+      return 0;
+    }
+    return (long) Math.ceil(a/b);
   }
 
   public static int roundUp(int a, int b) {
@@ -198,12 +212,20 @@ public abstract class ResourceCalculator {
    * @return resultant resource
    */
   public abstract Resource divideAndCeil(Resource numerator, int denominator);
+
+  /**
+   * Divide-and-ceil <code>numerator</code> by <code>denominator</code>.
+   *
+   * @param numerator numerator resource
+   * @param denominator denominator
+   * @return resultant resource
+   */
+  public abstract Resource divideAndCeil(Resource numerator, float denominator);
   
   /**
    * Check if a smaller resource can be contained by bigger resource.
    */
-  public abstract boolean fitsIn(Resource cluster,
-      Resource smaller, Resource bigger);
+  public abstract boolean fitsIn(Resource smaller, Resource bigger);
 
   /**
    * Check if resource has any major resource types (which are all NodeManagers

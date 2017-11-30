@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -27,11 +32,16 @@ import javax.ws.rs.core.MultivaluedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -151,7 +161,7 @@ public class TestTimelineClientV2Impl {
         maxRetries);
     c.init(conf);
     c.start();
-    c.setTimelineServiceAddress("localhost:12345");
+    c.setTimelineCollectorInfo(CollectorInfo.newInstance("localhost:12345"));
     try {
       c.putEntities(new TimelineEntity());
     } catch (IOException e) {
@@ -308,6 +318,50 @@ public class TestTimelineClientV2Impl {
               + " but was " + publishedEntities.getEntities().size(),
           publishedEntities.getEntities().size() <= 3);
     }
+  }
+
+  @Test
+  public void testSetTimelineToken() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    assertEquals(0, ugi.getTokens().size());
+    assertNull("Timeline token in v2 client should not be set",
+        client.currentTimelineToken);
+
+    Token token = Token.newInstance(
+        new byte[0], "kind", new byte[0], "service");
+    client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, token));
+    assertNull("Timeline token in v2 client should not be set as token kind " +
+        "is unexepcted.", client.currentTimelineToken);
+    assertEquals(0, ugi.getTokens().size());
+
+    token = Token.newInstance(new byte[0], TimelineDelegationTokenIdentifier.
+        KIND_NAME.toString(), new byte[0], null);
+    client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, token));
+    assertNull("Timeline token in v2 client should not be set as serice is " +
+        "not set.", client.currentTimelineToken);
+    assertEquals(0, ugi.getTokens().size());
+
+    TimelineDelegationTokenIdentifier ident =
+        new TimelineDelegationTokenIdentifier(new Text(ugi.getUserName()),
+        new Text("renewer"), null);
+    ident.setSequenceNumber(1);
+    token = Token.newInstance(ident.getBytes(),
+        TimelineDelegationTokenIdentifier.KIND_NAME.toString(), new byte[0],
+        "localhost:1234");
+    client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, token));
+    assertEquals(1, ugi.getTokens().size());
+    assertNotNull("Timeline token should be set in v2 client.",
+        client.currentTimelineToken);
+    assertEquals(token, client.currentTimelineToken);
+
+    ident.setSequenceNumber(20);
+    Token newToken = Token.newInstance(ident.getBytes(),
+        TimelineDelegationTokenIdentifier.KIND_NAME.toString(), new byte[0],
+        "localhost:1234");
+    client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, newToken));
+    assertEquals(1, ugi.getTokens().size());
+    assertNotEquals(token, client.currentTimelineToken);
+    assertEquals(newToken, client.currentTimelineToken);
   }
 
   @Test

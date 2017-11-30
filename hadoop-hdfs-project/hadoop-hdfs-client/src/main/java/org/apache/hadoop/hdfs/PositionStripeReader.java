@@ -27,6 +27,7 @@ import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -57,6 +58,10 @@ class PositionStripeReader extends StripeReader {
     Preconditions.checkState(index >= dataBlkNum &&
         alignedStripe.chunks[index] == null);
 
+    int bufLen = (int) alignedStripe.getSpanInBlock();
+    decodeInputs[index] = new ECChunk(codingBuffer.duplicate(), index * bufLen,
+        bufLen);
+
     alignedStripe.chunks[index] =
         new StripingChunk(decodeInputs[index].getBuffer());
 
@@ -64,7 +69,7 @@ class PositionStripeReader extends StripeReader {
   }
 
   @Override
-  void decode() {
+  void decode() throws IOException {
     finalizeDecodeInputs();
     decodeAndFillBuffer(true);
   }
@@ -75,7 +80,7 @@ class PositionStripeReader extends StripeReader {
     codingBuffer = dfsStripedInputStream.getBufferPool().
         getBuffer(useDirectBuffer(), bufLen * bufCount);
     ByteBuffer buffer;
-    for (int i = 0; i < decodeInputs.length; i++) {
+    for (int i = 0; i < dataBlkNum; i++) {
       buffer = codingBuffer.duplicate();
       decodeInputs[i] = new ECChunk(buffer, i * bufLen, bufLen);
     }

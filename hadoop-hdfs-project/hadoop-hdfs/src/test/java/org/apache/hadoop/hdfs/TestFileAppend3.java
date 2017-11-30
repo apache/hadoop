@@ -58,7 +58,8 @@ public class TestFileAppend3  {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(InterDatanodeProtocol.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(InterDatanodeProtocol.LOG, org.slf4j
+        .event.Level.TRACE);
   }
 
   static final long BLOCK_SIZE = 64 * 1024;

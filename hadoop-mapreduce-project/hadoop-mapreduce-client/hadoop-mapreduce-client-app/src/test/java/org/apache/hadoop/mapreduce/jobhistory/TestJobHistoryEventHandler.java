@@ -21,6 +21,9 @@ package org.apache.hadoop.mapreduce.jobhistory;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -33,8 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
@@ -62,6 +63,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -83,12 +85,14 @@ import org.mockito.Mockito;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestJobHistoryEventHandler {
 
 
-  private static final Log LOG = LogFactory
-      .getLog(TestJobHistoryEventHandler.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestJobHistoryEventHandler.class);
   private static MiniDFSCluster dfsCluster = null;
   private static String coreSitePath;
 
@@ -144,7 +148,7 @@ public class TestJobHistoryEventHandler {
 
       // First completion event, but min-queue-size for batching flushes is 10
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-          t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+          t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       verify(mockWriter).flush();
 
     } finally {
@@ -180,7 +184,7 @@ public class TestJobHistoryEventHandler {
 
       for (int i = 0 ; i < 100 ; i++) {
         queueEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       }
 
       handleNextNEvents(jheh, 9);
@@ -225,7 +229,7 @@ public class TestJobHistoryEventHandler {
 
       for (int i = 0 ; i < 100 ; i++) {
         queueEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       }
 
       handleNextNEvents(jheh, 9);
@@ -268,10 +272,11 @@ public class TestJobHistoryEventHandler {
 
       for (int i = 0 ; i < 100 ; i++) {
         queueEvent(jheh, new JobHistoryEvent(t.jobId, new TaskFinishedEvent(
-            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null)));
+            t.taskID, t.taskAttemptID, 0, TaskType.MAP, "", null, 0)));
       }
       queueEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 10, 10, 0, 0, null, null, new Counters())));
+          TypeConverter.fromYarn(t.jobId), 0, 10, 10, 0, 0, 0, 0, null, null,
+          new Counters())));
 
       handleNextNEvents(jheh, 29);
       verify(mockWriter, times(0)).flush();
@@ -304,22 +309,22 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.ERROR.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.ERROR.toString())));
       verify(jheh, times(1)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-        TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
-        new Counters(), new Counters())));
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
+          new Counters(), new Counters())));
       verify(jheh, times(2)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.FAILED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
       verify(jheh, times(3)).processDoneFiles(any(JobId.class));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.KILLED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.KILLED.toString())));
       verify(jheh, times(4)).processDoneFiles(any(JobId.class));
 
       mockWriter = jheh.getEventWriter();
@@ -350,22 +355,22 @@ public class TestJobHistoryEventHandler {
       // skip processing done files
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.ERROR.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.ERROR.toString())));
       verify(jheh, times(0)).processDoneFiles(t.jobId);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
           new Counters(), new Counters())));
       verify(jheh, times(1)).processDoneFiles(t.jobId);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.FAILED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
       verify(jheh, times(2)).processDoneFiles(t.jobId);
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.KILLED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.KILLED.toString())));
       verify(jheh, times(3)).processDoneFiles(t.jobId);
 
       mockWriter = jheh.getEventWriter();
@@ -401,7 +406,8 @@ public class TestJobHistoryEventHandler {
               "nmhost", 3000, 4000, -1)));
       handleEvent(jheh, new JobHistoryEvent(params.jobId,
           new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(
-              params.jobId), 0, 0, 0, JobStateInternal.FAILED.toString())));
+              params.jobId), 0, 0, 0, 0, 0, 0, 0,
+              JobStateInternal.FAILED.toString())));
 
       // verify the value of the sensitive property in job.xml is restored.
       Assert.assertEquals(sensitivePropertyName + " is modified.",
@@ -472,7 +478,7 @@ public class TestJobHistoryEventHandler {
           t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
-          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, new Counters(),
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
           new Counters(), new Counters())));
 
       // If we got here then event handler worked but we don't know with which
@@ -542,7 +548,7 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
         new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId), 0,
-          0, 0, JobStateInternal.FAILED.toString())));
+          0, 0, 0, 0, 0, 0, JobStateInternal.FAILED.toString())));
 
       Assert.assertEquals(mi.getJobIndexInfo().getSubmitTime(), 100);
       Assert.assertEquals(mi.getJobIndexInfo().getJobStartTime(), 200);
@@ -638,7 +644,7 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
               new JobFinishedEvent(TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0,
-              0, new Counters(), new Counters(), new Counters()), currentTime));
+              0, 0, 0, new Counters(), new Counters(), new Counters()), currentTime));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -664,7 +670,8 @@ public class TestJobHistoryEventHandler {
 
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId),
-            0, 0, 0, JobStateInternal.KILLED.toString()), currentTime + 20));
+            0, 0, 0, 0, 0, 0, 0, JobStateInternal.KILLED.toString()),
+            currentTime + 20));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
               null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
@@ -919,6 +926,104 @@ public class TestJobHistoryEventHandler {
     assertTrue("Last event handled wasn't JobUnsuccessfulCompletionEvent",
         jheh.lastEventHandled.getHistoryEvent()
         instanceof JobUnsuccessfulCompletionEvent);
+  }
+
+  @Test (timeout=50000)
+  public void testSetTrackingURLAfterHistoryIsWritten() throws Exception {
+    TestParams t = new TestParams(true);
+    Configuration conf = new Configuration();
+
+    JHEvenHandlerForTest realJheh =
+        new JHEvenHandlerForTest(t.mockAppContext, 0, false);
+    JHEvenHandlerForTest jheh = spy(realJheh);
+    jheh.init(conf);
+
+    try {
+      jheh.start();
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
+      verify(jheh, times(0)).processDoneFiles(any(JobId.class));
+      verify(t.mockAppContext, times(0)).setHistoryUrl(any(String.class));
+
+      // Job finishes and successfully writes history
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
+          new Counters(), new Counters())));
+
+      verify(jheh, times(1)).processDoneFiles(any(JobId.class));
+      String historyUrl = MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(
+          conf, t.mockAppContext.getApplicationID());
+      verify(t.mockAppContext, times(1)).setHistoryUrl(historyUrl);
+    } finally {
+      jheh.stop();
+    }
+  }
+
+  @Test (timeout=50000)
+  public void testDontSetTrackingURLIfHistoryWriteFailed() throws Exception {
+    TestParams t = new TestParams(true);
+    Configuration conf = new Configuration();
+
+    JHEvenHandlerForTest realJheh =
+        new JHEvenHandlerForTest(t.mockAppContext, 0, false);
+    JHEvenHandlerForTest jheh = spy(realJheh);
+    jheh.init(conf);
+
+    try {
+      jheh.start();
+      doReturn(false).when(jheh).moveToDoneNow(any(Path.class),
+          any(Path.class));
+      doNothing().when(jheh).moveTmpToDone(any(Path.class));
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
+      verify(jheh, times(0)).processDoneFiles(any(JobId.class));
+      verify(t.mockAppContext, times(0)).setHistoryUrl(any(String.class));
+
+      // Job finishes, but doesn't successfully write history
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
+          TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0, new Counters(),
+          new Counters(), new Counters())));
+      verify(jheh, times(1)).processDoneFiles(any(JobId.class));
+      verify(t.mockAppContext, times(0)).setHistoryUrl(any(String.class));
+
+    } finally {
+      jheh.stop();
+    }
+  }
+  @Test (timeout=50000)
+  public void testDontSetTrackingURLIfHistoryWriteThrows() throws Exception {
+    TestParams t = new TestParams(true);
+    Configuration conf = new Configuration();
+
+    JHEvenHandlerForTest realJheh =
+        new JHEvenHandlerForTest(t.mockAppContext, 0, false);
+    JHEvenHandlerForTest jheh = spy(realJheh);
+    jheh.init(conf);
+
+    try {
+      jheh.start();
+      doThrow(new YarnRuntimeException(new IOException()))
+          .when(jheh).processDoneFiles(any(JobId.class));
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, new AMStartedEvent(
+          t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000, -1)));
+      verify(jheh, times(0)).processDoneFiles(any(JobId.class));
+      verify(t.mockAppContext, times(0)).setHistoryUrl(any(String.class));
+
+      // Job finishes, but doesn't successfully write history
+      try {
+        handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobFinishedEvent(
+            TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0, 0, 0, 0,
+            new Counters(), new Counters(), new Counters())));
+        throw new RuntimeException(
+            "processDoneFiles didn't throw, but should have");
+      } catch (YarnRuntimeException yre) {
+        // Exception expected, do nothing
+      }
+      verify(jheh, times(1)).processDoneFiles(any(JobId.class));
+      verify(t.mockAppContext, times(0)).setHistoryUrl(any(String.class));
+    } finally {
+      jheh.stop();
+    }
   }
 }
 

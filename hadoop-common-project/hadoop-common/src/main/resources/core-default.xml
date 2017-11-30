@@ -347,6 +347,26 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.userbase</name>
+  <value></value>
+  <description>
+    The search base for the LDAP connection for user search query. This is a
+    distinguished name, and its the root of the LDAP directory for users.
+    If not set, hadoop.security.group.mapping.ldap.base is used.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.groupbase</name>
+  <value></value>
+  <description>
+    The search base for the LDAP connection for group search . This is a
+    distinguished name, and its the root of the LDAP directory for groups.
+    If not set, hadoop.security.group.mapping.ldap.base is used.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
   <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
   <description>
@@ -479,7 +499,15 @@
     name to use for the service when the client wishes to make an RPC call.
   </description>
 </property>
-
+  <property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>unknown</value>
+    <description>
+      WASB passes User-Agent header to the Azure back-end. The default value
+      contains WASB version, Java Runtime version, Azure Client library version,
+      and the value of the configuration option fs.azure.user.agent.prefix.
+    </description>
+  </property>
 
 <property>
     <name>hadoop.security.uid.cache.secs</name>
@@ -773,9 +801,24 @@
 </property>
 
 <property>
+  <name>fs.viewfs.rename.strategy</name>
+  <value>SAME_MOUNTPOINT</value>
+  <description>Allowed rename strategy to rename between multiple mountpoints.
+    Allowed values are SAME_MOUNTPOINT,SAME_TARGET_URI_ACROSS_MOUNTPOINT and
+    SAME_FILESYSTEM_ACROSS_MOUNTPOINT.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FtpFs</value>
   <description>The FileSystem for Ftp: uris.</description>
+</property>
+
+<property>
+  <name>fs.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The implementation class of the FTP FileSystem</description>
 </property>
 
 <property>
@@ -835,30 +878,6 @@
 </property>
 
 <property>
-  <name>fs.s3n.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3n</value>
-  <description>Determines where on the local filesystem the s3n:// filesystem
-  should store files before sending them to S3
-  (or after retrieving them from S3).
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.maxRetries</name>
-  <value>4</value>
-  <description>The maximum number of retries for reading or writing files to S3,
-  before we signal failure to the application.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.sleepTimeSeconds</name>
-  <value>10</value>
-  <description>The number of seconds to sleep between each S3 retry.
-  </description>
-</property>
-
-<property>
   <name>fs.swift.impl</name>
   <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
   <description>The implementation class of the OpenStack Swift Filesystem</description>
@@ -871,56 +890,6 @@
   exit using a JVM shutdown hook. Setting this property to false disables this
   behavior. This is an advanced option that should only be used by server applications
   requiring a more carefully orchestrated shutdown sequence.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.awsAccessKeyId</name>
-  <description>AWS access key ID used by S3 native file system.</description>
-</property>
-
-<property>
-  <name>fs.s3n.awsSecretAccessKey</name>
-  <description>AWS secret key used by S3 native file system.</description>
-</property>
-
-<property>
-  <name>fs.s3n.block.size</name>
-  <value>67108864</value>
-  <description>Block size to use when reading files using the native S3
-  filesystem (s3n: URIs).</description>
-</property>
-
-<property>
-  <name>fs.s3n.multipart.uploads.enabled</name>
-  <value>false</value>
-  <description>Setting this property to true enables multiple uploads to
-  native S3 filesystem. When uploading a file, it is split into blocks
-  if the size is larger than fs.s3n.multipart.uploads.block.size.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.multipart.uploads.block.size</name>
-  <value>67108864</value>
-  <description>The block size for multipart uploads to native S3 filesystem.
-  Default size is 64MB.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.multipart.copy.block.size</name>
-  <value>5368709120</value>
-  <description>The block size for multipart copy in native S3 filesystem.
-  Default size is 5GB.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3n.server-side-encryption-algorithm</name>
-  <value></value>
-  <description>Specify a server-side encryption algorithm for S3.
-  Unset by default, and the only other currently allowable value is AES256.
   </description>
 </property>
 
@@ -1154,7 +1123,8 @@
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge.
+  <description>Minimum age in seconds of multipart uploads to purge
+    on startup if "fs.s3a.multipart.purge" is true
   </description>
 </property>
 
@@ -1198,21 +1168,11 @@
 </property>
 
 <property>
-  <name>fs.s3a.fast.upload</name>
-  <value>false</value>
-  <description>
-    Use the incremental block-based fast upload mechanism with
-    the buffering mechanism set in fs.s3a.fast.upload.buffer.
-  </description>
-</property>
-
-<property>
   <name>fs.s3a.fast.upload.buffer</name>
   <value>disk</value>
   <description>
-    The buffering mechanism to use when using S3A fast upload
-    (fs.s3a.fast.upload=true). Values: disk, array, bytebuffer.
-    This configuration option has no effect if fs.s3a.fast.upload is false.
+    The buffering mechanism to for data being written.
+    Values: disk, array, bytebuffer.
 
     "disk" will use the directories listed in fs.s3a.buffer.dir as
     the location(s) to save data prior to being uploaded.
@@ -1272,9 +1232,231 @@
 </property>
 
 <property>
+    <name>fs.s3a.metadatastore.authoritative</name>
+    <value>false</value>
+    <description>
+        When true, allow MetadataStore implementations to act as source of
+        truth for getting file status and directory listings.  Even if this
+        is set to true, MetadataStore implementations may choose not to
+        return authoritative results.  If the configured MetadataStore does
+        not support being authoritative, this setting will have no effect.
+    </description>
+</property>
+
+<property>
+    <name>fs.s3a.metadatastore.impl</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+    <description>
+        Fully-qualified name of the class that implements the MetadataStore
+        to be used by s3a.  The default class, NullMetadataStore, has no
+        effect: s3a will continue to treat the backing S3 service as the one
+        and only source of truth for file and directory metadata.
+    </description>
+</property>
+
+<property>
+    <name>fs.s3a.s3guard.cli.prune.age</name>
+    <value>86400000</value>
+    <description>
+        Default age (in milliseconds) after which to prune metadata from the
+        metadatastore when the prune command is run.  Can be overridden on the
+        command-line.
+    </description>
+</property>
+
+
+<property>
   <name>fs.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
   <description>The implementation class of the S3A Filesystem</description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.region</name>
+  <value></value>
+  <description>
+    AWS DynamoDB region to connect to. An up-to-date list is
+    provided in the AWS Documentation: regions and endpoints. Without this
+    property, the S3Guard will operate table in the associated S3 bucket region.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table</name>
+  <value></value>
+  <description>
+    The DynamoDB table name to operate. Without this property, the respective
+    S3 bucket name will be used.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.create</name>
+  <value>false</value>
+  <description>
+    If true, the S3A client will create the table if it does not already exist.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
+  <value>500</value>
+  <description>
+    Provisioned throughput requirements for read operations in terms of capacity
+    units for the DynamoDB table.  This config value will only be used when
+    creating a new DynamoDB table, though later you can manually provision by
+    increasing or decreasing read capacity as needed for existing tables.
+    See DynamoDB documents for more information.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
+  <value>100</value>
+  <description>
+    Provisioned throughput requirements for write operations in terms of
+    capacity units for the DynamoDB table.  Refer to related config
+    fs.s3a.s3guard.ddb.table.capacity.read before usage.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.max.retries</name>
+  <value>9</value>
+    <description>
+      Max retries on batched DynamoDB operations before giving up and
+      throwing an IOException.  Each retry is delayed with an exponential
+      backoff timer which starts at 100 milliseconds and approximately
+      doubles each time.  The minimum wait before throwing an exception is
+      sum(100, 200, 400, 800, .. 100*2^N-1 ) == 100 * ((2^N)-1)
+      So N = 9 yields at least 51.1 seconds (51,100) milliseconds of blocking
+      before throwing an IOException.
+    </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.background.sleep</name>
+  <value>25</value>
+  <description>
+    Length (in milliseconds) of pause between each batch of deletes when
+    pruning metadata.  Prevents prune operations (which can typically be low
+    priority background operations) from overly interfering with other I/O
+    operations.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.limit</name>
+  <value>${fs.s3a.attempts.maximum}</value>
+  <description>
+    Number of times to retry any repeatable S3 client request on failure,
+    excluding throttling requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.interval</name>
+  <value>500ms</value>
+  <description>
+    Interval between attempts to retry operations for any reason other
+    than S3 throttle errors.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.throttle.limit</name>
+  <value>${fs.s3a.attempts.maximum}</value>
+  <description>
+    Number of times to retry any throttled request.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.retry.throttle.interval</name>
+  <value>1000ms</value>
+  <description>
+    Interval between retry attempts on throttled requests.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.name</name>
+  <value>file</value>
+  <description>
+    Committer to create for output to S3A, one of:
+    "file", "directory", "partitioned", "magic".
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.magic.enabled</name>
+  <value>false</value>
+  <description>
+    Enable support in the filesystem for the S3 "Magic" committer.
+    When working with AWS S3, S3Guard must be enabled for the destination
+    bucket, as consistent metadata listings are required.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.threads</name>
+  <value>8</value>
+  <description>
+    Number of threads in committers for parallel operations on files
+    (upload, commit, abort, delete...)
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.tmp.path</name>
+  <value>tmp/staging</value>
+  <description>
+    Path in the cluster filesystem for temporary data.
+    This is for HDFS, not the local filesystem.
+    It is only for the summary data of each file, not the actual
+    data being committed.
+    Using an unqualified path guarantees that the full path will be
+    generated relative to the home directory of the user creating the job,
+    hence private (assuming home directory permissions are secure).
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.unique-filenames</name>
+  <value>true</value>
+  <description>
+    Option for final files to have a unique name through job attempt info,
+    or the value of fs.s3a.committer.staging.uuid
+    When writing data with the "append" conflict option, this guarantees
+    that new data will not overwrite any existing data.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.conflict-mode</name>
+  <value>fail</value>
+  <description>
+    Staging committer conflict resolution policy.
+    Supported: "fail", "append", "replace".
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.staging.abort.pending.uploads</name>
+  <value>true</value>
+  <description>
+    Should the staging committers abort all pending uploads to the destination
+    directory?
+
+    Changing this if more than one partitioned committer is
+    writing to the same destination tree simultaneously; otherwise
+    the first job to complete will cancel all outstanding uploads from the
+    others. However, it may lead to leaked outstanding uploads from failed
+    tasks. If disabled, configure the bucket lifecycle to remove uploads
+    after a time period, and/or set up a workflow to explicitly delete
+    entries. Otherwise there is a risk that uncommitted uploads may run up
+    bills.
+  </description>
 </property>
 
 <property>
@@ -1283,7 +1465,28 @@
   <description>The implementation class of the S3A AbstractFileSystem.</description>
 </property>
 
+<property>
+  <name>fs.s3a.list.version</name>
+  <value>2</value>
+  <description>
+    Select which version of the S3 SDK's List Objects API to use.  Currently
+    support 2 (default) and 1 (older API).
+  </description>
+</property>
+
 <!-- Azure file system properties -->
+<property>
+  <name>fs.wasb.impl</name>
+  <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value>
+  <description>The implementation class of the Native Azure Filesystem</description>
+</property>
+
+<property>
+  <name>fs.wasbs.impl</name>
+  <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem$Secure</value>
+  <description>The implementation class of the Secure Native Azure Filesystem</description>
+</property>
+
 <property>
   <name>fs.azure.secure.mode</name>
   <value>false</value>
@@ -1323,8 +1526,23 @@
     configuration
   </description>
 </property>
-
-
+<property>
+  <name>fs.azure.authorization.caching.enable</name>
+  <value>true</value>
+  <description>
+    Config flag to enable caching of authorization results and saskeys in WASB.
+    This flag is relevant only when fs.azure.authorization is enabled.
+  </description>
+</property>
+<property>
+  <name>fs.azure.saskey.usecontainersaskeyforallaccess</name>
+  <value>true</value>
+  <description>
+    Use container saskey for access to all blobs within the container.
+    Blob-specific saskeys are not used when this setting is enabled.
+    This setting provides better performance compared to blob-specific saskeys.
+  </description>
+</property>
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
@@ -1622,42 +1840,6 @@
   <description>Replication factor</description>
 </property>
 
-<!-- s3native File System -->
-
-<property>
-  <name>s3native.stream-buffer-size</name>
-  <value>4096</value>
-  <description>The size of buffer to stream files.
-  The size of this buffer should probably be a multiple of hardware
-  page size (4096 on Intel x86), and it determines how much data is
-  buffered during read and write operations.</description>
-</property>
-
-<property>
-  <name>s3native.bytes-per-checksum</name>
-  <value>512</value>
-  <description>The number of bytes per checksum.  Must not be larger than
-  s3native.stream-buffer-size</description>
-</property>
-
-<property>
-  <name>s3native.client-write-packet-size</name>
-  <value>65536</value>
-  <description>Packet size for clients to write</description>
-</property>
-
-<property>
-  <name>s3native.blocksize</name>
-  <value>67108864</value>
-  <description>Block size</description>
-</property>
-
-<property>
-  <name>s3native.replication</name>
-  <value>3</value>
-  <description>Replication factor</description>
-</property>
-
 <!-- FTP file system -->
 <property>
   <name>ftp.stream-buffer-size</name>
@@ -1792,38 +1974,44 @@
 
 <!-- HTTP CORS support -->
 <property>
-  <description>Enable/disable the cross-origin (CORS) filter.</description>
   <name>hadoop.http.cross-origin.enabled</name>
   <value>false</value>
+  <description>Enable/disable the cross-origin (CORS) filter.</description>
 </property>
 
 <property>
-  <description>Comma separated list of origins that are allowed for web
-    services needing cross-origin (CORS) support. Wildcards (*) and patterns
-    allowed</description>
   <name>hadoop.http.cross-origin.allowed-origins</name>
   <value>*</value>
+  <description>Comma separated list of origins that are allowed for web services
+    needing cross-origin (CORS) support. If a value in the list contains an
+    asterix (*), a regex pattern, escaping any dots ('.' -> '\.') and replacing
+    the asterix such that it captures any characters ('*' -> '.*'), is generated.
+    Values prefixed with 'regex:' are interpreted directly as regular expressions,
+    e.g. use the expression 'regex:https?:\/\/foo\.bar:([0-9]+)?' to allow any
+    origin using the 'http' or 'https' protocol in the domain 'foo.bar' on any
+    port. The use of simple wildcards ('*') is discouraged, and only available for
+    backward compatibility.</description>
 </property>
 
 <property>
-  <description>Comma separated list of methods that are allowed for web
-    services needing cross-origin (CORS) support.</description>
   <name>hadoop.http.cross-origin.allowed-methods</name>
   <value>GET,POST,HEAD</value>
+  <description>Comma separated list of methods that are allowed for web
+    services needing cross-origin (CORS) support.</description>
 </property>
 
 <property>
-  <description>Comma separated list of headers that are allowed for web
-    services needing cross-origin (CORS) support.</description>
   <name>hadoop.http.cross-origin.allowed-headers</name>
   <value>X-Requested-With,Content-Type,Accept,Origin</value>
+  <description>Comma separated list of headers that are allowed for web
+    services needing cross-origin (CORS) support.</description>
 </property>
 
 <property>
-  <description>The number of seconds a pre-flighted request can be cached
-    for web services needing cross-origin (CORS) support.</description>
   <name>hadoop.http.cross-origin.max-age</name>
   <value>1800</value>
+  <description>The number of seconds a pre-flighted request can be cached
+    for web services needing cross-origin (CORS) support.</description>
 </property>
 
 <property>
@@ -1914,13 +2102,13 @@
 
 <!-- Static Web User Filter properties. -->
 <property>
+  <name>hadoop.http.staticuser.user</name>
+  <value>dr.who</value>
   <description>
     The user name to filter as, on static web filters
     while rendering content. An example use is the HDFS
     web UI (user to be used for browsing files).
   </description>
-  <name>hadoop.http.staticuser.user</name>
-  <value>dr.who</value>
 </property>
 
 <!-- SSLFactory configuration -->
@@ -2267,6 +2455,42 @@
     key will be dropped. Default = 12hrs
   </description>
 </property>
+<property>
+  <name>hadoop.security.kms.client.timeout</name>
+  <value>60</value>
+  <description>
+    Sets value for KMS client connection timeout, and the read timeout
+    to KMS servers.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.failover.sleep.base.millis</name>
+  <value>100</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the base value used in the failover calculation. The
+    first failover will retry immediately. The 2nd failover attempt
+    will delay at least hadoop.security.client.failover.sleep.base.millis
+    milliseconds. And so on.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.kms.client.failover.sleep.max.millis</name>
+  <value>2000</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the maximum value to wait between failovers.
+    Specifically, the time between two failover attempts will not
+    exceed +/- 50% of hadoop.security.client.failover.sleep.max.millis
+    milliseconds.
+  </description>
+</property>
 
  <property>
   <name>ipc.server.max.connections</name>
@@ -2283,6 +2507,8 @@
   <!-- YARN registry -->
 
   <property>
+    <name>hadoop.registry.rm.enabled</name>
+    <value>false</value>
     <description>
       Is the registry enabled in the YARN Resource Manager?
 
@@ -2294,50 +2520,50 @@
       If false, the paths must be created by other means,
       and no automatic cleanup of service records will take place.
     </description>
-    <name>hadoop.registry.rm.enabled</name>
-    <value>false</value>
   </property>
 
   <property>
+    <name>hadoop.registry.zk.root</name>
+    <value>/registry</value>
     <description>
       The root zookeeper node for the registry
     </description>
-    <name>hadoop.registry.zk.root</name>
-    <value>/registry</value>
   </property>
 
   <property>
+    <name>hadoop.registry.zk.session.timeout.ms</name>
+    <value>60000</value>
     <description>
       Zookeeper session timeout in milliseconds
     </description>
-    <name>hadoop.registry.zk.session.timeout.ms</name>
-    <value>60000</value>
   </property>
 
   <property>
+    <name>hadoop.registry.zk.connection.timeout.ms</name>
+    <value>15000</value>
     <description>
       Zookeeper connection timeout in milliseconds
     </description>
-    <name>hadoop.registry.zk.connection.timeout.ms</name>
-    <value>15000</value>
   </property>
 
   <property>
+    <name>hadoop.registry.zk.retry.times</name>
+    <value>5</value>
     <description>
       Zookeeper connection retry count before failing
     </description>
-    <name>hadoop.registry.zk.retry.times</name>
-    <value>5</value>
   </property>
 
   <property>
-    <description>
-    </description>
     <name>hadoop.registry.zk.retry.interval.ms</name>
     <value>1000</value>
+    <description>
+    </description>
   </property>
 
   <property>
+    <name>hadoop.registry.zk.retry.ceiling.ms</name>
+    <value>60000</value>
     <description>
       Zookeeper retry limit in milliseconds, during
       exponential backoff.
@@ -2347,20 +2573,20 @@
       with the backoff policy, result in a long retry
       period
     </description>
-    <name>hadoop.registry.zk.retry.ceiling.ms</name>
-    <value>60000</value>
   </property>
 
   <property>
+    <name>hadoop.registry.zk.quorum</name>
+    <value>localhost:2181</value>
     <description>
       List of hostname:port pairs defining the
       zookeeper quorum binding for the registry
     </description>
-    <name>hadoop.registry.zk.quorum</name>
-    <value>localhost:2181</value>
   </property>
 
   <property>
+    <name>hadoop.registry.secure</name>
+    <value>false</value>
     <description>
       Key to set if the registry is secure. Turning it on
       changes the permissions policy from "open access"
@@ -2368,11 +2594,11 @@
       a user adding one or more auth key pairs down their
       own tree.
     </description>
-    <name>hadoop.registry.secure</name>
-    <value>false</value>
   </property>
 
   <property>
+    <name>hadoop.registry.system.acls</name>
+    <value>sasl:yarn@, sasl:mapred@, sasl:hdfs@</value>
     <description>
       A comma separated list of Zookeeper ACL identifiers with
       system access to the registry in a secure cluster.
@@ -2382,11 +2608,11 @@
       If there is an "@" at the end of a SASL entry it
       instructs the registry client to append the default kerberos domain.
     </description>
-    <name>hadoop.registry.system.acls</name>
-    <value>sasl:yarn@, sasl:mapred@, sasl:hdfs@</value>
   </property>
 
   <property>
+    <name>hadoop.registry.kerberos.realm</name>
+    <value></value>
     <description>
       The kerberos realm: used to set the realm of
       system principals which do not declare their realm,
@@ -2398,26 +2624,24 @@
       If neither are known and the realm is needed, then the registry
       service/client will fail.
     </description>
-    <name>hadoop.registry.kerberos.realm</name>
-    <value></value>
   </property>
 
   <property>
+    <name>hadoop.registry.jaas.context</name>
+    <value>Client</value>
     <description>
       Key to define the JAAS context. Used in secure
       mode
     </description>
-    <name>hadoop.registry.jaas.context</name>
-    <value>Client</value>
   </property>
 
   <property>
+    <name>hadoop.shell.missing.defaultFs.warning</name>
+    <value>false</value>
     <description>
       Enable hdfs shell commands to display warnings if (fs.defaultFS) property
       is not set.
     </description>
-    <name>hadoop.shell.missing.defaultFs.warning</name>
-    <value>false</value>
   </property>
 
   <property>
@@ -2447,13 +2671,13 @@
   </property>
 
   <property>
+    <name>hadoop.http.logs.enabled</name>
+    <value>true</value>
     <description>
       Enable the "/logs" endpoint on all Hadoop daemons, which serves local
       logs, but may be considered a security risk due to it listing the contents
       of a directory.
     </description>
-    <name>hadoop.http.logs.enabled</name>
-    <value>true</value>
   </property>
 
   <property>
@@ -2502,11 +2726,15 @@
     <value>ClientCredential</value>
     <description>
       Defines Azure Active Directory OAuth2 access token provider type.
-      Supported types are ClientCredential, RefreshToken, and Custom.
+      Supported types are ClientCredential, RefreshToken, MSI, DeviceCode,
+      and Custom.
       The ClientCredential type requires property fs.adl.oauth2.client.id,
       fs.adl.oauth2.credential, and fs.adl.oauth2.refresh.url.
       The RefreshToken type requires property fs.adl.oauth2.client.id and
       fs.adl.oauth2.refresh.token.
+      The MSI type reads optional property fs.adl.oauth2.msi.port, if specified.
+      The DeviceCode type requires property
+      fs.adl.oauth2.devicecode.clientapp.id.
       The Custom type requires property fs.adl.oauth2.access.token.provider.
     </description>
   </property>
@@ -2540,6 +2768,27 @@
     <value></value>
     <description>
       The class name of the OAuth2 access token provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.msi.port</name>
+    <value></value>
+    <description>
+      The localhost port for the MSI token service. This is the port specified
+      when creating the Azure VM. The default, if this setting is not specified,
+      is 50342.
+      Used by MSI token provider.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.adl.oauth2.devicecode.clientapp.id</name>
+    <value></value>
+    <description>
+      The app id of the AAD native app in whose context the auth request
+      should be made.
+      Used by DeviceCode token provider.
     </description>
   </property>
 
@@ -2589,6 +2838,65 @@
       The number of streams to merge at once while sorting
       files using SequenceFile.Sorter.
       This determines the number of open file handles.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.address</name>
+    <!--value>127.0.0.1:2181</value-->
+    <description>Host:Port of the ZooKeeper server to be used.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.num-retries</name>
+    <value>1000</value>
+    <description>Number of tries to connect to ZooKeeper.</description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.retry-interval-ms</name>
+    <value>1000</value>
+    <description>Retry interval in milliseconds when connecting to ZooKeeper.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.timeout-ms</name>
+    <value>10000</value>
+    <description>ZooKeeper session timeout in milliseconds. Session expiration
+    is managed by the ZooKeeper cluster itself, not by the client. This value is
+    used by the cluster to determine when the client's session expires.
+    Expirations happens when the cluster does not hear from the client within
+    the specified session timeout period (i.e. no heartbeat).</description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.acl</name>
+    <value>world:anyone:rwcda</value>
+    <description>ACL's to be used for ZooKeeper znodes.</description>
+  </property>
+
+  <property>
+    <name>hadoop.zk.auth</name>
+    <description>
+        Specify the auths to be used for the ACL's specified in hadoop.zk.acl.
+        This takes a comma-separated list of authentication mechanisms, each of the
+        form 'scheme:auth' (the same syntax used for the 'addAuth' command in
+        the ZK CLI).
+    </description>
+  </property>
+  <property>
+    <name>hadoop.treat.subject.external</name>
+    <value>false</value>
+    <description>
+      When creating UGI with UserGroupInformation(Subject), treat the passed
+      subject external if set to true, and assume the owner of the subject
+      should do the credential renewal.
+
+      When true this property will introduce an incompatible change which
+      may require changes in client code. For more details, see the jiras:
+      HADOOP-13805,HADOOP-13558.
     </description>
   </property>
 </configuration>

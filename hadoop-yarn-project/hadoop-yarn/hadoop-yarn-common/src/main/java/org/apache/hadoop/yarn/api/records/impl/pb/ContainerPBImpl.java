@@ -93,9 +93,7 @@ public class ContainerPBImpl extends Container {
             builder.getNodeId())) {
       builder.setNodeId(convertToProtoFormat(this.nodeId));
     }
-    if (this.resource != null
-        && !((ResourcePBImpl) this.resource).getProto().equals(
-            builder.getResource())) {
+    if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
     if (this.priority != null && 
@@ -183,7 +181,7 @@ public class ContainerPBImpl extends Container {
       builder.clearNodeHttpAddress();
       return;
     }
-    builder.setNodeHttpAddress(nodeHttpAddress);
+    builder.setNodeHttpAddress(nodeHttpAddress.intern());
   }
 
   @Override
@@ -307,7 +305,7 @@ public class ContainerPBImpl extends Container {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {

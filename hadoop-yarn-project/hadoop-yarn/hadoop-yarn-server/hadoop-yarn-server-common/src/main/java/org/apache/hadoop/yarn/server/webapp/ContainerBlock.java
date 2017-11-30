@@ -20,27 +20,29 @@ package org.apache.hadoop.yarn.server.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContainerBlock extends HtmlBlock {
 
-  private static final Log LOG = LogFactory.getLog(ContainerBlock.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ContainerBlock.class);
   protected ApplicationBaseProtocol appBaseProt;
 
   @Inject
@@ -71,22 +73,20 @@ public class ContainerBlock extends HtmlBlock {
       final GetContainerReportRequest request =
           GetContainerReportRequest.newInstance(containerId);
       if (callerUGI == null) {
-        containerReport = appBaseProt.getContainerReport(request)
-            .getContainerReport();
+        containerReport = getContainerReport(request);
       } else {
         containerReport = callerUGI.doAs(
             new PrivilegedExceptionAction<ContainerReport> () {
           @Override
           public ContainerReport run() throws Exception {
-            return appBaseProt.getContainerReport(request)
-                .getContainerReport();
+            return getContainerReport(request);
           }
         });
       }
     } catch (Exception e) {
       String message = "Failed to read the container " + containerid + ".";
       LOG.error(message, e);
-      html.p()._(message)._();
+      html.p().__(message).__();
       return;
     }
 
@@ -99,32 +99,38 @@ public class ContainerBlock extends HtmlBlock {
     setTitle(join("Container ", containerid));
 
     info("Container Overview")
-      ._(
+      .__(
         "Container State:",
         container.getContainerState() == null ? UNAVAILABLE : container
           .getContainerState())
-      ._("Exit Status:", container.getContainerExitStatus())
-      ._(
+      .__("Exit Status:", container.getContainerExitStatus())
+      .__(
         "Node:",
         container.getNodeHttpAddress() == null ? "#" : container
           .getNodeHttpAddress(),
         container.getNodeHttpAddress() == null ? "N/A" : container
           .getNodeHttpAddress())
-      ._("Priority:", container.getPriority())
-      ._("Started:", Times.format(container.getStartedTime()))
-      ._(
+      .__("Priority:", container.getPriority())
+      .__("Started:", Times.format(container.getStartedTime()))
+      .__(
         "Elapsed:",
         StringUtils.formatTime(Times.elapsed(container.getStartedTime(),
           container.getFinishedTime())))
-      ._(
+      .__(
         "Resource:",
         container.getAllocatedMB() + " Memory, "
             + container.getAllocatedVCores() + " VCores")
-      ._("Logs:", container.getLogUrl() == null ? "#" : container.getLogUrl(),
+      .__("Logs:", container.getLogUrl() == null ? "#" : container.getLogUrl(),
           container.getLogUrl() == null ? "N/A" : "Logs")
-      ._("Diagnostics:", container.getDiagnosticsInfo() == null ?
+      .__("Diagnostics:", container.getDiagnosticsInfo() == null ?
           "" : container.getDiagnosticsInfo());
 
-    html._(InfoBlock.class);
+    html.__(InfoBlock.class);
+  }
+
+  protected ContainerReport getContainerReport(
+      final GetContainerReportRequest request)
+      throws YarnException, IOException {
+    return appBaseProt.getContainerReport(request).getContainerReport();
   }
 }

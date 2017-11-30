@@ -38,7 +38,7 @@ public abstract class SASKeyGeneratorImpl implements SASKeyGeneratorInterface {
   /**
    * Default value for the SAS key expiry period in days. {@value}
    */
-  public static final long DEFAUL_CONTAINER_SAS_KEY_PERIOD = 90;
+  public static final long DEFAULT_CONTAINER_SAS_KEY_PERIOD = 90;
 
   private long sasKeyExpiryPeriod;
 
@@ -47,7 +47,7 @@ public abstract class SASKeyGeneratorImpl implements SASKeyGeneratorInterface {
   public SASKeyGeneratorImpl(Configuration conf) {
     this.conf = conf;
     this.sasKeyExpiryPeriod = conf.getTimeDuration(
-        KEY_SAS_KEY_EXPIRY_PERIOD, DEFAUL_CONTAINER_SAS_KEY_PERIOD,
+        KEY_SAS_KEY_EXPIRY_PERIOD, DEFAULT_CONTAINER_SAS_KEY_PERIOD,
         TimeUnit.DAYS);
   }
 

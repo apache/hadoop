@@ -84,9 +84,9 @@ public class TestConcatenatedCompressedInput {
   public void after() {
     ZlibFactory.loadNativeZLib();
   }
-  private static Path workDir =
-    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
-             "TestConcatenatedCompressedInput").makeQualified(localFs);
+  private static Path workDir = localFs.makeQualified(new Path(
+      System.getProperty("test.build.data", "/tmp"),
+      "TestConcatenatedCompressedInput"));
 
   private static LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream(str.getBytes("UTF-8")),

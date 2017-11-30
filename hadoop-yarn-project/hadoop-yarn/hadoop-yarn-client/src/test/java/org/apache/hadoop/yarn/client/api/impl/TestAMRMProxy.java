@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -44,15 +42,19 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * End-to-End test cases for the AMRMProxy Service.
  */
 public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
 
-  private static final Log LOG = LogFactory.getLog(TestAMRMProxy.class);
+  private static final Logger LOG = LoggerFactory
+          .getLogger(TestAMRMProxy.class);
 
   /*
    * This test validates register, allocate and finish of an application through
@@ -67,6 +69,9 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
             YarnClient rmClient = YarnClient.createYarnClient()) {
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
+      // Make sure if using FairScheduler that we can assign multiple containers
+      // in a single heartbeat later
+      conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
       cluster.init(conf);
       cluster.start();
       final Configuration yarnConf = cluster.getConfig();
@@ -151,13 +156,13 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
            YarnClient rmClient = YarnClient.createYarnClient()) {
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
-      conf.setInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 1500);
-      conf.setInt(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 1500);
-      conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 1500);
+      conf.setInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 4500);
+      conf.setInt(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 4500);
+      conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 4500);
       // RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS should be at least
       // RM_AM_EXPIRY_INTERVAL_MS * 1.5 *3
       conf.setInt(
-          YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS, 6);
+          YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS, 20);
       cluster.init(conf);
       cluster.start();
       final Configuration yarnConf = cluster.getConfig();
@@ -198,7 +203,7 @@ public class TestAMRMProxy extends BaseAMRMProxyE2ETest {
         lastToken = response.getAMRMToken();
 
         // Time slot to be sure the AMRMProxy renew the token
-        Thread.sleep(1500);
+        Thread.sleep(4500);
 
       }
 

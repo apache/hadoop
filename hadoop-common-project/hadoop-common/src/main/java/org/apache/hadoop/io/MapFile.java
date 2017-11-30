@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -37,6 +35,8 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SKIP_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SKIP_KEY;
@@ -60,7 +60,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAP_INDEX_SK
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MapFile {
-  private static final Log LOG = LogFactory.getLog(MapFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MapFile.class);
 
   /** The name of the index file. */
   public static final String INDEX_FILE_NAME = "index";
@@ -1002,7 +1002,7 @@ public class MapFile {
       while (reader.next(key, value))               // copy all entries
         writer.append(key, value);
     } finally {
-      IOUtils.cleanup(LOG, writer, reader);
+      IOUtils.cleanupWithLogger(LOG, writer, reader);
     }
   }
 }

@@ -14,20 +14,9 @@
 
 # Hadoop Azure Support: Azure Blob Storage
 
-* [Introduction](#Introduction)
-* [Features](#Features)
-* [Limitations](#Limitations)
-* [Usage](#Usage)
-    * [Concepts](#Concepts)
-    * [Configuring Credentials](#Configuring_Credentials)
-    * [Page Blob Support and Configuration](#Page_Blob_Support_and_Configuration)
-    * [Atomic Folder Rename](#Atomic_Folder_Rename)
-    * [Accessing wasb URLs](#Accessing_wasb_URLs)
-    * [Append API Support and Configuration](#Append_API_Support_and_Configuration)
-    * [Multithread Support](#Multithread_Support)
-* [Testing the hadoop-azure Module](#Testing_the_hadoop-azure_Module)
+<!-- MACRO{toc|fromDepth=1|toDepth=3} -->
 
-## <a name="Introduction" />Introduction
+## Introduction
 
 The hadoop-azure module provides support for integration with
 [Azure Blob Storage](http://azure.microsoft.com/en-us/documentation/services/storage/).
@@ -38,7 +27,7 @@ on the additional artifacts it requires, notably the
 To make it part of Apache Hadoop's default classpath, simply make sure that
 HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-azure' in the list.
 
-## <a name="Features" />Features
+## Features
 
 * Read and write data stored in an Azure Blob Storage account.
 * Present a hierarchical file system view by implementing the standard Hadoop
@@ -54,15 +43,15 @@ HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-azure' in the list.
 * Tested on both Linux and Windows.
 * Tested at scale.
 
-## <a name="Limitations" />Limitations
+## Limitations
 
 * File owner and group are persisted, but the permissions model is not enforced.
   Authorization occurs at the level of the entire Azure Blob Storage account.
 * File last access time is not tracked.
 
-## <a name="Usage" />Usage
+## Usage
 
-### <a name="Concepts" />Concepts
+### Concepts
 
 The Azure Blob Storage data model presents 3 core concepts:
 
@@ -76,7 +65,7 @@ The Azure Blob Storage data model presents 3 core concepts:
   The internal implementation also uses blobs to persist the file system
   hierarchy and other metadata.
 
-### <a name="Configuring_Credentials" />Configuring Credentials
+### Configuring Credentials
 
 Usage of Azure Blob Storage requires configuration of credentials.  Typically
 this is set in core-site.xml.  The configuration property name is of the form
@@ -87,11 +76,12 @@ untrusted party.**
 
 For example:
 
-    <property>
-      <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
-      <value>YOUR ACCESS KEY</value>
-    </property>
-
+```xml
+<property>
+  <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
+  <value>YOUR ACCESS KEY</value>
+</property>
+```
 In many Hadoop clusters, the core-site.xml file is world-readable. It is possible to
 protect the access key within a credential provider as well. This provides an encrypted
 file format along with protection with file permissions.
@@ -110,14 +100,14 @@ For additional reading on the credential provider API see:
 
 ###### provision
 
-```
+```bash
 % hadoop credential create fs.azure.account.key.youraccount.blob.core.windows.net -value 123
     -provider localjceks://file/home/lmccay/wasb.jceks
 ```
 
 ###### configure core-site.xml or command line system property
 
-```
+```xml
 <property>
   <name>hadoop.security.credential.provider.path</name>
   <value>localjceks://file/home/lmccay/wasb.jceks</value>
@@ -127,7 +117,7 @@ For additional reading on the credential provider API see:
 
 ###### distcp
 
-```
+```bash
 % hadoop distcp
     [-D hadoop.security.credential.provider.path=localjceks://file/home/lmccay/wasb.jceks]
     hdfs://hostname:9001/user/lmccay/007020615 wasb://yourcontainer@youraccount.blob.core.windows.net/testDir/
@@ -145,22 +135,59 @@ specifies an external program to be invoked by Hadoop processes to decrypt the
 key.  The encrypted key value is passed to this external program as a command
 line argument:
 
-    <property>
-      <name>fs.azure.account.keyprovider.youraccount</name>
-      <value>org.apache.hadoop.fs.azure.ShellDecryptionKeyProvider</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.account.keyprovider.youraccount</name>
+  <value>org.apache.hadoop.fs.azure.ShellDecryptionKeyProvider</value>
+</property>
 
-    <property>
-      <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
-      <value>YOUR ENCRYPTED ACCESS KEY</value>
-    </property>
+<property>
+  <name>fs.azure.account.key.youraccount.blob.core.windows.net</name>
+  <value>YOUR ENCRYPTED ACCESS KEY</value>
+</property>
 
-    <property>
-      <name>fs.azure.shellkeyprovider.script</name>
-      <value>PATH TO DECRYPTION PROGRAM</value>
-    </property>
+<property>
+  <name>fs.azure.shellkeyprovider.script</name>
+  <value>PATH TO DECRYPTION PROGRAM</value>
+</property>
 
-### <a name="Page_Blob_Support_and_Configuration" />Page Blob Support and Configuration
+```
+
+### Block Blob with Compaction Support and Configuration
+
+Block blobs are the default kind of blob and are good for most big-data use
+cases. However, block blobs have strict limit of 50,000 blocks per blob.
+To prevent reaching the limit WASB, by default, does not upload new block to
+the service after every `hflush()` or `hsync()`.
+
+For most of the cases, combining data from multiple `write()` calls in
+blocks of 4Mb is a good optimization. But, in others cases, like HBase log files,
+every call to `hflush()` or `hsync()` must upload the data to the service.
+
+Block blobs with compaction upload the data to the cloud service after every
+`hflush()`/`hsync()`. To mitigate the limit of 50000 blocks, `hflush()
+`/`hsync()` runs once compaction process, if number of blocks in the blob
+is above 32,000.
+
+Block compaction search and replaces a sequence of small blocks with one big
+block. That means there is associated cost with block compaction: reading
+small blocks back to the client and writing it again as one big block.
+
+In order to have the files you create be block blobs with block compaction
+enabled, the client must set the configuration variable
+`fs.azure.block.blob.with.compaction.dir` to a comma-separated list of
+folder names.
+
+For example:
+
+```xml
+<property>
+  <name>fs.azure.block.blob.with.compaction.dir</name>
+  <value>/hbase/WALs,/data/myblobfiles</value>
+</property>
+```
+
+### Page Blob Support and Configuration
 
 The Azure Blob Storage interface for Hadoop supports two kinds of blobs,
 [block blobs and page blobs](http://msdn.microsoft.com/en-us/library/azure/ee691964.aspx).
@@ -182,10 +209,12 @@ folder names.
 
 For example:
 
-    <property>
-      <name>fs.azure.page.blob.dir</name>
-      <value>/hbase/WALs,/hbase/oldWALs,/data/mypageblobfiles</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.page.blob.dir</name>
+  <value>/hbase/WALs,/hbase/oldWALs,/data/mypageblobfiles</value>
+</property>
+```
 
 You can set this to simply / to make all files page blobs.
 
@@ -197,7 +226,20 @@ The configuration option `fs.azure.page.blob.extension.size` is the page blob
 extension size.  This defines the amount to extend a page blob if it starts to
 get full.  It must be 128MB or greater, specified as an integer number of bytes.
 
-### <a name="Atomic_Folder_Rename" />Atomic Folder Rename
+### Custom User-Agent
+WASB passes User-Agent header to the Azure back-end. The default value
+contains WASB version, Java Runtime version, Azure Client library version, and the
+value of the configuration option `fs.azure.user.agent.prefix`. Customized User-Agent
+header enables better troubleshooting and analysis by Azure service.
+
+```xml
+<property>
+    <name>fs.azure.user.agent.prefix</name>
+    <value>Identifier</value>
+</property>
+```
+
+### Atomic Folder Rename
 
 Azure storage stores files as a flat key/value store without formal support
 for folders.  The hadoop-azure file system layer simulates folders on top
@@ -216,12 +258,14 @@ the intention of the rename operation, to allow redo in event of a failure.
 
 For example:
 
-    <property>
-      <name>fs.azure.atomic.rename.dir</name>
-      <value>/hbase,/data</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.atomic.rename.dir</name>
+  <value>/hbase,/data</value>
+</property>
+```
 
-### <a name="Accessing_wasb_URLs" />Accessing wasb URLs
+### Accessing wasb URLs
 
 After credentials are configured in core-site.xml, any Hadoop component may
 reference files in that Azure Blob Storage account by using URLs of the following
@@ -238,28 +282,32 @@ For example, the following
 commands demonstrate access to a storage account named `youraccount` and a
 container named `yourcontainer`.
 
-    > hadoop fs -mkdir wasb://yourcontainer@youraccount.blob.core.windows.net/testDir
+```bash
+% hadoop fs -mkdir wasb://yourcontainer@youraccount.blob.core.windows.net/testDir
 
-    > hadoop fs -put testFile wasb://yourcontainer@youraccount.blob.core.windows.net/testDir/testFile
+% hadoop fs -put testFile wasb://yourcontainer@youraccount.blob.core.windows.net/testDir/testFile
 
-    > hadoop fs -cat wasbs://yourcontainer@youraccount.blob.core.windows.net/testDir/testFile
-    test file content
+% hadoop fs -cat wasbs://yourcontainer@youraccount.blob.core.windows.net/testDir/testFile
+test file content
+```
 
 It's also possible to configure `fs.defaultFS` to use a `wasb` or `wasbs` URL.
 This causes all bare paths, such as `/testDir/testFile` to resolve automatically
 to that file system.
 
-### <a name="Append_API_Support_and_Configuration" />Append API Support and Configuration
+### Append API Support and Configuration
 
 The Azure Blob Storage interface for Hadoop has optional support for Append API for
 single writer by setting the configuration `fs.azure.enable.append.support` to true.
 
 For Example:
 
-    <property>
-      <name>fs.azure.enable.append.support</name>
-      <value>true</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.enable.append.support</name>
+  <value>true</value>
+</property>
+```
 
 It must be noted Append support in Azure Blob Storage interface DIFFERS FROM HDFS SEMANTICS. Append
 support does not enforce single writer internally but requires applications to guarantee this semantic.
@@ -267,25 +315,29 @@ It becomes a responsibility of the application either to ensure single-threaded 
 file path, or rely on some external locking mechanism of its own.  Failure to do so will result in
 unexpected behavior.
 
-### <a name="Multithread_Support" />Multithread Support
+### Multithread Support
 
 Rename and Delete blob operations on directories with large number of files and sub directories currently is very slow as these operations are done one blob at a time serially. These files and sub folders can be deleted or renamed parallel. Following configurations can be used to enable threads to do parallel processing
 
 To enable 10 threads for Delete operation. Set configuration value to 0 or 1 to disable threads. The default behavior is threads disabled.
 
-    <property>
-      <name>fs.azure.delete.threads</name>
-      <value>10</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.delete.threads</name>
+  <value>10</value>
+</property>
+```
 
 To enable 20 threads for Rename operation. Set configuration value to 0 or 1 to disable threads. The default behavior is threads disabled.
 
-    <property>
-      <name>fs.azure.rename.threads</name>
-      <value>20</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.rename.threads</name>
+  <value>20</value>
+</property>
+```
 
-### <a name="WASB_SECURE_MODE" />WASB Secure mode and configuration
+### WASB Secure mode and configuration
 
 WASB can operate in secure mode where the Storage access keys required to communicate with Azure storage does not have to
 be in the same address space as the process using WASB. In this mode all interactions with Azure storage is performed using
@@ -295,30 +347,32 @@ Romote mode, however for testing purposes the local mode can be enabled to gener
 
 To enable Secure mode following property needs to be set to true.
 
-```
-    <property>
-      <name>fs.azure.secure.mode</name>
-      <value>true</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.secure.mode</name>
+  <value>true</value>
+</property>
 ```
 
 To enable SAS key generation locally following property needs to be set to true.
 
+```xml
+<property>
+  <name>fs.azure.local.sas.key.mode</name>
+  <value>true</value>
+</property>
 ```
-    <property>
-      <name>fs.azure.local.sas.key.mode</name>
-      <value>true</value>
-    </property>
-```
-To use the remote SAS key generation mode, an external REST service is expected to provided required SAS keys.
+
+To use the remote SAS key generation mode, comma separated external REST services are expected to provided required SAS keys.
 Following property can used to provide the end point to use for remote SAS Key generation:
 
+```xml
+<property>
+  <name>fs.azure.cred.service.urls</name>
+  <value>{URL}</value>
+</property>
 ```
-    <property>
-      <name>fs.azure.cred.service.url</name>
-      <value>{URL}</value>
-    </property>
-```
+
 The remote service is expected to provide support for two REST calls ```{URL}/GET_CONTAINER_SAS``` and ```{URL}/GET_RELATIVE_BLOB_SAS```, for generating
 container and relative blob sas keys. An example requests
 
@@ -326,7 +380,8 @@ container and relative blob sas keys. An example requests
 ```{URL}/GET_CONTAINER_SAS?storage_account=<account_name>&container=<container>&relative_path=<relative path>&sas_expiry=<expiry period>&delegation_token=<delegation token>```
 
 The service is expected to return a response in JSON format:
-```
+
+```json
 {
   "responseCode" : 0 or non-zero <int>,
   "responseMessage" : relavant message on failure <String>,
@@ -334,126 +389,154 @@ The service is expected to return a response in JSON format:
 }
 ```
 
-## <a name="WASB Authorization" />Authorization Support in WASB.
+### Authorization Support in WASB
 
 Authorization support can be enabled in WASB using the following configuration:
 
-```
-    <property>
-      <name>fs.azure.authorization</name>
-      <value>true</value>
-    </property>
-```
-  The current implementation of authorization relies on the presence of an external service that can enforce
-  the authorization. The service is expected to be running on a URL provided by the following config.
-
-```
-    <property>
-      <name>fs.azure.authorization.remote.service.url</name>
-      <value>{URL}</value>
-    </property>
+```xml
+<property>
+  <name>fs.azure.authorization</name>
+  <value>true</value>
+</property>
 ```
 
-  The remote service is expected to provide support for the following REST call: ```{URL}/CHECK_AUTHORIZATION```
-  An example request:
+The current implementation of authorization relies on the presence of an external service that can enforce
+the authorization. The service is expected to be running on comma separated URLs provided by the following config.
+
+```xml
+<property>
+  <name>fs.azure.authorization.remote.service.urls</name>
+  <value>{URL}</value>
+</property>
+```
+
+The remote service is expected to provide support for the following REST call: ```{URL}/CHECK_AUTHORIZATION```
+An example request:
   ```{URL}/CHECK_AUTHORIZATION?wasb_absolute_path=<absolute_path>&operation_type=<operation type>&delegation_token=<delegation token>```
 
-  The service is expected to return a response in JSON format:
-  ```
-  {
+The service is expected to return a response in JSON format:
+
+```json
+{
     "responseCode" : 0 or non-zero <int>,
     "responseMessage" : relevant message on failure <String>,
     "authorizationResult" : true/false <boolean>
-  }
-  ```
+}
+```
 
-## <a name="Testing_the_hadoop-azure_Module" />Testing the hadoop-azure Module
+### Delegation token support in WASB
 
-The hadoop-azure module includes a full suite of unit tests.  Most of the tests
-will run without additional configuration by running `mvn test`.  This includes
-tests against mocked storage, which is an in-memory emulation of Azure Storage.
+Delegation token support support can be enabled in WASB using the following configuration:
 
-A selection of tests can run against the
-[Azure Storage Emulator](http://msdn.microsoft.com/en-us/library/azure/hh403989.aspx)
-which is a high-fidelity emulation of live Azure Storage.  The emulator is
-sufficient for high-confidence testing.  The emulator is a Windows executable
-that runs on a local machine.
+```xml
+<property>
+  <name>fs.azure.enable.kerberos.support</name>
+  <value>true</value>
+</property>
+```
 
-To use the emulator, install Azure SDK 2.3 and start the storage emulator.  Then,
-edit `src/test/resources/azure-test.xml` and add the following property:
+The current implementation of delegation token implementation relies on the presence of an external service instances that can generate and manage delegation tokens. The service is expected to be running on comma separated URLs provided by the following config.
 
+```xml
+<property>
+  <name>fs.azure.delegation.token.service.urls</name>
+  <value>{URL}</value>
+</property>
+```
+
+The remote service is expected to provide support for the following REST call: ```{URL}?op=GETDELEGATIONTOKEN```, ```{URL}?op=RENEWDELEGATIONTOKEN``` and ```{URL}?op=CANCELDELEGATIONTOKEN```
+An example request:
+  ```{URL}?op=GETDELEGATIONTOKEN&renewer=<renewer>```
+  ```{URL}?op=RENEWDELEGATIONTOKEN&token=<delegation token>```
+  ```{URL}?op=CANCELDELEGATIONTOKEN&token=<delegation token>```
+
+The service is expected to return a response in JSON format for GETDELEGATIONTOKEN request:
+
+```json
+{
+    "Token" : {
+        "urlString": URL string of delegation token.
+    }
+}
+```
+### chown behaviour when authorization is enabled in WASB
+
+When authorization is enabled, only the users listed in the following configuration
+are allowed to change the owning user of files/folders in WASB. The configuration
+value takes a comma separated list of user names who are allowed to perform chown.
+
+```xml
+<property>
+  <name>fs.azure.chown.allowed.userlist</name>
+  <value>user1,user2</value>
+</property>
+```
+### chmod behaviour when authorization is enabled in WASB
+
+When authorization is enabled, only the owner and the users listed in the
+following configurations are allowed to change the permissions of files/folders in WASB.
+The configuration value takes a comma separated list of user names who are allowed to perform chmod.
+
+```xml
+<property>
+  <name>fs.azure.daemon.userlist</name>
+  <value>user1,user2</value>
+</property>
+<property>
+  <name>fs.azure.chmod.allowed.userlist</name>
+  <value>userA,userB</value>
+</property>
+```
+
+Caching of both SAS keys and Authorization responses can be enabled using the following setting:
+The cache settings are applicable only when fs.azure.authorization is enabled.
+The cache is maintained at a filesystem object level.
+```
     <property>
-      <name>fs.azure.test.emulator</name>
+      <name>fs.azure.authorization.caching.enable</name>
       <value>true</value>
     </property>
-
-There is a known issue when running tests with the emulator.  You may see the
-following failure message:
-
-    com.microsoft.windowsazure.storage.StorageException: The value for one of the HTTP headers is not in the correct format.
-
-To resolve this, restart the Azure Emulator.  Ensure it v3.2 or later.
-
-It's also possible to run tests against a live Azure Storage account by saving a
-file to `src/test/resources/azure-auth-keys.xml` and setting
-the name of the storage account and its access key.
-
-For example:
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <property>
-    <name>fs.azure.test.account.name</name>
-    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
-  </property>
-  <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-    <value>{ACCOUNT ACCESS KEY}</value>
-  </property>
-</configuration>
 ```
 
-To run contract tests, set the WASB file system URI in `src/test/resources/azure-auth-keys.xml`
-and the account access key. For example:
-
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <property>
-    <name>fs.contract.test.fs.wasb</name>
-    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
-    <description>The name of the azure file system for testing.</description>
-  </property>
-  <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-    <value>{ACCOUNT ACCESS KEY}</value>
-  </property>
-</configuration>
+The maximum number of entries that that cache can hold can be customized using the following setting:
+```
+    <property>
+      <name>fs.azure.authorization.caching.maxentries</name>
+      <value>512</value>
+    </property>
 ```
 
-Overall, to run all the tests using `mvn test`,  a sample `azure-auth-keys.xml` is like following:
-
-```xml
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <property>
-    <name>fs.azure.test.account.name</name>
-    <value>{ACCOUNTNAME}.blob.core.windows.net</value>
-  </property>
-  <property>
-    <name>fs.azure.account.key.{ACCOUNTNAME}.blob.core.windows.net</name>
-    <value>{ACCOUNT ACCESS KEY}</value>
-  </property>
-  <property>
-    <name>fs.contract.test.fs.wasb</name>
-    <value>wasb://{CONTAINERNAME}@{ACCOUNTNAME}.blob.core.windows.net</value>
-  </property>
-</configuration>
+ The validity of an authorization cache-entry can be controlled using the following setting:
+ Setting the value to zero disables authorization-caching.
+ If the key is not specified, a default expiry duration of 5m takes effect.
+ ```
+    <property>
+      <name>fs.azure.authorization.cacheentry.expiry.period</name>
+      <value>5m</value>
+    </property>
 ```
 
-DO NOT ADD `azure-auth-keys.xml` TO REVISION CONTROL.  The keys to your Azure
-Storage account are a secret and must not be shared.
+ The validity of a SASKey cache-entry can be controlled using the following setting.
+ Setting the value to zero disables SASKey-caching.
+ If the key is not specified, the default expiry duration specified in the sas-key request takes effect.
+ ```
+    <property>
+      <name>fs.azure.saskey.cacheentry.expiry.period</name>
+      <value>90d</value>
+    </property>
+```
 
+ Use container saskey for access to all blobs within the container.
+ Blob-specific saskeys are not used when this setting is enabled.
+ This setting provides better performance compared to blob-specific saskeys.
+ ```
+    <property>
+      <name>fs.azure.saskey.usecontainersaskeyforallaccess</name>
+      <value>true</value>
+    </property>
+```
+
+## Further Reading
+
+* [Testing the Azure WASB client](testing_azure.html).
+* MSDN article, [Understanding Block Blobs, Append Blobs, and Page Blobs](https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs)

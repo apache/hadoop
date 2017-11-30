@@ -44,4 +44,5 @@ public class RMAppEvent extends AbstractEvent<RMAppEventType>{
   public String getDiagnosticMsg() {
     return this.diagnosticMsg;
   }
+
 }

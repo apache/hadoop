@@ -25,13 +25,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the base implementation class for services.
@@ -40,7 +40,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Evolving
 public abstract class AbstractService implements Service {
 
-  private static final Log LOG = LogFactory.getLog(AbstractService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractService.class);
 
   /**
    * Service name.
@@ -258,7 +259,7 @@ public abstract class AbstractService implements Service {
    */
   protected final void noteFailure(Exception exception) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("noteFailure " + exception, null);
+      LOG.debug("noteFailure " + exception, (Throwable) null);
     }
     if (exception == null) {
       //make sure failure logic doesn't itself cause problems

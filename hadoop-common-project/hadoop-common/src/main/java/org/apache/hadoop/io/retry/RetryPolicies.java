@@ -32,15 +32,18 @@ import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import javax.security.sasl.SaslException;
+
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.ietf.jgss.GSSException;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -49,7 +52,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class RetryPolicies {
   
-  public static final Log LOG = LogFactory.getLog(RetryPolicies.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RetryPolicies.class);
   
   /**
    * <p>
@@ -663,6 +666,11 @@ public class RetryPolicies {
             + retries + ") exceeded maximum allowed (" + maxRetries + ")");
       }
 
+      if (isSaslFailure(e)) {
+          return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
+                  "SASL failure");
+      }
+
       if (e instanceof ConnectException ||
           e instanceof EOFException ||
           e instanceof NoRouteToHostException ||
@@ -716,7 +724,7 @@ public class RetryPolicies {
   private static long calculateExponentialTime(long time, int retries) {
     return calculateExponentialTime(time, retries, Long.MAX_VALUE);
   }
-  
+
   private static boolean isWrappedStandbyException(Exception e) {
     if (!(e instanceof RemoteException)) {
       return false;
@@ -724,6 +732,18 @@ public class RetryPolicies {
     Exception unwrapped = ((RemoteException)e).unwrapRemoteException(
         StandbyException.class);
     return unwrapped instanceof StandbyException;
+  }
+
+  private static boolean isSaslFailure(Exception e) {
+      Throwable current = e;
+      do {
+          if (current instanceof SaslException) {
+            return true;
+          }
+          current = current.getCause();
+      } while (current != null);
+
+      return false;
   }
   
   static RetriableException getWrappedRetriableException(Exception e) {

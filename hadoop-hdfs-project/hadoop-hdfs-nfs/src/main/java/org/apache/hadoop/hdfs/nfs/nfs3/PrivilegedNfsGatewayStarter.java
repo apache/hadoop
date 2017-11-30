@@ -40,6 +40,7 @@ public class PrivilegedNfsGatewayStarter implements Daemon {
   static final Log LOG = LogFactory.getLog(PrivilegedNfsGatewayStarter.class);
   private String[] args = null;
   private DatagramSocket registrationSocket = null;
+  private Nfs3 nfs3Server = null;
 
   @Override
   public void init(DaemonContext context) throws Exception {
@@ -68,12 +69,14 @@ public class PrivilegedNfsGatewayStarter implements Daemon {
 
   @Override
   public void start() throws Exception {
-    Nfs3.startService(args, registrationSocket);
+    nfs3Server = Nfs3.startService(args, registrationSocket);
   }
 
   @Override
   public void stop() throws Exception {
-    // Nothing to do.
+    if (nfs3Server != null) {
+      nfs3Server.stop();
+    }
   }
 
   @Override

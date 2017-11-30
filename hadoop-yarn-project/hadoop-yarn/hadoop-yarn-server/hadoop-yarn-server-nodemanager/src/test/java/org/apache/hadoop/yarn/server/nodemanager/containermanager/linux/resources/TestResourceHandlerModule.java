@@ -20,19 +20,22 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static org.mockito.Mockito.mock;
+
 public class TestResourceHandlerModule {
-  private static final Log LOG = LogFactory.
-      getLog(TestResourceHandlerModule.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestResourceHandlerModule.class);
   Configuration emptyConf;
   Configuration networkEnabledConf;
 
@@ -62,7 +65,7 @@ public class TestResourceHandlerModule {
 
       //Ensure that outbound bandwidth resource handler is present in the chain
       ResourceHandlerChain resourceHandlerChain = ResourceHandlerModule
-          .getConfiguredResourceHandlerChain(networkEnabledConf);
+          .getConfiguredResourceHandlerChain(networkEnabledConf, mock(Context.class));
       List<ResourceHandler> resourceHandlers = resourceHandlerChain
           .getResourceHandlerList();
       //Exactly one resource handler in chain
@@ -88,7 +91,8 @@ public class TestResourceHandlerModule {
     Assert.assertNotNull(handler);
 
     ResourceHandlerChain resourceHandlerChain =
-        ResourceHandlerModule.getConfiguredResourceHandlerChain(diskConf);
+        ResourceHandlerModule.getConfiguredResourceHandlerChain(diskConf,
+            mock(Context.class));
     List<ResourceHandler> resourceHandlers =
         resourceHandlerChain.getResourceHandlerList();
     // Exactly one resource handler in chain

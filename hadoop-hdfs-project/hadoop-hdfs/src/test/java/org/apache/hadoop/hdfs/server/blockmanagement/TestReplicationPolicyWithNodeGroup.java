@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -51,6 +52,9 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
   @Override
   DatanodeDescriptor[] getDatanodeDescriptors(Configuration conf) {
+    // default is true, in this case this test will against DFSNetworkTopology
+    // but it run on NetworkTopologyWithNodeGroup, so set to false.
+    conf.setBoolean(DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
     conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
             NetworkTopologyWithNodeGroup.class.getName());
     final String[] racks = {

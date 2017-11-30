@@ -141,7 +141,7 @@ Similar to get command, except that the destination is restricted to a local fil
 count
 -----
 
-Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] <paths> `
+Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] [-e] <paths> `
 
 Count the number of directories, files and bytes under the paths that match the specified file pattern. Get the quota and the usage. The output columns with -count are: DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
@@ -159,6 +159,12 @@ The -v option displays a header line.
 
 The -x option excludes snapshots from the result calculation. Without the -x option (default), the result is always calculated from all INodes, including all snapshots under the given path. The -x option is ignored if -u or -q option is given.
 
+The -e option shows the erasure coding policy for each file.
+
+The output columns with -count -e are: DIR\_COUNT, FILE\_COUNT, CONTENT_SIZE, ERASURECODING\_POLICY, PATHNAME
+
+The ERASURECODING\_POLICY is name of the policy for the file. If a erasure coding policy is setted on that file, it will return name of the policy. If no erasure coding policy is setted, it will return \"Replicated\" which means it use replication storage strategy.
+
 Example:
 
 * `hadoop fs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2`
@@ -168,6 +174,7 @@ Example:
 * `hadoop fs -count -u hdfs://nn1.example.com/file1`
 * `hadoop fs -count -u -h hdfs://nn1.example.com/file1`
 * `hadoop fs -count -u -h -v hdfs://nn1.example.com/file1`
+* `hadoop fs -count -e hdfs://nn1.example.com/file1`
 
 Exit Code:
 
@@ -393,6 +400,19 @@ Exit Code:
 
 Returns 0 on success and non-zero on error.
 
+head
+----
+
+Usage: `hadoop fs -head URI`
+
+Displays first kilobyte of the file to stdout.
+
+Example:
+
+* `hadoop fs -head pathname`
+
+Exit Code: Returns 0 on success and -1 on error.
+
 help
 ----
 
@@ -403,7 +423,7 @@ Return usage output.
 ls
 ----
 
-Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] <args> `
+Usage: `hadoop fs -ls [-C] [-d] [-h] [-q] [-R] [-t] [-S] [-r] [-u] [-e] <args> `
 
 Options:
 
@@ -416,6 +436,7 @@ Options:
 * -S: Sort output by file size.
 * -r: Reverse the sort order.
 * -u: Use access time rather than modification time for display and sorting.  
+* -e: Display the erasure coding policy of files and directories only.
 
 For a file ls returns stat on the file with the following format:
 
@@ -430,6 +451,7 @@ Files within a directory are order by filename by default.
 Example:
 
 * `hadoop fs -ls /user/hadoop/file1`
+* `hadoop fs -ls -e /ecdir`
 
 Exit Code:
 
@@ -667,11 +689,11 @@ stat
 
 Usage: `hadoop fs -stat [format] <path> ...`
 
-Print statistics about the file/directory at \<path\> in the specified format. Format accepts permissions in octal (%a) and symbolic (%A), filesize in bytes (%b), type (%F), group name of owner (%g), name (%n), block size (%o), replication (%r), user name of owner(%u), and modification date (%y, %Y). %y shows UTC date as "yyyy-MM-dd HH:mm:ss" and %Y shows milliseconds since January 1, 1970 UTC. If the format is not specified, %y is used by default.
+Print statistics about the file/directory at \<path\> in the specified format. Format accepts permissions in octal (%a) and symbolic (%A), filesize in bytes (%b), type (%F), group name of owner (%g), name (%n), block size (%o), replication (%r), user name of owner(%u), access date(%x, %X), and modification date (%y, %Y). %x and %y show UTC date as "yyyy-MM-dd HH:mm:ss", and %X and %Y show milliseconds since January 1, 1970 UTC. If the format is not specified, %y is used by default.
 
 Example:
 
-* `hadoop fs -stat "%F %a %u:%g %b %y %n" /file`
+* `hadoop fs -stat "type:%F perm:%a %u:%g size:%b mtime:%y atime:%x name:%n" /file`
 
 Exit Code: Returns 0 on success and -1 on error.
 

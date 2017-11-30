@@ -31,10 +31,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerQue
 import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.LI;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -70,20 +70,23 @@ public class FairSchedulerPage extends RmView {
     @Override
     protected void render(Block html) {
       ResponseInfo ri = info("\'" + qinfo.getQueueName() + "\' Queue Status").
-          _("Used Resources:", qinfo.getUsedResources().toString()).
-          _("Demand Resources:", qinfo.getDemandResources().toString()).
-          _("Num Active Applications:", qinfo.getNumActiveApplications()).
-          _("Num Pending Applications:", qinfo.getNumPendingApplications()).
-          _("Min Resources:", qinfo.getMinResources().toString()).
-          _("Max Resources:", qinfo.getMaxResources().toString());
+          __("Used Resources:", qinfo.getUsedResources().toString()).
+          __("Demand Resources:", qinfo.getDemandResources().toString()).
+          __("AM Used Resources:", qinfo.getAMUsedResources().toString()).
+          __("AM Max Resources:", qinfo.getAMMaxResources().toString()).
+          __("Num Active Applications:", qinfo.getNumActiveApplications()).
+          __("Num Pending Applications:", qinfo.getNumPendingApplications()).
+          __("Min Resources:", qinfo.getMinResources().toString()).
+          __("Max Resources:", qinfo.getMaxResources().toString()).
+          __("Reserved Resources:", qinfo.getReservedResources().toString());
       int maxApps = qinfo.getMaxApplications();
       if (maxApps < Integer.MAX_VALUE) {
-          ri._("Max Running Applications:", qinfo.getMaxApplications());
+        ri.__("Max Running Applications:", qinfo.getMaxApplications());
       }
-      ri._(STEADY_FAIR_SHARE + ":", qinfo.getSteadyFairShare().toString());
-      ri._(INSTANTANEOUS_FAIR_SHARE + ":", qinfo.getFairShare().toString());
-      ri._("Preemptable:", qinfo.isPreemptable());
-      html._(InfoBlock.class);
+      ri.__(STEADY_FAIR_SHARE + ":", qinfo.getSteadyFairShare().toString());
+      ri.__(INSTANTANEOUS_FAIR_SHARE + ":", qinfo.getFairShare().toString());
+      ri.__("Preemptable:", qinfo.isPreemptable());
+      html.__(InfoBlock.class);
 
       // clear the info contents so this queue's info doesn't accumulate into another queue's info
       ri.clear();
@@ -101,16 +104,17 @@ public class FairSchedulerPage extends RmView {
     @Override
     protected void render(Block html) {
       ResponseInfo ri = info("\'" + qinfo.getQueueName() + "\' Queue Status").
-          _("Used Resources:", qinfo.getUsedResources().toString()).
-          _("Min Resources:", qinfo.getMinResources().toString()).
-          _("Max Resources:", qinfo.getMaxResources().toString());
+          __("Used Resources:", qinfo.getUsedResources().toString()).
+          __("Min Resources:", qinfo.getMinResources().toString()).
+          __("Max Resources:", qinfo.getMaxResources().toString()).
+          __("Reserved Resources:", qinfo.getReservedResources().toString());
       int maxApps = qinfo.getMaxApplications();
       if (maxApps < Integer.MAX_VALUE) {
-          ri._("Max Running Applications:", qinfo.getMaxApplications());
+        ri.__("Max Running Applications:", qinfo.getMaxApplications());
       }
-      ri._(STEADY_FAIR_SHARE + ":", qinfo.getSteadyFairShare().toString());
-      ri._(INSTANTANEOUS_FAIR_SHARE + ":", qinfo.getFairShare().toString());
-      html._(InfoBlock.class);
+      ri.__(STEADY_FAIR_SHARE + ":", qinfo.getSteadyFairShare().toString());
+      ri.__(INSTANTANEOUS_FAIR_SHARE + ":", qinfo.getFairShare().toString());
+      html.__(InfoBlock.class);
 
       // clear the info contents so this queue's info doesn't accumulate into another queue's info
       ri.clear();
@@ -139,28 +143,28 @@ public class FairSchedulerPage extends RmView {
               $title(join(join(STEADY_FAIR_SHARE + ":", percent(steadyFairShare)),
                   join(" " + INSTANTANEOUS_FAIR_SHARE + ":", percent(instantaneousFairShare)))).
               span().$style(join(Q_GIVEN, ";font-size:1px;", width(steadyFairShare / capacity))).
-                _('.')._().
+            __('.').__().
               span().$style(join(Q_INSTANTANEOUS_FS, ";font-size:1px;",
                   width(instantaneousFairShare/capacity))).
-                _('.')._().
+            __('.').__().
               span().$style(join(width(used/capacity),
                 ";font-size:1px;left:0%;", used > instantaneousFairShare ? Q_OVER : Q_UNDER)).
-                _('.')._().
-              span(".q", info.getQueueName())._().
+            __('.').__().
+              span(".q", info.getQueueName()).__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
-              _(join(percent(used), " used"))._();
+            __(join(percent(used), " used")).__();
 
         fsqinfo.qinfo = info;
         if (info instanceof FairSchedulerLeafQueueInfo) {
-          li.ul("#lq").li()._(LeafQueueBlock.class)._()._();
+          li.ul("#lq").li().__(LeafQueueBlock.class).__().__();
         } else {
-          li.ul("#lq").li()._(ParentQueueBlock.class)._()._();
-          li._(QueueBlock.class);
+          li.ul("#lq").li().__(ParentQueueBlock.class).__().__();
+          li.__(QueueBlock.class);
         }
-        li._();
+        li.__();
       }
 
-      ul._();
+      ul.__();
     }
   }
   
@@ -175,19 +179,19 @@ public class FairSchedulerPage extends RmView {
 
     @Override
     public void render(Block html) {
-      html._(MetricsOverviewTable.class);
+      html.__(MetricsOverviewTable.class);
       UL<DIV<DIV<Hamlet>>> ul = html.
         div("#cs-wrapper.ui-widget").
           div(".ui-widget-header.ui-corner-top").
-            _("Application Queues")._().
+          __("Application Queues").__().
           div("#cs.ui-widget-content.ui-corner-bottom").
             ul();
       if (fs == null) {
         ul.
           li().
             a(_Q).$style(width(Q_MAX_WIDTH)).
-              span().$style(Q_END)._("100% ")._().
-              span(".q", "default")._()._();
+              span().$style(Q_END).__("100% ").__().
+              span(".q", "default").__().__();
       } else {
         FairSchedulerInfo sinfo = new FairSchedulerInfo(fs);
         fsqinfo.qinfo = sinfo.getRootQueueInfo();
@@ -195,52 +199,52 @@ public class FairSchedulerPage extends RmView {
 
         ul.
           li().$style("margin-bottom: 1em").
-            span().$style("font-weight: bold")._("Legend:")._().
+            span().$style("font-weight: bold").__("Legend:").__().
             span().$class("qlegend ui-corner-all").$style(Q_GIVEN).
               $title("The steady fair shares consider all queues, " +
                   "both active (with running applications) and inactive.").
-              _(STEADY_FAIR_SHARE)._().
+            __(STEADY_FAIR_SHARE).__().
             span().$class("qlegend ui-corner-all").$style(Q_INSTANTANEOUS_FS).
               $title("The instantaneous fair shares consider only active " +
                   "queues (with running applications).").
-              _(INSTANTANEOUS_FAIR_SHARE)._().
+            __(INSTANTANEOUS_FAIR_SHARE).__().
             span().$class("qlegend ui-corner-all").$style(Q_UNDER).
-              _("Used")._().
+            __("Used").__().
             span().$class("qlegend ui-corner-all").$style(Q_OVER).
-              _("Used (over fair share)")._().
+            __("Used (over fair share)").__().
             span().$class("qlegend ui-corner-all ui-state-default").
-              _("Max Capacity")._().
-        _().
+            __("Max Capacity").__().
+            __().
           li().
             a(_Q).$style(width(Q_MAX_WIDTH)).
               span().$style(join(width(used), ";left:0%;",
-                  used > 1 ? Q_OVER : Q_UNDER))._(".")._().
-              span(".q", "root")._().
+                  used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
+              span(".q", "root").__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
-              _(join(percent(used), " used"))._().
-            _(QueueBlock.class)._();
+            __(join(percent(used), " used")).__().
+            __(QueueBlock.class).__();
       }
-      ul._()._().
+      ul.__().__().
       script().$type("text/javascript").
-          _("$('#cs').hide();")._()._().
-      _(FairSchedulerAppsBlock.class);
+          __("$('#cs').hide();").__().__().
+          __(FairSchedulerAppsBlock.class);
     }
   }
   
-  @Override protected void postHead(Page.HTML<_> html) {
+  @Override protected void postHead(Page.HTML<__> html) {
     html.
       style().$type("text/css").
-        _("#cs { padding: 0.5em 0 1em 0; margin-bottom: 1em; position: relative }",
+        __("#cs { padding: 0.5em 0 1em 0; margin-bottom: 1em; position: relative }",
           "#cs ul { list-style: none }",
           "#cs a { font-weight: normal; margin: 2px; position: relative }",
           "#cs a span { font-weight: normal; font-size: 80% }",
           "#cs-wrapper .ui-widget-header { padding: 0.2em 0.5em }",
           ".qstats { font-weight: normal; font-size: 80%; position: absolute }",
           ".qlegend { font-weight: normal; padding: 0 1em; margin: 1em }",
-          "table.info tr th {width: 50%}")._(). // to center info table
+          "table.info tr th {width: 50%}").__(). // to center info table
       script("/static/jt/jquery.jstree.js").
       script().$type("text/javascript").
-        _("$(function() {",
+        __("$(function() {",
           "  $('#cs a span').addClass('ui-corner-all').css('position', 'absolute');",
           "  $('#cs').bind('loaded.jstree', function (e, data) {",
           "    var callback = { call:reopenQueryNodes }",
@@ -260,8 +264,8 @@ public class FairSchedulerPage extends RmView {
           "    $('#apps').dataTable().fnFilter(q, 4, true);",
           "  });",
           "  $('#cs').show();",
-          "});")._().
-        _(SchedulerPageUtil.QueueBlockUtil.class);
+          "});").__().
+        __(SchedulerPageUtil.QueueBlockUtil.class);
   }
   
   @Override protected Class<? extends SubView> content() {

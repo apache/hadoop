@@ -194,7 +194,8 @@ public class DFSZKFailoverController extends ZKFailoverController {
     try {
       retCode = zkfc.run(parser.getRemainingArgs());
     } catch (Throwable t) {
-      LOG.fatal("Got a fatal error, exiting now", t);
+      LOG.fatal("DFSZKFailOverController exiting due to earlier exception "
+          + t);
     }
     System.exit(retCode);
   }

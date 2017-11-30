@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.util.Diff.UndoInfo;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSHOT_ID;
 
@@ -630,7 +631,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   }
 
   public void computeContentSummary4Snapshot(final BlockStoragePolicySuite bsps,
-      final ContentCounts counts) {
+      final ContentCounts counts) throws AccessControlException {
     // Create a new blank summary context for blocking processing of subtree.
     ContentSummaryComputationContext summary = 
         new ContentSummaryComputationContext(bsps);

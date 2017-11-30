@@ -23,18 +23,22 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -45,10 +49,10 @@ import org.apache.hadoop.yarn.server.webapp.AppAttemptBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -61,7 +65,7 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
 
   @Inject
   RMAppAttemptBlock(ViewContext ctx, ResourceManager rm, Configuration conf) {
-    super(rm.getClientRMService(), ctx);
+    super(null, ctx);
     this.rm = rm;
     this.conf = conf;
   }
@@ -86,7 +90,7 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
         .th(".resource", "ResourceName").th(".capacity", "Capability")
         .th(".containers", "NumContainers")
         .th(".relaxlocality", "RelaxLocality")
-        .th(".labelexpression", "NodeLabelExpression")._()._().tbody();
+        .th(".labelexpression", "NodeLabelExpression").__().__().tbody();
 
     StringBuilder resourceRequestTableData = new StringBuilder("[\n");
     for (ResourceRequestInfo resourceRequest  : resourceRequests) {
@@ -114,9 +118,9 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
     }
     resourceRequestTableData.append("]");
     html.script().$type("text/javascript")
-        ._("var resourceRequestsTableData=" + resourceRequestTableData)._();
-    tbody._()._();
-    div._();
+        .__("var resourceRequestsTableData=" + resourceRequestTableData).__();
+    tbody.__().__();
+    div.__();
   }
 
   private Resource getTotalResource(List<ResourceRequestInfo> requests) {
@@ -163,7 +167,7 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
         th(_TH, "Node Local Request").
         th(_TH, "Rack Local Request").
         th(_TH, "Off Switch Request").
-      _();
+        __();
 
     String[] containersType =
         { "Num Node Local Containers (satisfied by)", "Num Rack Local Containers (satisfied by)",
@@ -173,10 +177,10 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
       table.tr((odd = !odd) ? _ODD : _EVEN).td(containersType[i])
         .td(String.valueOf(attemptMetrics.getLocalityStatistics()[i][0]))
         .td(i == 0 ? "" : String.valueOf(attemptMetrics.getLocalityStatistics()[i][1]))
-        .td(i <= 1 ? "" : String.valueOf(attemptMetrics.getLocalityStatistics()[i][2]))._();
+        .td(i <= 1 ? "" : String.valueOf(attemptMetrics.getLocalityStatistics()[i][2])).__();
     }
-    table._();
-    div._();
+    table.__();
+    div.__();
   }
 
   private boolean isApplicationInFinalState(YarnApplicationAttemptState state) {
@@ -192,12 +196,12 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
       if (!isApplicationInFinalState(YarnApplicationAttemptState
           .valueOf(attempt.getAppAttemptState().toString()))) {
         RMAppAttemptMetrics metrics = attempt.getRMAppAttemptMetrics();
-        DIV<Hamlet> pdiv = html._(InfoBlock.class).div(_INFO_WRAP);
+        DIV<Hamlet> pdiv = html.__(InfoBlock.class).div(_INFO_WRAP);
         info("Application Attempt Overview").clear();
-        info("Application Attempt Metrics")._(
+        info("Application Attempt Metrics").__(
           "Application Attempt Headroom : ", metrics == null ? "N/A" :
             metrics.getApplicationAttemptHeadroom());
-        pdiv._();
+        pdiv.__();
       }
     }
   }
@@ -226,23 +230,23 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
           .getBlacklistUpdates().getBlacklistAdditions());
 
     info("Application Attempt Overview")
-      ._(
+      .__(
         "Application Attempt State:",
         appAttempt.getAppAttemptState() == null ? UNAVAILABLE : appAttempt
           .getAppAttemptState())
-        ._("Started:", Times.format(appAttempt.getStartedTime()))
-        ._("Elapsed:",
+        .__("Started:", Times.format(appAttempt.getStartedTime()))
+        .__("Elapsed:",
             org.apache.hadoop.util.StringUtils.formatTime(Times.elapsed(
                 appAttempt.getStartedTime(), appAttempt.getFinishedTime())))
-      ._(
+      .__(
         "AM Container:",
         appAttempt.getAmContainerId() == null || containers == null
             || !hasAMContainer(appAttemptReport.getAMContainerId(), containers)
             ? null : root_url("container", appAttempt.getAmContainerId()),
         appAttempt.getAmContainerId() == null ? "N/A" :
           String.valueOf(appAttempt.getAmContainerId()))
-      ._("Node:", node)
-      ._(
+      .__("Node:", node)
+      .__(
         "Tracking URL:",
         appAttempt.getTrackingUrl() == null
             || appAttempt.getTrackingUrl().equals(UNAVAILABLE) ? null
@@ -254,12 +258,12 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
                 || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.FAILED
                 || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.KILLED
                 ? "History" : "ApplicationMaster")
-      ._(
+      .__(
         "Diagnostics Info:",
         appAttempt.getDiagnosticsInfo() == null ? "" : appAttempt
           .getDiagnosticsInfo())
-      ._("Nodes blacklisted by the application:", appBlacklistedNodes)
-      ._("Nodes blacklisted by the system:", rmBlackListedNodes);
+      .__("Nodes blacklisted by the application:", appBlacklistedNodes)
+      .__("Nodes blacklisted by the system:", rmBlackListedNodes);
   }
 
   private String getNodeString(Collection<String> nodes) {
@@ -274,5 +278,19 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
   protected void createTablesForAttemptMetrics(Block html) {
     createContainerLocalityTable(html);
     createResourceRequestsTable(html);
+  }
+
+  @Override
+  protected List<ContainerReport> getContainers(
+      final GetContainersRequest request) throws YarnException, IOException {
+    return rm.getClientRMService().getContainers(request).getContainerList();
+  }
+
+  @Override
+  protected ApplicationAttemptReport getApplicationAttemptReport(
+      final GetApplicationAttemptReportRequest request)
+      throws YarnException, IOException {
+    return rm.getClientRMService().getApplicationAttemptReport(request)
+        .getApplicationAttemptReport();
   }
 }

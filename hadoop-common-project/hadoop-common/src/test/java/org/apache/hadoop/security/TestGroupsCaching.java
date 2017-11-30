@@ -40,17 +40,17 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class TestGroupsCaching {
-  public static final Log TESTLOG = LogFactory.getLog(TestGroupsCaching.class);
+  public static final Logger TESTLOG =
+      LoggerFactory.getLogger(TestGroupsCaching.class);
   private static String[] myGroups = {"grp1", "grp2"};
   private Configuration conf;
 

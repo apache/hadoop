@@ -21,6 +21,7 @@ import Ember from 'ember';
 export default Ember.Component.extend({
 
   breadcrumbs: null,
+  hideRefresh: false,
 
   actions:{
     refresh: function () {

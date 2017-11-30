@@ -65,9 +65,11 @@ Architecture
 
       2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, five built-in policies are supported: `RS-3-2-64k`, `RS-6-3-64k`, `RS-10-4-64k`, `RS-LEGACY-6-3-64k`, and `XOR-2-1-64k`.
+    Policies are named *codec*-*num data blocks*-*num parity blocks*-*cell size*. Currently, six built-in policies are supported: `RS-3-2-1024k`, `RS-6-3-1024k`, `RS-10-4-1024k`, `RS-LEGACY-6-3-1024k`, `XOR-2-1-1024k` and `REPLICATION`.
 
-    By default, all built-in erasure coding policies are disabled.
+    `REPLICATION` is a special policy. It can only be set on directory, to force the directory to adopt 3x replication scheme, instead of inheriting its ancestor's erasure coding policy. This policy makes it possible to interleave 3x replication scheme directory with erasure coding directory.
+
+    `REPLICATION` policy is always enabled. For other built-in policies, they are disabled by default.
 
     Similar to HDFS storage policies, erasure coding policies are set on a directory. When a file is created, it inherits the EC policy of its nearest ancestor directory.
 
@@ -108,14 +110,16 @@ Deployment
 
 ### Configuration keys
 
-  The set of enabled erasure coding policies can be configured on the NameNode via `dfs.namenode.ec.policies.enabled` configuration. This restricts
-  what EC policies can be set by clients. It does not affect the behavior of already set file or directory-level EC policies.
-
-  By default, all built-in erasure coding policies are disabled. Typically, the cluster administrator will enable set of policies by including them
-  in the `dfs .namenode.ec.policies.enabled` configuration based on the size of the cluster and the desired fault-tolerance properties. For instance,
-  for a cluster with 9 racks, a policy like `RS-10-4-64k` will not preserve rack-level fault-tolerance, and `RS-6-3-64k` or `RS-3-2-64k` might
-  be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-64k` would still be appropriate as long as
+  By default, all built-in erasure coding policies are disabled, except the one defined in `dfs.namenode.ec.system.default.policy` which is enabled by default.
+  The cluster administrator can enable set of policies through `hdfs ec [-enablePolicy -policy <policyName>]` command based on the size of the cluster and the desired fault-tolerance properties. For instance,
+  for a cluster with 9 racks, a policy like `RS-10-4-1024k` will not preserve rack-level fault-tolerance, and `RS-6-3-1024k` or `RS-3-2-1024k` might
+  be more appropriate. If the administrator only cares about node-level fault-tolerance, `RS-10-4-1024k` would still be appropriate as long as
   there are at least 14 DataNodes in the cluster.
+
+  A system default EC policy can be configured via 'dfs.namenode.ec.system.default.policy' configuration. With this configuration,
+  the default EC policy will be used when no policy name is passed as an argument in the '-setPolicy' command.
+
+  By default, the 'dfs.namenode.ec.system.default.policy' is "RS-6-3-1024k".
 
   The codec implementations for Reed-Solomon and XOR can be configured with the following client and DataNode configuration keys:
   `io.erasurecode.codec.rs.rawcoders` for the default RS codec,
@@ -123,51 +127,63 @@ Deployment
   `io.erasurecode.codec.xor.rawcoders` for the XOR codec.
   User can also configure self-defined codec with configuration key like:
   `io.erasurecode.codec.self-defined-codec.rawcoders`.
-  The values for these key are lists of coder names with a fall-back mechanism.
+  The values for these key are lists of coder names with a fall-back mechanism. These codec factories are loaded in the order specified by the configuration values, until a codec is loaded successfully. The default RS and XOR codec configuration prefers native implementation over the pure Java one. There is no RS-LEGACY native codec implementation so the default is pure Java implementation only.
   All these codecs have implementations in pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
   The default implementation for RS Legacy is pure Java, and the default implementations for default RS and XOR are native implementations using Intel ISA-L library.
 
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 
   1. `dfs.datanode.ec.reconstruction.stripedread.timeout.millis` - Timeout for striped reads. Default value is 5000 ms.
-  1. `dfs.datanode.ec.reconstruction.stripedread.threads` - Number of concurrent reader threads. Default value is 20 threads.
   1. `dfs.datanode.ec.reconstruction.stripedread.buffer.size` - Buffer size for reader service. Default value is 64KB.
-  1. `dfs.datanode.ec.reconstruction.stripedblock.threads.size` - Number of threads used by the Datanode for background reconstruction work. Default value is 8 threads.
+  1. `dfs.datanode.ec.reconstruction.threads` - Number of threads used by the Datanode for background reconstruction work. Default value is 8 threads.
+  1. `dfs.datanode.ec.reconstruction.xmits.weight` - Relative weight of xmits used by EC background recovery task comparing to replicated block recovery. Default value is 0.5.
+  It sets to `0` to disable calculate weights for EC recovery tasks, that is, EC task always has `1` xmits.
+  The xmits of an erasure coding recovery task is calculated as the maximum value between the number of read streams and the number of write streams. For example, if an EC recovery
+  task need to read from 6 nodes and write to 2 nodes, it has xmits of `max(6, 2) * 0.5 = 3`. Recovery task for replicated file always counts
+  as `1` xmit. NameNode utilizes `dfs.namenode.replication.max-streams` minus the total `xmitsInProgress` on the DataNode that combines of the xmits from
+  replicated file and EC files, to schedule recovery tasks to this DataNode.
 
 ### Enable Intel ISA-L
 
   HDFS native implementation of default RS codec leverages Intel ISA-L library to improve the encoding and decoding calculation. To enable and use Intel ISA-L, there are three steps.
+
   1. Build ISA-L library. Please refer to the official site "https://github.com/01org/isa-l/" for detail information.
-  2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop" in (BUILDING.txt) in the source code. Use `-Dbundle.isal` to copy the contents of the `isal.lib` directory into the final tar file. Deploy Hadoop with the tar file. Make sure ISA-L is available on HDFS clients and DataNodes.
-  3. Configure the `io.erasurecode.codec.rs.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS clients and DataNodes.
+  2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop" in (BUILDING.txt) in the source code.
+  3. Use `-Dbundle.isal` to copy the contents of the `isal.lib` directory into the final tar file. Deploy Hadoop with the tar file. Make sure ISA-L is available on HDFS clients and DataNodes.
 
   To verify that ISA-L is correctly detected by Hadoop, run the `hadoop checknative` command.
-
-  To enable the native implementation of the XOR codec, perform the same first two steps as above to build and deploy Hadoop with ISA-L support. Afterwards, configure the `io.erasurecode.codec.xor.rawcoder` key with `org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory` on both HDFS client and DataNodes.
 
 ### Administrative commands
 
   HDFS provides an `ec` subcommand to perform administrative commands related to erasure coding.
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -path <path> [-policy <policyName>] [-replicate]]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
          [-addPolicies -policyFile <file>]
          [-listCodecs]
-         [-usage [cmd ...]]
+         [-enablePolicy -policy <policyName>]
+         [-disablePolicy -policy <policyName>]
          [-help [cmd ...]]
 
 Below are the details about each command.
 
- *  `[-setPolicy -policy <policyName> -path <path>]`
+ *  `[-setPolicy -path <path> [-policy <policyName>] [-replicate]]`
 
     Sets an erasure coding policy on a directory at the specified path.
 
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
       `policyName`: The erasure coding policy to be used for files under this directory.
+      This parameter can be omitted if a 'dfs.namenode.ec.system.default.policy' configuration is set.
+      The EC policy of the path will be set with the default value in configuration.
+
+      `-replicate` apply the special `REPLICATION` policy on the directory, force the directory to adopt 3x replication scheme.
+
+      `-replicate` and `-policy <policyName>` are optional arguments. They cannot be specified at the same time.
+
 
  *  `[-getPolicy -path <path>]`
 
@@ -179,12 +195,43 @@ Below are the details about each command.
 
  *  `[-listPolicies]`
 
-     Lists the set of enabled erasure coding policies. These names are suitable for use with the `setPolicy` command.
+     Lists all (enabled, disabled and removed) erasure coding policies registered in HDFS. Only the enabled policies are suitable for use with the `setPolicy` command.
 
  *  `[-addPolicies -policyFile <file>]`
 
-     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB.
+     Add a list of erasure coding policies. Please refer etc/hadoop/user_ec_policies.xml.template for the example policy file. The maximum cell size is defined in property 'dfs.namenode.ec.policies.max.cellsize' with the default value 4MB. Currently HDFS allows the user to add 64 policies in total, and the added policy ID is in range of 64 to 127. Adding policy will fail if there are already 64 policies added.
 
  *  `[-listCodecs]`
 
      Get the list of supported erasure coding codecs and coders in system. A coder is an implementation of a codec. A codec can have different implementations, thus different coders. The coders for a codec are listed in a fall back order.
+
+*  `[-removePolicy -policy <policyName>]`
+
+     Remove an erasure coding policy.
+
+*  `[-enablePolicy -policy <policyName>]`
+
+     Enable an erasure coding policy.
+
+*  `[-disablePolicy -policy <policyName>]`
+
+     Disable an erasure coding policy.
+
+Limitations
+-----------
+
+Certain HDFS file write operations, i.e., `hflush`, `hsync` and `append`,
+are not supported on erasure coded files due to substantial technical
+challenges.
+
+* `append()` on an erasure coded file will throw `IOException`.
+* `hflush()` and `hsync()` on `DFSStripedOutputStream` are no-op. Thus calling
+`hflush()` or `hsync()` on an erasure coded file can not guarantee data
+being persistent.
+
+A client can use [`StreamCapabilities`](../hadoop-common/filesystem/filesystem.html#interface_StreamCapabilities)
+API to query whether a `OutputStream` supports `hflush()` and `hsync()`.
+If the client desires data persistence via `hflush()` and `hsync()`, the current
+remedy is creating such files as regular 3x replication files in a
+non-erasure-coded directory, or using `FSDataOutputStreamBuilder#replicate()`
+API to create 3x replication files in an erasure-coded directory.

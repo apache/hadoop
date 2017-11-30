@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -156,7 +157,8 @@ public class TestNonAggregatingLogHandler {
 
     logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
 
-    logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11,
+        ContainerType.APPLICATION_MASTER, 0));
 
     logHandler.handle(new LogHandlerAppFinishedEvent(appId));
 
@@ -196,7 +198,8 @@ public class TestNonAggregatingLogHandler {
 
     logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
 
-    logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11,
+        ContainerType.APPLICATION_MASTER, 0));
 
     logHandler.handle(new LogHandlerAppFinishedEvent(appId));
 
@@ -365,7 +368,8 @@ public class TestNonAggregatingLogHandler {
     logHandler.start();
 
     logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null, null));
-    logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11,
+        ContainerType.APPLICATION_MASTER, 0));
     logHandler.handle(new LogHandlerAppFinishedEvent(appId));
 
     // simulate a restart and verify deletion is rescheduled

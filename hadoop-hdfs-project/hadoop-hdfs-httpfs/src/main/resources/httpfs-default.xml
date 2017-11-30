@@ -16,7 +16,7 @@
 <configuration>
 
   <property>
-    <name>hadoop.httpfs.http.port</name>
+    <name>httpfs.http.port</name>
     <value>14000</value>
     <description>
       The HTTP port for HttpFS REST API.
@@ -24,7 +24,7 @@
   </property>
 
   <property>
-    <name>hadoop.httpfs.http.host</name>
+    <name>httpfs.http.hostname</name>
     <value>0.0.0.0</value>
     <description>
       The bind host for HttpFS REST API.
@@ -32,7 +32,7 @@
   </property>
 
   <property>
-    <name>hadoop.httpfs.http.administrators</name>
+    <name>httpfs.http.administrators</name>
     <value></value>
     <description>ACL for the admins, this configuration is used to control
       who can access the default servlets for HttpFS server. The value
@@ -46,7 +46,7 @@
   </property>
 
   <property>
-    <name>hadoop.httpfs.ssl.enabled</name>
+    <name>httpfs.ssl.enabled</name>
     <value>false</value>
     <description>
       Whether SSL is enabled. Default is false, i.e. disabled.

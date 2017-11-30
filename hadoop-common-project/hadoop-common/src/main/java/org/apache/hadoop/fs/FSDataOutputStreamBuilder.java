@@ -17,37 +17,121 @@
  */
 package org.apache.hadoop.fs;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
-/** Base of specific file system FSDataOutputStreamBuilder. */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class FSDataOutputStreamBuilder {
-  private Path path = null;
+/**
+ * Builder for {@link FSDataOutputStream} and its subclasses.
+ *
+ * It is used to create {@link FSDataOutputStream} when creating a new file or
+ * appending an existing file on {@link FileSystem}.
+ *
+ * By default, it does not create parent directory that do not exist.
+ * {@link FileSystem#createNonRecursive(Path, boolean, int, short, long,
+ * Progressable)}.
+ *
+ * To create missing parent directory, use {@link #recursive()}.
+ *
+ * To be more generic, {@link #opt(String, int)} and {@link #must(String, int)}
+ * variants provide implementation-agnostic way to customize the builder.
+ * Each FS-specific builder implementation can interpret the FS-specific
+ * options accordingly, for example:
+ *
+ * <code>
+ *
+ * // Don't
+ * if (fs instanceof FooFileSystem) {
+ *   FooFileSystem fs = (FooFileSystem) fs;
+ *   OutputStream out = dfs.createFile(path)
+ *     .optionA()
+ *     .optionB("value")
+ *     .cache()
+ *   .build()
+ * } else if (fs instanceof BarFileSystem) {
+ *   ...
+ * }
+ *
+ * // Do
+ * OutputStream out = fs.createFile(path)
+ *   .permission(perm)
+ *   .bufferSize(bufSize)
+ *   .opt("foofs:option.a", true)
+ *   .opt("foofs:option.b", "value")
+ *   .opt("barfs:cache", true)
+ *   .must("foofs:cache", true)
+ *   .must("barfs:cache-size", 256 * 1024 * 1024)
+ *   .build();
+ * </code>
+ *
+ * If the option is not related to the file system, the option will be ignored.
+ * If the option is must, but not supported by the file system, a
+ * {@link IllegalArgumentException} will be thrown.
+ *
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public abstract class FSDataOutputStreamBuilder
+    <S extends FSDataOutputStream, B extends FSDataOutputStreamBuilder<S, B>> {
+  private final FileSystem fs;
+  private final Path path;
   private FsPermission permission = null;
-  private Integer bufferSize;
-  private Short replication;
-  private Long blockSize;
+  private int bufferSize;
+  private short replication;
+  private long blockSize;
+  /** set to true to create missing directory. */
+  private boolean recursive = false;
+  private final EnumSet<CreateFlag> flags = EnumSet.noneOf(CreateFlag.class);
   private Progressable progress = null;
-  private EnumSet<CreateFlag> flags = null;
   private ChecksumOpt checksumOpt = null;
 
-  private final FileSystem fs;
+  /**
+   * Contains optional and mandatory parameters.
+   *
+   * It does not load default configurations from default files.
+   */
+  private final Configuration options = new Configuration(false);
 
-  protected FSDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+  /** Keep track of the keys for mandatory options. */
+  private final Set<String> mandatoryKeys = new HashSet<>();
+
+  /**
+   * Return the concrete implementation of the builder instance.
+   */
+  protected abstract B getThisBuilder();
+
+  /**
+   * Constructor.
+   */
+  protected FSDataOutputStreamBuilder(@Nonnull FileSystem fileSystem,
+      @Nonnull Path p) {
+    Preconditions.checkNotNull(fileSystem);
+    Preconditions.checkNotNull(p);
     fs = fileSystem;
     path = p;
+    bufferSize = fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT);
+    replication = fs.getDefaultReplication(path);
+    blockSize = fs.getDefaultBlockSize(p);
+  }
+
+  protected FileSystem getFS() {
+    return fs;
   }
 
   protected Path getPath() {
@@ -56,91 +140,279 @@ public class FSDataOutputStreamBuilder {
 
   protected FsPermission getPermission() {
     if (permission == null) {
-      return FsPermission.getFileDefault();
+      permission = FsPermission.getFileDefault();
     }
     return permission;
   }
 
-  public FSDataOutputStreamBuilder setPermission(final FsPermission perm) {
+  /**
+   * Set permission for the file.
+   */
+  public B permission(@Nonnull final FsPermission perm) {
     Preconditions.checkNotNull(perm);
     permission = perm;
-    return this;
+    return getThisBuilder();
   }
 
   protected int getBufferSize() {
-    if (bufferSize == null) {
-      return fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
-          IO_FILE_BUFFER_SIZE_DEFAULT);
-    }
     return bufferSize;
   }
 
-  public FSDataOutputStreamBuilder setBufferSize(int bufSize) {
+  /**
+   * Set the size of the buffer to be used.
+   */
+  public B bufferSize(int bufSize) {
     bufferSize = bufSize;
-    return this;
+    return getThisBuilder();
   }
 
   protected short getReplication() {
-    if (replication == null) {
-      return fs.getDefaultReplication(getPath());
-    }
     return replication;
   }
 
-  public FSDataOutputStreamBuilder setReplication(short replica) {
+  /**
+   * Set replication factor.
+   */
+  public B replication(short replica) {
     replication = replica;
-    return this;
+    return getThisBuilder();
   }
 
   protected long getBlockSize() {
-    if (blockSize == null) {
-      return fs.getDefaultBlockSize(getPath());
-    }
     return blockSize;
   }
 
-  public FSDataOutputStreamBuilder setBlockSize(long blkSize) {
+  /**
+   * Set block size.
+   */
+  public B blockSize(long blkSize) {
     blockSize = blkSize;
-    return this;
+    return getThisBuilder();
+  }
+
+  /**
+   * Return true to create the parent directories if they do not exist.
+   */
+  protected boolean isRecursive() {
+    return recursive;
+  }
+
+  /**
+   * Create the parent directory if they do not exist.
+   */
+  public B recursive() {
+    recursive = true;
+    return getThisBuilder();
   }
 
   protected Progressable getProgress() {
     return progress;
   }
 
-  public FSDataOutputStreamBuilder setProgress(final Progressable prog) {
+  /**
+   * Set the facility of reporting progress.
+   */
+  public B progress(@Nonnull final Progressable prog) {
     Preconditions.checkNotNull(prog);
     progress = prog;
-    return this;
+    return getThisBuilder();
   }
 
   protected EnumSet<CreateFlag> getFlags() {
-    if (flags == null) {
-      return EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
-    }
     return flags;
   }
 
-  public FSDataOutputStreamBuilder setFlags(
-      final EnumSet<CreateFlag> enumFlags) {
-    Preconditions.checkNotNull(enumFlags);
-    flags = enumFlags;
-    return this;
+  /**
+   * Create an FSDataOutputStream at the specified path.
+   */
+  public B create() {
+    flags.add(CreateFlag.CREATE);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set to true to overwrite the existing file.
+   * Set it to false, an exception will be thrown when calling {@link #build()}
+   * if the file exists.
+   */
+  public B overwrite(boolean overwrite) {
+    if (overwrite) {
+      flags.add(CreateFlag.OVERWRITE);
+    } else {
+      flags.remove(CreateFlag.OVERWRITE);
+    }
+    return getThisBuilder();
+  }
+
+  /**
+   * Append to an existing file (optional operation).
+   */
+  public B append() {
+    flags.add(CreateFlag.APPEND);
+    return getThisBuilder();
   }
 
   protected ChecksumOpt getChecksumOpt() {
     return checksumOpt;
   }
 
-  public FSDataOutputStreamBuilder setChecksumOpt(
-      final ChecksumOpt chksumOpt) {
+  /**
+   * Set checksum opt.
+   */
+  public B checksumOpt(@Nonnull final ChecksumOpt chksumOpt) {
     Preconditions.checkNotNull(chksumOpt);
     checksumOpt = chksumOpt;
-    return this;
+    return getThisBuilder();
   }
 
-  public FSDataOutputStream build() throws IOException {
-    return fs.create(getPath(), getPermission(), getFlags(), getBufferSize(),
-        getReplication(), getBlockSize(), getProgress(), getChecksumOpt());
+  /**
+   * Set optional Builder parameter.
+   */
+  public B opt(@Nonnull final String key, @Nonnull final String value) {
+    mandatoryKeys.remove(key);
+    options.set(key, value);
+    return getThisBuilder();
   }
+
+  /**
+   * Set optional boolean parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  public B opt(@Nonnull final String key, boolean value) {
+    mandatoryKeys.remove(key);
+    options.setBoolean(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set optional int parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  public B opt(@Nonnull final String key, int value) {
+    mandatoryKeys.remove(key);
+    options.setInt(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set optional float parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  public B opt(@Nonnull final String key, float value) {
+    mandatoryKeys.remove(key);
+    options.setFloat(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set optional double parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  public B opt(@Nonnull final String key, double value) {
+    mandatoryKeys.remove(key);
+    options.setDouble(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set an array of string values as optional parameter for the Builder.
+   *
+   * @see #opt(String, String)
+   */
+  public B opt(@Nonnull final String key, @Nonnull final String... values) {
+    mandatoryKeys.remove(key);
+    options.setStrings(key, values);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set mandatory option to the Builder.
+   *
+   * If the option is not supported or unavailable on the {@link FileSystem},
+   * the client should expect {@link #build()} throws IllegalArgumentException.
+   */
+  public B must(@Nonnull final String key, @Nonnull final String value) {
+    mandatoryKeys.add(key);
+    options.set(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set mandatory boolean option.
+   *
+   * @see #must(String, String)
+   */
+  public B must(@Nonnull final String key, boolean value) {
+    mandatoryKeys.add(key);
+    options.setBoolean(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set mandatory int option.
+   *
+   * @see #must(String, String)
+   */
+  public B must(@Nonnull final String key, int value) {
+    mandatoryKeys.add(key);
+    options.setInt(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set mandatory float option.
+   *
+   * @see #must(String, String)
+   */
+  public B must(@Nonnull final String key, float value) {
+    mandatoryKeys.add(key);
+    options.setFloat(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set mandatory double option.
+   *
+   * @see #must(String, String)
+   */
+  public B must(@Nonnull final String key, double value) {
+    mandatoryKeys.add(key);
+    options.setDouble(key, value);
+    return getThisBuilder();
+  }
+
+  /**
+   * Set a string array as mandatory option.
+   *
+   * @see #must(String, String)
+   */
+  public B must(@Nonnull final String key, @Nonnull final String... values) {
+    mandatoryKeys.add(key);
+    options.setStrings(key, values);
+    return getThisBuilder();
+  }
+
+  protected Configuration getOptions() {
+    return options;
+  }
+
+  /**
+   * Get all the keys that are set as mandatory keys.
+   */
+  @VisibleForTesting
+  protected Set<String> getMandatoryKeys() {
+    return Collections.unmodifiableSet(mandatoryKeys);
+  }
+
+  /**
+   * Create the FSDataOutputStream to write on the file system.
+   *
+   * @throws IllegalArgumentException if the parameters are not valid.
+   * @throws IOException on errors when file system creates or appends the file.
+   */
+  public abstract S build() throws IllegalArgumentException, IOException;
 }

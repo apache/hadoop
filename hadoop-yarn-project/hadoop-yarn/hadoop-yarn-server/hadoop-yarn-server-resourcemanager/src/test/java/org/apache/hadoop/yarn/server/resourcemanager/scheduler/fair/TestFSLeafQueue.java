@@ -81,16 +81,17 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     String queueName = "root.queue1";
     FSLeafQueue schedulable = new FSLeafQueue(queueName, scheduler, null);
-    schedulable.setMaxShare(maxResource);
+    schedulable.setMaxShare(new ConfigurableResource(maxResource));
     assertEquals(schedulable.getMetrics().getMaxApps(), Integer.MAX_VALUE);
     assertEquals(schedulable.getMetrics().getSchedulingPolicy(),
         SchedulingPolicy.DEFAULT_POLICY.getName());
 
     FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(maxResource);
+    Mockito.when(app.getResourceUsage()).thenReturn(Resources.none());
 
-    schedulable.addAppSchedulable(app);
-    schedulable.addAppSchedulable(app);
+    schedulable.addApp(app, true);
+    schedulable.addApp(app, true);
 
     schedulable.updateDemand();
 
@@ -165,7 +166,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
       @Override
       public void run() {
         for (int i=0; i < 500; i++) {
-          schedulable.addAppSchedulable(app);
+          schedulable.addApp(app, true);
         }
       }
     });

@@ -27,8 +27,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -52,6 +50,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGen
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Invoked via the coprocessor when a Get or a Scan is issued for flow run
@@ -62,7 +62,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 class FlowScanner implements RegionScanner, Closeable {
 
-  private static final Log LOG = LogFactory.getLog(FlowScanner.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FlowScanner.class);
 
   /**
    * use a special application id to represent the flow id this is needed since

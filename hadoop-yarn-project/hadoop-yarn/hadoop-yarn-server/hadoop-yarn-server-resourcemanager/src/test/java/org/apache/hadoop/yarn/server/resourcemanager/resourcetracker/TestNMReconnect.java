@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -69,6 +70,10 @@ public class TestNMReconnect extends ParameterizedSchedulerTestBase {
   private List<RMNodeEvent> rmNodeEvents = new ArrayList<RMNodeEvent>();
   private Dispatcher dispatcher;
   private RMContextImpl context;
+
+  public TestNMReconnect(SchedulerType type) throws IOException {
+    super(type);
+  }
 
   private class TestRMNodeEventDispatcher implements
       EventHandler<RMNodeEvent> {

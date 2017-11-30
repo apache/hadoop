@@ -30,9 +30,6 @@ public enum RMAppEventType {
   // Source: Scheduler
   APP_ACCEPTED,
 
-  // TODO add source later
-  COLLECTOR_UPDATE,
-
   // Source: RMAppAttempt
   ATTEMPT_REGISTERED,
   ATTEMPT_UNREGISTERED,
@@ -47,4 +44,5 @@ public enum RMAppEventType {
   // Source: RMStateStore
   APP_NEW_SAVED,
   APP_UPDATE_SAVED,
+  APP_SAVE_FAILED,
 }

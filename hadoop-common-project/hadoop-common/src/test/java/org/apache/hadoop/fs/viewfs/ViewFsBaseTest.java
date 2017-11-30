@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.local.LocalConfigKeys;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.viewfs.ViewFs.MountPoint;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -345,33 +347,93 @@ abstract public class ViewFsBaseTest {
   }
   
   // rename across mount points that point to same target also fail 
-  @Test(expected=IOException.class) 
+  @Test
   public void testRenameAcrossMounts1() throws IOException {
     fileContextTestHelper.createFile(fcView, "/user/foo");
-    fcView.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
-    /* - code if we had wanted this to succeed
-    Assert.assertFalse(exists(fc, new Path("/user/foo")));
-    Assert.assertFalse(exists(fclocal, new Path(targetTestRoot,"user/foo")));
-    Assert.assertTrue(isFile(fc,
-       FileContextTestHelper.getTestRootPath(fc,"/user2/fooBarBar")));
-    Assert.assertTrue(isFile(fclocal,
-        new Path(targetTestRoot,"user/fooBarBar")));
-    */
+    try {
+      fcView.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
   }
   
   
   // rename across mount points fail if the mount link targets are different
   // even if the targets are part of the same target FS
 
-  @Test(expected=IOException.class) 
+  @Test
   public void testRenameAcrossMounts2() throws IOException {
     fileContextTestHelper.createFile(fcView, "/user/foo");
-    fcView.rename(new Path("/user/foo"), new Path("/data/fooBar"));
+    try {
+      fcView.rename(new Path("/user/foo"), new Path("/data/fooBar"));
+      ContractTestUtils.fail("IOException is not thrown on rename operation");
+    } catch (IOException e) {
+      GenericTestUtils
+          .assertExceptionContains("Renames across Mount points not supported",
+              e);
+    }
   }
-  
-  
-  
-  
+
+  // RenameStrategy SAME_TARGET_URI_ACROSS_MOUNTPOINT enabled
+  // to rename across mount points that point to same target URI
+  @Test
+  public void testRenameAcrossMounts3() throws IOException {
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_TARGET_URI_ACROSS_MOUNTPOINT
+            .toString());
+
+    FileContext fcView2 =
+        FileContext.getFileContext(FsConstants.VIEWFS_URI, conf2);
+    String user1Path = "/user/foo";
+    fileContextTestHelper.createFile(fcView2, user1Path);
+    String user2Path = "/user2/fooBarBar";
+    Path user2Dst = new Path(user2Path);
+    fcView2.rename(new Path(user1Path), user2Dst);
+    ContractTestUtils
+        .assertPathDoesNotExist(fcView2, "src should not exist after rename",
+            new Path(user1Path));
+    ContractTestUtils
+        .assertPathDoesNotExist(fcTarget, "src should not exist after rename",
+            new Path(targetTestRoot, "user/foo"));
+    ContractTestUtils.assertIsFile(fcView2,
+        fileContextTestHelper.getTestRootPath(fcView2, user2Path));
+    ContractTestUtils
+        .assertIsFile(fcTarget, new Path(targetTestRoot, "user/fooBarBar"));
+  }
+
+  // RenameStrategy SAME_FILESYSTEM_ACROSS_MOUNTPOINT enabled
+  // to rename across mount points if the mount link targets are different
+  // but are part of the same target FS
+  @Test
+  public void testRenameAcrossMounts4() throws IOException {
+    Configuration conf2 = new Configuration(conf);
+    conf2.set(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+        ViewFileSystem.RenameStrategy.SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+            .toString());
+    FileContext fcView2 =
+        FileContext.getFileContext(FsConstants.VIEWFS_URI, conf2);
+    String userPath = "/user/foo";
+    fileContextTestHelper.createFile(fcView2, userPath);
+    String anotherMountPath = "/data/fooBar";
+    Path anotherDst = new Path(anotherMountPath);
+    fcView2.rename(new Path(userPath), anotherDst);
+
+    ContractTestUtils
+        .assertPathDoesNotExist(fcView2, "src should not exist after rename",
+            new Path(userPath));
+    ContractTestUtils
+        .assertPathDoesNotExist(fcTarget, "src should not exist after rename",
+            new Path(targetTestRoot, "user/foo"));
+    ContractTestUtils.assertIsFile(fcView2,
+        fileContextTestHelper.getTestRootPath(fcView2, anotherMountPath));
+    ContractTestUtils
+        .assertIsFile(fcView2, new Path(targetTestRoot, "data/fooBar"));
+  }
+
   static protected boolean SupportsBlocks = false; //  local fs use 1 block
                                                    // override for HDFS
   @Test

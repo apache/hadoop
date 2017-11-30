@@ -66,54 +66,103 @@ Hadoop uses the following kinds of audience in order of increasing/wider visibil
 
 #### Private
 
-The interface is for internal use within the project (such as HDFS or MapReduce)
-and should not be used by applications or by other projects. It is subject to
-change at anytime without notice. Most interfaces of a project are Private (also
-referred to as project-private).
+A Private interface is for internal use within the project (such as HDFS or
+MapReduce) and should not be used by applications or by other projects. Most
+interfaces of a project are Private (also referred to as project-private).
+Unless an interface is intentionally exposed for external consumption, it should
+be marked Private.
 
 #### Limited-Private
 
-The interface is used by a specified set of projects or systems (typically
-closely related projects). Other projects or systems should not use the
-interface. Changes to the interface will be communicated/negotiated with the
+A Limited-Private interface is used by a specified set of projects or systems
+(typically closely related projects). Other projects or systems should not use
+the interface. Changes to the interface will be communicated/negotiated with the
 specified projects. For example, in the Hadoop project, some interfaces are
 LimitedPrivate{HDFS, MapReduce} in that they are private to the HDFS and
 MapReduce projects.
 
 #### Public
 
-The interface is for general use by any application.
+A Public interface is for general use by any application.
+
+### Change Compatibility
+
+Changes to an API fall into two broad categories: compatible and incompatible.
+A compatible change is a change that meets the following criteria:
+
+* no existing capabilities are removed,
+* no existing capabilities are modified in a way that prevents their use by clients that were constructed to use the interface prior to the change, and
+* no capabilities are added that require changes to clients that were constructed to use the interface prior to the change.
+
+Any change that does not meet these three criteria is an incompatible change.
+Stated simply a compatible change will not break existing clients.  These
+examples are compatible changes:
+
+* adding a method to a Java class,
+* adding an optional parameter to a RESTful web service, or
+* adding a tag to an XML document.
+* making the audience annotation of an interface more broad (e.g. from Private to Public) or the change compatibility annotation more restrictive (e.g. from Evolving to Stable)
+
+These examples are incompatible changes:
+
+* removing a method from a Java class,
+* adding a method to a Java interface,
+* adding a required parameter to a RESTful web service, or
+* renaming a field in a JSON document.
+* making the audience annotation of an interface less broad (e.g. from Public to Limited Private) or the change compatibility annotation more restrictive (e.g. from Evolving to Unstable)
 
 ### Stability
 
-Stability denotes how stable an interface is, as in when incompatible changes to
-the interface are allowed. Hadoop APIs have the following levels of stability.
+Stability denotes how stable an interface is and when compatible and
+incompatible changes to the interface are allowed. Hadoop APIs have the
+following levels of stability.
 
 #### Stable
 
-Can evolve while retaining compatibility for minor release boundaries; in other
-words, incompatible changes to APIs marked as Stable are allowed only at major
-releases (i.e. at m.0).
+A Stable interface is exposed as a preferred means of communication. A Stable
+interface is expected not to change incompatibly within a major release and
+hence serves as a safe development target. A Stable interface may evolve
+compatibly between minor releases.
+
+Incompatible changes allowed: major (X.0.0)
+Compatible changes allowed: maintenance (x.Y.0)
 
 #### Evolving
 
-Evolving, but incompatible changes are allowed at minor releases (i.e. m .x)
+An Evolving interface is typically exposed so that users or external code can
+make use of a feature before it has stabilized. The expectation that an
+interface should "eventually" stabilize and be promoted to Stable, however,
+is not a requirement for the interface to be labeled as Evolving.
+
+Incompatible changes are allowed for Evolving interface only at minor releases.
+
+Incompatible changes allowed: minor (x.Y.0)
+Compatible changes allowed: maintenance (x.y.Z)
 
 #### Unstable
 
-Incompatible changes to Unstable APIs are allowed at any time. This usually makes
-sense for only private interfaces.
+An Unstable interface is one for which no compatibility guarantees are made. An
+Unstable interface is not necessarily unstable. An unstable interface is
+typically exposed because a user or external code needs to access an interface
+that is not intended for consumption. The interface is exposed as an Unstable
+interface to state clearly that even though the interface is exposed, it is not
+the preferred access path, and no compatibility guarantees are made for it.
 
-However one may call this out for a supposedly public interface to highlight
-that it should not be used as an interface; for public interfaces, labeling it
-as Not-an-interface is probably more appropriate than "Unstable".
+Unless there is a reason to offer a compatibility guarantee on an interface,
+whether it is exposed or not, it should be labeled as Unstable.  Private
+interfaces also should be Unstable in most cases.
 
-Examples of publicly visible interfaces that are unstable
-(i.e. not-an-interface): GUI, CLIs whose output format will change.
+Incompatible changes to Unstable interfaces are allowed at any time.
+
+Incompatible changes allowed: maintenance (x.y.Z)
+Compatible changes allowed: maintenance (x.y.Z)
 
 #### Deprecated
 
-APIs that could potentially be removed in the future and should not be used.
+A Deprecated interface could potentially be removed in the future and should
+not be used.  Even so, a Deprecated interface will continue to function until
+it is removed.  When a Deprecated interface can be removed depends on whether
+it is also Stable, Evolving, or Unstable.
 
 How are the Classifications Recorded?
 -------------------------------------
@@ -121,95 +170,101 @@ How are the Classifications Recorded?
 How will the classification be recorded for Hadoop APIs?
 
 * Each interface or class will have the audience and stability recorded using
-  annotations in org.apache.hadoop.classification package.
+  annotations in the org.apache.hadoop.classification package.
 
-* The javadoc generated by the maven target javadoc:javadoc lists only the public API.
+* The javadoc generated by the maven target javadoc:javadoc lists only the
+  public API.
 
 * One can derive the audience of java classes and java interfaces by the
   audience of the package in which they are contained. Hence it is useful to
   declare the audience of each java package as public or private (along with the
   private audience variations).
 
+How will the classification be recorded for other interfaces, such as CLIs?
+
+* See the [Hadoop Compatibility](Compatibility.html) page for details.
+
 FAQ
 ---
 
 * Why aren’t the java scopes (private, package private and public) good enough?
     * Java’s scoping is not very complete. One is often forced to make a class
-      public in order for other internal components to use it. It does not have
-      friends or sub-package-private like C++.
+      public in order for other internal components to use it. It also does not
+      have friends or sub-package-private like C++.
 
-* But I can easily access a private implementation interface if it is Java public.
-  Where is the protection and control?
-    * The purpose of this is not providing absolute access control. Its purpose
-      is to communicate to users and developers. One can access private
-      implementation functions in libc; however if they change the internal
-      implementation details, your application will break and you will have
-      little sympathy from the folks who are supplying libc. If you use a
-      non-public interface you understand the risks.
+* But I can easily access a Private interface if it is Java public. Where is the
+  protection and control?
+    * The purpose of this classification scheme is not providing absolute
+      access control. Its purpose is to communicate to users and developers.
+      One can access private implementation functions in libc; however if
+      they change the internal implementation details, the application will
+      break and one will receive little sympathy from the folks who are
+      supplying libc. When using a non-public interface, the risks are
+      understood.
 
-* Why bother declaring the stability of a private interface?
-  Aren’t private interfaces always unstable?
-    * Private interfaces are not always unstable. In the cases where they are
-      stable they capture internal properties of the system and can communicate
+* Why bother declaring the stability of a Private interface? Aren’t Private
+  interfaces always Unstable?
+    * Private interfaces are not always Unstable. In the cases where they are
+      Stable they capture internal properties of the system and can communicate
       these properties to its internal users and to developers of the interface.
-        * e.g. In HDFS, NN-DN protocol is private but stable and can help
-          implement rolling upgrades. It communicates that this interface should
-          not be changed in incompatible ways even though it is private.
-        * e.g. In HDFS, FSImage stability provides more flexible rollback.
+        * e.g. In HDFS, NN-DN protocol is Private but Stable and can help
+          implement rolling upgrades. The stability annotation communicates that
+          this interface should not be changed in incompatible ways even though
+          it is Private.
+        * e.g. In HDFS, FSImage the Stabile designation provides more flexible
+          rollback.
 
-* What is the harm in applications using a private interface that is stable? How
-  is it different than a public stable interface?
-    * While a private interface marked as stable is targeted to change only at
+* What is the harm in applications using a Private interface that is Stable?
+  How is it different from a Public Stable interface?
+    * While a Private interface marked as Stable is targeted to change only at
       major releases, it may break at other times if the providers of that
-      interface are willing to change the internal users of that
-      interface. Further, a public stable interface is less likely to break even
+      interface also are willing to change the internal consumers of that
+      interface. Further, a Public Stable interface is less likely to break even
       at major releases (even though it is allowed to break compatibility)
-      because the impact of the change is larger. If you use a private interface
+      because the impact of the change is larger. If you use a Private interface
       (regardless of its stability) you run the risk of incompatibility.
 
-* Why bother with Limited-private? Isn’t it giving special treatment to some projects?
-  That is not fair.
-    * First, most interfaces should be public or private; actually let us state
-      it even stronger: make it private unless you really want to expose it to
-      public for general use.
-    * Limited-private is for interfaces that are not intended for general
+* Why bother with Limited-Private? Isn’t it giving special treatment to some
+  projects? That is not fair.
+    * Most interfaces should be Public or Private. An interface should be
+      Private unless it is explicitly intended for general use.
+    * Limited-Private is for interfaces that are not intended for general
       use. They are exposed to related projects that need special hooks. Such a
-      classification has a cost to both the supplier and consumer of the limited
+      classification has a cost to both the supplier and consumer of the
       interface. Both will have to work together if ever there is a need to
       break the interface in the future; for example the supplier and the
       consumers will have to work together to get coordinated releases of their
-      respective projects. This should not be taken lightly – if you can get
-      away with private then do so; if the interface is really for general use
-      for all applications then do so. But remember that making an interface
-      public has huge responsibility. Sometimes Limited-private is just right.
-    * A good example of a limited-private interface is BlockLocations, This is a
-      fairly low-level interface that we are willing to expose to MR and perhaps
-      HBase. We are likely to change it down the road and at that time we will
-      coordinate release effort with the MR team.
-      While MR and HDFS are always released in sync today, they may
-      change down the road.
-    * If you have a limited-private interface with many projects listed then you
-      are fooling yourself. It is practically public.
-    * It might be worth declaring a special audience classification called
-      Hadoop-Private for the Hadoop family.
+      respective projects. This contract should not be taken lightly–use
+      Private if possible; if the interface is really for general use
+      for all applications then use Public. Always remember that making an
+      interface Public comes with large burden of responsibility. Sometimes
+      Limited-Private is just right.
+    * A good example of a Limited-Private interface is BlockLocations. This
+      interface is a fairly low-level interface that is exposed to MapReduce
+      and HBase. The interface is likely to change down the road, and at that
+      time the release effort will have to be coordinated with the
+      MapReduce development team. While MapReduce and HDFS are always released
+      in sync today, that policy may change down the road.
+    * If you have a Limited-Private interface with many projects listed then
+      the interface is probably a good candidate to be made Public.
 
-* Lets treat all private interfaces as Hadoop-private. What is the harm in
-  projects in the Hadoop family have access to private classes?
-    * Do we want MR accessing class files that are implementation details inside
-      HDFS. There used to be many such layer violations in the code that we have
-      been cleaning up over the last few years. We don’t want such layer
-      violations to creep back in by no separating between the major components
-      like HDFS and MR.
+* Let's treat all Private interfaces as Limited-Private for all of Hadoop. What
+  is the harm if projects in the Hadoop family have access to private classes?
+    * There used to be many cases in the code where one project depended on the
+      internal implementation details of another. A significant effort went
+      into cleaning up those issues. Opening up all interfaces as
+      Limited-Private for all of Hadoop would open the door to reintroducing
+      such coupling issues.
 
-* Aren't all public interfaces stable?
-    * One may mark a public interface as evolving in its early days. Here one is
+* Aren't all Public interfaces Stable?
+    * One may mark a Public interface as Evolving in its early days. Here one is
       promising to make an effort to make compatible changes but may need to
       break it at minor releases.
-    * One example of a public interface that is unstable is where one is
+    * One example of a Public interface that is Unstable is where one is
       providing an implementation of a standards-body based interface that is
       still under development. For example, many companies, in an attempt to be
       first to market, have provided implementations of a new NFS protocol even
       when the protocol was not fully completed by IETF. The implementor cannot
-      evolve the interface in a fashion that causes least distruption because
+      evolve the interface in a fashion that causes least disruption because
       the stability is controlled by the standards body. Hence it is appropriate
-      to label the interface as unstable.
+      to label the interface as Unstable.

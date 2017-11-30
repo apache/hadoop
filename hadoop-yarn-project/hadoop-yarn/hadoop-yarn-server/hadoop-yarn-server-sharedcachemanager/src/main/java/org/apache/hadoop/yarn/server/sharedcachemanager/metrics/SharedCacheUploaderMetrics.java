@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.sharedcachemanager.metrics;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -27,6 +25,8 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is for maintaining shared cache uploader requests metrics
@@ -37,8 +37,8 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 @Metrics(about="shared cache upload metrics", context="yarn")
 public class SharedCacheUploaderMetrics {
 
-  static final Log LOG =
-      LogFactory.getLog(SharedCacheUploaderMetrics.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(SharedCacheUploaderMetrics.class);
   final MetricsRegistry registry;
   private final static SharedCacheUploaderMetrics INSTANCE = create();
 

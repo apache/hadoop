@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.sls;
 
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -38,12 +41,8 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
   @Parameters(name = "Testing with: {1}, {0}, (nodeFile {3})")
   public static Collection<Object[]> data() {
 
-    String capScheduler =
-        "org.apache.hadoop.yarn.server.resourcemanager.scheduler."
-            + "capacity.CapacityScheduler";
-    String fairScheduler =
-        "org.apache.hadoop.yarn.server.resourcemanager.scheduler."
-            + "fair.FairScheduler";
+    String capScheduler = CapacityScheduler.class.getCanonicalName();
+    String fairScheduler = FairScheduler.class.getCanonicalName();
     String slsTraceFile = "src/test/resources/inputsls.json";
     String rumenTraceFile = "src/main/data/2jobs2min-rumen-jh.json";
     String synthTraceFile = "src/test/resources/syn.json";
@@ -71,6 +70,12 @@ public class TestSLSRunner extends BaseSLSRunnerTest {
         {fairScheduler, "RUMEN", rumenTraceFile, nodeFile },
         {fairScheduler, "SLS", slsTraceFile, nodeFile }
     });
+  }
+
+  @Before
+  public void setup() {
+    ongoingInvariantFile = "src/test/resources/ongoing-invariants.txt";
+    exitInvariantFile = "src/test/resources/exit-invariants.txt";
   }
 
   @Test(timeout = 60000)

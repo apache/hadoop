@@ -27,12 +27,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.SampleStat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -48,7 +48,8 @@ import org.apache.hadoop.metrics2.util.SampleStat;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class MutableRatesWithAggregation extends MutableMetric {
-  static final Log LOG = LogFactory.getLog(MutableRatesWithAggregation.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(MutableRatesWithAggregation.class);
   private final Map<String, MutableRate> globalMetrics =
       new ConcurrentHashMap<>();
   private final Set<Class<?>> protocolCache = Sets.newHashSet();

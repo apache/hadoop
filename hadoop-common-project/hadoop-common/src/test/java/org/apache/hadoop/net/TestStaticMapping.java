@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.net;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +34,8 @@ import java.util.Map;
  * Because the map is actually static, this map needs to be reset for every test
  */
 public class TestStaticMapping extends Assert {
-  private static final Log LOG = LogFactory.getLog(TestStaticMapping.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestStaticMapping.class);
 
   /**
    * Reset the map then create a new instance of the {@link StaticMapping}

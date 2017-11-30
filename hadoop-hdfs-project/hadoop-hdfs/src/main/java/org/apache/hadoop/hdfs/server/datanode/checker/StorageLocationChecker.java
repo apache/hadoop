@@ -128,16 +128,16 @@ public class StorageLocationChecker {
   }
 
   /**
-   * Initiate a check of the supplied storage volumes and return
-   * a list of failed volumes.
+   * Initiate a check on the supplied storage volumes and return
+   * a list of healthy volumes.
    *
    * StorageLocations are returned in the same order as the input
    * for compatibility with existing unit tests.
    *
    * @param conf HDFS configuration.
    * @param dataDirs list of volumes to check.
-   * @return returns a list of failed volumes. Returns the empty list if
-   *         there are no failed volumes.
+   * @return returns a list of healthy volumes. Returns an empty list if
+   *         there are no healthy volumes.
    *
    * @throws InterruptedException if the check was interrupted.
    * @throws IOException if the number of failed volumes exceeds the

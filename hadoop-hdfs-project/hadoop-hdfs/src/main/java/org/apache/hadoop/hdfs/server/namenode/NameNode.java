@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.MetricsLoggerTask;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -86,6 +87,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -365,8 +367,9 @@ public class NameNode extends ReconfigurableBase implements
   private final boolean haEnabled;
   private final HAContext haContext;
   protected final boolean allowStaleStandbyReads;
-  private AtomicBoolean started = new AtomicBoolean(false); 
+  private AtomicBoolean started = new AtomicBoolean(false);
 
+  private final static int HEALTH_MONITOR_WARN_THRESHOLD_MS = 5000;
   
   /** httpServer */
   protected NameNodeHttpServer httpServer;
@@ -1144,6 +1147,21 @@ public class NameNode extends ReconfigurableBase implements
       FSNamesystem fsn = new FSNamesystem(conf, fsImage);
       fsImage.getEditLog().initJournalsForWrite();
 
+      // Abort NameNode format if reformat is disabled and if
+      // meta-dir already exists
+      if (conf.getBoolean(DFSConfigKeys.DFS_REFORMAT_DISABLED,
+          DFSConfigKeys.DFS_REFORMAT_DISABLED_DEFAULT)) {
+        force = false;
+        isInteractive = false;
+        for (StorageDirectory sd : fsImage.storage.dirIterable(null)) {
+          if (sd.hasSomeData()) {
+            throw new NameNodeFormatException(
+                "NameNode format aborted as reformat is disabled for "
+                    + "this cluster.");
+          }
+        }
+      }
+
       if (!fsImage.confirmFormat(force, isInteractive)) {
         return true; // aborted
       }
@@ -1715,7 +1733,14 @@ public class NameNode extends ReconfigurableBase implements
     if (!haEnabled) {
       return; // no-op, if HA is not enabled
     }
+    long start = Time.monotonicNow();
     getNamesystem().checkAvailableResources();
+    long end = Time.monotonicNow();
+    if (end - start >= HEALTH_MONITOR_WARN_THRESHOLD_MS) {
+      // log a warning if it take >= 5 seconds.
+      LOG.warn("Remote IP {} checking available resources took {}ms",
+          Server.getRemoteIp(), end - start);
+    }
     if (!getNamesystem().nameNodeHasResourcesAvailable()) {
       throw new HealthCheckFailedException(
           "The NameNode has no resources available");
@@ -2041,7 +2066,10 @@ public class NameNode extends ReconfigurableBase implements
         datanodeManager.setHeartbeatInterval(DFS_HEARTBEAT_INTERVAL_DEFAULT);
         return String.valueOf(DFS_HEARTBEAT_INTERVAL_DEFAULT);
       } else {
-        datanodeManager.setHeartbeatInterval(Long.parseLong(newVal));
+        long newInterval = getConf()
+            .getTimeDurationHelper(DFS_HEARTBEAT_INTERVAL_KEY,
+                newVal, TimeUnit.SECONDS);
+        datanodeManager.setHeartbeatInterval(newInterval);
         return String.valueOf(datanodeManager.getHeartbeatInterval());
       }
     } catch (NumberFormatException nfe) {

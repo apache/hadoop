@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha4-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-maven-plugins</artifactId>
@@ -80,13 +80,16 @@
   <build>
     <plugins>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
         <version>${maven.plugin-tools.version}</version>
         <executions>
           <execution>
             <id>default-descriptor</id>
-            <phase>process-classes</phase>
+            <phase>compile</phase>
           </execution>
         </executions>
       </plugin>

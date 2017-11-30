@@ -32,11 +32,11 @@ import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Plugin to calculate resource information on Linux systems.
@@ -44,8 +44,8 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SysInfoLinux extends SysInfo {
-  private static final Log LOG =
-      LogFactory.getLog(SysInfoLinux.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SysInfoLinux.class);
 
   /**
    * proc's meminfo virtual file has keys-values in the format

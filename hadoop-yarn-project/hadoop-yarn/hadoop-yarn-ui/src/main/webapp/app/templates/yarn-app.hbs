@@ -18,38 +18,131 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
-<div class="col-md-12 container-fluid">
-  <div class="row">
-
-    <div class="col-md-2 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          {{#if serviceName}}
-            Service
-          {{else}}
-            Application
-          {{/if}}
+<div class="panel-group">
+  <div class="panel panel-default">
+    <div class="yarn-app-header">
+      <div class="flex">
+        <div>
+          <div class="flex">
+            <div>
+              <h3 class="yarn-app-name">
+                {{#if model.app.unmanagedApplication}}
+                  <span title="This is an unmanaged application" class="yarn-tooltip">
+                    <i class="glyphicon glyphicon-exclamation-sign glyphicon-gray" />
+                  </span>
+                {{/if}}
+                {{model.app.appName}}
+              </h3>
+            </div>
+            {{#if model.app.finalStatus}}
+            <div title="Final status" class="yarn-tooltip yarn-app-final-status offset-1">
+              <span class={{model.app.finalStatusStyle}}>
+                {{model.app.finalStatus}}
+              </span>
+            </div>
+            {{/if}}
+          </div>
+          <div title="Application id" class="muted-text">{{model.app.id}}</div>
+          {{em-table-simple-status-cell content=model.app.state}}
+          <div class="flex">
+            <div class="tail-2">
+              <i class="glyphicon glyphicon-user glyphicon-gray" /> {{model.app.user}}
+            </div>
+            {{#if model.app.hasFinishedTime}}
+              <div title="Started at {{model.app.startTime}}. &#10; Ran for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
+                <i class="glyphicon glyphicon-time glyphicon-gray" />
+                Finished at {{model.app.validatedFinishedTs}}
+              </div>
+            {{else}}
+              <div title="Running for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
+                <i class="glyphicon glyphicon-time glyphicon-gray" />
+                Started at {{model.app.startTime}}
+              </div>
+            {{/if}}
+          </div>
         </div>
-        <div class="panel-body">
-          <ul class="nav nav-pills nav-stacked" id="stacked-menu">
-            <ul class="nav nav-pills nav-stacked collapse in">
-              {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
-                {{#link-to 'yarn-app.info' appId (query-params service=serviceName)}}Information{{/link-to}}
-              {{/link-to}}
-              {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
-                {{#link-to 'yarn-app.attempts' appId (query-params service=serviceName)}}Attempts List{{/link-to}}
-              {{/link-to}}
-              {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
-                {{#link-to 'yarn-app.charts' appId (query-params service=serviceName)}}Resource Usage{{/link-to}}
-              {{/link-to}}
-            </ul>
-          </ul>
+
+        <div class="flex-right">
+          <div class="links">
+            <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
+            <a href="{{amHostHttpAddressFormatted}}" target="_blank">Master Node</a>  &nbsp;|&nbsp;
+            {{#if isRunningService}}
+              <div class="btn-group">
+                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="glyphicon glyphicon-cog" />
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right">
+                  <li>
+                    <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service</a>
+                  </li>
+                  <li>
+                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service </a>
+                  </li>
+                </ul>
+              </div>
+            {{/if}}
+
+            {{#if model.serviceName}}
+              {{#if model.quicklinks}}
+              <div class="btn-group">
+                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Quick links" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="glyphicon glyphicon-option-vertical" />
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right">
+                  {{#each model.quicklinks as |link|}}
+                    <li><a href="{{link.value}}" target="_blank">{{link.name}}</a></li>
+                  {{/each}}
+                </ul>
+              </div>
+              {{/if}}
+            {{/if}}
+          </div>
+          <div>
+            <span title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</span>
+          </div>
+          <div>Priority {{model.app.priority}}</div>
         </div>
       </div>
     </div>
-
-    <div class="col-md-10 container-fluid">
+    <div class="panel-heading">
+      <div class="clearfix">
+        <ul class="nav nav-pills">
+          <ul class="nav nav-pills collapse in">
+            {{#link-to 'yarn-app.attempts' tagName="li" class=(if (eq target.currentPath 'yarn-app.attempts') "active")}}
+              {{#link-to 'yarn-app.attempts' appId (query-params service=model.serviceName)}}Attempts List{{/link-to}}
+            {{/link-to}}
+            {{#link-to 'yarn-app.charts' tagName="li" class=(if (eq target.currentPath 'yarn-app.charts') "active")}}
+              {{#link-to 'yarn-app.charts' appId (query-params service=model.serviceName)}}Resource Usage{{/link-to}}
+            {{/link-to}}
+            {{#if model.serviceName}}
+              {{#link-to 'yarn-app.components' tagName="li" class=(if (eq target.currentPath 'yarn-app.components') "active")}}
+                {{#link-to 'yarn-app.components' appId (query-params service=model.serviceName)}}Components{{/link-to}}
+              {{/link-to}}
+              {{#link-to 'yarn-app.configs' tagName="li" class=(if (eq target.currentPath 'yarn-app.configs') "active")}}
+                {{#link-to 'yarn-app.configs' appId (query-params service=model.serviceName)}}Configurations &amp; Metrics{{/link-to}}
+              {{/link-to}}
+            {{/if}}
+            {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
+              {{#link-to 'yarn-app.info' appId (query-params service=model.serviceName)}}Diagnostics{{/link-to}}
+            {{/link-to}}
+          </ul>
+        </ul>
+      </div>
+    </div>
+    <div class="panel-body yarn-app-body">
       {{outlet}}
     </div>
   </div>
 </div>
+
+{{confirm-dialog
+  dialogId="stopServiceConfirmDialog"
+  message=(concat 'Are you sure you want to stop service "' model.serviceName '" ?')
+  action="stopService"
+}}
+
+{{confirm-dialog
+  dialogId="deleteServiceConfirmDialog"
+  message=(concat 'Are you sure you want to delete service "' model.serviceName '" ?')
+  action="deleteService"
+}}

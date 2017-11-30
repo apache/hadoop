@@ -69,7 +69,7 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
   private FlowRunColumnPrefix(ColumnFamily<FlowRunTable> columnFamily,
       String columnPrefix, AggregationOperation fra, ValueConverter converter,
       boolean compoundColQual) {
-    column = new ColumnHelper<FlowRunTable>(columnFamily, converter);
+    column = new ColumnHelper<FlowRunTable>(columnFamily, converter, true);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
     if (columnPrefix == null) {
@@ -209,60 +209,9 @@ public enum FlowRunColumnPrefix implements ColumnPrefix<FlowRunTable> {
         keyConverter);
   }
 
-  /**
-   * Retrieve an {@link FlowRunColumnPrefix} given a name, or null if there is
-   * no match. The following holds true: {@code columnFor(x) == columnFor(y)} if
-   * and only if {@code x.equals(y)} or {@code (x == y == null)}
-   *
-   * @param columnPrefix Name of the column to retrieve
-   * @return the corresponding {@link FlowRunColumnPrefix} or null
-   */
-  public static final FlowRunColumnPrefix columnFor(String columnPrefix) {
-
-    // Match column based on value, assume column family matches.
-    for (FlowRunColumnPrefix frcp : FlowRunColumnPrefix.values()) {
-      // Find a match based only on name.
-      if (frcp.getColumnPrefix().equals(columnPrefix)) {
-        return frcp;
-      }
-    }
-
-    // Default to null
-    return null;
-  }
-
   @Override
   public ValueConverter getValueConverter() {
     return column.getValueConverter();
   }
 
-  /**
-   * Retrieve an {@link FlowRunColumnPrefix} given a name, or null if there is
-   * no match. The following holds true:
-   * {@code columnFor(a,x) == columnFor(b,y)} if and only if
-   * {@code (x == y == null)} or {@code a.equals(b) & x.equals(y)}
-   *
-   * @param columnFamily The columnFamily for which to retrieve the column.
-   * @param columnPrefix Name of the column to retrieve
-   * @return the corresponding {@link FlowRunColumnPrefix} or null if both
-   *         arguments don't match.
-   */
-  public static final FlowRunColumnPrefix columnFor(
-      FlowRunColumnFamily columnFamily, String columnPrefix) {
-
-    // TODO: needs unit test to confirm and need to update javadoc to explain
-    // null prefix case.
-
-    for (FlowRunColumnPrefix frcp : FlowRunColumnPrefix.values()) {
-      // Find a match based column family and on name.
-      if (frcp.columnFamily.equals(columnFamily)
-          && (((columnPrefix == null) && (frcp.getColumnPrefix() == null)) ||
-          (frcp.getColumnPrefix().equals(columnPrefix)))) {
-        return frcp;
-      }
-    }
-
-    // Default to null
-    return null;
-  }
 }

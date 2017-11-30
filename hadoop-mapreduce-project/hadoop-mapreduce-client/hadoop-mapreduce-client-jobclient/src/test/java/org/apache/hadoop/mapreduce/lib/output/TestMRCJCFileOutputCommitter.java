@@ -21,7 +21,10 @@ package org.apache.hadoop.mapreduce.lib.output;
 import java.io.*;
 import java.net.URI;
 
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -38,7 +41,7 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 
-public class TestMRCJCFileOutputCommitter extends TestCase {
+public class TestMRCJCFileOutputCommitter {
   private static Path outDir = new Path(System.getProperty("test.build.data",
       "/tmp"), "output");
 
@@ -76,17 +79,18 @@ public class TestMRCJCFileOutputCommitter extends TestCase {
     fs.delete(outDir, true);
   }
   
-  @Override
+  @Before
   public void setUp() throws IOException {
     cleanup();
   }
   
-  @Override
+  @After
   public void tearDown() throws IOException {
     cleanup();
   }
   
   @SuppressWarnings("unchecked")
+  @Test
   public void testCommitter() throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -122,7 +126,8 @@ public class TestMRCJCFileOutputCommitter extends TestCase {
     assertEquals(output, expectedOutput.toString());
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
-  
+
+  @Test
   public void testEmptyOutput() throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -146,6 +151,7 @@ public class TestMRCJCFileOutputCommitter extends TestCase {
   }
 
   @SuppressWarnings("unchecked")
+  @Test
   public void testAbort() throws IOException, InterruptedException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -195,6 +201,7 @@ public class TestMRCJCFileOutputCommitter extends TestCase {
   }
 
   @SuppressWarnings("unchecked")
+  @Test
   public void testFailAbort() throws IOException, InterruptedException {
     Job job = Job.getInstance();
     Configuration conf = job.getConfiguration();

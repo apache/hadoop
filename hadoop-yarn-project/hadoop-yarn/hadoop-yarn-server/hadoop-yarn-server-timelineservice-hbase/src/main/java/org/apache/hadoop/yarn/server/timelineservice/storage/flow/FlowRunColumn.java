@@ -76,7 +76,7 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
     // Future-proof by ensuring the right column prefix hygiene.
     this.columnQualifierBytes = Bytes.toBytes(Separator.SPACE
         .encode(columnQualifier));
-    this.column = new ColumnHelper<FlowRunTable>(columnFamily, converter);
+    this.column = new ColumnHelper<FlowRunTable>(columnFamily, converter, true);
   }
 
   /**
@@ -123,60 +123,9 @@ public enum FlowRunColumn implements Column<FlowRunTable> {
     return column.readResult(result, columnQualifierBytes);
   }
 
-  /**
-   * Retrieve an {@link FlowRunColumn} given a name, or null if there is no
-   * match. The following holds true: {@code columnFor(x) == columnFor(y)} if
-   * and only if {@code x.equals(y)} or {@code (x == y == null)}
-   *
-   * @param columnQualifier
-   *          Name of the column to retrieve
-   * @return the corresponding {@link FlowRunColumn} or null
-   */
-  public static final FlowRunColumn columnFor(String columnQualifier) {
-
-    // Match column based on value, assume column family matches.
-    for (FlowRunColumn ec : FlowRunColumn.values()) {
-      // Find a match based only on name.
-      if (ec.getColumnQualifier().equals(columnQualifier)) {
-        return ec;
-      }
-    }
-
-    // Default to null
-    return null;
-  }
-
   @Override
   public ValueConverter getValueConverter() {
     return column.getValueConverter();
-  }
-
-  /**
-   * Retrieve an {@link FlowRunColumn} given a name, or null if there is no
-   * match. The following holds true: {@code columnFor(a,x) == columnFor(b,y)}
-   * if and only if {@code a.equals(b) & x.equals(y)} or
-   * {@code (x == y == null)}
-   *
-   * @param columnFamily
-   *          The columnFamily for which to retrieve the column.
-   * @param name
-   *          Name of the column to retrieve
-   * @return the corresponding {@link FlowRunColumn} or null if both arguments
-   *         don't match.
-   */
-  public static final FlowRunColumn columnFor(FlowRunColumnFamily columnFamily,
-      String name) {
-
-    for (FlowRunColumn ec : FlowRunColumn.values()) {
-      // Find a match based column family and on name.
-      if (ec.columnFamily.equals(columnFamily)
-          && ec.getColumnQualifier().equals(name)) {
-        return ec;
-      }
-    }
-
-    // Default to null
-    return null;
   }
 
 }

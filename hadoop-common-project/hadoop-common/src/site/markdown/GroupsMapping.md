@@ -76,6 +76,7 @@ This provider supports LDAP with simple password authentication using JNDI API.
 `hadoop.security.group.mapping.ldap.url` must be set. This refers to the URL of the LDAP server for resolving user groups.
 
 `hadoop.security.group.mapping.ldap.base` configures the search base for the LDAP connection. This is a distinguished name, and will typically be the root of the LDAP directory.
+Get groups for a given username first looks up the user and then looks up the groups for the user result. If the directory setup has different user and group search bases, use `hadoop.security.group.mapping.ldap.userbase` and `hadoop.security.group.mapping.ldap.groupbase` configs.
 
 If the LDAP server does not support anonymous binds,
 set the distinguished name of the user to bind in `hadoop.security.group.mapping.ldap.bind.user`.
@@ -84,9 +85,10 @@ This file should be readable only by the Unix user running the daemons.
 
 It is possible to set a maximum time limit when searching and awaiting a result.
 Set `hadoop.security.group.mapping.ldap.directory.search.timeout` to 0 if infinite wait period is desired. Default is 10,000 milliseconds (10 seconds).
+This is the limit for each ldap query.  If `hadoop.security.group.mapping.ldap.search.group.hierarchy.levels` is set to a positive value, then the total latency will be bounded by max(Recur Depth in LDAP, `hadoop.security.group.mapping.ldap.search.group.hierarchy.levels` ) * `hadoop.security.group.mapping.ldap.directory.search.timeout`.
 
-The implementation does not attempt to resolve group hierarchies. Therefore, a user must be an explicit member of a group object
-in order to be considered a member.
+`hadoop.security.group.mapping.ldap.base` configures how far to walk up the groups hierarchy when resolving groups.
+By default, with a limit of 0, in order to be considered a member of a group, the user must be an explicit member in LDAP.  Otherwise, it will traverse the group hierarchy `hadoop.security.group.mapping.ldap.search.group.hierarchy.levels` levels up.
 
 
 ### Active Directory ###

@@ -24,8 +24,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,16 +34,21 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+
 import org.junit.After;
-import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestClientDistributedCacheManager {
-  private static final Log LOG = LogFactory.getLog(
-      TestClientDistributedCacheManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestClientDistributedCacheManager.class);
   
   private static final Path TEST_ROOT_DIR = new Path(
       System.getProperty("test.build.data",
@@ -97,15 +100,15 @@ public class TestClientDistributedCacheManager {
     FileStatus firstStatus = statCache.get(firstCacheFile.toUri());
     FileStatus secondStatus = statCache.get(secondCacheFile.toUri());
     
-    Assert.assertNotNull(firstCacheFile + " was not found in the stats cache",
+    assertNotNull(firstCacheFile + " was not found in the stats cache",
         firstStatus);
-    Assert.assertNotNull(secondCacheFile + " was not found in the stats cache",
+    assertNotNull(secondCacheFile + " was not found in the stats cache",
         secondStatus);
-    Assert.assertEquals("Missing/extra entries found in the stas cache",
+    assertEquals("Missing/extra entries found in the stats cache",
         2, statCache.size());
     String expected = firstStatus.getModificationTime() + ","
         + secondStatus.getModificationTime();
-    Assert.assertEquals(expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS));
+    assertEquals(expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS));
 
     job = Job.getInstance(conf);
     job.addCacheFile(new Path(TEST_VISIBILITY_CHILD_DIR, "*").toUri());
@@ -115,12 +118,12 @@ public class TestClientDistributedCacheManager {
 
     FileStatus thirdStatus = statCache.get(TEST_VISIBILITY_CHILD_DIR.toUri());
 
-    Assert.assertEquals("Missing/extra entries found in the stas cache",
+    assertEquals("Missing/extra entries found in the stats cache",
         1, statCache.size());
-    Assert.assertNotNull(TEST_VISIBILITY_CHILD_DIR
+    assertNotNull(TEST_VISIBILITY_CHILD_DIR
         + " was not found in the stats cache", thirdStatus);
     expected = Long.toString(thirdStatus.getModificationTime());
-    Assert.assertEquals("Incorrect timestamp for " + TEST_VISIBILITY_CHILD_DIR,
+    assertEquals("Incorrect timestamp for " + TEST_VISIBILITY_CHILD_DIR,
         expected, jobConf.get(MRJobConfig.CACHE_FILE_TIMESTAMPS));
   }
   
@@ -140,6 +143,11 @@ public class TestClientDistributedCacheManager {
     job.addCacheFile(firstCacheFile.toUri());
     job.addCacheFile(relativePath.toUri());
     jobConf = job.getConfiguration();
+
+    // skip test if scratch dir is not PUBLIC
+    assumeTrue(TEST_VISIBILITY_PARENT_DIR + " is not public",
+        ClientDistributedCacheManager.isPublic(
+            jobConf, TEST_VISIBILITY_PARENT_DIR.toUri(), statCache));
 
     ClientDistributedCacheManager.determineCacheVisibilities(jobConf,
         statCache);

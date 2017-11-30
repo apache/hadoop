@@ -28,8 +28,6 @@ import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +43,8 @@ import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides a way to access information about the map/reduce cluster.
@@ -64,7 +64,8 @@ public class Cluster {
   private Path sysDir = null;
   private Path stagingAreaDir = null;
   private Path jobHistoryDir = null;
-  private static final Log LOG = LogFactory.getLog(Cluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Cluster.class);
 
   @VisibleForTesting
   static Iterable<ClientProtocolProvider> frameworkLoader =
@@ -213,15 +214,15 @@ public class Cluster {
   public Job getJob(JobID jobId) throws IOException, InterruptedException {
     JobStatus status = client.getJobStatus(jobId);
     if (status != null) {
-      final JobConf conf = new JobConf();
-      final Path jobPath = new Path(client.getFilesystemName(),
-          status.getJobFile());
-      final FileSystem fs = FileSystem.get(jobPath.toUri(), getConf());
+      JobConf conf;
       try {
-        conf.addResource(fs.open(jobPath), jobPath.toString());
-      } catch (FileNotFoundException fnf) {
-        if (LOG.isWarnEnabled()) {
-          LOG.warn("Job conf missing on cluster", fnf);
+        conf = new JobConf(status.getJobFile());
+      } catch (RuntimeException ex) {
+        // If job file doesn't exist it means we can't find the job
+        if (ex.getCause() instanceof FileNotFoundException) {
+          return null;
+        } else {
+          throw ex;
         }
       }
       return Job.getInstance(this, status, conf);

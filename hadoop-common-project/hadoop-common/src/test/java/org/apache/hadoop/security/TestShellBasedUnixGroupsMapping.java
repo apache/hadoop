@@ -20,8 +20,6 @@ package org.apache.hadoop.security;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -30,6 +28,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doNothing;
@@ -38,8 +38,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestShellBasedUnixGroupsMapping {
-  private static final Log TESTLOG =
-      LogFactory.getLog(TestShellBasedUnixGroupsMapping.class);
+  private static final Logger TESTLOG =
+      LoggerFactory.getLogger(TestShellBasedUnixGroupsMapping.class);
 
   private final GenericTestUtils.LogCapturer shellMappingLog =
       GenericTestUtils.LogCapturer.captureLogs(

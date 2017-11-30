@@ -160,8 +160,8 @@ final class FileDistributionCalculator {
               + StringUtils.byteDesc(((long) (i == 0 ? 0 : i - 1) * steps))
               + ", "
               + StringUtils.byteDesc((long)
-                  (i == distribution.length - 1 ? maxFileSize : i * steps))
-                  + "]\t" + distribution[i]);
+                  (i == distribution.length - 1 ? maxFileSize :
+                      (long) i * steps)) + "]\t" + distribution[i]);
         } else {
           out.print(((long) i * steps) + "\t" + distribution[i]);
         }

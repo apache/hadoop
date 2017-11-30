@@ -32,14 +32,16 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestIndexCache extends TestCase {
+public class TestIndexCache {
   private JobConf conf;
   private FileSystem fs;
   private Path p;
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     conf = new JobConf();
     fs = FileSystem.getLocal(conf).getRaw();
@@ -47,6 +49,7 @@ public class TestIndexCache extends TestCase {
         "cache").makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
+  @Test
   public void testLRCPolicy() throws Exception {
     Random r = new Random();
     long seed = r.nextLong();
@@ -120,6 +123,7 @@ public class TestIndexCache extends TestCase {
     checkRecord(rec, totalsize);
   }
 
+  @Test
   public void testBadIndex() throws Exception {
     final int parts = 30;
     fs.delete(p, true);
@@ -152,6 +156,7 @@ public class TestIndexCache extends TestCase {
     }
   }
 
+  @Test
   public void testInvalidReduceNumberOrLength() throws Exception {
     fs.delete(p, true);
     conf.setInt(TTConfig.TT_INDEX_CACHE, 1);
@@ -192,6 +197,7 @@ public class TestIndexCache extends TestCase {
     }
   }
 
+  @Test
   public void testRemoveMap() throws Exception {
     // This test case use two thread to call getIndexInformation and 
     // removeMap concurrently, in order to construct race condition.
@@ -241,7 +247,8 @@ public class TestIndexCache extends TestCase {
       assertEquals(true, cache.checkTotalMemoryUsed());
     }      
   }
-  
+
+  @Test
   public void testCreateRace() throws Exception {
     fs.delete(p, true);
     conf.setInt(TTConfig.TT_INDEX_CACHE, 1);

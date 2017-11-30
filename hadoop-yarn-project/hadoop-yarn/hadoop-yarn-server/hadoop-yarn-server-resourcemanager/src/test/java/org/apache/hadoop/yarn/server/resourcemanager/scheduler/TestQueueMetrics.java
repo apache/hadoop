@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.apache.hadoop.test.MockitoMaker.make;
-import static org.apache.hadoop.test.MockitoMaker.stub;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -37,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -72,8 +71,10 @@ public class TestQueueMetrics {
     metrics.submitAppAttempt(user);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
 
-    metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
-    metrics.incrPendingResources(user, 5, Resources.createResource(3*GB, 3));
+    metrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+        Resources.createResource(100*GB, 100));
+    metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
+        user, 5, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
     checkResources(queueSource, 0, 0, 0, 0, 0, 100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
@@ -81,17 +82,21 @@ public class TestQueueMetrics {
     metrics.runAppAttempt(app.getApplicationId(), user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
 
-    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2), true);
+    metrics.allocateResources(RMNodeLabelsManager.NO_LABEL,
+        user, 3, Resources.createResource(2*GB, 2), true);
     checkResources(queueSource, 6*GB, 6, 3, 3, 0, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
 
-    metrics.releaseResources(user, 1, Resources.createResource(2*GB, 2));
+    metrics.releaseResources(RMNodeLabelsManager.NO_LABEL,
+        user, 1, Resources.createResource(2*GB, 2));
     checkResources(queueSource, 4*GB, 4, 2, 3, 1, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
 
-    metrics.incrPendingResources(user, 0, Resources.createResource(2 * GB, 2));
+    metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
+        user, 0, Resources.createResource(2 * GB, 2));
     checkResources(queueSource, 4 * GB, 4, 2, 3, 1, 100 * GB, 100, 9 * GB, 9, 2,
         0, 0, 0);
 
-    metrics.decrPendingResources(user, 0, Resources.createResource(2 * GB, 2));
+    metrics.decrPendingResources(RMNodeLabelsManager.NO_LABEL,
+        user, 0, Resources.createResource(2 * GB, 2));
     checkResources(queueSource, 4 * GB, 4, 2, 3, 1, 100 * GB, 100, 9 * GB, 9, 2,
         0, 0, 0);
 
@@ -177,9 +182,12 @@ public class TestQueueMetrics {
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
     checkApps(userSource, 1, 1, 0, 0, 0, 0, true);
 
-    metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
-    metrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB, 10));
-    metrics.incrPendingResources(user, 5, Resources.createResource(3*GB, 3));
+    metrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+        Resources.createResource(100*GB, 100));
+    metrics.setAvailableResourcesToUser(RMNodeLabelsManager.NO_LABEL,
+        user, Resources.createResource(10*GB, 10));
+    metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
+        user, 5, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
     checkResources(queueSource, 0, 0, 0, 0, 0,  100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
@@ -189,11 +197,13 @@ public class TestQueueMetrics {
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
     checkApps(userSource, 1, 0, 1, 0, 0, 0, true);
 
-    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2), true);
+    metrics.allocateResources(RMNodeLabelsManager.NO_LABEL,
+        user, 3, Resources.createResource(2*GB, 2), true);
     checkResources(queueSource, 6*GB, 6, 3, 3, 0, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
     checkResources(userSource, 6*GB, 6, 3, 3, 0, 10*GB, 10, 9*GB, 9, 2, 0, 0, 0);
 
-    metrics.releaseResources(user, 1, Resources.createResource(2*GB, 2));
+    metrics.releaseResources(RMNodeLabelsManager.NO_LABEL,
+        user, 1, Resources.createResource(2*GB, 2));
     checkResources(queueSource, 4*GB, 4, 2, 3, 1, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
     checkResources(userSource, 4*GB, 4, 2, 3, 1, 10*GB, 10, 9*GB, 9, 2, 0, 0, 0);
 
@@ -214,8 +224,8 @@ public class TestQueueMetrics {
 
     QueueMetrics parentMetrics =
       QueueMetrics.forQueue(ms, parentQueueName, null, true, conf);
-    Queue parentQueue = make(stub(Queue.class).returning(parentMetrics).
-        from.getMetrics());
+    Queue parentQueue = mock(Queue.class);
+    when(parentQueue.getMetrics()).thenReturn(parentMetrics);
     QueueMetrics metrics =
       QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true, conf);
     MetricsSource parentQueueSource = queueSource(ms, parentQueueName);
@@ -260,8 +270,8 @@ public class TestQueueMetrics {
 
     QueueMetrics parentMetrics =
       QueueMetrics.forQueue(ms, parentQueueName, null, true, conf);
-    Queue parentQueue = make(stub(Queue.class).returning(parentMetrics).
-        from.getMetrics());
+    Queue parentQueue = mock(Queue.class);
+    when(parentQueue.getMetrics()).thenReturn(parentMetrics);
     QueueMetrics metrics =
       QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true, conf);
     MetricsSource parentQueueSource = queueSource(ms, parentQueueName);
@@ -283,11 +293,16 @@ public class TestQueueMetrics {
     checkApps(userSource, 1, 1, 0, 0, 0, 0, true);
     checkApps(parentUserSource, 1, 1, 0, 0, 0, 0, true);
 
-    parentMetrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
-    metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
-    parentMetrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB, 10));
-    metrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB, 10));
-    metrics.incrPendingResources(user, 5, Resources.createResource(3*GB, 3));
+    parentMetrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+        Resources.createResource(100*GB, 100));
+    metrics.setAvailableResourcesToQueue(RMNodeLabelsManager.NO_LABEL,
+        Resources.createResource(100*GB, 100));
+    parentMetrics.setAvailableResourcesToUser(RMNodeLabelsManager.NO_LABEL,
+        user, Resources.createResource(10*GB, 10));
+    metrics.setAvailableResourcesToUser(RMNodeLabelsManager.NO_LABEL,
+        user, Resources.createResource(10*GB, 10));
+    metrics.incrPendingResources(RMNodeLabelsManager.NO_LABEL,
+        user, 5, Resources.createResource(3*GB, 3));
     checkResources(queueSource, 0, 0, 0, 0, 0, 100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
     checkResources(parentQueueSource, 0, 0, 0, 0, 0, 100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
     checkResources(userSource, 0, 0, 0, 0, 0, 10*GB, 10, 15*GB, 15, 5, 0, 0, 0);
@@ -297,8 +312,10 @@ public class TestQueueMetrics {
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
     checkApps(userSource, 1, 0, 1, 0, 0, 0, true);
 
-    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2), true);
-    metrics.reserveResource(user, Resources.createResource(3*GB, 3));
+    metrics.allocateResources(RMNodeLabelsManager.NO_LABEL,
+        user, 3, Resources.createResource(2*GB, 2), true);
+    metrics.reserveResource(RMNodeLabelsManager.NO_LABEL,
+        user, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
     checkResources(queueSource, 6*GB, 6, 3, 3, 0, 100*GB, 100, 9*GB, 9, 2, 3*GB, 3, 1);
@@ -306,8 +323,10 @@ public class TestQueueMetrics {
     checkResources(userSource, 6*GB, 6, 3, 3, 0, 10*GB, 10, 9*GB, 9, 2, 3*GB, 3, 1);
     checkResources(parentUserSource, 6*GB, 6, 3, 3, 0, 10*GB, 10, 9*GB, 9, 2, 3*GB, 3, 1);
 
-    metrics.releaseResources(user, 1, Resources.createResource(2*GB, 2));
-    metrics.unreserveResource(user, Resources.createResource(3*GB, 3));
+    metrics.releaseResources(RMNodeLabelsManager.NO_LABEL,
+        user, 1, Resources.createResource(2*GB, 2));
+    metrics.unreserveResource(RMNodeLabelsManager.NO_LABEL,
+          user, Resources.createResource(3*GB, 3));
     checkResources(queueSource, 4*GB, 4, 2, 3, 1, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
     checkResources(parentQueueSource, 4*GB, 4, 2, 3, 1, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
     checkResources(userSource, 4*GB, 4, 2, 3, 1, 10*GB, 10, 9*GB, 9, 2, 0, 0, 0);
@@ -338,8 +357,8 @@ public class TestQueueMetrics {
 
       QueueMetrics p1Metrics =
           QueueMetrics.forQueue(ms, p1, null, true, conf);
-      Queue parentQueue1 = make(stub(Queue.class).returning(p1Metrics).
-          from.getMetrics());
+      Queue parentQueue1 = mock(Queue.class);
+      when(parentQueue1.getMetrics()).thenReturn(p1Metrics);
       QueueMetrics metrics =
           QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
 

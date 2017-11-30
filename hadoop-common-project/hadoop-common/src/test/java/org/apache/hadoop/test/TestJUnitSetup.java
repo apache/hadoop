@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.test;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestJUnitSetup {
-  public static final Log LOG = LogFactory.getLog(TestJUnitSetup.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestJUnitSetup.class);
 
   @Test
   public void testJavaAssert() {

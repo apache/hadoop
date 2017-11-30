@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -34,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
@@ -73,8 +73,8 @@ import com.google.common.base.Optional;
  */
 public class DefaultContainerExecutor extends ContainerExecutor {
 
-  private static final Log LOG = LogFactory
-      .getLog(DefaultContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(DefaultContainerExecutor.class);
 
   private static final int WIN_MAX_PATH = 260;
 
@@ -135,7 +135,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public void init() throws IOException {
+  public void init(Context nmContext) throws IOException {
     // nothing to do or verify here
   }
 
@@ -275,7 +275,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       sb.writeLocalWrapperScript(launchDst, pidFile);
     } else {
       LOG.info("Container " + containerIdStr
-          + " was marked as inactive. Returning terminated error");
+          + " pid file not set. Returning terminated error");
       return ExitCode.TERMINATED.getExitCode();
     }
     
@@ -320,8 +320,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           builder.append("Exception message: ");
           builder.append(e.getMessage()).append("\n");
         }
-        builder.append("Stack trace: ");
-        builder.append(StringUtils.stringifyException(e)).append("\n");
+
         if (!shExec.getOutput().isEmpty()) {
           builder.append("Shell output: ");
           builder.append(shExec.getOutput()).append("\n");
@@ -423,7 +422,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         pout = new PrintStream(out, false, "UTF-8");
         writeLocalWrapperScript(launchDst, pidFile, pout);
       } finally {
-        IOUtils.cleanup(LOG, pout, out);
+        IOUtils.cleanupWithLogger(LOG, pout, out);
       }
     }
 
@@ -505,7 +504,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         String exec = Shell.isSetsidAvailable? "exec setsid" : "exec";
         pout.printf("%s /bin/bash \"%s\"", exec, launchDst.toUri().getPath());
       } finally {
-        IOUtils.cleanup(LOG, pout, out);
+        IOUtils.cleanupWithLogger(LOG, pout, out);
       }
       lfs.setPermission(sessionScriptPath,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);

@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.fs.ftp;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.net.ftp.FTP;
 
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+
 
 import static org.junit.Assert.assertEquals;
 
@@ -82,4 +86,55 @@ public class TestFTPFileSystem {
         client.getDataConnectionMode());
 
   }
+
+  @Test
+  public void testGetFsAction(){
+    FTPFileSystem ftp = new FTPFileSystem();
+    int[] accesses = new int[] {FTPFile.USER_ACCESS, FTPFile.GROUP_ACCESS,
+        FTPFile.WORLD_ACCESS};
+    FsAction[] actions = FsAction.values();
+    for(int i = 0; i < accesses.length; i++){
+      for(int j = 0; j < actions.length; j++){
+        enhancedAssertEquals(actions[j], ftp.getFsAction(accesses[i],
+            getFTPFileOf(accesses[i], actions[j])));
+      }
+    }
+  }
+
+  private void enhancedAssertEquals(FsAction actionA, FsAction actionB){
+    String notNullErrorMessage = "FsAction cannot be null here.";
+    Preconditions.checkNotNull(actionA, notNullErrorMessage);
+    Preconditions.checkNotNull(actionB, notNullErrorMessage);
+    String errorMessageFormat = "expect FsAction is %s, whereas it is %s now.";
+    String notEqualErrorMessage = String.format(errorMessageFormat,
+        actionA.name(), actionB.name());
+    assertEquals(notEqualErrorMessage, actionA, actionB);
+  }
+
+  private FTPFile getFTPFileOf(int access, FsAction action) {
+    boolean check = access == FTPFile.USER_ACCESS ||
+                      access == FTPFile.GROUP_ACCESS ||
+                      access == FTPFile.WORLD_ACCESS;
+    String errorFormat = "access must be in [%d,%d,%d], but it is %d now.";
+    String errorMessage = String.format(errorFormat, FTPFile.USER_ACCESS,
+         FTPFile.GROUP_ACCESS, FTPFile.WORLD_ACCESS, access);
+    Preconditions.checkArgument(check, errorMessage);
+    Preconditions.checkNotNull(action);
+    FTPFile ftpFile = new FTPFile();
+
+    if(action.implies(FsAction.READ)){
+      ftpFile.setPermission(access, FTPFile.READ_PERMISSION, true);
+    }
+
+    if(action.implies(FsAction.WRITE)){
+      ftpFile.setPermission(access, FTPFile.WRITE_PERMISSION, true);
+    }
+
+    if(action.implies(FsAction.EXECUTE)){
+      ftpFile.setPermission(access, FTPFile.EXECUTE_PERMISSION, true);
+    }
+
+    return ftpFile;
+  }
+
 }

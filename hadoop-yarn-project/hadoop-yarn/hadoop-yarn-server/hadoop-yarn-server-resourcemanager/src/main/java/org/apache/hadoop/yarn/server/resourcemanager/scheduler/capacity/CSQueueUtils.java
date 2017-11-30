@@ -230,13 +230,13 @@ class CSQueueUtils {
 
     // QueueMetrics does not support per-label capacities,
     // so we report values only for the default partition.
-    if (nodePartition.equals(CommonNodeLabelsManager.NO_LABEL)) {
-      queueMetrics.setUsedCapacity(
-          queueCapacities.getUsedCapacity(RMNodeLabelsManager.NO_LABEL));
-      queueMetrics.setAbsoluteUsedCapacity(
-          queueCapacities.getAbsoluteUsedCapacity(
-              RMNodeLabelsManager.NO_LABEL));
-    }
+
+    queueMetrics.setUsedCapacity(nodePartition,
+        queueCapacities.getUsedCapacity(RMNodeLabelsManager.NO_LABEL));
+    queueMetrics.setAbsoluteUsedCapacity(nodePartition,
+        queueCapacities.getAbsoluteUsedCapacity(
+            RMNodeLabelsManager.NO_LABEL));
+
   }
 
   private static Resource getMaxAvailableResourceToQueue(
@@ -302,7 +302,7 @@ class CSQueueUtils {
 
     // Update queue metrics w.r.t node labels. In a generic way, we can
     // calculate available resource from all labels in cluster.
-    childQueue.getMetrics().setAvailableResourcesToQueue(
+    childQueue.getMetrics().setAvailableResourcesToQueue(nodePartition,
         getMaxAvailableResourceToQueue(rc, nlm, childQueue, cluster));
    }
 }

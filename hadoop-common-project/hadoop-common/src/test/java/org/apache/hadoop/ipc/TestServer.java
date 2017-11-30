@@ -27,12 +27,12 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server.Call;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 /**
  * This is intended to be a set of unit tests for the 
@@ -136,7 +136,7 @@ public class TestServer {
   public void testLogExceptions() throws Exception {
     final Configuration conf = new Configuration();
     final Call dummyCall = new Call(0, 0, null, null);
-    Log logger = mock(Log.class);
+    Logger logger = mock(Logger.class);
     Server server = new Server("0.0.0.0", 0, LongWritable.class, 1, conf) {
       @Override
       public Writable call(

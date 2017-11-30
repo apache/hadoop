@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -141,6 +142,11 @@ public final class AclTestHelpers {
     }
   }
 
+  public static void assertPermission(FileSystem fs, Path pathToCheck,
+      short perm) throws IOException {
+    assertPermission(fs, pathToCheck, perm, (perm & (1 << 12)) != 0);
+  }
+
   /**
    * Asserts the value of the FsPermission bits on the inode of a specific path.
    *
@@ -150,10 +156,11 @@ public final class AclTestHelpers {
    * @throws IOException thrown if there is an I/O error
    */
   public static void assertPermission(FileSystem fs, Path pathToCheck,
-      short perm) throws IOException {
+      short perm, boolean hasAcl) throws IOException {
     short filteredPerm = (short)(perm & 01777);
-    FsPermission fsPermission = fs.getFileStatus(pathToCheck).getPermission();
+    FileStatus stat = fs.getFileStatus(pathToCheck);
+    FsPermission fsPermission = stat.getPermission();
     assertEquals(filteredPerm, fsPermission.toShort());
-    assertEquals(((perm & (1 << 12)) != 0), fsPermission.getAclBit());
+    assertEquals(hasAcl, stat.hasAcl());
   }
 }

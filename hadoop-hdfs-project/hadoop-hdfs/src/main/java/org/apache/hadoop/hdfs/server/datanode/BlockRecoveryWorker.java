@@ -127,8 +127,7 @@ public class BlockRecoveryWorker {
       // - Original state is RWR or better
       for(DatanodeID id : locs) {
         try {
-          DatanodeID bpReg = new DatanodeID(
-              datanode.getBPOfferService(bpid).bpRegistration);
+          DatanodeID bpReg = getDatanodeID(bpid);
           InterDatanodeProtocol proxyDN = bpReg.equals(id)?
               datanode: DataNode.createInterDataNodeProtocolProxy(id, conf,
               dnConf.socketTimeout, dnConf.connectToDnViaHostname);
@@ -198,10 +197,9 @@ public class BlockRecoveryWorker {
       long blockId = (isTruncateRecovery) ?
           rBlock.getNewBlock().getBlockId() : block.getBlockId();
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
-            + "), syncList=" + syncList);
-      }
+      LOG.info("BlockRecoveryWorker: block={} (length={}),"
+              + " isTruncateRecovery={}, syncList={}", block,
+          block.getNumBytes(), isTruncateRecovery, syncList);
 
       // syncList.isEmpty() means that all data-nodes do not have the block
       // or their replicas have 0 length.
@@ -289,6 +287,11 @@ public class BlockRecoveryWorker {
       if (isTruncateRecovery) {
         newBlock.setNumBytes(rBlock.getNewBlock().getNumBytes());
       }
+
+      LOG.info("BlockRecoveryWorker: block={} (length={}), bestState={},"
+              + " newBlock={} (length={}), participatingList={}",
+          block, block.getNumBytes(), bestState.name(), newBlock,
+          newBlock.getNumBytes(), participatingList);
 
       List<DatanodeID> failedList = new ArrayList<>();
       final List<BlockRecord> successList = new ArrayList<>();
@@ -398,8 +401,7 @@ public class BlockRecoveryWorker {
       for (int i = 0; i < locs.length; i++) {
         DatanodeID id = locs[i];
         try {
-          DatanodeID bpReg = new DatanodeID(
-              datanode.getBPOfferService(bpid).bpRegistration);
+          DatanodeID bpReg = getDatanodeID(bpid);
           InterDatanodeProtocol proxyDN = bpReg.equals(id) ?
               datanode : DataNode.createInterDataNodeProtocolProxy(id, conf,
               dnConf.socketTimeout, dnConf.connectToDnViaHostname);
@@ -532,11 +534,19 @@ public class BlockRecoveryWorker {
     }
   }
 
+  private DatanodeID getDatanodeID(String bpid) throws IOException {
+    BPOfferService bpos = datanode.getBPOfferService(bpid);
+    if (bpos == null) {
+      throw new IOException("No block pool offer service for bpid=" + bpid);
+    }
+    return new DatanodeID(bpos.bpRegistration);
+  }
+
   private static void logRecoverBlock(String who, RecoveringBlock rb) {
     ExtendedBlock block = rb.getBlock();
     DatanodeInfo[] targets = rb.getLocations();
 
-    LOG.info(who + " calls recoverBlock(" + block
+    LOG.info("BlockRecoveryWorker: " + who + " calls recoverBlock(" + block
         + ", targets=[" + Joiner.on(", ").join(targets) + "]"
         + ", newGenerationStamp=" + rb.getNewGenerationStamp()
         + ", newBlock=" + rb.getNewBlock()

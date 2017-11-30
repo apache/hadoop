@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
@@ -294,4 +296,25 @@ public class TestCGroupsCpuResourceHandlerImpl {
   public void testStrictResourceUsage() throws Exception {
     Assert.assertNull(cGroupsCpuResourceHandler.teardown());
   }
+
+  @Test
+  public void testOpportunistic() throws Exception {
+    Configuration conf = new YarnConfiguration();
+
+    cGroupsCpuResourceHandler.bootstrap(plugin, conf);
+    ContainerTokenIdentifier tokenId = mock(ContainerTokenIdentifier.class);
+    when(tokenId.getExecutionType()).thenReturn(ExecutionType.OPPORTUNISTIC);
+    Container container = mock(Container.class);
+    String id = "container_01_01";
+    ContainerId mockContainerId = mock(ContainerId.class);
+    when(mockContainerId.toString()).thenReturn(id);
+    when(container.getContainerId()).thenReturn(mockContainerId);
+    when(container.getContainerTokenIdentifier()).thenReturn(tokenId);
+    when(container.getResource()).thenReturn(Resource.newInstance(1024, 2));
+    cGroupsCpuResourceHandler.preStart(container);
+    verify(mockCGroupsHandler, times(1))
+        .updateCGroupParam(CGroupsHandler.CGroupController.CPU, id,
+            CGroupsHandler.CGROUP_CPU_SHARES, "2");
+  }
+
 }

@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -59,8 +58,7 @@ public class SchedulingMonitor extends AbstractService {
   }
 
   public void serviceInit(Configuration conf) throws Exception {
-    scheduleEditPolicy.init(conf, rmContext,
-        (PreemptableResourceScheduler) rmContext.getScheduler());
+    scheduleEditPolicy.init(conf, rmContext, rmContext.getScheduler());
     this.monitorInterval = scheduleEditPolicy.getMonitoringInterval();
     super.serviceInit(conf);
   }
@@ -75,9 +73,13 @@ public class SchedulingMonitor extends AbstractService {
         return t;
       }
     });
+    schedulePreemptionChecker();
+    super.serviceStart();
+  }
+
+  private void schedulePreemptionChecker() {
     handler = ses.scheduleAtFixedRate(new PreemptionChecker(),
         0, monitorInterval, TimeUnit.MILLISECONDS);
-    super.serviceStart();
   }
 
   @Override
@@ -100,11 +102,18 @@ public class SchedulingMonitor extends AbstractService {
     @Override
     public void run() {
       try {
-        //invoke the preemption policy
-        invokePolicy();
-      } catch (YarnRuntimeException e) {
-        LOG.error("YarnRuntimeException raised while executing preemption"
-            + " checker, skip this run..., exception=", e);
+        if (monitorInterval != scheduleEditPolicy.getMonitoringInterval()) {
+          handler.cancel(true);
+          monitorInterval = scheduleEditPolicy.getMonitoringInterval();
+          schedulePreemptionChecker();
+        } else {
+          invokePolicy();
+        }
+      } catch (Throwable t) {
+        // The preemption monitor does not alter structures nor do structures
+        // persist across invocations. Therefore, log, skip, and retry.
+        LOG.error("Exception raised while executing preemption"
+            + " checker, skip this run..., exception=", t);
       }
     }
   }

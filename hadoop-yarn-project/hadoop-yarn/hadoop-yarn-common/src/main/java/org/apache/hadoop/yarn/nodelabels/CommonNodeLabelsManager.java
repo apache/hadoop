@@ -99,6 +99,8 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected ConcurrentMap<String, Host> nodeCollections =
       new ConcurrentHashMap<String, Host>();
 
+  protected RMNodeLabel noNodeLabel;
+
   protected final ReadLock readLock;
   protected final WriteLock writeLock;
 
@@ -225,7 +227,8 @@ public class CommonNodeLabelsManager extends AbstractService {
     isCentralizedNodeLabelConfiguration  =
         YarnConfiguration.isCentralizedNodeLabelConfiguration(conf);
 
-    labelCollections.put(NO_LABEL, new RMNodeLabel(NO_LABEL));
+    noNodeLabel = new RMNodeLabel(NO_LABEL);
+    labelCollections.put(NO_LABEL, noNodeLabel);
   }
 
   /**
@@ -947,6 +950,9 @@ public class CommonNodeLabelsManager extends AbstractService {
   }
 
   public boolean isExclusiveNodeLabel(String nodeLabel) throws IOException {
+    if (nodeLabel.equals(NO_LABEL)) {
+      return noNodeLabel.getIsExclusive();
+    }
     try {
       readLock.lock();
       RMNodeLabel label = labelCollections.get(nodeLabel);

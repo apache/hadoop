@@ -39,7 +39,7 @@ public class HsView extends TwoColumnLayout {
    * (non-Javadoc)
    * @see org.apache.hadoop.yarn.webapp.view.TwoColumnLayout#preHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
    */
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     set(DATATABLES_ID, "jobs");
     set(initID(DATATABLES, "jobs"), jobsTableInit());
@@ -51,7 +51,7 @@ public class HsView extends TwoColumnLayout {
    * The prehead that should be common to all subclasses.
    * @param html used to render.
    */
-  protected void commonPreHead(Page.HTML<_> html) {
+  protected void commonPreHead(Page.HTML<__> html) {
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
   }

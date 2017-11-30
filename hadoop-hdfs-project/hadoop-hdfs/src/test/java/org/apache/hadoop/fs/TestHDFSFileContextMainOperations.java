@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
@@ -199,9 +200,9 @@ public class TestHDFSFileContextMainOperations extends
      * accommodates rename
      */
     // rename uses dstdir quota=1
-    rename(src1, dst1, false, true, false, Rename.NONE);
+    rename(src1, dst1, false, true, Rename.NONE);
     // rename reuses dstdir quota=1
-    rename(src2, dst1, true, true, false, Rename.OVERWRITE);
+    rename(src2, dst1, false, true, Rename.OVERWRITE);
 
     /*
      * Test2: src does not exceed quota and dst has *no* quota to accommodate 
@@ -209,7 +210,10 @@ public class TestHDFSFileContextMainOperations extends
      */
     // dstDir quota = 1 and dst1 already uses it
     createFile(src2);
-    rename(src2, dst2, false, false, true, Rename.NONE);
+    try {
+      rename(src2, dst2, true, false, Rename.NONE);
+      fail("NSQuotaExceededException excepted");
+    } catch (NSQuotaExceededException e) {}
 
     /*
      * Test3: src exceeds quota and dst has *no* quota to accommodate rename
@@ -217,7 +221,11 @@ public class TestHDFSFileContextMainOperations extends
      */
     // src1 has no quota to accommodate new rename node
     fs.setQuota(src1.getParent(), 1, HdfsConstants.QUOTA_DONT_SET);
-    rename(dst1, src1, false, false, true, Rename.NONE);
+
+    try {
+      rename(dst1, src1, true, false, Rename.NONE);
+      fail("NSQuotaExceededException excepted");
+    } catch (NSQuotaExceededException e) {}
     
     /*
      * Test4: src exceeds quota and dst has *no* quota to accommodate rename
@@ -228,16 +236,23 @@ public class TestHDFSFileContextMainOperations extends
     fs.setQuota(src1.getParent(), 100, HdfsConstants.QUOTA_DONT_SET);
     createFile(src1);
     fs.setQuota(src1.getParent(), 1, HdfsConstants.QUOTA_DONT_SET);
-    rename(dst1, src1, true, true, false, Rename.OVERWRITE);
+    rename(dst1, src1, false, true, Rename.OVERWRITE);
   }
   
-  @Test
+  @Test(expected = RemoteException.class)
   public void testRenameRoot() throws Exception {
     Path src = getTestRootPath(fc, "test/testRenameRoot/srcdir/src1");
     Path dst = new Path("/");
     createFile(src);
-    rename(src, dst, true, false, true, Rename.OVERWRITE);
-    rename(dst, src, true, false, true, Rename.OVERWRITE);
+    rename(dst, src, true, true, Rename.OVERWRITE);
+  }
+
+  @Test(expected = RemoteException.class)
+  public void testRenameToRoot() throws Exception {
+    Path src = getTestRootPath(fc, "test/testRenameRoot/srcdir/src1");
+    Path dst = new Path("/");
+    createFile(src);
+    rename(src, dst, true, true, Rename.OVERWRITE);
   }
   
   /**
@@ -286,7 +301,7 @@ public class TestHDFSFileContextMainOperations extends
     fs.setQuota(dst1.getParent(), 2, HdfsConstants.QUOTA_DONT_SET);
     // Free up quota for a subsequent rename
     fs.delete(dst1, true);
-    rename(src1, dst1, true, true, false, Rename.OVERWRITE);
+    rename(src1, dst1, false, true, Rename.OVERWRITE);
     
     // Restart the cluster and ensure the above operations can be
     // loaded from the edits log
@@ -323,19 +338,6 @@ public class TestHDFSFileContextMainOperations extends
     }
     Assert.assertEquals(renameSucceeds, !exists(fc, src));
     Assert.assertEquals(renameSucceeds, exists(fc, dst));
-  }
-  
-  private void rename(Path src, Path dst, boolean dstExists,
-      boolean renameSucceeds, boolean exception, Options.Rename... options)
-      throws Exception {
-    try {
-      fc.rename(src, dst, options);
-      Assert.assertTrue(renameSucceeds);
-    } catch (Exception ex) {
-      Assert.assertTrue(exception);
-    }
-    Assert.assertEquals(renameSucceeds, !exists(fc, src));
-    Assert.assertEquals((dstExists||renameSucceeds), exists(fc, dst));
   }
   
   @Override

@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -49,10 +48,13 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
+import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
@@ -69,8 +71,8 @@ public class TestHBaseStorageFlowRunCompaction {
 
   private static HBaseTestingUtility util;
 
-  private static final String METRIC_1 = "MAP_SLOT_MILLIS";
-  private static final String METRIC_2 = "HDFS_BYTES_READ";
+  private static final String METRIC1 = "MAP_SLOT_MILLIS";
+  private static final String METRIC2 = "HDFS_BYTES_READ";
 
   private final byte[] aRowKey = Bytes.toBytes("a");
   private final byte[] aFamily = Bytes.toBytes("family");
@@ -82,15 +84,12 @@ public class TestHBaseStorageFlowRunCompaction {
     Configuration conf = util.getConfiguration();
     conf.setInt("hfile.format.version", 3);
     util.startMiniCluster();
-    createSchema();
+    DataGeneratorForTest.createSchema(util.getConfiguration());
   }
 
-  private static void createSchema() throws IOException {
-    TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
-  }
-
-  /** Writes non numeric data into flow run table
-   * reads it back.
+  /**
+   * writes non numeric data into flow run table.
+   * reads it back
    *
    * @throws Exception
    */
@@ -106,11 +105,10 @@ public class TestHBaseStorageFlowRunCompaction {
     p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnNameBytes,
         valueBytes);
     Configuration hbaseConf = util.getConfiguration();
-    TableName table = TableName.valueOf(hbaseConf.get(
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
     Connection conn = null;
     conn = ConnectionFactory.createConnection(hbaseConf);
-    Table flowRunTable = conn.getTable(table);
+    Table flowRunTable = conn.getTable(BaseTable.getTableName(hbaseConf,
+        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
     flowRunTable.put(p);
 
     Get g = new Get(rowKeyBytes);
@@ -156,11 +154,10 @@ public class TestHBaseStorageFlowRunCompaction {
         value4Bytes);
 
     Configuration hbaseConf = util.getConfiguration();
-    TableName table = TableName.valueOf(hbaseConf.get(
-        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
     Connection conn = null;
     conn = ConnectionFactory.createConnection(hbaseConf);
-    Table flowRunTable = conn.getTable(table);
+    Table flowRunTable = conn.getTable(BaseTable.getTableName(hbaseConf,
+        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
     flowRunTable.put(p);
 
     String rowKey2 = "nonNumericRowKey2";
@@ -262,7 +259,6 @@ public class TestHBaseStorageFlowRunCompaction {
           .getFamilyMap(FlowRunColumnFamily.INFO.getBytes());
       // we expect all back in one next call
       assertEquals(4, values.size());
-      System.out.println(" values size " + values.size() +  " " + batchLimit);
       rowCount++;
     }
     // should get back 1 row with each invocation
@@ -286,9 +282,12 @@ public class TestHBaseStorageFlowRunCompaction {
     Configuration c1 = util.getConfiguration();
     TimelineEntities te1 = null;
     TimelineEntity entityApp1 = null;
+    UserGroupInformation remoteUser =
+        UserGroupInformation.createRemoteUser(user);
     try {
       hbi = new HBaseTimelineWriterImpl();
       hbi.init(c1);
+
       // now insert count * ( 100 + 100) metrics
       // each call to getEntityMetricsApp1 brings back 100 values
       // of metric1 and 100 of metric2
@@ -298,14 +297,16 @@ public class TestHBaseStorageFlowRunCompaction {
         te1 = new TimelineEntities();
         entityApp1 = TestFlowDataGenerator.getEntityMetricsApp1(insertTs, c1);
         te1.addEntity(entityApp1);
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1, remoteUser);
 
         appName = "application_2048000000000_7" + appIdSuffix;
         insertTs++;
         te1 = new TimelineEntities();
         entityApp1 = TestFlowDataGenerator.getEntityMetricsApp2(insertTs);
         te1.addEntity(entityApp1);
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1, remoteUser);
       }
     } finally {
       String appName = "application_10240000000000_" + appIdSuffix;
@@ -314,17 +315,19 @@ public class TestHBaseStorageFlowRunCompaction {
           insertTs + 1, c1);
       te1.addEntity(entityApp1);
       if (hbi != null) {
-        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.write(new TimelineCollectorContext(cluster, user, flow, flowVersion,
+            runid, appName), te1, remoteUser);
         hbi.flush();
         hbi.close();
       }
     }
 
     // check in flow run table
-    HRegionServer server = util.getRSForFirstRegionInTable(TableName
-        .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
-    List<Region> regions = server.getOnlineRegions(TableName
-        .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
+    HRegionServer server = util.getRSForFirstRegionInTable(
+        BaseTable.getTableName(c1, FlowRunTable.TABLE_NAME_CONF_NAME,
+            FlowRunTable.DEFAULT_TABLE_NAME));
+    List<Region> regions = server.getOnlineRegions(BaseTable.getTableName(c1,
+        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
     assertTrue("Didn't find any regions for primary table!",
         regions.size() > 0);
     // flush and compact all the regions of the primary table
@@ -349,8 +352,8 @@ public class TestHBaseStorageFlowRunCompaction {
         new FlowRunRowKey(clusterStop, user, flow, runid).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
-    Table table1 = conn.getTable(TableName
-        .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(BaseTable.getTableName(c1,
+        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
     ResultScanner scanner = table1.getScanner(s);
 
     int rowCount = 0;
@@ -364,13 +367,13 @@ public class TestHBaseStorageFlowRunCompaction {
       rowCount++;
       // check metric1
       byte[] q = ColumnHelper.getColumnQualifier(
-          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC_1);
+          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC1);
       assertTrue(values.containsKey(q));
       assertEquals(141, Bytes.toLong(values.get(q)));
 
       // check metric2
       q = ColumnHelper.getColumnQualifier(
-          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC_2);
+          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC2);
       assertTrue(values.containsKey(q));
       assertEquals(57, Bytes.toLong(values.get(q)));
     }
@@ -587,9 +590,9 @@ public class TestHBaseStorageFlowRunCompaction {
     long cellTsFinalStart = 10001120L;
     long cellTsFinal = cellTsFinalStart;
 
-    long cellTsFinalStartNotExpire =
-        TimestampGenerator.getSupplementedTimestamp(
-        System.currentTimeMillis(), "application_10266666661166_118821");
+    long cellTsFinalStartNotExpire = TimestampGenerator
+        .getSupplementedTimestamp(System.currentTimeMillis(),
+            "application_10266666661166_118821");
     long cellTsFinalNotExpire = cellTsFinalStartNotExpire;
 
     long cellTsNotFinalStart = currentTimestamp - 5;

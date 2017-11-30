@@ -95,8 +95,12 @@ public class HttpFSAuthenticationFilter
       throw new RuntimeException("Could not read HttpFS signature secret file: " + signatureSecretFile);
     }
     setAuthHandlerClass(props);
+    String dtkind = WebHdfsConstants.WEBHDFS_TOKEN_KIND.toString();
+    if (conf.getBoolean(HttpFSServerWebServer.SSL_ENABLED_KEY, false)) {
+      dtkind = WebHdfsConstants.SWEBHDFS_TOKEN_KIND.toString();
+    }
     props.setProperty(KerberosDelegationTokenAuthenticationHandler.TOKEN_KIND,
-        WebHdfsConstants.WEBHDFS_TOKEN_KIND.toString());
+                      dtkind);
     return props;
   }
 

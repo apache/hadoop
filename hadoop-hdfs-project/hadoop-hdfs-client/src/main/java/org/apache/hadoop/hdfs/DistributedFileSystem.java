@@ -18,21 +18,14 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
@@ -51,27 +44,29 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.StorageStatistics;
-import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.impl.CorruptFileBlockIterator;
-import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
-import org.apache.hadoop.hdfs.protocol.AddECPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -81,29 +76,40 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsPathHandle;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nonnull;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -239,6 +245,13 @@ public class DistributedFileSystem extends FileSystem {
     return getFileBlockLocations(file.getPath(), start, len);
   }
 
+  /**
+   * The returned BlockLocation will have different formats for replicated
+   * and erasure coded file.
+   * Please refer to
+   * {@link FileSystem#getFileBlockLocations(FileStatus, long, long)}
+   * for more details.
+   */
   @Override
   public BlockLocation[] getFileBlockLocations(Path p,
       final long start, final long len) throws IOException {
@@ -309,6 +322,56 @@ public class DistributedFileSystem extends FileSystem {
         return fs.open(p, bufferSize);
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Opens an FSDataInputStream with the indicated file ID extracted from
+   * the {@link PathHandle}.
+   * @param fd Reference to entity in this FileSystem.
+   * @param bufferSize the size of the buffer to be used.
+   */
+  @Override
+  public FSDataInputStream open(PathHandle fd, int bufferSize)
+      throws IOException {
+    if (!(fd instanceof HdfsPathHandle)) {
+      fd = new HdfsPathHandle(fd.bytes());
+    }
+    HdfsPathHandle id = (HdfsPathHandle) fd;
+    return open(DFSUtilClient.makePathFromFileId(id.getInodeId()), bufferSize);
+  }
+
+  /**
+   * Create a handle to an HDFS file.
+   * @param st HdfsFileStatus instance from NameNode
+   * @param opts Standard handle arguments
+   * @throws IllegalArgumentException If the FileStatus instance refers to a
+   * directory, symlink, or another namesystem.
+   * @throws UnsupportedOperationException If opts are not specified or both
+   * data and location are not allowed to change.
+   * @return A handle to the file.
+   */
+  @Override
+  protected PathHandle createPathHandle(FileStatus st, HandleOpt... opts) {
+    if (!(st instanceof HdfsFileStatus)) {
+      throw new IllegalArgumentException("Invalid FileStatus "
+          + st.getClass().getSimpleName());
+    }
+    if (st.isDirectory() || st.isSymlink()) {
+      throw new IllegalArgumentException("PathHandle only available for files");
+    }
+    if (!getUri().getAuthority().equals(st.getPath().toUri().getAuthority())) {
+      throw new IllegalArgumentException("Wrong FileSystem: " + st.getPath());
+    }
+    HandleOpt.Data data = HandleOpt.getOpt(HandleOpt.Data.class, opts)
+        .orElse(HandleOpt.changed(false));
+    HandleOpt.Location loc = HandleOpt.getOpt(HandleOpt.Location.class, opts)
+        .orElse(HandleOpt.moved(false));
+    if (!data.allowChange() || !loc.allowChange()) {
+      throw new UnsupportedOperationException("Unsupported opts "
+          + Arrays.stream(opts)
+                  .map(HandleOpt::toString).collect(Collectors.joining(",")));
+    }
+    return new HdfsPathHandle((HdfsFileStatus)st);
   }
 
   @Override
@@ -523,6 +586,49 @@ public class DistributedFileSystem extends FileSystem {
         absolutePermission, flag, true, replication, blockSize,
         progress, bufferSize, checksumOpt);
     return dfs.createWrappedOutputStream(dfsos, statistics);
+  }
+
+  /**
+   * Similar to {@link #create(Path, FsPermission, EnumSet, int, short, long,
+   * Progressable, ChecksumOpt, InetSocketAddress[], String)}, it provides a
+   * HDFS-specific version of {@link #createNonRecursive(Path, FsPermission,
+   * EnumSet, int, short, long, Progressable)} with a few additions.
+   *
+   * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
+   * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
+   * additional parameters, i.e., favoredNodes and ecPolicyName.
+   */
+  private HdfsDataOutputStream createNonRecursive(final Path f,
+      final FsPermission permission, final EnumSet<CreateFlag> flag,
+      final int bufferSize, final short replication, final long blockSize,
+      final Progressable progress, final ChecksumOpt checksumOpt,
+      final InetSocketAddress[] favoredNodes, final String ecPolicyName)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.CREATE);
+    Path absF = fixRelativePart(f);
+    return new FileSystemLinkResolver<HdfsDataOutputStream>() {
+      @Override
+      public HdfsDataOutputStream doCall(final Path p) throws IOException {
+        final DFSOutputStream out = dfs.create(getPathName(f), permission,
+            flag, false, replication, blockSize, progress, bufferSize,
+            checksumOpt, favoredNodes, ecPolicyName);
+        return dfs.createWrappedOutputStream(out, statistics);
+      }
+      @Override
+      public HdfsDataOutputStream next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.createNonRecursive(p, permission, flag, bufferSize,
+              replication, blockSize, progress, checksumOpt, favoredNodes,
+              ecPolicyName);
+        }
+        throw new UnsupportedOperationException("Cannot create with" +
+            " favoredNodes through a symlink to a non-DistributedFileSystem: "
+            + f + " -> " + p);
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -996,6 +1102,13 @@ public class DistributedFileSystem extends FileSystem {
     }.resolve(this, absF);
   }
 
+  /**
+   * The BlockLocation of returned LocatedFileStatus will have different
+   * formats for replicated and erasure coded file.
+   * Please refer to
+   * {@link FileSystem#getFileBlockLocations(FileStatus, long, long)} for
+   * more details.
+   */
   @Override
   protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path p,
       final PathFilter filter)
@@ -1124,7 +1237,7 @@ public class DistributedFileSystem extends FileSystem {
             needLocation);
         statistics.incrementReadOps(1);
         if (thisListing == null) {
-          return false;
+          throw new FileNotFoundException("File " + p + " does not exist.");
         }
         i = 0;
       }
@@ -1266,12 +1379,12 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Returns count of blocks with one of more replica missing.
+   * Returns aggregated count of blocks with less redundancy.
    *
    * @throws IOException
    */
-  public long getUnderReplicatedBlocksCount() throws IOException {
-    return dfs.getUnderReplicatedBlocksCount();
+  public long getLowRedundancyBlocksCount() throws IOException {
+    return dfs.getLowRedundancyBlocksCount();
   }
 
   /**
@@ -2271,6 +2384,38 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /* HDFS only */
+  public void reencryptEncryptionZone(final Path zone,
+      final ReencryptAction action) throws IOException {
+    final Path absF = fixRelativePart(zone);
+    new FileSystemLinkResolver<Void>() {
+      @Override
+      public Void doCall(final Path p) throws IOException {
+        dfs.reencryptEncryptionZone(getPathName(p), action);
+        return null;
+      }
+
+      @Override
+      public Void next(final FileSystem fs, final Path p) throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem) fs;
+          myDfs.reencryptEncryptionZone(p, action);
+          return null;
+        }
+        throw new UnsupportedOperationException(
+            "Cannot call reencryptEncryptionZone"
+                + " on a symlink to a non-DistributedFileSystem: " + zone
+                + " -> " + p);
+      }
+    }.resolve(this, absF);
+  }
+
+  /* HDFS only */
+  public RemoteIterator<ZoneReencryptionStatus> listReencryptionStatus()
+      throws IOException {
+    return dfs.listReencryptionStatus();
+  }
+
+  /* HDFS only */
   public FileEncryptionInfo getFileEncryptionInfo(final Path path)
       throws IOException {
     Path absF = fixRelativePart(path);
@@ -2471,8 +2616,6 @@ public class DistributedFileSystem extends FileSystem {
   public void setErasureCodingPolicy(final Path path,
       final String ecPolicyName) throws IOException {
     Path absF = fixRelativePart(path);
-    Preconditions.checkNotNull(ecPolicyName, "Erasure coding policy cannot be" +
-        " null.");
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException {
@@ -2499,7 +2642,8 @@ public class DistributedFileSystem extends FileSystem {
    *
    * @param path The path of the file or directory
    * @return Returns the policy information if file or directory on the path
-   * is erasure coded, null otherwise
+   * is erasure coded, null otherwise. Null will be returned if directory or
+   * file has REPLICATION policy.
    * @throws IOException
    */
   public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
@@ -2526,12 +2670,14 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Retrieve all the erasure coding policies supported by this file system.
+   * Retrieve all the erasure coding policies supported by this file system,
+   * including enabled, disabled and removed policies, but excluding
+   * REPLICATION policy.
    *
    * @return all erasure coding policies supported by this file system.
    * @throws IOException
    */
-  public Collection<ErasureCodingPolicy> getAllErasureCodingPolicies()
+  public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies()
       throws IOException {
     return Arrays.asList(dfs.getErasureCodingPolicies());
   }
@@ -2543,7 +2689,7 @@ public class DistributedFileSystem extends FileSystem {
    * @return all erasure coding codecs and coders supported by this file system.
    * @throws IOException
    */
-  public HashMap<String, String> getAllErasureCodingCodecs()
+  public Map<String, String> getAllErasureCodingCodecs()
       throws IOException {
     return dfs.getErasureCodingCodecs();
   }
@@ -2551,16 +2697,50 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Add Erasure coding policies to HDFS. For each policy input, schema and
    * cellSize are musts, name and id are ignored. They will be automatically
-   * created and assigned by Namenode once the policy is successfully added, and
-   * will be returned in the response.
+   * created and assigned by Namenode once the policy is successfully added,
+   * and will be returned in the response; policy states will be set to
+   * DISABLED automatically.
    *
    * @param policies The user defined ec policy list to add.
    * @return Return the response list of adding operations.
    * @throws IOException
    */
-  public AddECPolicyResponse[] addErasureCodingPolicies(
+  public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies)  throws IOException {
     return dfs.addErasureCodingPolicies(policies);
+  }
+
+  /**
+   * Remove erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be removed.
+   * @throws IOException
+   */
+  public void removeErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.removeErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
+   * Enable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be enabled.
+   * @throws IOException
+   */
+  public void enableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+  }
+
+  /**
+   * Disable erasure coding policy.
+   *
+   * @param ecPolicyName The name of the policy to be disabled.
+   * @throws IOException
+   */
+  public void disableErasureCodingPolicy(String ecPolicyName)
+      throws IOException {
+    dfs.disableErasureCodingPolicy(ecPolicyName);
   }
 
   /**
@@ -2658,8 +2838,7 @@ public class DistributedFileSystem extends FileSystem {
             }
           }
         } else {
-          Path userTrash = new Path(ezTrashRoot, System.getProperty(
-              "user.name"));
+          Path userTrash = new Path(ezTrashRoot, dfs.ugi.getShortUserName());
           try {
             ret.add(getFileStatus(userTrash));
           } catch (FileNotFoundException ignored) {
@@ -2686,33 +2865,88 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Extends FSDataOutputStreamBuilder to support special requirements
-   * of DistributedFileSystem.
+   * HdfsDataOutputStreamBuilder provides the HDFS-specific capabilities to
+   * write file on HDFS.
    */
-  public static class HdfsDataOutputStreamBuilder
-      extends FSDataOutputStreamBuilder {
+  public static final class HdfsDataOutputStreamBuilder
+      extends FSDataOutputStreamBuilder<
+      FSDataOutputStream, HdfsDataOutputStreamBuilder> {
     private final DistributedFileSystem dfs;
     private InetSocketAddress[] favoredNodes = null;
     private String ecPolicyName = null;
-    private boolean shouldReplicate  = false;
 
-    public HdfsDataOutputStreamBuilder(DistributedFileSystem dfs, Path path) {
+    /**
+     * Construct a HdfsDataOutputStream builder for a file.
+     * @param dfs the {@link DistributedFileSystem} instance.
+     * @param path the path of the file to create / append.
+     */
+    private HdfsDataOutputStreamBuilder(DistributedFileSystem dfs, Path path) {
       super(dfs, path);
       this.dfs = dfs;
     }
 
-    protected InetSocketAddress[] getFavoredNodes() {
+    @Override
+    protected HdfsDataOutputStreamBuilder getThisBuilder() {
+      return this;
+    }
+
+    private InetSocketAddress[] getFavoredNodes() {
       return favoredNodes;
     }
 
-    public HdfsDataOutputStreamBuilder setFavoredNodes(
+    /**
+     * Set favored DataNodes.
+     * @param nodes the addresses of the favored DataNodes.
+     */
+    public HdfsDataOutputStreamBuilder favoredNodes(
         @Nonnull final InetSocketAddress[] nodes) {
       Preconditions.checkNotNull(nodes);
       favoredNodes = nodes.clone();
       return this;
     }
 
-    protected String getEcPolicyName() {
+    /**
+     * Force closed blocks to disk.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder syncBlock() {
+      getFlags().add(CreateFlag.SYNC_BLOCK);
+      return this;
+    }
+
+    /**
+     * Create the block on transient storage if possible.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder lazyPersist() {
+      getFlags().add(CreateFlag.LAZY_PERSIST);
+      return this;
+    }
+
+    /**
+     * Append data to a new block instead of the end of the last partial block.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder newBlock() {
+      getFlags().add(CreateFlag.NEW_BLOCK);
+      return this;
+    }
+
+    /**
+     * Advise that a block replica NOT be written to the local DataNode.
+     *
+     * @see CreateFlag for the details.
+     */
+    public HdfsDataOutputStreamBuilder noLocalWrite() {
+      getFlags().add(CreateFlag.NO_LOCAL_WRITE);
+      return this;
+    }
+
+    @VisibleForTesting
+    String getEcPolicyName() {
       return ecPolicyName;
     }
 
@@ -2722,17 +2956,17 @@ public class DistributedFileSystem extends FileSystem {
      * or erasure coding policy is. Don't call this function and
      * enforceReplicate() in the same builder since they have conflict
      * of interest.
-     *
      */
-    public HdfsDataOutputStreamBuilder setEcPolicyName(
+    public HdfsDataOutputStreamBuilder ecPolicyName(
         @Nonnull final String policyName) {
       Preconditions.checkNotNull(policyName);
       ecPolicyName = policyName;
       return this;
     }
 
-    public boolean shouldReplicate() {
-      return shouldReplicate;
+    @VisibleForTesting
+    boolean shouldReplicate() {
+      return getFlags().contains(CreateFlag.SHOULD_REPLICATE);
     }
 
     /**
@@ -2742,30 +2976,79 @@ public class DistributedFileSystem extends FileSystem {
      * conflict of interest.
      */
     public HdfsDataOutputStreamBuilder replicate() {
-      shouldReplicate  = true;
+      getFlags().add(CreateFlag.SHOULD_REPLICATE);
       return this;
     }
 
+    @VisibleForTesting
     @Override
-    public HdfsDataOutputStream build() throws IOException {
-      Preconditions.checkState(
-          !(shouldReplicate() && (!StringUtils.isEmpty(getEcPolicyName()))),
-          "shouldReplicate and ecPolicyName are " +
-              "exclusive parameters. Set both is not allowed!");
+    protected EnumSet<CreateFlag> getFlags() {
+      return super.getFlags();
+    }
 
-      EnumSet<CreateFlag> createFlags = getFlags();
-      if (shouldReplicate()) {
-        createFlags.add(CreateFlag.SHOULD_REPLICATE);
+    /**
+     * Build HdfsDataOutputStream to write.
+     *
+     * @return a fully-initialized OutputStream.
+     * @throws IOException on I/O errors.
+     */
+    @Override
+    public FSDataOutputStream build() throws IOException {
+      if (getFlags().contains(CreateFlag.CREATE) ||
+          getFlags().contains(CreateFlag.OVERWRITE)) {
+        if (isRecursive()) {
+          return dfs.create(getPath(), getPermission(), getFlags(),
+              getBufferSize(), getReplication(), getBlockSize(),
+              getProgress(), getChecksumOpt(), getFavoredNodes(),
+              getEcPolicyName());
+        } else {
+          return dfs.createNonRecursive(getPath(), getPermission(), getFlags(),
+              getBufferSize(), getReplication(), getBlockSize(), getProgress(),
+              getChecksumOpt(), getFavoredNodes(), getEcPolicyName());
+        }
+      } else if (getFlags().contains(CreateFlag.APPEND)) {
+        return dfs.append(getPath(), getFlags(), getBufferSize(), getProgress(),
+            getFavoredNodes());
       }
-      return dfs.create(getPath(), getPermission(), createFlags,
-          getBufferSize(), getReplication(), getBlockSize(),
-          getProgress(), getChecksumOpt(), getFavoredNodes(),
-          getEcPolicyName());
+      throw new HadoopIllegalArgumentException(
+          "Must specify either create or append");
     }
   }
 
+  /**
+   * Create a HdfsDataOutputStreamBuilder to create a file on DFS.
+   * Similar to {@link #create(Path)}, file is overwritten by default.
+   *
+   * @param path the path of the file to create.
+   * @return A HdfsDataOutputStreamBuilder for creating a file.
+   */
   @Override
-  public HdfsDataOutputStreamBuilder newFSDataOutputStreamBuilder(Path path) {
-    return new HdfsDataOutputStreamBuilder(this, path);
+  public HdfsDataOutputStreamBuilder createFile(Path path) {
+    return new HdfsDataOutputStreamBuilder(this, path).create().overwrite(true);
+  }
+
+  /**
+   * Returns a RemoteIterator which can be used to list all open files
+   * currently managed by the NameNode. For large numbers of open files,
+   * iterator will fetch the list in batches of configured size.
+   * <p/>
+   * Since the list is fetched in batches, it does not represent a
+   * consistent snapshot of the all open files.
+   * <p/>
+   * This method can only be called by HDFS superusers.
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
+    return dfs.listOpenFiles();
+  }
+
+  /**
+   * Create a {@link HdfsDataOutputStreamBuilder} to append a file on DFS.
+   *
+   * @param path file path.
+   * @return A {@link HdfsDataOutputStreamBuilder} for appending a file.
+   */
+  @Override
+  public HdfsDataOutputStreamBuilder appendFile(Path path) {
+    return new HdfsDataOutputStreamBuilder(this, path).append();
   }
 }

@@ -26,22 +26,22 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.crypto.random.OsSecureRandom;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implement the AES-CTR crypto codec using JNI into OpenSSL.
  */
 @InterfaceAudience.Private
 public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
-  private static final Log LOG =
-      LogFactory.getLog(OpensslAesCtrCryptoCodec.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OpensslAesCtrCryptoCodec.class.getName());
 
   private Configuration conf;
   private Random random;
@@ -72,16 +72,6 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
   }
 
   @Override
-  protected void finalize() throws Throwable {
-    try {
-      Closeable r = (Closeable) this.random;
-      r.close();
-    } catch (ClassCastException e) {
-    }
-    super.finalize();
-  }
-
-  @Override
   public Configuration getConf() {
     return conf;
   }
@@ -100,7 +90,17 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
   public void generateSecureRandom(byte[] bytes) {
     random.nextBytes(bytes);
   }
-  
+
+  @Override
+  public void close() throws IOException {
+    try {
+      Closeable r = (Closeable) this.random;
+      r.close();
+    } catch (ClassCastException e) {
+    }
+    super.close();
+  }
+
   private static class OpensslAesCtrCipher implements Encryptor, Decryptor {
     private final OpensslCipher cipher;
     private final int mode;

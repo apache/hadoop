@@ -40,9 +40,19 @@
     <load-on-startup>1</load-on-startup>
   </servlet>
 
+  <servlet>
+    <servlet-name>jmx-servlet</servlet-name>
+    <servlet-class>org.apache.hadoop.jmx.JMXJsonServlet</servlet-class>
+  </servlet>
+
   <servlet-mapping>
     <servlet-name>webservices-driver</servlet-name>
     <url-pattern>/kms/*</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>jmx-servlet</servlet-name>
+    <url-pattern>/kms/jmx</url-pattern>
   </servlet-mapping>
 
   <filter>

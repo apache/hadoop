@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockMemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
@@ -61,10 +63,10 @@ public class TestRMDelegationTokens {
     rootLogger.setLevel(Level.DEBUG);
     ExitUtil.disableSystemExit();
     testConf = new YarnConfiguration();
+    testConf
+        .set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     UserGroupInformation.setLoginUser(null);
     UserGroupInformation.setConfiguration(testConf);
-    testConf.set(YarnConfiguration.RM_STORE,
-        MemoryRMStateStore.class.getName());
   }
 
   // Test the DT mast key in the state-store when the mast key is being rolled.
@@ -73,7 +75,10 @@ public class TestRMDelegationTokens {
     Configuration conf = new Configuration(testConf);
     conf.set("hadoop.security.authentication", "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    UserGroupInformation.getLoginUser()
+        .setAuthenticationMethod(AuthenticationMethod.KERBEROS);
+
+    MemoryRMStateStore memStore = new MockMemoryRMStateStore();
     memStore.init(conf);
     RMState rmState = memStore.getState();
 
@@ -127,7 +132,7 @@ public class TestRMDelegationTokens {
   // Test all expired keys are removed from state-store.
   @Test(timeout = 15000)
   public void testRemoveExpiredMasterKeyInRMStateStore() throws Exception {
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    MemoryRMStateStore memStore = new MockMemoryRMStateStore();
     memStore.init(testConf);
     RMState rmState = memStore.getState();
 

@@ -18,21 +18,22 @@
 
 package org.apache.hadoop.yarn.conf;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.net.InetSocketAddress;
+import java.util.Collection;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import java.net.InetSocketAddress;
-import java.util.Collection;
+import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class HAUtil {
-  private static Log LOG = LogFactory.getLog(HAUtil.class);
+  private static Logger LOG = LoggerFactory.getLogger(HAUtil.class);
 
   @VisibleForTesting
   public static final String BAD_CONFIG_MESSAGE_PREFIX =
@@ -42,6 +43,29 @@ public class HAUtil {
 
   private static void throwBadConfigurationException(String msg) {
     throw new YarnRuntimeException(BAD_CONFIG_MESSAGE_PREFIX + msg);
+  }
+
+  /**
+   * Returns true if Federation is configured.
+   *
+   * @param conf Configuration
+   * @return true if federation is configured in the configuration; else false.
+   */
+  public static boolean isFederationEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+  }
+
+  /**
+   * Returns true if RM failover is enabled in a Federation setting.
+   *
+   * @param conf Configuration
+   * @return if RM failover is enabled in conjunction with Federation in the
+   *         configuration; else false.
+   */
+  public static boolean isFederationFailoverEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.FEDERATION_FAILOVER_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_FAILOVER_ENABLED);
   }
 
   /**
@@ -278,9 +302,9 @@ public class HAUtil {
     String confKey = getConfKeyForRMInstance(prefix, conf);
     String retVal = conf.getTrimmed(confKey);
     if (LOG.isTraceEnabled()) {
-      LOG.trace("getConfValueForRMInstance: prefix = " + prefix +
-          "; confKey being looked up = " + confKey +
-          "; value being set to = " + retVal);
+      LOG.trace("getConfValueForRMInstance: prefix = {};" +
+          " confKey being looked up = {};" +
+          " value being set to = {}", prefix, confKey, retVal);
     }
     return retVal;
   }

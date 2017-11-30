@@ -63,7 +63,7 @@ public class TestHttpFSServerWebServer {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    conf.set(HttpFSServerWebServer.HTTP_HOST_KEY, "localhost");
+    conf.set(HttpFSServerWebServer.HTTP_HOSTNAME_KEY, "localhost");
     conf.setInt(HttpFSServerWebServer.HTTP_PORT_KEY, 0);
     Configuration sslConf = new Configuration();
     webServer = new HttpFSServerWebServer(conf, sslConf);

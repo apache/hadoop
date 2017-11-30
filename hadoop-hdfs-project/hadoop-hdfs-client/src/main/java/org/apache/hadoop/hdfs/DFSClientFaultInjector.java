@@ -61,4 +61,8 @@ public class DFSClientFaultInjector {
   public boolean skipRollingRestartWait() {
     return false;
   }
+
+  public void sleepBeforeHedgedGet() {}
+
+  public void delayWhenRenewLeaseTimeout() {}
 }

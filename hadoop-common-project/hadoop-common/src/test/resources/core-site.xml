@@ -45,12 +45,6 @@
    This is required by FTPFileSystem</description>
 </property>
 
-<property>
-  <name>test.fs.s3n.name</name>
-  <value>s3n:///</value>
-  <description>The name of the s3n file system for testing.</description>
-</property>
-
 <!-- Turn security off for tests by default -->
 <property>
   <name>hadoop.security.authentication</name>

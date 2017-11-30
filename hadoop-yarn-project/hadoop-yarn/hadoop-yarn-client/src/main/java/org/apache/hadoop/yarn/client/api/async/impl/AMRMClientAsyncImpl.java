@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -51,13 +49,16 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
 public class AMRMClientAsyncImpl<T extends ContainerRequest> 
 extends AMRMClientAsync<T> {
   
-  private static final Log LOG = LogFactory.getLog(AMRMClientAsyncImpl.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(AMRMClientAsyncImpl.class);
   
   private final HeartbeatThread heartbeatThread;
   private final CallbackHandlerThread handlerThread;
@@ -68,8 +69,6 @@ extends AMRMClientAsync<T> {
   
   private volatile boolean keepRunning;
   private volatile float progress;
-  
-  private volatile String collectorAddr;
 
   /**
    *
@@ -144,11 +143,7 @@ extends AMRMClientAsync<T> {
     handlerThread.interrupt();
     super.serviceStop();
   }
-  
-  public void setHeartbeatInterval(int interval) {
-    heartbeatIntervalMs.set(interval);
-  }
-  
+
   public List<? extends Collection<T>> getMatchingRequests(
                                                    Priority priority, 
                                                    String resourceName, 
@@ -325,17 +320,16 @@ extends AMRMClientAsync<T> {
           }
 
           AllocateResponse response = (AllocateResponse) object;
-          String collectorAddress = response.getCollectorAddr();
+          String collectorAddress = null;
+          if (response.getCollectorInfo() != null) {
+            collectorAddress = response.getCollectorInfo().getCollectorAddr();
+          }
+
           TimelineV2Client timelineClient =
               client.getRegisteredTimelineV2Client();
-          if (timelineClient != null && collectorAddress != null
-              && !collectorAddress.isEmpty()) {
-            if (collectorAddr == null
-                || !collectorAddr.equals(collectorAddress)) {
-              collectorAddr = collectorAddress;
-              timelineClient.setTimelineServiceAddress(collectorAddress);
-              LOG.info("collectorAddress " + collectorAddress);
-            }
+          if (timelineClient != null && response.getCollectorInfo() != null) {
+            timelineClient.
+                setTimelineCollectorInfo(response.getCollectorInfo());
           }
 
           List<NodeReport> updatedNodes = response.getUpdatedNodes();

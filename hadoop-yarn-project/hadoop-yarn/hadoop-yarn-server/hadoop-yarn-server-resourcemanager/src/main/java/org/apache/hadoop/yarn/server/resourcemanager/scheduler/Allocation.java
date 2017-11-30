@@ -38,6 +38,7 @@ public class Allocation {
   final List<Container> decreasedContainers;
   final List<Container> promotedContainers;
   final List<Container> demotedContainers;
+  private final List<Container> previousAttemptContainers;
   private Resource resourceLimit;
 
 
@@ -52,7 +53,7 @@ public class Allocation {
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens) {
     this(containers,  resourceLimit,strictContainers,  fungibleContainers,
-      fungibleResources, nmTokens, null, null, null, null);
+      fungibleResources, nmTokens, null, null, null, null, null);
   }
 
   public Allocation(List<Container> containers, Resource resourceLimit,
@@ -61,14 +62,15 @@ public class Allocation {
       List<Container> increasedContainers, List<Container> decreasedContainer) {
     this(containers,  resourceLimit,strictContainers,  fungibleContainers,
         fungibleResources, nmTokens, increasedContainers, decreasedContainer,
-        null, null);
+        null, null, null);
   }
 
   public Allocation(List<Container> containers, Resource resourceLimit,
       Set<ContainerId> strictContainers, Set<ContainerId> fungibleContainers,
       List<ResourceRequest> fungibleResources, List<NMToken> nmTokens,
       List<Container> increasedContainers, List<Container> decreasedContainer,
-      List<Container> promotedContainers, List<Container> demotedContainer) {
+      List<Container> promotedContainers, List<Container> demotedContainer,
+      List<Container> previousAttemptContainers) {
     this.containers = containers;
     this.resourceLimit = resourceLimit;
     this.strictContainers = strictContainers;
@@ -79,6 +81,7 @@ public class Allocation {
     this.decreasedContainers = decreasedContainer;
     this.promotedContainers = promotedContainers;
     this.demotedContainers = demotedContainer;
+    this.previousAttemptContainers = previousAttemptContainers;
   }
 
   public List<Container> getContainers() {
@@ -119,6 +122,10 @@ public class Allocation {
 
   public List<Container> getDemotedContainers() {
     return demotedContainers;
+  }
+
+  public List<Container> getPreviousAttemptContainers() {
+    return previousAttemptContainers;
   }
 
   @VisibleForTesting

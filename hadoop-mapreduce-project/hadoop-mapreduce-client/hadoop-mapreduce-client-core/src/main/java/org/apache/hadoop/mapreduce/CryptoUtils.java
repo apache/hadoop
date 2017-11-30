@@ -22,8 +22,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +35,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.LimitInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides utilities to make it easier to work with Cryptographic
@@ -47,7 +47,7 @@ import org.apache.hadoop.util.LimitInputStream;
 @InterfaceStability.Unstable
 public class CryptoUtils {
 
-  private static final Log LOG = LogFactory.getLog(CryptoUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
 
   public static boolean isEncryptedSpillEnabled(Configuration conf) {
     return conf.getBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA,
@@ -66,16 +66,24 @@ public class CryptoUtils {
     if (isEncryptedSpillEnabled(conf)) {
       byte[] iv = new byte[cryptoCodec.getCipherSuite().getAlgorithmBlockSize()];
       cryptoCodec.generateSecureRandom(iv);
+      cryptoCodec.close();
       return iv;
     } else {
       return null;
     }
   }
 
-  public static int cryptoPadding(Configuration conf) {
+  public static int cryptoPadding(Configuration conf) throws IOException {
     // Sizeof(IV) + long(start-offset)
-    return isEncryptedSpillEnabled(conf) ? CryptoCodec.getInstance(conf)
-        .getCipherSuite().getAlgorithmBlockSize() + 8 : 0;
+    if (!isEncryptedSpillEnabled(conf)) {
+      return 0;
+    }
+    final CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf);
+    try {
+      return cryptoCodec.getCipherSuite().getAlgorithmBlockSize() + 8;
+    } finally {
+      cryptoCodec.close();
+    }
   }
 
   private static byte[] getEncryptionKey() throws IOException {

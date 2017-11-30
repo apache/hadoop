@@ -26,17 +26,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDomainSocketWatcher {
-  static final Log LOG = LogFactory.getLog(TestDomainSocketWatcher.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestDomainSocketWatcher.class);
 
   private Throwable trappedException = null;
 
@@ -141,7 +142,7 @@ public class TestDomainSocketWatcher {
             }
           }
         } catch (Throwable e) {
-          LOG.error(e);
+          LOG.error(e.toString());
           throw new RuntimeException(e);
         }
       }
@@ -169,7 +170,7 @@ public class TestDomainSocketWatcher {
             }
           }
         } catch (Throwable e) {
-          LOG.error(e);
+          LOG.error(e.toString());
           throw new RuntimeException(e);
         }
       }
@@ -212,7 +213,7 @@ public class TestDomainSocketWatcher {
             TimeUnit.MILLISECONDS.sleep(1);
           }
         } catch (Throwable e) {
-          LOG.error(e);
+          LOG.error(e.toString());
           throw new RuntimeException(e);
         }
       }
@@ -241,7 +242,7 @@ public class TestDomainSocketWatcher {
             }
           }
         } catch (Throwable e) {
-          LOG.error(e);
+          LOG.error(e.toString());
           throw new RuntimeException(e);
         }
       }

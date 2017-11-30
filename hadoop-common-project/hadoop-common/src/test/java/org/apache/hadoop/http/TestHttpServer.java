@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.http;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -40,6 +38,8 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -73,7 +73,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_S
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
-  static final Log LOG = LogFactory.getLog(TestHttpServer.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer2 server;
   private static final int MAX_THREADS = 10;
 
@@ -681,5 +681,18 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       stopHttpServer(myServer);
       stopHttpServer(myServer2);
     }
+  }
+
+  @Test
+  public void testBacklogSize() throws Exception
+  {
+    final int backlogSize = 2048;
+    Configuration conf = new Configuration();
+    conf.setInt(HttpServer2.HTTP_SOCKET_BACKLOG_SIZE_KEY, backlogSize);
+    HttpServer2 srv = createServer("test", conf);
+    List<?> listeners = (List<?>) Whitebox.getInternalState(srv,
+            "listeners");
+    ServerConnector listener = (ServerConnector)listeners.get(0);
+    assertEquals(backlogSize, listener.getAcceptQueueSize());
   }
 }

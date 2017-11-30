@@ -17,7 +17,6 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +29,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -63,12 +63,6 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
   
-  /** Whether to enable the Fair Scheduler event log */
-  public static final String EVENT_LOG_ENABLED = CONF_PREFIX + "event-log-enabled";
-  public static final boolean DEFAULT_EVENT_LOG_ENABLED = false;
-
-  protected static final String EVENT_LOG_DIR = "eventlog.dir";
-
   /** Whether pools can be created that were not specified in the FS configuration file
    */
   protected static final String ALLOW_UNDECLARED_POOLS = CONF_PREFIX + "allow-undeclared-pools";
@@ -254,15 +248,6 @@ public class FairSchedulerConfiguration extends Configuration {
     return getBoolean(SIZE_BASED_WEIGHT, DEFAULT_SIZE_BASED_WEIGHT);
   }
 
-  public boolean isEventLogEnabled() {
-    return getBoolean(EVENT_LOG_ENABLED, DEFAULT_EVENT_LOG_ENABLED);
-  }
-  
-  public String getEventlogDir() {
-    return get(EVENT_LOG_DIR, new File(System.getProperty("hadoop.log.dir",
-    		"/tmp/")).getAbsolutePath() + File.separator + "fairscheduler");
-  }
-  
   public long getWaitTimeBeforeNextStarvationCheck() {
     return getLong(WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS,
         DEFAULT_WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS);
@@ -287,19 +272,62 @@ public class FairSchedulerConfiguration extends Configuration {
    * 
    * @throws AllocationConfigurationException
    */
-  public static Resource parseResourceConfigValue(String val)
+  public static ConfigurableResource parseResourceConfigValue(String val)
       throws AllocationConfigurationException {
+    ConfigurableResource configurableResource;
     try {
       val = StringUtils.toLowerCase(val);
-      int memory = findResource(val, "mb");
-      int vcores = findResource(val, "vcores");
-      return BuilderUtils.newResource(memory, vcores);
+      if (val.contains("%")) {
+        configurableResource = new ConfigurableResource(
+            getResourcePercentage(val));
+      } else {
+        int memory = findResource(val, "mb");
+        int vcores = findResource(val, "vcores");
+        configurableResource = new ConfigurableResource(
+            BuilderUtils.newResource(memory, vcores));
+      }
     } catch (AllocationConfigurationException ex) {
       throw ex;
     } catch (Exception ex) {
       throw new AllocationConfigurationException(
           "Error reading resource config", ex);
     }
+    return configurableResource;
+  }
+
+  private static double[] getResourcePercentage(
+      String val) throws AllocationConfigurationException {
+    int numberOfKnownResourceTypes = ResourceUtils
+        .getNumberOfKnownResourceTypes();
+    double[] resourcePercentage = new double[numberOfKnownResourceTypes];
+    String[] strings = val.split(",");
+    if (strings.length == 1) {
+      double percentage = findPercentage(strings[0], "");
+      for (int i = 0; i < numberOfKnownResourceTypes; i++) {
+        resourcePercentage[i] = percentage/100;
+      }
+    } else {
+      resourcePercentage[0] = findPercentage(val, "memory")/100;
+      resourcePercentage[1] = findPercentage(val, "cpu")/100;
+    }
+    return resourcePercentage;
+  }
+
+  private static double findPercentage(String val, String units)
+    throws AllocationConfigurationException {
+    final Pattern pattern =
+        Pattern.compile("((\\d+)(\\.\\d*)?)\\s*%\\s*" + units);
+    Matcher matcher = pattern.matcher(val);
+    if (!matcher.find()) {
+      if (units.equals("")) {
+        throw new AllocationConfigurationException("Invalid percentage: " +
+            val);
+      } else {
+        throw new AllocationConfigurationException("Missing resource: " +
+            units);
+      }
+    }
+    return Double.parseDouble(matcher.group(1));
   }
 
   public long getUpdateInterval() {
@@ -307,8 +335,8 @@ public class FairSchedulerConfiguration extends Configuration {
   }
   
   private static int findResource(String val, String units)
-    throws AllocationConfigurationException {
-    Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
+      throws AllocationConfigurationException {
+    final Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
     Matcher matcher = pattern.matcher(val);
     if (!matcher.find()) {
       throw new AllocationConfigurationException("Missing resource: " + units);

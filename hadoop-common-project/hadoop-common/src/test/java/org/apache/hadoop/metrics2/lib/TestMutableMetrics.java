@@ -34,18 +34,19 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test metrics record builder interface and mutable metrics
  */
 public class TestMutableMetrics {
 
-  private static final Log LOG = LogFactory.getLog(TestMutableMetrics.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMutableMetrics.class);
   private final double EPSILON = 1e-42;
 
   /**

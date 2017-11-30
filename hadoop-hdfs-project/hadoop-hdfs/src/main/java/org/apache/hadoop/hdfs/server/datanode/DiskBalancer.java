@@ -1011,14 +1011,18 @@ public class DiskBalancer {
         return;
       }
 
+      if (source.isTransientStorage() || dest.isTransientStorage()) {
+        final String errMsg = "Disk Balancer - Unable to support " +
+                "transient storage type.";
+        LOG.error(errMsg);
+        item.setErrMsg(errMsg);
+        return;
+      }
+
       List<FsVolumeSpi.BlockIterator> poolIters = new LinkedList<>();
       startTime = Time.now();
       item.setStartTime(startTime);
       secondsElapsed = 0;
-
-      if (source.isTransientStorage() || dest.isTransientStorage()) {
-        return;
-      }
 
       try {
         openPoolIters(source, poolIters);

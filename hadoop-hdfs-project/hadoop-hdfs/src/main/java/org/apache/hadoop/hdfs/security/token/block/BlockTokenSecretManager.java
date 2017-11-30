@@ -112,6 +112,7 @@ public class BlockTokenSecretManager extends
    * @param blockPoolId block pool ID
    * @param encryptionAlgorithm encryption algorithm to use
    * @param numNNs number of namenodes possible
+   * @param useProto should we use new protobuf style tokens
    */
   public BlockTokenSecretManager(long keyUpdateInterval,
       long tokenLifetime, int nnIndex, int numNNs,  String blockPoolId,

@@ -19,8 +19,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -30,6 +28,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBaseSchemaConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The entity table as column families info, config and metrics. Info stores
@@ -50,8 +50,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
  * | flowRunId! |                              |              | configKey2:  |
  * | AppId!     | created_time:                | metricId1:   | configValue2 |
  * | entityType!| 1392993084018                | metricValue2 |              |
- * | entityId   |                              | @timestamp2  |              |
- * |            | i!infoKey:                   |              |              |
+ * | idPrefix!  |                              | @timestamp2  |              |
+ * | entityId   | i!infoKey:                   |              |              |
  * |            | infoValue                    | metricId1:   |              |
  * |            |                              | metricValue1 |              |
  * |            | r!relatesToKey:              | @timestamp2  |              |
@@ -99,7 +99,8 @@ public class EntityTable extends BaseTable<EntityTable> {
   /** default max number of versions. */
   private static final int DEFAULT_METRICS_MAX_VERSIONS = 10000;
 
-  private static final Log LOG = LogFactory.getLog(EntityTable.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(EntityTable.class);
 
   public EntityTable() {
     super(TABLE_NAME_CONF_NAME, DEFAULT_TABLE_NAME);

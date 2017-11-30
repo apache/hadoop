@@ -23,32 +23,28 @@ package org.apache.hadoop.fs.azure.security;
  */
 public final class Constants {
 
-  private Constants() {
-  }
-
-  /**
-   * Configuration parameter name expected in the Configuration
-   * object to provide the url of the remote service {@value}
-   */
-  public static final String KEY_CRED_SERVICE_URL = "fs.azure.cred.service.url";
-  /**
-   * Default port of the remote service used as delegation token manager and Azure storage SAS key generator.
-   */
-  public static final int DEFAULT_CRED_SERVICE_PORT = 50911;
-
-  /**
-   * Default remote delegation token manager endpoint.
-   */
-  public static final String DEFAULT_DELEGATION_TOKEN_MANAGER_ENDPOINT = "/tokenmanager/v1";
-
   /**
    * The configuration property to enable Kerberos support.
    */
 
-  public static final String AZURE_KERBEROS_SUPPORT_PROPERTY_NAME = "fs.azure.enable.kerberos.support";
+  public static final String AZURE_KERBEROS_SUPPORT_PROPERTY_NAME =
+      "fs.azure.enable.kerberos.support";
+  /**
+   * The configuration property to enable SPNEGO token cache.
+   */
+  public static final String AZURE_ENABLE_SPNEGO_TOKEN_CACHE =
+      "fs.azure.enable.spnego.token.cache";
 
   /**
    * Parameter to be used for impersonation.
    */
   public static final String DOAS_PARAM = "doas";
+  /**
+   * Error message for Authentication failures.
+   */
+  public static final String AUTHENTICATION_FAILED_ERROR_MESSAGE =
+      "Authentication Failed ";
+
+  private Constants() {
+  }
 }

@@ -33,13 +33,13 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The DomainSocketWatcher watches a set of domain sockets to see when they
@@ -68,7 +68,7 @@ public final class DomainSocketWatcher implements Closeable {
     }
   }
 
-  static Log LOG = LogFactory.getLog(DomainSocketWatcher.class);
+  static final Logger LOG = LoggerFactory.getLogger(DomainSocketWatcher.class);
 
   /**
    * The reason why DomainSocketWatcher is not available, or null if it is
@@ -306,7 +306,7 @@ public final class DomainSocketWatcher implements Closeable {
     try {
       if (closed) {
         handler.handle(sock);
-        IOUtils.cleanup(LOG, sock);
+        IOUtils.cleanupWithLogger(LOG, sock);
         return;
       }
       Entry entry = new Entry(sock, handler);
@@ -411,7 +411,7 @@ public final class DomainSocketWatcher implements Closeable {
             this + ": file descriptor " + sock.fd + " was closed while " +
             "still in the poll(2) loop.");
       }
-      IOUtils.cleanup(LOG, sock);
+      IOUtils.cleanupWithLogger(LOG, sock);
       fdSet.remove(fd);
       return true;
     } else {
@@ -524,7 +524,7 @@ public final class DomainSocketWatcher implements Closeable {
               Entry entry = iter.next();
               entry.getDomainSocket().refCount.unreference();
               entry.getHandler().handle(entry.getDomainSocket());
-              IOUtils.cleanup(LOG, entry.getDomainSocket());
+              IOUtils.cleanupWithLogger(LOG, entry.getDomainSocket());
               iter.remove();
             }
             // Items in toRemove might not be really removed, handle it here

@@ -21,20 +21,20 @@ package org.apache.hadoop.security;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.security.http.CrossOriginFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HttpCrossOriginFilterInitializer extends FilterInitializer {
 
   public static final String PREFIX = "hadoop.http.cross-origin.";
   public static final String ENABLED_SUFFIX = "enabled";
 
-  private static final Log LOG =
-      LogFactory.getLog(HttpCrossOriginFilterInitializer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HttpCrossOriginFilterInitializer.class);
 
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {

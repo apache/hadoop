@@ -18,8 +18,6 @@
 package org.apache.hadoop.io.erasurecode;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.codec.ErasureCodec;
@@ -31,6 +29,8 @@ import org.apache.hadoop.io.erasurecode.coder.ErasureEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -48,7 +48,7 @@ import java.lang.reflect.InvocationTargetException;
 @InterfaceAudience.Private
 public final class CodecUtil {
 
-  private static final Log LOG = LogFactory.getLog(CodecUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CodecUtil.class);
 
   public static final String IO_ERASURECODE_CODEC = "io.erasurecode.codec.";
 
@@ -178,8 +178,10 @@ public final class CodecUtil {
         }
       } catch (LinkageError | Exception e) {
         // Fallback to next coder if possible
-        LOG.warn("Failed to create raw erasure encoder " + rawCoderName +
-            ", fallback to next codec if possible", e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to create raw erasure encoder " + rawCoderName +
+              ", fallback to next codec if possible", e);
+        }
       }
     }
     throw new IllegalArgumentException("Fail to create raw erasure " +
@@ -198,12 +200,14 @@ public final class CodecUtil {
         }
       } catch (LinkageError | Exception e) {
         // Fallback to next coder if possible
-        LOG.warn("Failed to create raw erasure decoder " + rawCoderName +
-            ", fallback to next codec if possible", e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to create raw erasure decoder " + rawCoderName +
+                  ", fallback to next codec if possible", e);
+        }
       }
     }
     throw new IllegalArgumentException("Fail to create raw erasure " +
-        "encoder with given codec: " + codecName);
+        "decoder with given codec: " + codecName);
   }
 
   private static ErasureCodec createCodec(Configuration conf,

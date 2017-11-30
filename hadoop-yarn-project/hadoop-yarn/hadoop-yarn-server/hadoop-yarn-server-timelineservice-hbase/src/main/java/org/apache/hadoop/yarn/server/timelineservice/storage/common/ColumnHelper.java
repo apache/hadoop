@@ -24,13 +24,14 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * This class is meant to be used only by explicit Columns, and not directly to
  * write by clients.
@@ -38,7 +39,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
  * @param <T> refers to the table.
  */
 public class ColumnHelper<T> {
-  private static final Log LOG = LogFactory.getLog(ColumnHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ColumnHelper.class);
 
   private final ColumnFamily<T> columnFamily;
 
@@ -50,11 +52,28 @@ public class ColumnHelper<T> {
 
   private final ValueConverter converter;
 
+  private final boolean supplementTs;
+
   public ColumnHelper(ColumnFamily<T> columnFamily) {
     this(columnFamily, GenericConverter.getInstance());
   }
 
   public ColumnHelper(ColumnFamily<T> columnFamily, ValueConverter converter) {
+    this(columnFamily, converter, false);
+  }
+
+  /**
+   * @param columnFamily column family implementation.
+   * @param converter converter use to encode/decode values stored in the column
+   *     or column prefix.
+   * @param needSupplementTs flag to indicate if cell timestamp needs to be
+   *     modified for this column by calling
+   *     {@link TimestampGenerator#getSupplementedTimestamp(long, String)}. This
+   *     would be required for columns(such as metrics in flow run table) where
+   *     potential collisions can occur due to same timestamp.
+   */
+  public ColumnHelper(ColumnFamily<T> columnFamily, ValueConverter converter,
+      boolean needSupplementTs) {
     this.columnFamily = columnFamily;
     columnFamilyBytes = columnFamily.getBytes();
     if (converter == null) {
@@ -62,6 +81,7 @@ public class ColumnHelper<T> {
     } else {
       this.converter = converter;
     }
+    this.supplementTs = needSupplementTs;
   }
 
   /**
@@ -104,18 +124,24 @@ public class ColumnHelper<T> {
   }
 
   /*
-   * Figures out the cell timestamp used in the Put For storing into flow run
-   * table. We would like to left shift the timestamp and supplement it with the
-   * AppId id so that there are no collisions in the flow run table's cells
+   * Figures out the cell timestamp used in the Put For storing.
+   * Will supplement the timestamp if required. Typically done for flow run
+   * table.If we supplement the timestamp, we left shift the timestamp and
+   * supplement it with the AppId id so that there are no collisions in the flow
+   * run table's cells.
    */
   private long getPutTimestamp(Long timestamp, Attribute[] attributes) {
     if (timestamp == null) {
       timestamp = System.currentTimeMillis();
     }
-    String appId = getAppIdFromAttributes(attributes);
-    long supplementedTS = TimestampGenerator.getSupplementedTimestamp(
-        timestamp, appId);
-    return supplementedTS;
+    if (!this.supplementTs) {
+      return timestamp;
+    } else {
+      String appId = getAppIdFromAttributes(attributes);
+      long supplementedTS = TimestampGenerator.getSupplementedTimestamp(
+          timestamp, appId);
+      return supplementedTS;
+    }
   }
 
   private String getAppIdFromAttributes(Attribute[] attributes) {
@@ -190,7 +216,6 @@ public class ColumnHelper<T> {
 
       NavigableMap<byte[], NavigableMap<Long, byte[]>> columnCellMap =
           resultMap.get(columnFamilyBytes);
-
       // could be that there is no such column family.
       if (columnCellMap != null) {
         for (Entry<byte[], NavigableMap<Long, byte[]>> entry : columnCellMap
@@ -233,9 +258,9 @@ public class ColumnHelper<T> {
               for (Entry<Long, byte[]> cell : cells.entrySet()) {
                 V value =
                     (V) converter.decodeValue(cell.getValue());
-                cellResults.put(
-                    TimestampGenerator.getTruncatedTimestamp(cell.getKey()),
-                    value);
+                Long ts = supplementTs ? TimestampGenerator.
+                    getTruncatedTimestamp(cell.getKey()) : cell.getKey();
+                cellResults.put(ts, value);
               }
             }
             results.put(converterColumnKey, cellResults);
@@ -316,8 +341,9 @@ public class ColumnHelper<T> {
   /**
    * @param columnPrefixBytes The byte representation for the column prefix.
    *          Should not contain {@link Separator#QUALIFIERS}.
-   * @param qualifier for the remainder of the column. Any
-   *          {@link Separator#QUALIFIERS} will be encoded in the qualifier.
+   * @param qualifier for the remainder of the column.
+   *          {@link Separator#QUALIFIERS} is permissible in the qualifier
+   *          as it is joined only with the column prefix bytes.
    * @return fully sanitized column qualifier that is a combination of prefix
    *         and qualifier. If prefix is null, the result is simply the encoded
    *         qualifier without any separator.

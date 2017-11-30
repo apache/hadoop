@@ -45,8 +45,6 @@ import java.util.zip.ZipFile;
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -57,6 +55,8 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A collection of file-processing util methods
@@ -65,7 +65,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Evolving
 public class FileUtil {
 
-  private static final Log LOG = LogFactory.getLog(FileUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileUtil.class);
 
   /* The error code is defined in winutils to indicate insufficient
    * privilege to create symbolic links. This value need to keep in
@@ -115,8 +115,10 @@ public class FileUtil {
     file.deleteOnExit();
     if (file.isDirectory()) {
       File[] files = file.listFiles();
-      for (File child : files) {
-        fullyDeleteOnExit(child);
+      if (files != null) {
+        for (File child : files) {
+          fullyDeleteOnExit(child);
+        }
       }
     }
   }
@@ -293,8 +295,8 @@ public class FileUtil {
                                         Path dst)
                                         throws IOException {
     if (srcFS == dstFS) {
-      String srcq = src.makeQualified(srcFS).toString() + Path.SEPARATOR;
-      String dstq = dst.makeQualified(dstFS).toString() + Path.SEPARATOR;
+      String srcq = srcFS.makeQualified(src).toString() + Path.SEPARATOR;
+      String dstq = dstFS.makeQualified(dst).toString() + Path.SEPARATOR;
       if (dstq.startsWith(srcq)) {
         if (srcq.length() == dstq.length()) {
           throw new IOException("Cannot copy " + src + " to itself.");
@@ -695,7 +697,7 @@ public class FileUtil {
         entry = tis.getNextTarEntry();
       }
     } finally {
-      IOUtils.cleanup(LOG, tis, inputStream);
+      IOUtils.cleanupWithLogger(LOG, tis, inputStream);
     }
   }
 
@@ -1285,7 +1287,7 @@ public class FileUtil {
       bos = new BufferedOutputStream(fos);
       jos = new JarOutputStream(bos, jarManifest);
     } finally {
-      IOUtils.cleanup(LOG, jos, bos, fos);
+      IOUtils.cleanupWithLogger(LOG, jos, bos, fos);
     }
     String[] jarCp = {classPathJar.getCanonicalPath(),
                         unexpandedWildcardClasspath.toString()};

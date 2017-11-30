@@ -48,6 +48,8 @@ message RegisterApplicationMasterResponseProto {
   optional string queue = 5;
   repeated NMTokenProto nm_tokens_from_previous_attempts = 6;
   repeated SchedulerResourceTypes scheduler_resource_types = 7;
+  optional ResourceProfilesProto resource_profiles = 8;
+  repeated ResourceTypeInfoProto resource_types = 9;
 }
 
 message FinishApplicationMasterRequestProto {
@@ -87,7 +89,7 @@ message AllocateRequestProto {
   optional ResourceBlacklistRequestProto blacklist_request = 3;
   optional int32 response_id = 4;
   optional float progress = 5;
-  repeated UpdateContainerRequestProto update_requests = 6;
+  repeated UpdateContainerRequestProto update_requests = 7;
 }
 
 message NMTokenProto {
@@ -112,9 +114,10 @@ message AllocateResponseProto {
   repeated NMTokenProto nm_tokens = 9;
   optional hadoop.common.TokenProto am_rm_token = 12;
   optional PriorityProto application_priority = 13;
-  optional string collector_addr = 14;
+  optional CollectorInfoProto collector_info = 14;
   repeated UpdateContainerErrorProto update_errors = 15;
   repeated UpdatedContainerProto updated_containers = 16;
+  repeated ContainerProto containers_from_previous_attempts = 17;
 }
 
 enum SchedulerResourceTypes {
@@ -279,6 +282,28 @@ message UpdateApplicationTimeoutsResponseProto {
     repeated ApplicationUpdateTimeoutMapProto application_timeouts = 1;
 }
 
+message GetAllResourceProfilesRequestProto {
+}
+
+message GetAllResourceProfilesResponseProto {
+  required ResourceProfilesProto resource_profiles = 1;
+}
+
+message GetResourceProfileRequestProto {
+  required string profile = 1;
+}
+
+message GetResourceProfileResponseProto {
+  required ResourceProto resources = 1;
+}
+
+message GetAllResourceTypeInfoRequestProto {
+}
+
+message GetAllResourceTypeInfoResponseProto {
+  repeated ResourceTypeInfoProto resource_type_info = 1;
+}
+
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////
 //////////////////////////////////////////////////////
@@ -364,6 +389,15 @@ message IncreaseContainersResourceRequestProto {
 }
 
 message IncreaseContainersResourceResponseProto {
+  repeated ContainerIdProto succeeded_requests = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+message ContainerUpdateRequestProto {
+  repeated hadoop.common.TokenProto update_container_token = 1;
+}
+
+message ContainerUpdateResponseProto {
   repeated ContainerIdProto succeeded_requests = 1;
   repeated ContainerExceptionMapProto failed_requests = 2;
 }

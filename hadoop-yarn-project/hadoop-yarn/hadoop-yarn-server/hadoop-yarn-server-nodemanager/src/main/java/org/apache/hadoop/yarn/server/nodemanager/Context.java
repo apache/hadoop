@@ -28,11 +28,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
@@ -65,11 +67,18 @@ public interface Context {
   Map<ApplicationId, Credentials> getSystemCredentialsForApps();
 
   /**
-   * Get the registered collectors that located on this NM.
-   * @return registered collectors, or null if the timeline service v.2 is not
+   * Get the list of collectors that are registering with the RM from this node.
+   * @return registering collectors, or null if the timeline service v.2 is not
    * enabled
    */
-  Map<ApplicationId, String> getRegisteredCollectors();
+  ConcurrentMap<ApplicationId, AppCollectorData> getRegisteringCollectors();
+
+  /**
+   * Get the list of collectors registered with the RM and known by this node.
+   * @return known collectors, or null if the timeline service v.2 is not
+   * enabled.
+   */
+  ConcurrentMap<ApplicationId, AppCollectorData> getKnownCollectors();
 
   ConcurrentMap<ContainerId, Container> getContainers();
 
@@ -112,4 +121,8 @@ public interface Context {
   NMTimelinePublisher getNMTimelinePublisher();
 
   ContainerExecutor getContainerExecutor();
+
+  ContainerStateTransitionListener getContainerStateTransitionListener();
+
+  ResourcePluginManager getResourcePluginManager();
 }

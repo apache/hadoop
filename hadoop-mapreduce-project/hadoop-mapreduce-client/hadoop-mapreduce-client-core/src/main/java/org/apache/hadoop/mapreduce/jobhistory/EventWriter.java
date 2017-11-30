@@ -27,8 +27,6 @@ import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.Utf8;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -36,6 +34,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -55,7 +55,7 @@ public class EventWriter {
   private DatumWriter<Event> writer =
     new SpecificDatumWriter<Event>(Event.class);
   private Encoder encoder;
-  private static final Log LOG = LogFactory.getLog(EventWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EventWriter.class);
 
   /**
    * avro encoding format supported by EventWriter.
@@ -112,7 +112,7 @@ public class EventWriter {
       out.close();
       out = null;
     } finally {
-      IOUtils.cleanup(LOG, out);
+      IOUtils.cleanupWithLogger(LOG, out);
     }
   }
 

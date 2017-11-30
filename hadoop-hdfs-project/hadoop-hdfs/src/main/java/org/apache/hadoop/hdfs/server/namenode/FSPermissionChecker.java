@@ -195,6 +195,38 @@ class FSPermissionChecker implements AccessControlEnforcer {
         ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
   }
 
+  /**
+   * Check permission only for the given inode (not checking the children's
+   * access).
+   *
+   * @param inode the inode to check.
+   * @param snapshotId the snapshot id.
+   * @param access the target access.
+   * @throws AccessControlException
+   */
+  void checkPermission(INode inode, int snapshotId, FsAction access)
+      throws AccessControlException {
+    try {
+      byte[][] localComponents = {inode.getLocalNameBytes()};
+      INodeAttributes[] iNodeAttr = {inode.getSnapshotINode(snapshotId)};
+      AccessControlEnforcer enforcer = getAccessControlEnforcer();
+      enforcer.checkPermission(
+          fsOwner, supergroup, callerUgi,
+          iNodeAttr, // single inode attr in the array
+          new INode[]{inode}, // single inode in the array
+          localComponents, snapshotId,
+          null, -1, // this will skip checkTraverse() because
+          // not checking ancestor here
+          false, null, null,
+          access, // the target access to be checked against the inode
+          null, // passing null sub access avoids checking children
+          false);
+    } catch (AccessControlException ace) {
+      throw new AccessControlException(
+          toAccessControlString(inode, inode.getFullPathName(), access));
+    }
+  }
+
   @Override
   public void checkPermission(String fsOwner, String supergroup,
       UserGroupInformation callerUgi, INodeAttributes[] inodeAttrs,
@@ -243,8 +275,16 @@ class FSPermissionChecker implements AccessControlEnforcer {
     INodeAttributes inodeAttrs = inode.getSnapshotINode(snapshotId);
     if (getAttributesProvider() != null) {
       String[] elements = new String[pathIdx + 1];
-      for (int i = 0; i < elements.length; i++) {
-        elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+      /**
+       * {@link INode#getPathComponents(String)} returns a null component
+       * for the root only path "/". Assign an empty string if so.
+       */
+      if (pathByNameArr.length == 1 && pathByNameArr[0] == null) {
+        elements[0] = "";
+      } else {
+        for (int i = 0; i < elements.length; i++) {
+          elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+        }
       }
       inodeAttrs = getAttributesProvider().getAttributes(elements, inodeAttrs);
     }

@@ -27,10 +27,10 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.InputType;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -69,7 +69,7 @@ public class HsJobsBlock extends HtmlBlock {
             th("Maps Completed").
             th("Reduces Total").
             th("Reduces Completed").
-            th("Elapsed Time")._()._().
+            th("Elapsed Time").__().__().
         tbody();
     LOG.info("Getting list of all Jobs.");
     // Write all the data into a JavaScript array of arrays for JQuery
@@ -105,38 +105,38 @@ public class HsJobsBlock extends HtmlBlock {
     }
     jobsTableData.append("]");
     html.script().$type("text/javascript").
-    _("var jobsTableData=" + jobsTableData)._();
-    tbody._().
+        __("var jobsTableData=" + jobsTableData).__();
+    tbody.__().
     tfoot().
       tr().
         th().input("search_init").$type(InputType.text)
-          .$name("submit_time").$value("Submit Time")._()._().
+          .$name("submit_time").$value("Submit Time").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("start_time").$value("Start Time")._()._().
+          .$name("start_time").$value("Start Time").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("finish_time").$value("Finish Time")._()._().
+          .$name("finish_time").$value("Finish Time").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("job_id").$value("Job ID")._()._().
+          .$name("job_id").$value("Job ID").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("name").$value("Name")._()._().
+          .$name("name").$value("Name").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("user").$value("User")._()._().
+          .$name("user").$value("User").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("queue").$value("Queue")._()._().
+          .$name("queue").$value("Queue").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("state").$value("State")._()._().
+          .$name("state").$value("State").__().__().
         th().input("search_init").$type(InputType.text)
-          .$name("maps_total").$value("Maps Total")._()._().
+          .$name("maps_total").$value("Maps Total").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("maps_completed").$value("Maps Completed")._()._().
+          $name("maps_completed").$value("Maps Completed").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("reduces_total").$value("Reduces Total")._()._().
+          $name("reduces_total").$value("Reduces Total").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("reduces_completed").$value("Reduces Completed")._()._().
+          $name("reduces_completed").$value("Reduces Completed").__().__().
         th().input("search_init").$type(InputType.text).
-          $name("elapsed_time").$value("Elapsed Time")._()._().
-        _().
-      _().
-    _();
+          $name("elapsed_time").$value("Elapsed Time").__().__().
+        __().
+        __().
+        __();
   }
 }

@@ -318,9 +318,9 @@ class WriteCtx {
   
   @Override
   public String toString() {
-    return "Id:" + handle.getFileId() + " offset:" + getPlainOffset() + " " +
-        "count:" + count + " originalCount:" + getOriginalCount() +
-        " stableHow:" + stableHow + " replied:" + replied + " dataState:" +
-        dataState + " xid:" + xid;
+    return "FileHandle:" + handle.dumpFileHandle() + " offset:"
+        + getPlainOffset() + " " + "count:" + count + " originalCount:"
+        + getOriginalCount() + " stableHow:" + stableHow + " replied:"
+        + replied + " dataState:" + dataState + " xid:" + xid;
   }
 }

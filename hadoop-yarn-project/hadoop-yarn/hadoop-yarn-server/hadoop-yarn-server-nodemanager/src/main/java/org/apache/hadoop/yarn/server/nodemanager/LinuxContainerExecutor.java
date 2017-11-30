@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
@@ -62,6 +63,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
@@ -98,8 +100,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  */
 public class LinuxContainerExecutor extends ContainerExecutor {
 
-  private static final Log LOG = LogFactory
-      .getLog(LinuxContainerExecutor.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(LinuxContainerExecutor.class);
 
   private String nonsecureLocalUser;
   private Pattern nonsecureLocalUserPattern;
@@ -275,8 +277,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
   }
 
+  protected PrivilegedOperationExecutor getPrivilegedOperationExecutor() {
+    return PrivilegedOperationExecutor.getInstance(getConf());
+  }
+
   @Override
-  public void init() throws IOException {
+  public void init(Context nmContext) throws IOException {
     Configuration conf = super.getConf();
 
     // Send command to executor which will just start up,
@@ -285,7 +291,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       PrivilegedOperation checkSetupOp = new PrivilegedOperation(
           PrivilegedOperation.OperationType.CHECK_SETUP);
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(checkSetupOp,
           false);
@@ -300,10 +306,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     try {
       resourceHandlerChain = ResourceHandlerModule
-          .getConfiguredResourceHandlerChain(conf);
+          .getConfiguredResourceHandlerChain(conf, nmContext);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
-            == null));
+            != null));
       }
       if (resourceHandlerChain != null) {
         LOG.debug("Bootstrapping resource handler chain");
@@ -319,7 +325,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       if (linuxContainerRuntime == null) {
         LinuxContainerRuntime runtime = new DelegatingLinuxContainerRuntime();
 
-        runtime.initialize(conf);
+        runtime.initialize(conf, nmContext);
         this.linuxContainerRuntime = runtime;
       }
     } catch (ContainerExecutionException e) {
@@ -377,12 +383,16 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     List<String> localizerArgs = new ArrayList<>();
 
     buildMainArgs(localizerArgs, user, appId, locId, nmAddr, localDirs);
+
+    Path containerLogDir = getContainerLogDir(dirsHandler, appId, locId);
+    localizerArgs = replaceWithContainerLogDir(localizerArgs, containerLogDir);
+
     initializeContainerOp.appendArgs(localizerArgs);
 
     try {
       Configuration conf = super.getConf();
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(prefixCommands,
           initializeContainerOp, null, null, false, true);
@@ -395,6 +405,27 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       throw new IOException("Application " + appId + " initialization failed" +
           " (exitCode=" + exitCode + ") with output: " + e.getOutput(), e);
     }
+  }
+
+  private List<String> replaceWithContainerLogDir(List<String> commands,
+      Path containerLogDir) {
+    List<String> newCmds = new ArrayList<>(commands.size());
+
+    for (String item : commands) {
+      newCmds.add(item.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
+          containerLogDir.toString()));
+    }
+
+    return newCmds;
+  }
+
+  private Path getContainerLogDir(LocalDirsHandlerService dirsHandler,
+      String appId, String containerId) throws IOException {
+    String relativeContainerLogDir = ContainerLaunch
+        .getRelativeContainerLogDir(appId, containerId);
+
+    return dirsHandler.getLogPathForWrite(relativeContainerLogDir,
+        false);
   }
 
   /**
@@ -412,7 +443,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public void buildMainArgs(List<String> command, String user, String appId,
       String locId, InetSocketAddress nmAddr, List<String> localDirs) {
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
-      localDirs);
+        localDirs, super.getConf());
   }
 
   @Override
@@ -434,6 +465,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       linuxContainerRuntime.prepareContainer(builder.build());
     } catch (ContainerExecutionException e) {
       throw new IOException("Unable to prepare container: ", e);
+    }
+  }
+
+  @Override
+  protected void updateEnvForWhitelistVars(Map<String, String> env) {
+    if (linuxContainerRuntime.useWhitelistEnv(env)) {
+      super.updateEnvForWhitelistVars(env);
     }
   }
 
@@ -528,10 +566,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         if (!Optional.fromNullable(e.getErrorOutput()).or("").isEmpty()) {
           builder.append("Exception message: " + e.getErrorOutput() + "\n");
         }
-        builder.append("Stack trace: "
-            + StringUtils.stringifyException(e) + "\n");
-        if (!e.getOutput().isEmpty()) {
-          builder.append("Shell output: " + e.getOutput() + "\n");
+        //Skip stack trace
+        String output = e.getOutput();
+        if (output != null && !e.getOutput().isEmpty()) {
+          builder.append("Shell output: " + output + "\n");
         }
         String diagnostics = builder.toString();
         logOutput(diagnostics);
@@ -620,7 +658,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public String[] getIpAndHost(Container container) {
+  public String[] getIpAndHost(Container container)
+      throws ContainerExecutionException {
     return linuxContainerRuntime.getIpAndHost(container);
   }
 
@@ -729,7 +768,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     try {
       Configuration conf = super.getConf();
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(deleteAsUserOp,
           false);
@@ -759,7 +798,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     try {
       PrivilegedOperationExecutor privOpExecutor =
-          PrivilegedOperationExecutor.getInstance(super.getConf());
+          getPrivilegedOperationExecutor();
 
       String results =
           privOpExecutor.executePrivilegedOperation(listAsUserOp, true);
@@ -818,7 +857,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
       mountCGroupsOp.appendArgs(cgroupKVs);
       PrivilegedOperationExecutor privilegedOperationExecutor =
-          PrivilegedOperationExecutor.getInstance(conf);
+          getPrivilegedOperationExecutor();
 
       privilegedOperationExecutor.executePrivilegedOperation(mountCGroupsOp,
           false);
@@ -830,5 +869,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
           "; exit code = " + exitCode + " and output: " + e.getOutput(),
           e);
     }
+  }
+
+  @VisibleForTesting
+  public ResourceHandler getResourceHandler() {
+    return resourceHandlerChain;
   }
 }

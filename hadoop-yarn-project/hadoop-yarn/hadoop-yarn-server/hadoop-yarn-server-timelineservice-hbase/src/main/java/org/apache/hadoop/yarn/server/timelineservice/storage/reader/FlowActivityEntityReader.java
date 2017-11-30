@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
+import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongKeyConverter;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityCo
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import com.google.common.base.Preconditions;
 
@@ -60,7 +62,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
 
   public FlowActivityEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
-    super(ctxt, entityFilters, toRetrieve, true);
+    super(ctxt, entityFilters, toRetrieve);
   }
 
   public FlowActivityEntityReader(TimelineReaderContext ctxt,
@@ -110,11 +112,30 @@ class FlowActivityEntityReader extends TimelineEntityReader {
       Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
     String clusterId = getContext().getClusterId();
-    if (getFilters().getCreatedTimeBegin() == 0L &&
-        getFilters().getCreatedTimeEnd() == Long.MAX_VALUE) {
+    if (getFilters().getFromId() == null
+        && getFilters().getCreatedTimeBegin() == 0L
+        && getFilters().getCreatedTimeEnd() == Long.MAX_VALUE) {
        // All records have to be chosen.
       scan.setRowPrefixFilter(new FlowActivityRowKeyPrefix(clusterId)
           .getRowKeyPrefix());
+    } else if (getFilters().getFromId() != null) {
+      FlowActivityRowKey key = null;
+      try {
+        key =
+            FlowActivityRowKey.parseRowKeyFromString(getFilters().getFromId());
+      } catch (IllegalArgumentException e) {
+        throw new BadRequestException("Invalid filter fromid is provided.");
+      }
+      if (!clusterId.equals(key.getClusterId())) {
+        throw new BadRequestException(
+            "fromid doesn't belong to clusterId=" + clusterId);
+      }
+      scan.setStartRow(key.getRowKey());
+      scan.setStopRow(
+          new FlowActivityRowKeyPrefix(clusterId,
+              (getFilters().getCreatedTimeBegin() <= 0 ? 0
+                  : (getFilters().getCreatedTimeBegin() - 1)))
+                      .getRowKeyPrefix());
     } else {
       scan.setStartRow(new FlowActivityRowKeyPrefix(clusterId, getFilters()
           .getCreatedTimeEnd()).getRowKeyPrefix());
@@ -157,7 +178,8 @@ class FlowActivityEntityReader extends TimelineEntityReader {
       flowRun.setId(flowRun.getId());
       flowActivity.addFlowRun(flowRun);
     }
-
+    flowActivity.getInfo().put(TimelineReaderUtils.FROMID_KEY,
+        rowKey.getRowKeyAsString());
     return flowActivity;
   }
 }

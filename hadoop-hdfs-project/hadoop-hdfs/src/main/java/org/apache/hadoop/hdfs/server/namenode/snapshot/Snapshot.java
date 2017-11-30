@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.security.AccessControlException;
 
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
@@ -176,7 +177,8 @@ public class Snapshot implements Comparable<byte[]> {
 
     @Override
     public ContentSummaryComputationContext computeContentSummary(
-        int snapshotId, ContentSummaryComputationContext summary) {
+        int snapshotId, ContentSummaryComputationContext summary)
+        throws AccessControlException {
       return computeDirectoryContentSummary(summary, snapshotId);
     }
 

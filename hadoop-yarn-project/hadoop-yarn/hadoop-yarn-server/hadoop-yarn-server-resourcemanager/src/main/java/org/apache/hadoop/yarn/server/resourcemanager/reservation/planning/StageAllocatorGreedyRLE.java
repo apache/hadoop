@@ -54,7 +54,7 @@ public class StageAllocatorGreedyRLE implements StageAllocator {
   public Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
       RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageEarliestStart, long stageDeadline, String user,
+      long stageEarliestStart, long stageDeadline, long period, String user,
       ReservationId oldId) throws PlanningException {
 
     // abort early if the interval is not satisfiable
@@ -85,7 +85,7 @@ public class StageAllocatorGreedyRLE implements StageAllocator {
     // get available resources from plan
     RLESparseResourceAllocation netRLERes =
         plan.getAvailableResourceOverTime(user, oldId, stageEarliestStart,
-            stageDeadline);
+            stageDeadline, period);
 
     // remove plan modifications
     netRLERes =

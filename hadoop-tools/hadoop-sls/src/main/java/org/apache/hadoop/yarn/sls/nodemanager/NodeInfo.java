@@ -179,7 +179,7 @@ public class NodeInfo {
     }
 
     @Override
-    public void updateNodeHeartbeatResponseForContainersDecreasing(
+    public void updateNodeHeartbeatResponseForUpdatedContainers(
         NodeHeartbeatResponse response) {
       // TODO Auto-generated method stub
       

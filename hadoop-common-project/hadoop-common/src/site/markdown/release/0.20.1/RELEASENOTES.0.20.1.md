@@ -23,16 +23,23 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HADOOP-6213](https://issues.apache.org/jira/browse/HADOOP-6213) | *Blocker* | **Remove commons dependency on commons-cli2**
+* [HADOOP-5210](https://issues.apache.org/jira/browse/HADOOP-5210) | *Minor* | **Reduce Task Progress shows \> 100% when the total size of map outputs (for a single reducer) is high**
 
-GenericOptionsParser in branch 0.20 depends on commons-cli2. This jira removes the dependency of branch 0.20 on commons-cli2 completely. The problem is seen after 'ant binary' where all the library files are copied to '$hadoop-home/lib' which already has commons-cli2.
+This patch resets the variable totalBytesProcessed before the final merge sothat it will be used for calculating the progress of reducePhase(the 3rd phase of reduce task) correctly.
 
 
 ---
 
-* [HADOOP-6080](https://issues.apache.org/jira/browse/HADOOP-6080) | *Major* | **Handling of  Trash with quota**
+* [HADOOP-5726](https://issues.apache.org/jira/browse/HADOOP-5726) | *Major* | **Remove pre-emption from the capacity scheduler code base**
 
-Provide a new option to rm and rmr, -skipTrash, which will immediately delete the files specified, rather than moving them to the trash.
+Removed pre-emption from capacity scheduler. The impact of this change is that capacities for queues can no longer be guaranteed within a given span of time. Also changed configuration variables to remove pre-emption related variables and better reflect the absence of guarantees.
+
+
+---
+
+* [HADOOP-5881](https://issues.apache.org/jira/browse/HADOOP-5881) | *Major* | **Simplify configuration related to task-memory-monitoring and memory-based scheduling**
+
+**WARNING: No release note provided for this change.**
 
 
 ---
@@ -40,6 +47,21 @@ Provide a new option to rm and rmr, -skipTrash, which will immediately delete th
 * [HADOOP-5924](https://issues.apache.org/jira/browse/HADOOP-5924) | *Major* | **JT fails to recover the jobs after restart after HADOOP:4372**
 
 Post HADOOP-4372, empty job history files caused NPE. This issues fixes that by creating new files if no old file is found.
+
+
+---
+
+* [HADOOP-5746](https://issues.apache.org/jira/browse/HADOOP-5746) | *Major* | **Errors encountered in MROutputThread after the last map/reduce call can go undetected**
+
+If the child (streaming) process returns successfully and the MROutputThread throws an error, there was no way to detect that as all the IOExceptions was ignored. Such issues can occur when DFS clients were closed etc. Now a check for errors (in threads) is made before finishing off the task and an exception is thrown that fails he task.
+
+
+---
+
+* [HADOOP-5884](https://issues.apache.org/jira/browse/HADOOP-5884) | *Major* | **Capacity scheduler should account high memory jobs as using more capacity of the queue**
+
+Fixes Capacity scheduler to account more capacity of a queue for a high memory job. Done by considering these jobs to
+take more slots proportionally with respect to a slot's default memory size.
 
 
 ---
@@ -58,45 +80,65 @@ TestJobHistory fails as jobtracker is restarted very fast (within a minute) and 
 
 ---
 
-* [HADOOP-5884](https://issues.apache.org/jira/browse/HADOOP-5884) | *Major* | **Capacity scheduler should account high memory jobs as using more capacity of the queue**
-
-Fixes Capacity scheduler to account more capacity of a queue for a high memory job. Done by considering these jobs to
-take more slots proportionally with respect to a slot's default memory size.
-
-
----
-
-* [HADOOP-5881](https://issues.apache.org/jira/browse/HADOOP-5881) | *Major* | **Simplify configuration related to task-memory-monitoring and memory-based scheduling**
-
-**WARNING: No release note provided for this incompatible change.**
-
-
----
-
-* [HADOOP-5746](https://issues.apache.org/jira/browse/HADOOP-5746) | *Major* | **Errors encountered in MROutputThread after the last map/reduce call can go undetected**
-
-If the child (streaming) process returns successfully and the MROutputThread throws an error, there was no way to detect that as all the IOExceptions was ignored. Such issues can occur when DFS clients were closed etc. Now a check for errors (in threads) is made before finishing off the task and an exception is thrown that fails he task.
-
-
----
-
-* [HADOOP-5726](https://issues.apache.org/jira/browse/HADOOP-5726) | *Major* | **Remove pre-emption from the capacity scheduler code base**
-
-Removed pre-emption from capacity scheduler. The impact of this change is that capacities for queues can no longer be guaranteed within a given span of time. Also changed configuration variables to remove pre-emption related variables and better reflect the absence of guarantees.
-
-
----
-
-* [HADOOP-5210](https://issues.apache.org/jira/browse/HADOOP-5210) | *Minor* | **Reduce Task Progress shows \> 100% when the total size of map outputs (for a single reducer) is high**
-
-This patch resets the variable totalBytesProcessed before the final merge sothat it will be used for calculating the progress of reducePhase(the 3rd phase of reduce task) correctly.
-
-
----
-
 * [HADOOP-3315](https://issues.apache.org/jira/browse/HADOOP-3315) | *Major* | **New binary file format**
 
 Add a new, binary file format TFile.
+
+
+---
+
+* [MAPREDUCE-2](https://issues.apache.org/jira/browse/MAPREDUCE-2) | *Major* | **ArrayOutOfIndex error in KeyFieldBasedPartitioner on empty key**
+
+KeyFieldBasedPartitioner throws ArrayOutOfIndex when passed an empty key. This patch hashes empty key to 0 hashcode.
+
+
+---
+
+* [MAPREDUCE-130](https://issues.apache.org/jira/browse/MAPREDUCE-130) | *Major* | **Delete the jobconf copy from the log directory of the JobTracker when the job is retired**
+
+When a job is initialized, it localizes the job conf to the logs dir. Without this patch I never gets deleted. Now when the job retires, the conf is deleted. This local copy is required to display on the webui.
+
+
+---
+
+* [MAPREDUCE-657](https://issues.apache.org/jira/browse/MAPREDUCE-657) | *Major* | **CompletedJobStatusStore hardcodes filesystem to hdfs**
+
+CompletedJobStatusStore was hardcored to persist to hdfs. This patch allows to persist to local fs. Just qualify mapred.job.tracker.persist.jobstatus.dir with file://
+
+
+---
+
+* [HADOOP-6080](https://issues.apache.org/jira/browse/HADOOP-6080) | *Major* | **Handling of  Trash with quota**
+
+Provide a new option to rm and rmr, -skipTrash, which will immediately delete the files specified, rather than moving them to the trash.
+
+
+---
+
+* [MAPREDUCE-18](https://issues.apache.org/jira/browse/MAPREDUCE-18) | *Blocker* | **Under load the shuffle sometimes gets incorrect data**
+
+This patch adds the mapid and reduceid in the http header of mapoutput when being sent to reduce node. Also validates compressed length, decompressed length, mapid and reduceid from http header at reduce node.
+
+
+---
+
+* [MAPREDUCE-383](https://issues.apache.org/jira/browse/MAPREDUCE-383) | *Major* | **pipes combiner does not reset properly after a spill**
+
+Fixed a bug in Pipes combiner to reset the spilled bytes count after the spill.
+
+
+---
+
+* [MAPREDUCE-40](https://issues.apache.org/jira/browse/MAPREDUCE-40) | *Blocker* | **Memory management variables need a backwards compatibility option after HADOOP-5881**
+
+Fixed backwards compatibility by re-introducing and deprecating removed memory monitoring related configuration options.
+
+
+---
+
+* [MAPREDUCE-796](https://issues.apache.org/jira/browse/MAPREDUCE-796) | *Major* | **Encountered "ClassCastException" on tasktracker while running wordcount with MultithreadedMapRunner**
+
+Multithreaded mapper was modified to create a new Runtime exception (object) from a throwable instead of casting a throwable into a RuntimeException, once the Multithreaded map encounters a fault.
 
 
 ---
@@ -108,9 +150,13 @@ Fixed a bug in the way commit of task outputs happens. The bug was that if commi
 
 ---
 
-* [MAPREDUCE-834](https://issues.apache.org/jira/browse/MAPREDUCE-834) | *Major* | **When TaskTracker config use old memory management values its memory monitoring is diabled.**
+* [MAPREDUCE-805](https://issues.apache.org/jira/browse/MAPREDUCE-805) | *Major* | **Deadlock in Jobtracker**
 
-The tasktracker's startup code was modified to use deprecated memory management configuration variables, when specified, and enable memory monitoring of tasks.
+Job initialization process was changed to not change (run) states during initialization. The reason is two fold
+- this can lead to deadlock as state changes require circular locking (i.e JobInProgress requires JobTracker lock)
+- events were not raised as these state changes were not informed/propogated back to the JobTracker
+
+Now the JobTracker takes care of initializing/failing/killing the job and raising appropriate events. The simple rule that was enforced was that "The JobTracker lock is \*must\* before changing the run-state of a job".
 
 
 ---
@@ -118,6 +164,20 @@ The tasktracker's startup code was modified to use deprecated memory management 
 * [MAPREDUCE-832](https://issues.apache.org/jira/browse/MAPREDUCE-832) | *Major* | **Too many WARN messages about deprecated memorty config variables in JobTacker log**
 
 Reduced the frequency of log messages printed when a deprecated memory management variable is found in configuration of a job.
+
+
+---
+
+* [MAPREDUCE-745](https://issues.apache.org/jira/browse/MAPREDUCE-745) | *Major* | **TestRecoveryManager fails sometimes**
+
+JobTracker was changed to take an identifier as an argument. This helps in testcases where the jobtracker/mapred-cluster is (re)started in a short span of time and the chances of jobtracker identifier clashing are high. Also the RecoveryManager was modified to throw an exception if a job fails in init during the recovery process. The reason being that this event will trigger a job failure in the recovery process and will remove the failed job from further initialization and processing.
+
+
+---
+
+* [MAPREDUCE-834](https://issues.apache.org/jira/browse/MAPREDUCE-834) | *Major* | **When TaskTracker config use old memory management values its memory monitoring is diabled.**
+
+The tasktracker's startup code was modified to use deprecated memory management configuration variables, when specified, and enable memory monitoring of tasks.
 
 
 ---
@@ -136,24 +196,6 @@ The JobTracker tries to delete the mapred.system.dir when it is starting up (wit
 
 ---
 
-* [MAPREDUCE-805](https://issues.apache.org/jira/browse/MAPREDUCE-805) | *Major* | **Deadlock in Jobtracker**
-
-Job initialization process was changed to not change (run) states during initialization. The reason is two fold
-- this can lead to deadlock as state changes require circular locking (i.e JobInProgress requires JobTracker lock)
-- events were not raised as these state changes were not informed/propogated back to the JobTracker
-
-Now the JobTracker takes care of initializing/failing/killing the job and raising appropriate events. The simple rule that was enforced was that "The JobTracker lock is \*must\* before changing the run-state of a job".
-
-
----
-
-* [MAPREDUCE-796](https://issues.apache.org/jira/browse/MAPREDUCE-796) | *Major* | **Encountered "ClassCastException" on tasktracker while running wordcount with MultithreadedMapRunner**
-
-Multithreaded mapper was modified to create a new Runtime exception (object) from a throwable instead of casting a throwable into a RuntimeException, once the Multithreaded map encounters a fault.
-
-
----
-
 * [MAPREDUCE-767](https://issues.apache.org/jira/browse/MAPREDUCE-767) | *Major* | **to remove mapreduce dependency on commons-cli2**
 
 Removes the dependency of hadoop-mapred from commons-cli2 and uses commons-cli1.2 for command-line parsing.
@@ -161,16 +203,9 @@ Removes the dependency of hadoop-mapred from commons-cli2 and uses commons-cli1.
 
 ---
 
-* [MAPREDUCE-745](https://issues.apache.org/jira/browse/MAPREDUCE-745) | *Major* | **TestRecoveryManager fails sometimes**
+* [HADOOP-6213](https://issues.apache.org/jira/browse/HADOOP-6213) | *Blocker* | **Remove commons dependency on commons-cli2**
 
-JobTracker was changed to take an identifier as an argument. This helps in testcases where the jobtracker/mapred-cluster is (re)started in a short span of time and the chances of jobtracker identifier clashing are high. Also the RecoveryManager was modified to throw an exception if a job fails in init during the recovery process. The reason being that this event will trigger a job failure in the recovery process and will remove the failed job from further initialization and processing.
-
-
----
-
-* [MAPREDUCE-657](https://issues.apache.org/jira/browse/MAPREDUCE-657) | *Major* | **CompletedJobStatusStore hardcodes filesystem to hdfs**
-
-CompletedJobStatusStore was hardcored to persist to hdfs. This patch allows to persist to local fs. Just qualify mapred.job.tracker.persist.jobstatus.dir with file://
+GenericOptionsParser in branch 0.20 depends on commons-cli2. This jira removes the dependency of branch 0.20 on commons-cli2 completely. The problem is seen after 'ant binary' where all the library files are copied to '$hadoop-home/lib' which already has commons-cli2.
 
 
 ---
@@ -178,41 +213,6 @@ CompletedJobStatusStore was hardcored to persist to hdfs. This patch allows to p
 * [MAPREDUCE-430](https://issues.apache.org/jira/browse/MAPREDUCE-430) | *Major* | **Task stuck in cleanup with OutOfMemoryErrors**
 
 Various code paths in the framework caught Throwable and tried to do inline cleanup. In case of OOM errors, such inline-cleanups can result into hung jvms. With this fix, the TaskTracker provides a api to report fatal errors (any throwable other than FSErrror and Exceptions). On catching a Throwable, Mapper/Reducer tries to inform the TT.
-
-
----
-
-* [MAPREDUCE-383](https://issues.apache.org/jira/browse/MAPREDUCE-383) | *Major* | **pipes combiner does not reset properly after a spill**
-
-Fixed a bug in Pipes combiner to reset the spilled bytes count after the spill.
-
-
----
-
-* [MAPREDUCE-130](https://issues.apache.org/jira/browse/MAPREDUCE-130) | *Major* | **Delete the jobconf copy from the log directory of the JobTracker when the job is retired**
-
-When a job is initialized, it localizes the job conf to the logs dir. Without this patch I never gets deleted. Now when the job retires, the conf is deleted. This local copy is required to display on the webui.
-
-
----
-
-* [MAPREDUCE-40](https://issues.apache.org/jira/browse/MAPREDUCE-40) | *Blocker* | **Memory management variables need a backwards compatibility option after HADOOP-5881**
-
-Fixed backwards compatibility by re-introducing and deprecating removed memory monitoring related configuration options.
-
-
----
-
-* [MAPREDUCE-18](https://issues.apache.org/jira/browse/MAPREDUCE-18) | *Blocker* | **Under load the shuffle sometimes gets incorrect data**
-
-This patch adds the mapid and reduceid in the http header of mapoutput when being sent to reduce node. Also validates compressed length, decompressed length, mapid and reduceid from http header at reduce node.
-
-
----
-
-* [MAPREDUCE-2](https://issues.apache.org/jira/browse/MAPREDUCE-2) | *Major* | **ArrayOutOfIndex error in KeyFieldBasedPartitioner on empty key**
-
-KeyFieldBasedPartitioner throws ArrayOutOfIndex when passed an empty key. This patch hashes empty key to 0 hashcode.
 
 
 

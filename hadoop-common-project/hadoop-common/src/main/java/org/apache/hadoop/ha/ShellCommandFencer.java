@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.Shell;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fencing method that runs a shell command. It should be specified
@@ -61,8 +61,7 @@ public class ShellCommandFencer
   private static final String TARGET_PREFIX = "target_";
 
   @VisibleForTesting
-  static Log LOG = LogFactory.getLog(
-      ShellCommandFencer.class);
+  static Logger LOG = LoggerFactory.getLogger(ShellCommandFencer.class);
 
   @Override
   public void checkArgs(String args) throws BadFencingConfigurationException {

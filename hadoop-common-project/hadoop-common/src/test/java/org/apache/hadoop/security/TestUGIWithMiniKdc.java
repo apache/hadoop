@@ -23,9 +23,9 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.PlatformName;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;

@@ -302,6 +302,7 @@ class BlockSender implements java.io.Closeable {
         LengthInputStream metaIn = null;
         boolean keepMetaInOpen = false;
         try {
+          DataNodeFaultInjector.get().throwTooManyOpenFiles();
           metaIn = datanode.data.getMetaDataInputStream(block);
           if (!corruptChecksumOk || metaIn != null) {
             if (metaIn == null) {
@@ -331,10 +332,14 @@ class BlockSender implements java.io.Closeable {
             LOG.warn("Could not find metadata file for " + block);
           }
         } catch (FileNotFoundException e) {
-          // The replica is on its volume map but not on disk
-          datanode.notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
-          datanode.data.invalidate(block.getBlockPoolId(),
-              new Block[]{block.getLocalBlock()});
+          if ((e.getMessage() != null) && !(e.getMessage()
+              .contains("Too many open files"))) {
+            // The replica is on its volume map but not on disk
+            datanode
+                .notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
+            datanode.data.invalidate(block.getBlockPoolId(),
+                new Block[] {block.getLocalBlock()});
+          }
           throw e;
         } finally {
           if (!keepMetaInOpen) {

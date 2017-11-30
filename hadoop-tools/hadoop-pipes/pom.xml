@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha4-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-pipes</artifactId>
-  <version>3.0.0-alpha4-SNAPSHOT</version>
+  <version>3.1.0-SNAPSHOT</version>
   <description>Apache Hadoop Pipes</description>
   <name>Apache Hadoop Pipes</name>
   <packaging>pom</packaging>
@@ -39,6 +39,9 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <openssl.prefix></openssl.prefix>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -53,6 +56,7 @@
                   <source>${basedir}/src</source>
                   <vars>
                     <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
+                    <OPENSSL_ROOT_DIR>${openssl.prefix} </OPENSSL_ROOT_DIR>
                   </vars>
                 </configuration>
               </execution>

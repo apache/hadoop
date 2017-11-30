@@ -38,18 +38,18 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * This class tests the FileStatus API.
  */
 public class TestFileStatus {
   {
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.TRACE);
   }
 
   static final long seed = 0xDEADBEEFL;
@@ -317,8 +317,31 @@ public class TestFileStatus {
     assertEquals(file3.toString(), itor.next().getPath().toString());
 
     assertFalse(itor.hasNext());
-      
 
-    fs.delete(dir, true);
+    itor = fs.listStatusIterator(dir);
+    assertEquals(dir3.toString(), itor.next().getPath().toString());
+    assertEquals(dir4.toString(), itor.next().getPath().toString());
+    fs.delete(dir.getParent(), true);
+    try {
+      itor.hasNext();
+      fail("FileNotFoundException expected");
+    } catch (FileNotFoundException fnfe) {
+    }
+
+    fs.mkdirs(file2);
+    fs.mkdirs(dir3);
+    fs.mkdirs(dir4);
+    fs.mkdirs(dir5);
+    itor = fs.listStatusIterator(dir);
+    int count = 0;
+    try {
+      fs.delete(dir.getParent(), true);
+      while (itor.next() != null) {
+        count++;
+      }
+      fail("FileNotFoundException expected");
+    } catch (FileNotFoundException fnfe) {
+    }
+    assertEquals(2, count);
   }
 }

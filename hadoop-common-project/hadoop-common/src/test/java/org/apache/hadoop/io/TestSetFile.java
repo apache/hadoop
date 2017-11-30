@@ -21,14 +21,13 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 
-
-import org.apache.commons.logging.*;
-
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -37,7 +36,7 @@ import static org.junit.Assert.fail;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSetFile {
-  private static final Log LOG = LogFactory.getLog(TestSetFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSetFile.class);
   private static String FILE = GenericTestUtils.getTempPath("test.set");
 
   private static Configuration conf = new Configuration();

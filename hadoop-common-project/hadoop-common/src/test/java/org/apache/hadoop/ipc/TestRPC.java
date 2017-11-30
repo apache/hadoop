@@ -20,8 +20,6 @@ package org.apache.hadoop.ipc;
 
 import com.google.common.base.Supplier;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -50,11 +48,13 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.MockitoUtil;
-import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import javax.net.SocketFactory;
 import java.io.Closeable;
@@ -104,7 +104,7 @@ import static org.mockito.Mockito.verify;
 @SuppressWarnings("deprecation")
 public class TestRPC extends TestRpcBase {
 
-  public static final Log LOG = LogFactory.getLog(TestRPC.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestRPC.class);
 
   @Before
   public void setup() {
@@ -1123,7 +1123,7 @@ public class TestRPC extends TestRpcBase {
                 return null;
               }
             }));
-        verify(spy, timeout(500).times(i + 1)).offer(Mockito.<Call>anyObject());
+        verify(spy, timeout(500).times(i + 1)).add(Mockito.<Call>anyObject());
       }
       try {
         proxy.sleep(null, newSleepRequest(100));
@@ -1194,7 +1194,7 @@ public class TestRPC extends TestRpcBase {
                 return null;
               }
             }));
-        verify(spy, timeout(500).times(i + 1)).offer(Mockito.<Call>anyObject());
+        verify(spy, timeout(500).times(i + 1)).add(Mockito.<Call>anyObject());
       }
       // Start another sleep RPC call and verify the call is backed off due to
       // avg response time(3s) exceeds threshold (2s).

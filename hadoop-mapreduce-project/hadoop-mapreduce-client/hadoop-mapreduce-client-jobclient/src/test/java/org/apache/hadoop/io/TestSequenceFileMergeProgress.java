@@ -32,12 +32,12 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.*;
 
-import org.apache.commons.logging.*;
+import org.slf4j.Logger;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 public class TestSequenceFileMergeProgress {
-  private static final Log LOG = FileInputFormat.LOG;
+  private static final Logger LOG = FileInputFormat.LOG;
   private static final int RECORDS = 10000;
 
   @Test

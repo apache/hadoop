@@ -38,11 +38,11 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.THEAD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -100,7 +100,7 @@ public class TaskPage extends AppView {
             .append("  }\n")
             .append("}\n");
 
-        html.script().$type("text/javascript")._(script.toString())._();
+        html.script().$type("text/javascript").__(script.toString()).__();
       }
 
       TR<THEAD<TABLE<Hamlet>>> tr = html.table("#attempts").thead().tr();
@@ -118,7 +118,7 @@ public class TaskPage extends AppView {
         tr.th(".actions", "Actions");
       }
 
-      TBODY<TABLE<Hamlet>> tbody = tr._()._().tbody();
+      TBODY<TABLE<Hamlet>> tbody = tr.__().__().tbody();
       // Write all the data into a JavaScript array of arrays for JQuery
       // DataTables to display
       StringBuilder attemptsTableData = new StringBuilder("[\n");
@@ -178,9 +178,9 @@ public class TaskPage extends AppView {
       }
       attemptsTableData.append("]");
       html.script().$type("text/javascript").
-      _("var attemptsTableData=" + attemptsTableData)._();
+          __("var attemptsTableData=" + attemptsTableData).__();
 
-      tbody._()._();
+      tbody.__().__();
 
     }
 
@@ -197,7 +197,7 @@ public class TaskPage extends AppView {
     }
   }
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
 
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:3}");

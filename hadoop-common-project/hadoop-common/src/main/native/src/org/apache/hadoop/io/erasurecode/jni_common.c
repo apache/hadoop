@@ -63,8 +63,9 @@ IsalCoder* getCoder(JNIEnv* env, jobject thiz) {
                                     "Field nativeCoder not found");
   }
   pCoder = (IsalCoder*)(*env)->GetLongField(env, thiz, fid);
-  pCoder->verbose = (verbose == JNI_TRUE) ? 1 : 0;
-
+  if (pCoder != NULL) {
+    pCoder->verbose = (verbose == JNI_TRUE) ? 1 : 0;
+  }
   return pCoder;
 }
 

@@ -938,19 +938,37 @@ public class TestBalancer {
       throws Exception {
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
 
-    // start rebalancing
-    Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
-    final int r = runBalancer(namenodes, p, conf);
-    if (conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT) ==0) {
-      assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
-      return;
-    } else {
-      assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
+    int retry = 5;
+    while (retry > 0) {
+      // start rebalancing
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+      final int run = runBalancer(namenodes, p, conf);
+      if (conf.getInt(
+          DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+          DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT)
+          == 0) {
+        assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), run);
+        return;
+      } else {
+        assertEquals(ExitStatus.SUCCESS.getExitCode(), run);
+      }
+      waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
+      LOG.info("  .");
+      try {
+        waitForBalancer(totalUsedSpace, totalCapacity, client, cluster, p,
+            excludedNodes);
+      } catch (TimeoutException e) {
+        // See HDFS-11682. NN may not get heartbeat to reflect the newest
+        // block changes.
+        retry--;
+        if (retry == 0) {
+          throw e;
+        }
+        LOG.warn("The cluster has not balanced yet, retry...");
+        continue;
+      }
+      break;
     }
-    waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
-    LOG.info("  .");
-    waitForBalancer(totalUsedSpace, totalCapacity, client, cluster, p, excludedNodes);
   }
 
   private static int runBalancer(Collection<URI> namenodes,
@@ -1847,7 +1865,7 @@ public class TestBalancer {
     for(int i = 0; i < lengths.length; i++) {
       final long size = lengths[i];
       final Path p = new Path("/file" + i + "_size" + size);
-      try(final OutputStream out = dfs.create(p)) {
+      try(OutputStream out = dfs.create(p)) {
         for(int j = 0; j < size; j++) {
           out.write(j);
         }
@@ -1942,7 +1960,7 @@ public class TestBalancer {
     doTestBalancerWithStripedFile(conf);
   }
 
-  @Test(timeout = 100000)
+  @Test(timeout = 200000)
   public void testBalancerWithStripedFile() throws Exception {
     Configuration conf = new Configuration();
     initConfWithStripe(conf);
@@ -1963,8 +1981,6 @@ public class TestBalancer {
     for (int i = 0; i < numOfDatanodes; i++) {
       racks[i] = "/rack" + (i % numOfRacks);
     }
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)
         .racks(racks)
@@ -1975,6 +1991,8 @@ public class TestBalancer {
       cluster.waitActive();
       client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
+      client.enableErasureCodingPolicy(
+          StripedFileTestUtil.getDefaultECPolicy().getName());
       client.setErasureCodingPolicy("/",
           StripedFileTestUtil.getDefaultECPolicy().getName());
 

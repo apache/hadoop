@@ -26,8 +26,6 @@ import java.net.URLDecoder;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -45,12 +43,15 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class renders the various pages that the web app supports.
  */
 public class AppController extends Controller implements AMParams {
-  private static final Log LOG = LogFactory.getLog(AppController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AppController.class);
   private static final Joiner JOINER = Joiner.on("");
   
   protected final App app;
@@ -84,11 +85,11 @@ public class AppController extends Controller implements AMParams {
   public void info() {
     AppInfo info = new AppInfo(app, app.context);
     info("Application Master Overview").
-      _("Application ID:", info.getId()).
-      _("Application Name:", info.getName()).
-      _("User:", info.getUser()).
-      _("Started on:", Times.format(info.getStartTime())).
-      _("Elasped: ", org.apache.hadoop.util.StringUtils.formatTime(
+        __("Application ID:", info.getId()).
+        __("Application Name:", info.getName()).
+        __("User:", info.getUser()).
+        __("Started on:", Times.format(info.getStartTime())).
+        __("Elasped: ", org.apache.hadoop.util.StringUtils.formatTime(
           info.getElapsedTime() ));
     render(InfoPage.class);
   }

@@ -25,7 +25,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -35,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -51,8 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode
-    .RMNodeDecreaseContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -284,7 +283,6 @@ public class RMContainerImpl implements RMContainer {
   @Override
   public RMContainerState getState() {
     this.readLock.lock();
-
     try {
       return this.stateMachine.getCurrentState();
     } finally {
@@ -598,7 +596,7 @@ public class RMContainerImpl implements RMContainer {
       RMContainerUpdatesAcquiredEvent acquiredEvent =
           (RMContainerUpdatesAcquiredEvent) event;
       if (acquiredEvent.isIncreasedContainer()) {
-        // If container is increased but not acquired by AM, we will start
+        // If container is increased but not started by AM, we will start
         // containerAllocationExpirer for this container in this transition. 
         container.containerAllocationExpirer.register(
             new AllocationExpirationInfo(event.getContainerId(), true));
@@ -641,9 +639,10 @@ public class RMContainerImpl implements RMContainer {
         container.lastConfirmedResource = rmContainerResource;
         container.containerAllocationExpirer.unregister(
             new AllocationExpirationInfo(event.getContainerId()));
-        container.eventHandler.handle(new RMNodeDecreaseContainerEvent(
+        container.eventHandler.handle(new RMNodeUpdateContainerEvent(
             container.nodeId,
-            Collections.singletonList(container.getContainer())));
+            Collections.singletonMap(container.getContainer(),
+                ContainerUpdateType.DECREASE_RESOURCE)));
       } else if (Resources.fitsIn(nmContainerResource, rmContainerResource)) {
         // If nmContainerResource < rmContainerResource, this is caused by the
         // following sequence:
@@ -715,20 +714,15 @@ public class RMContainerImpl implements RMContainer {
 
       if (rmAttempt != null) {
         long usedMillis = container.finishTime - container.creationTime;
-        long memorySeconds = resource.getMemorySize()
-                              * usedMillis / DateUtils.MILLIS_PER_SECOND;
-        long vcoreSeconds = resource.getVirtualCores()
-                             * usedMillis / DateUtils.MILLIS_PER_SECOND;
         rmAttempt.getRMAppAttemptMetrics()
-                  .updateAggregateAppResourceUsage(memorySeconds,vcoreSeconds);
+            .updateAggregateAppResourceUsage(resource, usedMillis);
         // If this is a preempted container, update preemption metrics
         if (ContainerExitStatus.PREEMPTED == container.finishedStatus
-                .getExitStatus()) {
-          rmAttempt.getRMAppAttemptMetrics().updatePreemptionInfo(resource,
-                  container);
+            .getExitStatus()) {
           rmAttempt.getRMAppAttemptMetrics()
-                  .updateAggregatePreemptedAppResourceUsage(memorySeconds,
-                          vcoreSeconds);
+              .updatePreemptionInfo(resource, container);
+          rmAttempt.getRMAppAttemptMetrics()
+              .updateAggregatePreemptedAppResourceUsage(resource, usedMillis);
         }
       }
     }
@@ -762,7 +756,7 @@ public class RMContainerImpl implements RMContainer {
           this.getAllocatedSchedulerKey().getPriority(), this.getCreationTime(),
           this.getFinishTime(), this.getDiagnosticsInfo(), this.getLogURL(),
           this.getContainerExitStatus(), this.getContainerState(),
-          this.getNodeHttpAddress());
+          this.getNodeHttpAddress(), this.getExecutionType());
     } finally {
       this.readLock.unlock();
     }

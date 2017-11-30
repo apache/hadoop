@@ -25,7 +25,7 @@ public class DockerPullCommand extends DockerCommand {
 
   public DockerPullCommand(String imageName) {
     super(PULL_COMMAND);
-    super.addCommandArguments(imageName);
+    super.addCommandArguments("image", imageName);
   }
 
 }

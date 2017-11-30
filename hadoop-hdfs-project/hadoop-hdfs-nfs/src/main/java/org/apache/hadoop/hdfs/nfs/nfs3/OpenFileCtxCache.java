@@ -156,7 +156,7 @@ class OpenFileCtxCache {
       Entry<FileHandle, OpenFileCtx> pairs = it.next();
       FileHandle handle = pairs.getKey();
       OpenFileCtx ctx = pairs.getValue();
-      if (!ctx.streamCleanup(handle.getFileId(), streamTimeout)) {
+      if (!ctx.streamCleanup(handle, streamTimeout)) {
         continue;
       }
 
@@ -164,10 +164,10 @@ class OpenFileCtxCache {
       synchronized (this) {
         OpenFileCtx ctx2 = openFileMap.get(handle);
         if (ctx2 != null) {
-          if (ctx2.streamCleanup(handle.getFileId(), streamTimeout)) {
+          if (ctx2.streamCleanup(handle, streamTimeout)) {
             openFileMap.remove(handle);
             if (LOG.isDebugEnabled()) {
-              LOG.debug("After remove stream " + handle.getFileId()
+              LOG.debug("After remove stream " + handle.dumpFileHandle()
                   + ", the stream number:" + size());
             }
             ctxToRemove.add(ctx2);

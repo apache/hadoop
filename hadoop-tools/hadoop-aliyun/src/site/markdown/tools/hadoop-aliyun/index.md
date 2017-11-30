@@ -56,14 +56,14 @@ Authorization occurs at the level of the entire Aliyun account via
 4. The append operation is not supported.
 
 ### Warning #2: Directory last access time is not tracked,
-features of Hadoop relying on this can have unexpected behaviour. E.g. the
-AggregatedLogDeletionService of YARN will not remove the appropriate logfiles.
+Features of Hadoop relying on this can have unexpected behaviour. E.g. the
+AggregatedLogDeletionService of YARN will not remove the appropriate log files.
 
 ### Warning #3: Your Aliyun credentials are valuable
 
 Your Aliyun credentials not only pay for services, they offer read and write
 access to the data. Anyone with the account can not only read your datasets
-—they can delete them.
+— they can delete them.
 
 Do not inadvertently share these credentials through means such as
 1. Checking in to SCM any configuration files containing the secrets.
@@ -274,7 +274,7 @@ XInclude inclusion. Here is an example of `contract-test-options.xml`:
 
       <property>
         <name>fs.oss.impl</name>
-        <value>org.apache.hadoop.fs.aliyun.AliyunOSSFileSystem</value>
+        <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
       </property>
 
       <property>

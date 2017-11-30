@@ -70,4 +70,8 @@ public class TestReservationSystemInvariants extends BaseSLSRunnerTest {
 
   }
 
+  @Override
+  public void setup() {
+
+  }
 }

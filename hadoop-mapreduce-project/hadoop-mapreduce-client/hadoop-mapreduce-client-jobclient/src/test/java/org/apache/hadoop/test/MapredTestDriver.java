@@ -94,7 +94,7 @@ public class MapredTestDriver {
       pgd.addClass("gsleep", GrowingSleepJob.class,
           "A sleep job whose mappers create 1MB buffer for every record.");
       pgd.addClass("timelineperformance", TimelineServicePerformance.class,
-                   "A job that launches mappers to test timline service " +
+                   "A job that launches mappers to test timeline service " +
                    "performance.");
       pgd.addClass("nnbench", NNBench.class,
           "A benchmark that stresses the namenode w/ MR.");

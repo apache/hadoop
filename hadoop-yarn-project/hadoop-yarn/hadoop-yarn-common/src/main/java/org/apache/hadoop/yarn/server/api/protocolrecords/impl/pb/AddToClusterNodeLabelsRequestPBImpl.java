@@ -111,6 +111,13 @@ public class AddToClusterNodeLabelsRequestPBImpl extends
     for (NodeLabelProto r : attributesProtoList) {
       this.updatedNodeLabels.add(convertFromProtoFormat(r));
     }
+
+    if (this.updatedNodeLabels.isEmpty()) {
+      List<String> deprecatedLabelsList = p.getDeprecatedNodeLabelsList();
+      for (String l : deprecatedLabelsList) {
+        this.updatedNodeLabels.add(NodeLabel.newInstance(l));
+      }
+    }
   }
 
   private NodeLabel convertFromProtoFormat(NodeLabelProto p) {

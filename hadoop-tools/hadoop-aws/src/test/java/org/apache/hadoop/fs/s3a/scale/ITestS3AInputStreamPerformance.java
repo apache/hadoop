@@ -20,10 +20,10 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -56,7 +56,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   private S3AFileSystem s3aFS;
   private Path testData;
-  private S3AFileStatus testDataStatus;
+  private FileStatus testDataStatus;
   private FSDataInputStream in;
   private S3AInstrumentation.InputStreamStatistics streamStatistics;
   public static final int BLOCK_SIZE = 32 * 1024;

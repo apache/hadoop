@@ -25,7 +25,6 @@ import java.rmi.server.UID;
 import java.security.MessageDigest;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.*;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.Options.CreateOpts;
@@ -51,6 +50,8 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -203,7 +204,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSU
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SequenceFile {
-  private static final Log LOG = LogFactory.getLog(SequenceFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SequenceFile.class);
 
   private SequenceFile() {}                         // no public ctor
 
@@ -1882,7 +1883,7 @@ public class SequenceFile {
     @Deprecated
     public Reader(FileSystem fs, Path file, 
                   Configuration conf) throws IOException {
-      this(conf, file(file.makeQualified(fs)));
+      this(conf, file(fs.makeQualified(file)));
     }
 
     /**
@@ -1923,7 +1924,7 @@ public class SequenceFile {
         succeeded = true;
       } finally {
         if (!succeeded) {
-          IOUtils.cleanup(LOG, this.in);
+          IOUtils.cleanupWithLogger(LOG, this.in);
         }
       }
     }

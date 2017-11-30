@@ -30,9 +30,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import java.util.Collection;
@@ -63,7 +63,7 @@ class NodesPage extends RmView {
 
     @Override
     protected void render(Block html) {
-      html._(MetricsOverviewTable.class);
+      html.__(MetricsOverviewTable.class);
 
       ResourceScheduler sched = rm.getResourceScheduler();
 
@@ -98,7 +98,7 @@ class NodesPage extends RmView {
       }
 
       TBODY<TABLE<Hamlet>> tbody =
-          trbody.th(".nodeManagerVersion", "Version")._()._().tbody();
+          trbody.th(".nodeManagerVersion", "Version").__().__().tbody();
 
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
@@ -201,13 +201,13 @@ class NodesPage extends RmView {
       }
       nodeTableData.append("]");
       html.script().$type("text/javascript")
-          ._("var nodeTableData=" + nodeTableData)._();
-      tbody._()._();
+          .__("var nodeTableData=" + nodeTableData).__();
+      tbody.__().__();
     }
   }
 
   @Override
-  protected void preHead(Page.HTML<_> html) {
+  protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
     String type = $(NODE_STATE);
     String title = "Nodes of the cluster";

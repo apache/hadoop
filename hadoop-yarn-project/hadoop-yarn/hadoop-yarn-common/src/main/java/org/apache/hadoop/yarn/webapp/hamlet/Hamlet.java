@@ -29,6 +29,10 @@ import java.util.EnumSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.SubView;
 
+/**
+ * @deprecated Use org.apache.hadoop.yarn.webapp.hamlet2 package instead.
+ */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class Hamlet extends HamletImpl implements HamletSpec._Html {
   public Hamlet(PrintWriter out, int nestLevel, boolean wasInline) {

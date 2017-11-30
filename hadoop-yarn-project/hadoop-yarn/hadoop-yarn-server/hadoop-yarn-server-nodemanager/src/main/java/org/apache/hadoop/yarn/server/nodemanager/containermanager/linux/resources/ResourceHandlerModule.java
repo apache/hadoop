@@ -21,18 +21,28 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides mechanisms to get various resource handlers - cpu, memory, network,
@@ -42,7 +52,8 @@ import java.util.List;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class ResourceHandlerModule {
-  static final Log LOG = LogFactory.getLog(ResourceHandlerModule.class);
+  static final Logger LOG =
+       LoggerFactory.getLogger(ResourceHandlerModule.class);
   private static volatile ResourceHandlerChain resourceHandlerChain;
 
   /**
@@ -113,8 +124,8 @@ public class ResourceHandlerModule {
   }
 
   private static TrafficControlBandwidthHandlerImpl
-    getTrafficControlBandwidthHandler(Configuration conf)
-      throws ResourceHandlerException {
+      getTrafficControlBandwidthHandler(Configuration conf)
+        throws ResourceHandlerException {
     if (conf.getBoolean(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED,
         YarnConfiguration.DEFAULT_NM_NETWORK_RESOURCE_ENABLED)) {
       if (trafficControlBandwidthHandler == null) {
@@ -137,8 +148,8 @@ public class ResourceHandlerModule {
   }
 
   public static OutboundBandwidthResourceHandler
-    getOutboundBandwidthResourceHandler(Configuration conf)
-      throws ResourceHandlerException {
+      getOutboundBandwidthResourceHandler(Configuration conf)
+        throws ResourceHandlerException {
     return getTrafficControlBandwidthHandler(conf);
   }
 
@@ -176,7 +187,7 @@ public class ResourceHandlerModule {
   }
 
   private static CGroupsMemoryResourceHandlerImpl
-    getCgroupsMemoryResourceHandler(
+      getCgroupsMemoryResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     if (cGroupsMemoryResourceHandler == null) {
       synchronized (MemoryResourceHandler.class) {
@@ -198,22 +209,41 @@ public class ResourceHandlerModule {
   }
 
   private static void initializeConfiguredResourceHandlerChain(
-      Configuration conf) throws ResourceHandlerException {
+      Configuration conf, Context nmContext)
+      throws ResourceHandlerException {
     ArrayList<ResourceHandler> handlerList = new ArrayList<>();
 
     addHandlerIfNotNull(handlerList, getOutboundBandwidthResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getDiskResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getMemoryResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getCGroupsCpuResourceHandler(conf));
+    addHandlersFromConfiguredResourcePlugins(handlerList, conf, nmContext);
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }
 
+  private static void addHandlersFromConfiguredResourcePlugins(
+      List<ResourceHandler> handlerList, Configuration conf,
+      Context nmContext) throws ResourceHandlerException {
+    ResourcePluginManager pluginManager = nmContext.getResourcePluginManager();
+    if (pluginManager != null) {
+       Map<String, ResourcePlugin> pluginMap = pluginManager.getNameToPlugins();
+       if (pluginMap != null) {
+        for (ResourcePlugin plugin : pluginMap.values()) {
+          addHandlerIfNotNull(handlerList, plugin
+              .createResourceHandler(nmContext,
+                  getInitializedCGroupsHandler(conf),
+                  PrivilegedOperationExecutor.getInstance(conf)));
+        }
+      }
+    }
+  }
+
   public static ResourceHandlerChain getConfiguredResourceHandlerChain(
-      Configuration conf) throws ResourceHandlerException {
+      Configuration conf, Context nmContext) throws ResourceHandlerException {
     if (resourceHandlerChain == null) {
       synchronized (ResourceHandlerModule.class) {
         if (resourceHandlerChain == null) {
-          initializeConfiguredResourceHandlerChain(conf);
+          initializeConfiguredResourceHandlerChain(conf, nmContext);
         }
       }
     }
@@ -228,5 +258,46 @@ public class ResourceHandlerModule {
   @VisibleForTesting
   static void nullifyResourceHandlerChain() throws ResourceHandlerException {
     resourceHandlerChain = null;
+  }
+
+  /**
+   * If a cgroup mount directory is specified, it returns cgroup directories
+   * with valid names.
+   * The requirement is that each hierarchy has to be named with the comma
+   * separated names of subsystems supported.
+   * For example: /sys/fs/cgroup/cpu,cpuacct
+   * @param cgroupMountPath Root cgroup mount path (/sys/fs/cgroup in the
+   *                        example above)
+   * @return A path to cgroup subsystem set mapping in the same format as
+   *         {@link CGroupsHandlerImpl#parseMtab(String)}
+   * @throws IOException if the specified directory cannot be listed
+   */
+  public static Map<String, Set<String>> parseConfiguredCGroupPath(
+      String cgroupMountPath) throws IOException {
+    File cgroupDir = new File(cgroupMountPath);
+    File[] list = cgroupDir.listFiles();
+    if (list == null) {
+      throw new IOException("Empty cgroup mount directory specified: " +
+          cgroupMountPath);
+    }
+
+    Map<String, Set<String>> pathSubsystemMappings = new HashMap<>();
+    Set<String> validCGroups =
+        CGroupsHandler.CGroupController.getValidCGroups();
+    for (File candidate: list) {
+      Set<String> cgroupList =
+          new HashSet<>(Arrays.asList(candidate.getName().split(",")));
+      // Collect the valid subsystem names
+      cgroupList.retainAll(validCGroups);
+      if (!cgroupList.isEmpty()) {
+        if (candidate.isDirectory()) {
+          pathSubsystemMappings.put(candidate.getAbsolutePath(), cgroupList);
+        } else {
+          LOG.warn("The following cgroup is not a directory " +
+              candidate.getAbsolutePath());
+        }
+      }
+    }
+    return pathSubsystemMappings;
   }
 }

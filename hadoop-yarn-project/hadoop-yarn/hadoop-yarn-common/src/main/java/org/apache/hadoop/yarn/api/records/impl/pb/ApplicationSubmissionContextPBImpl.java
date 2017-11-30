@@ -119,9 +119,7 @@ extends ApplicationSubmissionContext {
     if (this.amContainer != null) {
       builder.setAmContainerSpec(convertToProtoFormat(this.amContainer));
     }
-    if (this.resource != null &&
-        !((ResourcePBImpl) this.resource).getProto().equals(
-            builder.getResource())) {
+    if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
     if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
@@ -474,7 +472,7 @@ extends ApplicationSubmissionContext {
   }
 
   private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
+    return ProtoUtils.convertToProtoFormat(t);
   }
 
   @Override

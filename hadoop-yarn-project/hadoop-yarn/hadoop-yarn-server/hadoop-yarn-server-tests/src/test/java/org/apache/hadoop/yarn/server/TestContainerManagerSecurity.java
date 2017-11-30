@@ -28,9 +28,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -38,6 +38,7 @@ import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -67,6 +69,7 @@ import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -82,12 +85,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @RunWith(Parameterized.class)
 public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
 
-  static Log LOG = LogFactory.getLog(TestContainerManagerSecurity.class);
+  static Logger LOG = LoggerFactory.getLogger(TestContainerManagerSecurity.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   private static MiniYARNCluster yarnCluster;
@@ -122,7 +127,13 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     testRootDir.delete();
   }
 
-  @Parameters
+  /*
+   * Run two tests: one with no security ("simple") and one with "Secure"
+   * The first parameter is just the test name to make it easier to debug
+   * and to give details in say an IDE.  The second is the configuraiton
+   * object to use.
+   */
+  @Parameters(name = "{0}")
   public static Collection<Object[]> configs() {
     Configuration configurationWithoutSecurity = new Configuration();
     configurationWithoutSecurity.set(
@@ -142,16 +153,18 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
       YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
       httpSpnegoKeytabFile.getAbsolutePath());
 
-    return Arrays.asList(new Object[][] { { configurationWithoutSecurity },
-        { configurationWithSecurity } });
+    return Arrays.asList(new Object[][] {
+        {"Simple", configurationWithoutSecurity},
+        {"Secure", configurationWithSecurity}});
   }
   
-  public TestContainerManagerSecurity(Configuration conf) {
+  public TestContainerManagerSecurity(String name, Configuration conf) {
+    LOG.info("RUNNING TEST " + name);
     conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
     this.conf = conf;
   }
   
-  @Test (timeout = 120000)
+  @Test
   public void testContainerManager() throws Exception {
       
       // TestNMTokens.
@@ -165,7 +178,11 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
 
   }
 
-  private void testNMTokens(Configuration conf) throws Exception {
+  /**
+   * Run a series of tests using different NMTokens.  A configuration is
+   * provided for managing creating of the tokens and rpc.
+   */
+  private void testNMTokens(Configuration testConf) throws Exception {
     NMTokenSecretManagerInRM nmTokenSecretManagerRM =
         yarnCluster.getResourceManager().getRMContext()
           .getNMTokenSecretManager();
@@ -201,7 +218,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
      * nmToken error. (This can be best tested if we roll over NMToken
      * master key twice).
      */
-    YarnRPC rpc = YarnRPC.create(conf);
+    YarnRPC rpc = YarnRPC.create(testConf);
     String user = "test";
     Resource r = Resource.newInstance(1024, 1);
 
@@ -233,7 +250,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     StringBuilder sb;
     // testInvalidNMToken ... creating NMToken using different secret manager.
     
-    NMTokenSecretManagerInRM tempManager = new NMTokenSecretManagerInRM(conf);
+    NMTokenSecretManagerInRM tempManager = new NMTokenSecretManagerInRM(testConf);
     tempManager.rollMasterKey();
     do {
       tempManager.rollMasterKey();
@@ -252,7 +269,9 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     }
     String errorMsg = testStartContainer(rpc, validAppAttemptId, validNode,
         validContainerToken, null, true);
-    Assert.assertTrue(errorMsg.contains(sb.toString()));
+    Assert.assertTrue("In calling " + validNode + " exception was '"
+        + errorMsg + "' but doesn't contain '"
+        + sb.toString() + "'", errorMsg.contains(sb.toString()));
     
     org.apache.hadoop.yarn.api.records.Token invalidNMToken =
         tempManager.createNMToken(validAppAttemptId, validNode, user);
@@ -277,7 +296,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
             validContainerToken, invalidNMToken, true)));
     
     // using correct tokens. nmtoken for app attempt should get saved.
-    conf.setInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
+    testConf.setInt(YarnConfiguration.RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS,
         4 * 60 * 1000);
     validContainerToken =
         containerTokenSecretManager.createContainerToken(validContainerId,
@@ -375,8 +394,8 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, false).contains(sb.toString()));
 
-    // using appAttempt-1 NMtoken for launching container for appAttempt-2 should
-    // succeed.
+    // using appAttempt-1 NMtoken for launching container for appAttempt-2
+    // should succeed.
     ApplicationAttemptId attempt2 = ApplicationAttemptId.newInstance(appId, 2);
     Token attempt1NMToken =
         nmTokenSecretManagerRM
@@ -389,25 +408,39 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
       newContainerToken, attempt1NMToken, false).isEmpty());
   }
 
-  private void waitForContainerToFinishOnNM(ContainerId containerId) {
-    Context nmContet = yarnCluster.getNodeManager(0).getNMContext();
+  private void waitForContainerToFinishOnNM(ContainerId containerId)
+      throws TimeoutException, InterruptedException {
+    Context nmContext = yarnCluster.getNodeManager(0).getNMContext();
     int interval = 4 * 60; // Max time for container token to expire.
-    Assert.assertNotNull(nmContet.getContainers().containsKey(containerId));
-    while ((interval-- > 0)
-        && !nmContet.getContainers().get(containerId)
-          .cloneAndGetContainerStatus().getState()
-          .equals(ContainerState.COMPLETE)) {
+
+    // If the container is null, then it has already completed and been removed
+    // from the Context by asynchronous calls.
+    Container waitContainer = nmContext.getContainers().get(containerId);
+    if (waitContainer != null) {
       try {
-        LOG.info("Waiting for " + containerId + " to complete.");
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
+        LOG.info("Waiting for " + containerId + " to get to state " +
+            ContainerState.COMPLETE);
+        GenericTestUtils.waitFor(new Supplier<Boolean>() {
+          @Override
+          public Boolean get() {
+            return ContainerState.COMPLETE.equals(
+                waitContainer.cloneAndGetContainerStatus().getState());
+          }
+        }, 10, interval);
+      } catch (TimeoutException te) {
+        fail("Was waiting for " + containerId + " to get to state " +
+            ContainerState.COMPLETE + " but was in state " +
+            waitContainer.cloneAndGetContainerStatus().getState() +
+            " after the timeout");
       }
     }
+
     // Normally, Containers will be removed from NM context after they are
     // explicitly acked by RM. Now, manually remove it for testing.
     yarnCluster.getNodeManager(0).getNodeStatusUpdater()
       .addCompletedContainer(containerId);
-    nmContet.getContainers().remove(containerId);
+    LOG.info("Removing container from NMContext, containerID = " + containerId);
+    nmContext.getContainers().remove(containerId);
   }
 
   protected void waitForNMToReceiveNMTokenKey(
@@ -439,7 +472,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
       ContainerId containerId, Token nmToken, boolean isExceptionExpected) {
     try {
       stopContainer(rpc, nmToken,
-          Arrays.asList(new ContainerId[] { containerId }), appAttemptId,
+          Arrays.asList(new ContainerId[] {containerId}), appAttemptId,
           nodeId);
       if (isExceptionExpected) {
         fail("Exception was expected!!");
@@ -525,7 +558,8 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
       proxy =
           getContainerManagementProtocolProxy(rpc, nmToken, nodeId,
               appAttemptId.toString());
-      GetContainerStatusesResponse statuses = proxy.getContainerStatuses(request);
+      GetContainerStatusesResponse statuses
+          = proxy.getContainerStatuses(request);
       if (statuses.getFailedRequests() != null
           && statuses.getFailedRequests().containsKey(containerId)) {
         parseAndThrowException(statuses.getFailedRequests().get(containerId)
@@ -546,7 +580,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     ContainerLaunchContext context =
         Records.newRecord(ContainerLaunchContext.class);
     StartContainerRequest scRequest =
-        StartContainerRequest.newInstance(context,containerToken);
+        StartContainerRequest.newInstance(context, containerToken);
     List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
     list.add(scRequest);
     StartContainersRequest allRequests =
@@ -582,7 +616,7 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     ContainerManagementProtocol proxy;
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
     final InetSocketAddress addr =
-        NetUtils.createSocketAddr(nodeId.getHost(), nodeId.getPort());
+        new InetSocketAddress(nodeId.getHost(), nodeId.getPort());
     if (nmToken != null) {
       ugi.addToken(ConverterUtils.convertFromYarn(nmToken, addr));      
     }
@@ -645,9 +679,11 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     ContainerTokenIdentifier containerTokenIdentifier = 
         getContainerTokenIdentifierFromToken(containerToken);
     
-    // Verify new compatible version ContainerTokenIdentifier can work successfully.
+    // Verify new compatible version ContainerTokenIdentifier
+    // can work successfully.
     ContainerTokenIdentifierForTest newVersionTokenIdentifier = 
-        new ContainerTokenIdentifierForTest(containerTokenIdentifier, "message");
+        new ContainerTokenIdentifierForTest(containerTokenIdentifier,
+            "message");
     byte[] password = 
         containerTokenSecretManager.createPassword(newVersionTokenIdentifier);
     

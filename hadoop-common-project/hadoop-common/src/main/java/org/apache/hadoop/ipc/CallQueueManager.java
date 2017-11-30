@@ -18,22 +18,31 @@
 
 package org.apache.hadoop.ipc;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.AbstractQueue;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
+
+import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstracts queue operations for different blocking queues.
  */
-public class CallQueueManager<E> {
-  public static final Log LOG = LogFactory.getLog(CallQueueManager.class);
+public class CallQueueManager<E extends Schedulable>
+    extends AbstractQueue<E> implements BlockingQueue<E> {
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CallQueueManager.class);
   // Number of checkpoints for empty queue.
   private static final int CHECKPOINT_NUM = 20;
   // Interval to check empty queue.
@@ -74,6 +83,15 @@ public class CallQueueManager<E> {
     this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
     LOG.info("Using callQueue: " + backingClass + " queueCapacity: " +
         maxQueueSize + " scheduler: " + schedulerClass);
+  }
+
+  @VisibleForTesting // only!
+  CallQueueManager(BlockingQueue<E> queue, RpcScheduler scheduler,
+      boolean clientBackOffEnabled) {
+    this.putRef = new AtomicReference<BlockingQueue<E>>(queue);
+    this.takeRef = new AtomicReference<BlockingQueue<E>>(queue);
+    this.scheduler = scheduler;
+    this.clientBackOffEnabled = clientBackOffEnabled;
   }
 
   private static <T extends RpcScheduler> T createScheduler(
@@ -190,12 +208,40 @@ public class CallQueueManager<E> {
   }
 
   /**
-   * Insert e into the backing queue or block until we can.
+   * Insert e into the backing queue or block until we can.  If client
+   * backoff is enabled this method behaves like add which throws if
+   * the queue overflows.
    * If we block and the queue changes on us, we will insert while the
    * queue is drained.
    */
+  @Override
   public void put(E e) throws InterruptedException {
-    putRef.get().put(e);
+    if (!isClientBackoffEnabled()) {
+      putRef.get().put(e);
+    } else if (shouldBackOff(e)) {
+      throwBackoff();
+    } else {
+      add(e);
+    }
+  }
+
+  @Override
+  public boolean add(E e) {
+    try {
+      return putRef.get().add(e);
+    } catch (CallQueueOverflowException ex) {
+      // queue provided a custom exception that may control if the client
+      // should be disconnected.
+      throw ex;
+    } catch (IllegalStateException ise) {
+      throwBackoff();
+    }
+    return true;
+  }
+
+  // ideally this behavior should be controllable too.
+  private void throwBackoff() throws IllegalStateException {
+    throw CallQueueOverflowException.DISCONNECT;
   }
 
   /**
@@ -203,14 +249,37 @@ public class CallQueueManager<E> {
    * Return true if e is queued.
    * Return false if the queue is full.
    */
-  public boolean offer(E e) throws InterruptedException {
+  @Override
+  public boolean offer(E e) {
     return putRef.get().offer(e);
+  }
+
+  @Override
+  public boolean offer(E e, long timeout, TimeUnit unit)
+      throws InterruptedException {
+    return putRef.get().offer(e, timeout, unit);
+  }
+
+  @Override
+  public E peek() {
+    return takeRef.get().peek();
+  }
+
+  @Override
+  public E poll() {
+    return takeRef.get().poll();
+  }
+
+  @Override
+  public E poll(long timeout, TimeUnit unit) throws InterruptedException {
+    return takeRef.get().poll(timeout, unit);
   }
 
   /**
    * Retrieve an E from the backing queue or block until we can.
    * Guaranteed to return an element from the current queue.
    */
+  @Override
   public E take() throws InterruptedException {
     E e = null;
 
@@ -221,8 +290,14 @@ public class CallQueueManager<E> {
     return e;
   }
 
+  @Override
   public int size() {
     return takeRef.get().size();
+  }
+
+  @Override
+  public int remainingCapacity() {
+    return takeRef.get().remainingCapacity();
   }
 
   /**
@@ -307,5 +382,50 @@ public class CallQueueManager<E> {
 
   private String stringRepr(Object o) {
     return o.getClass().getName() + '@' + Integer.toHexString(o.hashCode());
+  }
+
+  @Override
+  public int drainTo(Collection<? super E> c) {
+    return takeRef.get().drainTo(c);
+  }
+
+  @Override
+  public int drainTo(Collection<? super E> c, int maxElements) {
+    return takeRef.get().drainTo(c, maxElements);
+  }
+
+  @Override
+  public Iterator<E> iterator() {
+    return takeRef.get().iterator();
+  }
+
+  // exception that mimics the standard ISE thrown by blocking queues but
+  // embeds a rpc server exception for the client to retry and indicate
+  // if the client should be disconnected.
+  @SuppressWarnings("serial")
+  static class CallQueueOverflowException extends IllegalStateException {
+    private static String TOO_BUSY = "Server too busy";
+    static final CallQueueOverflowException KEEPALIVE =
+        new CallQueueOverflowException(
+            new RetriableException(TOO_BUSY),
+            RpcStatusProto.ERROR);
+    static final CallQueueOverflowException DISCONNECT =
+        new CallQueueOverflowException(
+            new RetriableException(TOO_BUSY + " - disconnecting"),
+            RpcStatusProto.FATAL);
+
+    CallQueueOverflowException(final IOException ioe,
+        final RpcStatusProto status) {
+      super("Queue full", new RpcServerException(ioe.getMessage(), ioe){
+        @Override
+        public RpcStatusProto getRpcStatusProto() {
+          return status;
+        }
+      });
+    }
+    @Override
+    public IOException getCause() {
+      return (IOException)super.getCause();
+    }
   }
 }

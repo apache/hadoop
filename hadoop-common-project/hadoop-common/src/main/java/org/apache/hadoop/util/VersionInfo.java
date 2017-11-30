@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class returns build information about Hadoop components.
@@ -34,7 +34,7 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class VersionInfo {
-  private static final Log LOG = LogFactory.getLog(VersionInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(VersionInfo.class);
 
   private Properties info;
 
@@ -46,7 +46,7 @@ public class VersionInfo {
       is = ThreadUtil.getResourceAsStream(versionInfoFile);
       info.load(is);
     } catch (IOException ex) {
-      LogFactory.getLog(getClass()).warn("Could not read '" +
+      LoggerFactory.getLogger(getClass()).warn("Could not read '" +
           versionInfoFile + "', " + ex.toString(), ex);
     } finally {
       IOUtils.closeStream(is);

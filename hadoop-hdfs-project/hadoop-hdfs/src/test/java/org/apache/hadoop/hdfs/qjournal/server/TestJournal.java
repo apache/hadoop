@@ -156,12 +156,12 @@ public class TestJournal {
     journal.startLogSegment(makeRI(1), 1,
         NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     // Send txids 1-3, with a request indicating only 0 committed
-    journal.journal(new RequestInfo(JID, 1, 2, 0), 1, 1, 3,
+    journal.journal(new RequestInfo(JID, null,  1, 2, 0), 1, 1, 3,
         QJMTestUtil.createTxnData(1, 3));
     assertEquals(0, journal.getCommittedTxnId());
     
     // Send 4-6, with request indicating that through 3 is committed.
-    journal.journal(new RequestInfo(JID, 1, 3, 3), 1, 4, 3,
+    journal.journal(new RequestInfo(JID, null, 1, 3, 3), 1, 4, 3,
         QJMTestUtil.createTxnData(4, 6));
     assertEquals(3, journal.getCommittedTxnId());
   }
@@ -195,7 +195,7 @@ public class TestJournal {
   @Test (timeout = 10000)
   public void testFormatResetsCachedValues() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 12345L);
-    journal.startLogSegment(new RequestInfo(JID, 12345L, 1L, 0L), 1L,
+    journal.startLogSegment(new RequestInfo(JID, null, 12345L, 1L, 0L), 1L,
         NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
 
     assertEquals(12345L, journal.getLastPromisedEpoch());
@@ -404,7 +404,7 @@ public class TestJournal {
   }
   
   private static RequestInfo makeRI(int serial) {
-    return new RequestInfo(JID, 1, serial, 0);
+    return new RequestInfo(JID, null, 1, serial, 0);
   }
   
   @Test (timeout = 10000)

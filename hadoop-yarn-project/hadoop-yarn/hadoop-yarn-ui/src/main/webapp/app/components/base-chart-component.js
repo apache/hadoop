@@ -108,7 +108,7 @@ export default Ember.Component.extend({
           data = d.data;
         }
 
-        this.tooltip.style("opacity", 0.9);
+        this.tooltip.style("opacity", 0.7);
         var value = data.value;
         if (this.get("type") === "memory") {
           value = Converter.memoryToSimpliedUnit(value);

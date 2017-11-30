@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -116,7 +117,9 @@ class BlockManagerSafeMode {
   private Counter awaitingReportedBlocksCounter;
 
   /** Keeps track of how many bytes are in Future Generation blocks. */
-  private final AtomicLong numberOfBytesInFutureBlocks = new AtomicLong();
+  private final LongAdder bytesInFutureBlocks = new LongAdder();
+  private final LongAdder bytesInFutureECBlockGroups = new LongAdder();
+
   /** Reports if Name node was started with Rollback option. */
   private final boolean inRollBack;
 
@@ -358,12 +361,13 @@ class BlockManagerSafeMode {
   boolean leaveSafeMode(boolean force) {
     assert namesystem.hasWriteLock() : "Leaving safe mode needs write lock!";
 
-    final long bytesInFuture = numberOfBytesInFutureBlocks.get();
+    final long bytesInFuture = getBytesInFuture();
     if (bytesInFuture > 0) {
       if (force) {
         LOG.warn("Leaving safe mode due to forceExit. This will cause a data "
             + "loss of {} byte(s).", bytesInFuture);
-        numberOfBytesInFutureBlocks.set(0);
+        bytesInFutureBlocks.reset();
+        bytesInFutureECBlockGroups.reset();
       } else {
         LOG.error("Refusing to leave safe mode without a force flag. " +
             "Exiting safe mode will cause a deletion of {} byte(s). Please " +
@@ -481,9 +485,12 @@ class BlockManagerSafeMode {
     }
 
     if (!blockManager.getShouldPostponeBlocksFromFuture() &&
-        !inRollBack &&
-        blockManager.isGenStampInFuture(brr)) {
-      numberOfBytesInFutureBlocks.addAndGet(brr.getBytesOnDisk());
+        !inRollBack && blockManager.isGenStampInFuture(brr)) {
+      if (BlockIdManager.isStripedBlockID(brr.getBlockId())) {
+        bytesInFutureECBlockGroups.add(brr.getBytesOnDisk());
+      } else {
+        bytesInFutureBlocks.add(brr.getBytesOnDisk());
+      }
     }
   }
 
@@ -494,7 +501,15 @@ class BlockManagerSafeMode {
    * @return Bytes in future
    */
   long getBytesInFuture() {
-    return numberOfBytesInFutureBlocks.get();
+    return getBytesInFutureBlocks() + getBytesInFutureECBlockGroups();
+  }
+
+  long getBytesInFutureBlocks() {
+    return bytesInFutureBlocks.longValue();
+  }
+
+  long getBytesInFutureECBlockGroups() {
+    return bytesInFutureECBlockGroups.longValue();
   }
 
   void close() {

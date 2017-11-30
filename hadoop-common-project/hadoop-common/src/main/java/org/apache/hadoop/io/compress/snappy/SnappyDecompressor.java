@@ -22,19 +22,19 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DirectDecompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link Decompressor} based on the snappy compression algorithm.
  * http://code.google.com/p/snappy/
  */
 public class SnappyDecompressor implements Decompressor {
-  private static final Log LOG =
-      LogFactory.getLog(SnappyDecompressor.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SnappyDecompressor.class.getName());
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64 * 1024;
 
   private int directBufferSize;

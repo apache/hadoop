@@ -26,7 +26,10 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name = "labelsToNodesInfo")
+/**
+ * XML element uses to represent NodeIds' list.
+ */
+@XmlRootElement(name = "nodeIDsInfo")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class NodeIDsInfo {
 

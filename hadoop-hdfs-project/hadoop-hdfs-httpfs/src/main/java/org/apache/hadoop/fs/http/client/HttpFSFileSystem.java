@@ -119,6 +119,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String NEW_LENGTH_PARAM = "newlength";
   public static final String START_AFTER_PARAM = "startAfter";
   public static final String POLICY_NAME_PARAM = "storagepolicy";
+  public static final String SNAPSHOT_NAME_PARAM = "snapshotname";
+  public static final String OLD_SNAPSHOT_NAME_PARAM = "oldsnapshotname";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -138,6 +140,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String SET_REPLICATION_JSON = "boolean";
 
   public static final String UPLOAD_CONTENT_TYPE= "application/octet-stream";
+
+  public static final String SNAPSHOT_JSON = "Path";
 
   public enum FILE_TYPE {
     FILE, DIRECTORY, SYMLINK;
@@ -194,6 +198,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
   public static final String EC_BIT_JSON = "ecBit";
+  public static final String SNAPSHOT_BIT_JSON = "seBit";
 
   public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
   public static final String PARTIAL_LISTING_JSON = "partialListing";
@@ -223,7 +228,9 @@ public class HttpFSFileSystem extends FileSystem
     DELETE(HTTP_DELETE), SETXATTR(HTTP_PUT), GETXATTRS(HTTP_GET),
     REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
     GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
-    SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST);
+    SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST),
+    CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
+    RENAMESNAPSHOT(HTTP_PUT);
 
     private String httpMethod;
 
@@ -698,14 +705,13 @@ public class HttpFSFileSystem extends FileSystem
   }
 
   /**
-   * List the statuses of the files/directories in the given path if the path is
-   * a directory.
+   * Get {@link FileStatus} of files/directories in the given path. If path
+   * corresponds to a file then {@link FileStatus} of that file is returned.
+   * Else if path represents a directory then {@link FileStatus} of all
+   * files/directories inside given path is returned.
    *
    * @param f given path
-   *
-   * @return the statuses of the files/directories in the given patch
-   *
-   * @throws IOException
+   * @return the statuses of the files/directories in the given path
    */
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
@@ -718,6 +724,13 @@ public class HttpFSFileSystem extends FileSystem
     return toFileStatuses(json, f);
   }
 
+  /**
+   * Get {@link DirectoryEntries} of the given path. {@link DirectoryEntries}
+   * contains an array of {@link FileStatus}, as well as iteration information.
+   *
+   * @param f given path
+   * @return {@link DirectoryEntries} for given path
+   */
   @Override
   public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
       FileNotFoundException, IOException {
@@ -1041,18 +1054,7 @@ public class HttpFSFileSystem extends FileSystem
   /** Convert a string to a FsPermission object. */
   static FsPermission toFsPermission(JSONObject json) {
     final String s = (String) json.get(PERMISSION_JSON);
-    final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
-    final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
-    final Boolean erasureBit = (Boolean) json.get(EC_BIT_JSON);
-    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
-    final boolean aBit = (aclBit != null) ? aclBit : false;
-    final boolean eBit = (encBit != null) ? encBit : false;
-    final boolean ecBit = (erasureBit != null) ? erasureBit : false;
-    if (aBit || eBit || ecBit) {
-      return new FsPermissionExtension(perm, aBit, eBit, ecBit);
-    } else {
-      return perm;
-    }
+    return new FsPermission(Short.parseShort(s, 8));
   }
 
   private FileStatus createFileStatus(Path parent, JSONObject json) {
@@ -1067,23 +1069,28 @@ public class HttpFSFileSystem extends FileSystem
     long mTime = (Long) json.get(MODIFICATION_TIME_JSON);
     long blockSize = (Long) json.get(BLOCK_SIZE_JSON);
     short replication = ((Long) json.get(REPLICATION_JSON)).shortValue();
-    FileStatus fileStatus = null;
 
-    switch (type) {
-      case FILE:
-      case DIRECTORY:
-        fileStatus = new FileStatus(len, (type == FILE_TYPE.DIRECTORY),
-                                    replication, blockSize, mTime, aTime,
-                                    permission, owner, group, path);
-        break;
-      case SYMLINK:
-        Path symLink = null;
-        fileStatus = new FileStatus(len, false,
-                                    replication, blockSize, mTime, aTime,
-                                    permission, owner, group, symLink,
-                                    path);
+    final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
+    final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
+    final Boolean erasureBit = (Boolean) json.get(EC_BIT_JSON);
+    final Boolean snapshotEnabledBit = (Boolean) json.get(SNAPSHOT_BIT_JSON);
+    final boolean aBit = (aclBit != null) ? aclBit : false;
+    final boolean eBit = (encBit != null) ? encBit : false;
+    final boolean ecBit = (erasureBit != null) ? erasureBit : false;
+    final boolean seBit =
+        (snapshotEnabledBit != null) ? snapshotEnabledBit : false;
+    if (aBit || eBit || ecBit || seBit) {
+      // include this for compatibility with 2.x
+      FsPermissionExtension deprecatedPerm =
+          new FsPermissionExtension(permission, aBit, eBit, ecBit);
+      FileStatus fileStatus = new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+          replication, blockSize, mTime, aTime, deprecatedPerm, owner, group,
+          null, path, FileStatus.attributes(aBit, eBit, ecBit, seBit));
+      return fileStatus;
+    } else {
+      return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
+          replication, blockSize, mTime, aTime, permission, owner, group, path);
     }
-    return fileStatus;
   }
 
   /**
@@ -1403,4 +1410,43 @@ public class HttpFSFileSystem extends FileSystem
         Operation.UNSETSTORAGEPOLICY.getMethod(), params, src, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
+
+  @Override
+  public final Path createSnapshot(Path path, String snapshotName)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.CREATESNAPSHOT.toString());
+    if (snapshotName != null) {
+      params.put(SNAPSHOT_NAME_PARAM, snapshotName);
+    }
+    HttpURLConnection conn = getConnection(Operation.CREATESNAPSHOT.getMethod(),
+        params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return new Path((String) json.get(SNAPSHOT_JSON));
+  }
+
+  @Override
+  public void renameSnapshot(Path path, String snapshotOldName,
+                             String snapshotNewName) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.RENAMESNAPSHOT.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotNewName);
+    params.put(OLD_SNAPSHOT_NAME_PARAM, snapshotOldName);
+    HttpURLConnection conn = getConnection(Operation.RENAMESNAPSHOT.getMethod(),
+        params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  @Override
+  public void deleteSnapshot(Path path, String snapshotName)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.DELETESNAPSHOT.toString());
+    params.put(SNAPSHOT_NAME_PARAM, snapshotName);
+    HttpURLConnection conn = getConnection(Operation.DELETESNAPSHOT.getMethod(),
+        params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
 }

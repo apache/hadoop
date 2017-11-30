@@ -28,7 +28,7 @@
 
 # HTTPFS temporary directory
 #
-# export HTTPFS_TEMP=${HADOOP_HOME}/temp
+# export HTTPFS_TEMP=${HADOOP_HDFS_HOME}/temp
 
 # The HTTP port used by HTTPFS
 #

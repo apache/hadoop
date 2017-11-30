@@ -239,6 +239,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
       flush();
       if (closeOutputStream) {
         super.close();
+        codec.close();
       }
       freeBuffers();
     } finally {

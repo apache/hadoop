@@ -29,6 +29,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -63,7 +64,7 @@ public class ITestS3ACopyFromLocalFile extends AbstractS3ATestBase {
     Path dest = upload(file, true);
     assertPathExists("uploaded file not found", dest);
     S3AFileSystem fs = getFileSystem();
-    S3AFileStatus status = fs.getFileStatus(dest);
+    FileStatus status = fs.getFileStatus(dest);
     assertEquals("File length of " + status,
         message.getBytes(ASCII).length, status.getLen());
     assertFileTextEquals(dest, message);

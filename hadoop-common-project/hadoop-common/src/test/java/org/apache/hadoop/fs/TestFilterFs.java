@@ -23,12 +23,12 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.util.Iterator;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
+import org.junit.Test;
 
-public class TestFilterFs extends TestCase {
+public class TestFilterFs {
 
   private static final Log LOG = FileSystem.LOG;
 
@@ -41,7 +41,8 @@ public class TestFilterFs extends TestCase {
       return null;
     }
   }
-  
+
+  @Test
   public void testFilterFileSystem() throws Exception {
     for (Method m : AbstractFileSystem.class.getDeclaredMethods()) {
       if (Modifier.isStatic(m.getModifiers()))
@@ -69,6 +70,7 @@ public class TestFilterFs extends TestCase {
   
   // Test that FilterFs will accept an AbstractFileSystem to be filtered which
   // has an optional authority, such as ViewFs
+  @Test
   public void testFilteringWithNonrequiredAuthority() throws Exception {
     Configuration conf = new Configuration();
     ConfigUtil.addLink(conf, "custom", "/mnt", URI.create("file:///"));

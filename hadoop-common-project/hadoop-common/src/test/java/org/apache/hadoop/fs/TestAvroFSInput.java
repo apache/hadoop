@@ -24,9 +24,10 @@ import java.io.OutputStreamWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestAvroFSInput extends TestCase {
+public class TestAvroFSInput {
 
   private static final String INPUT_DIR = "AvroFSInput";
 
@@ -34,6 +35,7 @@ public class TestAvroFSInput extends TestCase {
     return new Path(GenericTestUtils.getTempPath(INPUT_DIR));
   }
 
+  @Test
   public void testAFSInput() throws Exception {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);

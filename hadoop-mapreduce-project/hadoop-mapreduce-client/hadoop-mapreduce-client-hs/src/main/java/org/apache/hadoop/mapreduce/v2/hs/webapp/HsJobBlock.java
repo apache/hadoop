@@ -43,9 +43,9 @@ import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -69,38 +69,38 @@ public class HsJobBlock extends HtmlBlock {
     String jid = $(JOB_ID);
     if (jid.isEmpty()) {
       html.
-        p()._("Sorry, can't do anything without a JobID.")._();
+        p().__("Sorry, can't do anything without a JobID.").__();
       return;
     }
     JobId jobID = MRApps.toJobID(jid);
     Job j = appContext.getJob(jobID);
     if (j == null) {
-      html.p()._("Sorry, ", jid, " not found.")._();
+      html.p().__("Sorry, ", jid, " not found.").__();
       return;
     }
     if(j instanceof UnparsedJob) {
       final int taskCount = j.getTotalMaps() + j.getTotalReduces();
       UnparsedJob oversizedJob = (UnparsedJob) j;
-      html.p()._("The job has a total of " + taskCount + " tasks. ")
-          ._("Any job larger than " + oversizedJob.getMaxTasksAllowed() +
-              " will not be loaded.")._();
-      html.p()._("You can either use the CLI tool: 'mapred job -history'"
+      html.p().__("The job has a total of " + taskCount + " tasks. ")
+          .__("Any job larger than " + oversizedJob.getMaxTasksAllowed() +
+              " will not be loaded.").__();
+      html.p().__("You can either use the CLI tool: 'mapred job -history'"
           + " to view large jobs or adjust the property " +
-          JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX + ".")._();
+          JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX + ".").__();
       return;
     }
     List<AMInfo> amInfos = j.getAMInfos();
     JobInfo job = new JobInfo(j);
     ResponseInfo infoBlock = info("Job Overview").
-        _("Job Name:", job.getName()).
-        _("User Name:", job.getUserName()).
-        _("Queue:", job.getQueueName()).
-        _("State:", job.getState()).
-        _("Uberized:", job.isUber()).
-        _("Submitted:", new Date(job.getSubmitTime())).
-        _("Started:", job.getStartTimeStr()).
-        _("Finished:", new Date(job.getFinishTime())).
-        _("Elapsed:", StringUtils.formatTime(
+        __("Job Name:", job.getName()).
+        __("User Name:", job.getUserName()).
+        __("Queue:", job.getQueueName()).
+        __("State:", job.getState()).
+        __("Uberized:", job.isUber()).
+        __("Submitted:", new Date(job.getSubmitTime())).
+        __("Started:", job.getStartTimeStr()).
+        __("Finished:", new Date(job.getFinishTime())).
+        __("Elapsed:", StringUtils.formatTime(
             Times.elapsed(job.getStartTime(), job.getFinishTime(), false)));
     
     String amString =
@@ -117,19 +117,19 @@ public class HsJobBlock extends HtmlBlock {
     }
 
     if(job.getNumMaps() > 0) {
-      infoBlock._("Average Map Time", StringUtils.formatTime(job.getAvgMapTime()));
+      infoBlock.__("Average Map Time", StringUtils.formatTime(job.getAvgMapTime()));
     }
     if(job.getNumReduces() > 0) {
-      infoBlock._("Average Shuffle Time", StringUtils.formatTime(job.getAvgShuffleTime()));
-      infoBlock._("Average Merge Time", StringUtils.formatTime(job.getAvgMergeTime()));
-      infoBlock._("Average Reduce Time", StringUtils.formatTime(job.getAvgReduceTime()));
+      infoBlock.__("Average Shuffle Time", StringUtils.formatTime(job.getAvgShuffleTime()));
+      infoBlock.__("Average Merge Time", StringUtils.formatTime(job.getAvgMergeTime()));
+      infoBlock.__("Average Reduce Time", StringUtils.formatTime(job.getAvgReduceTime()));
     }
 
     for (ConfEntryInfo entry : job.getAcls()) {
-      infoBlock._("ACL "+entry.getName()+":", entry.getValue());
+      infoBlock.__("ACL "+entry.getName()+":", entry.getValue());
     }
     DIV<Hamlet> div = html.
-      _(InfoBlock.class).
+        __(InfoBlock.class).
       div(_INFO_WRAP);
     
       // MRAppMasters Table
@@ -137,13 +137,13 @@ public class HsJobBlock extends HtmlBlock {
         table.
           tr().
             th(amString).
-          _().
+            __().
           tr().
             th(_TH, "Attempt Number").
             th(_TH, "Start Time").
             th(_TH, "Node").
             th(_TH, "Logs").
-            _();
+            __();
         boolean odd = false;
           for (AMInfo amInfo : amInfos) {
             AMAttemptInfo attempt = new AMAttemptInfo(amInfo,
@@ -153,13 +153,13 @@ public class HsJobBlock extends HtmlBlock {
               td(new Date(attempt.getStartTime()).toString()).
               td().a(".nodelink", url(MRWebAppUtil.getYARNWebappScheme(),
                   attempt.getNodeHttpAddress()),
-                  attempt.getNodeHttpAddress())._().
+                  attempt.getNodeHttpAddress()).__().
               td().a(".logslink", url(attempt.getLogsLink()),
-                      "logs")._().
-            _();
+                      "logs").__().
+                __();
           }
-          table._();
-          div._();
+          table.__();
+          div.__();
           
         
         html.div(_INFO_WRAP).        
@@ -169,18 +169,18 @@ public class HsJobBlock extends HtmlBlock {
           tr().
             th(_TH, "Task Type").
             th(_TH, "Total").
-            th(_TH, "Complete")._().
+            th(_TH, "Complete").__().
           tr(_ODD).
             th().
-              a(url("tasks", jid, "m"), "Map")._().
+              a(url("tasks", jid, "m"), "Map").__().
             td(String.valueOf(String.valueOf(job.getMapsTotal()))).
-            td(String.valueOf(String.valueOf(job.getMapsCompleted())))._().
+            td(String.valueOf(String.valueOf(job.getMapsCompleted()))).__().
           tr(_EVEN).
             th().
-              a(url("tasks", jid, "r"), "Reduce")._().
+              a(url("tasks", jid, "r"), "Reduce").__().
             td(String.valueOf(String.valueOf(job.getReducesTotal()))).
-            td(String.valueOf(String.valueOf(job.getReducesCompleted())))._()
-          ._().
+            td(String.valueOf(String.valueOf(job.getReducesCompleted()))).__()
+          .__().
 
         // Attempts table
         table("#job").
@@ -188,33 +188,33 @@ public class HsJobBlock extends HtmlBlock {
           th(_TH, "Attempt Type").
           th(_TH, "Failed").
           th(_TH, "Killed").
-          th(_TH, "Successful")._().
+          th(_TH, "Successful").__().
         tr(_ODD).
           th("Maps").
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.FAILED.toString()), 
-              String.valueOf(job.getFailedMapAttempts()))._().
+              String.valueOf(job.getFailedMapAttempts())).__().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.KILLED.toString()), 
-              String.valueOf(job.getKilledMapAttempts()))._().
+              String.valueOf(job.getKilledMapAttempts())).__().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.SUCCESSFUL.toString()), 
-              String.valueOf(job.getSuccessfulMapAttempts()))._().
-        _().
+              String.valueOf(job.getSuccessfulMapAttempts())).__().
+            __().
         tr(_EVEN).
           th("Reduces").
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.FAILED.toString()), 
-              String.valueOf(job.getFailedReduceAttempts()))._().
+              String.valueOf(job.getFailedReduceAttempts())).__().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.KILLED.toString()), 
-              String.valueOf(job.getKilledReduceAttempts()))._().
+              String.valueOf(job.getKilledReduceAttempts())).__().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.SUCCESSFUL.toString()), 
-              String.valueOf(job.getSuccessfulReduceAttempts()))._().
-         _().
-       _().
-     _();
+              String.valueOf(job.getSuccessfulReduceAttempts())).__().
+            __().
+            __().
+            __();
   }
 
   static String addTaskLinks(String text) {

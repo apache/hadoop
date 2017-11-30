@@ -49,10 +49,10 @@ import org.apache.hadoop.net.NetUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
+
 @InterfaceAudience.Private
 @VisibleForTesting
 public class JournalNodeRpcServer implements QJournalProtocol {
-
   private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
   private Server server;
@@ -117,15 +117,18 @@ public class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
-  public boolean isFormatted(String journalId) throws IOException {
-    return jn.getOrCreateJournal(journalId).isFormatted();
+  public boolean isFormatted(String journalId,
+                             String nameServiceId) throws IOException {
+    return jn.getOrCreateJournal(journalId, nameServiceId).isFormatted();
   }
 
   @SuppressWarnings("deprecation")
   @Override
-  public GetJournalStateResponseProto getJournalState(String journalId)
+  public GetJournalStateResponseProto getJournalState(String journalId,
+                                                      String nameServiceId)
         throws IOException {
-    long epoch = jn.getOrCreateJournal(journalId).getLastPromisedEpoch(); 
+    long epoch = jn.getOrCreateJournal(journalId,
+        nameServiceId).getLastPromisedEpoch();
     return GetJournalStateResponseProto.newBuilder()
         .setLastPromisedEpoch(epoch)
         .setHttpPort(jn.getBoundHttpAddress().getPort())
@@ -135,59 +138,64 @@ public class JournalNodeRpcServer implements QJournalProtocol {
 
   @Override
   public NewEpochResponseProto newEpoch(String journalId,
-      NamespaceInfo nsInfo,
+                                        String nameServiceId,
+                                        NamespaceInfo nsInfo,
       long epoch) throws IOException {
-    return jn.getOrCreateJournal(journalId).newEpoch(nsInfo, epoch);
+    return jn.getOrCreateJournal(journalId,
+        nameServiceId).newEpoch(nsInfo, epoch);
   }
 
   @Override
-  public void format(String journalId, NamespaceInfo nsInfo)
+  public void format(String journalId,
+                     String nameServiceId,
+                     NamespaceInfo nsInfo)
       throws IOException {
-    jn.getOrCreateJournal(journalId).format(nsInfo);
+    jn.getOrCreateJournal(journalId, nameServiceId).format(nsInfo);
   }
 
   @Override
   public void journal(RequestInfo reqInfo,
       long segmentTxId, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
        .journal(reqInfo, segmentTxId, firstTxnId, numTxns, records);
   }
   
   @Override
   public void heartbeat(RequestInfo reqInfo) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .heartbeat(reqInfo);
   }
 
   @Override
   public void startLogSegment(RequestInfo reqInfo, long txid, int layoutVersion)
       throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .startLogSegment(reqInfo, txid, layoutVersion);
   }
 
   @Override
   public void finalizeLogSegment(RequestInfo reqInfo, long startTxId,
       long endTxId) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .finalizeLogSegment(reqInfo, startTxId, endTxId);
   }
 
   @Override
   public void purgeLogsOlderThan(RequestInfo reqInfo, long minTxIdToKeep)
       throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
       .purgeLogsOlderThan(reqInfo, minTxIdToKeep);
   }
 
   @SuppressWarnings("deprecation")
   @Override
-  public GetEditLogManifestResponseProto getEditLogManifest(String jid,
+  public GetEditLogManifestResponseProto getEditLogManifest(
+      String jid, String nameServiceId,
       long sinceTxId, boolean inProgressOk)
       throws IOException {
     
-    RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid)
+    RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
         .getEditLogManifest(sinceTxId, inProgressOk);
     
     return GetEditLogManifestResponseProto.newBuilder()
@@ -200,14 +208,15 @@ public class JournalNodeRpcServer implements QJournalProtocol {
   @Override
   public PrepareRecoveryResponseProto prepareRecovery(RequestInfo reqInfo,
       long segmentTxId) throws IOException {
-    return jn.getOrCreateJournal(reqInfo.getJournalId())
+    return jn.getOrCreateJournal(reqInfo.getJournalId(),
+        reqInfo.getNameServiceId())
         .prepareRecovery(reqInfo, segmentTxId);
   }
 
   @Override
   public void acceptRecovery(RequestInfo reqInfo, SegmentStateProto log,
       URL fromUrl) throws IOException {
-    jn.getOrCreateJournal(reqInfo.getJournalId())
+    jn.getOrCreateJournal(reqInfo.getJournalId(), reqInfo.getNameServiceId())
         .acceptRecovery(reqInfo, log, fromUrl);
   }
 
@@ -222,30 +231,36 @@ public class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
-  public void doFinalize(String journalId) throws IOException {
-    jn.doFinalize(journalId);
+  public void doFinalize(String journalId,
+                         String nameServiceId) throws IOException {
+    jn.doFinalize(journalId, nameServiceId);
   }
 
   @Override
-  public Boolean canRollBack(String journalId, StorageInfo storage,
+  public Boolean canRollBack(String journalId,
+                             String nameServiceId, StorageInfo storage,
       StorageInfo prevStorage, int targetLayoutVersion)
       throws IOException {
-    return jn.canRollBack(journalId, storage, prevStorage, targetLayoutVersion);
+    return jn.canRollBack(journalId, storage, prevStorage, targetLayoutVersion,
+        nameServiceId);
   }
 
   @Override
-  public void doRollback(String journalId) throws IOException {
-    jn.doRollback(journalId);
+  public void doRollback(String journalId,
+                         String nameServiceId) throws IOException {
+    jn.doRollback(journalId, nameServiceId);
   }
 
   @Override
-  public void discardSegments(String journalId, long startTxId)
+  public void discardSegments(String journalId,
+                              String nameServiceId, long startTxId)
       throws IOException {
-    jn.discardSegments(journalId, startTxId);
+    jn.discardSegments(journalId, startTxId, nameServiceId);
   }
 
   @Override
-  public Long getJournalCTime(String journalId) throws IOException {
-    return jn.getJournalCTime(journalId);
+  public Long getJournalCTime(String journalId,
+                              String nameServiceId) throws IOException {
+    return jn.getJournalCTime(journalId, nameServiceId);
   }
 }

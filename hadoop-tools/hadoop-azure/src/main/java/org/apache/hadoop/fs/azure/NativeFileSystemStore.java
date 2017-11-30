@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.azure;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Date;
 
@@ -46,12 +46,13 @@ interface NativeFileSystemStore {
 
   FileMetadata retrieveMetadata(String key) throws IOException;
 
-  DataInputStream retrieve(String key) throws IOException;
+  InputStream retrieve(String key) throws IOException;
 
-  DataInputStream retrieve(String key, long byteRangeStart) throws IOException;
+  InputStream retrieve(String key, long byteRangeStart) throws IOException;
 
-  DataOutputStream storefile(String key, PermissionStatus permissionStatus)
-      throws AzureException;
+  DataOutputStream storefile(String keyEncoded,
+      PermissionStatus permissionStatus,
+      String key) throws AzureException;
 
   boolean isPageBlobKey(String key);
 

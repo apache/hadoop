@@ -32,8 +32,6 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -45,6 +43,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This testcase issues SSL certificates configures the HttpServer to serve
@@ -56,7 +56,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static final String BASEDIR =
       GenericTestUtils.getTempPath(TestSSLHttpServer.class.getSimpleName());
 
-  private static final Log LOG = LogFactory.getLog(TestSSLHttpServer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static Configuration conf;
   private static HttpServer2 server;
   private static String keystoresDir;

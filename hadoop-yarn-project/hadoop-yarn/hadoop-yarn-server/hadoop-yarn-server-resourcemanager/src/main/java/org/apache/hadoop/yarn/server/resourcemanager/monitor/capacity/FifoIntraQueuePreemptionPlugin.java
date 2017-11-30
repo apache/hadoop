@@ -203,6 +203,12 @@ public class FifoIntraQueuePreemptionPlugin
       Resources.subtractFromNonNegative(preemtableFromApp, tmpApp.selected);
       Resources.subtractFromNonNegative(preemtableFromApp, tmpApp.getAMUsed());
 
+      if (context.getIntraQueuePreemptionOrderPolicy()
+            .equals(IntraQueuePreemptionOrderPolicy.USERLIMIT_FIRST)) {
+        Resources.subtractFromNonNegative(preemtableFromApp,
+          tmpApp.getFiCaSchedulerApp().getCSLeafQueue().getMinimumAllocation());
+      }
+
       // Calculate toBePreempted from apps as follows:
       // app.preemptable = min(max(app.used - app.selected - app.ideal, 0),
       // intra_q_preemptable)
@@ -397,10 +403,16 @@ public class FifoIntraQueuePreemptionPlugin
         ResourceUsage userResourceUsage = tq.leafQueue.getUser(userName)
             .getResourceUsage();
 
+        // perUserAMUsed was populated with running apps, now we are looping
+        // through both running and pending apps.
+        Resource userSpecificAmUsed = perUserAMUsed.get(userName);
+        amUsed = (userSpecificAmUsed == null)
+            ? Resources.none() : userSpecificAmUsed;
+
         TempUserPerPartition tmpUser = new TempUserPerPartition(
             tq.leafQueue.getUser(userName), tq.queueName,
             Resources.clone(userResourceUsage.getUsed(partition)),
-            Resources.clone(perUserAMUsed.get(userName)),
+            Resources.clone(userSpecificAmUsed),
             Resources.clone(userResourceUsage.getReserved(partition)),
             Resources.none());
 
@@ -547,15 +559,17 @@ public class FifoIntraQueuePreemptionPlugin
     Collection<FiCaSchedulerApp> runningApps = leafQueue.getApplications();
     Resource amUsed = Resources.createResource(0, 0);
 
-    for (FiCaSchedulerApp app : runningApps) {
-      Resource userAMResource = perUserAMUsed.get(app.getUser());
-      if (null == userAMResource) {
-        userAMResource = Resources.createResource(0, 0);
-        perUserAMUsed.put(app.getUser(), userAMResource);
-      }
+    synchronized (leafQueue) {
+      for (FiCaSchedulerApp app : runningApps) {
+        Resource userAMResource = perUserAMUsed.get(app.getUser());
+        if (null == userAMResource) {
+          userAMResource = Resources.createResource(0, 0);
+          perUserAMUsed.put(app.getUser(), userAMResource);
+        }
 
-      Resources.addTo(userAMResource, app.getAMResource(partition));
-      Resources.addTo(amUsed, app.getAMResource(partition));
+        Resources.addTo(userAMResource, app.getAMResource(partition));
+        Resources.addTo(amUsed, app.getAMResource(partition));
+      }
     }
 
     return amUsed;

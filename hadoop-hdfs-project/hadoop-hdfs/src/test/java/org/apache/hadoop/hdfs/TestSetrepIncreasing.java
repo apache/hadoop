@@ -110,13 +110,13 @@ public class TestSetrepIncreasing {
   public void testSetRepOnECFile() throws Exception {
     ClientProtocol client;
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-        StripedFileTestUtil.getDefaultECPolicy().getName());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .build();
     cluster.waitActive();
     client = NameNodeProxies.createProxy(conf,
         cluster.getFileSystem(0).getUri(), ClientProtocol.class).getProxy();
+    client.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     client.setErasureCodingPolicy("/",
         StripedFileTestUtil.getDefaultECPolicy().getName());
 

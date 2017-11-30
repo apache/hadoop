@@ -23,14 +23,15 @@ import java.util.List;
 
 import org.junit.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.IdentityHashStore;
 import org.apache.hadoop.util.IdentityHashStore.Visitor;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestIdentityHashStore {
-  private static final Log LOG = LogFactory.getLog(TestIdentityHashStore.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestIdentityHashStore.class.getName());
 
   private static class Key {
     private final String name;

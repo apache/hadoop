@@ -25,14 +25,13 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
 import org.junit.Test;
 
@@ -45,88 +44,130 @@ import org.junit.Test;
  */
 public class TestCorruptReplicaInfo {
   
-  private static final Log LOG = 
-                           LogFactory.getLog(TestCorruptReplicaInfo.class);
-  
-  private final Map<Long, Block> block_map =
-    new HashMap<Long, Block>();  
-    
-  // Allow easy block creation by block id
-  // Return existing block if one with same block id already exists
-  private Block getBlock(Long block_id) {
-    if (!block_map.containsKey(block_id)) {
-      block_map.put(block_id, new Block(block_id,0,0));
+  private static final Log LOG = LogFactory.getLog(
+      TestCorruptReplicaInfo.class);
+  private final Map<Long, Block> replicaMap = new HashMap<>();
+  private final Map<Long, Block> stripedBlocksMap = new HashMap<>();
+
+  // Allow easy block creation by block id. Return existing
+  // replica block if one with same block id already exists.
+  private Block getReplica(Long blockId) {
+    if (!replicaMap.containsKey(blockId)) {
+      replicaMap.put(blockId, new Block(blockId, 0, 0));
     }
-    
-    return block_map.get(block_id);
+    return replicaMap.get(blockId);
   }
-  
-  private Block getBlock(int block_id) {
-    return getBlock((long)block_id);
+
+  private Block getReplica(int blkId) {
+    return getReplica(Long.valueOf(blkId));
+  }
+
+  private Block getStripedBlock(int blkId) {
+    Long stripedBlockId = (1L << 63) + blkId;
+    assertTrue(BlockIdManager.isStripedBlockID(stripedBlockId));
+    if (!stripedBlocksMap.containsKey(stripedBlockId)) {
+      stripedBlocksMap.put(stripedBlockId, new Block(stripedBlockId, 1024, 0));
+    }
+    return stripedBlocksMap.get(stripedBlockId);
+  }
+
+  private void verifyCorruptBlocksCount(CorruptReplicasMap corruptReplicasMap,
+      long expectedReplicaCount, long expectedStripedBlockCount) {
+    long totalExpectedCorruptBlocks = expectedReplicaCount +
+        expectedStripedBlockCount;
+    assertEquals("Unexpected total corrupt blocks count!",
+        totalExpectedCorruptBlocks, corruptReplicasMap.size());
+    assertEquals("Unexpected replica blocks count!",
+        expectedReplicaCount, corruptReplicasMap.getCorruptBlocks());
+    assertEquals("Unexpected striped blocks count!",
+        expectedStripedBlockCount,
+        corruptReplicasMap.getCorruptECBlockGroups());
   }
   
   @Test
-  public void testCorruptReplicaInfo() throws IOException, 
-                                       InterruptedException {
-    
-      CorruptReplicasMap crm = new CorruptReplicasMap();
-      
-      // Make sure initial values are returned correctly
-      assertEquals("Number of corrupt blocks must initially be 0", 0, crm.size());
-      assertNull("Param n cannot be less than 0", crm.getCorruptReplicaBlockIdsForTesting(-1, null));
-      assertNull("Param n cannot be greater than 100", crm.getCorruptReplicaBlockIdsForTesting(101, null));
-      long[] l = crm.getCorruptReplicaBlockIdsForTesting(0, null);
-      assertNotNull("n = 0 must return non-null", l);
-      assertEquals("n = 0 must return an empty list", 0, l.length);
+  public void testCorruptReplicaInfo()
+      throws IOException, InterruptedException {
+    CorruptReplicasMap crm = new CorruptReplicasMap();
 
-      // create a list of block_ids. A list is used to allow easy validation of the
-      // output of getCorruptReplicaBlockIds
-      int NUM_BLOCK_IDS = 140;
-      List<Long> block_ids = new LinkedList<Long>();
-      for (int i=0;i<NUM_BLOCK_IDS;i++) {
-        block_ids.add((long)i);
-      }
-      
-      DatanodeDescriptor dn1 = DFSTestUtil.getLocalDatanodeDescriptor();
-      DatanodeDescriptor dn2 = DFSTestUtil.getLocalDatanodeDescriptor();
-      
-      addToCorruptReplicasMap(crm, getBlock(0), dn1);
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   1, crm.size());
-      addToCorruptReplicasMap(crm, getBlock(1), dn1);
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   2, crm.size());
-      
-      addToCorruptReplicasMap(crm, getBlock(1), dn2);
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   2, crm.size());
-      
-      crm.removeFromCorruptReplicasMap(getBlock(1));
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   1, crm.size());
-      
-      crm.removeFromCorruptReplicasMap(getBlock(0));
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   0, crm.size());
-      
-      for (Long block_id: block_ids) {
-        addToCorruptReplicasMap(crm, getBlock(block_id), dn1);
-      }
-            
-      assertEquals("Number of corrupt blocks not returning correctly",
-                   NUM_BLOCK_IDS, crm.size());
-      
-      assertTrue("First five block ids not returned correctly ",
-                Arrays.equals(new long[]{0,1,2,3,4},
-                              crm.getCorruptReplicaBlockIdsForTesting(5, null)));
-                              
-      LOG.info(crm.getCorruptReplicaBlockIdsForTesting(10, 7L));
-      LOG.info(block_ids.subList(7, 18));
+    // Make sure initial values are returned correctly
+    assertEquals("Total number of corrupt blocks must initially be 0!",
+        0, crm.size());
+    assertEquals("Number of corrupt replicas must initially be 0!",
+        0, crm.getCorruptBlocks());
+    assertEquals("Number of corrupt striped block groups must initially be 0!",
+        0, crm.getCorruptECBlockGroups());
+    assertNull("Param n cannot be less than 0",
+        crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, -1, null));
+    assertNull("Param n cannot be greater than 100",
+        crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 101, null));
+    long[] l = crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 0, null);
+    assertNotNull("n = 0 must return non-null", l);
+    assertEquals("n = 0 must return an empty list", 0, l.length);
 
-      assertTrue("10 blocks after 7 not returned correctly ",
-                Arrays.equals(new long[]{8,9,10,11,12,13,14,15,16,17},
-                              crm.getCorruptReplicaBlockIdsForTesting(10, 7L)));
-      
+    // Create a list of block ids. A list is used to allow easy
+    // validation of the output of getCorruptReplicaBlockIds.
+    final int blockCount = 140;
+    long[] replicaIds = new long[blockCount];
+    long[] stripedIds = new long[blockCount];
+    for (int i = 0; i < blockCount; i++) {
+      replicaIds[i] = getReplica(i).getBlockId();
+      stripedIds[i] = getStripedBlock(i).getBlockId();
+    }
+
+    DatanodeDescriptor dn1 = DFSTestUtil.getLocalDatanodeDescriptor();
+    DatanodeDescriptor dn2 = DFSTestUtil.getLocalDatanodeDescriptor();
+
+    // Add to corrupt blocks map.
+    // Replicas
+    addToCorruptReplicasMap(crm, getReplica(0), dn1);
+    verifyCorruptBlocksCount(crm, 1, 0);
+    addToCorruptReplicasMap(crm, getReplica(1), dn1);
+    verifyCorruptBlocksCount(crm, 2, 0);
+    addToCorruptReplicasMap(crm, getReplica(1), dn2);
+    verifyCorruptBlocksCount(crm, 2, 0);
+
+    // Striped blocks
+    addToCorruptReplicasMap(crm, getStripedBlock(0), dn1);
+    verifyCorruptBlocksCount(crm, 2, 1);
+    addToCorruptReplicasMap(crm, getStripedBlock(1), dn1);
+    verifyCorruptBlocksCount(crm, 2, 2);
+    addToCorruptReplicasMap(crm, getStripedBlock(1), dn2);
+    verifyCorruptBlocksCount(crm, 2, 2);
+
+    // Remove from corrupt blocks map.
+    // Replicas
+    crm.removeFromCorruptReplicasMap(getReplica(1));
+    verifyCorruptBlocksCount(crm, 1, 2);
+    crm.removeFromCorruptReplicasMap(getReplica(0));
+    verifyCorruptBlocksCount(crm, 0, 2);
+
+    // Striped blocks
+    crm.removeFromCorruptReplicasMap(getStripedBlock(1));
+    verifyCorruptBlocksCount(crm, 0, 1);
+    crm.removeFromCorruptReplicasMap(getStripedBlock(0));
+    verifyCorruptBlocksCount(crm, 0, 0);
+
+    for (int blockId = 0; blockId  < blockCount; blockId++) {
+      addToCorruptReplicasMap(crm, getReplica(blockId), dn1);
+      addToCorruptReplicasMap(crm, getStripedBlock(blockId), dn1);
+    }
+
+    assertEquals("Number of corrupt blocks not returning correctly",
+        2 * blockCount, crm.size());
+    assertTrue("First five corrupt replica blocks ids are not right!",
+        Arrays.equals(Arrays.copyOfRange(replicaIds, 0, 5),
+            crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 5, null)));
+    assertTrue("First five corrupt striped blocks ids are not right!",
+        Arrays.equals(Arrays.copyOfRange(stripedIds, 0, 5),
+            crm.getCorruptBlockIdsForTesting(BlockType.STRIPED, 5, null)));
+
+    assertTrue("10 replica blocks after 7 not returned correctly!",
+        Arrays.equals(Arrays.copyOfRange(replicaIds, 7, 17),
+            crm.getCorruptBlockIdsForTesting(BlockType.CONTIGUOUS, 10, 7L)));
+    assertTrue("10 striped blocks after 7 not returned correctly!",
+        Arrays.equals(Arrays.copyOfRange(stripedIds, 7, 17),
+            crm.getCorruptBlockIdsForTesting(BlockType.STRIPED,
+                10, getStripedBlock(7).getBlockId())));
   }
   
   private static void addToCorruptReplicasMap(CorruptReplicasMap crm,

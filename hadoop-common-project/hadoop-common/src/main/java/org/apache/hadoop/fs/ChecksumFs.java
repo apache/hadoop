@@ -27,14 +27,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract Checksumed Fs.
@@ -110,8 +110,8 @@ public abstract class ChecksumFs extends FilterFs {
    * It verifies that data matches checksums.
    *******************************************************/
   private static class ChecksumFSInputChecker extends FSInputChecker {
-    public static final Log LOG 
-      = LogFactory.getLog(FSInputChecker.class);
+    public static final Logger LOG =
+        LoggerFactory.getLogger(FSInputChecker.class);
     private static final int HEADER_LENGTH = 8;
     
     private ChecksumFs fs;

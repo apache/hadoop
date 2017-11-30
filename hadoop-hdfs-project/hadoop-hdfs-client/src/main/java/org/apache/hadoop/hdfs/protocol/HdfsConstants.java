@@ -48,8 +48,8 @@ public final class HdfsConstants {
   public static final byte COLD_STORAGE_POLICY_ID = 2;
   public static final String COLD_STORAGE_POLICY_NAME = "COLD";
 
-  // TODO should be conf injected?
-  public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
+  public static final int DEFAULT_DATA_SOCKET_SIZE = 0;
+
   /**
    * A special path component contained in the path for a snapshot file/dir
    */
@@ -58,6 +58,10 @@ public final class HdfsConstants {
           = Path.SEPARATOR + DOT_SNAPSHOT_DIR;
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR_SEPARATOR
       = Path.SEPARATOR + DOT_SNAPSHOT_DIR + Path.SEPARATOR;
+  public final static String DOT_RESERVED_STRING = ".reserved";
+  public final static String DOT_RESERVED_PATH_PREFIX = Path.SEPARATOR
+      + DOT_RESERVED_STRING;
+  public final static String DOT_INODES_STRING = ".inodes";
 
   /**
    * Generation stamp of blocks that pre-date the introduction
@@ -142,6 +146,13 @@ public final class HdfsConstants {
   // type of the datanode report
   public enum DatanodeReportType {
     ALL, LIVE, DEAD, DECOMMISSIONING, ENTERING_MAINTENANCE, IN_MAINTENANCE
+  }
+
+  /**
+   * Re-encrypt encryption zone actions.
+   */
+  public enum ReencryptAction {
+    CANCEL, START
   }
 
   /* Hidden constructor */

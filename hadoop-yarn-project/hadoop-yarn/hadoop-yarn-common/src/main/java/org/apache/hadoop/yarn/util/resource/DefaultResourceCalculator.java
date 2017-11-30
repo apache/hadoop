@@ -67,6 +67,12 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
+  public Resource divideAndCeil(Resource numerator, float denominator) {
+    return Resources.createResource(
+        divideAndCeil(numerator.getMemorySize(), denominator));
+  }
+
+  @Override
   public Resource normalize(Resource r, Resource minimumResource,
       Resource maximumResource, Resource stepFactor) {
     if (stepFactor.getMemorySize() == 0) {
@@ -117,8 +123,7 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean fitsIn(Resource cluster,
-      Resource smaller, Resource bigger) {
+  public boolean fitsIn(Resource smaller, Resource bigger) {
     return smaller.getMemorySize() <= bigger.getMemorySize();
   }
 

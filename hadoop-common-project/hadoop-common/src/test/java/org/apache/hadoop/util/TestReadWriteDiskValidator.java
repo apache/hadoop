@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -125,7 +126,7 @@ public class TestReadWriteDiskValidator {
       readWriteDiskValidator.checkStatus(testDir);
       fail("Disk check should fail.");
     } catch (DiskErrorException e) {
-      assertTrue(e.getMessage().equals("Disk Check failed!"));
+      assertEquals("Disk Check failed!", e.getMessage());
     }
 
     MetricsSource source = ms.getSource(
@@ -137,7 +138,7 @@ public class TestReadWriteDiskValidator {
       readWriteDiskValidator.checkStatus(testDir);
       fail("Disk check should fail.");
     } catch (DiskErrorException e) {
-      assertTrue(e.getMessage().equals("Disk Check failed!"));
+      assertEquals("Disk Check failed!", e.getMessage());
     }
 
     source.getMetrics(collector, true);

@@ -298,10 +298,10 @@ public class TestMRTimelineEventHandling {
         " does not exist.",
         jobEventFile.exists());
     verifyEntity(jobEventFile, EventType.JOB_FINISHED.name(),
-        true, false, null);
+        true, false, null, false);
     Set<String> cfgsToCheck = Sets.newHashSet("dummy_conf1", "dummy_conf2",
         "huge_dummy_conf1", "huge_dummy_conf2");
-    verifyEntity(jobEventFile, null, false, true, cfgsToCheck);
+    verifyEntity(jobEventFile, null, false, true, cfgsToCheck, false);
 
     // for this test, we expect MR job metrics are published in YARN_APPLICATION
     String outputAppDir =
@@ -322,8 +322,8 @@ public class TestMRTimelineEventHandling {
         "appEventFilePath: " + appEventFilePath +
         " does not exist.",
         appEventFile.exists());
-    verifyEntity(appEventFile, null, true, false, null);
-    verifyEntity(appEventFile, null, false, true, cfgsToCheck);
+    verifyEntity(appEventFile, null, true, false, null, false);
+    verifyEntity(appEventFile, null, false, true, cfgsToCheck, false);
 
     // check for task event file
     String outputDirTask =
@@ -344,7 +344,7 @@ public class TestMRTimelineEventHandling {
         " does not exist.",
         taskEventFile.exists());
     verifyEntity(taskEventFile, EventType.TASK_FINISHED.name(),
-        true, false, null);
+        true, false, null, true);
 
     // check for task attempt event file
     String outputDirTaskAttempt =
@@ -363,7 +363,7 @@ public class TestMRTimelineEventHandling {
     Assert.assertTrue("taskAttemptEventFileName: " + taskAttemptEventFilePath +
         " does not exist.", taskAttemptEventFile.exists());
     verifyEntity(taskAttemptEventFile, EventType.MAP_ATTEMPT_FINISHED.name(),
-        true, false, null);
+        true, false, null, true);
   }
 
   /**
@@ -380,12 +380,13 @@ public class TestMRTimelineEventHandling {
    * @throws IOException
    */
   private void verifyEntity(File entityFile, String eventId,
-      boolean chkMetrics, boolean chkCfg, Set<String> cfgsToVerify)
-      throws IOException {
+      boolean chkMetrics, boolean chkCfg, Set<String> cfgsToVerify,
+      boolean checkIdPrefix) throws IOException {
     BufferedReader reader = null;
     String strLine;
     try {
       reader = new BufferedReader(new FileReader(entityFile));
+      long idPrefix = -1;
       while ((strLine = reader.readLine()) != null) {
         if (strLine.trim().length() > 0) {
           org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
@@ -394,6 +395,19 @@ public class TestMRTimelineEventHandling {
                       strLine.trim(),
                       org.apache.hadoop.yarn.api.records.timelineservice.
                           TimelineEntity.class);
+
+          LOG.info("strLine.trim()= " + strLine.trim());
+          if (checkIdPrefix) {
+            Assert.assertTrue("Entity ID prefix expected to be > 0",
+                entity.getIdPrefix() > 0);
+            if (idPrefix == -1) {
+              idPrefix = entity.getIdPrefix();
+            } else {
+              Assert.assertEquals("Entity ID prefix should be same across " +
+                  "each publish of same entity",
+                      idPrefix, entity.getIdPrefix());
+            }
+          }
           if (eventId == null) {
             // Job metrics are published without any events for
             // ApplicationEntity. There is also possibility that some other

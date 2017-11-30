@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.PathExistsException;
-import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
+import org.apache.hadoop.fs.shell.CopyCommands.Put;
 
 /** Various commands for moving files */
 @InterfaceAudience.Private
@@ -41,7 +41,7 @@ class MoveCommands {
   /**
    *  Move local files to a remote filesystem
    */
-  public static class MoveFromLocal extends CopyFromLocal {
+  public static class MoveFromLocal extends Put {
     public static final String NAME = "moveFromLocal";
     public static final String USAGE = "<localsrc> ... <dst>";
     public static final String DESCRIPTION = 

@@ -28,11 +28,11 @@ import java.net.InetAddress;
 import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.Time;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.CoreMatchers.not;
@@ -44,7 +44,7 @@ import static org.junit.Assert.*;
  */
 public class TestDNS {
 
-  private static final Log LOG = LogFactory.getLog(TestDNS.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDNS.class);
   private static final String DEFAULT = "default";
 
   // This is not a legal hostname (starts with a hyphen). It will never

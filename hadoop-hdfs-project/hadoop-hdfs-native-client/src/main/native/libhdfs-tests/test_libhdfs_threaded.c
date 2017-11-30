@@ -17,8 +17,11 @@
  */
 
 #include "expect.h"
+#include "exception.h"
 #include "hdfs/hdfs.h"
+#include "jni_helper.h"
 #include "native_mini_dfs.h"
+#include "os/mutexes.h"
 #include "os/thread.h"
 
 #include <errno.h>
@@ -329,6 +332,23 @@ static int checkFailures(struct tlhThreadInfo *ti, int tlhNumThreads)
     return EXIT_FAILURE;
 }
 
+int testRecursiveJvmMutex() {
+    jthrowable jthr;
+    JNIEnv *env = getJNIEnv();
+    if (!env) {
+        fprintf(stderr, "testRecursiveJvmMutex: getJNIEnv failed\n");
+        return -EIO;
+    }
+    jthr = newRuntimeError(env, "Dummy error to print for testing");
+
+    /* printExceptionAndFree() takes the jvmMutex within */
+    mutexLock(&jvmMutex);
+    printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "testRecursiveJvmMutex");
+    mutexUnlock(&jvmMutex);
+
+    return 0;
+}
+
 /**
  * Test that we can write a file with libhdfs and then read it back
  */
@@ -340,6 +360,12 @@ int main(void)
     struct NativeMiniDfsConf conf = {
         1, /* doFormat */
     };
+
+    /* Check that the recursive mutex works as expected */
+    if (testRecursiveJvmMutex() < 0) {
+        fprintf(stderr, "testRecursiveJvmMutex failed\n");
+        return EXIT_FAILURE;
+    }
 
     tlhNumThreadsStr = getenv("TLH_NUM_THREADS");
     if (!tlhNumThreadsStr) {

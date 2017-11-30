@@ -387,6 +387,8 @@ class DataXceiver extends Receiver implements Runnable {
       } catch (IOException e) {
         bld.setStatus(ERROR);
         bld.setMessage(e.getMessage());
+        LOG.error("Request short-circuit read file descriptor" +
+            " failed with unknown error.", e);
       }
       bld.build().writeDelimitedTo(socketOut);
       if (fis != null) {
@@ -695,11 +697,18 @@ class DataXceiver extends Receiver implements Runnable {
     if (targetStorageTypes.length > 0) {
       System.arraycopy(targetStorageTypes, 0, storageTypes, 1, nst);
     }
-    int nsi = targetStorageIds.length;
-    String[] storageIds = new String[nsi + 1];
-    storageIds[0] = storageId;
-    if (targetStorageTypes.length > 0) {
-      System.arraycopy(targetStorageIds, 0, storageIds, 1, nsi);
+
+    // To support older clients, we don't pass in empty storageIds
+    final int nsi = targetStorageIds.length;
+    final String[] storageIds;
+    if (nsi > 0) {
+      storageIds = new String[nsi + 1];
+      storageIds[0] = storageId;
+      if (targetStorageTypes.length > 0) {
+        System.arraycopy(targetStorageIds, 0, storageIds, 1, nsi);
+      }
+    } else {
+      storageIds = new String[0];
     }
     checkAccess(replyOut, isClient, block, blockToken, Op.WRITE_BLOCK,
         BlockTokenIdentifier.AccessMode.WRITE,
@@ -804,20 +813,25 @@ class DataXceiver extends Receiver implements Runnable {
               smallBufferSize));
           mirrorIn = new DataInputStream(unbufMirrorIn);
 
+          String targetStorageId = null;
+          if (targetStorageIds.length > 0) {
+            // Older clients may not have provided any targetStorageIds
+            targetStorageId = targetStorageIds[0];
+          }
           if (targetPinnings != null && targetPinnings.length > 0) {
             new Sender(mirrorOut).writeBlock(originalBlock, targetStorageTypes[0],
                 blockToken, clientname, targets, targetStorageTypes,
                 srcDataNode, stage, pipelineSize, minBytesRcvd, maxBytesRcvd,
                 latestGenerationStamp, requestedChecksum, cachingStrategy,
                 allowLazyPersist, targetPinnings[0], targetPinnings,
-                targetStorageIds[0], targetStorageIds);
+                targetStorageId, targetStorageIds);
           } else {
             new Sender(mirrorOut).writeBlock(originalBlock, targetStorageTypes[0],
                 blockToken, clientname, targets, targetStorageTypes,
                 srcDataNode, stage, pipelineSize, minBytesRcvd, maxBytesRcvd,
                 latestGenerationStamp, requestedChecksum, cachingStrategy,
                 allowLazyPersist, false, targetPinnings,
-                targetStorageIds[0], targetStorageIds);
+                targetStorageId, targetStorageIds);
           }
 
           mirrorOut.flush();

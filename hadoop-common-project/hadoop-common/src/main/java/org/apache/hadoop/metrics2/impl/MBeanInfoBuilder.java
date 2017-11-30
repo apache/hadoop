@@ -106,7 +106,7 @@ class MBeanInfoBuilder implements MetricsVisitor {
       }
       ++curRecNo;
     }
-    MetricsSystemImpl.LOG.debug(attrs);
+    MetricsSystemImpl.LOG.debug(attrs.toString());
     MBeanAttributeInfo[] attrsArray = new MBeanAttributeInfo[attrs.size()];
     return new MBeanInfo(name, description, attrs.toArray(attrsArray),
                          null, null, null); // no ops/ctors/notifications

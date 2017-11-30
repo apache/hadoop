@@ -43,12 +43,12 @@ public class FifoCandidatesSelector
       LogFactory.getLog(FifoCandidatesSelector.class);
   private PreemptableResourceCalculator preemptableAmountCalculator;
 
-  FifoCandidatesSelector(
-      CapacitySchedulerPreemptionContext preemptionContext) {
+  FifoCandidatesSelector(CapacitySchedulerPreemptionContext preemptionContext,
+      boolean includeReservedResource) {
     super(preemptionContext);
 
     preemptableAmountCalculator = new PreemptableResourceCalculator(
-        preemptionContext, false);
+        preemptionContext, includeReservedResource);
   }
 
   @Override

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyFloat;
 import static org.mockito.Matchers.anyInt;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,8 +48,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -110,6 +111,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.client.api.TimelineV2Client;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -121,6 +123,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -140,6 +143,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
 import org.junit.Assert;
@@ -148,12 +152,14 @@ import org.junit.Test;
 
 import com.google.common.base.Supplier;
 import org.mockito.InOrder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unchecked")
 public class TestRMContainerAllocator {
 
-  static final Log LOG = LogFactory
-      .getLog(TestRMContainerAllocator.class);
+  static final Logger LOG = LoggerFactory
+      .getLogger(TestRMContainerAllocator.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
@@ -329,8 +335,7 @@ public class TestRMContainerAllocator {
     for(TaskAttemptContainerAssignedEvent event : assigned) {
       if(event.getTaskAttemptID().equals(event3.getAttemptID())) {
         assigned.remove(event);
-        Assert.assertTrue(
-                    event.getContainer().getNodeId().getHost().equals("h3"));
+        Assert.assertEquals("h3", event.getContainer().getNodeId().getHost());
         break;
       }
     }
@@ -747,6 +752,96 @@ public class TestRMContainerAllocator {
       Assert.fail("Invalid resource location "
           + resourceRequest.getResourceName());
     }
+  }
+
+  @Test
+  public void testUpdateCollectorInfo() throws Exception {
+    LOG.info("Running testUpdateCollectorInfo");
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+    JobId jobId = MRBuilderUtils.newJobId(appId, 0);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
+    String localAddr = "localhost:1234";
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    // Generate a timeline delegation token.
+    TimelineDelegationTokenIdentifier ident =
+        new TimelineDelegationTokenIdentifier(new Text(ugi.getUserName()),
+        new Text("renewer"), null);
+    ident.setSequenceNumber(1);
+    Token<TimelineDelegationTokenIdentifier> collectorToken =
+        new Token<TimelineDelegationTokenIdentifier>(ident.getBytes(),
+        new byte[0], TimelineDelegationTokenIdentifier.KIND_NAME,
+        new Text(localAddr));
+    org.apache.hadoop.yarn.api.records.Token token =
+        org.apache.hadoop.yarn.api.records.Token.newInstance(
+            collectorToken.getIdentifier(), collectorToken.getKind().toString(),
+            collectorToken.getPassword(),
+            collectorToken.getService().toString());
+    CollectorInfo collectorInfo = CollectorInfo.newInstance(localAddr, token);
+    // Mock scheduler to server Allocate request.
+    final MockSchedulerForTimelineCollector mockScheduler =
+        new MockSchedulerForTimelineCollector(collectorInfo);
+    MyContainerAllocator allocator =
+        new MyContainerAllocator(null, conf, attemptId, mockJob,
+            SystemClock.getInstance()) {
+          @Override
+          protected void register() {
+          }
+
+          @Override
+          protected ApplicationMasterProtocol createSchedulerProxy() {
+            return mockScheduler;
+          }
+        };
+    // Initially UGI should have no tokens.
+    ArrayList<Token<? extends TokenIdentifier>> tokens =
+        new ArrayList<>(ugi.getTokens());
+    assertEquals(0, tokens.size());
+    TimelineV2Client client = spy(TimelineV2Client.createTimelineClient(appId));
+    client.init(conf);
+    when(((RunningAppContext)allocator.getContext()).getTimelineV2Client()).
+        thenReturn(client);
+
+    // Send allocate request to RM and fetch collector address and token.
+    allocator.schedule();
+    verify(client).setTimelineCollectorInfo(collectorInfo);
+    // Verify if token has been updated in UGI.
+    tokens = new ArrayList<>(ugi.getTokens());
+    assertEquals(1, tokens.size());
+    assertEquals(TimelineDelegationTokenIdentifier.KIND_NAME,
+        tokens.get(0).getKind());
+    assertEquals(collectorToken.decodeIdentifier(),
+        tokens.get(0).decodeIdentifier());
+
+    // Generate new collector token, send allocate request to RM and fetch the
+    // new token.
+    ident.setSequenceNumber(100);
+    Token<TimelineDelegationTokenIdentifier> collectorToken1 =
+        new Token<TimelineDelegationTokenIdentifier>(ident.getBytes(),
+        new byte[0], TimelineDelegationTokenIdentifier.KIND_NAME,
+        new Text(localAddr));
+    token = org.apache.hadoop.yarn.api.records.Token.newInstance(
+        collectorToken1.getIdentifier(), collectorToken1.getKind().toString(),
+        collectorToken1.getPassword(), collectorToken1.getService().toString());
+    collectorInfo = CollectorInfo.newInstance(localAddr, token);
+    mockScheduler.updateCollectorInfo(collectorInfo);
+    allocator.schedule();
+    verify(client).setTimelineCollectorInfo(collectorInfo);
+    // Verify if new token has been updated in UGI.
+    tokens = new ArrayList<>(ugi.getTokens());
+    assertEquals(1, tokens.size());
+    assertEquals(TimelineDelegationTokenIdentifier.KIND_NAME,
+        tokens.get(0).getKind());
+    assertEquals(collectorToken1.decodeIdentifier(),
+        tokens.get(0).decodeIdentifier());
+    allocator.close();
   }
 
   @Test
@@ -2414,10 +2509,7 @@ public class TestRMContainerAllocator {
     conf.setInt(
         MRJobConfig.MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERECENT, -1);
 
-    MemoryRMStateStore memStore = new MemoryRMStateStore();
-    memStore.init(conf);
-
-    MyResourceManager rm1 = new MyResourceManager(conf, memStore);
+    MyResourceManager rm1 = new MyResourceManager(conf);
     rm1.start();
 
     // Submit the application
@@ -2504,7 +2596,7 @@ public class TestRMContainerAllocator {
     assertBlacklistAdditionsAndRemovals(0, 0, rm1);
 
     // Phase-2 start 2nd RM is up
-    MyResourceManager rm2 = new MyResourceManager(conf, memStore);
+    MyResourceManager rm2 = new MyResourceManager(conf, rm1.getRMStateStore());
     rm2.start();
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     allocator.updateSchedulerProxy(rm2);
@@ -2782,14 +2874,77 @@ public class TestRMContainerAllocator {
   }
 
   @Test
+  public void testConcurrentTaskLimitsDisabledIfSmaller() throws Exception {
+    final int MAP_COUNT = 1;
+    final int REDUCE_COUNT = 1;
+    final int MAP_LIMIT = 1;
+    final int REDUCE_LIMIT = 1;
+    Configuration conf = new Configuration();
+    conf.setInt(MRJobConfig.JOB_RUNNING_MAP_LIMIT, MAP_LIMIT);
+    conf.setInt(MRJobConfig.JOB_RUNNING_REDUCE_LIMIT, REDUCE_LIMIT);
+    conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 0.0f);
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
+    when(mockJob.getTotalMaps()).thenReturn(MAP_COUNT);
+    when(mockJob.getTotalReduces()).thenReturn(REDUCE_COUNT);
+
+    final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
+    MyContainerAllocator allocator =
+        new MyContainerAllocator(null, conf, appAttemptId, mockJob,
+            SystemClock.getInstance()) {
+          @Override
+          protected void register() {
+          }
+
+          @Override
+          protected ApplicationMasterProtocol createSchedulerProxy() {
+            return mockScheduler;
+          }
+
+          @Override
+          protected void setRequestLimit(Priority priority,
+              Resource capability, int limit) {
+            Assert.fail("setRequestLimit() should not be invoked");
+          }
+        };
+
+    // create some map requests
+    ContainerRequestEvent[] reqMapEvents = new ContainerRequestEvent[MAP_COUNT];
+    for (int i = 0; i < reqMapEvents.length; ++i) {
+      reqMapEvents[i] = createReq(jobId, i, 1024, new String[] { "h" + i });
+    }
+    allocator.sendRequests(Arrays.asList(reqMapEvents));
+    // create some reduce requests
+    ContainerRequestEvent[] reqReduceEvents =
+        new ContainerRequestEvent[REDUCE_COUNT];
+    for (int i = 0; i < reqReduceEvents.length; ++i) {
+      reqReduceEvents[i] =
+          createReq(jobId, i, 1024, new String[] {}, false, true);
+    }
+    allocator.sendRequests(Arrays.asList(reqReduceEvents));
+    allocator.schedule();
+    allocator.schedule();
+    allocator.schedule();
+    allocator.close();
+  }
+
+  @Test
   public void testConcurrentTaskLimits() throws Exception {
+    final int MAP_COUNT = 5;
+    final int REDUCE_COUNT = 2;
     final int MAP_LIMIT = 3;
     final int REDUCE_LIMIT = 1;
     LOG.info("Running testConcurrentTaskLimits");
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.JOB_RUNNING_MAP_LIMIT, MAP_LIMIT);
     conf.setInt(MRJobConfig.JOB_RUNNING_REDUCE_LIMIT, REDUCE_LIMIT);
-    conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 1.0f);
+    conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 0.0f);
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         appId, 1);
@@ -2798,6 +2953,9 @@ public class TestRMContainerAllocator {
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
             0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
+    when(mockJob.getTotalMaps()).thenReturn(MAP_COUNT);
+    when(mockJob.getTotalReduces()).thenReturn(REDUCE_COUNT);
+
     final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
     MyContainerAllocator allocator = new MyContainerAllocator(null, conf,
         appAttemptId, mockJob, SystemClock.getInstance()) {
@@ -2812,14 +2970,13 @@ public class TestRMContainerAllocator {
     };
 
     // create some map requests
-    ContainerRequestEvent[] reqMapEvents = new ContainerRequestEvent[5];
+    ContainerRequestEvent[] reqMapEvents = new ContainerRequestEvent[MAP_COUNT];
     for (int i = 0; i < reqMapEvents.length; ++i) {
       reqMapEvents[i] = createReq(jobId, i, 1024, new String[] { "h" + i });
     }
     allocator.sendRequests(Arrays.asList(reqMapEvents));
-
     // create some reduce requests
-    ContainerRequestEvent[] reqReduceEvents = new ContainerRequestEvent[2];
+    ContainerRequestEvent[] reqReduceEvents = new ContainerRequestEvent[REDUCE_COUNT];
     for (int i = 0; i < reqReduceEvents.length; ++i) {
       reqReduceEvents[i] = createReq(jobId, i, 1024, new String[] {},
           false, true);
@@ -3424,6 +3581,46 @@ public class TestRMContainerAllocator {
     public void completeContainer(ContainerId containerId) {
       containersToComplete.add(ContainerStatus.newInstance(containerId,
           ContainerState.COMPLETE, "", 0));
+    }
+  }
+
+  private final static class MockSchedulerForTimelineCollector
+      implements ApplicationMasterProtocol {
+    private CollectorInfo collectorInfo;
+
+    private MockSchedulerForTimelineCollector(CollectorInfo info) {
+      this.collectorInfo = info;
+    }
+
+    private void updateCollectorInfo(CollectorInfo info) {
+      collectorInfo = info;
+    }
+
+    @Override
+    public RegisterApplicationMasterResponse registerApplicationMaster(
+        RegisterApplicationMasterRequest request) throws YarnException,
+        IOException {
+      return Records.newRecord(RegisterApplicationMasterResponse.class);
+    }
+
+    @Override
+    public FinishApplicationMasterResponse finishApplicationMaster(
+        FinishApplicationMasterRequest request) throws YarnException,
+        IOException {
+      return FinishApplicationMasterResponse.newInstance(false);
+    }
+
+    @Override
+    public AllocateResponse allocate(AllocateRequest request)
+        throws YarnException, IOException {
+      AllocateResponse response =  AllocateResponse.newInstance(
+          request.getResponseId(), Collections.<ContainerStatus>emptyList(),
+          Collections.<Container>emptyList(),
+          Collections.<NodeReport>emptyList(),
+          Resource.newInstance(512000, 1024), null, 10, null,
+          Collections.<NMToken>emptyList());
+      response.setCollectorInfo(collectorInfo);
+      return response;
     }
   }
 

@@ -135,4 +135,30 @@ public class TestEncryptionZoneManager {
     assertEquals(0L, result.get(0).getId());
     assertEquals("/", result.get(0).getPath());
   }
+
+  @Test
+  public void testListEncryptionZonesSubDirInvalid() throws Exception{
+    INodeDirectory thirdINode = new INodeDirectory(3L, "third".getBytes(),
+        defaultPermission, System.currentTimeMillis());
+    when(this.mockedDir.getInode(3L)).thenReturn(thirdINode);
+    //sets "second" as parent
+    thirdINode.setParent(this.secondINode);
+    this.ezManager = new EncryptionZoneManager(mockedDir, new Configuration());
+    this.ezManager.addEncryptionZone(1L, CipherSuite.AES_CTR_NOPADDING,
+        CryptoProtocolVersion.ENCRYPTION_ZONES, "test_key");
+    this.ezManager.addEncryptionZone(3L, CipherSuite.AES_CTR_NOPADDING,
+        CryptoProtocolVersion.ENCRYPTION_ZONES, "test_key");
+    // sets root as proper parent for firstINode only,
+    // leave secondINode with no parent
+    this.firstINode.setParent(rootINode);
+    when(mockedDir.getINodesInPath("/first", DirOp.READ_LINK)).
+        thenReturn(mockedINodesInPath);
+    when(mockedINodesInPath.getLastINode()).
+        thenReturn(firstINode);
+    BatchedListEntries<EncryptionZone> result = ezManager.
+        listEncryptionZones(0);
+    assertEquals(1, result.size());
+    assertEquals(1L, result.get(0).getId());
+    assertEquals("/first", result.get(0).getPath());
+  }
 }

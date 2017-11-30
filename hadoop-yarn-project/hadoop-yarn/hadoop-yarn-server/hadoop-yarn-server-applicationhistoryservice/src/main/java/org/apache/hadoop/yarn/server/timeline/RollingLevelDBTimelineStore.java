@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,8 +38,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -74,6 +73,9 @@ import org.iq80.leveldb.Options;
 import org.iq80.leveldb.ReadOptions;
 import org.iq80.leveldb.WriteBatch;
 import org.nustaq.serialization.FSTConfiguration;
+import org.nustaq.serialization.FSTClazzNameRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -166,13 +168,26 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 @InterfaceStability.Unstable
 public class RollingLevelDBTimelineStore extends AbstractService implements
     TimelineStore {
-  private static final Log LOG = LogFactory
-      .getLog(RollingLevelDBTimelineStore.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RollingLevelDBTimelineStore.class);
   private static FSTConfiguration fstConf =
       FSTConfiguration.createDefaultConfiguration();
+  // Fall back to 2.24 parsing if 2.50 parsing fails
+  private static FSTConfiguration fstConf224 =
+      FSTConfiguration.createDefaultConfiguration();
+  // Static class code for 2.24
+  private static final int LINKED_HASH_MAP_224_CODE = 83;
 
   static {
     fstConf.setShareReferences(false);
+    fstConf224.setShareReferences(false);
+    // YARN-6654 unable to find class for code 83 (LinkedHashMap)
+    // The linked hash map was changed between 2.24 and 2.50 so that
+    // the static code for LinkedHashMap (83) was changed to a dynamic
+    // code.
+    FSTClazzNameRegistry registry = fstConf224.getClassRegistry();
+    registry.registerClass(
+        LinkedHashMap.class, LINKED_HASH_MAP_224_CODE, fstConf224);
   }
 
   @Private
@@ -339,7 +354,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       deletionThread.start();
     }
     super.serviceStart();
-   }
+  }
 
   @Override
   protected void serviceStop() throws Exception {
@@ -353,9 +368,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
             + " closing db now", e);
       }
     }
-    IOUtils.cleanup(LOG, domaindb);
-    IOUtils.cleanup(LOG, starttimedb);
-    IOUtils.cleanup(LOG, ownerdb);
+    IOUtils.cleanupWithLogger(LOG, domaindb);
+    IOUtils.cleanupWithLogger(LOG, starttimedb);
+    IOUtils.cleanupWithLogger(LOG, ownerdb);
     entitydb.stop();
     indexdb.stop();
     super.serviceStop();
@@ -365,7 +380,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     private final long ttl;
     private final long ttlInterval;
 
-    public EntityDeletionThread(Configuration conf) {
+    EntityDeletionThread(Configuration conf) {
       ttl = conf.getLong(TIMELINE_SERVICE_TTL_MS,
           DEFAULT_TIMELINE_SERVICE_TTL_MS);
       ttlInterval = conf.getLong(
@@ -384,7 +399,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           discardOldEntities(timestamp);
           Thread.sleep(ttlInterval);
         } catch (IOException e) {
-          LOG.error(e);
+          LOG.error(e.toString());
         } catch (InterruptedException e) {
           LOG.info("Deletion thread received interrupt, exiting");
           break;
@@ -479,9 +494,15 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           try {
             o = fstConf.asObject(iterator.peekNext().getValue());
             entity.addOtherInfo(keyStr, o);
-          } catch (Exception e) {
-            LOG.warn("Error while decoding "
-                + entityId + ":otherInfo:" + keyStr, e);
+          } catch (Exception ignore) {
+            try {
+              // Fall back to 2.24 parser
+              o = fstConf224.asObject(iterator.peekNext().getValue());
+              entity.addOtherInfo(keyStr, o);
+            } catch (Exception e) {
+              LOG.warn("Error while decoding "
+                  + entityId + ":otherInfo:" + keyStr, e);
+            }
           }
         }
       } else if (key[prefixlen] == RELATED_ENTITIES_COLUMN[0]) {
@@ -1348,8 +1369,13 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       Object o = null;
       try {
         o = fstConf.asObject(value);
-      } catch (Exception e) {
-        LOG.warn("Error while decoding " + tstype, e);
+      } catch (Exception ignore) {
+        try {
+          // Fall back to 2.24 parser
+          o = fstConf224.asObject(value);
+        } catch (Exception e) {
+          LOG.warn("Error while decoding " + tstype, e);
+        }
       }
       if (o == null) {
         event.setEventInfo(null);
@@ -1378,8 +1404,14 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     try {
       value = fstConf.asObject(bytes);
       entity.addPrimaryFilter(name, value);
-    } catch (Exception e) {
-      LOG.warn("Error while decoding " + name, e);
+    } catch (Exception ignore) {
+      try {
+        // Fall back to 2.24 parser
+        value = fstConf224.asObject(bytes);
+        entity.addPrimaryFilter(name, value);
+      } catch (Exception e) {
+        LOG.warn("Error while decoding " + name, e);
+      }
     }
   }
 
@@ -1493,7 +1525,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
                   + ". Total start times deleted so far this cycle: "
                   + startTimesCount);
             }
-            IOUtils.cleanup(LOG, writeBatch);
+            IOUtils.cleanupWithLogger(LOG, writeBatch);
             writeBatch = starttimedb.createWriteBatch();
             batchSize = 0;
           }
@@ -1513,7 +1545,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       LOG.info("Deleted " + startTimesCount + "/" + totalCount
           + " start time entities earlier than " + minStartTime);
     } finally {
-      IOUtils.cleanup(LOG, writeBatch);
+      IOUtils.cleanupWithLogger(LOG, writeBatch);
     }
     return startTimesCount;
   }
@@ -1590,7 +1622,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       String incompatibleMessage = "Incompatible version for timeline store: "
           + "expecting version " + getCurrentVersion()
           + ", but loading version " + loadedVersion;
-      LOG.fatal(incompatibleMessage);
+      LOG.error(incompatibleMessage);
       throw new IOException(incompatibleMessage);
     }
   }

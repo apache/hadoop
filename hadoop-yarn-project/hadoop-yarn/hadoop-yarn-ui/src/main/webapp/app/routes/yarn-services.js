@@ -23,7 +23,7 @@ export default AbstractRoute.extend({
   model() {
       return Ember.RSVP.hash({
         apps: this.store.query('yarn-app', {
-          applicationTypes: "org-apache-slider"
+          applicationTypes: "yarn-service"
         }),
     });
   },

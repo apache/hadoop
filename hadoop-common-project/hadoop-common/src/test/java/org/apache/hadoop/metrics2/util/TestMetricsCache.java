@@ -25,15 +25,17 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.apache.hadoop.metrics2.lib.Interns.*;
 
 public class TestMetricsCache {
-  private static final Log LOG = LogFactory.getLog(TestMetricsCache.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMetricsCache.class);
 
   @SuppressWarnings("deprecation")
   @Test public void testUpdate() {

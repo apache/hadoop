@@ -23,7 +23,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import org.junit.Assert;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -38,7 +39,7 @@ import org.apache.hadoop.io.Text;
 
 
 @SuppressWarnings("unchecked")
-public class TestFileOutputCommitter extends TestCase {
+public class TestFileOutputCommitter {
   private static Path outDir = new Path(System.getProperty("test.build.data",
       "/tmp"), "output");
 
@@ -153,14 +154,18 @@ public class TestFileOutputCommitter extends TestCase {
     validateContent(outDir);
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
+
+  @Test
   public void testRecoveryV1() throws Exception {
     testRecoveryInternal(1, 1);
   }
 
+  @Test
   public void testRecoveryV2() throws Exception {
     testRecoveryInternal(2, 2);
   }
 
+  @Test
   public void testRecoveryUpgradeV1V2() throws Exception {
     testRecoveryInternal(1, 2);
   }
@@ -203,11 +208,13 @@ public class TestFileOutputCommitter extends TestCase {
     assert(dataFileFound && indexFileFound);
   }
 
+  @Test
   public void testCommitterWithFailureV1() throws Exception {
     testCommitterWithFailureInternal(1, 1);
     testCommitterWithFailureInternal(1, 2);
   }
 
+  @Test
   public void testCommitterWithFailureV2() throws Exception {
     testCommitterWithFailureInternal(2, 1);
     testCommitterWithFailureInternal(2, 2);
@@ -256,10 +263,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testCommitterWithDuplicatedCommitV1() throws Exception {
     testCommitterWithDuplicatedCommitInternal(1);
   }
 
+  @Test
   public void testCommitterWithDuplicatedCommitV2() throws Exception {
     testCommitterWithDuplicatedCommitInternal(2);
   }
@@ -340,10 +349,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testCommitterV1() throws Exception {
     testCommitterInternal(1);
   }
 
+  @Test
   public void testCommitterV2() throws Exception {
     testCommitterInternal(2);
   }
@@ -380,18 +391,22 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testMapFileOutputCommitterV1() throws Exception {
     testMapFileOutputCommitterInternal(1);
   }
 
+  @Test
   public void testMapFileOutputCommitterV2() throws Exception {
     testMapFileOutputCommitterInternal(2);
   }
 
+  @Test
   public void testMapOnlyNoOutputV1() throws Exception {
     testMapOnlyNoOutputInternal(1);
   }
 
+  @Test
   public void testMapOnlyNoOutputV2() throws Exception {
     testMapOnlyNoOutputInternal(2);
   }
@@ -456,10 +471,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(out);
   }
 
+  @Test
   public void testAbortV1() throws Exception {
     testAbortInternal(1);
   }
 
+  @Test
   public void testAbortV2() throws Exception {
     testAbortInternal(2);
   }
@@ -537,10 +554,12 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
   public void testFailAbortV1() throws Exception {
     testFailAbortInternal(1);
   }
 
+  @Test
   public void testFailAbortV2() throws Exception {
     testFailAbortInternal(2);
   }

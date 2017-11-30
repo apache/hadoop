@@ -18,9 +18,9 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.net.InetAddress;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -31,7 +31,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
  * Audit log format is written as key=value pairs. Tab separated.
  */
 public class NMAuditLogger {
-  private static final Log LOG = LogFactory.getLog(NMAuditLogger.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(NMAuditLogger.class);
 
   enum Keys {USER, OPERATION, TARGET, RESULT, IP,
                     DESCRIPTION, APPID, CONTAINERID}

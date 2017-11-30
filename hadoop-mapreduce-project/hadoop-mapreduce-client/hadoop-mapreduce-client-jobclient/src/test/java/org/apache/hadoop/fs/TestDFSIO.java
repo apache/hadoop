@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -294,8 +295,17 @@ public class TestDFSIO implements Tool {
                                   int nrFiles
                                 ) throws IOException {
     LOG.info("creating control file: "+nrBytes+" bytes, "+nrFiles+" files");
-
+    final int maxDirItems = config.getInt(
+        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
     Path controlDir = getControlDir(config);
+
+    if (nrFiles > maxDirItems) {
+      final String message = "The directory item limit of " + controlDir +
+          " is exceeded: limit=" + maxDirItems + " items=" + nrFiles;
+      throw new IOException(message);
+    }
+
     fs.delete(controlDir, true);
 
     for(int i=0; i < nrFiles; i++) {
@@ -310,8 +320,9 @@ public class TestDFSIO implements Tool {
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
       } finally {
-        if (writer != null)
+        if (writer != null) {
           writer.close();
+        }
         writer = null;
       }
     }
@@ -845,7 +856,7 @@ public class TestDFSIO implements Tool {
       long tStart = System.currentTimeMillis();
       sequentialTest(fs, testType, nrBytes, nrFiles);
       long execTime = System.currentTimeMillis() - tStart;
-      String resultLine = "Seq Test exec time sec: " + (float)execTime / 1000;
+      String resultLine = "Seq Test exec time sec: " + msToSecs(execTime);
       LOG.info(resultLine);
       return 0;
     }
@@ -909,13 +920,17 @@ public class TestDFSIO implements Tool {
     return ((float)bytes)/MEGA;
   }
 
+  static float msToSecs(long timeMillis) {
+    return timeMillis / 1000.0f;
+  }
+
   private boolean checkErasureCodePolicy(String erasureCodePolicyName,
       FileSystem fs, TestType testType) throws IOException {
-    Collection<ErasureCodingPolicy> list =
+    Collection<ErasureCodingPolicyInfo> list =
         ((DistributedFileSystem) fs).getAllErasureCodingPolicies();
     boolean isValid = false;
-    for (ErasureCodingPolicy ec : list) {
-      if (erasureCodePolicyName.equals(ec.getName())) {
+    for (ErasureCodingPolicyInfo ec : list) {
+      if (erasureCodePolicyName.equals(ec.getPolicy().getName())) {
         isValid = true;
         break;
       }
@@ -925,8 +940,8 @@ public class TestDFSIO implements Tool {
       System.out.println("Invalid erasure code policy: " +
           erasureCodePolicyName);
       System.out.println("Current supported erasure code policy list: ");
-      for (ErasureCodingPolicy ec : list) {
-        System.out.println(ec.getName());
+      for (ErasureCodingPolicyInfo ec : list) {
+        System.out.println(ec.getPolicy().getName());
       }
       return false;
     }
@@ -985,9 +1000,10 @@ public class TestDFSIO implements Tool {
         getConf().get(ERASURE_CODE_POLICY_NAME_KEY, null);
 
     fs.mkdirs(path);
-    Collection<ErasureCodingPolicy> list =
+    Collection<ErasureCodingPolicyInfo> list =
         ((DistributedFileSystem) fs).getAllErasureCodingPolicies();
-    for (ErasureCodingPolicy ec : list) {
+    for (ErasureCodingPolicyInfo info : list) {
+      final ErasureCodingPolicy ec = info.getPolicy();
       if (erasureCodePolicyName.equals(ec.getName())) {
         ((DistributedFileSystem) fs).setErasureCodingPolicy(path, ec.getName());
         LOG.info("enable erasureCodePolicy = " + erasureCodePolicyName  +
@@ -1041,11 +1057,10 @@ public class TestDFSIO implements Tool {
         "            Date & time: " + new Date(System.currentTimeMillis()),
         "        Number of files: " + tasks,
         " Total MBytes processed: " + df.format(toMB(size)),
-        "      Throughput mb/sec: " + df.format(size * 1000.0 / (time * MEGA)),
-        "Total Throughput mb/sec: " + df.format(toMB(size) / ((float)execTime)),
+        "      Throughput mb/sec: " + df.format(toMB(size) / msToSecs(time)),
         " Average IO rate mb/sec: " + df.format(med),
         "  IO rate std deviation: " + df.format(stdDev),
-        "     Test exec time sec: " + df.format((float)execTime / 1000),
+        "     Test exec time sec: " + df.format(msToSecs(execTime)),
         "" };
 
     PrintStream res = null;

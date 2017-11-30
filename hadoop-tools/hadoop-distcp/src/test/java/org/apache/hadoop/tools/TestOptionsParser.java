@@ -413,7 +413,7 @@ public class TestOptionsParser {
         "-f",
         "hdfs://localhost:9820/source/first",
         "hdfs://localhost:9820/target/"});
-    Assert.assertFalse(options.shouldPreserve(FileAttribute.BLOCKSIZE));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.BLOCKSIZE));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.REPLICATION));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.PERMISSION));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.USER));

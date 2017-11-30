@@ -101,6 +101,9 @@ public final class DistCpOptions {
   // content at their s1, if src is not the same as tgt.
   private final boolean useRdiff;
 
+  /** Whether to log additional info (path, size) in the SKIP/COPY log. */
+  private final boolean verboseLog;
+
   // For both -diff and -rdiff, given the example command line switches, two
   // steps are taken:
   //   1. Sync Step. This step does renaming/deletion ops in the snapshot diff,
@@ -204,6 +207,7 @@ public final class DistCpOptions {
     this.blocksPerChunk = builder.blocksPerChunk;
 
     this.copyBufferSize = builder.copyBufferSize;
+    this.verboseLog = builder.verboseLog;
   }
 
   public Path getSourceFileListing() {
@@ -323,6 +327,10 @@ public final class DistCpOptions {
     return copyBufferSize;
   }
 
+  public boolean shouldVerboseLog() {
+    return verboseLog;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -361,6 +369,8 @@ public final class DistCpOptions {
         String.valueOf(blocksPerChunk));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.COPY_BUFFER_SIZE,
         String.valueOf(copyBufferSize));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.VERBOSE_LOG,
+        String.valueOf(verboseLog));
   }
 
   /**
@@ -396,6 +406,7 @@ public final class DistCpOptions {
         ", filtersFile='" + filtersFile + '\'' +
         ", blocksPerChunk=" + blocksPerChunk +
         ", copyBufferSize=" + copyBufferSize +
+        ", verboseLog=" + verboseLog +
         '}';
   }
 
@@ -420,6 +431,7 @@ public final class DistCpOptions {
     private boolean append = false;
     private boolean skipCRC = false;
     private boolean blocking = true;
+    private boolean verboseLog = false;
 
     private boolean useDiff = false;
     private boolean useRdiff = false;
@@ -552,6 +564,11 @@ public final class DistCpOptions {
         throw new IllegalArgumentException(
             "-diff and -rdiff are mutually exclusive");
       }
+
+      if (verboseLog && logPath == null) {
+        throw new IllegalArgumentException(
+            "-v is valid only with -log option");
+      }
     }
 
     @VisibleForTesting
@@ -683,6 +700,11 @@ public final class DistCpOptions {
       this.copyBufferSize =
           newCopyBufferSize > 0 ? newCopyBufferSize
               : DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
+      return this;
+    }
+
+    public Builder withVerboseLog(boolean newVerboseLog) {
+      this.verboseLog = newVerboseLog;
       return this;
     }
   }

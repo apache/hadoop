@@ -310,9 +310,8 @@ public class TestSnapshotPathINodes {
   }
 
   private int getNumNonNull(INodesInPath iip) {
-    List<INode> inodes = iip.getReadOnlyINodes();
-    for (int i = inodes.size() - 1; i >= 0; i--) {
-      if (inodes.get(i) != null) {
+    for (int i = iip.length() - 1; i >= 0; i--) {
+      if (iip.getINode(i) != null) {
         return i+1;
       }
     }

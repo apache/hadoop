@@ -281,7 +281,7 @@ public class TestFileCorruption {
         @Override public Boolean get() {
           try {
             return cluster.getNamesystem().getBlockManager()
-                .getUnderReplicatedBlocksCount() == 1;
+                .getLowRedundancyBlocksCount() == 1;
           } catch (Exception e) {
             e.printStackTrace();
             return false;

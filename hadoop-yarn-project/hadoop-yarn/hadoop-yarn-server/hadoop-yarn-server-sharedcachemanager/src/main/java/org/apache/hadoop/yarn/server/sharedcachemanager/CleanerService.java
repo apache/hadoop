@@ -26,8 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -43,6 +41,8 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The cleaner service that maintains the shared cache area, and cleans up stale
@@ -57,7 +57,8 @@ public class CleanerService extends CompositeService {
    */
   public static final String GLOBAL_CLEANER_PID = ".cleaner_pid";
 
-  private static final Log LOG = LogFactory.getLog(CleanerService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CleanerService.class);
 
   private Configuration conf;
   private CleanerMetrics metrics;

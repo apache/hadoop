@@ -22,16 +22,6 @@
   </property>
 
   <property>
-    <name>yarn.resourcemanager.scheduler.monitor.enable</name>
-    <value>true</value>
-  </property>
-
-  <property>
-    <name>yarn.resourcemanager.scheduler.monitor.policies</name>
-    <value>org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy</value>
-  </property>
-
-  <property>
     <description>The address of the RM web application.</description>
     <name>yarn.resourcemanager.webapp.address</name>
     <value>localhost:18088</value>

@@ -60,32 +60,50 @@ import com.microsoft.azure.storage.blob.PageRange;
 @InterfaceAudience.Private
 class StorageInterfaceImpl extends StorageInterface {
   private CloudBlobClient serviceClient;
+  private RetryPolicyFactory retryPolicyFactory;
+  private int timeoutIntervalInMs;
+
+  private void updateRetryPolicy() {
+    if (serviceClient != null && retryPolicyFactory != null) {
+      serviceClient.getDefaultRequestOptions().setRetryPolicyFactory(retryPolicyFactory);
+    }
+  }
+
+  private void updateTimeoutInMs() {
+    if (serviceClient != null && timeoutIntervalInMs > 0) {
+      serviceClient.getDefaultRequestOptions().setTimeoutIntervalInMs(timeoutIntervalInMs);
+    }
+  }
 
   @Override
   public void setRetryPolicyFactory(final RetryPolicyFactory retryPolicyFactory) {
-    serviceClient.getDefaultRequestOptions().setRetryPolicyFactory(
-            retryPolicyFactory);
+    this.retryPolicyFactory = retryPolicyFactory;
+    updateRetryPolicy();
   }
 
   @Override
   public void setTimeoutInMs(int timeoutInMs) {
-    serviceClient.getDefaultRequestOptions().setTimeoutIntervalInMs(
-            timeoutInMs);
+    timeoutIntervalInMs = timeoutInMs;
+    updateTimeoutInMs();
   }
 
   @Override
   public void createBlobClient(CloudStorageAccount account) {
     serviceClient = account.createCloudBlobClient();
+    updateRetryPolicy();
+    updateTimeoutInMs();
   }
 
   @Override
   public void createBlobClient(URI baseUri) {
-    serviceClient = new CloudBlobClient(baseUri);
+    createBlobClient(baseUri, (StorageCredentials)null);
   }
 
   @Override
   public void createBlobClient(URI baseUri, StorageCredentials credentials) {
     serviceClient = new CloudBlobClient(baseUri, credentials);
+    updateRetryPolicy();
+    updateTimeoutInMs();
   }
 
   @Override
@@ -259,7 +277,7 @@ class StorageInterfaceImpl extends StorageInterface {
 
       return new CloudBlockBlobWrapperImpl(container.getBlockBlobReference(relativePath));
     }
-    
+
     @Override
     public CloudBlobWrapper getPageBlobReference(String relativePath)
         throws URISyntaxException, StorageException {
@@ -268,7 +286,7 @@ class StorageInterfaceImpl extends StorageInterface {
     }
 
   }
-  
+
   abstract static class CloudBlobWrapperImpl implements CloudBlobWrapper {
     private final CloudBlob blob;
 
@@ -381,6 +399,11 @@ class StorageInterfaceImpl extends StorageInterface {
     }
 
     @Override
+    public int getStreamMinimumReadSizeInBytes() {
+        return getBlob().getStreamMinimumReadSizeInBytes();
+    }
+
+    @Override
     public void setStreamMinimumReadSizeInBytes(int minimumReadSizeBytes) {
       getBlob().setStreamMinimumReadSizeInBytes(minimumReadSizeBytes);
     }
@@ -418,10 +441,10 @@ class StorageInterfaceImpl extends StorageInterface {
 
     @Override
     public SelfRenewingLease acquireLease() throws StorageException {
-      return new SelfRenewingLease(this);
+      return new SelfRenewingLease(this, false);
     }
   }
-  
+
 
   //
   // CloudBlockBlobWrapperImpl
@@ -456,10 +479,10 @@ class StorageInterfaceImpl extends StorageInterface {
     }
 
     @Override
-    public void uploadBlock(String blockId, InputStream sourceStream,
+    public void uploadBlock(String blockId, AccessCondition accessCondition, InputStream sourceStream,
         long length, BlobRequestOptions options,
         OperationContext opContext) throws IOException, StorageException {
-      ((CloudBlockBlob) getBlob()).uploadBlock(blockId, sourceStream, length, null, options, opContext);
+      ((CloudBlockBlob) getBlob()).uploadBlock(blockId, sourceStream, length, accessCondition, options, opContext);
     }
 
     @Override

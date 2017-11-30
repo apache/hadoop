@@ -58,7 +58,7 @@ public class TestEvents {
     Counters counters = new Counters();
     TaskAttemptFinishedEvent test = new TaskAttemptFinishedEvent(taskAttemptId,
         TaskType.REDUCE, "TEST", 123L, "RAKNAME", "HOSTNAME", "STATUS",
-        counters);
+        counters, 234);
     assertEquals(test.getAttemptId().toString(), taskAttemptId.toString());
 
     assertEquals(test.getCounters(), counters);
@@ -69,7 +69,7 @@ public class TestEvents {
     assertEquals(test.getTaskId(), tid);
     assertEquals(test.getTaskStatus(), "TEST");
     assertEquals(test.getTaskType(), TaskType.REDUCE);
-
+    assertEquals(234, test.getStartTime());
   }
 
   /**

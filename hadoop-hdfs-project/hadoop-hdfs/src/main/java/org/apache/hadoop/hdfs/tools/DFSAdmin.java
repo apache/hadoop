@@ -33,11 +33,11 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +49,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.PathData;
@@ -64,15 +66,19 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeVolumeInfo;
+import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -191,7 +197,8 @@ public class DFSAdmin extends FsShell {
       super(conf);
       CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
-      this.quota = Long.parseLong(parameters.remove(0));
+      this.quota =
+          StringUtils.TraditionalBinaryPrefix.string2long(parameters.remove(0));
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
@@ -455,6 +462,7 @@ public class DFSAdmin extends FsShell {
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
     "\t[-metasave filename]\n" +
     "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port>]\n" +
+    "\t[-listOpenFiles]\n" +
     "\t[-help [cmd]]\n";
 
   /**
@@ -514,24 +522,43 @@ public class DFSAdmin extends FsShell {
         + " (" + StringUtils.byteDesc(remaining) + ")");
     System.out.println("DFS Used: " + used
                        + " (" + StringUtils.byteDesc(used) + ")");
+    double dfsUsedPercent = 0;
+    if (presentCapacity != 0) {
+      dfsUsedPercent = used/(double)presentCapacity;
+    }
     System.out.println("DFS Used%: "
-        + StringUtils.formatPercent(used/(double)presentCapacity, 2));
-    
+        + StringUtils.formatPercent(dfsUsedPercent, 2));
+
     /* These counts are not always upto date. They are updated after  
      * iteration of an internal list. Should be updated in a few seconds to 
      * minutes. Use "-metaSave" to list of all such blocks and accurate 
      * counts.
      */
-    System.out.println("Under replicated blocks: " + 
-                       dfs.getUnderReplicatedBlocksCount());
-    System.out.println("Blocks with corrupt replicas: " + 
-                       dfs.getCorruptBlocksCount());
-    System.out.println("Missing blocks: " + 
-                       dfs.getMissingBlocksCount());
-    System.out.println("Missing blocks (with replication factor 1): " +
-                      dfs.getMissingReplOneBlocksCount());
-    System.out.println("Pending deletion blocks: " +
-        dfs.getPendingDeletionBlocksCount());
+    ReplicatedBlockStats replicatedBlockStats =
+        dfs.getClient().getNamenode().getReplicatedBlockStats();
+    System.out.println("Replicated Blocks:");
+    System.out.println("\tUnder replicated blocks: " +
+        replicatedBlockStats.getLowRedundancyBlocks());
+    System.out.println("\tBlocks with corrupt replicas: " +
+        replicatedBlockStats.getCorruptBlocks());
+    System.out.println("\tMissing blocks: " +
+        replicatedBlockStats.getMissingReplicaBlocks());
+    System.out.println("\tMissing blocks (with replication factor 1): " +
+        replicatedBlockStats.getMissingReplicationOneBlocks());
+    System.out.println("\tPending deletion blocks: " +
+        replicatedBlockStats.getPendingDeletionBlocks());
+
+    ECBlockGroupStats ecBlockGroupStats =
+        dfs.getClient().getNamenode().getECBlockGroupStats();
+    System.out.println("Erasure Coded Block Groups: ");
+    System.out.println("\tLow redundancy block groups: " +
+        ecBlockGroupStats.getLowRedundancyBlockGroups());
+    System.out.println("\tBlock groups with corrupt internal blocks: " +
+        ecBlockGroupStats.getCorruptBlockGroups());
+    System.out.println("\tMissing block groups: " +
+        ecBlockGroupStats.getMissingBlockGroups());
+    System.out.println("\tPending deletion blocks: " +
+        ecBlockGroupStats.getPendingDeletionBlocks());
 
     System.out.println();
 
@@ -726,7 +753,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Allowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Allowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**
@@ -743,7 +770,7 @@ public class DFSAdmin extends FsShell {
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Disallowing snaphot on " + argv[1] + " succeeded");
+    System.out.println("Disallowing snapshot on " + argv[1] + " succeeded");
   }
   
   /**
@@ -882,6 +909,45 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Command to list all the open files currently managed by NameNode.
+   * Usage: hdfs dfsadmin -listOpenFiles
+   *
+   * @throws IOException
+   */
+  public int listOpenFiles() throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
+
+    RemoteIterator<OpenFileEntry> openFilesRemoteIterator;
+    if (isHaEnabled) {
+      ProxyAndInfo<ClientProtocol> proxy = NameNodeProxies.createNonHAProxy(
+          dfsConf, HAUtil.getAddressOfActive(getDFS()), ClientProtocol.class,
+          UserGroupInformation.getCurrentUser(), false);
+      openFilesRemoteIterator = new OpenFilesIterator(proxy.getProxy(),
+          FsTracer.get(dfsConf));
+    } else {
+      openFilesRemoteIterator = dfs.listOpenFiles();
+    }
+    printOpenFiles(openFilesRemoteIterator);
+    return 0;
+  }
+
+  private void printOpenFiles(RemoteIterator<OpenFileEntry> openFilesIterator)
+      throws IOException {
+    System.out.println(String.format("%-20s\t%-20s\t%s", "Client Host",
+          "Client Name", "Open File Path"));
+    while (openFilesIterator.hasNext()) {
+      OpenFileEntry openFileEntry = openFilesIterator.next();
+      System.out.println(String.format("%-20s\t%-20s\t%20s",
+          openFileEntry.getClientMachine(),
+          openFileEntry.getClientName(),
+          openFileEntry.getFilePath()));
+    }
+  }
+
+  /**
    * Command to ask the namenode to set the balancer bandwidth for all of the
    * datanodes.
    * Usage: hdfs dfsadmin -setBalancerBandwidth bandwidth
@@ -894,7 +960,7 @@ public class DFSAdmin extends FsShell {
     int exitCode = -1;
 
     try {
-      bandwidth = Long.parseLong(argv[idx]);
+      bandwidth = StringUtils.TraditionalBinaryPrefix.string2long(argv[idx]);
     } catch (NumberFormatException nfe) {
       System.err.println("NumberFormatException: " + nfe.getMessage());
       System.err.println("Usage: hdfs dfsadmin"
@@ -1068,29 +1134,39 @@ public class DFSAdmin extends FsShell {
         "\tor gets a list of reconfigurable properties.\n" +
 
         "\tThe second parameter specifies the node type\n";
-    String genericRefresh = "-refresh: Arguments are <hostname:port> <resource_identifier> [arg1..argn]\n" +
-      "\tTriggers a runtime-refresh of the resource specified by <resource_identifier>\n" +
-      "\ton <hostname:port>. All other args after are sent to the host.\n";
+    String genericRefresh = "-refresh: Arguments are <hostname:ipc_port>" +
+            " <resource_identifier> [arg1..argn]\n" +
+            "\tTriggers a runtime-refresh of the resource specified by " +
+            "<resource_identifier> on <hostname:ipc_port>.\n" +
+            "\tAll other args after are sent to the host.\n" +
+            "\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
 
     String printTopology = "-printTopology: Print a tree of the racks and their\n" +
                            "\t\tnodes as reported by the Namenode\n";
     
-    String refreshNamenodes = "-refreshNamenodes: Takes a datanodehost:port as argument,\n"+
-                              "\t\tFor the given datanode, reloads the configuration files,\n" +
-                              "\t\tstops serving the removed block-pools\n"+
-                              "\t\tand starts serving new block-pools\n";
+    String refreshNamenodes = "-refreshNamenodes: Takes a " +
+            "datanodehost:ipc_port as argument,For the given datanode\n" +
+            "\t\treloads the configuration files,stops serving the removed\n" +
+            "\t\tblock-pools and starts serving new block-pools.\n" +
+            "\t\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
     
-    String getVolumeReport = "-getVolumeReport: Takes a datanodehost:port as "
-        + "argument,\n\t\tFor the given datanode, get the volume report\n";
+    String getVolumeReport = "-getVolumeReport: Takes a datanodehost:ipc_port"+
+            " as argument,For the given datanode,get the volume report.\n" +
+            "\t\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
 
-    String deleteBlockPool = "-deleteBlockPool: Arguments are datanodehost:port, blockpool id\n"+
-                             "\t\t and an optional argument \"force\". If force is passed,\n"+
-                             "\t\t block pool directory for the given blockpool id on the given\n"+
-                             "\t\t datanode is deleted along with its contents, otherwise\n"+
-                             "\t\t the directory is deleted only if it is empty. The command\n" +
-                             "\t\t will fail if datanode is still serving the block pool.\n" +
-                             "\t\t   Refer to refreshNamenodes to shutdown a block pool\n" +
-                             "\t\t service on a datanode.\n";
+    String deleteBlockPool = "-deleteBlockPool: Arguments are " +
+            "datanodehost:ipc_port, blockpool id and an optional argument\n" +
+            "\t\t\"force\". If force is passed,block pool directory for\n" +
+            "\t\tthe given blockpool id on the given datanode is deleted\n" +
+            "\t\talong with its contents,otherwise the directory is deleted\n"+
+            "\t\tonly if it is empty.The command will fail if datanode is\n" +
+            "\t\tstill serving the block pool.Refer to refreshNamenodes to\n" +
+            "\t\tshutdown a block pool service on a datanode.\n" +
+            "\t\tThe ipc_port is determined by 'dfs.datanode.ipc.address'," +
+            "default is DFS_DATANODE_IPC_DEFAULT_PORT.\n";
 
     String setBalancerBandwidth = "-setBalancerBandwidth <bandwidth>:\n" +
       "\tChanges the network bandwidth used by each datanode during\n" +
@@ -1137,6 +1213,10 @@ public class DFSAdmin extends FsShell {
         + "\tTrigger a block report for the datanode.\n"
         + "\tIf 'incremental' is specified, it will be an incremental\n"
         + "\tblock report; otherwise, it will be a full block report.\n";
+
+    String listOpenFiles = "-listOpenFiles\n"
+        + "\tList all open files currently managed by the NameNode along\n"
+        + "\twith client name and client machine accessing them.\n";
 
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -1203,6 +1283,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(evictWriters);
     } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
       System.out.println(getDatanodeInfo);
+    } else if ("listOpenFiles".equalsIgnoreCase(cmd)) {
+      System.out.println(listOpenFiles);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1238,6 +1320,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(evictWriters);
       System.out.println(getDatanodeInfo);
       System.out.println(triggerBlockReport);
+      System.out.println(listOpenFiles);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -1841,23 +1924,24 @@ public class DFSAdmin extends FsShell {
                          + " [-refreshCallQueue]");
     } else if ("-reconfig".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-reconfig <namenode|datanode> <host:port> "
+          + " [-reconfig <namenode|datanode> <host:ipc_port> "
           + "<start|status|properties>]");
     } else if ("-refresh".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-                         + " [-refresh <hostname:port> <resource_identifier> [arg1..argn]");
+          + " [-refresh <hostname:ipc_port> "
+          + "<resource_identifier> [arg1..argn]");
     } else if ("-printTopology".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
                          + " [-printTopology]");
     } else if ("-refreshNamenodes".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-                         + " [-refreshNamenodes datanode-host:port]");
+                         + " [-refreshNamenodes datanode-host:ipc_port]");
     } else if ("-getVolumeReport".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-getVolumeReport datanode-host:port]");
+          + " [-getVolumeReport datanode-host:ipc_port]");
     } else if ("-deleteBlockPool".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-deleteBlockPool datanode-host:port blockpoolId [force]]");
+          + " [-deleteBlockPool datanode-host:ipc_port blockpoolId [force]]");
     } else if ("-setBalancerBandwidth".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
                   + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
@@ -1879,6 +1963,8 @@ public class DFSAdmin extends FsShell {
     } else if ("-triggerBlockReport".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
+    } else if ("-listOpenFiles".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin [-listOpenFiles]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -2032,6 +2118,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-listOpenFiles".equals(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -2113,6 +2204,8 @@ public class DFSAdmin extends FsShell {
         exitCode = reconfig(argv, i);
       } else if ("-triggerBlockReport".equals(cmd)) {
         exitCode = triggerBlockReport(argv);
+      } else if ("-listOpenFiles".equals(cmd)) {
+        exitCode = listOpenFiles();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -2151,7 +2244,7 @@ public class DFSAdmin extends FsShell {
       System.err.println(cmd.substring(1) + ": "
                          + e.getLocalizedMessage());
     }
-    if (LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled() && debugException != null) {
       LOG.debug("Exception encountered:", debugException);
     }
     return exitCode;

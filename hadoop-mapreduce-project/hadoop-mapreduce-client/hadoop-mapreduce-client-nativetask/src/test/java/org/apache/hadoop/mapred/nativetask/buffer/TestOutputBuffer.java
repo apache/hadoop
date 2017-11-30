@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.mapred.nativetask.buffer;
 
-import junit.framework.TestCase;
-
+import org.junit.Test;
 import org.junit.Assert;
 
-public class TestOutputBuffer extends TestCase {
+public class TestOutputBuffer {
+
+  @Test
   public void testOutputBuffer() {
     final int size = 100;
     final OutputBuffer output1 = new OutputBuffer(BufferType.DIRECT_BUFFER, size);

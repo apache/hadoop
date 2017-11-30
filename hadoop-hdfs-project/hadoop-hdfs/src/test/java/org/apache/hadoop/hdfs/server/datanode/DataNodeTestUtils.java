@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
@@ -37,16 +36,16 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Supplier;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
+
+/**
+ * DO NOT ADD MOCKITO IMPORTS HERE Or Downstream projects may not
+ * be able to start mini dfs cluster. THANKS.
+ */
 
 /**
  * Utility class for accessing package-private DataNode information during tests.
@@ -194,27 +193,6 @@ public class DataNodeTestUtils {
     if (directoryScanner != null) {
       dn.getDirectoryScanner().reconcile();
     }
-  }
-
-  /**
-   * This method is used to mock the data node block pinning API.
-   *
-   * @param dn datanode
-   * @param pinned true if the block is pinned, false otherwise
-   * @throws IOException
-   */
-  public static void mockDatanodeBlkPinning(final DataNode dn,
-      final boolean pinned) throws IOException {
-    final FsDatasetSpi<? extends FsVolumeSpi> data = dn.data;
-    dn.data = Mockito.spy(data);
-
-    doAnswer(new Answer<Object>() {
-      public Object answer(InvocationOnMock invocation) throws IOException {
-        // Bypass the argument to FsDatasetImpl#getPinning to show that
-        // the block is pinned.
-        return pinned;
-      }
-    }).when(dn.data).getPinning(any(ExtendedBlock.class));
   }
 
   /**

@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 /**
  * Utility for logging scheduler activities
  */
-// FIXME: make sure PlacementSet works with this class
+// FIXME: make sure CandidateNodeSet works with this class
 public class ActivitiesLogger {
   private static final Log LOG = LogFactory.getLog(ActivitiesLogger.class);
 
@@ -63,9 +63,14 @@ public class ActivitiesLogger {
         SchedulerApplicationAttempt application, Priority priority,
         String diagnostic) {
       String type = "app";
-      recordActivity(activitiesManager, node, application.getQueueName(),
-          application.getApplicationId().toString(), priority,
-          ActivityState.REJECTED, diagnostic, type);
+      if (activitiesManager == null) {
+        return;
+      }
+      if (activitiesManager.shouldRecordThisNode(node.getNodeID())) {
+        recordActivity(activitiesManager, node, application.getQueueName(),
+            application.getApplicationId().toString(), priority,
+            ActivityState.REJECTED, diagnostic, type);
+      }
       finishSkippedAppAllocationRecording(activitiesManager,
           application.getApplicationId(), ActivityState.REJECTED, diagnostic);
     }
@@ -203,8 +208,13 @@ public class ActivitiesLogger {
     public static void recordQueueActivity(ActivitiesManager activitiesManager,
         SchedulerNode node, String parentQueueName, String queueName,
         ActivityState state, String diagnostic) {
-      recordActivity(activitiesManager, node, parentQueueName, queueName, null,
-          state, diagnostic, null);
+      if (activitiesManager == null) {
+        return;
+      }
+      if (activitiesManager.shouldRecordThisNode(node.getNodeID())) {
+        recordActivity(activitiesManager, node, parentQueueName, queueName,
+            null, state, diagnostic, null);
+      }
     }
   }
 
@@ -266,13 +276,10 @@ public class ActivitiesLogger {
   private static void recordActivity(ActivitiesManager activitiesManager,
       SchedulerNode node, String parentName, String childName,
       Priority priority, ActivityState state, String diagnostic, String type) {
-    if (activitiesManager == null) {
-      return;
-    }
-    if (activitiesManager.shouldRecordThisNode(node.getNodeID())) {
-      activitiesManager.addSchedulingActivityForNode(node.getNodeID(),
-          parentName, childName, priority != null ? priority.toString() : null,
-          state, diagnostic, type);
-    }
+
+    activitiesManager.addSchedulingActivityForNode(node.getNodeID(), parentName,
+        childName, priority != null ? priority.toString() : null, state,
+        diagnostic, type);
+
   }
 }

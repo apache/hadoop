@@ -19,8 +19,8 @@
 package org.apache.hadoop.util;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +29,8 @@ import java.util.concurrent.TimeUnit;
  * Helper class to shutdown {@link Thread}s and {@link ExecutorService}s.
  */
 public class ShutdownThreadsHelper {
-  private static Log LOG = LogFactory.getLog(ShutdownThreadsHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ShutdownThreadsHelper.class);
 
   @VisibleForTesting
   static final int SHUTDOWN_WAIT_MS = 3000;

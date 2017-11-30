@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.conf;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import java.util.Properties;
 
@@ -25,11 +26,12 @@ import java.util.Properties;
  * Created 21-Jan-2009 13:42:36
  */
 
-public class TestConfigurationSubclass extends TestCase {
+public class TestConfigurationSubclass {
   private static final String EMPTY_CONFIGURATION_XML
           = "/org/apache/hadoop/conf/empty-configuration.xml";
 
 
+  @Test
   public void testGetProps() {
     SubConf conf = new SubConf(true);
     Properties properties = conf.getProperties();
@@ -37,6 +39,7 @@ public class TestConfigurationSubclass extends TestCase {
             properties.getProperty("hadoop.tmp.dir"));
   }
 
+  @Test
   public void testReload() throws Throwable {
     SubConf conf = new SubConf(true);
     assertFalse(conf.isReloaded());
@@ -45,6 +48,7 @@ public class TestConfigurationSubclass extends TestCase {
     Properties properties = conf.getProperties();
   }
 
+  @Test
   public void testReloadNotQuiet() throws Throwable {
     SubConf conf = new SubConf(true);
     conf.setQuietMode(false);

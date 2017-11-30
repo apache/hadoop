@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -474,12 +475,30 @@ public class MockStorageInterface extends StorageInterface {
     public void downloadRange(long offset, long length, OutputStream os,
         BlobRequestOptions options, OperationContext opContext)
         throws StorageException {
-      throw new NotImplementedException();
+      if (offset < 0 || length <= 0) {
+        throw new IndexOutOfBoundsException();
+      }
+      if (!backingStore.exists(convertUriToDecodedString(uri))) {
+        throw new StorageException("BlobNotFound",
+            "Resource does not exist.",
+            HttpURLConnection.HTTP_NOT_FOUND,
+            null,
+            null);
+      }
+      byte[] content = backingStore.getContent(convertUriToDecodedString(uri));
+      try {
+        os.write(content, (int) offset, (int) length);
+      } catch (IOException e) {
+        throw new StorageException("Unknown error", "Unexpected error", e);
+      }
     }
   }
 
   class MockCloudBlockBlobWrapper extends MockCloudBlobWrapper
     implements CloudBlockBlobWrapper {
+
+    int minimumReadSize = AzureNativeFileSystemStore.DEFAULT_DOWNLOAD_BLOCK_SIZE;
+
     public MockCloudBlockBlobWrapper(URI uri, HashMap<String, String> metadata,
         int length) {
       super(uri, metadata, length);
@@ -493,7 +512,13 @@ public class MockStorageInterface extends StorageInterface {
     }
 
     @Override
+    public int getStreamMinimumReadSizeInBytes() {
+      return this.minimumReadSize;
+    }
+
+    @Override
     public void setStreamMinimumReadSizeInBytes(int minimumReadSizeBytes) {
+        this.minimumReadSize = minimumReadSizeBytes;
     }
 
     @Override
@@ -526,7 +551,8 @@ public class MockStorageInterface extends StorageInterface {
       throw new UnsupportedOperationException("downloadBlockList not used in Mock Tests");
     }
     @Override
-    public void uploadBlock(String blockId, InputStream sourceStream,
+    public void uploadBlock(String blockId, AccessCondition accessCondition,
+        InputStream sourceStream,
         long length, BlobRequestOptions options,
         OperationContext opContext) throws IOException, StorageException {
       throw new UnsupportedOperationException("uploadBlock not used in Mock Tests");
@@ -546,6 +572,9 @@ public class MockStorageInterface extends StorageInterface {
 
   class MockCloudPageBlobWrapper extends MockCloudBlobWrapper
     implements CloudPageBlobWrapper {
+
+    int minimumReadSize = AzureNativeFileSystemStore.DEFAULT_DOWNLOAD_BLOCK_SIZE;
+
     public MockCloudPageBlobWrapper(URI uri, HashMap<String, String> metadata,
         int length) {
       super(uri, metadata, length);
@@ -571,7 +600,13 @@ public class MockStorageInterface extends StorageInterface {
     }
 
     @Override
+    public int getStreamMinimumReadSizeInBytes() {
+      return this.minimumReadSize;
+    }
+
+    @Override
     public void setStreamMinimumReadSizeInBytes(int minimumReadSize) {
+        this.minimumReadSize = minimumReadSize;
     }
 
     @Override

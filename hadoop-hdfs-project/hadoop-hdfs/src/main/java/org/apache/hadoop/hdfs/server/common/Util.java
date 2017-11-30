@@ -225,6 +225,7 @@ public final class Util {
       stream = new DigestInputStream(stream, digester);
     }
     boolean finishedReceiving = false;
+    int num = 1;
 
     List<FileOutputStream> outputStreams = Lists.newArrayList();
 
@@ -256,7 +257,6 @@ public final class Util {
         }
       }
 
-      int num = 1;
       byte[] buf = new byte[IO_FILE_BUFFER_SIZE];
       while (num > 0) {
         num = stream.read(buf);
@@ -305,8 +305,8 @@ public final class Util {
         // exception that makes it look like a server-side problem!
         deleteTmpFiles(localPaths);
         throw new IOException("File " + url + " received length " + received +
-            " is not of the advertised size " +
-            advertisedSize);
+            " is not of the advertised size " + advertisedSize +
+            ". Fsimage name: " + fsImageName + " lastReceived: " + num);
       }
     }
     xferStats.insert(0, String.format("Combined time for file download and" +

@@ -51,7 +51,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
-import static org.apache.hadoop.hdfs.inotify.Event.CreateEvent;
 import static org.junit.Assert.*;
 
 /**
@@ -572,7 +571,7 @@ public class TestDFSUpgradeFromImage {
       Path path) throws IOException {
     String pathStr = path.toString();
     HdfsFileStatus status = dfs.getFileInfo(pathStr);
-    if (!status.isDir()) {
+    if (!status.isDirectory()) {
       for (int retries = 10; retries > 0; retries--) {
         if (dfs.recoverLease(pathStr)) {
           return;

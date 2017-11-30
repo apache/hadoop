@@ -19,8 +19,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.application;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -30,6 +28,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBaseSchemaConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The application table as column families info, config and metrics. Info
@@ -70,7 +70,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineHBas
 public class ApplicationTable extends BaseTable<ApplicationTable> {
   /** application prefix. */
   private static final String PREFIX =
-      YarnConfiguration.TIMELINE_SERVICE_PREFIX + ".application";
+      YarnConfiguration.TIMELINE_SERVICE_PREFIX + "application";
 
   /** config param name that specifies the application table name. */
   public static final String TABLE_NAME_CONF_NAME = PREFIX + ".table.name";
@@ -99,7 +99,8 @@ public class ApplicationTable extends BaseTable<ApplicationTable> {
   /** default max number of versions. */
   private static final int DEFAULT_METRICS_MAX_VERSIONS = 10000;
 
-  private static final Log LOG = LogFactory.getLog(ApplicationTable.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ApplicationTable.class);
 
   public ApplicationTable() {
     super(TABLE_NAME_CONF_NAME, DEFAULT_TABLE_NAME);

@@ -18,7 +18,7 @@
 if ! declare -f hadoop_subcommand_rumenfolder >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "rumenfolder" "scale a rumen input trace"
+    hadoop_add_subcommand "rumenfolder" client "scale a rumen input trace"
   fi
 
 ## @description  rumenfolder command for hadoop
@@ -37,7 +37,7 @@ fi
 if ! declare -f hadoop_subcommand_rumentrace >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "rumentrace" "convert logs into a rumen trace"
+    hadoop_add_subcommand "rumentrace" client "convert logs into a rumen trace"
   fi
 
 ## @description  rumentrace command for hadoop

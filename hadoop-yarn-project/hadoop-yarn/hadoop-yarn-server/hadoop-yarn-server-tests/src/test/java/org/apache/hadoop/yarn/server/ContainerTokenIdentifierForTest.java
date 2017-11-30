@@ -23,9 +23,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -33,16 +32,19 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationContextProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTestTokenProtos.ContainerTokenIdentifierForTestProto;
 
 import com.google.protobuf.TextFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContainerTokenIdentifierForTest extends ContainerTokenIdentifier {
 
-  private static Log LOG = LogFactory.getLog(ContainerTokenIdentifier.class);
+  private static Logger LOG = LoggerFactory.getLogger(ContainerTokenIdentifier.class);
 
   public static final Text KIND = new Text("ContainerToken");
   
@@ -60,7 +62,7 @@ public class ContainerTokenIdentifierForTest extends ContainerTokenIdentifier {
     builder.setNmHostAddr(hostName);
     builder.setAppSubmitter(appSubmitter);
     if (r != null) {
-      builder.setResource(((ResourcePBImpl)r).getProto());
+      builder.setResource(ProtoUtils.convertToProtoFormat(r));
     }
     builder.setExpiryTimeStamp(expiryTimeStamp);
     builder.setMasterKeyId(masterKeyId);
@@ -91,7 +93,7 @@ public class ContainerTokenIdentifierForTest extends ContainerTokenIdentifier {
     
     ResourcePBImpl resource = (ResourcePBImpl)identifier.getResource();
     if (resource != null) {
-      builder.setResource(resource.getProto());
+      builder.setResource(ProtoUtils.convertToProtoFormat(resource));
     }
     
     builder.setExpiryTimeStamp(identifier.getExpiryTimeStamp());
@@ -118,6 +120,12 @@ public class ContainerTokenIdentifierForTest extends ContainerTokenIdentifier {
 
   public ContainerId getContainerID() {
     return new ContainerIdPBImpl(proto.getContainerId());
+  }
+
+  @Override
+  public UserGroupInformation getUser() {
+    final ContainerId containerId = getContainerID();
+    return UserGroupInformation.createRemoteUser(containerId.toString());
   }
 
   public String getApplicationSubmitter() {

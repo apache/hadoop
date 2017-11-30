@@ -25,6 +25,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.MapFile.Reader;
 import org.apache.hadoop.mapreduce.Partitioner;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -41,6 +42,7 @@ public class TestMapFileOutputFormat {
     assertTrue(!MyPartitioner.isGetPartitionCalled());
   }
 
+  @After
   public void tearDown() throws Exception {
     MyPartitioner.setGetPartitionCalled(false);
   }

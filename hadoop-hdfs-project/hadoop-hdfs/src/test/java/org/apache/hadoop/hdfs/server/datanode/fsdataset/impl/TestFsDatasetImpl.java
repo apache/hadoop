@@ -687,7 +687,7 @@ public class TestFsDatasetImpl {
           @Override public Boolean get() {
               return volume.getReferenceCount() == 0;
             }
-          }, 100, 10);
+          }, 100, 1000);
       assertThat(dataNode.getFSDataset().getNumFailedVolumes(), is(1));
 
       try {

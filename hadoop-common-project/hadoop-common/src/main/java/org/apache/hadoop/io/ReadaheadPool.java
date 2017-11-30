@@ -23,8 +23,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -33,6 +31,8 @@ import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_WILLNEED;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages a pool of threads which can issue readahead requests on file descriptors.
@@ -40,7 +40,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ReadaheadPool {
-  static final Log LOG = LogFactory.getLog(ReadaheadPool.class);
+  static final Logger LOG = LoggerFactory.getLogger(ReadaheadPool.class);
   private static final int POOL_SIZE = 4;
   private static final int MAX_POOL_SIZE = 16;
   private static final int CAPACITY = 1024;

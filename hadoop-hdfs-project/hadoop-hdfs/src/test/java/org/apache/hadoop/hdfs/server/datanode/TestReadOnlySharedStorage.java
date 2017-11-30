@@ -199,7 +199,7 @@ public class TestReadOnlySharedStorage {
     assertThat(numberReplicas.replicasOnStaleNodes(), is(0));
     
     BlockManagerTestUtil.updateState(blockManager);
-    assertThat(blockManager.getUnderReplicatedBlocksCount(), is(0L));
+    assertThat(blockManager.getLowRedundancyBlocksCount(), is(0L));
     assertThat(blockManager.getExcessBlocksCount(), is(0L));
   }
   
@@ -238,7 +238,7 @@ public class TestReadOnlySharedStorage {
     
     // The block should be reported as under-replicated
     BlockManagerTestUtil.updateState(blockManager);
-    assertThat(blockManager.getUnderReplicatedBlocksCount(), is(1L));
+    assertThat(blockManager.getLowRedundancyBlocksCount(), is(1L));
     
     // The BlockManager should be able to heal the replication count back to 1
     // by triggering an inter-datanode replication from one of the READ_ONLY_SHARED replicas

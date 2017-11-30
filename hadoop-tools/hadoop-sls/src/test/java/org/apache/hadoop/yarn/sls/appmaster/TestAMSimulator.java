@@ -133,8 +133,8 @@ public class TestAMSimulator {
     String appId = "app1";
     String queue = "default";
     List<ContainerSimulator> containers = new ArrayList<>();
-    app.init(1, 1000, containers, rm, null, 0, 1000000L, "user1", queue,
-        true, appId, null, 0);
+    app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
+        appId, null, 0, SLSConfiguration.getAMContainerResource(conf));
     app.firstStep();
 
     verifySchedulerMetrics(appId);

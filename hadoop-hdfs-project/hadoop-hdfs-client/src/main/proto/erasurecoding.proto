@@ -25,7 +25,7 @@ import "hdfs.proto";
 
 message SetErasureCodingPolicyRequestProto {
   required string src = 1;
-  required string ecPolicyName = 2;
+  optional string ecPolicyName = 2;
 }
 
 message SetErasureCodingPolicyResponseProto {
@@ -58,7 +58,28 @@ message AddErasureCodingPoliciesRequestProto {
 }
 
 message AddErasureCodingPoliciesResponseProto {
-  repeated AddECPolicyResponseProto responses = 1;
+  repeated AddErasureCodingPolicyResponseProto responses = 1;
+}
+
+message RemoveErasureCodingPolicyRequestProto {
+  required string ecPolicyName = 1;
+}
+
+message RemoveErasureCodingPolicyResponseProto {
+}
+
+message EnableErasureCodingPolicyRequestProto {
+  required string ecPolicyName = 1;
+}
+
+message EnableErasureCodingPolicyResponseProto {
+}
+
+message DisableErasureCodingPolicyRequestProto {
+  required string ecPolicyName = 1;
+}
+
+message DisableErasureCodingPolicyResponseProto {
 }
 
 message UnsetErasureCodingPolicyRequestProto {

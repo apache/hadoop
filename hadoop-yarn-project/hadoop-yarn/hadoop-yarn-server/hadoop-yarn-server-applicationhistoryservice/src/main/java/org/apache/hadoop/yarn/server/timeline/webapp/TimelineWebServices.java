@@ -43,8 +43,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -68,13 +66,16 @@ import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 @Path("/ws/v1/timeline")
 //TODO: support XML serialization/deserialization
 public class TimelineWebServices {
 
-  private static final Log LOG = LogFactory.getLog(TimelineWebServices.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TimelineWebServices.class);
 
   private TimelineDataManager timelineDataManager;
 

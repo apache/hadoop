@@ -30,8 +30,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -53,6 +51,8 @@ import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.event.Event;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DefaultSpeculator extends AbstractService implements
     Speculator {
@@ -70,7 +70,8 @@ public class DefaultSpeculator extends AbstractService implements
   private double proportionTotalTasksSpeculatable;
   private int  minimumAllowedSpeculativeTasks;
 
-  private static final Log LOG = LogFactory.getLog(DefaultSpeculator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultSpeculator.class);
 
   private final ConcurrentMap<TaskId, Boolean> runningTasks
       = new ConcurrentHashMap<TaskId, Boolean>();

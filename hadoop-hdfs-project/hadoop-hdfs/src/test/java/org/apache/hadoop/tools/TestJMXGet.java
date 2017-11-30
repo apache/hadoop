@@ -129,7 +129,7 @@ public class TestJMXGet {
     byte[] bytes = null;
     String pattern = "List of all the available keys:";
     PipedOutputStream pipeOut = new PipedOutputStream();
-    PipedInputStream pipeIn = new PipedInputStream(pipeOut);
+    PipedInputStream pipeIn = new PipedInputStream(pipeOut, 1024 * 1024);
     PrintStream oldErr = System.err;
     System.setErr(new PrintStream(pipeOut));
     try {

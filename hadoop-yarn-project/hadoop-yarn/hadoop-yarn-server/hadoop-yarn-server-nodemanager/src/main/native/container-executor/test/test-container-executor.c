@@ -17,6 +17,10 @@
  */
 #include "configuration.h"
 #include "container-executor.h"
+#include "utils/string-utils.h"
+#include "util.h"
+#include "get_executable.h"
+#include "test/test-container-executor-common.h"
 
 #include <inttypes.h>
 #include <errno.h>
@@ -28,25 +32,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-
-#ifdef __APPLE__
-#include <CoreFoundation/CFString.h>
-#include <CoreFoundation/CFPreferences.h>
-
-#define TMPDIR "/private/tmp"
-#define RELTMPDIR "../.."
-#else
-#define RELTMPDIR ".."
-#define TMPDIR "/tmp"
-#endif
-
-#define TEST_ROOT TMPDIR "/test-container-executor"
-
-#define DONT_TOUCH_FILE "dont-touch-me"
-#define NM_LOCAL_DIRS       TEST_ROOT "/local-1%" TEST_ROOT "/local-2%" \
-               TEST_ROOT "/local-3%" TEST_ROOT "/local-4%" TEST_ROOT "/local-5"
-#define NM_LOG_DIRS         TEST_ROOT "/logs/userlogs"
-#define ARRAY_SIZE 1000
 
 static char* username = NULL;
 static char* yarn_username = NULL;
@@ -285,6 +270,8 @@ void test_delete_container() {
   char buffer[100000];
   sprintf(buffer, "mkdir -p %s/who/let/the/dogs/out/who/who", container_dir);
   run(buffer);
+  sprintf(buffer, "mknod %s/who/let/the/dogs/out/who/who/p p", container_dir);
+  run(buffer);
   sprintf(buffer, "touch %s", dont_touch);
   run(buffer);
 
@@ -302,8 +289,14 @@ void test_delete_container() {
   run(buffer);
   sprintf(buffer, "chmod 000 %s/who/let/protect", container_dir);
   run(buffer);
+  // create a no execute permission directory
+  sprintf(buffer, "chmod 600 %s/who/let/the", container_dir);
+  run(buffer);
   // create a no permission directory
   sprintf(buffer, "chmod 000 %s/who/let", container_dir);
+  run(buffer);
+  // create a no write permission directory
+  sprintf(buffer, "chmod 500 %s/who", container_dir);
   run(buffer);
 
   // delete container directory
@@ -368,7 +361,7 @@ void test_delete_app() {
   sprintf(buffer, "chmod 000 %s/who/let", container_dir);
   run(buffer);
 
-  // delete container directory
+  // delete application directory
   int ret = delete_as_user(yarn_username, app_dir, NULL);
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
@@ -390,13 +383,20 @@ void test_delete_app() {
     printf("FAIL: accidently deleted file %s\n", dont_touch);
     exit(1);
   }
+  // verify attempt to delete a nonexistent directory does not fail
+  ret = delete_as_user(yarn_username, app_dir, NULL);
+  if (ret != 0) {
+    printf("FAIL: return code from delete_as_user is %d\n", ret);
+    exit(1);
+  }
+
   free(app_dir);
   free(container_dir);
   free(dont_touch);
 }
 
 void validate_feature_enabled_value(int expected_value, const char* key,
-    int default_value, struct configuration *cfg) {
+    int default_value, struct section *cfg) {
   int value = is_feature_enabled(key, default_value, cfg);
 
   if (value != expected_value) {
@@ -411,7 +411,8 @@ void test_is_feature_enabled() {
   FILE *file = fopen(filename, "w");
   int disabled = 0;
   int enabled = 1;
-  struct configuration cfg = {.size=0, .confdetails=NULL};
+  struct configuration exec_cfg = {.size=0, .sections=NULL};
+  struct section cfg = {.size=0, .kv_pairs=NULL};
 
   if (file == NULL) {
     printf("FAIL: Could not open configuration file: %s\n", filename);
@@ -425,7 +426,8 @@ void test_is_feature_enabled() {
   fprintf(file, "feature.name5.enabled=-1\n");
   fprintf(file, "feature.name6.enabled=2\n");
   fclose(file);
-  read_config(filename, &cfg);
+  read_config(filename, &exec_cfg);
+  cfg = *(get_configuration_section("", &exec_cfg));
 
   validate_feature_enabled_value(disabled, "feature.name1.enabled",
       disabled, &cfg);
@@ -441,7 +443,7 @@ void test_is_feature_enabled() {
           disabled, &cfg);
 
 
-  free_configurations(&cfg);
+  free_configuration(&exec_cfg);
 }
 
 void test_delete_user() {
@@ -975,6 +977,83 @@ static void expect_type(const char *path, int mode) {
   }
 }
 
+static void test_delete_race_internal() {
+  char* app_dir = get_app_directory(TEST_ROOT "/local-2", yarn_username, "app_1");
+  char* container_dir = get_container_work_directory(TEST_ROOT "/local-2",
+                          yarn_username, "app_1", "container_1");
+  char buffer[100000];
+
+  sprintf(buffer, "mkdir -p %s/a/b/c/d", container_dir);
+  run(buffer);
+  int i;
+  for (i = 0; i < 100; ++i) {
+    sprintf(buffer, "%s/a/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/c/f%d", container_dir, i);
+    touch_or_die(buffer);
+    sprintf(buffer, "%s/a/b/c/d/f%d", container_dir, i);
+    touch_or_die(buffer);
+  }
+
+  pid_t child = fork();
+  if (child == -1) {
+    printf("FAIL: fork failed\n");
+    exit(1);
+  } else if (child == 0) {
+    // delete container directory
+    char * dirs[] = {app_dir, 0};
+    int ret = delete_as_user(yarn_username, "container_1" , dirs);
+    if (ret != 0) {
+      printf("FAIL: return code from delete_as_user is %d\n", ret);
+      exit(1);
+    }
+    exit(0);
+  } else {
+    // delete application directory
+    int ret = delete_as_user(yarn_username, app_dir, NULL);
+    int status = 0;
+    if (waitpid(child, &status, 0) == -1) {
+      printf("FAIL: waitpid %" PRId64 " failed - %s\n", (int64_t)child, strerror(errno));
+      exit(1);
+    }
+    if (!WIFEXITED(status)) {
+      printf("FAIL: child %" PRId64 " didn't exit - %d\n", (int64_t)child, status);
+      exit(1);
+    }
+    if (WEXITSTATUS(status) != 0) {
+      printf("FAIL: child %" PRId64 " exited with bad status %d\n",
+             (int64_t)child, WEXITSTATUS(status));
+      exit(1);
+    }
+    if (ret != 0) {
+      printf("FAIL: return code from delete_as_user is %d\n", ret);
+      exit(1);
+    }
+  }
+
+  // check to make sure the app directory is gone
+  if (access(app_dir, R_OK) == 0) {
+    printf("FAIL: didn't delete the directory - %s\n", app_dir);
+    exit(1);
+  }
+
+  free(app_dir);
+  free(container_dir);
+}
+
+void test_delete_race() {
+  if (initialize_user(yarn_username, local_dirs)) {
+    printf("FAIL: failed to initialize user %s\n", yarn_username);
+    exit(1);
+  }
+  int i;
+  for (i = 0; i < 100; ++i) {
+    test_delete_race_internal();
+  }
+}
+
 int recursive_unlink_children(const char *name);
 
 void test_recursive_unlink_children() {
@@ -1085,37 +1164,6 @@ void test_trim_function() {
   free(trimmed);
 }
 
-void test_sanitize_docker_command() {
-
-  char *input[] = {
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=$CID --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run --name=cname --user=nobody -d --workdir=/yarn/local/cdir --privileged --rm --device=/sys/fs/cgroup/device:/sys/fs/cgroup/device --detach=true --cgroup-parent=/sys/fs/cgroup/cpu/yarn/cid --net=host --cap-drop=ALL --cap-add=SYS_CHROOT --cap-add=MKNOD --cap-add=SETFCAP --cap-add=SETPCAP --cap-add=FSETID --cap-add=CHOWN --cap-add=AUDIT_WRITE --cap-add=SETGID --cap-add=NET_RAW --cap-add=FOWNER --cap-add=SETUID --cap-add=DAC_OVERRIDE --cap-add=KILL --cap-add=NET_BIND_SERVICE -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /yarn/local/cdir:/yarn/local/cdir -v /yarn/local/usercache/test/:/yarn/local/usercache/test/ ubuntu' || touch /tmp/file # bash /yarn/local/usercache/test/appcache/aid/cid/launch_container.sh",
-    "run ''''''''"
-  };
-  char *expected_output[] = {
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='$CID' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run --name='cname' --user='nobody' -d --workdir='/yarn/local/cdir' --privileged --rm --device='/sys/fs/cgroup/device:/sys/fs/cgroup/device' --detach='true' --cgroup-parent='/sys/fs/cgroup/cpu/yarn/cid' --net='host' --cap-drop='ALL' --cap-add='SYS_CHROOT' --cap-add='MKNOD' --cap-add='SETFCAP' --cap-add='SETPCAP' --cap-add='FSETID' --cap-add='CHOWN' --cap-add='AUDIT_WRITE' --cap-add='SETGID' --cap-add='NET_RAW' --cap-add='FOWNER' --cap-add='SETUID' --cap-add='DAC_OVERRIDE' --cap-add='KILL' --cap-add='NET_BIND_SERVICE' -v '/sys/fs/cgroup:/sys/fs/cgroup:ro' -v '/yarn/local/cdir:/yarn/local/cdir' -v '/yarn/local/usercache/test/:/yarn/local/usercache/test/' 'ubuntu'\"'\"'' '||' 'touch' '/tmp/file' '#' 'bash' '/yarn/local/usercache/test/appcache/aid/cid/launch_container.sh' ",
-      "run ''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"''\"'\"'' ",
-  };
-
-  int input_size = sizeof(input) / sizeof(char *);
-  int i = 0;
-  for(i = 0;  i < input_size; i++) {
-    char *command = (char *) calloc(strlen(input[i]), sizeof(char));
-    strncpy(command, input[i], strlen(input[i]));
-    char *op = sanitize_docker_command(command);
-    if(strncmp(expected_output[i], op, strlen(expected_output[i])) != 0) {
-      printf("FAIL: expected output %s does not match actual output '%s'\n", expected_output[i], op);
-      exit(1);
-    }
-    free(command);
-  }
-}
-
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
@@ -1152,8 +1200,8 @@ int main(int argc, char **argv) {
 
   read_executor_config(TEST_ROOT "/test.cfg");
 
-  local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
-  log_dirs = extract_values(strdup(NM_LOG_DIRS));
+  local_dirs = split(strdup(NM_LOCAL_DIRS));
+  log_dirs = split(strdup(NM_LOG_DIRS));
 
   create_nm_roots(local_dirs);
 
@@ -1204,11 +1252,11 @@ int main(int argc, char **argv) {
   printf("\nTesting delete_app()\n");
   test_delete_app();
 
+  printf("\nTesting delete race\n");
+  test_delete_race();
+
   printf("\nTesting is_feature_enabled()\n");
   test_is_feature_enabled();
-
-  printf("\nTesting sanitize docker commands()\n");
-  test_sanitize_docker_command();
 
   test_check_user(0);
 
@@ -1281,10 +1329,7 @@ int main(int argc, char **argv) {
   test_check_user(1);
 #endif
 
-  run("rm -fr " TEST_ROOT);
-
   test_trim_function();
-
   printf("\nFinished tests\n");
 
   free(current_username);

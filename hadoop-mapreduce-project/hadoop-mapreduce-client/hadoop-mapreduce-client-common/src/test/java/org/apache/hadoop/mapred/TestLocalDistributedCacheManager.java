@@ -30,6 +30,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -39,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
@@ -164,6 +167,9 @@ public class TestLocalDistributedCacheManager {
     });
 
     DistributedCache.addCacheFile(file, conf);
+    Map<String, Boolean> policies = new HashMap<String, Boolean>();
+    policies.put(file.toString(), true);
+    Job.setFileSharedCacheUploadPolicies(conf, policies);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "101");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "201");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "false");
@@ -272,6 +278,9 @@ public class TestLocalDistributedCacheManager {
 
     DistributedCache.addCacheFile(file, conf);
     DistributedCache.addCacheFile(file, conf);
+    Map<String, Boolean> policies = new HashMap<String, Boolean>();
+    policies.put(file.toString(), true);
+    Job.setFileSharedCacheUploadPolicies(conf, policies);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "101,101");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "201,201");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "false,false");

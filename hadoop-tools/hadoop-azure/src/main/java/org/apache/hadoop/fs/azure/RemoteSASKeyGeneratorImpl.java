@@ -21,19 +21,17 @@ package org.apache.hadoop.fs.azure;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.security.PrivilegedExceptionAction;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.Validate;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.security.Constants;
-import org.apache.hadoop.fs.azure.security.SecurityUtils;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.security.authentication.client.Authenticator;
-import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
+
+import org.apache.http.NameValuePair;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 
@@ -55,53 +53,75 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(AzureNativeFileSystemStore.class);
+  private static final ObjectReader RESPONSE_READER = new ObjectMapper()
+      .readerFor(RemoteSASKeyGenerationResponse.class);
 
+  /**
+   * Configuration parameter name expected in the Configuration
+   * object to provide the url of the remote service {@value}
+   */
+  public static final String KEY_CRED_SERVICE_URLS =
+      "fs.azure.cred.service.urls";
+  /**
+   * Configuration key to enable http retry policy for SAS Key generation. {@value}
+   */
+  public static final String
+      SAS_KEY_GENERATOR_HTTP_CLIENT_RETRY_POLICY_ENABLED_KEY =
+      "fs.azure.saskeygenerator.http.retry.policy.enabled";
+  /**
+   * Configuration key for SAS Key Generation http retry policy spec. {@value}
+   */
+  public static final String
+      SAS_KEY_GENERATOR_HTTP_CLIENT_RETRY_POLICY_SPEC_KEY =
+      "fs.azure.saskeygenerator.http.retry.policy.spec";
   /**
    * Container SAS Key generation OP name. {@value}
    */
   private static final String CONTAINER_SAS_OP = "GET_CONTAINER_SAS";
-
   /**
    * Relative Blob SAS Key generation OP name. {@value}
    */
   private static final String BLOB_SAS_OP = "GET_RELATIVE_BLOB_SAS";
-
   /**
    * Query parameter specifying the expiry period to be used for sas key
    * {@value}
    */
   private static final String SAS_EXPIRY_QUERY_PARAM_NAME = "sas_expiry";
-
   /**
    * Query parameter name for the storage account. {@value}
    */
   private static final String STORAGE_ACCOUNT_QUERY_PARAM_NAME =
       "storage_account";
-
   /**
    * Query parameter name for the storage account container. {@value}
    */
-  private static final String CONTAINER_QUERY_PARAM_NAME =
-      "container";
-
-  /**
-   * Query parameter name for user info {@value}
-   */
-  private static final String DELEGATION_TOKEN_QUERY_PARAM_NAME =
-      "delegation";
-
+  private static final String CONTAINER_QUERY_PARAM_NAME = "container";
   /**
    * Query parameter name for the relative path inside the storage
    * account container. {@value}
    */
-  private static final String RELATIVE_PATH_QUERY_PARAM_NAME =
-      "relative_path";
+  private static final String RELATIVE_PATH_QUERY_PARAM_NAME = "relative_path";
+  /**
+   * SAS Key Generation Remote http client retry policy spec. {@value}
+   */
+  private static final String
+      SAS_KEY_GENERATOR_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
+      "10,3,100,2";
+  /**
+   * Saskey caching period
+   */
+  private static final String SASKEY_CACHEENTRY_EXPIRY_PERIOD =
+      "fs.azure.saskey.cacheentry.expiry.period";
 
-  private String delegationToken;
-  private String credServiceUrl = "";
   private WasbRemoteCallHelper remoteCallHelper = null;
-  private boolean isSecurityEnabled;
   private boolean isKerberosSupportEnabled;
+  private boolean isSpnegoTokenCacheEnabled;
+  private RetryPolicy retryPolicy;
+  private String[] commaSeparatedUrls;
+  private CachingAuthorizer<CachedSASKeyEntry, URI> cache;
+
+  private static final int HOURS_IN_DAY = 24;
+  private static final int MINUTES_IN_HOUR = 60;
 
   public RemoteSASKeyGeneratorImpl(Configuration conf) {
     super(conf);
@@ -110,176 +130,137 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
   public void initialize(Configuration conf) throws IOException {
 
     LOG.debug("Initializing RemoteSASKeyGeneratorImpl instance");
-    setDelegationToken();
-    try {
-      credServiceUrl = SecurityUtils.getCredServiceUrls(conf);
-    } catch (UnknownHostException e) {
-      final String msg = "Invalid CredService Url, configure it correctly";
-      LOG.error(msg, e);
-      throw new IOException(msg, e);
+
+    this.retryPolicy = RetryUtils.getMultipleLinearRandomRetry(conf,
+        SAS_KEY_GENERATOR_HTTP_CLIENT_RETRY_POLICY_ENABLED_KEY, true,
+        SAS_KEY_GENERATOR_HTTP_CLIENT_RETRY_POLICY_SPEC_KEY,
+        SAS_KEY_GENERATOR_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT);
+
+    this.isKerberosSupportEnabled =
+        conf.getBoolean(Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
+    this.isSpnegoTokenCacheEnabled =
+        conf.getBoolean(Constants.AZURE_ENABLE_SPNEGO_TOKEN_CACHE, true);
+    this.commaSeparatedUrls = conf.getTrimmedStrings(KEY_CRED_SERVICE_URLS);
+    if (this.commaSeparatedUrls == null || this.commaSeparatedUrls.length <= 0) {
+      throw new IOException(
+          KEY_CRED_SERVICE_URLS + " config not set" + " in configuration.");
+    }
+    if (isKerberosSupportEnabled && UserGroupInformation.isSecurityEnabled()) {
+      this.remoteCallHelper = new SecureWasbRemoteCallHelper(retryPolicy, false,
+          isSpnegoTokenCacheEnabled);
+    } else {
+      this.remoteCallHelper = new WasbRemoteCallHelper(retryPolicy);
     }
 
-    if (credServiceUrl == null || credServiceUrl.isEmpty()) {
-      final String msg = "CredService Url not found in configuration to "
-          + "initialize RemoteSASKeyGenerator";
-      LOG.error(msg);
-      throw new IOException(msg);
-    }
-
-    remoteCallHelper = new WasbRemoteCallHelper();
-    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
-    this.isKerberosSupportEnabled = conf.getBoolean(
-        Constants.AZURE_KERBEROS_SUPPORT_PROPERTY_NAME, false);
+    /* Expire the cache entry five minutes before the actual saskey expiry, so that we never encounter a case
+     * where a stale sas-key-entry is picked up from the cache; which is expired on use.
+     */
+    long sasKeyExpiryPeriodInMinutes = getSasKeyExpiryPeriod() * HOURS_IN_DAY * MINUTES_IN_HOUR; // sas-expiry is in days, convert into mins
+    long cacheEntryDurationInMinutes =
+        conf.getTimeDuration(SASKEY_CACHEENTRY_EXPIRY_PERIOD, sasKeyExpiryPeriodInMinutes, TimeUnit.MINUTES);
+    cacheEntryDurationInMinutes = (cacheEntryDurationInMinutes > (sasKeyExpiryPeriodInMinutes - 5))
+        ? (sasKeyExpiryPeriodInMinutes - 5)
+        : cacheEntryDurationInMinutes;
+    this.cache = new CachingAuthorizer<>(cacheEntryDurationInMinutes, "SASKEY");
+    this.cache.init(conf);
     LOG.debug("Initialization of RemoteSASKeyGenerator instance successful");
   }
 
   @Override
-  public URI getContainerSASUri(String storageAccount, String container)
-      throws SASKeyGenerationException {
+  public URI getContainerSASUri(String storageAccount,
+      String container) throws SASKeyGenerationException {
+    RemoteSASKeyGenerationResponse sasKeyResponse = null;
     try {
-      LOG.debug("Generating Container SAS Key for Container {} "
-          + "inside Storage Account {} ", container, storageAccount);
-      setDelegationToken();
-      URIBuilder uriBuilder = new URIBuilder(credServiceUrl);
-      uriBuilder.setPath("/" + CONTAINER_SAS_OP);
-      uriBuilder.addParameter(STORAGE_ACCOUNT_QUERY_PARAM_NAME,
-          storageAccount);
-      uriBuilder.addParameter(CONTAINER_QUERY_PARAM_NAME,
-          container);
-      uriBuilder.addParameter(SAS_EXPIRY_QUERY_PARAM_NAME, ""
-          + getSasKeyExpiryPeriod());
-      if (isSecurityEnabled && StringUtils.isNotEmpty(delegationToken)) {
-        uriBuilder.addParameter(DELEGATION_TOKEN_QUERY_PARAM_NAME,
-            this.delegationToken);
+      CachedSASKeyEntry cacheKey = new CachedSASKeyEntry(storageAccount, container, "/");
+      URI cacheResult = cache.get(cacheKey);
+      if (cacheResult != null) {
+        return cacheResult;
       }
 
-      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      UserGroupInformation connectUgi = ugi.getRealUser();
-      if (connectUgi == null) {
-        connectUgi = ugi;
+      LOG.debug("Generating Container SAS Key: Storage Account {}, Container {}", storageAccount, container);
+      URIBuilder uriBuilder = new URIBuilder();
+      uriBuilder.setPath("/" + CONTAINER_SAS_OP);
+      uriBuilder.addParameter(STORAGE_ACCOUNT_QUERY_PARAM_NAME, storageAccount);
+      uriBuilder.addParameter(CONTAINER_QUERY_PARAM_NAME, container);
+      uriBuilder.addParameter(SAS_EXPIRY_QUERY_PARAM_NAME,
+          "" + getSasKeyExpiryPeriod());
+
+      sasKeyResponse = makeRemoteRequest(commaSeparatedUrls, uriBuilder.getPath(),
+              uriBuilder.getQueryParams());
+
+      if (sasKeyResponse.getResponseCode() == REMOTE_CALL_SUCCESS_CODE) {
+        URI sasKey = new URI(sasKeyResponse.getSasKey());
+        cache.put(cacheKey, sasKey);
+        return sasKey;
       } else {
-        uriBuilder.addParameter(Constants.DOAS_PARAM, ugi.getShortUserName());
+        throw new SASKeyGenerationException(
+            "Remote Service encountered error in SAS Key generation : "
+                + sasKeyResponse.getResponseMessage());
       }
-      return getSASKey(uriBuilder.build(), connectUgi);
     } catch (URISyntaxException uriSyntaxEx) {
-      throw new SASKeyGenerationException("Encountered URISyntaxException "
-          + "while building the HttpGetRequest to remote cred service",
+      throw new SASKeyGenerationException("Encountered URISyntaxException"
+          + " while building the HttpGetRequest to remote service for ",
           uriSyntaxEx);
-    } catch (IOException e) {
-      throw new SASKeyGenerationException("Encountered IOException"
-          + " while building the HttpGetRequest to remote service", e);
     }
   }
 
   @Override
-  public URI getRelativeBlobSASUri(String storageAccount, String container,
-      String relativePath) throws SASKeyGenerationException {
+  public URI getRelativeBlobSASUri(String storageAccount,
+      String container, String relativePath) throws SASKeyGenerationException {
+
     try {
-      LOG.debug("Generating RelativePath SAS Key for relativePath {} inside"
-              + " Container {} inside Storage Account {} ",
+      CachedSASKeyEntry cacheKey = new CachedSASKeyEntry(storageAccount, container, relativePath);
+      URI cacheResult = cache.get(cacheKey);
+      if (cacheResult != null) {
+        return cacheResult;
+      }
+
+      LOG.debug("Generating RelativePath SAS Key for relativePath {} inside Container {} inside Storage Account {}",
           relativePath, container, storageAccount);
-      setDelegationToken();
-      URIBuilder uriBuilder = new URIBuilder(credServiceUrl);
+
+      URIBuilder uriBuilder = new URIBuilder();
       uriBuilder.setPath("/" + BLOB_SAS_OP);
-      uriBuilder.addParameter(STORAGE_ACCOUNT_QUERY_PARAM_NAME,
-          storageAccount);
-      uriBuilder.addParameter(CONTAINER_QUERY_PARAM_NAME,
-          container);
-      uriBuilder.addParameter(RELATIVE_PATH_QUERY_PARAM_NAME,
-          relativePath);
-      uriBuilder.addParameter(SAS_EXPIRY_QUERY_PARAM_NAME, ""
-          + getSasKeyExpiryPeriod());
+      uriBuilder.addParameter(STORAGE_ACCOUNT_QUERY_PARAM_NAME, storageAccount);
+      uriBuilder.addParameter(CONTAINER_QUERY_PARAM_NAME, container);
+      uriBuilder.addParameter(RELATIVE_PATH_QUERY_PARAM_NAME, relativePath);
+      uriBuilder.addParameter(SAS_EXPIRY_QUERY_PARAM_NAME,
+          "" + getSasKeyExpiryPeriod());
 
-      if (isSecurityEnabled && StringUtils.isNotEmpty(
-          delegationToken)) {
-        uriBuilder.addParameter(DELEGATION_TOKEN_QUERY_PARAM_NAME,
-            this.delegationToken);
-      }
-
-      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      UserGroupInformation connectUgi = ugi.getRealUser();
-      if (connectUgi == null) {
-        connectUgi = ugi;
+      RemoteSASKeyGenerationResponse sasKeyResponse =
+          makeRemoteRequest(commaSeparatedUrls, uriBuilder.getPath(),
+              uriBuilder.getQueryParams());
+      if (sasKeyResponse.getResponseCode() == REMOTE_CALL_SUCCESS_CODE) {
+        URI sasKey = new URI(sasKeyResponse.getSasKey());
+        cache.put(cacheKey, sasKey);
+        return sasKey;
       } else {
-        uriBuilder.addParameter(Constants.DOAS_PARAM, ugi.getShortUserName());
+        throw new SASKeyGenerationException(
+            "Remote Service encountered error in SAS Key generation : "
+                + sasKeyResponse.getResponseMessage());
       }
-      return getSASKey(uriBuilder.build(), connectUgi);
     } catch (URISyntaxException uriSyntaxEx) {
       throw new SASKeyGenerationException("Encountered URISyntaxException"
           + " while building the HttpGetRequest to " + " remote service",
           uriSyntaxEx);
-    } catch (IOException e) {
-      throw new SASKeyGenerationException("Encountered IOException"
-          + " while building the HttpGetRequest to remote service", e);
-    }
-  }
-
-  private URI getSASKey(final URI uri, UserGroupInformation connectUgi)
-      throws URISyntaxException, SASKeyGenerationException {
-    final RemoteSASKeyGenerationResponse sasKeyResponse;
-    try {
-      sasKeyResponse = connectUgi.doAs(
-          new PrivilegedExceptionAction<RemoteSASKeyGenerationResponse>() {
-            @Override
-            public RemoteSASKeyGenerationResponse run() throws Exception {
-              AuthenticatedURL.Token token = null;
-              if (isKerberosSupportEnabled && UserGroupInformation
-                  .isSecurityEnabled() && (delegationToken == null
-                  || delegationToken.isEmpty())) {
-                token = new AuthenticatedURL.Token();
-                final Authenticator kerberosAuthenticator =
-                    new KerberosDelegationTokenAuthenticator();
-                try {
-                  kerberosAuthenticator.authenticate(uri.toURL(), token);
-                  Validate.isTrue(token.isSet(),
-                      "Authenticated Token is NOT present. "
-                          + "The request cannot proceed.");
-                } catch (AuthenticationException e) {
-                  throw new IOException(
-                      "Authentication failed in check authorization", e);
-                }
-              }
-              return makeRemoteRequest(uri,
-                  (token != null ? token.toString() : null));
-            }
-          });
-    } catch (InterruptedException | IOException e) {
-      final String msg = "Error fetching SAS Key from Remote Service: " + uri;
-      LOG.error(msg, e);
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
-      throw new SASKeyGenerationException(msg, e);
-    }
-
-    if (sasKeyResponse.getResponseCode() == REMOTE_CALL_SUCCESS_CODE) {
-      return new URI(sasKeyResponse.getSasKey());
-    } else {
-      throw new SASKeyGenerationException(
-          "Remote Service encountered error in SAS Key generation : "
-              + sasKeyResponse.getResponseMessage());
     }
   }
 
   /**
    * Helper method to make a remote request.
-   * @param uri - Uri to use for the remote request
-   * @param token - hadoop.auth token for the remote request
+   *
+   * @param urls        - Urls to use for the remote request
+   * @param path        - hadoop.auth token for the remote request
+   * @param queryParams - queryParams to be used.
    * @return RemoteSASKeyGenerationResponse
    */
-  private RemoteSASKeyGenerationResponse makeRemoteRequest(URI uri,
-      String token) throws SASKeyGenerationException {
+  private RemoteSASKeyGenerationResponse makeRemoteRequest(String[] urls,
+      String path, List<NameValuePair> queryParams)
+      throws SASKeyGenerationException {
 
     try {
-      HttpGet httpGet = new HttpGet(uri);
-      if (token != null) {
-        httpGet.setHeader("Cookie", AuthenticatedURL.AUTH_COOKIE + "=" + token);
-      }
-      String responseBody = remoteCallHelper.makeRemoteGetRequest(httpGet);
-
-      ObjectMapper objectMapper = new ObjectMapper();
-      return objectMapper.readValue(responseBody,
-          RemoteSASKeyGenerationResponse.class);
+      String responseBody = remoteCallHelper
+          .makeRemoteRequest(urls, path, queryParams, HttpGet.METHOD_NAME);
+      return RESPONSE_READER.readValue(responseBody);
 
     } catch (WasbRemoteCallException remoteCallEx) {
       throw new SASKeyGenerationException("Encountered RemoteCallException"
@@ -287,7 +268,8 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
     } catch (JsonParseException jsonParserEx) {
       throw new SASKeyGenerationException("Encountered JsonParseException "
           + "while parsing the response from remote"
-          + " service into RemoteSASKeyGenerationResponse object", jsonParserEx);
+          + " service into RemoteSASKeyGenerationResponse object",
+          jsonParserEx);
     } catch (JsonMappingException jsonMappingEx) {
       throw new SASKeyGenerationException("Encountered JsonMappingException"
           + " while mapping the response from remote service into "
@@ -297,10 +279,6 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
           + "accessing remote service to retrieve SAS Key", ioEx);
     }
   }
-
-  private void setDelegationToken() throws IOException {
-    this.delegationToken = SecurityUtils.getDelegationTokenFromCredentials();
-  }
 }
 
 /**
@@ -309,9 +287,9 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
  * The remote SAS Key generation service is expected to
  * return SAS key in json format:
  * {
- *    "responseCode" : 0 or non-zero <int>,
- *    "responseMessage" : relavant message on failure <String>,
- *    "sasKey" : Requested SAS Key <String>
+ *   "responseCode" : 0 or non-zero <int>,
+ *   "responseMessage" : relavant message on failure <String>,
+ *   "sasKey" : Requested SAS Key <String>
  * }
  */
 class RemoteSASKeyGenerationResponse {

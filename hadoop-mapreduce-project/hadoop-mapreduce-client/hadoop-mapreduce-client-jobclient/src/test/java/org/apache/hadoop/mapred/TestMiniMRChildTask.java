@@ -75,8 +75,8 @@ public class TestMiniMRChildTask {
     }
   }
 
-  private static Path TEST_ROOT_DIR = new Path("target",
-      TestMiniMRChildTask.class.getName() + "-tmpDir").makeQualified(localFs);
+  private static Path TEST_ROOT_DIR = localFs.makeQualified(
+      new Path("target", TestMiniMRChildTask.class.getName() + "-tmpDir"));
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
   /**

@@ -70,15 +70,15 @@ public class StageAllocatorLowCostAligned implements StageAllocator {
   public Map<ReservationInterval, Resource> computeStageAllocation(Plan plan,
       RLESparseResourceAllocation planLoads,
       RLESparseResourceAllocation planModifications, ReservationRequest rr,
-      long stageArrival, long stageDeadline, String user, ReservationId oldId)
-      throws PlanningException {
+      long stageArrival, long stageDeadline, long period, String user,
+      ReservationId oldId) throws PlanningException {
 
     // Initialize
     ResourceCalculator resCalc = plan.getResourceCalculator();
     Resource capacity = plan.getTotalCapacity();
 
-    RLESparseResourceAllocation netRLERes = plan
-        .getAvailableResourceOverTime(user, oldId, stageArrival, stageDeadline);
+    RLESparseResourceAllocation netRLERes = plan.getAvailableResourceOverTime(
+        user, oldId, stageArrival, stageDeadline, period);
 
     long step = plan.getStep();
 

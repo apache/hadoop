@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.ContentSummary;
 
 /**
  * Get a listing of all files in that match the file patterns.
@@ -54,13 +55,14 @@ class Ls extends FsCommand {
   private static final String OPTION_MTIME = "t";
   private static final String OPTION_ATIME = "u";
   private static final String OPTION_SIZE = "S";
+  private static final String OPTION_ECPOLICY = "e";
 
   public static final String NAME = "ls";
   public static final String USAGE = "[-" + OPTION_PATHONLY + "] [-" +
       OPTION_DIRECTORY + "] [-" + OPTION_HUMAN + "] [-" +
       OPTION_HIDENONPRINTABLE + "] [-" + OPTION_RECURSIVE + "] [-" +
       OPTION_MTIME + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE + "] [-" +
-      OPTION_ATIME + "] [<path> ...]";
+      OPTION_ATIME + "] [-" + OPTION_ECPOLICY +"] [<path> ...]";
 
   public static final String DESCRIPTION =
       "List the contents that match the specified file pattern. If " +
@@ -91,7 +93,9 @@ class Ls extends FsCommand {
           "  Reverse the order of the sort.\n" +
           "  -" + OPTION_ATIME +
           "  Use time of last access instead of modification for\n" +
-          "      display and sorting.";
+          "      display and sorting.\n"+
+          "  -" + OPTION_ECPOLICY +
+          "  Display the erasure coding policy of files and directories.\n";
 
   protected final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -104,6 +108,7 @@ class Ls extends FsCommand {
   private boolean orderTime;
   private boolean orderSize;
   private boolean useAtime;
+  private boolean displayECPolicy;
   private Comparator<PathData> orderComparator;
 
   protected boolean humanReadable = false;
@@ -129,7 +134,7 @@ class Ls extends FsCommand {
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE,
         OPTION_PATHONLY, OPTION_DIRECTORY, OPTION_HUMAN,
         OPTION_HIDENONPRINTABLE, OPTION_RECURSIVE, OPTION_REVERSE,
-        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME);
+        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME, OPTION_ECPOLICY);
     cf.parse(args);
     pathOnly = cf.getOpt(OPTION_PATHONLY);
     dirRecurse = !cf.getOpt(OPTION_DIRECTORY);
@@ -140,6 +145,7 @@ class Ls extends FsCommand {
     orderTime = cf.getOpt(OPTION_MTIME);
     orderSize = !orderTime && cf.getOpt(OPTION_SIZE);
     useAtime = cf.getOpt(OPTION_ATIME);
+    displayECPolicy = cf.getOpt(OPTION_ECPOLICY);
     if (args.isEmpty()) args.add(Path.CUR_DIR);
 
     initialiseOrderComparator();
@@ -245,25 +251,42 @@ class Ls extends FsCommand {
       return;
     }
     FileStatus stat = item.stat;
-    String line = String.format(lineFormat,
-        (stat.isDirectory() ? "d" : "-"),
-        stat.getPermission() + (stat.getPermission().getAclBit() ? "+" : " "),
-        (stat.isFile() ? stat.getReplication() : "-"),
-        stat.getOwner(),
-        stat.getGroup(),
-        formatSize(stat.getLen()),
-        dateFormat.format(new Date(isUseAtime()
-            ? stat.getAccessTime()
-            : stat.getModificationTime())),
-        isHideNonPrintable() ? new PrintableString(item.toString()) : item);
-    out.println(line);
+    if (displayECPolicy) {
+      ContentSummary contentSummary = item.fs.getContentSummary(item.path);
+      String line = String.format(lineFormat,
+          (stat.isDirectory() ? "d" : "-"),
+          stat.getPermission() + (stat.hasAcl() ? "+" : " "),
+          (stat.isFile() ? stat.getReplication() : "-"),
+          stat.getOwner(),
+          stat.getGroup(),
+          contentSummary.getErasureCodingPolicy(),
+          formatSize(stat.getLen()),
+          dateFormat.format(new Date(isUseAtime()
+              ? stat.getAccessTime()
+              : stat.getModificationTime())),
+          isHideNonPrintable() ? new PrintableString(item.toString()) : item);
+      out.println(line);
+    } else {
+      String line = String.format(lineFormat,
+          (stat.isDirectory() ? "d" : "-"),
+          stat.getPermission() + (stat.hasAcl() ? "+" : " "),
+          (stat.isFile() ? stat.getReplication() : "-"),
+          stat.getOwner(),
+          stat.getGroup(),
+          formatSize(stat.getLen()),
+          dateFormat.format(new Date(isUseAtime()
+              ? stat.getAccessTime()
+              : stat.getModificationTime())),
+          isHideNonPrintable() ? new PrintableString(item.toString()) : item);
+      out.println(line);
+    }
   }
 
   /**
    * Compute column widths and rebuild the format string
    * @param items to find the max field width for each column
    */
-  private void adjustColumnWidths(PathData items[]) {
+  private void adjustColumnWidths(PathData items[]) throws IOException {
     for (PathData item : items) {
       FileStatus stat = item.stat;
       maxRepl  = maxLength(maxRepl, stat.getReplication());
@@ -278,6 +301,14 @@ class Ls extends FsCommand {
     // Do not use '%-0s' as a formatting conversion, since it will throw a
     // a MissingFormatWidthException if it is used in String.format().
     // http://docs.oracle.com/javase/1.5.0/docs/api/java/util/Formatter.html#intFlags
+    if(displayECPolicy){
+      int maxEC=0;
+      for (PathData item : items) {
+          ContentSummary contentSummary = item.fs.getContentSummary(item.path);
+          maxEC=maxLength(maxEC,contentSummary.getErasureCodingPolicy().length());
+      }
+      fmt.append(" %"+maxEC+"s ");
+    }
     fmt.append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s");
     fmt.append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
     fmt.append("%"  + maxLen   + "s ");

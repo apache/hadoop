@@ -167,8 +167,6 @@ public class TestHdfsHelper extends TestDirHelper {
           new Path(helper.getTestRootDir(), "test.jks").toUri();
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
           jceksPath);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_ENABLED_KEY,
-          ERASURE_CODING_POLICY.getName());
       MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
       int totalDataNodes = ERASURE_CODING_POLICY.getNumDataUnits() +
           ERASURE_CODING_POLICY.getNumParityUnits();
@@ -178,6 +176,7 @@ public class TestHdfsHelper extends TestDirHelper {
       DFSTestUtil.createKey(testkey, miniHdfs, conf);
 
       DistributedFileSystem fileSystem = miniHdfs.getFileSystem();
+      fileSystem.enableErasureCodingPolicy(ERASURE_CODING_POLICY.getName());
       fileSystem.getClient().setKeyProvider(miniHdfs.getNameNode()
           .getNamesystem().getProvider());
 

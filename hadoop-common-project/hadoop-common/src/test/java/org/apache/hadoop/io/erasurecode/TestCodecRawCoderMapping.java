@@ -18,11 +18,13 @@
 package org.apache.hadoop.io.erasurecode;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSLegacyRawDecoder;
-import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSLegacyRawEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
@@ -55,10 +57,15 @@ public class TestCodecRawCoderMapping {
     // should return default raw coder of rs codec
     RawErasureEncoder encoder = CodecUtil.createRawEncoder(
         conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
-    Assert.assertTrue(encoder instanceof RSRawEncoder);
     RawErasureDecoder decoder = CodecUtil.createRawDecoder(
         conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
-    Assert.assertTrue(decoder instanceof RSRawDecoder);
+    if (ErasureCodeNative.isNativeCodeLoaded()) {
+      Assert.assertTrue(encoder instanceof NativeRSRawEncoder);
+      Assert.assertTrue(decoder instanceof NativeRSRawDecoder);
+    } else {
+      Assert.assertTrue(encoder instanceof RSRawEncoder);
+      Assert.assertTrue(decoder instanceof RSRawDecoder);
+    }
 
     // should return default raw coder of rs-legacy codec
     encoder = CodecUtil.createRawEncoder(conf,

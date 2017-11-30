@@ -19,18 +19,18 @@
 package org.apache.hadoop.yarn.server.nodemanager.
     containermanager.linux.runtime;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FilePermission;
 import java.io.IOException;
@@ -117,8 +117,8 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 @InterfaceStability.Unstable
 public class JavaSandboxLinuxContainerRuntime
     extends DefaultLinuxContainerRuntime {
-  private static final Log LOG =
-      LogFactory.getLog(DefaultLinuxContainerRuntime.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultLinuxContainerRuntime.class);
   private Configuration configuration;
   private SandboxMode sandboxMode;
 
@@ -144,7 +144,7 @@ public class JavaSandboxLinuxContainerRuntime
   }
 
   @Override
-  public void initialize(Configuration conf)
+  public void initialize(Configuration conf, Context nmContext)
       throws ContainerExecutionException {
     this.configuration = conf;
     this.sandboxMode =
@@ -152,7 +152,7 @@ public class JavaSandboxLinuxContainerRuntime
             this.configuration.get(YARN_CONTAINER_SANDBOX,
                 YarnConfiguration.DEFAULT_YARN_CONTAINER_SANDBOX));
 
-    super.initialize(conf);
+    super.initialize(conf, nmContext);
   }
 
   /**
@@ -254,7 +254,7 @@ public class JavaSandboxLinuxContainerRuntime
       } catch (IOException e) {
         throw new ContainerExecutionException(e);
       } finally {
-        IOUtils.cleanup(LOG, policyOutputStream);
+        IOUtils.cleanupWithLogger(LOG, policyOutputStream);
       }
     }
   }
@@ -417,7 +417,7 @@ public class JavaSandboxLinuxContainerRuntime
         + SEPARATOR + "-\" {%n" +
         "  permission " + AllPermission.class.getCanonicalName() + ";%n};%n";
     static final Logger LOG =
-        Logger.getLogger(NMContainerPolicyUtils.class);
+            LoggerFactory.getLogger(NMContainerPolicyUtils.class);
 
     /**
      * Write new policy file to policyOutStream which will include read access

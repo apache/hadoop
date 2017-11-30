@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /**
@@ -85,4 +86,13 @@ public class DataNodeFaultInjector {
   public void startOfferService() throws Exception {}
 
   public void endOfferService() throws Exception {}
+
+  public void throwTooManyOpenFiles() throws FileNotFoundException {
+  }
+
+  /**
+   * Used as a hook to inject failure in erasure coding reconstruction
+   * process.
+   */
+  public void stripedBlockReconstruction() throws IOException {}
 }

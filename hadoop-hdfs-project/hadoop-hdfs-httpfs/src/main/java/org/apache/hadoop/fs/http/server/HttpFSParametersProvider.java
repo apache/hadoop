@@ -99,6 +99,13 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.SETSTORAGEPOLICY,
         new Class[] {PolicyNameParam.class});
     PARAMS_DEF.put(Operation.UNSETSTORAGEPOLICY, new Class[] {});
+    PARAMS_DEF.put(Operation.CREATESNAPSHOT,
+            new Class[] {SnapshotNameParam.class});
+    PARAMS_DEF.put(Operation.DELETESNAPSHOT,
+            new Class[] {SnapshotNameParam.class});
+    PARAMS_DEF.put(Operation.RENAMESNAPSHOT,
+            new Class[] {OldSnapshotNameParam.class,
+                SnapshotNameParam.class});
   }
 
   public HttpFSParametersProvider() {
@@ -564,4 +571,42 @@ public class HttpFSParametersProvider extends ParametersProvider {
       super(NAME, null);
     }
   }
+
+  /**
+   * Class for SnapshotName parameter.
+   */
+  public static class SnapshotNameParam extends StringParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.SNAPSHOT_NAME_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public SnapshotNameParam() {
+      super(NAME, null);
+    }
+
+  }
+
+  /**
+   * Class for OldSnapshotName parameter.
+   */
+  public static class OldSnapshotNameParam extends StringParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.OLD_SNAPSHOT_NAME_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public OldSnapshotNameParam() {
+      super(NAME, null);
+    }
+  }
+
 }

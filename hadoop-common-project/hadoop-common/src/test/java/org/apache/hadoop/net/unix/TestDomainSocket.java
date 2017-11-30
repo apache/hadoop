@@ -203,7 +203,7 @@ public class TestDomainSocket {
         } catch (IOException e) {
           throw new RuntimeException("unexpected IOException", e);
         } finally {
-          IOUtils.cleanup(DomainSocket.LOG, serverConn);
+          IOUtils.cleanupWithLogger(DomainSocket.LOG, serverConn);
         }
         return null;
       }

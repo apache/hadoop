@@ -18,6 +18,9 @@
 
 #include "configuration.h"
 #include "container-executor.h"
+#include "utils/docker-util.h"
+#include "util.h"
+#include "config.h"
 
 #include <inttypes.h>
 #include <libgen.h>
@@ -40,8 +43,6 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <getopt.h>
-
-#include "config.h"
 
 #ifndef HAVE_FCHMODAT
 #include "compat/fchmodat.h"
@@ -85,7 +86,8 @@ FILE* ERRORFILE = NULL;
 static uid_t nm_uid = -1;
 static gid_t nm_gid = -1;
 
-struct configuration executor_cfg = {.size=0, .confdetails=NULL};
+struct configuration CFG = {.size=0, .sections=NULL};
+struct section executor_cfg = {.size=0, .kv_pairs=NULL};
 
 char *concatenate(char *concat_pattern, char *return_path_name,
    int numArgs, ...);
@@ -96,18 +98,25 @@ void set_nm_uid(uid_t user, gid_t group) {
 }
 
 //function used to load the configurations present in the secure config
-void read_executor_config(const char* file_name) {
-    read_config(file_name, &executor_cfg);
+void read_executor_config(const char *file_name) {
+  const struct section *tmp = NULL;
+  int ret = read_config(file_name, &CFG);
+  if (ret == 0) {
+    tmp = get_configuration_section("", &CFG);
+    if (tmp != NULL) {
+      executor_cfg = *tmp;
+    }
+  }
 }
 
 //function used to free executor configuration data
 void free_executor_configurations() {
-    free_configurations(&executor_cfg);
+    free_configuration(&CFG);
 }
 
 //Lookup nodemanager group from container executor configuration.
 char *get_nodemanager_group() {
-    return get_value(NM_GROUP_KEY, &executor_cfg);
+    return get_section_value(NM_GROUP_KEY, &executor_cfg);
 }
 
 int check_executor_permissions(char *executable_file) {
@@ -424,8 +433,8 @@ int change_user(uid_t user, gid_t group) {
 }
 
 int is_feature_enabled(const char* feature_key, int default_value,
-                              struct configuration *cfg) {
-    char *enabled_str = get_value(feature_key, cfg);
+                              struct section *cfg) {
+    char *enabled_str = get_section_value(feature_key, cfg);
     int enabled = default_value;
 
     if (enabled_str != NULL) {
@@ -450,20 +459,14 @@ int is_feature_enabled(const char* feature_key, int default_value,
 }
 
 int is_docker_support_enabled() {
-    return is_feature_enabled(DOCKER_SUPPORT_ENABLED_KEY,
-    DEFAULT_DOCKER_SUPPORT_ENABLED, &executor_cfg);
+  return is_feature_enabled(DOCKER_SUPPORT_ENABLED_KEY,
+                         DEFAULT_DOCKER_SUPPORT_ENABLED, &executor_cfg)
+      || docker_module_enabled(&CFG);
 }
 
 int is_tc_support_enabled() {
     return is_feature_enabled(TC_SUPPORT_ENABLED_KEY,
     DEFAULT_TC_SUPPORT_ENABLED, &executor_cfg);
-}
-
-char* check_docker_binary(char *docker_binary) {
-  if (docker_binary == NULL) {
-    return "docker";
-  }
-  return docker_binary;
 }
 
 /**
@@ -746,7 +749,7 @@ static struct passwd* get_user_info(const char* user) {
 }
 
 int is_whitelisted(const char *user) {
-  char **whitelist = get_values(ALLOWED_SYSTEM_USERS_KEY, &executor_cfg);
+  char **whitelist = get_section_values(ALLOWED_SYSTEM_USERS_KEY, &executor_cfg);
   char **users = whitelist;
   if (whitelist != NULL) {
     for(; *users; ++users) {
@@ -774,7 +777,7 @@ struct passwd* check_user(const char *user) {
     fflush(LOGFILE);
     return NULL;
   }
-  char *min_uid_str = get_value(MIN_USERID_KEY, &executor_cfg);
+  char *min_uid_str = get_section_value(MIN_USERID_KEY, &executor_cfg);
   int min_uid = DEFAULT_MIN_USERID;
   if (min_uid_str != NULL) {
     char *end_ptr = NULL;
@@ -801,7 +804,7 @@ struct passwd* check_user(const char *user) {
     free(user_info);
     return NULL;
   }
-  char **banned_users = get_values(BANNED_USERS_KEY, &executor_cfg);
+  char **banned_users = get_section_values(BANNED_USERS_KEY, &executor_cfg);
   banned_users = banned_users == NULL ?
     (char**) DEFAULT_BANNED_USERS : banned_users;
   char **banned_user = banned_users;
@@ -1142,202 +1145,29 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-static char* escape_single_quote(const char *str) {
-  int p = 0;
-  int i = 0;
-  char replacement[] = "'\"'\"'";
-  size_t replacement_length = strlen(replacement);
-  size_t ret_size = strlen(str) * replacement_length + 1;
-  char *ret = (char *) calloc(ret_size, sizeof(char));
-  if(ret == NULL) {
-    exit(OUT_OF_MEMORY);
+char *construct_docker_command(const char *command_file) {
+  int ret = 0;
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
+  char *buffer = alloc_and_clear_memory(command_size, sizeof(char));
+  ret = get_docker_command(command_file, &CFG, buffer, command_size);
+  if (ret != 0) {
+    fprintf(ERRORFILE, "Error constructing docker command, docker error code=%d, error message='%s'\n", ret,
+            get_docker_error_message(ret));
+    fflush(ERRORFILE);
+    exit(DOCKER_RUN_FAILED);
   }
-  while(str[p] != '\0') {
-    if(str[p] == '\'') {
-      strncat(ret, replacement, ret_size - strlen(ret));
-      i += replacement_length;
-    }
-    else {
-      ret[i] = str[p];
-      ret[i + 1] = '\0';
-      i++;
-    }
-    p++;
-  }
-  return ret;
-}
-
-static void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg) {
-  char *tmp = escape_single_quote(arg);
-  strcat(*str, param);
-  strcat(*str, "'");
-  if(strlen(*str) + strlen(tmp) > *size) {
-    *str = (char *) realloc(*str, strlen(*str) + strlen(tmp) + 1024);
-    if(*str == NULL) {
-      exit(OUT_OF_MEMORY);
-    }
-    *size = strlen(*str) + strlen(tmp) + 1024;
-  }
-  strcat(*str, tmp);
-  strcat(*str, "' ");
-  free(tmp);
-}
-
-char** tokenize_docker_command(const char *input, int *split_counter) {
-  char *line = (char *)calloc(strlen(input) + 1, sizeof(char));
-  char **linesplit = (char **) malloc(sizeof(char *));
-  char *p = NULL;
-  int c = 0;
-  *split_counter = 0;
-  strncpy(line, input, strlen(input));
-
-  p = strtok(line, " ");
-  while(p != NULL) {
-    linesplit[*split_counter] = p;
-    (*split_counter)++;
-    linesplit = realloc(linesplit, (sizeof(char *) * (*split_counter + 1)));
-    if(linesplit == NULL) {
-      fprintf(ERRORFILE, "Cannot allocate memory to parse docker command %s",
-                 strerror(errno));
-      fflush(ERRORFILE);
-      exit(OUT_OF_MEMORY);
-    }
-    p = strtok(NULL, " ");
-  }
-  linesplit[*split_counter] = NULL;
-  return linesplit;
-}
-
-char* sanitize_docker_command(const char *line) {
-  static struct option long_options[] = {
-    {"name", required_argument, 0, 'n' },
-    {"user", required_argument, 0, 'u' },
-    {"rm", no_argument, 0, 'r' },
-    {"workdir", required_argument, 0, 'w' },
-    {"net", required_argument, 0, 'e' },
-    {"cgroup-parent", required_argument, 0, 'g' },
-    {"privileged", no_argument, 0, 'p' },
-    {"cap-add", required_argument, 0, 'a' },
-    {"cap-drop", required_argument, 0, 'o' },
-    {"device", required_argument, 0, 'i' },
-    {"detach", required_argument, 0, 't' },
-    {0, 0, 0, 0}
-  };
-
-  int c = 0;
-  int option_index = 0;
-  char *output = NULL;
-  size_t output_size = 0;
-  char **linesplit;
-  int split_counter = 0;
-  int len = strlen(line);
-
-  linesplit = tokenize_docker_command(line, &split_counter);
-
-  output_size = len * 2;
-  output = (char *) calloc(output_size, sizeof(char));
-  if(output == NULL) {
-    exit(OUT_OF_MEMORY);
-  }
-  strcat(output, linesplit[0]);
-  strcat(output, " ");
-  optind = 1;
-  while((c=getopt_long(split_counter, linesplit, "dv:", long_options, &option_index)) != -1) {
-    switch(c) {
-      case 'n':
-        quote_and_append_arg(&output, &output_size, "--name=", optarg);
-        break;
-      case 'w':
-        quote_and_append_arg(&output, &output_size, "--workdir=", optarg);
-        break;
-      case 'u':
-        quote_and_append_arg(&output, &output_size, "--user=", optarg);
-        break;
-      case 'e':
-        quote_and_append_arg(&output, &output_size, "--net=", optarg);
-        break;
-      case 'v':
-        quote_and_append_arg(&output, &output_size, "-v ", optarg);
-        break;
-      case 'a':
-        quote_and_append_arg(&output, &output_size, "--cap-add=", optarg);
-        break;
-      case 'o':
-        quote_and_append_arg(&output, &output_size, "--cap-drop=", optarg);
-        break;
-      case 'd':
-        strcat(output, "-d ");
-        break;
-      case 'r':
-        strcat(output, "--rm ");
-        break;
-      case 'g':
-        quote_and_append_arg(&output, &output_size, "--cgroup-parent=", optarg);
-        break;
-      case 'p':
-        strcat(output, "--privileged ");
-        break;
-      case 'i':
-        quote_and_append_arg(&output, &output_size, "--device=", optarg);
-        break;
-      case 't':
-        quote_and_append_arg(&output, &output_size, "--detach=", optarg);
-        break;
-      default:
-        fprintf(LOGFILE, "Unknown option in docker command, character %d %c, optionindex = %d\n", c, c, optind);
-        fflush(LOGFILE);
-        return NULL;
-        break;
-    }
-  }
-
-  if(optind < split_counter) {
-    while(optind < split_counter) {
-      quote_and_append_arg(&output, &output_size, "", linesplit[optind++]);
-    }
-  }
-
-  return output;
-}
-
-char* parse_docker_command_file(const char* command_file) {
-
-  size_t len = 0;
-  char *line = NULL;
-  ssize_t read;
-  FILE *stream;
-  stream = fopen(command_file, "r");
-  if (stream == NULL) {
-   fprintf(ERRORFILE, "Cannot open file %s - %s",
-                 command_file, strerror(errno));
-   fflush(ERRORFILE);
-   exit(ERROR_OPENING_DOCKER_FILE);
-  }
-  if ((read = getline(&line, &len, stream)) == -1) {
-     fprintf(ERRORFILE, "Error reading command_file %s\n", command_file);
-     fflush(ERRORFILE);
-     exit(ERROR_READING_DOCKER_FILE);
-  }
-  fclose(stream);
-
-  char* ret = sanitize_docker_command(line);
-  if(ret == NULL) {
-    exit(ERROR_SANITIZING_DOCKER_COMMAND);
-  }
-  fprintf(LOGFILE, "Using command %s\n", ret);
-  fflush(LOGFILE);
-
-  return ret;
+  return buffer;
 }
 
 int run_docker(const char *command_file) {
-  char* docker_command = parse_docker_command_file(command_file);
-  char* docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
-  docker_binary = check_docker_binary(docker_binary);
+  char* docker_command = construct_docker_command(command_file);
+  char* docker_binary = get_docker_binary(&CFG);
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
 
-  char* docker_command_with_binary = calloc(sizeof(char), EXECUTOR_PATH_MAX);
-  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
-  char **args = extract_values_delim(docker_command_with_binary, " ");
+  char* docker_command_with_binary = alloc_and_clear_memory(command_size, sizeof(char));
+  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
+  fprintf(LOGFILE, "Invoking '%s'\n", docker_command_with_binary);
+  char **args = split_delimiter(docker_command_with_binary, " ");
 
   int exit_code = -1;
   if (execvp(docker_binary, args) != 0) {
@@ -1350,8 +1180,9 @@ int run_docker(const char *command_file) {
       free(docker_command_with_binary);
       free(docker_command);
       exit_code = DOCKER_RUN_FAILED;
+  } else {
+    exit_code = 0;
   }
-  exit_code = 0;
   return exit_code;
 }
 
@@ -1484,22 +1315,29 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-  char docker_command_with_binary[EXECUTOR_PATH_MAX];
-  char docker_wait_command[EXECUTOR_PATH_MAX];
-  char docker_logs_command[EXECUTOR_PATH_MAX];
-  char docker_inspect_command[EXECUTOR_PATH_MAX];
-  char docker_rm_command[EXECUTOR_PATH_MAX];
+  char *docker_command_with_binary = NULL;
+  char *docker_wait_command = NULL;
+  char *docker_logs_command = NULL;
+  char *docker_inspect_command = NULL;
+  char *docker_rm_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
   int BUFFER_SIZE = 4096;
   char buffer[BUFFER_SIZE];
 
+  size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
+
+  docker_command_with_binary = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_wait_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_logs_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_inspect_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_rm_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+
   gid_t user_gid = getegid();
   uid_t prev_uid = geteuid();
 
-  char *docker_command = parse_docker_command_file(command_file);
-  char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
-  docker_binary = check_docker_binary(docker_binary);
+  char *docker_command = NULL;
+  char *docker_binary = NULL;
 
   fprintf(LOGFILE, "Creating script paths...\n");
   exit_code = create_script_paths(
@@ -1522,6 +1360,9 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
+  docker_command = construct_docker_command(command_file);
+  docker_binary = get_docker_binary(&CFG);
+
   fprintf(LOGFILE, "Getting exit code file...\n");
   exit_code_file = get_exit_code_file(pid_file);
   if (NULL == exit_code_file) {
@@ -1538,7 +1379,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
+  snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
 
   fprintf(LOGFILE, "Launching docker container...\n");
   FILE* start_docker = popen(docker_command_with_binary, "r");
@@ -1551,7 +1392,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-  snprintf(docker_inspect_command, EXECUTOR_PATH_MAX,
+  snprintf(docker_inspect_command, command_size,
     "%s inspect --format {{.State.Pid}} %s",
     docker_binary, container_id);
 
@@ -1596,7 +1437,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       goto cleanup;
     }
 
-    snprintf(docker_wait_command, EXECUTOR_PATH_MAX,
+    snprintf(docker_wait_command, command_size,
       "%s wait %s", docker_binary, container_id);
 
     fprintf(LOGFILE, "Waiting for docker container to finish...\n");
@@ -1610,7 +1451,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     if(exit_code != 0) {
       fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
       exit_code);
-      snprintf(docker_logs_command, EXECUTOR_PATH_MAX, "%s logs --tail=250 %s",
+      snprintf(docker_logs_command, command_size, "%s logs --tail=250 %s",
         docker_binary, container_id);
       FILE* logs = popen(docker_logs_command, "r");
       if(logs != NULL) {
@@ -1640,7 +1481,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
   fprintf(LOGFILE, "Removing docker container post-exit...\n");
-  snprintf(docker_rm_command, EXECUTOR_PATH_MAX,
+  snprintf(docker_rm_command, command_size,
     "%s rm %s", docker_binary, container_id);
   FILE* rm_docker = popen(docker_rm_command, "w");
   if (pclose (rm_docker) != 0)
@@ -1680,6 +1521,11 @@ cleanup:
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
+  free(docker_command_with_binary);
+  free(docker_wait_command);
+  free(docker_logs_command);
+  free(docker_inspect_command);
+  free(docker_rm_command);
   return exit_code;
 }
 
@@ -1833,7 +1679,7 @@ static int rmdir_as_nm(const char* path) {
   int user_gid = getegid();
   int ret = change_effective_user(nm_uid, nm_gid);
   if (ret == 0) {
-    if (rmdir(path) != 0) {
+    if (rmdir(path) != 0 && errno != ENOENT) {
       fprintf(LOGFILE, "rmdir of %s failed - %s\n", path, strerror(errno));
       ret = -1;
     }
@@ -1878,25 +1724,26 @@ static int unlink_helper(int dirfd, const char *name, int flags) {
   } else {
     ret = unlink(name);
   }
-  if (ret >= 0) {
+  if (ret >= 0 || errno == ENOENT) {
     return 0;
   }
   return errno;
 }
 
 /**
- * Determine if an entry in a directory is a symlink.
+ * Determine if an entry in a directory is another directory without following
+ * symlinks.
  *
  * @param dirfd     The directory file descriptor, or -1 if there is none.
  * @param name      If dirfd is -1, this is the path to examine.
  *                  Otherwise, this is the file name in the directory to
  *                  examine.
  *
- * @return          0 if the entry is not a symlink
- *                  1 if the entry is a symlink
+ * @return          0 if the entry is a symlink or otherwise not a directory
+ *                  1 if the entry is a directory
  *                  A negative errno code if we couldn't access the entry.
  */
-static int is_symlink_helper(int dirfd, const char *name)
+static int is_dir_helper(int dirfd, const char *name)
 {
   struct stat stat;
 
@@ -1909,42 +1756,49 @@ static int is_symlink_helper(int dirfd, const char *name)
       return -errno;
     }
   }
-  return !!S_ISLNK(stat.st_mode);
+  return !!S_ISDIR(stat.st_mode);
 }
 
 static int recursive_unlink_helper(int dirfd, const char *name,
                                    const char* fullpath)
 {
-  int fd = -1, ret = 0;
+  int fd = -1, ret = 0, unlink_err = 0;
   DIR *dfd = NULL;
   struct stat stat;
 
-  // Check to see if the file is a symlink.  If so, delete the symlink rather
-  // than what it points to.
-  ret = is_symlink_helper(dirfd, name);
+  // Check to see if the file is a directory. If not then we can unlink it now.
+  ret = is_dir_helper(dirfd, name);
   if (ret < 0) {
-    // is_symlink_helper failed.
+    // is_dir_helper failed.
+    if (ret == -ENOENT) {
+      ret = 0;
+      goto done;
+    }
     ret = -ret;
-    fprintf(LOGFILE, "is_symlink_helper(%s) failed: %s\n",
+    fprintf(LOGFILE, "is_dir_helper(%s) failed: %s\n",
             fullpath, strerror(ret));
     goto done;
-  } else if (ret == 1) {
-    // is_symlink_helper determined that the path is a symlink.
+  } else if (ret == 0) {
+    // is_dir_helper determined that the path is not a directory.
     ret = unlink_helper(dirfd, name, 0);
     if (ret) {
-      fprintf(LOGFILE, "failed to unlink symlink %s: %s\n",
+      fprintf(LOGFILE, "failed to unlink %s: %s\n",
               fullpath, strerror(ret));
     }
     goto done;
   }
 
-  // Open the file.  We use O_NOFOLLOW here to ensure that we if a symlink was
+  // Open the directory. We use O_NOFOLLOW here to ensure that if a symlink was
   // swapped in by an attacker, we will fail to follow it rather than deleting
   // something we potentially should not.
   fd = open_helper(dirfd, name);
   if (fd == -EACCES) {
     ret = chmod_helper(dirfd, name, 0700);
     if (ret) {
+      if (ret == ENOENT) {
+        ret = 0;
+        goto done;
+      }
       fprintf(LOGFILE, "chmod(%s) failed: %s\n", fullpath, strerror(ret));
       goto done;
     }
@@ -1952,11 +1806,19 @@ static int recursive_unlink_helper(int dirfd, const char *name,
   }
   if (fd < 0) {
     ret = -fd;
+    if (ret == ENOENT) {
+      ret = 0;
+      goto done;
+    }
     fprintf(LOGFILE, "error opening %s: %s\n", fullpath, strerror(ret));
     goto done;
   }
   if (fstat(fd, &stat) < 0) {
     ret = errno;
+    if (ret == ENOENT) {
+      ret = 0;
+      goto done;
+    }
     fprintf(LOGFILE, "failed to stat %s: %s\n", fullpath, strerror(ret));
     goto done;
   }
@@ -1967,9 +1829,26 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       goto done;
     }
   } else {
+    // make sure the directory has full user permissions
+    // so entries can be deleted
+    if ((stat.st_mode & S_IRWXU) != S_IRWXU) {
+      ret = chmod_helper(dirfd, name, 0700);
+      if (ret) {
+        if (ret == ENOENT) {
+          ret = 0;
+          goto done;
+        }
+        fprintf(LOGFILE, "chmod(%s) failed: %s\n", fullpath, strerror(ret));
+        goto done;
+      }
+    }
     dfd = fdopendir(fd);
     if (!dfd) {
       ret = errno;
+      if (ret == ENOENT) {
+        ret = 0;
+        goto done;
+      }
       fprintf(LOGFILE, "fopendir(%s) failed: %s\n", fullpath, strerror(ret));
       goto done;
     }
@@ -1981,7 +1860,7 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       de = readdir(dfd);
       if (!de) {
         ret = errno;
-        if (ret) {
+        if (ret && ret != ENOENT) {
           fprintf(LOGFILE, "readdir(%s) failed: %s\n", fullpath, strerror(ret));
           goto done;
         }
@@ -1999,10 +1878,10 @@ static int recursive_unlink_helper(int dirfd, const char *name,
         ret = ENOMEM;
         goto done;
       }
-      ret = recursive_unlink_helper(fd, de->d_name, new_fullpath);
+      int rc = recursive_unlink_helper(fd, de->d_name, new_fullpath);
       free(new_fullpath);
-      if (ret) {
-        goto done;
+      if (rc && !unlink_err) {
+        unlink_err = rc;
       }
     }
     if (dirfd != -1) {
@@ -2013,7 +1892,7 @@ static int recursive_unlink_helper(int dirfd, const char *name,
       }
     }
   }
-  ret = 0;
+  ret = unlink_err;
 done:
   if (fd >= 0) {
     close(fd);
@@ -2044,9 +1923,6 @@ static int delete_path(const char *full_path,
     return PATH_TO_DELETE_IS_NULL;
   }
   ret = recursive_unlink_children(full_path);
-  if (ret == ENOENT) {
-    return 0;
-  }
   if (ret != 0) {
     fprintf(LOGFILE, "Error while deleting %s: %d (%s)\n",
             full_path, ret, strerror(ret));
@@ -2328,4 +2204,13 @@ int traffic_control_read_state(char *command_file) {
  */
 int traffic_control_read_stats(char *command_file) {
   return run_traffic_control(TC_READ_STATS_OPTS, command_file);
+}
+
+/**
+ * FIXME: (wangda) it's better to move executor_cfg out of container-executor.c
+ * Now initialize of executor_cfg and data structures are stored inside
+ * container-executor which is not a good design.
+ */
+struct configuration* get_cfg() {
+  return &CFG;
 }

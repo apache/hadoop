@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
@@ -36,13 +34,16 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Set of utility methods used by timeline filter classes.
  */
 public final class TimelineFilterUtils {
 
-  private static final Log LOG = LogFactory.getLog(TimelineFilterUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineFilterUtils.class);
 
   private TimelineFilterUtils() {
   }
@@ -178,6 +179,23 @@ public final class TimelineFilterUtils {
         CompareOp.LESS_OR_EQUAL, true);
     list.addFilter(singleColValFilterEnd);
     return list;
+  }
+
+  /**
+   * Creates a HBase {@link SingleColumnValueFilter} with specified column.
+   * @param <T> Describes the type of column prefix.
+   * @param column Column which value to be filtered.
+   * @param value Value to be filtered.
+   * @param op Compare operator
+   * @return a SingleColumnValue Filter
+   * @throws IOException if any exception.
+   */
+  public static <T> Filter createHBaseSingleColValueFilter(Column<T> column,
+      Object value, CompareOp op) throws IOException {
+    Filter singleColValFilter = createHBaseSingleColValueFilter(
+        column.getColumnFamilyBytes(), column.getColumnQualifierBytes(),
+        column.getValueConverter().encodeValue(value), op, true);
+    return singleColValFilter;
   }
 
   /**

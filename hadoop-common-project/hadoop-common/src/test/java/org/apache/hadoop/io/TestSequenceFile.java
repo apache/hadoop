@@ -21,8 +21,6 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 
-import org.apache.commons.logging.*;
-
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
@@ -40,11 +38,14 @@ import static org.junit.Assert.fail;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSequenceFile {
-  private static final Log LOG = LogFactory.getLog(TestSequenceFile.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSequenceFile.class);
 
   private Configuration conf = new Configuration();
 

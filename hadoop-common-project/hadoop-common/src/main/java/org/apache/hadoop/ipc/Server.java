@@ -64,13 +64,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -82,6 +81,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
@@ -123,6 +123,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -291,9 +293,9 @@ public abstract class Server {
   }
   
 
-  public static final Log LOG = LogFactory.getLog(Server.class);
-  public static final Log AUDITLOG = 
-    LogFactory.getLog("SecurityLogger."+Server.class.getName());
+  public static final Logger LOG = LoggerFactory.getLogger(Server.class);
+  public static final Logger AUDITLOG =
+      LoggerFactory.getLogger("SecurityLogger."+Server.class.getName());
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
   private static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
   
@@ -1111,7 +1113,7 @@ public abstract class Server {
           } catch (IOException ex) {
             LOG.error("Error in Reader", ex);
           } catch (Throwable re) {
-            LOG.fatal("Bug in read selector!", re);
+            LOG.error("Bug in read selector!", re);
             ExitUtil.terminate(1, "Bug in read selector!");
           }
         }
@@ -1220,6 +1222,7 @@ public abstract class Server {
           if (channel.isOpen()) {
             IOUtils.cleanup(null, channel);
           }
+          connectionManager.droppedConnections.getAndIncrement();
           continue;
         }
         key.attach(c);  // so closeCurrentConnection can get the object
@@ -2477,7 +2480,9 @@ public abstract class Server {
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
 
       try {
-        queueCall(call);
+        internalQueueCall(call);
+      } catch (RpcServerException rse) {
+        throw rse;
       } catch (IOException ioe) {
         throw new FatalRpcServerException(
             RpcErrorCodeProto.ERROR_RPC_SERVER, ioe);
@@ -2614,9 +2619,19 @@ public abstract class Server {
   }
 
   public void queueCall(Call call) throws IOException, InterruptedException {
-    if (!callQueue.isClientBackoffEnabled()) {
+    // external non-rpc calls don't need server exception wrapper.
+    try {
+      internalQueueCall(call);
+    } catch (RpcServerException rse) {
+      throw (IOException)rse.getCause();
+    }
+  }
+
+  private void internalQueueCall(Call call)
+      throws IOException, InterruptedException {
+    try {
       callQueue.put(call); // queue the call; maybe blocked here
-    } else if (callQueue.shouldBackOff(call) || !callQueue.offer(call)) {
+    } catch (CallQueueOverflowException cqe) {
       // If rpc scheduler indicates back off based on performance degradation
       // such as response time or rpc queue is full, we will ask the client
       // to back off by throwing RetriableException. Whether the client will
@@ -2624,7 +2639,8 @@ public abstract class Server {
       // For example, IPC clients using FailoverOnNetworkExceptionRetry handle
       // RetriableException.
       rpcMetrics.incrClientBackoff();
-      throw new RetriableException("Server is too busy.");
+      // unwrap retriable exception.
+      throw cqe.getCause();
     }
   }
 
@@ -2676,7 +2692,7 @@ public abstract class Server {
           }
         } finally {
           CurCall.set(null);
-          IOUtils.cleanup(LOG, traceScope);
+          IOUtils.cleanupWithLogger(LOG, traceScope);
         }
       }
       LOG.debug(Thread.currentThread().getName() + ": exiting");
@@ -2685,7 +2701,7 @@ public abstract class Server {
   }
 
   @VisibleForTesting
-  void logException(Log logger, Throwable e, Call call) {
+  void logException(Logger logger, Throwable e, Call call) {
     if (exceptionsHandler.isSuppressedLog(e.getClass())) {
       return; // Log nothing.
     }
@@ -3161,6 +3177,16 @@ public abstract class Server {
   }
 
   /**
+   * The number of RPC connections dropped due to
+   * too many connections.
+   * @return the number of dropped rpc connections
+   */
+  public long getNumDroppedConnections() {
+    return connectionManager.getDroppedConnections();
+
+  }
+
+  /**
    * The number of rpc calls in the queue.
    * @return The number of rpc calls in the queue.
    */
@@ -3277,7 +3303,8 @@ public abstract class Server {
   }
   
   private class ConnectionManager {
-    final private AtomicInteger count = new AtomicInteger();    
+    final private AtomicInteger count = new AtomicInteger();
+    final private AtomicLong droppedConnections = new AtomicLong();
     final private Set<Connection> connections;
     /* Map to maintain the statistics per User */
     final private Map<String, Integer> userToConnectionsMap;
@@ -3362,6 +3389,11 @@ public abstract class Server {
 
     Map<String, Integer> getUserToConnectionsMap() {
       return userToConnectionsMap;
+    }
+
+
+    long getDroppedConnections() {
+      return droppedConnections.get();
     }
 
     int size() {

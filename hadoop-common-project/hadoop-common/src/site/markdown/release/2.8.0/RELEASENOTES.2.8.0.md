@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# "Apache Hadoop"  2.8.0 Release Notes
+# Apache Hadoop  2.8.0 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
 
@@ -178,7 +178,7 @@ Use today instead of 'Unreleased' in releasedocmaker.py when --usetoday is given
 
 * [HDFS-8226](https://issues.apache.org/jira/browse/HDFS-8226) | *Blocker* | **Non-HA rollback compatibility broken**
 
-Non-HA rollback steps have been changed. Run the rollback command on the namenode (`bin/hdfs namenode -rollback`) before starting cluster with '-rollback' option using (sbin/start-dfs.sh -rollback).
+Non-HA rollback steps have been changed. Run the rollback command on the namenode (\`bin/hdfs namenode -rollback\`) before starting cluster with '-rollback' option using (sbin/start-dfs.sh -rollback).
 
 
 ---
@@ -287,6 +287,13 @@ Documented missing properties and added the regression test to verify that there
 * [MAPREDUCE-6427](https://issues.apache.org/jira/browse/MAPREDUCE-6427) | *Minor* | **Fix typo in JobHistoryEventHandler**
 
 There is a typo in the event string "WORKFLOW\_ID" (as "WORKLFOW\_ID").  The branch-2 change will publish both event strings for compatibility with consumers, but the misspelled metric will be removed in trunk.
+
+
+---
+
+* [HADOOP-12209](https://issues.apache.org/jira/browse/HADOOP-12209) | *Minor* | **Comparable type should be in FileStatus**
+
+**WARNING: No release note provided for this change.**
 
 
 ---
@@ -551,7 +558,7 @@ Added -skip-empty-file option to hadoop fs -getmerge command. With the option, d
 * [HADOOP-11252](https://issues.apache.org/jira/browse/HADOOP-11252) | *Critical* | **RPC client does not time out by default**
 
 This fix includes public method interface change.
-A follow-up jira for this incompatibly for branch-2.7 is HADOOP-13579.
+A follow-up JIRA issue for this incompatibility for branch-2.7 is HADOOP-13579.
 
 
 ---
@@ -640,7 +647,7 @@ Number of blocks per volume is made available as a metric.
 
 ---
 
-* [HADOOP-12668](https://issues.apache.org/jira/browse/HADOOP-12668) | *Critical* | **Support excluding weak Ciphers in HttpServer2 through ssl-server.conf**
+* [HADOOP-12668](https://issues.apache.org/jira/browse/HADOOP-12668) | *Critical* | **Support excluding weak Ciphers in HttpServer2 through ssl-server.xml**
 
 The Code Changes include following:
 - Modified DFSUtil.java in Apache HDFS project for supplying new parameter ssl.server.exclude.cipher.list
@@ -925,13 +932,6 @@ Introduces a new configuration property, yarn.resourcemanager.amlauncher.log.com
 
 ---
 
-* [HDFS-8818](https://issues.apache.org/jira/browse/HDFS-8818) | *Major* | **Allow Balancer to run faster**
-
-Add a new conf "dfs.balancer.max-size-to-move" so that Balancer.MAX\_SIZE\_TO\_MOVE becomes configurable.
-
-
----
-
 * [HDFS-10489](https://issues.apache.org/jira/browse/HDFS-10489) | *Minor* | **Deprecate dfs.encryption.key.provider.uri for HDFS encryption zones**
 
 The configuration dfs.encryption.key.provider.uri is deprecated. To configure key provider in HDFS, please use hadoop.security.key.provider.path.
@@ -967,7 +967,7 @@ Disk usage summaries previously incorrectly counted files twice if they had been
 
 ---
 
-* [HDFS-10883](https://issues.apache.org/jira/browse/HDFS-10883) | *Major* | **`getTrashRoot`'s behavior is not consistent in DFS after enabling EZ.**
+* [HDFS-10883](https://issues.apache.org/jira/browse/HDFS-10883) | *Major* | **\`getTrashRoot\`'s behavior is not consistent in DFS after enabling EZ.**
 
 If root path / is an encryption zone, the old DistributedFileSystem#getTrashRoot(new Path("/")) returns
 /user/$USER/.Trash
@@ -1000,7 +1000,7 @@ This issue fixes a bug in how resources are evicted from the PUBLIC and PRIVATE 
 
 * [HDFS-11048](https://issues.apache.org/jira/browse/HDFS-11048) | *Major* | **Audit Log should escape control characters**
 
-HDFS audit logs are formatted as individual lines, each of which has a few of key-value pair fields. Some of the values come from client request (e.g. src, dst). Before this patch the control characters including \t \n etc are not escaped in audit logs. That may break lines unexpectedly or introduce additional table character (in the worst case, both) within a field. Tools that parse audit logs had to deal with this case carefully. After this patch, the control characters in the src/dst fields are escaped.
+HDFS audit logs are formatted as individual lines, each of which has a few of key-value pair fields. Some of the values come from client request (e.g. src, dst). Before this patch the control characters including \\t \\n etc are not escaped in audit logs. That may break lines unexpectedly or introduce additional table character (in the worst case, both) within a field. Tools that parse audit logs had to deal with this case carefully. After this patch, the control characters in the src/dst fields are escaped.
 
 
 ---
@@ -1076,6 +1076,13 @@ Let yarn client exit with an informative error message if an incompatible Jersey
 
 ---
 
+* [HADOOP-14138](https://issues.apache.org/jira/browse/HADOOP-14138) | *Critical* | **Remove S3A ref from META-INF service discovery, rely on existing core-default entry**
+
+The classpath implementing the s3a filesystem is now defined in core-default.xml. Attempting to instantiate an S3A filesystem instance using a Configuration instance which has not included the default resorts will fail. Applications should not be doing this anyway, as it will lose other critical  configuration options needed by the filesystem.
+
+
+---
+
 * [HDFS-11498](https://issues.apache.org/jira/browse/HDFS-11498) | *Major* | **Make RestCsrfPreventionHandler and WebHdfsHandler compatible with Netty 4.0**
 
 This JIRA sets the Netty 4 dependency to 4.0.23. This is an incompatible change for the 3.0 release line, as 3.0.0-alpha1 and 3.0.0-alpha2 depended on Netty 4.1.0.Beta5.
@@ -1102,4 +1109,16 @@ Applications may encounter build problems if they did depend on these JARs, and 
 \* add a dependency on hadoop-hdfs. For Hadoop 2.8+, this will add the missing dependencies. For builds against older versions of Hadoop, this will be harmless, as hadoop-hdfs and all its dependencies are already pulled in by the hadoop-client POM.
 
 
+---
+
+* [HDFS-8818](https://issues.apache.org/jira/browse/HDFS-8818) | *Major* | **Allow Balancer to run faster**
+
+Add a new conf "dfs.balancer.max-size-to-move" so that Balancer.MAX\_SIZE\_TO\_MOVE becomes configurable.
+
+
+---
+
+* [YARN-6959](https://issues.apache.org/jira/browse/YARN-6959) | *Major* | **RM may allocate wrong AM Container for new attempt**
+
+ResourceManager will now record ResourceRequests from different attempts into different objects.
 

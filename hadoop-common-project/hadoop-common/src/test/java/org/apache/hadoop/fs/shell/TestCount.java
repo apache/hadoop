@@ -447,7 +447,7 @@ public class TestCount {
     Count count = new Count();
     String actual = count.getUsage();
     String expected =
-        "-count [-q] [-h] [-v] [-t [<storage type>]] [-u] [-x] <path> ...";
+        "-count [-q] [-h] [-v] [-t [<storage type>]] [-u] [-x] [-e] <path> ...";
     assertEquals("Count.getUsage", expected, actual);
   }
 
@@ -478,7 +478,8 @@ public class TestCount {
         + "It can also pass the value '', 'all' or 'ALL' to specify all the "
         + "storage types.\n"
         + "The -u option shows the quota and \n"
-        + "the usage against the quota without the detailed content summary.";
+        + "the usage against the quota without the detailed content summary."
+        + "The -e option shows the erasure coding policy.";
 
     assertEquals("Count.getDescription", expected, actual);
   }

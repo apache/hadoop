@@ -56,7 +56,6 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
-    conf.setBoolean(Constants.FAST_UPLOAD, true);
     conf.set(FAST_UPLOAD_BUFFER, getBlockOutputBufferName());
     return conf;
   }

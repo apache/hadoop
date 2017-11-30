@@ -45,7 +45,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @InterfaceStability.Unstable
 public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";
-  public final static int DEFAULT_HOST_LEVEL = 2;
   public static final Logger LOG =
       LoggerFactory.getLogger(NetworkTopology.class);
 

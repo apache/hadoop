@@ -20,10 +20,10 @@ package org.apache.hadoop.util;
 
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Utility to assist with generation of progress reports.  Applications build
  * a hierarchy of {@link Progress} instances, each modelling a phase of
@@ -33,7 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
 public class Progress {
-  private static final Log LOG = LogFactory.getLog(Progress.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Progress.class);
   private String status = "";
   private float progress;
   private int currentPhase;

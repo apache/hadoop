@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -50,14 +48,16 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coprocessor for flow run table.
  */
 public class FlowRunCoprocessor extends BaseRegionObserver {
 
-  private static final Log LOG = LogFactory.getLog(FlowRunCoprocessor.class);
-  private boolean isFlowRunRegion = false;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FlowRunCoprocessor.class);
 
   private Region region;
   /**
@@ -71,13 +71,7 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
     if (e instanceof RegionCoprocessorEnvironment) {
       RegionCoprocessorEnvironment env = (RegionCoprocessorEnvironment) e;
       this.region = env.getRegion();
-      isFlowRunRegion = HBaseTimelineStorageUtils.isFlowRunTable(
-          region.getRegionInfo(), env.getConfiguration());
     }
-  }
-
-  public boolean isFlowRunRegion() {
-    return isFlowRunRegion;
   }
 
   /*
@@ -99,10 +93,6 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
   public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put,
       WALEdit edit, Durability durability) throws IOException {
     Map<String, byte[]> attributes = put.getAttributesMap();
-
-    if (!isFlowRunRegion) {
-      return;
-    }
     // Assumption is that all the cells in a put are the same operation.
     List<Tag> tags = new ArrayList<>();
     if ((attributes != null) && (attributes.size() > 0)) {
@@ -170,10 +160,6 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
   @Override
   public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e,
       Get get, List<Cell> results) throws IOException {
-    if (!isFlowRunRegion) {
-      return;
-    }
-
     Scan scan = new Scan(get);
     scan.setMaxVersions();
     RegionScanner scanner = null;
@@ -205,12 +191,9 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
   public RegionScanner preScannerOpen(
       ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
       RegionScanner scanner) throws IOException {
-
-    if (isFlowRunRegion) {
-      // set max versions for scan to see all
-      // versions to aggregate for metrics
-      scan.setMaxVersions();
-    }
+    // set max versions for scan to see all
+    // versions to aggregate for metrics
+    scan.setMaxVersions();
     return scanner;
   }
 
@@ -230,9 +213,6 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
   public RegionScanner postScannerOpen(
       ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
       RegionScanner scanner) throws IOException {
-    if (!isFlowRunRegion) {
-      return scanner;
-    }
     return new FlowScanner(e.getEnvironment(), scan,
         scanner, FlowScannerOperation.READ);
   }
@@ -241,9 +221,6 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
   public InternalScanner preFlush(
       ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       InternalScanner scanner) throws IOException {
-    if (!isFlowRunRegion) {
-      return scanner;
-    }
     if (LOG.isDebugEnabled()) {
       if (store != null) {
         LOG.debug("preFlush store = " + store.getColumnFamilyName()
@@ -264,9 +241,6 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
   @Override
   public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, StoreFile resultFile) {
-    if (!isFlowRunRegion) {
-      return;
-    }
     if (LOG.isDebugEnabled()) {
       if (store != null) {
         LOG.debug("postFlush store = " + store.getColumnFamilyName()
@@ -288,9 +262,6 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
       InternalScanner scanner, ScanType scanType, CompactionRequest request)
       throws IOException {
 
-    if (!isFlowRunRegion) {
-      return scanner;
-    }
     FlowScannerOperation requestOp = FlowScannerOperation.MINOR_COMPACTION;
     if (request != null) {
       requestOp = (request.isMajor() ? FlowScannerOperation.MAJOR_COMPACTION

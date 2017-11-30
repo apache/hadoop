@@ -19,13 +19,13 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusConfigChangeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.GetReconfigurationStatusResponseProto;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
 /**
@@ -56,7 +56,7 @@ public final class ReconfigurationProtocolUtils {
         if (change.hasErrorMessage()) {
           errorMessage = change.getErrorMessage();
         }
-        statusMap.put(pc, Optional.fromNullable(errorMessage));
+        statusMap.put(pc, Optional.ofNullable(errorMessage));
       }
     }
     return new ReconfigurationTaskStatus(startTime, endTime, statusMap);

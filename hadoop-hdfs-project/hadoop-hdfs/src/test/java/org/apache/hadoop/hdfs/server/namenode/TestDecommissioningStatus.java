@@ -50,7 +50,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DecommissionManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
@@ -100,7 +100,7 @@ public class TestDecommissioningStatus {
     fileSys = cluster.getFileSystem();
     cluster.getNamesystem().getBlockManager().getDatanodeManager()
         .setHeartbeatExpireInterval(3000);
-    Logger.getLogger(DecommissionManager.class).setLevel(Level.DEBUG);
+    Logger.getLogger(DatanodeAdminManager.class).setLevel(Level.DEBUG);
     LOG = Logger.getLogger(TestDecommissioningStatus.class);
   }
 
@@ -344,7 +344,7 @@ public class TestDecommissioningStatus {
    */
   @Test(timeout=120000)
   public void testDecommissionDeadDN() throws Exception {
-    Logger log = Logger.getLogger(DecommissionManager.class);
+    Logger log = Logger.getLogger(DatanodeAdminManager.class);
     log.setLevel(Level.DEBUG);
     DatanodeID dnID = cluster.getDataNodes().get(0).getDatanodeId();
     String dnName = dnID.getXferAddr();
@@ -410,7 +410,7 @@ public class TestDecommissioningStatus {
 
     // All nodes are dead and decommed. Blocks should be missing.
     long  missingBlocks = bm.getMissingBlocksCount();
-    long underreplicated = bm.getUnderReplicatedBlocksCount();
+    long underreplicated = bm.getLowRedundancyBlocksCount();
     assertTrue(missingBlocks > 0);
     assertTrue(underreplicated > 0);
 
@@ -440,7 +440,7 @@ public class TestDecommissioningStatus {
 
     // Blocks should be still be under-replicated
     Thread.sleep(2000);  // Let replication monitor run
-    assertEquals(underreplicated, bm.getUnderReplicatedBlocksCount());
+    assertEquals(underreplicated, bm.getLowRedundancyBlocksCount());
 
     // Start up a node.
     LOG.info("Starting two more nodes");
@@ -448,13 +448,13 @@ public class TestDecommissioningStatus {
     cluster.waitActive();
     // Replication should fix it.
     int count = 0;
-    while((bm.getUnderReplicatedBlocksCount() > 0 ||
+    while((bm.getLowRedundancyBlocksCount() > 0 ||
         bm.getPendingReconstructionBlocksCount() > 0) &&
         count++ < 10) {
       Thread.sleep(1000);
     }
 
-    assertEquals(0, bm.getUnderReplicatedBlocksCount());
+    assertEquals(0, bm.getLowRedundancyBlocksCount());
     assertEquals(0, bm.getPendingReconstructionBlocksCount());
     assertEquals(0, bm.getMissingBlocksCount());
 

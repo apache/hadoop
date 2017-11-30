@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.Server;
 
@@ -58,6 +57,9 @@ public class CorruptReplicasMap{
   private final Map<Block, Map<DatanodeDescriptor, Reason>> corruptReplicasMap =
     new HashMap<Block, Map<DatanodeDescriptor, Reason>>();
 
+  private final LongAdder totalCorruptBlocks = new LongAdder();
+  private final LongAdder totalCorruptECBlockGroups = new LongAdder();
+
   /**
    * Mark the block belonging to datanode as corrupt.
    *
@@ -72,6 +74,7 @@ public class CorruptReplicasMap{
     if (nodes == null) {
       nodes = new HashMap<DatanodeDescriptor, Reason>();
       corruptReplicasMap.put(blk, nodes);
+      incrementBlockStat(blk);
     }
     
     String reasonText;
@@ -97,13 +100,15 @@ public class CorruptReplicasMap{
   }
 
   /**
-   * Remove Block from CorruptBlocksMap
-   *
+   * Remove Block from CorruptBlocksMap.
    * @param blk Block to be removed
    */
   void removeFromCorruptReplicasMap(Block blk) {
     if (corruptReplicasMap != null) {
-      corruptReplicasMap.remove(blk);
+      Map<DatanodeDescriptor, Reason> value = corruptReplicasMap.remove(blk);
+      if (value != null) {
+        decrementBlockStat(blk);
+      }
     }
   }
 
@@ -121,8 +126,9 @@ public class CorruptReplicasMap{
   boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode,
       Reason reason) {
     Map <DatanodeDescriptor, Reason> datanodes = corruptReplicasMap.get(blk);
-    if (datanodes==null)
+    if (datanodes == null) {
       return false;
+    }
 
     // if reasons can be compared but don't match, return false.
     Reason storedReason = datanodes.get(datanode);
@@ -135,12 +141,28 @@ public class CorruptReplicasMap{
       if (datanodes.isEmpty()) {
         // remove the block if there is no more corrupted replicas
         corruptReplicasMap.remove(blk);
+        decrementBlockStat(blk);
       }
       return true;
     }
     return false;
   }
-    
+
+  private void incrementBlockStat(Block block) {
+    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+      totalCorruptECBlockGroups.increment();
+    } else {
+      totalCorruptBlocks.increment();
+    }
+  }
+
+  private void decrementBlockStat(Block block) {
+    if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+      totalCorruptECBlockGroups.decrement();
+    } else {
+      totalCorruptBlocks.decrement();
+    }
+  }
 
   /**
    * Get Nodes which have corrupt replicas of Block
@@ -188,56 +210,37 @@ public class CorruptReplicasMap{
    * @param startingBlockId Block id from which to start. If null, start at
    *  beginning.
    * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
-   *
    */
   @VisibleForTesting
-  long[] getCorruptReplicaBlockIdsForTesting(int numExpectedBlocks,
-                                   Long startingBlockId) {
+  long[] getCorruptBlockIdsForTesting(BlockType blockType,
+      int numExpectedBlocks, Long startingBlockId) {
     if (numExpectedBlocks < 0 || numExpectedBlocks > 100) {
       return null;
     }
-    
-    Iterator<Block> blockIt = 
-        new TreeMap<>(corruptReplicasMap).keySet().iterator();
-    
-    // if the starting block id was specified, iterate over keys until
-    // we find the matching block. If we find a matching block, break
-    // to leave the iterator on the next block after the specified block. 
-    if (startingBlockId != null) {
-      boolean isBlockFound = false;
-      while (blockIt.hasNext()) {
-        Block b = blockIt.next();
-        if (b.getBlockId() == startingBlockId) {
-          isBlockFound = true;
-          break; 
-        }
-      }
-      
-      if (!isBlockFound) {
-        return null;
-      }
-    }
-
-    ArrayList<Long> corruptReplicaBlockIds = new ArrayList<Long>();
-
-    // append up to numExpectedBlocks blockIds to our list
-    for(int i=0; i<numExpectedBlocks && blockIt.hasNext(); i++) {
-      corruptReplicaBlockIds.add(blockIt.next().getBlockId());
-    }
-    
-    long[] ret = new long[corruptReplicaBlockIds.size()];
-    for(int i=0; i<ret.length; i++) {
-      ret[i] = corruptReplicaBlockIds.get(i);
-    }
-    
-    return ret;
+    long cursorBlockId =
+        startingBlockId != null ? startingBlockId : Long.MIN_VALUE;
+    return corruptReplicasMap.keySet()
+        .stream()
+        .filter(r -> {
+          if (blockType == BlockType.STRIPED) {
+            return BlockIdManager.isStripedBlockID(r.getBlockId()) &&
+                r.getBlockId() >= cursorBlockId;
+          } else {
+            return !BlockIdManager.isStripedBlockID(r.getBlockId()) &&
+                r.getBlockId() >= cursorBlockId;
+          }
+        })
+        .sorted()
+        .limit(numExpectedBlocks)
+        .mapToLong(Block::getBlockId)
+        .toArray();
   }
 
   /**
    * method to get the set of corrupt blocks in corruptReplicasMap.
    * @return Set of Block objects
    */
-  Set<Block> getCorruptBlocks() {
+  Set<Block> getCorruptBlocksSet() {
     Set<Block> corruptBlocks = new HashSet<Block>();
     corruptBlocks.addAll(corruptReplicasMap.keySet());
     return corruptBlocks;
@@ -262,5 +265,13 @@ public class CorruptReplicasMap{
     } else {
       return null;
     }
+  }
+
+  long getCorruptBlocks() {
+    return totalCorruptBlocks.longValue();
+  }
+
+  long getCorruptECBlockGroups() {
+    return totalCorruptECBlockGroups.longValue();
   }
 }

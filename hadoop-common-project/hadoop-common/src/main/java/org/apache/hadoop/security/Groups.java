@@ -59,9 +59,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Timer;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A user-to-groups mapping service.
@@ -74,7 +73,7 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class Groups {
-  private static final Log LOG = LogFactory.getLog(Groups.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Groups.class);
   
   private final GroupMappingServiceProvider impl;
 

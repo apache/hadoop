@@ -26,8 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -47,6 +45,8 @@ import org.apache.zookeeper.KeeperException.Code;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -141,7 +141,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   @VisibleForTesting
   protected static final String BREADCRUMB_FILENAME = "ActiveBreadCrumb";
 
-  public static final Log LOG = LogFactory.getLog(ActiveStandbyElector.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(ActiveStandbyElector.class);
 
   private static final int SLEEP_AFTER_FAILURE_TO_BECOME_ACTIVE = 1000;
 
@@ -712,7 +713,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
 
   private void fatalError(String errorMessage) {
-    LOG.fatal(errorMessage);
+    LOG.error(errorMessage);
     reset();
     appClient.notifyFatalError(errorMessage);
   }
@@ -824,10 +825,10 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         createConnection();
         success = true;
       } catch(IOException e) {
-        LOG.warn(e);
+        LOG.warn(e.toString());
         sleepFor(5000);
       } catch(KeeperException e) {
-        LOG.warn(e);
+        LOG.warn(e.toString());
         sleepFor(5000);
       }
       ++connectionRetryCount;
@@ -866,7 +867,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     try {
       tempZk.close();
     } catch(InterruptedException e) {
-      LOG.warn(e);
+      LOG.warn(e.toString());
     }
     zkConnectionState = ConnectionState.TERMINATED;
     wantToBeInElection = false;
@@ -1080,7 +1081,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         List<ACL> acl = zkClient.getACL(path, stat);
         if (acl == null || !acl.containsAll(zkAcl) ||
             !zkAcl.containsAll(acl)) {
-          zkClient.setACL(path, zkAcl, stat.getVersion());
+          zkClient.setACL(path, zkAcl, stat.getAversion());
         }
         return null;
       }

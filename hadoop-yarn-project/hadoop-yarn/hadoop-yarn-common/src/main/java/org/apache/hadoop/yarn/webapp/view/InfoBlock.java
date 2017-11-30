@@ -26,11 +26,11 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 
 import com.google.inject.Inject;
 
@@ -47,7 +47,7 @@ public class InfoBlock extends HtmlBlock {
       div(_INFO_WRAP).
         table(_INFO).
           tr().
-            th().$class(C_TH).$colspan(2)._(info.about())._()._();
+            th().$class(C_TH).$colspan(2).__(info.about()).__().__();
     int i = 0;
     for (ResponseInfo.Item item : info) {
       TR<TABLE<DIV<Hamlet>>> tr = table.
@@ -62,23 +62,23 @@ public class InfoBlock extends HtmlBlock {
         	DIV<TD<TR<TABLE<DIV<Hamlet>>>>> singleLineDiv;
             for ( String line :lines) {
               singleLineDiv = td.div();
-              singleLineDiv._(line);
-              singleLineDiv._();
+              singleLineDiv.__(line);
+              singleLineDiv.__();
             }
           } else {
-            td._(value);
+            td.__(value);
           }
-          td._();
+          td.__();
         } else {
-          tr.td()._r(value)._();
+          tr.td()._r(value).__();
         }
       } else {
         tr.
           td().
-            a(url(item.url), value)._();
+            a(url(item.url), value).__();
       }
-      tr._();
+      tr.__();
     }
-    table._()._();
+    table.__().__();
   }
 }

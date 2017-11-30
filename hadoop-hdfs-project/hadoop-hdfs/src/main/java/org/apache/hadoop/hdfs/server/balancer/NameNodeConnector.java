@@ -25,7 +25,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,7 +35,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -246,10 +244,8 @@ public class NameNodeConnector implements Closeable {
         fs.delete(idPath, true);
       }
 
-      final FSDataOutputStream fsout = fs.newFSDataOutputStreamBuilder(idPath)
-          .replicate()
-          .setFlags(EnumSet.of(CreateFlag.CREATE))
-          .build();
+      final FSDataOutputStream fsout = fs.createFile(idPath)
+          .replicate().recursive().build();
 
       Preconditions.checkState(
           fsout.hasCapability(StreamCapability.HFLUSH.getValue())

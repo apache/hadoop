@@ -326,4 +326,8 @@ public class KMSACLs implements Runnable, KeyACLs {
         || whitelistKeyAcls.containsKey(opType));
   }
 
+  @VisibleForTesting
+  void forceNextReloadForTesting() {
+    lastReload = 0;
+  }
 }

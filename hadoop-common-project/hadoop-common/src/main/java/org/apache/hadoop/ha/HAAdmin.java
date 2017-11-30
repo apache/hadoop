@@ -28,8 +28,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +41,8 @@ import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A command-line tool for making calls in the HAServiceProtocol.
@@ -62,7 +62,7 @@ public abstract class HAAdmin extends Configured implements Tool {
    * operation, which is why it is not documented in the usage below.
    */
   private static final String FORCEMANUAL = "forcemanual";
-  private static final Log LOG = LogFactory.getLog(HAAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HAAdmin.class);
 
   private int rpcTimeoutForChecks = -1;
   
@@ -449,7 +449,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     
     if (cmdLine.hasOption(FORCEMANUAL)) {
       if (!confirmForceManual()) {
-        LOG.fatal("Aborted");
+        LOG.error("Aborted");
         return -1;
       }
       // Instruct the NNs to honor this request even if they're

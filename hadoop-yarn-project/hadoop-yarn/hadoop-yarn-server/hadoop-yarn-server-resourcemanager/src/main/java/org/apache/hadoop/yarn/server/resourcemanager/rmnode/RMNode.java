@@ -144,7 +144,7 @@ public interface RMNode {
    * applications to clean up for this node.
    * @param response the {@link NodeHeartbeatResponse} to update
    */
-  public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response);
+  void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response);
 
   public NodeHeartbeatResponse getLastNodeHeartBeatResponse();
 
@@ -169,9 +169,9 @@ public interface RMNode {
   public Set<String> getNodeLabels();
   
   /**
-   * Update containers to be decreased
+   * Update containers to be updated
    */
-  public void updateNodeHeartbeatResponseForContainersDecreasing(
+  void updateNodeHeartbeatResponseForUpdatedContainers(
       NodeHeartbeatResponse response);
   
   public List<Container> pullNewlyIncreasedContainers();
@@ -183,7 +183,7 @@ public interface RMNode {
   void setUntrackedTimeStamp(long timeStamp);
   /*
    * Optional decommissioning timeout in second
-   * (null indicates default timeout).
+   * (null indicates absent timeout).
    * @return the decommissioning timeout in second.
    */
   Integer getDecommissioningTimeout();

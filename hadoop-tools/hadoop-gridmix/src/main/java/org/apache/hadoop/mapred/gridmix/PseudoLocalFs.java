@@ -116,7 +116,7 @@ class PseudoLocalFs extends FileSystem {
    * @throws FileNotFoundException
    */
   long validateFileNameFormat(Path path) throws FileNotFoundException {
-    path = path.makeQualified(this);
+    path = this.makeQualified(path);
     boolean valid = true;
     long fileSize = 0;
     if (!path.toUri().getScheme().equals(getUri().getScheme())) {
@@ -328,5 +328,11 @@ class PseudoLocalFs extends FileSystem {
   public void setWorkingDirectory(Path newDir) {
     throw new UnsupportedOperationException("SetWorkingDirectory "
         + "is not supported in pseudo local file system.");
+  }
+
+  @Override
+  public Path makeQualified(Path path) {
+    // skip FileSystem#checkPath() to validate some other Filesystems
+    return path.makeQualified(this.getUri(), this.getWorkingDirectory());
   }
 }

@@ -16,56 +16,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# "Apache Hadoop" Changelog
+# Apache Hadoop Changelog
 
-## Release 3.0.0-alpha3 - 2017-05-25
+## Release 3.0.0-alpha3 - 2017-05-26
 
-### INCOMPATIBLE CHANGES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
 
 
 ### IMPORTANT ISSUES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### NEW FEATURES:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
+| [YARN-6709](https://issues.apache.org/jira/browse/YARN-6709) | Root privilege escalation in experimental Docker support |  Blocker | nodemanager, security | Allen Wittenauer | Varun Vasudev |
 
 
 ### IMPROVEMENTS:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
+| [YARN-5892](https://issues.apache.org/jira/browse/YARN-5892) | Support user-specific minimum user limit percentage in Capacity Scheduler |  Major | capacityscheduler | Eric Payne | Eric Payne |
 
 
 ### BUG FIXES:
 
 | JIRA | Summary | Priority | Component | Reporter | Contributor |
 |:---- |:---- | :--- |:---- |:---- |:---- |
-| [YARN-6336](https://issues.apache.org/jira/browse/YARN-6336) | Jenkins report YARN new UI build failure |  Blocker | . | Junping Du | Sunil G |
 | [YARN-6278](https://issues.apache.org/jira/browse/YARN-6278) | Enforce to use correct node and npm version in new YARN-UI build |  Critical | . | Sunil G | Sunil G |
+| [YARN-6336](https://issues.apache.org/jira/browse/YARN-6336) | Jenkins report YARN new UI build failure |  Blocker | . | Junping Du | Sunil G |
 
-
-### TESTS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### SUB-TASKS:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
-
-
-### OTHER:
-
-| JIRA | Summary | Priority | Component | Reporter | Contributor |
-|:---- |:---- | :--- |:---- |:---- |:---- |
 

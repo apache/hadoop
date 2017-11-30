@@ -27,6 +27,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
@@ -111,11 +113,11 @@ public class TestContainerResourceIncreaseRPC {
       // Construct container resource increase request,
       List<Token> increaseTokens = new ArrayList<>();
       increaseTokens.add(containerToken);
-      IncreaseContainersResourceRequest increaseRequest =
-          IncreaseContainersResourceRequest
-              .newInstance(increaseTokens);
+      ContainerUpdateRequest request = ContainerUpdateRequest
+          .newInstance(increaseTokens);
+
       try {
-        proxy.increaseContainersResource(increaseRequest);
+        proxy.updateContainer(request);
       } catch (Exception e) {
         LOG.info(StringUtils.stringifyException(e));
         Assert.assertEquals("Error, exception is not: "
@@ -170,8 +172,16 @@ public class TestContainerResourceIncreaseRPC {
     }
 
     @Override
+    @Deprecated
     public IncreaseContainersResourceResponse increaseContainersResource(
-        IncreaseContainersResourceRequest request) throws YarnException, IOException {
+        IncreaseContainersResourceRequest request)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public ContainerUpdateResponse updateContainer(ContainerUpdateRequest
+        request) throws YarnException, IOException {
       try {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(10000);
