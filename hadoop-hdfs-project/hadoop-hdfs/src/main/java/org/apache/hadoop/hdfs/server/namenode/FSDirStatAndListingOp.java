@@ -261,7 +261,7 @@ class FSDirStatAndListingOp {
             // This helps to prevent excessively large response payloads.
             // Approximate #locations with locatedBlockCount() * repl_factor
             LocatedBlocks blks =
-                ((HdfsLocatedFileStatus)listing[i]).getBlockLocations();
+                ((HdfsLocatedFileStatus)listing[i]).getLocatedBlocks();
             locationBudget -= (blks == null) ? 0 :
                blks.locatedBlockCount() * listing[i].getReplication();
         }
@@ -486,31 +486,26 @@ class FSDirStatAndListingOp {
       String owner, String group, byte[] symlink, byte[] path, long fileId,
       int childrenNum, FileEncryptionInfo feInfo, byte storagePolicy,
       ErasureCodingPolicy ecPolicy, LocatedBlocks locations) {
-    if (locations == null) {
-      return new HdfsFileStatus.Builder()
-          .length(length)
-          .isdir(isdir)
-          .replication(replication)
-          .blocksize(blocksize)
-          .mtime(mtime)
-          .atime(atime)
-          .perm(permission)
-          .flags(flags)
-          .owner(owner)
-          .group(group)
-          .symlink(symlink)
-          .path(path)
-          .fileId(fileId)
-          .children(childrenNum)
-          .feInfo(feInfo)
-          .storagePolicy(storagePolicy)
-          .ecPolicy(ecPolicy)
-          .build();
-    } else {
-      return new HdfsLocatedFileStatus(length, isdir, replication, blocksize,
-          mtime, atime, permission, flags, owner, group, symlink, path,
-          fileId, locations, childrenNum, feInfo, storagePolicy, ecPolicy);
-    }
+    return new HdfsFileStatus.Builder()
+        .length(length)
+        .isdir(isdir)
+        .replication(replication)
+        .blocksize(blocksize)
+        .mtime(mtime)
+        .atime(atime)
+        .perm(permission)
+        .flags(flags)
+        .owner(owner)
+        .group(group)
+        .symlink(symlink)
+        .path(path)
+        .fileId(fileId)
+        .children(childrenNum)
+        .feInfo(feInfo)
+        .storagePolicy(storagePolicy)
+        .ecPolicy(ecPolicy)
+        .locations(locations)
+        .build();
   }
 
   private static ContentSummary getContentSummaryInt(FSDirectory fsd,

@@ -1585,23 +1585,36 @@ public class PBHelperClient {
     EnumSet<HdfsFileStatus.Flags> flags = fs.hasFlags()
         ? convertFlags(fs.getFlags())
         : convertFlags(fs.getPermission());
-    return new HdfsLocatedFileStatus(
-        fs.getLength(), fs.getFileType().equals(FileType.IS_DIR),
-        fs.getBlockReplication(), fs.getBlocksize(),
-        fs.getModificationTime(), fs.getAccessTime(),
-        convert(fs.getPermission()),
-        flags,
-        fs.getOwner(), fs.getGroup(),
-        fs.getFileType().equals(FileType.IS_SYMLINK) ?
-            fs.getSymlink().toByteArray() : null,
-        fs.getPath().toByteArray(),
-        fs.hasFileId()? fs.getFileId(): HdfsConstants.GRANDFATHER_INODE_ID,
-        fs.hasLocations() ? convert(fs.getLocations()) : null,
-        fs.hasChildrenNum() ? fs.getChildrenNum() : -1,
-        fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) : null,
-        fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
-            : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
-        fs.hasEcPolicy() ? convertErasureCodingPolicy(fs.getEcPolicy()) : null);
+    return new HdfsFileStatus.Builder()
+        .length(fs.getLength())
+        .isdir(fs.getFileType().equals(FileType.IS_DIR))
+        .replication(fs.getBlockReplication())
+        .blocksize(fs.getBlocksize())
+        .mtime(fs.getModificationTime())
+        .atime(fs.getAccessTime())
+        .perm(convert(fs.getPermission()))
+        .flags(flags)
+        .owner(fs.getOwner())
+        .group(fs.getGroup())
+        .symlink(FileType.IS_SYMLINK.equals(fs.getFileType())
+            ? fs.getSymlink().toByteArray()
+            : null)
+        .path(fs.getPath().toByteArray())
+        .fileId(fs.hasFileId()
+            ? fs.getFileId()
+            : HdfsConstants.GRANDFATHER_INODE_ID)
+        .locations(fs.hasLocations() ? convert(fs.getLocations()) : null)
+        .children(fs.hasChildrenNum() ? fs.getChildrenNum() : -1)
+        .feInfo(fs.hasFileEncryptionInfo()
+            ? convert(fs.getFileEncryptionInfo())
+            : null)
+        .storagePolicy(fs.hasStoragePolicy()
+            ? (byte) fs.getStoragePolicy()
+            : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED)
+        .ecPolicy(fs.hasEcPolicy()
+            ? convertErasureCodingPolicy(fs.getEcPolicy())
+            : null)
+        .build();
   }
 
   private static EnumSet<HdfsFileStatus.Flags> convertFlags(int flags) {
@@ -1864,10 +1877,10 @@ public class PBHelperClient {
     if (dl == null)
       return null;
     List<HdfsFileStatusProto> partList =  dl.getPartialListingList();
-    return new DirectoryListing(partList.isEmpty() ?
-        new HdfsLocatedFileStatus[0] :
-        convert(partList.toArray(new HdfsFileStatusProto[partList.size()])),
-        dl.getRemainingEntries());
+    return new DirectoryListing(partList.isEmpty()
+        ? new HdfsFileStatus[0]
+        : convert(partList.toArray(new HdfsFileStatusProto[partList.size()])),
+                  dl.getRemainingEntries());
   }
 
   public static HdfsFileStatus[] convert(HdfsFileStatusProto[] fs) {
@@ -2163,7 +2176,7 @@ public class PBHelperClient {
     }
     if (fs instanceof HdfsLocatedFileStatus) {
       final HdfsLocatedFileStatus lfs = (HdfsLocatedFileStatus) fs;
-      LocatedBlocks locations = lfs.getBlockLocations();
+      LocatedBlocks locations = lfs.getLocatedBlocks();
       if (locations != null) {
         builder.setLocations(convert(locations));
       }
