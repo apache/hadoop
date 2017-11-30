@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -465,6 +466,33 @@ public class SnapshotManager implements SnapshotStatsMXBean {
             snapshotRootDir, snapshotDescendantDir, from, to);
     return diffs != null ? diffs.generateReport() : new SnapshotDiffReport(
         snapshotPath, from, to, Collections.<DiffReportEntry> emptyList());
+  }
+
+  /**
+   * Compute the partial difference between two snapshots of a directory,
+   * or between a snapshot of the directory and its current tree.
+   */
+  public SnapshotDiffReportListing diff(final INodesInPath iip,
+      final String snapshotPath, final String from, final String to,
+      byte[] startPath, int index, int snapshotDiffReportLimit)
+      throws IOException {
+    // Find the source root directory path where the snapshots were taken.
+    // All the check for path has been included in the valueOf method.
+    INodeDirectory snapshotRootDir;
+    if (this.snapshotDiffAllowSnapRootDescendant) {
+      snapshotRootDir = getSnapshottableAncestorDir(iip);
+    } else {
+      snapshotRootDir = getSnapshottableRoot(iip);
+    }
+    Preconditions.checkNotNull(snapshotRootDir);
+    INodeDirectory snapshotDescendantDir = INodeDirectory.valueOf(
+        iip.getLastINode(), snapshotPath);
+    final SnapshotDiffListingInfo diffs =
+        snapshotRootDir.getDirectorySnapshottableFeature()
+            .computeDiff(snapshotRootDir, snapshotDescendantDir, from, to,
+                startPath, index, snapshotDiffReportLimit);
+    return diffs != null ? diffs.generateReport() :
+        new SnapshotDiffReportListing();
   }
   
   public void clearSnapshottableDirs() {

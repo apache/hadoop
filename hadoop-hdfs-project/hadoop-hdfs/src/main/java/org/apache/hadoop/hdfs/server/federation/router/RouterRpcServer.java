@@ -92,6 +92,7 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -1504,6 +1505,14 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   @Override // ClientProtocol
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
       String earlierSnapshotName, String laterSnapshotName) throws IOException {
+    checkOperation(OperationCategory.READ, false);
+    return null;
+  }
+
+  @Override // ClientProtocol
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(
+      String snapshotRoot, String earlierSnapshotName, String laterSnapshotName,
+      byte[] startPath, int index) throws IOException {
     checkOperation(OperationCategory.READ, false);
     return null;
   }

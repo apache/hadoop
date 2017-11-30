@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
@@ -133,6 +134,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuo
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesRequestProto;
@@ -1198,6 +1201,27 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       GetSnapshotDiffReportResponseProto result =
           rpcProxy.getSnapshotDiffReport(null, req);
+
+      return PBHelperClient.convert(result.getDiffReport());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(
+      String snapshotRoot, String fromSnapshot, String toSnapshot,
+      byte[] startPath, int index) throws IOException {
+    GetSnapshotDiffReportListingRequestProto req =
+        GetSnapshotDiffReportListingRequestProto.newBuilder()
+            .setSnapshotRoot(snapshotRoot).setFromSnapshot(fromSnapshot)
+            .setToSnapshot(toSnapshot).setCursor(
+            HdfsProtos.SnapshotDiffReportCursorProto.newBuilder()
+                .setStartPath(PBHelperClient.getByteString(startPath))
+                .setIndex(index).build()).build();
+    try {
+      GetSnapshotDiffReportListingResponseProto result =
+          rpcProxy.getSnapshotDiffReportListing(null, req);
 
       return PBHelperClient.convert(result.getDiffReport());
     } catch (ServiceException e) {

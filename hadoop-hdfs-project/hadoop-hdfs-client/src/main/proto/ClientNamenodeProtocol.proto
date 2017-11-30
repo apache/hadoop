@@ -297,6 +297,16 @@ message GetSnapshotDiffReportResponseProto {
   required SnapshotDiffReportProto diffReport = 1;
 }
 
+message GetSnapshotDiffReportListingRequestProto {
+  required string snapshotRoot = 1;
+  required string fromSnapshot = 2;
+  required string toSnapshot = 3;
+  optional SnapshotDiffReportCursorProto cursor = 4;
+}
+
+message GetSnapshotDiffReportListingResponseProto {
+  required SnapshotDiffReportListingProto diffReport = 1;
+}
 message RenewLeaseRequestProto {
   required string clientName = 1;
 }
@@ -913,6 +923,8 @@ service ClientNamenodeProtocol {
       returns(DeleteSnapshotResponseProto);
   rpc getSnapshotDiffReport(GetSnapshotDiffReportRequestProto)
       returns(GetSnapshotDiffReportResponseProto);
+  rpc getSnapshotDiffReportListing(GetSnapshotDiffReportListingRequestProto)
+      returns(GetSnapshotDiffReportListingResponseProto);
   rpc isFileClosed(IsFileClosedRequestProto)
       returns(IsFileClosedResponseProto);
   rpc modifyAclEntries(ModifyAclEntriesRequestProto)

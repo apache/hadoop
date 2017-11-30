@@ -139,10 +139,10 @@ import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.ReencryptionStatusIterator;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
@@ -2140,14 +2140,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /**
    * Get the difference between two snapshots, or between a snapshot and the
    * current tree of a directory.
-   * @see ClientProtocol#getSnapshotDiffReport(String, String, String)
+   * @see ClientProtocol#getSnapshotDiffReportListing
    */
-  public SnapshotDiffReport getSnapshotDiffReport(String snapshotDir,
-      String fromSnapshot, String toSnapshot) throws IOException {
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(
+      String snapshotDir, String fromSnapshot, String toSnapshot,
+      byte[] startPath, int index) throws IOException {
     checkOpen();
     try (TraceScope ignored = tracer.newScope("getSnapshotDiffReport")) {
-      return namenode.getSnapshotDiffReport(snapshotDir,
-          fromSnapshot, toSnapshot);
+      return namenode
+          .getSnapshotDiffReportListing(snapshotDir, fromSnapshot, toSnapshot,
+              startPath, index);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     }

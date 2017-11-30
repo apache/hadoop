@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -90,12 +91,16 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
+import org.apache.hadoop.hdfs.client.impl.SnapshotDiffReportGenerator;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Progressable;
 
 import javax.annotation.Nonnull;
@@ -1971,19 +1976,46 @@ public class DistributedFileSystem extends FileSystem {
     }.resolve(this, absF);
   }
 
+  private SnapshotDiffReport getSnapshotDiffReportInternal(
+      final String snapshotDir, final String fromSnapshot,
+      final String toSnapshot) throws IOException {
+    byte[] startPath = DFSUtilClient.EMPTY_BYTES;
+    int index = -1;
+    SnapshotDiffReportGenerator snapshotDiffReport;
+    List<DiffReportListingEntry> modifiedList = new TreeList();
+    List<DiffReportListingEntry> createdList = new ChunkedArrayList<>();
+    List<DiffReportListingEntry> deletedList = new ChunkedArrayList<>();
+    SnapshotDiffReportListing report;
+    do {
+      report = dfs.getSnapshotDiffReportListing(snapshotDir, fromSnapshot,
+          toSnapshot, startPath, index);
+      startPath = report.getLastPath();
+      index = report.getLastIndex();
+      modifiedList.addAll(report.getModifyList());
+      createdList.addAll(report.getCreateList());
+      deletedList.addAll(report.getDeleteList());
+    } while (!(Arrays.equals(startPath, DFSUtilClient.EMPTY_BYTES)
+        && index == -1));
+    snapshotDiffReport =
+        new SnapshotDiffReportGenerator(snapshotDir, fromSnapshot, toSnapshot,
+            report.getIsFromEarlier(), modifiedList, createdList, deletedList);
+    return snapshotDiffReport.generateReport();
+  }
+
   /**
    * Get the difference between two snapshots, or between a snapshot and the
    * current tree of a directory.
    *
-   * @see DFSClient#getSnapshotDiffReport(String, String, String)
+   * @see DFSClient#getSnapshotDiffReportListing
    */
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {
     Path absF = fixRelativePart(snapshotDir);
     return new FileSystemLinkResolver<SnapshotDiffReport>() {
       @Override
-      public SnapshotDiffReport doCall(final Path p) throws IOException {
-        return dfs.getSnapshotDiffReport(getPathName(p), fromSnapshot,
+      public SnapshotDiffReport doCall(final Path p)
+          throws IOException {
+        return getSnapshotDiffReportInternal(getPathName(p), fromSnapshot,
             toSnapshot);
       }
 
