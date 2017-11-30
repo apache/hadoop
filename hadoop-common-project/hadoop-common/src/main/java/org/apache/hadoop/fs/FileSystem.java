@@ -957,6 +957,21 @@ public abstract class FileSystem extends Configured implements Closeable {
    * resource directly and verify that the resource referenced
    * satisfies constraints specified at its construciton.
    * @param fd PathHandle object returned by the FS authority.
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException If {@link #open(PathHandle, int)}
+   *                                       not overridden by subclass
+   */
+  public FSDataInputStream open(PathHandle fd) throws IOException {
+    return open(fd, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT));
+  }
+
+  /**
+   * Open an FSDataInputStream matching the PathHandle instance. The
+   * implementation may encode metadata in PathHandle to address the
+   * resource directly and verify that the resource referenced
+   * satisfies constraints specified at its construciton.
+   * @param fd PathHandle object returned by the FS authority.
    * @param bufferSize the size of the buffer to use
    * @throws IOException IO failure
    * @throws UnsupportedOperationException If not overridden by subclass
