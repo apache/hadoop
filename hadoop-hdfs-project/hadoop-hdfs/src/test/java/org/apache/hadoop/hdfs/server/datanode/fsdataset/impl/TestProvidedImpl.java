@@ -43,6 +43,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
@@ -214,7 +215,8 @@ public class TestProvidedImpl {
             }
 
             @Override
-            public FileRegion resolve(Block ident) throws IOException {
+            public Optional<FileRegion> resolve(Block ident)
+                throws IOException {
               return null;
             }
           };
@@ -231,6 +233,11 @@ public class TestProvidedImpl {
     @Override
     public void refresh() throws IOException {
       // do nothing!
+    }
+
+    @Override
+    public void close() throws IOException {
+      // do nothing
     }
   }
 

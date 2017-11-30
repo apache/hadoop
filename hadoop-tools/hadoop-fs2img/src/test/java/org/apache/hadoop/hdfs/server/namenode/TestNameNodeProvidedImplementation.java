@@ -27,11 +27,13 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -39,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.BlockMissingException;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -48,6 +51,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
@@ -56,6 +61,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ProvidedStorageMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
@@ -172,16 +178,16 @@ public class TestNameNodeProvidedImplementation {
 
   void createImage(TreeWalk t, Path out,
       Class<? extends BlockResolver> blockIdsClass) throws Exception {
-    createImage(t, out, blockIdsClass, "");
+    createImage(t, out, blockIdsClass, "", TextFileRegionAliasMap.class);
   }
 
   void createImage(TreeWalk t, Path out,
-      Class<? extends BlockResolver> blockIdsClass, String clusterID)
-      throws Exception {
+      Class<? extends BlockResolver> blockIdsClass, String clusterID,
+      Class<? extends BlockAliasMap> aliasMapClass) throws Exception {
     ImageWriter.Options opts = ImageWriter.defaults();
     opts.setConf(conf);
     opts.output(out.toString())
-        .blocks(TextFileRegionAliasMap.class)
+        .blocks(aliasMapClass)
         .blockIds(blockIdsClass)
         .clusterID(clusterID);
     try (ImageWriter w = new ImageWriter(opts)) {
@@ -389,17 +395,8 @@ public class TestNameNodeProvidedImplementation {
     return ret;
   }
 
-  @Test(timeout=30000)
-  public void testBlockRead() throws Exception {
-    conf.setClass(ImageWriter.Options.UGI_CLASS,
-        FsUGIResolver.class, UGIResolver.class);
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
-        FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 3,
-        new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
-        false);
+  private void verifyFileSystemContents() throws Exception {
     FileSystem fs = cluster.getFileSystem();
-    Thread.sleep(2000);
     int count = 0;
     // read NN metadata, verify contents match
     for (TreePath e : new FSTreeWalk(NAMEPATH, conf)) {
@@ -683,7 +680,7 @@ public class TestNameNodeProvidedImplementation {
   public void testSetClusterID() throws Exception {
     String clusterID = "PROVIDED-CLUSTER";
     createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
-        FixedBlockResolver.class, clusterID);
+        FixedBlockResolver.class, clusterID, TextFileRegionAliasMap.class);
     // 2 Datanodes, 1 PROVIDED and other DISK
     startCluster(NNDIRPATH, 2, null,
         new StorageType[][] {
@@ -744,4 +741,42 @@ public class TestNameNodeProvidedImplementation {
       verifyFileLocation(i, expectedLocations);
     }
   }
+
+
+  // This test will fail until there is a refactoring of the FileRegion
+  // (HDFS-12713).
+  @Test(expected=BlockMissingException.class)
+  public void testInMemoryAliasMap() throws Exception {
+    conf.setClass(ImageWriter.Options.UGI_CLASS,
+        FsUGIResolver.class, UGIResolver.class);
+    conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+        InMemoryLevelDBAliasMapClient.class, BlockAliasMap.class);
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
+        "localhost:32445");
+    File tempDirectory =
+        Files.createTempDirectory("in-memory-alias-map").toFile();
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
+        tempDirectory.getAbsolutePath());
+    conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+
+    InMemoryLevelDBAliasMapServer levelDBAliasMapServer =
+        new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init);
+    levelDBAliasMapServer.setConf(conf);
+    levelDBAliasMapServer.start();
+
+    createImage(new FSTreeWalk(NAMEPATH, conf),
+        NNDIRPATH,
+        FixedBlockResolver.class, "",
+        InMemoryLevelDBAliasMapClient.class);
+    levelDBAliasMapServer.close();
+
+    // start cluster with two datanodes,
+    // each with 1 PROVIDED volume and other DISK volume
+    startCluster(NNDIRPATH, 2,
+        new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
+        null, false);
+    verifyFileSystemContents();
+    FileUtils.deleteDirectory(tempDirectory);
+  }
+
 }

@@ -45,6 +45,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
@@ -207,6 +209,8 @@ public class NameNode extends ReconfigurableBase implements
   static{
     HdfsConfiguration.init();
   }
+
+  private InMemoryLevelDBAliasMapServer levelDBAliasMapServer;
 
   /**
    * Categories of operations supported by the namenode.
@@ -745,6 +749,20 @@ public class NameNode extends ReconfigurableBase implements
 
     startCommonServices(conf);
     startMetricsLogger(conf);
+    startAliasMapServerIfNecessary(conf);
+  }
+
+  private void startAliasMapServerIfNecessary(Configuration conf)
+      throws IOException {
+    if (conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED,
+        DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT)
+        && conf.getBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED,
+            DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED_DEFAULT)) {
+      levelDBAliasMapServer =
+          new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init);
+      levelDBAliasMapServer.setConf(conf);
+      levelDBAliasMapServer.start();
+    }
   }
 
   private void initReconfigurableBackoffKey() {
@@ -1026,6 +1044,9 @@ public class NameNode extends ReconfigurableBase implements
       if (nameNodeStatusBeanName != null) {
         MBeans.unregister(nameNodeStatusBeanName);
         nameNodeStatusBeanName = null;
+      }
+      if (levelDBAliasMapServer != null) {
+        levelDBAliasMapServer.close();
       }
     }
     tracer.close();

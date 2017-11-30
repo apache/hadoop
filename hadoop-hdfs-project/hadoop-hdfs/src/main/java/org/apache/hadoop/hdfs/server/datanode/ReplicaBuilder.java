@@ -315,12 +315,7 @@ public class ReplicaBuilder {
             offset, length, genStamp, volume, conf, remoteFS);
       }
     } else {
-      info = new FinalizedProvidedReplica(fileRegion.getBlock().getBlockId(),
-          fileRegion.getPath().toUri(),
-          fileRegion.getOffset(),
-          fileRegion.getBlock().getNumBytes(),
-          fileRegion.getBlock().getGenerationStamp(),
-          volume, conf, remoteFS);
+      info = new FinalizedProvidedReplica(fileRegion, volume, conf, remoteFS);
     }
     return info;
   }

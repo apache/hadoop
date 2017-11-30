@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.junit.Before;
 import org.junit.Test;
-
 import java.io.IOException;
 
 import static org.junit.Assert.assertNotNull;

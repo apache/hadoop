@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
@@ -57,14 +58,14 @@ public class NullBlockAliasMap extends BlockAliasMap<FileRegion> {
       }
 
       @Override
-      public FileRegion resolve(Block ident) throws IOException {
+      public Optional<FileRegion> resolve(Block ident) throws IOException {
         throw new UnsupportedOperationException();
       }
     };
   }
 
   @Override
-  public Writer<FileRegion> getWriter(Writer.Options opts) throws IOException {
+  public Writer getWriter(Writer.Options opts) throws IOException {
     return new Writer<FileRegion>() {
       @Override
       public void store(FileRegion token) throws IOException {
@@ -83,4 +84,8 @@ public class NullBlockAliasMap extends BlockAliasMap<FileRegion> {
     // do nothing
   }
 
+  @Override
+  public void close() throws IOException {
+
+  }
 }
