@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
@@ -48,7 +49,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preempti
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.util.Clock;
@@ -792,21 +792,23 @@ public class TestProportionalCapacityPreemptionPolicy {
     @SuppressWarnings("resource")
     MockRM rm = new MockRM(conf);
     rm.init(conf);
-    
+
     // ProportionalCapacityPreemptionPolicy should be initialized after
     // CapacityScheduler initialized. We will 
     // 1) find SchedulingMonitor from RMActiveService's service list, 
     // 2) check if ResourceCalculator in policy is null or not. 
     // If it's not null, we can come to a conclusion that policy initialized
     // after scheduler got initialized
-    for (Service service : rm.getRMActiveService().getServices()) {
-      if (service instanceof SchedulingMonitor) {
-        ProportionalCapacityPreemptionPolicy policy =
-            (ProportionalCapacityPreemptionPolicy) ((SchedulingMonitor) service)
-                .getSchedulingEditPolicy();
-        assertNotNull(policy.getResourceCalculator());
-        return;
-      }
+    // Get SchedulingMonitor from SchedulingMonitorManager instead
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    SchedulingMonitorManager smm = cs.getSchedulingMonitorManager();
+    Service service = smm.getAvailableSchedulingMonitor();
+    if (service instanceof SchedulingMonitor) {
+      ProportionalCapacityPreemptionPolicy policy =
+          (ProportionalCapacityPreemptionPolicy) ((SchedulingMonitor) service)
+              .getSchedulingEditPolicy();
+      assertNotNull(policy.getResourceCalculator());
+      return;
     }
     
     fail("Failed to find SchedulingMonitor service, please check what happened");

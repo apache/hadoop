@@ -105,9 +105,35 @@ public abstract class RMHATestBase extends ClientBaseWithFixes{
     return am;
   }
 
+  private MockRM initMockRMWithOldConf(Configuration confForRM1) {
+    return new MockRM(confForRM1, null, false, false) {
+      @Override
+      protected AdminService createAdminService() {
+        return new AdminService(this) {
+          @Override
+          protected void startServer() {
+            // override to not start rpc handler
+          }
+
+          @Override
+          protected void stopServer() {
+            // don't do anything
+          }
+
+          @Override
+          protected Configuration loadNewConfiguration()
+              throws IOException, YarnException {
+            return confForRM1;
+          }
+        };
+      }
+    };
+  }
+
   protected void startRMs() throws IOException {
-    rm1 = new MockRM(confForRM1, null, false, false);
-    rm2 = new MockRM(confForRM2, null, false, false);
+    rm1 = initMockRMWithOldConf(confForRM1);
+    rm2 = initMockRMWithOldConf(confForRM2);
+
     startRMs(rm1, confForRM1, rm2, confForRM2);
   }
 
