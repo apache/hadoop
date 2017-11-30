@@ -26,7 +26,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -138,7 +139,11 @@ public class TestCapacitySchedulerSurgicalPreemption
     Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
 
     // Get edit policy and do one update
-    SchedulingEditPolicy editPolicy = getSchedulingEditPolicy(rm1);
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
 
     // Call edit schedule twice, and check if 4 containers from app1 at n1 killed
     editPolicy.editSchedule();
@@ -217,8 +222,11 @@ public class TestCapacitySchedulerSurgicalPreemption
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
 
     // Call editSchedule: containers are selected to be preemption candidate
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
     ProportionalCapacityPreemptionPolicy editPolicy =
-        (ProportionalCapacityPreemptionPolicy) getSchedulingEditPolicy(rm1);
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
     Assert.assertEquals(3, editPolicy.getToPreemptContainers().size());
 
@@ -323,8 +331,11 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // Call editSchedule immediately: containers are not selected
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
     ProportionalCapacityPreemptionPolicy editPolicy =
-        (ProportionalCapacityPreemptionPolicy) getSchedulingEditPolicy(rm1);
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
     Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
 
@@ -434,8 +445,11 @@ public class TestCapacitySchedulerSurgicalPreemption
         cs.getNode(rmNode3.getNodeID()).getReservedContainer());
 
     // Call editSchedule immediately: nothing happens
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
     ProportionalCapacityPreemptionPolicy editPolicy =
-        (ProportionalCapacityPreemptionPolicy) getSchedulingEditPolicy(rm1);
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
     Assert.assertNotNull(
         cs.getNode(rmNode3.getNodeID()).getReservedContainer());
@@ -562,8 +576,11 @@ public class TestCapacitySchedulerSurgicalPreemption
     // 6 (selected) + 1 (allocated) which makes target capacity to 70%
     Thread.sleep(1000);
 
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
     ProportionalCapacityPreemptionPolicy editPolicy =
-        (ProportionalCapacityPreemptionPolicy) getSchedulingEditPolicy(rm1);
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
     checkNumberOfPreemptionCandidateFromApp(editPolicy, 6,
         am1.getApplicationAttemptId());
@@ -715,8 +732,11 @@ public class TestCapacitySchedulerSurgicalPreemption
     Thread.sleep(1000);
 
     /* 1st container preempted is on n2 */
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
     ProportionalCapacityPreemptionPolicy editPolicy =
-        (ProportionalCapacityPreemptionPolicy) getSchedulingEditPolicy(rm1);
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
 
     // We should have one to-preempt container, on node[2]
@@ -887,7 +907,11 @@ public class TestCapacitySchedulerSurgicalPreemption
     waitNumberOfReservedContainersFromApp(schedulerApp2, 1);
 
     // Call editSchedule twice and allocation once, container should get allocated
-    SchedulingEditPolicy editPolicy = getSchedulingEditPolicy(rm1);
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
     editPolicy.editSchedule();
     editPolicy.editSchedule();
 

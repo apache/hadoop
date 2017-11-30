@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -126,7 +128,11 @@ public class TestCapacitySchedulerLazyPreemption
             Resources.createResource(1 * GB), 1)), null);
 
     // Get edit policy and do one update
-    SchedulingEditPolicy editPolicy = getSchedulingEditPolicy(rm1);
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
 
     // Call edit schedule twice, and check if one container from app1 marked
     // to be "killable"
@@ -209,7 +215,11 @@ public class TestCapacitySchedulerLazyPreemption
             Resources.createResource(1 * GB), 1)), null);
 
     // Get edit policy and do one update
-    SchedulingEditPolicy editPolicy = getSchedulingEditPolicy(rm1);
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
 
     // Call edit schedule twice, and check if one container from app1 marked
     // to be "killable"
@@ -301,7 +311,11 @@ public class TestCapacitySchedulerLazyPreemption
             Resources.createResource(1 * GB), 1, false)), null);
 
     // Get edit policy and do one update
-    SchedulingEditPolicy editPolicy = getSchedulingEditPolicy(rm1);
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
 
     // Call edit schedule twice, and check if one container from app1 marked
     // to be "killable"
@@ -387,8 +401,11 @@ public class TestCapacitySchedulerLazyPreemption
     am2.allocate("*", 1 * GB, 1, new ArrayList<ContainerId>());
 
     // Get edit policy and do one update
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
     ProportionalCapacityPreemptionPolicy editPolicy =
-        (ProportionalCapacityPreemptionPolicy) getSchedulingEditPolicy(rm1);
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
 
     // Call edit schedule twice, and check if one container from app1 marked
     // to be "killable"
@@ -487,8 +504,11 @@ public class TestCapacitySchedulerLazyPreemption
     am2.allocate("*", 3 * GB, 1, new ArrayList<ContainerId>());
 
     // Get edit policy and do one update
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
     ProportionalCapacityPreemptionPolicy editPolicy =
-        (ProportionalCapacityPreemptionPolicy) getSchedulingEditPolicy(rm1);
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
 
     // Call edit schedule twice, and check if 3 container from app1 marked
     // to be "killable"
@@ -582,7 +602,11 @@ public class TestCapacitySchedulerLazyPreemption
             Resources.createResource(1 * GB), 1)), null);
 
     // Get edit policy and do one update
-    SchedulingEditPolicy editPolicy = getSchedulingEditPolicy(rm1);
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
 
     // Call edit schedule twice, and check if no container from app1 marked
     // to be "killable"
