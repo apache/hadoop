@@ -296,30 +296,13 @@ public interface FsVolumeSpi
      */
     public ScanInfo(long blockId, File blockFile, File metaFile,
         FsVolumeSpi vol) {
-      this(blockId, blockFile, metaFile, vol, null,
-          (blockFile != null) ? blockFile.length() : 0);
-    }
-
-    /**
-     * Create a ScanInfo object for a block. This constructor will examine
-     * the block data and meta-data files.
-     *
-     * @param blockId the block ID
-     * @param blockFile the path to the block data file
-     * @param metaFile the path to the block meta-data file
-     * @param vol the volume that contains the block
-     * @param fileRegion the file region (for provided blocks)
-     * @param length the length of the block data
-     */
-    public ScanInfo(long blockId, File blockFile, File metaFile,
-        FsVolumeSpi vol, FileRegion fileRegion, long length) {
       this.blockId = blockId;
       String condensedVolPath =
           (vol == null || vol.getBaseURI() == null) ? null :
-            getCondensedPath(new File(vol.getBaseURI()).getAbsolutePath());
+              getCondensedPath(new File(vol.getBaseURI()).getAbsolutePath());
       this.blockSuffix = blockFile == null ? null :
-        getSuffix(blockFile, condensedVolPath);
-      this.blockLength = length;
+              getSuffix(blockFile, condensedVolPath);
+      this.blockLength = (blockFile != null) ? blockFile.length() : 0;
       if (metaFile == null) {
         this.metaSuffix = null;
       } else if (blockFile == null) {
@@ -329,7 +312,26 @@ public interface FsVolumeSpi
             condensedVolPath + blockSuffix);
       }
       this.volume = vol;
+      this.fileRegion = null;
+    }
+
+    /**
+     * Create a ScanInfo object for a block. This constructor will examine
+     * the block data and meta-data files.
+     *
+     * @param blockId the block ID
+     * @param vol the volume that contains the block
+     * @param fileRegion the file region (for provided blocks)
+     * @param length the length of the block data
+     */
+    public ScanInfo(long blockId, FsVolumeSpi vol, FileRegion fileRegion,
+        long length) {
+      this.blockId = blockId;
+      this.blockLength = length;
+      this.volume = vol;
       this.fileRegion = fileRegion;
+      this.blockSuffix = null;
+      this.metaSuffix = null;
     }
 
     /**

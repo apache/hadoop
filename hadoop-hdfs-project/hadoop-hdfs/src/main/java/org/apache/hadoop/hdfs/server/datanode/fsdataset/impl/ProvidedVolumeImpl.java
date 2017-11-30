@@ -226,9 +226,7 @@ public class ProvidedVolumeImpl extends FsVolumeImpl {
         reportCompiler.throttle();
         FileRegion region = iter.next();
         if (region.getBlockPoolId().equals(bpid)) {
-          LOG.info("Adding ScanInfo for blkid " +
-              region.getBlock().getBlockId());
-          report.add(new ScanInfo(region.getBlock().getBlockId(), null, null,
+          report.add(new ScanInfo(region.getBlock().getBlockId(),
               providedVolume, region, region.getLength()));
         }
       }
