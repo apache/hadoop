@@ -117,13 +117,7 @@ Compatibility types
 
 Developers SHOULD annotate all Hadoop interfaces and classes with the
 @InterfaceAudience and @InterfaceStability annotations to describe the
-intended audience and stability. Annotations may be at the package, class, or
-member variable or method level. Member variable and method annotations SHALL
-override class annotations, and class annotations SHALL override package
-annotations. A package, class, or member variable or method that is not
-annotated SHALL be interpreted as implicitly
-[Private](./InterfaceClassification.html#Private) and
-[Unstable](./InterfaceClassification.html#Unstable).
+intended audience and stability.
 
 * @InterfaceAudience captures the intended audience. Possible values are
 [Public](./InterfaceClassification.html#Public) (for end users and external
@@ -133,6 +127,27 @@ etc.), and [Private](./InterfaceClassification.html#Private)
 (for intra component use).
 * @InterfaceStability describes what types of interface changes are permitted. Possible values are [Stable](./InterfaceClassification.html#Stable), [Evolving](./InterfaceClassification.html#Evolving), and [Unstable](./InterfaceClassification.html#Unstable).
 * @Deprecated notes that the package, class, or member variable or method could potentially be removed in the future and should not be used.
+
+Annotations MAY be applied at the package, class, or method level. If a method
+has no privacy or stability annotation, it SHALL inherit its intended audience
+or stability level from the class to which it belongs. If a class has no
+privacy or stability annotation, it SHALL inherit its intended audience or
+stability level from the package to which it belongs. If a package has no
+privacy or stability annotation, it SHALL be assumed to be
+[Private](./InterfaceClassification.html#Private) and
+[Unstable](./InterfaceClassification.html#Unstable),
+respectively.
+
+In the event that an element's audience or stability annotation conflicts with
+the corresponding annotation of its parent (whether explicit or inherited), the
+element's audience or stability (respectively) SHALL be determined by the
+more restrictive annotation. For example, if a
+[Private](./InterfaceClassification.html#Private) method is contained
+in a [Public](./InterfaceClassification.html#Public) class, then the method
+SHALL be treated as [Private](./InterfaceClassification.html#Private). If a
+[Public](./InterfaceClassification.html#Public) method is contained in a
+[Private](./InterfaceClassification.html#Private) class, the method SHALL be
+treated as [Private](./InterfaceClassification.html#Private).
 
 #### Use Cases
 
