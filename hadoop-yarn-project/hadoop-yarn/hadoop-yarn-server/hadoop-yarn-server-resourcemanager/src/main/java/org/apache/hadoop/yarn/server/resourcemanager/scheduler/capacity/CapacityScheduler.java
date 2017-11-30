@@ -458,7 +458,7 @@ public class CapacityScheduler extends
    * Schedule on all nodes by starting at a random point.
    * @param cs
    */
-  static void schedule(CapacityScheduler cs) {
+  static void schedule(CapacityScheduler cs) throws InterruptedException{
     // First randomize the start point
     int current = 0;
     Collection<FiCaSchedulerNode> nodes = cs.nodeTracker.getAllNodes();
@@ -474,9 +474,7 @@ public class CapacityScheduler extends
       cs.allocateContainersToNode(node.getNodeID(), false);
     }
 
-    try {
-      Thread.sleep(cs.getAsyncScheduleInterval());
-    } catch (InterruptedException e) {}
+    Thread.sleep(cs.getAsyncScheduleInterval());
   }
 
   static class AsyncScheduleThread extends Thread {
@@ -491,9 +489,9 @@ public class CapacityScheduler extends
 
     @Override
     public void run() {
-      while (true) {
+      while (!Thread.currentThread().isInterrupted()) {
         try {
-          if (!runSchedules.get() || Thread.currentThread().isInterrupted()) {
+          if (!runSchedules.get()) {
             Thread.sleep(100);
           } else {
             // Don't run schedule if we have some pending backlogs already
@@ -504,9 +502,11 @@ public class CapacityScheduler extends
             }
           }
         } catch (InterruptedException ie) {
-          // Do nothing
+          // keep interrupt signal
+          Thread.currentThread().interrupt();
         }
       }
+      LOG.info("AsyncScheduleThread[" + getName() + "] exited!");
     }
 
     public void beginSchedule() {
@@ -545,8 +545,10 @@ public class CapacityScheduler extends
 
         } catch (InterruptedException e) {
           LOG.error(e);
+          Thread.currentThread().interrupt();
         }
       }
+      LOG.info("ResourceCommitterService exited!");
     }
 
     public void addNewCommitRequest(
