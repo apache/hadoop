@@ -1085,10 +1085,7 @@ public class HttpFSFileSystem extends FileSystem
           new FsPermissionExtension(permission, aBit, eBit, ecBit);
       FileStatus fileStatus = new FileStatus(len, FILE_TYPE.DIRECTORY == type,
           replication, blockSize, mTime, aTime, deprecatedPerm, owner, group,
-          null, path, aBit, eBit, ecBit);
-      if (seBit) {
-        fileStatus.setSnapShotEnabledFlag(seBit);
-      }
+          null, path, FileStatus.attributes(aBit, eBit, ecBit, seBit));
       return fileStatus;
     } else {
       return new FileStatus(len, FILE_TYPE.DIRECTORY == type,

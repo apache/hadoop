@@ -96,12 +96,11 @@ public final class PBHelper {
     int flags = proto.getFlags();
     FileStatus fileStatus = new FileStatus(length, isdir, blockReplication,
         blocksize, mtime, atime, permission, owner, group, symlink, path,
-        (flags & FileStatusProto.Flags.HAS_ACL_VALUE) != 0,
-        (flags & FileStatusProto.Flags.HAS_CRYPT_VALUE) != 0,
-        (flags & FileStatusProto.Flags.HAS_EC_VALUE) != 0);
-
-    fileStatus.setSnapShotEnabledFlag((flags & FileStatusProto.Flags
-        .SNAPSHOT_ENABLED_VALUE) != 0);
+        FileStatus.attributes(
+          (flags & FileStatusProto.Flags.HAS_ACL_VALUE) != 0,
+          (flags & FileStatusProto.Flags.HAS_CRYPT_VALUE) != 0,
+          (flags & FileStatusProto.Flags.HAS_EC_VALUE) != 0,
+          (flags & FileStatusProto.Flags.SNAPSHOT_ENABLED_VALUE) != 0));
     return fileStatus;
   }
 

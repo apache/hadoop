@@ -17,28 +17,21 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.EnumSet;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 
+import java.io.IOException;
+import java.util.Set;
+
 /**
- * HDFS metadata for an entity in the filesystem with locations. Note that
+ * HDFS metadata for an entity in the filesystem without locations. Note that
  * symlinks and directories are returned as {@link HdfsLocatedFileStatus} for
  * backwards compatibility.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class HdfsLocatedFileStatus
-    extends LocatedFileStatus implements HdfsFileStatus {
-  private static final long serialVersionUID = 0x126eb82a;
+public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
 
   // local name of the inode that's encoded in java UTF8
   private byte[] uPath;
@@ -50,9 +43,6 @@ public class HdfsLocatedFileStatus
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
   private final int childrenNum;
   private final byte storagePolicy;
-
-  // BlockLocations[] is the user-facing type
-  private transient LocatedBlocks hdfsloc;
 
   /**
    * Constructor.
@@ -72,20 +62,18 @@ public class HdfsLocatedFileStatus
    * @param feInfo the file's encryption info
    * @param storagePolicy ID which specifies storage policy
    * @param ecPolicy the erasure coding policy
-   * @param hdfsloc block locations
    */
-  HdfsLocatedFileStatus(long length, boolean isdir, int replication,
-                        long blocksize, long mtime, long atime,
-                        FsPermission permission, EnumSet<Flags> flags,
-                        String owner, String group,
-                        byte[] symlink, byte[] path, long fileId,
-                        int childrenNum, FileEncryptionInfo feInfo,
-                        byte storagePolicy, ErasureCodingPolicy ecPolicy,
-                        LocatedBlocks hdfsloc) {
+  HdfsNamedFileStatus(long length, boolean isdir, int replication,
+                      long blocksize, long mtime, long atime,
+                      FsPermission permission, Set<Flags> flags,
+                      String owner, String group,
+                      byte[] symlink, byte[] path, long fileId,
+                      int childrenNum, FileEncryptionInfo feInfo,
+                      byte storagePolicy, ErasureCodingPolicy ecPolicy) {
     super(length, isdir, replication, blocksize, mtime, atime,
         HdfsFileStatus.convert(isdir, symlink != null, permission, flags),
-        owner, group, null, null, HdfsFileStatus.convert(flags),
-        null);
+        owner, group, null, null,
+        HdfsFileStatus.convert(flags));
     this.uSymlink = symlink;
     this.uPath = path;
     this.fileId = fileId;
@@ -93,15 +81,14 @@ public class HdfsLocatedFileStatus
     this.feInfo = feInfo;
     this.storagePolicy = storagePolicy;
     this.ecPolicy = ecPolicy;
-    this.hdfsloc = hdfsloc;
   }
 
-  @Override // visibility
+  @Override
   public void setOwner(String owner) {
     super.setOwner(owner);
   }
 
-  @Override // visibility
+  @Override
   public void setGroup(String group) {
     super.setOwner(group);
   }
@@ -119,13 +106,14 @@ public class HdfsLocatedFileStatus
     throw new IOException("Path " + getPath() + " is not a symbolic link");
   }
 
-  @Override // visibility
+  @Override
   public void setPermission(FsPermission permission) {
     super.setPermission(permission);
   }
 
   /**
    * Get the Java UTF8 representation of the local name.
+   *
    * @return the local name in java UTF8
    */
   @Override
@@ -158,6 +146,7 @@ public class HdfsLocatedFileStatus
 
   /**
    * Get the erasure coding policy if it's set.
+   *
    * @return the erasure coding policy
    */
   @Override
@@ -186,35 +175,6 @@ public class HdfsLocatedFileStatus
   public int hashCode() {
     // satisfy findbugs
     return super.hashCode();
-  }
-
-  /**
-   * Get block locations for this entity, in HDFS format.
-   * See {@link #makeQualifiedLocated(URI, Path)}.
-   * See {@link DFSUtilClient#locatedBlocks2Locations(LocatedBlocks)}.
-   * @return block locations
-   */
-  public LocatedBlocks getLocatedBlocks() {
-    return hdfsloc;
-  }
-
-  /**
-   * This function is used to transform the underlying HDFS LocatedBlocks to
-   * BlockLocations. This method must be invoked before
-   * {@link #getBlockLocations()}.
-   *
-   * The returned BlockLocation will have different formats for replicated
-   * and erasure coded file.
-   * Please refer to
-   * {@link org.apache.hadoop.fs.FileSystem#getFileBlockLocations
-   * (FileStatus, long, long)}
-   * for examples.
-   */
-  public LocatedFileStatus makeQualifiedLocated(URI defaultUri, Path path) {
-    makeQualified(defaultUri, path);
-    setBlockLocations(
-        DFSUtilClient.locatedBlocks2Locations(getLocatedBlocks()));
-    return this;
   }
 
 }
