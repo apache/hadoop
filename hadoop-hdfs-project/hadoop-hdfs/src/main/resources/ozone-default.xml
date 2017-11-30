@@ -1160,6 +1160,25 @@
     </description>
   </property>
   <property>
+    <name>ozone.rest.servers</name>
+    <value></value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      The REST server hostnames to connect, comma separated list of host
+      (typically datanodes) where Ozone REST handler are running.
+    </description>
+  </property>
+  <property>
+    <name>ozone.rest.client.port</name>
+    <value>9864</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>
+      Port used by client to connect to Ozone REST server. When a datanode
+      is configured to run Ozone REST handler, this port typically points to
+      datanode info port.
+    </description>
+  </property>
+  <property>
     <name>ozone.rest.client.http.connection.max</name>
     <value>100</value>
     <tag>OZONE, CLIENT</tag>
