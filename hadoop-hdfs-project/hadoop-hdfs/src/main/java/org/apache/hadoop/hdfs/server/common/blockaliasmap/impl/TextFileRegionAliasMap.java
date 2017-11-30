@@ -439,7 +439,8 @@ public class TextFileRegionAliasMap
 
   @Override
   public void refresh() throws IOException {
-    //nothing to do;
+    throw new UnsupportedOperationException(
+        "Refresh not supported by " + getClass());
   }
 
 }
