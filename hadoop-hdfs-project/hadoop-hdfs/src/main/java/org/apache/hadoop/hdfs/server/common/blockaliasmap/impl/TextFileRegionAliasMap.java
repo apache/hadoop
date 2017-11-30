@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.io.MultipleIOException;
@@ -160,7 +162,7 @@ public class TextFileRegionAliasMap
       file = new Path(tmpfile);
       delim = conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER,
           DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT);
-      LOG.info("TextFileRegionAliasMap: read path " + tmpfile.toString());
+      LOG.info("TextFileRegionAliasMap: read path {}", tmpfile);
     }
 
     @Override
@@ -190,7 +192,7 @@ public class TextFileRegionAliasMap
     private Configuration conf;
     private String codec = null;
     private Path file =
-        new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);;
+        new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);
     private String delim =
         DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT;
 
@@ -252,7 +254,7 @@ public class TextFileRegionAliasMap
       Options delimiter(String delim);
     }
 
-    static ReaderOptions defaults() {
+    public static ReaderOptions defaults() {
       return new ReaderOptions();
     }
 
@@ -278,14 +280,14 @@ public class TextFileRegionAliasMap
     }
 
     @Override
-    public FileRegion resolve(Block ident) throws IOException {
+    public Optional<FileRegion> resolve(Block ident) throws IOException {
       // consider layering index w/ composable format
       Iterator<FileRegion> i = iterator();
       try {
         while (i.hasNext()) {
           FileRegion f = i.next();
           if (f.getBlock().equals(ident)) {
-            return f;
+            return Optional.of(f);
           }
         }
       } finally {
@@ -295,7 +297,7 @@ public class TextFileRegionAliasMap
           r.close();
         }
       }
-      return null;
+      return Optional.empty();
     }
 
     class FRIterator implements Iterator<FileRegion> {
@@ -342,8 +344,8 @@ public class TextFileRegionAliasMap
         throw new IOException("Invalid line: " + line);
       }
       return new FileRegion(Long.parseLong(f[0]), new Path(f[1]),
-          Long.parseLong(f[2]), Long.parseLong(f[3]), f[5],
-          Long.parseLong(f[4]));
+          Long.parseLong(f[2]), Long.parseLong(f[3]), f[4],
+          Long.parseLong(f[5]));
     }
 
     public InputStream createStream() throws IOException {
@@ -390,7 +392,6 @@ public class TextFileRegionAliasMap
         throw MultipleIOException.createIOException(ex);
       }
     }
-
   }
 
   /**
@@ -422,12 +423,16 @@ public class TextFileRegionAliasMap
 
     @Override
     public void store(FileRegion token) throws IOException {
-      out.append(String.valueOf(token.getBlock().getBlockId())).append(delim);
-      out.append(token.getPath().toString()).append(delim);
-      out.append(Long.toString(token.getOffset())).append(delim);
-      out.append(Long.toString(token.getLength())).append(delim);
-      out.append(Long.toString(token.getGenerationStamp())).append(delim);
-      out.append(token.getBlockPoolId()).append("\n");
+      final Block block = token.getBlock();
+      final ProvidedStorageLocation psl = token.getProvidedStorageLocation();
+
+      out.append(String.valueOf(block.getBlockId())).append(delim);
+      out.append(psl.getPath().toString()).append(delim);
+      out.append(Long.toString(psl.getOffset())).append(delim);
+      out.append(Long.toString(psl.getLength())).append(delim);
+      out.append(token.getBlockPoolId()).append(delim);
+      out.append(Long.toString(block.getGenerationStamp())).append(delim);
+      out.append("\n");
     }
 
     @Override
@@ -441,6 +446,11 @@ public class TextFileRegionAliasMap
   public void refresh() throws IOException {
     throw new UnsupportedOperationException(
         "Refresh not supported by " + getClass());
+  }
+
+  @Override
+  public void close() throws IOException {
+    //nothing to do;
   }
 
 }

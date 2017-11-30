@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 
 /**
  * This class is used to represent provided blocks that are file regions,
@@ -27,95 +29,70 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
  */
 public class FileRegion implements BlockAlias {
 
-  private final Path path;
-  private final long offset;
-  private final long length;
-  private final long blockId;
+  private final Pair<Block, ProvidedStorageLocation> pair;
   private final String bpid;
-  private final long genStamp;
 
   public FileRegion(long blockId, Path path, long offset,
       long length, String bpid, long genStamp) {
-    this.path = path;
-    this.offset = offset;
-    this.length = length;
-    this.blockId = blockId;
-    this.bpid = bpid;
-    this.genStamp = genStamp;
+    this(new Block(blockId, length, genStamp),
+        new ProvidedStorageLocation(path, offset, length, new byte[0]), bpid);
   }
 
   public FileRegion(long blockId, Path path, long offset,
       long length, String bpid) {
     this(blockId, path, offset, length, bpid,
         HdfsConstants.GRANDFATHER_GENERATION_STAMP);
-
   }
 
   public FileRegion(long blockId, Path path, long offset,
       long length, long genStamp) {
     this(blockId, path, offset, length, null, genStamp);
+  }
 
+  public FileRegion(Block block,
+      ProvidedStorageLocation providedStorageLocation) {
+    this.pair  = Pair.of(block, providedStorageLocation);
+    this.bpid = null;
+  }
+
+  public FileRegion(Block block,
+      ProvidedStorageLocation providedStorageLocation, String bpid) {
+    this.pair  = Pair.of(block, providedStorageLocation);
+    this.bpid = bpid;
   }
 
   public FileRegion(long blockId, Path path, long offset, long length) {
     this(blockId, path, offset, length, null);
   }
 
-  @Override
   public Block getBlock() {
-    return new Block(blockId, length, genStamp);
+    return pair.getKey();
   }
 
-  @Override
-  public boolean equals(Object other) {
-    if (!(other instanceof FileRegion)) {
-      return false;
-    }
-    FileRegion o = (FileRegion) other;
-    return blockId == o.blockId
-      && offset == o.offset
-      && length == o.length
-      && genStamp == o.genStamp
-      && path.equals(o.path);
-  }
-
-  @Override
-  public int hashCode() {
-    return (int)(blockId & Integer.MIN_VALUE);
-  }
-
-  public Path getPath() {
-    return path;
-  }
-
-  public long getOffset() {
-    return offset;
-  }
-
-  public long getLength() {
-    return length;
-  }
-
-  public long getGenerationStamp() {
-    return genStamp;
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("{ block=\"").append(getBlock()).append("\"");
-    sb.append(", path=\"").append(getPath()).append("\"");
-    sb.append(", off=\"").append(getOffset()).append("\"");
-    sb.append(", len=\"").append(getBlock().getNumBytes()).append("\"");
-    sb.append(", genStamp=\"").append(getBlock()
-        .getGenerationStamp()).append("\"");
-    sb.append(", bpid=\"").append(bpid).append("\"");
-    sb.append(" }");
-    return sb.toString();
+  public ProvidedStorageLocation getProvidedStorageLocation() {
+    return pair.getValue();
   }
 
   public String getBlockPoolId() {
     return this.bpid;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    FileRegion that = (FileRegion) o;
+
+    return pair.equals(that.pair);
+  }
+
+  @Override
+  public int hashCode() {
+    return pair.hashCode();
+  }
 }

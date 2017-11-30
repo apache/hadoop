@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.common.blockaliasmap;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Optional;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.BlockAlias;
@@ -27,6 +29,19 @@ import org.apache.hadoop.hdfs.server.common.BlockAlias;
  * An abstract class used to read and write block maps for provided blocks.
  */
 public abstract class BlockAliasMap<T extends BlockAlias> {
+
+  /**
+   * ImmutableIterator is an Iterator that does not support the remove
+   * operation. This could inherit {@link java.util.Enumeration} but Iterator
+   * is supported by more APIs and Enumeration's javadoc even suggests using
+   * Iterator instead.
+   */
+  public abstract class ImmutableIterator implements Iterator<T> {
+    public void remove() {
+      throw new UnsupportedOperationException(
+          "Remove is not supported for provided storage");
+    }
+  }
 
   /**
    * An abstract class that is used to read {@link BlockAlias}es
@@ -45,7 +60,7 @@ public abstract class BlockAliasMap<T extends BlockAlias> {
      * @return BlockAlias correspoding to the provided block.
      * @throws IOException
      */
-    public abstract U resolve(Block ident) throws IOException;
+    public abstract Optional<U> resolve(Block ident) throws IOException;
 
   }
 
@@ -84,5 +99,7 @@ public abstract class BlockAliasMap<T extends BlockAlias> {
    * @throws IOException
    */
   public abstract void refresh() throws IOException;
+
+  public abstract void close() throws IOException;
 
 }
