@@ -20,7 +20,7 @@
 
 <div class="col-md-12 container-fluid">
   <div class="row">
-    {{node-menu-panel path="yarn-node-apps" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    {{node-menu-panel path="yarn-node-apps" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id nmGpuInfo=model.nmGpuInfo}}
     {{#if model.apps}}
     <div class="col-md-10 container-fluid">
       <table id="node-apps-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">

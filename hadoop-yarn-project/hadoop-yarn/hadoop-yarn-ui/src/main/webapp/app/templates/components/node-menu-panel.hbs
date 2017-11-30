@@ -36,7 +36,7 @@
               {{#link-to 'yarn-node-containers' nodeId nodeAddr}}List of Containers
               {{/link-to}}
             {{/link-to}}
-            {{#if nmGpuInfo}}
+            {{#if (and nmGpuInfo nmGpuInfo.info.totalGpuDevices)}}
               {{#link-to 'yarn-node.yarn-nm-gpu' tagName="li"}}
                 {{#link-to 'yarn-node.yarn-nm-gpu' nodeId nodeAddr }}GPU Information
                 {{/link-to}}

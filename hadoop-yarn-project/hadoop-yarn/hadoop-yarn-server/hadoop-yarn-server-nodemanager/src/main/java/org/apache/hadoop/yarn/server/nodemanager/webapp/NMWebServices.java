@@ -510,9 +510,7 @@ public class NMWebServices {
       }
     }
 
-    throw new YarnException(
-        "Could not get detailed resource information for given resource-name="
-            + resourceName);
+    return new NMResourceInfo();
   }
 
   private long parseLongParam(String bytes) {

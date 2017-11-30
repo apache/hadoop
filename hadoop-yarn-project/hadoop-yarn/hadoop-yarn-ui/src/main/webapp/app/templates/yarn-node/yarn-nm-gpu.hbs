@@ -23,6 +23,7 @@
 
     {{node-menu-panel path="yarn-node" nodeId=model.rmNode.id
                       nodeAddr=model.node.id nmGpuInfo=model.nmGpuInfo}}
+    {{#if model.nmGpuInfo.info.totalGpuDevices}}
 
     <div class="col-md-10 container-fluid">
       <div class="panel panel-default">
@@ -49,5 +50,8 @@
         {{yarn-nm-gpu-info gpu=gpu}}
       {{/each}}
     </div>
+    {{else}}
+      <h4 align = "center">No GPUs are found on this node.</h4>
+    {{/if}}
   </div>
 </div>
