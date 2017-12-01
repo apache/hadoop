@@ -313,15 +313,13 @@ public class ResourceUtils {
   }
 
   public static ResourceInformation[] getResourceTypesArray() {
-    initializeResourceTypesIfNeeded(null,
-        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+    initializeResourceTypesIfNeeded();
     return resourceTypesArray;
   }
 
   public static int getNumberOfKnownResourceTypes() {
     if (numKnownResourceTypes < 0) {
-      initializeResourceTypesIfNeeded(null,
-          YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+      initializeResourceTypesIfNeeded();
     }
     return numKnownResourceTypes;
   }
@@ -329,6 +327,11 @@ public class ResourceUtils {
   private static Map<String, ResourceInformation> getResourceTypes(
       Configuration conf) {
     return getResourceTypes(conf,
+        YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
+  }
+
+  private static void initializeResourceTypesIfNeeded() {
+    initializeResourceTypesIfNeeded(null,
         YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE);
   }
 
@@ -641,6 +644,8 @@ public class ResourceUtils {
    */
   public static ResourceInformation[] createResourceTypesArray(Map<String,
       Long> res) {
+    initializeResourceTypesIfNeeded();
+
     ResourceInformation[] info = new ResourceInformation[resourceTypes.size()];
 
     for (Entry<String, Integer> entry : RESOURCE_NAME_TO_INDEX.entrySet()) {
