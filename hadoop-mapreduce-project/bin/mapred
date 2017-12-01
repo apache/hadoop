@@ -32,6 +32,7 @@ function hadoop_usage
   hadoop_add_subcommand "pipes" client "run a Pipes job"
   hadoop_add_subcommand "queue" client "get information regarding JobQueues"
   hadoop_add_subcommand "sampler" client "sampler"
+  hadoop_add_subcommand "frameworkuploader" admin "mapreduce framework upload"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
@@ -91,6 +92,9 @@ function mapredcmd_case
     ;;
     sampler)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.lib.InputSampler
+    ;;
+    frameworkuploader)
+      HADOOP_CLASSNAME=org.apache.hadoop.mapred.uploader.FrameworkUploader
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
