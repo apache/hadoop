@@ -16,31 +16,24 @@
  * limitations under the License.
  */
 
-.flex {
-  display: flex;
-}
 
-/** Pushes the flex element to the right corner **/
-.flex-right {
-  margin-left: auto;
-}
+@import 'variables.scss';
 
-.offset-1 {
-  margin-left: 5px
-}
+.yarn-compose-box {
+  position: fixed;
+  bottom: 0;
+  top: 0px;
+  right: 0px;
+  background-color: $yarn-panel-bg;
+  border: 1px solid $yarn-border-color;
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  max-width: $compose-box-width;
+  overflow: scroll;
 
-.offset-2 {
-  margin-left: 10px
-}
-
-.tail-1 {
-  margin-right: 5px
-}
-
-.tail-2 {
-  margin-right: 10px
-}
-
-.top-1 {
-  margin-top: 5px;
+  .panel-heading {
+    background-color: $yarn-header-bg !important;
+    border-color: $yarn-border-color;
+    border-radius: 3px;
+  }
 }

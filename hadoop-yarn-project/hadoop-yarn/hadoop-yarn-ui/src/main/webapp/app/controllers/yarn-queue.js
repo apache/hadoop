@@ -33,15 +33,11 @@ export default Ember.Controller.extend({
       text: "Queues",
       routeName: 'yarn-queues',
       model: 'root'
-    }, {
-      text: `Queue [ ${queueName} ]`,
-      routeName: 'yarn-queue.info',
-      model: queueName
     }];
 
     if (path && path === "yarn-queue.apps") {
       crumbs.push({
-        text: "Applications",
+        text: `Queue [ ${queueName} ]`,
         routeName: 'yarn-queue.apps',
         model: queueName
       });

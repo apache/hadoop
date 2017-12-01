@@ -19,44 +19,46 @@
 {{queue-navigator model=model.queues selected=model.selected
   used="usedResources.memory" max="clusterResources.memory"}}
 
-<div class="row">
-  <div class="col-lg-4 container-fluid">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        Queue Information: {{model.selected}}
-      </div>
-        {{yarn-queue.fair-queue-conf-table queue=model.selectedQueue}}
-    </div>
+<div class="yarn-compose-box">
+  <div class="panel-heading">
+    Queue Information: {{model.selected}}
   </div>
-
-  <div class="col-lg-4 container-fluid">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        Queue Capacities: {{model.selected}}
-      </div>
-      <div class="container-fluid" id="capacity-bar-chart">
-        <br/>
-        {{bar-chart data=model.selectedQueue.capacitiesBarChartData
-        title=""
-        parentId="capacity-bar-chart"
-        textWidth=175
-        ratio=0.55
-        maxHeight=350}}
+  <div class="panel-body">
+    <div class="container-fluid">
+      <div class="panel panel-default">
+          {{yarn-queue.fair-queue-conf-table queue=model.selectedQueue}}
       </div>
     </div>
-  </div>
 
-  <div class="col-lg-4 container-fluid">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        Running Apps: {{model.selected}}
+    <div class="container-fluid">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          Queue Capacities: {{model.selected}}
+        </div>
+        <div class="container-fluid" id="capacity-bar-chart">
+          <br/>
+          {{bar-chart data=model.selectedQueue.capacitiesBarChartData
+          title=""
+          parentId="capacity-bar-chart"
+          textWidth=175
+          ratio=0.55
+          maxHeight=350}}
+        </div>
       </div>
-      <div class="container-fluid" id="numapplications-donut-chart">
-        {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
-        showLabels=true
-        parentId="numapplications-donut-chart"
-        ratio=0.6
-        maxHeight=350}}
+    </div>
+
+    <div class="container-fluid">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          Running Apps: {{model.selected}}
+        </div>
+        <div class="container-fluid" id="numapplications-donut-chart">
+          {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
+          showLabels=true
+          parentId="numapplications-donut-chart"
+          ratio=0.6
+          maxHeight=350}}
+        </div>
       </div>
     </div>
   </div>
