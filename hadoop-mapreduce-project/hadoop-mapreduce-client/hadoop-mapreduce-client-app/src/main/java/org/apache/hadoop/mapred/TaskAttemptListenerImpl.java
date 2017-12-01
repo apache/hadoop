@@ -22,9 +22,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +39,7 @@ import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.TaskHeartbeatHandler;
@@ -54,6 +57,8 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class is responsible for talking to the task umblical.
@@ -80,6 +85,11 @@ public class TaskAttemptListenerImpl extends CompositeService
   private ConcurrentMap<WrappedJvmID, org.apache.hadoop.mapred.Task>
     jvmIDToActiveAttemptMap
       = new ConcurrentHashMap<WrappedJvmID, org.apache.hadoop.mapred.Task>();
+
+  private ConcurrentMap<TaskAttemptId,
+      AtomicReference<TaskAttemptStatus>> attemptIdToStatus
+        = new ConcurrentHashMap<>();
+
   private Set<WrappedJvmID> launchedJVMs = Collections
       .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>());
 
@@ -328,6 +338,14 @@ public class TaskAttemptListenerImpl extends CompositeService
       TaskStatus taskStatus) throws IOException, InterruptedException {
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId yarnAttemptID =
         TypeConverter.toYarn(taskAttemptID);
+
+    AtomicReference<TaskAttemptStatus> lastStatusRef =
+        attemptIdToStatus.get(yarnAttemptID);
+    if (lastStatusRef == null) {
+      throw new IllegalStateException("Status update was called"
+          + " with illegal TaskAttemptId: " + yarnAttemptID);
+    }
+
     taskHeartbeatHandler.progressing(yarnAttemptID);
     TaskAttemptStatus taskAttemptStatus =
         new TaskAttemptStatus();
@@ -385,9 +403,8 @@ public class TaskAttemptListenerImpl extends CompositeService
 //    // isn't ever changed by the Task itself.
 //    taskStatus.getIncludeCounters();
 
-    context.getEventHandler().handle(
-        new TaskAttemptStatusUpdateEvent(taskAttemptStatus.id,
-            taskAttemptStatus));
+    coalesceStatusUpdate(yarnAttemptID, taskAttemptStatus, lastStatusRef);
+
     return true;
   }
 
@@ -468,6 +485,9 @@ public class TaskAttemptListenerImpl extends CompositeService
     launchedJVMs.add(jvmId);
 
     taskHeartbeatHandler.register(attemptID);
+
+    attemptIdToStatus.put(attemptID,
+        new AtomicReference<TaskAttemptStatus>());
   }
 
   @Override
@@ -489,6 +509,8 @@ public class TaskAttemptListenerImpl extends CompositeService
 
     //unregister this attempt
     taskHeartbeatHandler.unregister(attemptID);
+
+    attemptIdToStatus.remove(attemptID);
   }
 
   @Override
@@ -496,5 +518,48 @@ public class TaskAttemptListenerImpl extends CompositeService
       long clientVersion, int clientMethodsHash) throws IOException {
     return ProtocolSignature.getProtocolSignature(this, 
         protocol, clientVersion, clientMethodsHash);
+  }
+
+  private void coalesceStatusUpdate(TaskAttemptId yarnAttemptID,
+      TaskAttemptStatus taskAttemptStatus,
+      AtomicReference<TaskAttemptStatus> lastStatusRef) {
+    boolean asyncUpdatedNeeded = false;
+    TaskAttemptStatus lastStatus = lastStatusRef.get();
+
+    if (lastStatus == null) {
+      lastStatusRef.set(taskAttemptStatus);
+      asyncUpdatedNeeded = true;
+    } else {
+      List<TaskAttemptId> oldFetchFailedMaps =
+          taskAttemptStatus.fetchFailedMaps;
+
+      // merge fetchFailedMaps from the previous update
+      if (lastStatus.fetchFailedMaps != null) {
+        if (taskAttemptStatus.fetchFailedMaps == null) {
+          taskAttemptStatus.fetchFailedMaps = lastStatus.fetchFailedMaps;
+        } else {
+          taskAttemptStatus.fetchFailedMaps.addAll(lastStatus.fetchFailedMaps);
+        }
+      }
+
+      if (!lastStatusRef.compareAndSet(lastStatus, taskAttemptStatus)) {
+        // update failed - async dispatcher has processed it in the meantime
+        taskAttemptStatus.fetchFailedMaps = oldFetchFailedMaps;
+        lastStatusRef.set(taskAttemptStatus);
+        asyncUpdatedNeeded = true;
+      }
+    }
+
+    if (asyncUpdatedNeeded) {
+      context.getEventHandler().handle(
+          new TaskAttemptStatusUpdateEvent(taskAttemptStatus.id,
+              lastStatusRef));
+    }
+  }
+
+  @VisibleForTesting
+  ConcurrentMap<TaskAttemptId,
+      AtomicReference<TaskAttemptStatus>> getAttemptIdToStatus() {
+    return attemptIdToStatus;
   }
 }
