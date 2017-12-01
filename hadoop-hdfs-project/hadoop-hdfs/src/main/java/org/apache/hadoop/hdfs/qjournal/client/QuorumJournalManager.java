@@ -498,6 +498,12 @@ public class QuorumJournalManager implements JournalManager {
         // than committedTxnId. This ensures the consistency.
         if (onlyDurableTxns && inProgressOk) {
           endTxId = Math.min(endTxId, committedTxnId);
+          if (endTxId < remoteLog.getStartTxId()) {
+            LOG.warn("Found endTxId (" + endTxId + ") that is less than " +
+                "the startTxId (" + remoteLog.getStartTxId() +
+                ") - setting it to startTxId.");
+            endTxId = remoteLog.getStartTxId();
+          }
         }
 
         EditLogInputStream elis = EditLogFileInputStream.fromUrl(
