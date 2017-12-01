@@ -141,12 +141,13 @@ char* escape_single_quote(const char *str);
 
 /**
  * Helper function to quote the argument to a parameter and then append it to the provided string.
- * @param str Buffer to which the param='arg' string must be appended
+ * @param str Buffer to which the param'arg' string must be appended
  * @param size Size of the buffer
  * @param param Param name
  * @param arg Argument to be quoted
  */
 void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg);
+#define QUOTE_AND_APPEND_ARG_GROWTH (1024) // how much to increase str buffer by if needed
 
 /**
  * Helper function to allocate and clear a block of memory. It'll call exit if the allocation fails.

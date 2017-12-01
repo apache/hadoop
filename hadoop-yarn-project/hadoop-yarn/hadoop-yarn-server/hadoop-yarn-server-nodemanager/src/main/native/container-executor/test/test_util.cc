@@ -149,25 +149,155 @@ namespace ContainerExecutor {
     }
   }
 
+  /**
+   * Internal function for testing quote_and_append_arg()
+   */
+  void test_quote_and_append_arg_function_internal(char **str, size_t *size, const char* param, const char *arg, const char *expected_result) {
+    const size_t alloc_block_size = QUOTE_AND_APPEND_ARG_GROWTH;
+    size_t orig_size = *size;
+    size_t expected_size = strlen(expected_result) + 1;
+    if (expected_size > orig_size) {
+      expected_size += alloc_block_size;
+    } else {
+      expected_size = orig_size; // fits in original string
+    }
+    quote_and_append_arg(str, size, param, arg);
+    ASSERT_STREQ(*str, expected_result);
+    ASSERT_EQ(*size, expected_size);
+    return;
+  }
+
   TEST_F(TestUtil, test_quote_and_append_arg) {
+    size_t str_real_size = 32;
 
-    char *tmp = static_cast<char *>(malloc(4096));
-    size_t tmp_size = 4096;
+    // Simple test - size = 32, result = 16
+    size_t str_size = str_real_size;
+    char *str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "ssss");
+    const char *param = "pppp";
+    const char *arg = "aaaa";
+    const char *expected_result = "sssspppp'aaaa' ";
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
 
-    memset(tmp, 0, tmp_size);
-    quote_and_append_arg(&tmp, &tmp_size, "param=", "argument1");
-    ASSERT_STREQ("param='argument1' ", tmp);
+    // Original test - size = 32, result = 19
+    str_size = str_real_size;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    param = "param=";
+    arg = "argument1";
+    expected_result = "param='argument1' ";
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
 
-    memset(tmp, 0, tmp_size);
-    quote_and_append_arg(&tmp, &tmp_size, "param=", "ab'cd");
-    ASSERT_STREQ("param='ab'\"'\"'cd' ", tmp);
-    free(tmp);
+    // Original test - size = 32 and result = 21
+    str_size = str_real_size;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    param = "param=";
+    arg = "ab'cd";
+    expected_result = "param='ab'\"'\"'cd' "; // 21 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
 
-    tmp = static_cast<char *>(malloc(4));
-    tmp_size = 4;
-    memset(tmp, 0, tmp_size);
-    quote_and_append_arg(&tmp, &tmp_size, "param=", "argument1");
-    ASSERT_STREQ("param='argument1' ", tmp);
-    ASSERT_EQ(1040, tmp_size);
+    // Lie about size of buffer so we don't crash from an actual buffer overflow
+    // Original Test - Size = 4 and result = 19
+    str_size = 4;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    param = "param=";
+    arg = "argument1";
+    expected_result = "param='argument1' "; // 19 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // Size = 8 and result = 7
+    str_size = 8;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "s");
+    param = "p";
+    arg = "a";
+    expected_result = "sp'a' "; // 7 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // Size = 8 and result = 7
+    str_size = 8;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "s");
+    param = "p";
+    arg = "a";
+    expected_result = "sp'a' "; // 7 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // Size = 8 and result = 8
+    str_size = 8;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "ss");
+    param = "p";
+    arg = "a";
+    expected_result = "ssp'a' "; // 8 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // size = 8, result = 9 (should grow buffer)
+    str_size = 8;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "ss");
+    param = "pp";
+    arg = "a";
+    expected_result = "sspp'a' "; // 9 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // size = 8, result = 10 (should grow buffer)
+    str_size = 8;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "ss");
+    param = "pp";
+    arg = "aa";
+    expected_result = "sspp'aa' "; // 10 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // size = 8, result = 11 (should grow buffer)
+    str_size = 8;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "sss");
+    param = "pp";
+    arg = "aa";
+    expected_result = "ssspp'aa' "; // 11 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // One with quotes - size = 32, result = 17
+    str_size = 32;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "s");
+    param = "p";
+    arg = "'a'";
+    expected_result = "sp''\"'\"'a'\"'\"'' "; // 17 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
+
+    // One with quotes - size = 16, result = 17
+    str_size = 16;
+    str = (char *) malloc(str_real_size);
+    memset(str, 0, str_real_size);
+    strcpy(str, "s");
+    param = "p";
+    arg = "'a'";
+    expected_result = "sp''\"'\"'a'\"'\"'' "; // 17 characters
+    test_quote_and_append_arg_function_internal(&str, &str_size, param, arg, expected_result);
+    free(str);
   }
 }
