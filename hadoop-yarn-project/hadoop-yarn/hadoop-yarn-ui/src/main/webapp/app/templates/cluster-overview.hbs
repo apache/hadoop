@@ -172,6 +172,20 @@
         </div>
       </div>
     </div>
+
+    <div class="col-lg-6 container-fluid">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          Queue capacities
+        </div>
+        <div class="container-fluid donut-chart" id="queue-sunburst-chart">
+          {{queue-capacity-sunburst-chart data=model.queues
+          showLabels=true
+          parentId="queue-sunburst-chart"
+          ratio=0.8}}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
