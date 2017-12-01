@@ -100,9 +100,12 @@ public abstract class Resource implements Comparable<Resource> {
   @Stable
   public static Resource newInstance(long memory, int vCores,
       Map<String, Long> others) {
-    ResourceInformation[] info = ResourceUtils.createResourceTypesArray(others);
-
-    return new LightWeightResource(memory, vCores, info);
+    if (others != null) {
+      return new LightWeightResource(memory, vCores,
+          ResourceUtils.createResourceTypesArray(others));
+    } else {
+      return newInstance(memory, vCores);
+    }
   }
 
   @InterfaceAudience.Private
