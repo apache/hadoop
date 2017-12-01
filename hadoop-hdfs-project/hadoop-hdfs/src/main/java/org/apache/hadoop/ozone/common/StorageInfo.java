@@ -28,7 +28,7 @@ import java.util.UUID;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ozone.OzoneConsts.NodeType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeType;
 
 /**
  * Common class for storage information. This class defines the common

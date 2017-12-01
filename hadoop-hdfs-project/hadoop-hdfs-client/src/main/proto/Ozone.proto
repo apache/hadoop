@@ -47,6 +47,16 @@ message KeyValue {
 }
 
 /**
+ * Type of the node.
+ */
+enum NodeType {
+    KSM = 1;
+    SCM = 2;
+    DATANODE = 3;
+}
+
+// Should we rename NodeState to DatanodeState?
+/**
  * Enum that represents the Node State. This is used in calls to getNodeList
  * and getNodeCount.
  */

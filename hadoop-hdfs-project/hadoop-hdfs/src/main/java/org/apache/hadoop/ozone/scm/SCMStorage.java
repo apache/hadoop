@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.scm;
 
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.Storage;
-import org.apache.hadoop.ozone.OzoneConsts.NodeType;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeType;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import java.io.IOException;
