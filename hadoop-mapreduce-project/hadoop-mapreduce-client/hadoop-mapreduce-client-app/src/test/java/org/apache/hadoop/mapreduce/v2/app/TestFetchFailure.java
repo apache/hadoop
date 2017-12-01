@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
@@ -442,7 +443,7 @@ public class TestFetchFailure {
     status.stateString = "OK";
     status.taskState = attempt.getState();
     TaskAttemptStatusUpdateEvent event = new TaskAttemptStatusUpdateEvent(attempt.getID(),
-        status);
+        new AtomicReference<>(status));
     app.getContext().getEventHandler().handle(event);
   }
 

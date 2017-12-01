@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -1780,7 +1781,6 @@ public abstract class TaskAttemptImpl implements
     taskAttempt.updateProgressSplits();
   }
 
-
   static class RequestContainerTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
     private final boolean rescheduled;
@@ -1965,6 +1965,7 @@ public abstract class TaskAttemptImpl implements
       // register it to TaskAttemptListener so that it can start monitoring it.
       taskAttempt.taskAttemptListener
         .registerLaunchedTask(taskAttempt.attemptId, taskAttempt.jvmID);
+
       //TODO Resolve to host / IP in case of a local address.
       InetSocketAddress nodeHttpInetAddr = // TODO: Costly to create sock-addr?
           NetUtils.createSocketAddr(taskAttempt.container.getNodeHttpAddress());
@@ -2430,15 +2431,20 @@ public abstract class TaskAttemptImpl implements
   }
 
   private static class StatusUpdater 
-       implements SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+      implements SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, 
         TaskAttemptEvent event) {
-      // Status update calls don't really change the state of the attempt.
+      TaskAttemptStatusUpdateEvent statusEvent =
+          ((TaskAttemptStatusUpdateEvent)event);
+
+      AtomicReference<TaskAttemptStatus> taskAttemptStatusRef =
+          statusEvent.getTaskAttemptStatusRef();
+
       TaskAttemptStatus newReportedStatus =
-          ((TaskAttemptStatusUpdateEvent) event)
-              .getReportedTaskAttemptStatus();
+          taskAttemptStatusRef.getAndSet(null);
+
       // Now switch the information in the reportedStatus
       taskAttempt.reportedStatus = newReportedStatus;
       taskAttempt.reportedStatus.taskState = taskAttempt.getState();
@@ -2447,12 +2453,10 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.eventHandler.handle
           (new SpeculatorEvent
               (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
-      
       taskAttempt.updateProgressSplits();
-      
       //if fetch failures are present, send the fetch failure event to job
       //this only will happen in reduce attempt type
-      if (taskAttempt.reportedStatus.fetchFailedMaps != null && 
+      if (taskAttempt.reportedStatus.fetchFailedMaps != null &&
           taskAttempt.reportedStatus.fetchFailedMaps.size() > 0) {
         String hostname = taskAttempt.container == null ? "UNKNOWN"
             : taskAttempt.container.getNodeId().getHost();
