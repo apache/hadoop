@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -869,9 +871,22 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      * {@link BlocksMapUpdateInfo#toDeleteList}
      * @param toDelete the to-be-deleted block
      */
-    public void addDeleteBlock(Block toDelete) {
+    public void addDeleteBlock(BlockInfoContiguous toDelete) {
       assert toDelete != null : "toDelete is null";
       toDeleteList.add(toDelete);
+      // If the file is being truncated
+      // the copy-on-truncate block should also be collected for deletion
+      if(!(toDelete instanceof BlockInfoContiguousUnderConstruction)) {
+        return;
+      }
+      Block truncateBlock =
+          ((BlockInfoContiguousUnderConstruction)toDelete).getTruncateBlock();
+      if(truncateBlock == null || truncateBlock.equals(toDelete)) {
+        return;
+      }
+      assert truncateBlock instanceof BlockInfoContiguous :
+        "should be BlockInfoContiguous";
+      addDeleteBlock((BlockInfoContiguous) truncateBlock);
     }
 
     public void removeDeleteBlock(Block block) {
