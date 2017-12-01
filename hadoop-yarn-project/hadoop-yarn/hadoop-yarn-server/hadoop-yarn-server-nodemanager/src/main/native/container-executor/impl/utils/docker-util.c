@@ -299,29 +299,19 @@ static int value_permitted(const struct configuration* executor_cfg,
 int get_docker_volume_command(const char *command_file, const struct configuration *conf, char *out,
                                const size_t outlen) {
   int ret = 0;
-  char *driver = NULL, *volume_name = NULL, *sub_command = NULL;
+  char *driver = NULL, *volume_name = NULL, *sub_command = NULL, *format = NULL;
   struct configuration command_config = {0, NULL};
   ret = read_and_verify_command_file(command_file, DOCKER_VOLUME_COMMAND, &command_config);
   if (ret != 0) {
     return ret;
   }
   sub_command = get_configuration_value("sub-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (sub_command == NULL || 0 != strcmp(sub_command, "create")) {
-    fprintf(ERRORFILE, "\"create\" is the only acceptable sub-command of volume.\n");
+
+  if ((sub_command == NULL) || ((0 != strcmp(sub_command, "create")) &&
+      (0 != strcmp(sub_command, "ls")))) {
+    fprintf(ERRORFILE, "\"create/ls\" are the only acceptable sub-command of volume, input sub_command=\"%s\"\n",
+       sub_command);
     ret = INVALID_DOCKER_VOLUME_COMMAND;
-    goto cleanup;
-  }
-
-  volume_name = get_configuration_value("volume", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (volume_name == NULL || validate_volume_name(volume_name) != 0) {
-    fprintf(ERRORFILE, "%s is not a valid volume name.\n", volume_name);
-    ret = INVALID_DOCKER_VOLUME_NAME;
-    goto cleanup;
-  }
-
-  driver = get_configuration_value("driver", DOCKER_COMMAND_FILE_SECTION, &command_config);
-  if (driver == NULL) {
-    ret = INVALID_DOCKER_VOLUME_DRIVER;
     goto cleanup;
   }
 
@@ -338,42 +328,76 @@ int get_docker_volume_command(const char *command_file, const struct configurati
     goto cleanup;
   }
 
-  ret = add_to_buffer(out, outlen, " create");
-  if (ret != 0) {
-    goto cleanup;
-  }
+  if (0 == strcmp(sub_command, "create")) {
+    volume_name = get_configuration_value("volume", DOCKER_COMMAND_FILE_SECTION, &command_config);
+    if (volume_name == NULL || validate_volume_name(volume_name) != 0) {
+      fprintf(ERRORFILE, "%s is not a valid volume name.\n", volume_name);
+      ret = INVALID_DOCKER_VOLUME_NAME;
+      goto cleanup;
+    }
 
-  ret = add_to_buffer(out, outlen, " --name=");
-  if (ret != 0) {
-    goto cleanup;
-  }
+    driver = get_configuration_value("driver", DOCKER_COMMAND_FILE_SECTION, &command_config);
+    if (driver == NULL) {
+      ret = INVALID_DOCKER_VOLUME_DRIVER;
+      goto cleanup;
+    }
 
-  ret = add_to_buffer(out, outlen, volume_name);
-  if (ret != 0) {
-    goto cleanup;
-  }
+    ret = add_to_buffer(out, outlen, " create");
+    if (ret != 0) {
+      goto cleanup;
+    }
 
-  if (!value_permitted(conf, "docker.allowed.volume-drivers", driver)) {
-    fprintf(ERRORFILE, "%s is not permitted docker.allowed.volume-drivers\n",
-      driver);
-    ret = INVALID_DOCKER_VOLUME_DRIVER;
-    goto cleanup;
-  }
+    ret = add_to_buffer(out, outlen, " --name=");
+    if (ret != 0) {
+      goto cleanup;
+    }
 
-  ret = add_to_buffer(out, outlen, " --driver=");
-  if (ret != 0) {
-    goto cleanup;
-  }
+    ret = add_to_buffer(out, outlen, volume_name);
+    if (ret != 0) {
+      goto cleanup;
+    }
 
-  ret = add_to_buffer(out, outlen, driver);
-  if (ret != 0) {
-    goto cleanup;
+    if (!value_permitted(conf, "docker.allowed.volume-drivers", driver)) {
+      fprintf(ERRORFILE, "%s is not permitted docker.allowed.volume-drivers\n",
+        driver);
+      ret = INVALID_DOCKER_VOLUME_DRIVER;
+      goto cleanup;
+    }
+
+    ret = add_to_buffer(out, outlen, " --driver=");
+    if (ret != 0) {
+      goto cleanup;
+    }
+
+    ret = add_to_buffer(out, outlen, driver);
+    if (ret != 0) {
+      goto cleanup;
+    }
+  } else if (0 == strcmp(sub_command, "ls")) {
+    format = get_configuration_value("format", DOCKER_COMMAND_FILE_SECTION, &command_config);
+
+    ret = add_to_buffer(out, outlen, " ls");
+    if (ret != 0) {
+      goto cleanup;
+    }
+
+    if (format) {
+      ret = add_to_buffer(out, outlen, " --format=");
+      if (ret != 0) {
+        goto cleanup;
+      }
+      ret = add_to_buffer(out, outlen, format);
+      if (ret != 0) {
+        goto cleanup;
+      }
+    }
   }
 
 cleanup:
   free(driver);
   free(volume_name);
   free(sub_command);
+  free(format);
 
   // clean up out buffer
   if (ret != 0) {
