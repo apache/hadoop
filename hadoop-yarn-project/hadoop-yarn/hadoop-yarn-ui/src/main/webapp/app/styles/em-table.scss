@@ -18,99 +18,102 @@
 
 // All emtable style overrides go here
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel {
-     width: 240px;
-     margin-right: 15px;
-     padding: 0 0 15px 0;
-     background: none;
-     border: none;
-     border-radius: 0;
- }
+.yarn-applications-container {
+  .table-panel-left {
+    .em-table-facet-panel {
+      width: 240px;
+      margin-right: 15px;
+      padding: 0 0 15px 0;
+      background: none;
+      border: none;
+      border-radius: 0;
+      .field-list {
+        padding-top: 0px;
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .field-list>li .em-table-facet-panel-values {
-     margin-top: 0px;
-     margin-bottom: -4px;
-     background: $yarn-panel-bg;
-     border: 1px solid $yarn-border-color;
- }
+        & > li .em-table-facet-panel-values {
+          margin-top: 0px;
+          margin-bottom: -4px;
+          background: $yarn-panel-bg;
+          border: 1px solid $yarn-border-color;
+          .field-name {
+            cursor: default;
+            &::before {
+              display: none;
+            }
+            .all-button {
+              display: block;
+              cursor: pointer;
+            }
+          }
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .field-name {
-     background-color: $yarn-header-bg;
-     border-bottom: 1px solid $yarn-border-color;
-     padding: 10px 15px;
- }
+          &.hide-values {
+            .value-list,
+            .more-less,
+            .field-name .all-button {
+              display: block;
+            }
+            &.hide-select-all {
+              .field-name .all-button {
+                display: none;
+              }
+            }
+          }
+        }
+      }
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .all-button {
-     right: 5px !important;
- }
+      .field-name {
+        background-color: $yarn-header-bg;
+        border-bottom: 1px solid $yarn-border-color;
+        padding: 10px 15px;
+      }
+      .all-button {
+        right: 5px !important;
+      }
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .field-name::before {
-     margin-right: 5px;
- }
+      .field-name::before {
+        margin-right: 5px;
+      }
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .value-list {
-     padding: 0 10px;
- }
+      .value-list {
+        padding: 0 10px;
+      }
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .filter-box {
-     padding: 5px;
-     margin: 5px 0;
- }
+      .filter-box {
+        padding: 5px;
+        margin: 5px 0;
+      }
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .more-less {
-     padding: 5px 0;
- }
+      .more-less {
+        padding: 5px 0;
+      }
+    }
+  }
 
- .yarn-applications-container .table-panel-left .em-table-facet-panel .field-list {
-     padding-top: 0px;
- }
+  .ember-view.table-cell {
+    padding: 10px 15px;
+    height: auto;
+  }
 
- .yarn-applications-container .em-table .table-column .table-header-cell {
-     padding: 7.5px 0 7.5px 7.5px;
- }
+  .resize-column {
+    position: absolute;
+    right: -14px;
+    display: inline-block;
+    padding: 10px 0;
+    top: -36px;
+    font-size: 42px;
+    line-height: 2em;
+  }
+  .em-progress-container {
+    padding-bottom: 1px;
+  }
+}
 
- .yarn-applications-container .ember-view.table-cell {
-     padding: 10px 15px;
-     height: auto;
- }
-
- .yarn-applications-container .resize-column {
-     position: absolute;
-     right: -14px;
-     display: inline-block;
-     padding: 10px 0;
-     top: -36px;
-     font-size: 42px;
-     line-height: 2em;
- }
-
- .em-table .table-column .table-header-cell {
-     background-color: $yarn-header-bg;
-     border-bottom: 1px solid $yarn-border-color;
- }
-
- .em-table-facet-panel ul.field-list .em-table-facet-panel-values {
-     .field-name {
-         cursor: default;
-         &::before {
-             display: none;
-         }
-         .all-button {
-             display: block;
-             cursor: pointer;
-         }
-     }
-     &.hide-values {
-         .value-list,
-         .more-less,
-         .field-name .all-button {
-             display: block;
-         }
-         &.hide-select-all {
-             .field-name .all-button {
-                 display: none;
-             }
-         }
-     }
- }
- 
+.em-table {
+  .table-column {
+    .table-header-cell {
+      padding: 7.5px 0 7.5px 7.5px;
+      background-color: $yarn-header-bg;
+      border-bottom: 1px solid $yarn-border-color;
+    }
+  }
+}
