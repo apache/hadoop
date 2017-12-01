@@ -162,7 +162,7 @@ public class SCMCLI extends OzoneBaseCLI {
     HelpFormatter helpFormatter = new HelpFormatter();
     Options topLevelOptions = new Options();
     addTopLevelOptions(topLevelOptions);
-    helpFormatter.printHelp(CMD_WIDTH, "hdfs scm <commands> [<options>]",
+    helpFormatter.printHelp(CMD_WIDTH, "hdfs scmcli <commands> [<options>]",
         "where <commands> can be one of the following",
         topLevelOptions, "");
   }

@@ -48,6 +48,7 @@ import org.apache.hadoop.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,6 +90,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   private final KSMMetrics metrics;
   private final KeySpaceManagerHttpServer httpServer;
   private ObjectName ksmInfoBeanName;
+  private static final String USAGE = "hdfs ksm [genericOptions]";
 
   public KeySpaceManager(OzoneConfiguration conf) throws IOException {
     final int handlerCount = conf.getInt(OZONE_KSM_HANDLER_COUNT_KEY,
@@ -191,14 +193,25 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
    * @throws IOException if startup fails due to I/O error
    */
   public static void main(String[] argv) throws IOException {
-    StringUtils.startupShutdownMessage(KeySpaceManager.class, argv, LOG);
+    if (DFSUtil.parseHelpArgument(argv, USAGE,
+        System.out, true)) {
+      System.exit(0);
+    }
     try {
       OzoneConfiguration conf = new OzoneConfiguration();
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      if (!hParser.isParseSuccessful()
+          || hParser.getRemainingArgs().length > 0) {
+        System.err.println("USAGE: " + USAGE + " \n");
+        hParser.printGenericCommandUsage(System.err);
+        System.exit(1);
+      }
       if (!DFSUtil.isOzoneEnabled(conf)) {
         System.out.println("KSM cannot be started in secure mode or when " +
             OZONE_ENABLED + " is set to false");
         System.exit(1);
       }
+      StringUtils.startupShutdownMessage(KeySpaceManager.class, argv, LOG);
       KeySpaceManager ksm = new KeySpaceManager(conf);
       ksm.start();
       ksm.join();
