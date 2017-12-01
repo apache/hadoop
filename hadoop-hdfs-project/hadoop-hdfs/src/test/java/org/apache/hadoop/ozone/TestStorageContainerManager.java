@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
@@ -371,11 +372,11 @@ public class TestStorageContainerManager {
     StorageContainerManager.scmInit(conf);
 
     SCMStorage scmStore = new SCMStorage(conf);
-    Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
+    Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
     StartupOption.INIT.setClusterId("testClusterIdNew");
     StorageContainerManager.scmInit(conf);
-    Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
+    Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
 
   }
@@ -395,7 +396,7 @@ public class TestStorageContainerManager {
     // This will initialize SCM
     StorageContainerManager.scmInit(conf);
     SCMStorage scmStore = new SCMStorage(conf);
-    Assert.assertEquals(OzoneConsts.NodeType.SCM, scmStore.getNodeType());
+    Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
   }
 
