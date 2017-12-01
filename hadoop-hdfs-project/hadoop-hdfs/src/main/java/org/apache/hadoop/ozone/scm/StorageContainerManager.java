@@ -91,6 +91,7 @@ import org.apache.hadoop.scm.protocolPB.StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -216,9 +217,12 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
 
 
   private static final String USAGE =
-      "Usage: \n hdfs scm [ " + StartupOption.INIT.getName() + " [ "
-          + StartupOption.CLUSTERID.getName() + " <cid> ] ]\n " + "hdfs scm [ "
-          + StartupOption.GENCLUSTERID.getName() + " ]\n " + "hdfs scm [ "
+      "Usage: \n hdfs scm [genericOptions] "
+          + "[ " + StartupOption.INIT.getName() + " [ "
+          + StartupOption.CLUSTERID.getName() + " <cid> ] ]\n "
+          + "hdfs scm [genericOptions] [ "
+          + StartupOption.GENCLUSTERID.getName() + " ]\n " +
+          "hdfs scm [ "
           + StartupOption.HELP.getName() + " ]\n";
   /**
    * Creates a new StorageContainerManager.  Configuration will be updated with
@@ -401,11 +405,21 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @throws IOException if startup fails due to I/O error
    */
   public static void main(String[] argv) throws IOException {
-    StringUtils.startupShutdownMessage(StorageContainerManager.class,
-        argv, LOG);
-    OzoneConfiguration conf = new OzoneConfiguration();
+    if (DFSUtil.parseHelpArgument(argv, USAGE,
+        System.out, true)) {
+      System.exit(0);
+    }
     try {
-      StorageContainerManager scm = createSCM(argv, conf);
+      OzoneConfiguration conf = new OzoneConfiguration();
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      if (!hParser.isParseSuccessful()) {
+        System.err.println("USAGE: " + USAGE + "\n");
+        hParser.printGenericCommandUsage(System.err);
+        System.exit(1);
+      }
+      StringUtils.startupShutdownMessage(StorageContainerManager.class,
+          argv, LOG);
+      StorageContainerManager scm = createSCM(hParser.getRemainingArgs(), conf);
       if (scm != null) {
         scm.start();
         scm.join();

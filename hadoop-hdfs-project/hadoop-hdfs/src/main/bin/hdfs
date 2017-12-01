@@ -68,6 +68,7 @@ function hadoop_usage
   hadoop_add_subcommand "oz_debug" client "ozone debug tool, convert ozone metadata into relational data"
   hadoop_add_subcommand "portmap" daemon "run a portmap service"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
+  hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager "
   hadoop_add_subcommand "secondarynamenode" daemon "run the DFS secondary namenode"
   hadoop_add_subcommand "snapshotDiff" client "diff two snapshots of a directory or diff the current directory contents with a snapshot"
   hadoop_add_subcommand "storagepolicies" admin "list/get/set block storage policies"
@@ -219,9 +220,14 @@ function hdfscmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.portmap.Portmap
     ;;
+    scmcli)
+       HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
+    ;;
     scm)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.ozone.scm.StorageContainerManager'
+      hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
     ;;
     scmcli)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.scm.cli.SCMCLI
