@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
@@ -26,17 +27,16 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 
 public class TaskAttemptStatusUpdateEvent extends TaskAttemptEvent {
-
-  private TaskAttemptStatus reportedTaskAttemptStatus;
+  private AtomicReference<TaskAttemptStatus> taskAttemptStatusRef;
 
   public TaskAttemptStatusUpdateEvent(TaskAttemptId id,
-      TaskAttemptStatus taskAttemptStatus) {
+      AtomicReference<TaskAttemptStatus> taskAttemptStatusRef) {
     super(id, TaskAttemptEventType.TA_UPDATE);
-    this.reportedTaskAttemptStatus = taskAttemptStatus;
+    this.taskAttemptStatusRef = taskAttemptStatusRef;
   }
 
-  public TaskAttemptStatus getReportedTaskAttemptStatus() {
-    return reportedTaskAttemptStatus;
+  public AtomicReference<TaskAttemptStatus> getTaskAttemptStatusRef() {
+    return taskAttemptStatusRef;
   }
 
   /**
