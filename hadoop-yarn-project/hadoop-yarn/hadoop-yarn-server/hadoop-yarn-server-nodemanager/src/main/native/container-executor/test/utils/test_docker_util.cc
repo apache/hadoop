@@ -1132,12 +1132,15 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=volume\n  sub-command=create\n  volume=volume1 \n driver=driver1",
         "volume create --name=volume1 --driver=driver1"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+       "[docker-command-execution]\n  docker-command=volume\n  format={{.Name}},{{.Driver}}\n  sub-command=ls",
+       "volume ls --format={{.Name}},{{.Driver}}"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
 
     // Wrong subcommand
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=volume\n  sub-command=ls\n  volume=volume1 \n driver=driver1",
+        "[docker-command-execution]\n  docker-command=volume\n  sub-command=inspect\n  volume=volume1 \n driver=driver1",
         static_cast<int>(INVALID_DOCKER_VOLUME_COMMAND)));
 
     // Volume not specified

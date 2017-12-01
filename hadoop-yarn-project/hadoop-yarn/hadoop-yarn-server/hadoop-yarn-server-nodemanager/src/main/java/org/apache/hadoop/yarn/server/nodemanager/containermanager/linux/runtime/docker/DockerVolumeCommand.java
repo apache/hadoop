@@ -27,23 +27,50 @@ import java.util.regex.Pattern;
  */
 public class DockerVolumeCommand extends DockerCommand {
   public static final String VOLUME_COMMAND = "volume";
-  public static final String VOLUME_CREATE_COMMAND = "create";
+  public static final String VOLUME_CREATE_SUB_COMMAND = "create";
+  public static final String VOLUME_LS_SUB_COMMAND = "ls";
+
   // Regex pattern for volume name
   public static final Pattern VOLUME_NAME_PATTERN = Pattern.compile(
       "[a-zA-Z0-9][a-zA-Z0-9_.-]*");
 
+  private String volumeName;
+  private String driverName;
+  private String subCommand;
+
   public DockerVolumeCommand(String subCommand) {
     super(VOLUME_COMMAND);
+    this.subCommand = subCommand;
     super.addCommandArguments("sub-command", subCommand);
   }
 
   public DockerVolumeCommand setVolumeName(String volumeName) {
     super.addCommandArguments("volume", volumeName);
+    this.volumeName = volumeName;
     return this;
   }
 
   public DockerVolumeCommand setDriverName(String driverName) {
     super.addCommandArguments("driver", driverName);
+    this.driverName = driverName;
     return this;
   }
+
+  public String getVolumeName() {
+    return volumeName;
+  }
+
+  public String getDriverName() {
+    return driverName;
+  }
+
+  public String getSubCommand() {
+    return subCommand;
+  }
+
+  public DockerVolumeCommand setFormat(String format) {
+    super.addCommandArguments("format", format);
+    return this;
+  }
+
 }
