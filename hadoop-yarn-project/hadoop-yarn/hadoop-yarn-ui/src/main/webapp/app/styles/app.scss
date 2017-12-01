@@ -1,6 +1,7 @@
 @import 'variables.scss';
 @import 'layout.scss';
 @import 'yarn-app.scss';
+@import './compose-box.scss';
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -191,7 +192,7 @@ table.dataTable thead .sorting_desc_disabled {
 
 .breadcrumb {
   padding-bottom: 3px;
-  background-color: none;
+  background: none;
 }
 
 .navbar-default .navbar-nav > li > a {
@@ -744,4 +745,57 @@ div.service-action-mask img {
   background: none;
   border: none;
   box-shadow: none;
+}
+
+.queue-page-breadcrumb,
+#tree-selector-container {
+  width: calc(100% - #{$compose-box-width});
+}
+
+#tree-selector-container {
+  overflow: scroll;
+}
+
+.flex {
+  display: flex;
+}
+
+.yarn-label {
+  border-radius: 3px;
+  margin-bottom: 5px;
+  border: 1px solid $yarn-panel-bg;
+  font-size: 12px;
+  > span {
+    padding: 5px;
+  }
+  &.primary {
+    display: inline-grid;
+    .label-key {
+      color: $yarn-panel-bg;
+      background: #666;
+    }
+    .label-value {
+      color: $yarn-panel-bg;
+      background: $yarn-success-border;
+    }
+  } 
+  &.secondary {
+    display: inline-table;
+    .label-key {
+      color: $yarn-panel-bg;
+      background: #999;
+    }
+
+    .label-value {
+      color: $yarn-panel-bg;
+      background: yellowgreen;
+    }
+  }
+}
+
+.yarn-queues-container {
+  padding: 15px;
+  h3 {
+    margin-top: 0;
+  }
 }

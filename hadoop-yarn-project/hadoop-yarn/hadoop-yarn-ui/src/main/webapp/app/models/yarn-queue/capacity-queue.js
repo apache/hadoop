@@ -51,15 +51,18 @@ export default DS.Model.extend({
     var floatToFixed = Converter.floatToFixed;
     return [
       {
-        label: "Absolute Capacity",
-        value: this.get("name") === "root" ? 100 : floatToFixed(this.get("absCapacity"))
-      },
-      {
         label: "Absolute Used",
+        style: "primary",
         value: this.get("name") === "root" ? floatToFixed(this.get("usedCapacity")) : floatToFixed(this.get("absUsedCapacity"))
       },
       {
+        label: "Absolute Capacity",
+        style: "primary",
+        value: this.get("name") === "root" ? 100 : floatToFixed(this.get("absCapacity"))
+      },
+      {
         label: "Absolute Max Capacity",
+        style: "secondary",
         value: this.get("name") === "root" ? 100 : floatToFixed(this.get("absMaxCapacity"))
       }
     ];
