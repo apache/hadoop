@@ -624,16 +624,10 @@ public abstract class GenericTestUtils {
    * conditions.
    */
   public static class SleepAnswer implements Answer<Object> {
-    private final int minSleepTime;
     private final int maxSleepTime;
     private static Random r = new Random();
-
+    
     public SleepAnswer(int maxSleepTime) {
-      this(0, maxSleepTime);
-    }
-
-    public SleepAnswer(int minSleepTime, int maxSleepTime) {
-      this.minSleepTime = minSleepTime;
       this.maxSleepTime = maxSleepTime;
     }
     
@@ -641,7 +635,7 @@ public abstract class GenericTestUtils {
     public Object answer(InvocationOnMock invocation) throws Throwable {
       boolean interrupted = false;
       try {
-        Thread.sleep(r.nextInt(maxSleepTime) + minSleepTime);
+        Thread.sleep(r.nextInt(maxSleepTime));
       } catch (InterruptedException ie) {
         interrupted = true;
       }
