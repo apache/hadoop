@@ -110,7 +110,7 @@ public class TestFileStatusSerialization {
       dib.reset(dob.getData(), 0, dob.getLength());
       FileStatus fstat = new FileStatus();
       fstat.readFields(dib);
-      checkFields(stat, fstat);
+      checkFields((FileStatus) stat, fstat);
 
       // FsPermisisonExtension used for HdfsFileStatus, not FileStatus,
       // attribute flags should still be preserved
@@ -133,7 +133,7 @@ public class TestFileStatusSerialization {
     try (ObjectInputStream ois = new ObjectInputStream(bais)) {
       FileStatus deser = (FileStatus) ois.readObject();
       assertEquals(hs, deser);
-      checkFields(hs, deser);
+      checkFields((FileStatus) hs, deser);
     }
   }
 
@@ -168,8 +168,8 @@ public class TestFileStatusSerialization {
       byte[] dst = fsp.toByteArray();
       HdfsFileStatusProto hsp2 = HdfsFileStatusProto.parseFrom(dst);
       assertEquals(hsp, hsp2);
-      FileStatus hstat  = PBHelperClient.convert(hsp);
-      FileStatus hstat2 = PBHelperClient.convert(hsp2);
+      FileStatus hstat  = (FileStatus) PBHelperClient.convert(hsp);
+      FileStatus hstat2 = (FileStatus) PBHelperClient.convert(hsp2);
       checkFields(hstat, hstat2);
     }
   }

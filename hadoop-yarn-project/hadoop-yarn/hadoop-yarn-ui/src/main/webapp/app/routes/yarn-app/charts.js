@@ -21,15 +21,17 @@ import AbstractRoute from '../abstract';
 
 export default AbstractRoute.extend({
   model(param, transition) {
-    transition.send('updateBreadcrumbs', param.app_id, param.service, [{text: "Charts"}]);
+    const { app_id } = this.paramsFor('yarn-app');
+    const { service } = param;
+    transition.send('updateBreadcrumbs', app_id, service, [{text: "Charts"}]);
     return Ember.RSVP.hash({
-      appId: param.app_id,
-      serviceName: param.service,
+      appId: app_id,
+      serviceName: service,
 
-      app: this.store.find('yarn-app', param.app_id),
+      app: this.store.find('yarn-app', app_id),
 
-      rmContainers: this.store.find('yarn-app', param.app_id).then(function() {
-        return this.store.query('yarn-app-attempt', {appId: param.app_id}).then(function (attempts) {
+      rmContainers: this.store.find('yarn-app', app_id).then(function() {
+        return this.store.query('yarn-app-attempt', {appId: app_id}).then(function (attempts) {
           if (attempts && attempts.get('firstObject')) {
             var appAttemptId = attempts.get('firstObject').get('appAttemptId');
             return this.store.query('yarn-container', {
@@ -42,6 +44,10 @@ export default AbstractRoute.extend({
 
       nodes: this.store.findAll('yarn-rm-node')
     });
+  },
+
+  refresh() {
+    window.location.reload();
   },
 
   unloadAll() {

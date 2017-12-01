@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 }}
-
-{{#if (eq model.queues.firstObject.type "capacity")}}
-  {{yarn-queue.capacity-queue-info model=model}}
-{{else if (eq model.queues.firstObject.type "fair")}}
-  {{yarn-queue.fair-queue-info model=model}}
-{{else}}
-  {{yarn-queue.fifo-queue-info model=model}}
-{{/if}}
+<div class="row">
+  {{#if (eq model.queues.firstObject.type "capacity")}}
+    {{yarn-queue.capacity-queue-info model=model}}
+  {{else if (eq model.queues.firstObject.type "fair")}}
+    {{yarn-queue.fair-queue-info model=model}}
+  {{else}}
+    {{yarn-queue.fifo-queue-info model=model}}
+  {{/if}}
+</div>

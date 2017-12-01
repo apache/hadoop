@@ -21,18 +21,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FsConstants;
-
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 /**
  * Test StoragePolicyAdmin commands with ViewFileSystem.
@@ -76,5 +77,37 @@ public class TestViewFSStoragePolicyCommands extends TestStoragePolicyCommands {
     final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
     DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /", 2,
         "is not supported for filesystem viewfs on path /");
+  }
+
+  @Test
+  public void testStoragePolicyCommandPathWithSchema() throws Exception {
+    Path base1 = new Path("/user1");
+    final Path bar = new Path(base1, "bar");
+    DFSTestUtil.createFile(cluster.getFileSystem(0), bar, 1024, (short) 1, 0);
+
+    // Test with hdfs:// schema
+    String pathHdfsSchema = "hdfs://"
+        + cluster.getNameNode(0).getClientNamenodeAddress() + "/"
+        + bar.toString();
+    checkCommandsWithUriPath(pathHdfsSchema);
+
+    // Test with webhdfs:// schema
+    InetSocketAddress httpAddress = cluster.getNameNode(0).getHttpAddress();
+    String pathWebhdfsSchema = "webhdfs://" + httpAddress.getHostName() + ":"
+        + httpAddress.getPort() + "/" + bar.toString();
+    checkCommandsWithUriPath(pathWebhdfsSchema);
+  }
+
+  private void checkCommandsWithUriPath(String pathWithSchema) throws Exception{
+    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
+    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path " + pathWithSchema
+        + " -policy WARM", 0, "Set storage policy WARM on " + pathWithSchema);
+    final BlockStoragePolicySuite suite = BlockStoragePolicySuite
+        .createDefaultSuite();
+    final BlockStoragePolicy warm = suite.getPolicy("WARM");
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path " + pathWithSchema, 0,
+        "The storage policy of " + pathWithSchema + ":\n" + warm);
+    DFSTestUtil.toolRun(admin, "-unsetStoragePolicy -path " + pathWithSchema, 0,
+        "Unset storage policy from " + pathWithSchema);
   }
 }

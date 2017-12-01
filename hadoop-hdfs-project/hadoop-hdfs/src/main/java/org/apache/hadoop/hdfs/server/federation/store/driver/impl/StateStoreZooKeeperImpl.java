@@ -309,7 +309,8 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   /**
    * Creates a record from a string returned by ZooKeeper.
    *
-   * @param source Object from ZooKeeper.
+   * @param data The data to write.
+   * @param stat Stat of the data record to create.
    * @param clazz The data record type to create.
    * @return The created record.
    * @throws IOException

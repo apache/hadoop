@@ -74,6 +74,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   Resource limit;
 
   private List<Container> allocatedContainers = null;
+  private List<Container> containersFromPreviousAttempts = null;
   private List<NMToken> nmTokens = null;
   private List<ContainerStatus> completedContainersStatuses = null;
   private List<UpdatedContainer> updatedContainers = null;
@@ -171,6 +172,12 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     }
     if (this.appPriority != null) {
       builder.setApplicationPriority(convertToProtoFormat(this.appPriority));
+    }
+    if (this.containersFromPreviousAttempts != null) {
+      builder.clearContainersFromPreviousAttempts();
+      Iterable<ContainerProto> iterable =
+          getContainerProtoIterable(this.containersFromPreviousAttempts);
+      builder.addAllContainersFromPreviousAttempts(iterable);
     }
   }
 
@@ -447,6 +454,23 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     this.appPriority = priority;
   }
 
+  @Override
+  public synchronized List<Container> getContainersFromPreviousAttempts() {
+    initContainersFromPreviousAttemptsList();
+    return this.containersFromPreviousAttempts;
+  }
+
+  @Override
+  public synchronized void setContainersFromPreviousAttempts(
+      final List<Container> containers) {
+    if (containers == null) {
+      return;
+    }
+    initContainersFromPreviousAttemptsList();
+    containersFromPreviousAttempts.clear();
+    containersFromPreviousAttempts.addAll(containers);
+  }
+
   private synchronized void initLocalUpdatedContainerList() {
     if (this.updatedContainers != null) {
       return;
@@ -488,6 +512,19 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
     for (ContainerProto c : list) {
       allocatedContainers.add(convertFromProtoFormat(c));
+    }
+  }
+
+  private synchronized void initContainersFromPreviousAttemptsList() {
+    if (this.containersFromPreviousAttempts != null) {
+      return;
+    }
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerProto> list = p.getContainersFromPreviousAttemptsList();
+    containersFromPreviousAttempts = new ArrayList<>();
+
+    for (ContainerProto c : list) {
+      containersFromPreviousAttempts.add(convertFromProtoFormat(c));
     }
   }
 

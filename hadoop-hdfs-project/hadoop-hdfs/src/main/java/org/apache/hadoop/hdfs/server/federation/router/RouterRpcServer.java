@@ -92,6 +92,7 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -1390,7 +1391,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   /**
    * Aggregate content summaries for each subcluster.
    *
-   * @param results Collection of individual summaries.
+   * @param summaries Collection of individual summaries.
    * @return Aggregated content summary.
    */
   private ContentSummary aggregateContentSummary(
@@ -1504,6 +1505,14 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   @Override // ClientProtocol
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
       String earlierSnapshotName, String laterSnapshotName) throws IOException {
+    checkOperation(OperationCategory.READ, false);
+    return null;
+  }
+
+  @Override // ClientProtocol
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(
+      String snapshotRoot, String earlierSnapshotName, String laterSnapshotName,
+      byte[] startPath, int index) throws IOException {
     checkOperation(OperationCategory.READ, false);
     return null;
   }
@@ -1999,7 +2008,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    *
    * @param name Name of the mount point.
    * @param childrenNum Number of children.
-   * @param dates Map with the dates.
+   * @param date Map with the dates.
    * @return New HDFS file status representing a mount point.
    */
   private HdfsFileStatus getMountPointStatus(

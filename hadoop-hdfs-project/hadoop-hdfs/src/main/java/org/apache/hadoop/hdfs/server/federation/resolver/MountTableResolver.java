@@ -207,7 +207,7 @@ public class MountTableResolver
   /**
    * Invalidates all cache entries below this path. It requires the write lock.
    *
-   * @param src Source path.
+   * @param path Source path.
    */
   private void invalidateLocationCache(final String path) {
     if (locationCache.isEmpty()) {
@@ -449,7 +449,8 @@ public class MountTableResolver
   /**
    * Build a location for this result beneath the discovered mount point.
    *
-   * @param result Tree node search result.
+   * @param path Path to build for.
+   * @param entry Mount table entry.
    * @return PathLocation containing the namespace, local path.
    */
   private static PathLocation buildLocation(

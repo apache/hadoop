@@ -89,6 +89,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Arrays;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
@@ -124,6 +125,56 @@ public class DFSUtilClient {
     return bytes2String(bytes, 0, bytes.length);
   }
 
+  /**
+   * Converts a byte array to array of arrays of bytes
+   * on byte separator.
+   */
+  public static byte[][] bytes2byteArray(byte[] bytes) {
+    return bytes2byteArray(bytes, bytes.length, (byte)Path.SEPARATOR_CHAR);
+  }
+  /**
+   * Splits first len bytes in bytes to array of arrays of bytes
+   * on byte separator.
+   * @param bytes the byte array to split
+   * @param len the number of bytes to split
+   * @param separator the delimiting byte
+   */
+  public static byte[][] bytes2byteArray(byte[] bytes, int len,
+      byte separator) {
+    Preconditions.checkPositionIndex(len, bytes.length);
+    if (len == 0) {
+      return new byte[][]{null};
+    }
+    // Count the splits. Omit multiple separators and the last one by
+    // peeking at prior byte.
+    int splits = 0;
+    for (int i = 1; i < len; i++) {
+      if (bytes[i-1] == separator && bytes[i] != separator) {
+        splits++;
+      }
+    }
+    if (splits == 0 && bytes[0] == separator) {
+      return new byte[][]{null};
+    }
+    splits++;
+    byte[][] result = new byte[splits][];
+    int nextIndex = 0;
+    // Build the splits.
+    for (int i = 0; i < splits; i++) {
+      int startIndex = nextIndex;
+      // find next separator in the bytes.
+      while (nextIndex < len && bytes[nextIndex] != separator) {
+        nextIndex++;
+      }
+      result[i] = (nextIndex > 0)
+          ? Arrays.copyOfRange(bytes, startIndex, nextIndex)
+          : DFSUtilClient.EMPTY_BYTES; // reuse empty bytes for root.
+      do { // skip over separators.
+        nextIndex++;
+      } while (nextIndex < len && bytes[nextIndex] == separator);
+    }
+    return result;
+  }
   /** Return used as percentage of capacity */
   public static float getPercentUsed(long used, long capacity) {
     return capacity <= 0 ? 100 : (used * 100.0f)/capacity;
@@ -277,11 +328,9 @@ public class DFSUtilClient {
    * Given a list of path components returns a byte array
    */
   public static byte[] byteArray2bytes(byte[][] pathComponents) {
-    if (pathComponents.length == 0) {
+    if (pathComponents.length == 0 ||  (pathComponents.length == 1
+        && (pathComponents[0] == null || pathComponents[0].length == 0))) {
       return EMPTY_BYTES;
-    } else if (pathComponents.length == 1
-        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
-      return new byte[]{(byte) Path.SEPARATOR_CHAR};
     }
     int length = 0;
     for (int i = 0; i < pathComponents.length; i++) {

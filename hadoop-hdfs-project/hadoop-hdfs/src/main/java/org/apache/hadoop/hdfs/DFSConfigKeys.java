@@ -381,6 +381,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT =
       true;
 
+  public static final String
+      DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT  =
+      "dfs.namenode.snapshotdiff.listing.limit";
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT = 1000;
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;

@@ -523,6 +523,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * Abort all pending uploads to the destination directory during
    * job cleanup operations.
    * @param suppressExceptions should exceptions be suppressed
+   * @throws IOException IO problem
    */
   protected void abortPendingUploadsInCleanup(
       boolean suppressExceptions) throws IOException {

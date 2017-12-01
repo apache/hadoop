@@ -52,7 +52,7 @@ export default DS.JSONAPISerializer.extend({
           amContainerLogs: payload.amContainerLogs,
           amHostHttpAddress: payload.amHostHttpAddress,
           logAggregationStatus: payload.logAggregationStatus,
-          unmanagedApplication: payload.unmanagedApplication || 'N/A',
+          unmanagedApplication: payload.unmanagedApplication,
           amNodeLabelExpression: payload.amNodeLabelExpression,
           priority: (payload.priority !== undefined)? payload.priority : 'N/A',
           allocatedMB: payload.allocatedMB,

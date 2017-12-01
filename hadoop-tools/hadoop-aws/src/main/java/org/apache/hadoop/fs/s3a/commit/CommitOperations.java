@@ -529,7 +529,7 @@ public class CommitOperations {
    * {@link #maybeRethrow()} could be done as a map(), but because Java doesn't
    * allow checked exceptions in a map, the following code is invalid
    * <pre>
-   *   exception.map((e) -> {throw e;}
+   *   exception.map((e) -&gt; {throw e;}
    * </pre>
    * As a result, the code to work with exceptions would be almost as convoluted
    * as the original.

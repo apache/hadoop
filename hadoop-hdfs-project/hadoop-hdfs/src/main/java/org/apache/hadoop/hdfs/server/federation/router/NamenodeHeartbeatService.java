@@ -89,8 +89,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
   /**
    * Create a new Namenode status updater.
    * @param resolver Namenode resolver service to handle NN registration.
-   * @param nameserviceId Identifier of the nameservice.
-   * @param namenodeId Identifier of the namenode in HA.
+   * @param nsId Identifier of the nameservice.
+   * @param nnId Identifier of the namenode in HA.
    */
   public NamenodeHeartbeatService(
       ActiveNamenodeResolver resolver, String nsId, String nnId) {
@@ -320,7 +320,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
   /**
    * Get the parameters for a Namenode from JMX and add them to the report.
-   * @param webAddress Web interface of the Namenode to monitor.
+   * @param address Web interface of the Namenode to monitor.
    * @param report Namenode status report to update with JMX data.
    */
   private void updateJMXParameters(

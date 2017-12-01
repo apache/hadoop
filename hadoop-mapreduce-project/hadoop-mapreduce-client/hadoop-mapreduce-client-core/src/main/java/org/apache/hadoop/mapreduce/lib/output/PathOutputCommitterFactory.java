@@ -39,12 +39,12 @@ import org.apache.hadoop.util.ReflectionUtils;
  *
  * Algorithm:
  * <ol>
- *   <ul>If an explicit committer factory is named, it is used.</ul>
- *   <ul>The output path is examined.
+ *   <li>If an explicit committer factory is named, it is used.</li>
+ *   <li>The output path is examined.
  *   If is non null and there is an explicit schema for that filesystem,
- *   its factory is instantiated.</ul>
- *   <ul>Otherwise, an instance of {@link FileOutputCommitter} is
- *   created.</ul>
+ *   its factory is instantiated.</li>
+ *   <li>Otherwise, an instance of {@link FileOutputCommitter} is
+ *   created.</li>
  * </ol>
  *
  * In {@link FileOutputFormat}, the created factory has its method
@@ -186,7 +186,7 @@ public class PathOutputCommitterFactory extends Configured {
   }
 
   /**
-   * Create the committer factory for a task attempt & destination, then
+   * Create the committer factory for a task attempt and destination, then
    * create the committer from it.
    * @param outputPath the task's output path, or or null if no output path
    * has been defined.

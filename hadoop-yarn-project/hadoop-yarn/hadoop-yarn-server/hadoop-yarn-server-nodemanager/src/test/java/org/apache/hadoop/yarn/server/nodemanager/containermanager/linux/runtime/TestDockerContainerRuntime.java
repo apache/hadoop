@@ -1301,7 +1301,7 @@ public class TestDockerContainerRuntime {
     //single invocation expected
     //due to type erasure + mocking, this verification requires a suppress
     // warning annotation on the entire method
-    verify(mockExecutor, times(1))
+    verify(mockExecutor, times(2))
         .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
             File.class), anyMap(), anyBoolean(), anyBoolean());
 
@@ -1309,7 +1309,9 @@ public class TestDockerContainerRuntime {
     // hence, reset mock here
     Mockito.reset(mockExecutor);
 
-    PrivilegedOperation op = opCaptor.getValue();
+    List<PrivilegedOperation> allCaptures = opCaptor.getAllValues();
+
+    PrivilegedOperation op = allCaptures.get(0);
     Assert.assertEquals(PrivilegedOperation.OperationType
         .RUN_DOCKER_CMD, op.getOperationType());
 
@@ -1317,14 +1319,71 @@ public class TestDockerContainerRuntime {
     FileInputStream fileInputStream = new FileInputStream(commandFile);
     String fileContent = new String(IOUtils.toByteArray(fileInputStream));
     Assert.assertEquals("[docker-command-execution]\n"
-        + "  docker-command=volume\n" + "  sub-command=create\n"
-        + "  volume=volume1\n", fileContent);
+        + "  docker-command=volume\n" + "  driver=local\n"
+        + "  sub-command=create\n" + "  volume=volume1\n", fileContent);
+    fileInputStream.close();
+
+    op = allCaptures.get(1);
+    Assert.assertEquals(PrivilegedOperation.OperationType
+        .RUN_DOCKER_CMD, op.getOperationType());
+
+    commandFile = new File(StringUtils.join(",", op.getArguments()));
+    fileInputStream = new FileInputStream(commandFile);
+    fileContent = new String(IOUtils.toByteArray(fileInputStream));
+    Assert.assertEquals("[docker-command-execution]\n"
+        + "  docker-command=volume\n" + "  format={{.Name}},{{.Driver}}\n"
+        + "  sub-command=ls\n", fileContent);
+    fileInputStream.close();
   }
 
-  @Test
-  public void testDockerCommandPlugin() throws Exception {
-    DockerLinuxContainerRuntime runtime =
-        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+  private static class MockDockerCommandPlugin implements DockerCommandPlugin {
+    private final String volume;
+    private final String driver;
+
+    public MockDockerCommandPlugin(String volume, String driver) {
+      this.volume = volume;
+      this.driver = driver;
+    }
+
+    @Override
+    public void updateDockerRunCommand(DockerRunCommand dockerRunCommand,
+        Container container) throws ContainerExecutionException {
+      dockerRunCommand.setVolumeDriver("driver-1");
+      dockerRunCommand.addReadOnlyMountLocation("/source/path",
+          "/destination/path", true);
+    }
+
+    @Override
+    public DockerVolumeCommand getCreateDockerVolumeCommand(Container container)
+        throws ContainerExecutionException {
+      return new DockerVolumeCommand("create").setVolumeName(volume)
+          .setDriverName(driver);
+    }
+
+    @Override
+    public DockerVolumeCommand getCleanupDockerVolumesCommand(
+        Container container) throws ContainerExecutionException {
+      return null;
+    }
+  }
+
+  private void testDockerCommandPluginWithVolumesOutput(
+      String dockerVolumeListOutput, boolean expectFail)
+      throws PrivilegedOperationException, ContainerExecutionException,
+      IOException {
+    mockExecutor = Mockito
+        .mock(PrivilegedOperationExecutor.class);
+
+    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
+        mockExecutor, mockCGroupsHandler);
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        null);
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        dockerVolumeListOutput);
 
     Context nmContext = mock(Context.class);
     ResourcePluginManager rpm = mock(ResourcePluginManager.class);
@@ -1332,27 +1391,88 @@ public class TestDockerContainerRuntime {
     ResourcePlugin plugin1 = mock(ResourcePlugin.class);
 
     // Create the docker command plugin logic, which will set volume driver
-    DockerCommandPlugin dockerCommandPlugin = new DockerCommandPlugin() {
-      @Override
-      public void updateDockerRunCommand(DockerRunCommand dockerRunCommand,
-          Container container) throws ContainerExecutionException {
-        dockerRunCommand.setVolumeDriver("driver-1");
-        dockerRunCommand.addReadOnlyMountLocation("/source/path",
-            "/destination/path", true);
-      }
+    DockerCommandPlugin dockerCommandPlugin = new MockDockerCommandPlugin(
+        "volume1", "local");
 
-      @Override
-      public DockerVolumeCommand getCreateDockerVolumeCommand(Container container)
-          throws ContainerExecutionException {
-        return new DockerVolumeCommand("create").setVolumeName("volume1");
-      }
+    when(plugin1.getDockerCommandPluginInstance()).thenReturn(
+        dockerCommandPlugin);
+    ResourcePlugin plugin2 = mock(ResourcePlugin.class);
+    pluginsMap.put("plugin1", plugin1);
+    pluginsMap.put("plugin2", plugin2);
 
-      @Override
-      public DockerVolumeCommand getCleanupDockerVolumesCommand(Container container)
-          throws ContainerExecutionException {
-        return null;
+    when(rpm.getNameToPlugins()).thenReturn(pluginsMap);
+
+    when(nmContext.getResourcePluginManager()).thenReturn(rpm);
+
+    runtime.initialize(conf, nmContext);
+
+    ContainerRuntimeContext containerRuntimeContext = builder.build();
+
+    try {
+      runtime.prepareContainer(containerRuntimeContext);
+
+      checkVolumeCreateCommand();
+
+      runtime.launchContainer(containerRuntimeContext);
+    } catch (ContainerExecutionException e) {
+      if (expectFail) {
+        // Expected
+        return;
+      } else{
+        Assert.fail("Should successfully prepareContainers" + e);
       }
-    };
+    }
+    if (expectFail) {
+      Assert.fail(
+          "Should fail because output is illegal");
+    }
+  }
+
+  @Test
+  public void testDockerCommandPluginCheckVolumeAfterCreation()
+      throws Exception {
+    // For following tests, we expect to have volume1,local in output
+
+    // Failure cases
+    testDockerCommandPluginWithVolumesOutput("", true);
+    testDockerCommandPluginWithVolumesOutput("volume1", true);
+    testDockerCommandPluginWithVolumesOutput("local", true);
+    testDockerCommandPluginWithVolumesOutput("volume2,local", true);
+    testDockerCommandPluginWithVolumesOutput("volum1,something", true);
+    testDockerCommandPluginWithVolumesOutput("volum1,something\nvolum2,local",
+        true);
+
+    // Success case
+    testDockerCommandPluginWithVolumesOutput("volume1,local\n", false);
+    testDockerCommandPluginWithVolumesOutput(
+        "volume_xyz,nvidia\nvolume1,local\n\n", false);
+    testDockerCommandPluginWithVolumesOutput(" volume1,  local \n", false);
+    testDockerCommandPluginWithVolumesOutput(
+        "volume_xyz,\tnvidia\n   volume1,\tlocal\n\n", false);
+  }
+
+
+  @Test
+  public void testDockerCommandPlugin() throws Exception {
+    DockerLinuxContainerRuntime runtime =
+        new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        null);
+    when(mockExecutor
+        .executePrivilegedOperation(anyList(), any(PrivilegedOperation.class),
+            any(File.class), anyMap(), anyBoolean(), anyBoolean())).thenReturn(
+        "volume1,local");
+
+    Context nmContext = mock(Context.class);
+    ResourcePluginManager rpm = mock(ResourcePluginManager.class);
+    Map<String, ResourcePlugin> pluginsMap = new HashMap<>();
+    ResourcePlugin plugin1 = mock(ResourcePlugin.class);
+
+    // Create the docker command plugin logic, which will set volume driver
+    DockerCommandPlugin dockerCommandPlugin = new MockDockerCommandPlugin(
+        "volume1", "local");
 
     when(plugin1.getDockerCommandPluginInstance()).thenReturn(
         dockerCommandPlugin);

@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -168,6 +169,8 @@ public abstract class AbstractYarnScheduler
   // the NM in the next heartbeat.
   private boolean autoUpdateContainers = false;
 
+  protected SchedulingMonitorManager schedulingMonitorManager;
+
   /**
    * Construct the service.
    *
@@ -207,8 +210,8 @@ public abstract class AbstractYarnScheduler
           new RMCriticalThreadUncaughtExceptionHandler(rmContext));
       updateThread.setDaemon(true);
     }
-
     super.serviceInit(conf);
+
   }
 
   @Override
@@ -216,6 +219,7 @@ public abstract class AbstractYarnScheduler
     if (updateThread != null) {
       updateThread.start();
     }
+    schedulingMonitorManager.startAll();
     super.serviceStart();
   }
 
@@ -225,12 +229,20 @@ public abstract class AbstractYarnScheduler
       updateThread.interrupt();
       updateThread.join(THREAD_JOIN_TIMEOUT_MS);
     }
+    if (schedulingMonitorManager != null) {
+      schedulingMonitorManager.stop();
+    }
     super.serviceStop();
   }
 
   @VisibleForTesting
   public ClusterNodeTracker getNodeTracker() {
     return nodeTracker;
+  }
+
+  @VisibleForTesting
+  public SchedulingMonitorManager getSchedulingMonitorManager() {
+    return schedulingMonitorManager;
   }
 
   /*
@@ -245,8 +257,8 @@ public abstract class AbstractYarnScheduler
     if (app == null) {
       return containerList;
     }
-    Collection<RMContainer> liveContainers =
-        app.getCurrentAppAttempt().getLiveContainers();
+    Collection<RMContainer> liveContainers = app.getCurrentAppAttempt()
+        .pullContainersToTransfer();
     ContainerId amContainerId = null;
     // For UAM, amContainer would be null
     if (rmContext.getRMApps().get(appId).getCurrentAppAttempt()
@@ -1413,6 +1425,17 @@ public abstract class AbstractYarnScheduler
   protected void triggerUpdate() {
     synchronized (updateThreadMonitor) {
       updateThreadMonitor.notify();
+    }
+  }
+
+  @Override
+  public void reinitialize(Configuration conf, RMContext rmContext)
+      throws IOException {
+    try {
+      LOG.info("Reinitializing SchedulingMonitorManager ...");
+      schedulingMonitorManager.reinitialize(rmContext, conf);
+    } catch (YarnException e) {
+      throw new IOException(e);
     }
   }
 }

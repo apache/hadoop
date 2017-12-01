@@ -267,7 +267,7 @@ public class Router extends CompositeService {
   /**
    * Set the current RPC socket for the router.
    *
-   * @param rpcAddress RPC address.
+   * @param address RPC address.
    */
   protected void setRpcServerAddress(InetSocketAddress address) {
     this.rpcAddress = address;
@@ -310,7 +310,7 @@ public class Router extends CompositeService {
   /**
    * Set the current Admin socket for the router.
    *
-   * @param adminAddress Admin RPC address.
+   * @param address Admin RPC address.
    */
   protected void setAdminServerAddress(InetSocketAddress address) {
     this.adminAddress = address;
@@ -513,7 +513,7 @@ public class Router extends CompositeService {
   /**
    * Sets a unique ID for this router.
    *
-   * @param router Identifier of the Router.
+   * @param id Identifier of the Router.
    */
   public void setRouterId(String id) {
     this.routerId = id;

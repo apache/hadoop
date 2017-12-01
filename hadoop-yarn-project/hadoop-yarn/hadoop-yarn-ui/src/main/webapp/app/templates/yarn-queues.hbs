@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 }}
-
-{{breadcrumb-bar breadcrumbs=breadcrumbs}}
+<div class="queue-page-breadcrumb">
+  {{breadcrumb-bar breadcrumbs=breadcrumbs}}
+</div>
 <div class="container-fluid">
   {{#if (eq model.queues.firstObject.type "capacity")}}
     {{yarn-queue.capacity-queue model=model}}
