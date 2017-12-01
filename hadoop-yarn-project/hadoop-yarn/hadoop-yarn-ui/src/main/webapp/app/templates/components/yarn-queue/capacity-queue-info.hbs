@@ -16,60 +16,29 @@
  * limitations under the License.
 }}
 
-<div class="row">
-
-  <div class="col-lg-6 container-fluid">
+<div>
+  <div class="col-lg-6">
     <div class="panel panel-default">
       <div class="panel-heading">
-        Queue Capacities: {{model.selected}}
+        Running Apps: {{model.selected}}
       </div>
-      <div class="container-fluid" id="capacity-bar-chart">
-        <br/>
-        {{bar-chart data=model.selectedQueue.capacitiesBarChartData
-        title=""
-        parentId="capacity-bar-chart"
-        textWidth=170
-        ratio=0.55
+      <div id="numapplications-donut-chart">
+        {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
+        showLabels=true
+        parentId="numapplications-donut-chart"
+        ratio=0.6
         maxHeight=350}}
       </div>
     </div>
   </div>
 
-  <div class="col-lg-6 container-fluid">
-    <div class="panel panel-default">
-      <div class="panel-heading">
-        Queue Information: {{model.selected}}
-      </div>
-        {{yarn-queue.capacity-queue-conf-table queue=model.selectedQueue}}
-    </div>
-  </div>
-
-</div>
-
-<div class="row">
-
-    <div class="col-lg-6 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Running Apps: {{model.selected}}
-        </div>
-        <div class="container-fluid" id="numapplications-donut-chart">
-          {{donut-chart data=model.selectedQueue.numOfApplicationsDonutChartData
-          showLabels=true
-          parentId="numapplications-donut-chart"
-          ratio=0.6
-          maxHeight=350}}
-        </div>
-      </div>
-    </div>
-
   {{#if model.selectedQueue.hasUserUsages}}
-    <div class="col-lg-6 container-fluid">
+    <div class="col-lg-6">
       <div class="panel panel-default">
         <div class="panel-heading">
           User Usages: {{model.selected}}
         </div>
-        <div class="container-fluid"  id="userusage-donut-chart">
+        <div id="userusage-donut-chart">
           {{donut-chart data=model.selectedQueue.userUsagesDonutChartData
           showLabels=true
           parentId="userusage-donut-chart"

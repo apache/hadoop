@@ -146,7 +146,7 @@ export default Ember.Component.extend({
 
       }.bind(this))
     .on("dblclick", function (d) {
-      document.location.href = "#/yarn-queue/" + d.queueData.get("name") + "/info";
+      document.location.href = "#/yarn-queue/" + d.queueData.get("name") + "/apps";
     });
 
     nodeEnter.append("circle")
