@@ -309,6 +309,25 @@ public class TestStandbyInProgressTail {
     assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test3", true));
   }
 
+  @Test
+  public void testNonUniformConfig() throws Exception {
+    // Test case where some NNs (in this case the active NN) in the cluster
+    // do not have in-progress tailing enabled.
+    Configuration newConf = cluster.getNameNode(0).getConf();
+    newConf.setBoolean(
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        false);
+    cluster.restartNameNode(0);
+    cluster.transitionToActive(0);
+
+    cluster.getNameNode(0).getRpcServer().mkdirs("/test",
+        FsPermission.createImmutable((short) 0755), true);
+    cluster.getNameNode(0).getRpcServer().rollEdits();
+
+    cluster.getNameNode(1).getNamesystem().getEditLogTailer().doTailEdits();
+    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test", true));
+  }
+
   /**
    * Check that no edits files are present in the given storage dirs.
    */
