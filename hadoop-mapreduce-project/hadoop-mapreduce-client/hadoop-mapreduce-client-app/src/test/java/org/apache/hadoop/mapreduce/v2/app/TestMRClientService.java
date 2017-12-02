@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Assert;
 
@@ -104,8 +103,7 @@ public class TestMRClientService {
     taskAttemptStatus.phase = Phase.MAP;
     // send the status update
     app.getContext().getEventHandler().handle(
-        new TaskAttemptStatusUpdateEvent(attempt.getID(),
-            new AtomicReference<>(taskAttemptStatus)));
+        new TaskAttemptStatusUpdateEvent(attempt.getID(), taskAttemptStatus));
 
     
     //verify that all object are fully populated by invoking RPCs.

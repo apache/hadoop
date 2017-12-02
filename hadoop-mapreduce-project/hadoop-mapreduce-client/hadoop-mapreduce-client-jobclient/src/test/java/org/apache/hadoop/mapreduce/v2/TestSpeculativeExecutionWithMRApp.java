@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
@@ -85,8 +84,7 @@ public class TestSpeculativeExecutionWithMRApp {
             createTaskAttemptStatus(taskAttempt.getKey(), (float) 0.8,
               TaskAttemptState.RUNNING);
         TaskAttemptStatusUpdateEvent event =
-            new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(),
-                new AtomicReference<>(status));
+            new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(), status);
         appEventHandler.handle(event);
       }
     }
@@ -157,8 +155,7 @@ public class TestSpeculativeExecutionWithMRApp {
             createTaskAttemptStatus(taskAttempt.getKey(), (float) 0.5,
               TaskAttemptState.RUNNING);
         TaskAttemptStatusUpdateEvent event =
-            new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(),
-                new AtomicReference<>(status));
+            new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(), status);
         appEventHandler.handle(event);
       }
     }
@@ -183,8 +180,7 @@ public class TestSpeculativeExecutionWithMRApp {
                 TaskAttemptState.RUNNING);
           speculatedTask = task.getValue();
           TaskAttemptStatusUpdateEvent event =
-              new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(),
-                  new AtomicReference<>(status));
+              new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(), status);
           appEventHandler.handle(event);
         }
       }
@@ -199,8 +195,7 @@ public class TestSpeculativeExecutionWithMRApp {
               createTaskAttemptStatus(taskAttempt.getKey(), (float) 0.75,
                 TaskAttemptState.RUNNING);
           TaskAttemptStatusUpdateEvent event =
-              new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(),
-                  new AtomicReference<>(status));
+              new TaskAttemptStatusUpdateEvent(taskAttempt.getKey(), status);
           appEventHandler.handle(event);
         }
       }

@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
@@ -426,7 +425,7 @@ public class TestFetchFailure {
     status.stateString = "OK";
     status.taskState = attempt.getState();
     TaskAttemptStatusUpdateEvent event = new TaskAttemptStatusUpdateEvent(attempt.getID(),
-        new AtomicReference<>(status));
+        status);
     app.getContext().getEventHandler().handle(event);
   }
 
