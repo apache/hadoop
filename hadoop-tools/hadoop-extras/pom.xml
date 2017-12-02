@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>2.7.5-SNAPSHOT</version>
+    <version>2.7.5</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-extras</artifactId>
-  <version>2.7.5-SNAPSHOT</version>
+  <version>2.7.5</version>
   <description>Apache Hadoop Extras</description>
   <name>Apache Hadoop Extras</name>
   <packaging>jar</packaging>
