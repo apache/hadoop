@@ -75,6 +75,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     int queueWaitTime = -1;
     double timestamp;
     final NodeId nodeId;
+    private int queueCapacity = 0;
 
     public ClusterNode(NodeId nodeId) {
       this.nodeId = nodeId;
@@ -94,6 +95,16 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     public ClusterNode updateTimestamp() {
       this.timestamp = System.currentTimeMillis();
       return this;
+    }
+
+    public ClusterNode setQueueCapacity(int capacity) {
+      this.queueCapacity = capacity;
+      return this;
+    }
+
+    public boolean isQueueFull() {
+      return this.queueCapacity > 0 &&
+          this.queueLength >= this.queueCapacity;
     }
   }
 
@@ -207,6 +218,8 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       opportunisticContainersStatus =
           OpportunisticContainersStatus.newInstance();
     }
+    int opportQueueCapacity =
+        opportunisticContainersStatus.getOpportQueueCapacity();
     int estimatedQueueWaitTime =
         opportunisticContainersStatus.getEstimatedQueueWaitTime();
     int waitQueueLength = opportunisticContainersStatus.getWaitQueueLength();
@@ -222,7 +235,8 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
           this.clusterNodes.put(rmNode.getNodeID(),
               new ClusterNode(rmNode.getNodeID())
                   .setQueueWaitTime(estimatedQueueWaitTime)
-                  .setQueueLength(waitQueueLength));
+                  .setQueueLength(waitQueueLength)
+                  .setQueueCapacity(opportQueueCapacity));
           LOG.info("Inserting ClusterNode [" + rmNode.getNodeID() + "] " +
               "with queue wait time [" + estimatedQueueWaitTime + "] and " +
               "wait queue length [" + waitQueueLength + "]");
@@ -301,7 +315,11 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       // is what we ultimately care about.
       Arrays.sort(nodes, (Comparator)comparator);
       for (int j=0; j < nodes.length; j++) {
-        retList.add(((ClusterNode)nodes[j]).nodeId);
+        ClusterNode cNode = (ClusterNode)nodes[j];
+        // Exclude nodes whose queue is already full.
+        if (!cNode.isQueueFull()) {
+          retList.add(cNode.nodeId);
+        }
       }
       return retList;
     } finally {

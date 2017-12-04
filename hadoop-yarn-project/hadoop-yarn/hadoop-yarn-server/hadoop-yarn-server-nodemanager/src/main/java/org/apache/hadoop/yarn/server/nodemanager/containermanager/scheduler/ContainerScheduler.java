@@ -68,6 +68,7 @@ public class ContainerScheduler extends AbstractService implements
       LoggerFactory.getLogger(ContainerScheduler.class);
 
   private final Context context;
+  // Capacity of the queue for opportunistic Containers.
   private final int maxOppQueueLength;
 
   // Queue of Guaranteed Containers waiting for resources to run
@@ -258,6 +259,15 @@ public class ContainerScheduler extends AbstractService implements
         + this.queuedOpportunisticContainers.size();
   }
 
+  /**
+   * Return the capacity of the queue for opportunistic containers
+   * on this node.
+   * @return queue capacity.
+   */
+  public int getOpportunisticQueueCapacity() {
+    return this.maxOppQueueLength;
+  }
+
   @VisibleForTesting
   public int getNumQueuedGuaranteedContainers() {
     return this.queuedGuaranteedContainers.size();
@@ -290,6 +300,8 @@ public class ContainerScheduler extends AbstractService implements
         metrics.getAllocatedOpportunisticVCores());
     this.opportunisticContainersStatus.setRunningOpportContainers(
         metrics.getRunningOpportunisticContainers());
+    this.opportunisticContainersStatus.setOpportQueueCapacity(
+        getOpportunisticQueueCapacity());
     return this.opportunisticContainersStatus;
   }
 
