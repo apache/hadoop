@@ -668,8 +668,7 @@ public class ZKRMStateStore extends RMStateStore {
       ByteArrayInputStream is = new ByteArrayInputStream(data);
       try (DataInputStream fsIn = new DataInputStream(is)) {
         RMDelegationTokenIdentifierData identifierData =
-            new RMDelegationTokenIdentifierData();
-        identifierData.readFields(fsIn);
+            RMStateStoreUtils.readRMDelegationTokenIdentifierData(fsIn);
         RMDelegationTokenIdentifier identifier =
             identifierData.getTokenIdentifier();
         long renewDate = identifierData.getRenewDate();

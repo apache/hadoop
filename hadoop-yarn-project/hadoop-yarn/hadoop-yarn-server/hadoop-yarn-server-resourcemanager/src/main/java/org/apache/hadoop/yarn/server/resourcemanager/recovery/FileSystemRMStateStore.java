@@ -378,12 +378,10 @@ public class FileSystemRMStateStore extends RMStateStore {
           }
         } else if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
           RMDelegationTokenIdentifierData identifierData =
-              new RMDelegationTokenIdentifierData();
-          identifierData.readFields(fsIn);
+              RMStateStoreUtils.readRMDelegationTokenIdentifierData(fsIn);
           RMDelegationTokenIdentifier identifier =
               identifierData.getTokenIdentifier();
           long renewDate = identifierData.getRenewDate();
-
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
             renewDate);
           if (LOG.isDebugEnabled()) {
