@@ -626,14 +626,15 @@ public class TestNMWebServices extends JerseyTestBase {
           WebServicesTestUtils.getXmlString(element,
               "nodeManagerVersionBuiltOn"), WebServicesTestUtils.getXmlString(
               element, "nodeManagerBuildVersion"),
-          WebServicesTestUtils.getXmlString(element, "nodeManagerVersion"));
+          WebServicesTestUtils.getXmlString(element, "nodeManagerVersion"),
+          WebServicesTestUtils.getXmlString(element, "resourceTypes"));
     }
   }
 
   public void verifyNodeInfo(JSONObject json) throws JSONException, Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject info = json.getJSONObject("nodeInfo");
-    assertEquals("incorrect number of elements", 17, info.length());
+    assertEquals("incorrect number of elements", 18, info.length());
     verifyNodeInfoGeneric(info.getString("id"), info.getString("healthReport"),
         info.getLong("totalVmemAllocatedContainersMB"),
         info.getLong("totalPmemAllocatedContainersMB"),
@@ -645,7 +646,9 @@ public class TestNMWebServices extends JerseyTestBase {
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
         info.getString("nodeManagerVersionBuiltOn"),
         info.getString("nodeManagerBuildVersion"),
-        info.getString("nodeManagerVersion"));
+        info.getString("nodeManagerVersion"),
+        info.getString("resourceTypes")
+        );
 
   }
 
@@ -656,7 +659,8 @@ public class TestNMWebServices extends JerseyTestBase {
       long lastNodeUpdateTime, Boolean nodeHealthy, String nodeHostName,
       String hadoopVersionBuiltOn, String hadoopBuildVersion,
       String hadoopVersion, String resourceManagerVersionBuiltOn,
-      String resourceManagerBuildVersion, String resourceManagerVersion) {
+      String resourceManagerBuildVersion, String resourceManagerVersion,
+      String resourceTypes) {
 
     WebServicesTestUtils.checkStringMatch("id", "testhost.foo.com:8042", id);
     WebServicesTestUtils.checkStringMatch("healthReport", "Healthy",
@@ -688,6 +692,8 @@ public class TestNMWebServices extends JerseyTestBase {
         YarnVersionInfo.getBuildVersion(), resourceManagerBuildVersion);
     WebServicesTestUtils.checkStringMatch("resourceManagerVersion",
         YarnVersionInfo.getVersion(), resourceManagerVersion);
+
+    assertEquals("memory-mb (unit=Mi), vcores", resourceTypes);
   }
 
   private String getLogContext(String fullMessage) {
