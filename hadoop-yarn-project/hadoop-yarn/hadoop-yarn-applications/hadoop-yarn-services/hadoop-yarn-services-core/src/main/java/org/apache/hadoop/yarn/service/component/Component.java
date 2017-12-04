@@ -101,7 +101,7 @@ public class Component implements EventHandler<ComponentEvent> {
       new StateMachineFactory<Component, ComponentState, ComponentEventType, ComponentEvent>(
           INIT)
            // INIT will only got to FLEXING
-          .addTransition(INIT, EnumSet.of(STABLE, FLEXING),
+          .addTransition(INIT, EnumSet.of(STABLE, FLEXING, INIT),
               FLEX, new FlexComponentTransition())
           // container recovered on AM restart
           .addTransition(INIT, INIT, CONTAINER_RECOVERED,
