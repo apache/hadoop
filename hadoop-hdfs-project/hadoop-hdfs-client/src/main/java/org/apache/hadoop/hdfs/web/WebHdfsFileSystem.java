@@ -56,6 +56,8 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
@@ -84,6 +86,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtilClient;
+import org.apache.hadoop.hdfs.HdfsKMSUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -100,6 +103,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -107,6 +111,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
+import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -120,7 +125,7 @@ import com.google.common.collect.Lists;
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable,
-    TokenAspect.TokenManagementDelegator {
+    TokenAspect.TokenManagementDelegator, KeyProviderTokenIssuer {
   public static final Logger LOG = LoggerFactory
       .getLogger(WebHdfsFileSystem.class);
   /** WebHdfs version. */
@@ -1616,6 +1621,13 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public Token<?>[] addDelegationTokens(String renewer,
+      Credentials credentials) throws IOException {
+    Token<?>[] tokens = super.addDelegationTokens(renewer, credentials);
+    return HdfsKMSUtil.addDelegationTokensForKeyProvider(this, renewer,
+        credentials, getUri(), tokens);
+  }
+
   public BlockLocation[] getFileBlockLocations(final FileStatus status,
       final long offset, final long length) throws IOException {
     if (status == null) {
@@ -1803,6 +1815,29 @@ public class WebHdfsFileSystem extends FileSystem
   @VisibleForTesting
   public void setRetryPolicy(RetryPolicy rp) {
     this.retryPolicy = rp;
+  }
+
+
+  @Override
+  public URI getKeyProviderUri() throws IOException {
+    String keyProviderUri = null;
+    try {
+      keyProviderUri = getServerDefaults().getKeyProviderUri();
+    } catch (UnsupportedOperationException e) {
+      // This means server doesn't supports GETSERVERDEFAULTS call.
+      // Do nothing, let keyProviderUri = null.
+    }
+    return HdfsKMSUtil.getKeyProviderUri(ugi, getUri(), keyProviderUri,
+        getConf());
+  }
+
+  @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    URI keyProviderUri = getKeyProviderUri();
+    if (keyProviderUri == null) {
+      return null;
+    }
+    return KMSUtil.createKeyProviderFromUri(getConf(), keyProviderUri);
   }
 
   /**
