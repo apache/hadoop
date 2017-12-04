@@ -1634,7 +1634,7 @@ public class DFSUtil {
    */
   public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
       final Configuration conf) throws IOException {
-    KeyProvider keyProvider = DFSUtilClient.createKeyProvider(conf);
+    KeyProvider keyProvider = HdfsKMSUtil.createKeyProvider(conf);
     if (keyProvider == null) {
       return null;
     }
