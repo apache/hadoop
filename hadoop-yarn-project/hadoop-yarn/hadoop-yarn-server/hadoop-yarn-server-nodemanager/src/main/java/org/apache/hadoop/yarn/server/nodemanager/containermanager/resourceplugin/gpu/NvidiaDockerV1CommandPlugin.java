@@ -301,7 +301,7 @@ public class NvidiaDockerV1CommandPlugin implements DockerCommandPlugin {
 
     if (newVolumeName != null) {
       DockerVolumeCommand command = new DockerVolumeCommand(
-          DockerVolumeCommand.VOLUME_CREATE_COMMAND);
+          DockerVolumeCommand.VOLUME_CREATE_SUB_COMMAND);
       command.setDriverName(volumeDriver);
       command.setVolumeName(newVolumeName);
       return command;

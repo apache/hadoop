@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
+import org.apache.hadoop.security.HadoopKerberosName;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
@@ -40,6 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -84,6 +88,17 @@ public class ServiceApiUtil {
     if (!hasComponent(service)) {
       throw new IllegalArgumentException(
           "No component specified for " + service.getName());
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      if (!StringUtils.isEmpty(service.getKerberosPrincipal().getKeytab())) {
+        try {
+          // validate URI format
+          new URI(service.getKerberosPrincipal().getKeytab());
+        } catch (URISyntaxException e) {
+          throw new IllegalArgumentException(e);
+        }
+      }
     }
 
     // Validate there are no component name collisions (collisions are not

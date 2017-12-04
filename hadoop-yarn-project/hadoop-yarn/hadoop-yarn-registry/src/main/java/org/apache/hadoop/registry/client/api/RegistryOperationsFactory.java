@@ -111,6 +111,27 @@ public final class RegistryOperationsFactory {
   }
 
   /**
+   * Create a kerberos registry service client
+   * @param conf configuration
+   * @param jaasClientEntry the name of the login config entry
+   * @param principal principal of the client.
+   * @param keytab location to the keytab file
+   * @return a registry service client instance
+   */
+  public static RegistryOperations createKerberosInstance(Configuration conf,
+      String jaasClientEntry, String principal, String keytab) {
+    Preconditions.checkArgument(conf != null, "Null configuration");
+    conf.set(KEY_REGISTRY_CLIENT_AUTH, REGISTRY_CLIENT_AUTH_KERBEROS);
+    conf.set(KEY_REGISTRY_CLIENT_JAAS_CONTEXT, jaasClientEntry);
+    RegistryOperationsClient operations =
+        new RegistryOperationsClient("KerberosRegistryOperations");
+    operations.setKerberosPrincipalAndKeytab(principal, keytab);
+    operations.init(conf);
+    return operations;
+  }
+
+
+  /**
    * Create and initialize an operations instance authenticated with write
    * access via an <code>id:password</code> pair.
    *

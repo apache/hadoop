@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusRequestProto;
@@ -143,6 +144,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSer
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesRequestProto;
@@ -1239,6 +1242,25 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           request.getSnapshotRoot(), request.getFromSnapshot(),
           request.getToSnapshot());
       return GetSnapshotDiffReportResponseProto.newBuilder()
+          .setDiffReport(PBHelperClient.convert(report)).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetSnapshotDiffReportListingResponseProto getSnapshotDiffReportListing(
+      RpcController controller,
+      GetSnapshotDiffReportListingRequestProto request)
+      throws ServiceException {
+    try {
+      SnapshotDiffReportListing report = server
+          .getSnapshotDiffReportListing(request.getSnapshotRoot(),
+              request.getFromSnapshot(), request.getToSnapshot(),
+              request.getCursor().getStartPath().toByteArray(),
+              request.getCursor().getIndex());
+              //request.getStartPath(), request.getIndex());
+      return GetSnapshotDiffReportListingResponseProto.newBuilder()
           .setDiffReport(PBHelperClient.convert(report)).build();
     } catch (IOException e) {
       throw new ServiceException(e);

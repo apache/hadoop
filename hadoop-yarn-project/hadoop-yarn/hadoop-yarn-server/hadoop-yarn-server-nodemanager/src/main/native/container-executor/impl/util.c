@@ -21,6 +21,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
+#include <stdio.h>
 
 char** split_delimiter(char *value, const char *delim) {
   char **return_values = NULL;
@@ -176,17 +177,19 @@ char* escape_single_quote(const char *str) {
 
 void quote_and_append_arg(char **str, size_t *size, const char* param, const char *arg) {
   char *tmp = escape_single_quote(arg);
-  int alloc_block = 1024;
-  strcat(*str, param);
-  strcat(*str, "'");
-  if (strlen(*str) + strlen(tmp) > *size) {
-    *size = (strlen(*str) + strlen(tmp) + alloc_block) * sizeof(char);
-    *str = (char *) realloc(*str, *size);
-    if (*str == NULL) {
-      exit(OUT_OF_MEMORY);
-    }
+  const char *append_format = "%s'%s' ";
+  size_t append_size = snprintf(NULL, 0, append_format, param, tmp);
+  append_size += 1;   // for the terminating NUL
+  size_t len_str = strlen(*str);
+  size_t new_size = len_str + append_size;
+  if (new_size > *size) {
+      *size = new_size + QUOTE_AND_APPEND_ARG_GROWTH;
+      *str = (char *) realloc(*str, *size);
+      if (*str == NULL) {
+          exit(OUT_OF_MEMORY);
+      }
   }
-  strcat(*str, tmp);
-  strcat(*str, "' ");
+  char *cur_ptr = *str + len_str;
+  sprintf(cur_ptr, append_format, param, tmp);
   free(tmp);
 }

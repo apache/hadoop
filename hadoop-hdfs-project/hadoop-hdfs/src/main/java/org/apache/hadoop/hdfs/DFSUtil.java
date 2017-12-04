@@ -349,7 +349,8 @@ public class DFSUtil {
   public static byte[][] getPathComponents(String path) {
     // avoid intermediate split to String[]
     final byte[] bytes = string2Bytes(path);
-    return bytes2byteArray(bytes, bytes.length, (byte)Path.SEPARATOR_CHAR);
+    return DFSUtilClient
+        .bytes2byteArray(bytes, bytes.length, (byte) Path.SEPARATOR_CHAR);
   }
 
   /**
@@ -369,42 +370,9 @@ public class DFSUtil {
    * @param len the number of bytes to split
    * @param separator the delimiting byte
    */
-  public static byte[][] bytes2byteArray(byte[] bytes,
-                                         int len,
-                                         byte separator) {
-    Preconditions.checkPositionIndex(len, bytes.length);
-    if (len == 0) {
-      return new byte[][]{null};
-    }
-    // Count the splits. Omit multiple separators and the last one by
-    // peeking at prior byte.
-    int splits = 0;
-    for (int i = 1; i < len; i++) {
-      if (bytes[i-1] == separator && bytes[i] != separator) {
-        splits++;
-      }
-    }
-    if (splits == 0 && bytes[0] == separator) {
-      return new byte[][]{null};
-    }
-    splits++;
-    byte[][] result = new byte[splits][];
-    int nextIndex = 0;
-    // Build the splits.
-    for (int i = 0; i < splits; i++) {
-      int startIndex = nextIndex;
-      // find next separator in the bytes.
-      while (nextIndex < len && bytes[nextIndex] != separator) {
-        nextIndex++;
-      }
-      result[i] = (nextIndex > 0)
-          ? Arrays.copyOfRange(bytes, startIndex, nextIndex)
-          : DFSUtilClient.EMPTY_BYTES; // reuse empty bytes for root.
-      do { // skip over separators.
-        nextIndex++;
-      } while (nextIndex < len && bytes[nextIndex] == separator);
-    }
-    return result;
+  public static byte[][] bytes2byteArray(byte[] bytes, int len,
+      byte separator) {
+    return DFSUtilClient.bytes2byteArray(bytes, len, separator);
   }
 
   /**
@@ -1687,7 +1655,7 @@ public class DFSUtil {
    */
   public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
       final Configuration conf) throws IOException {
-    KeyProvider keyProvider = DFSUtilClient.createKeyProvider(conf);
+    KeyProvider keyProvider = HdfsKMSUtil.createKeyProvider(conf);
     if (keyProvider == null) {
       return null;
     }

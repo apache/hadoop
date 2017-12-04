@@ -22,11 +22,13 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -41,6 +43,7 @@ public class NodeInfo {
   protected boolean vmemCheckEnabled;
   protected boolean pmemCheckEnabled;
   protected long lastNodeUpdateTime;
+  protected String resourceTypes;
   protected boolean nodeHealthy;
   protected String nodeManagerVersion;
   protected String nodeManagerBuildVersion;
@@ -67,6 +70,8 @@ public class NodeInfo {
     this.pmemCheckEnabled = resourceView.isPmemCheckEnabled();
     this.totalVCoresAllocatedContainers = resourceView
         .getVCoresAllocatedForContainers();
+    this.resourceTypes = StringUtils.join(", ",
+        ResourceUtils.getResourcesTypeInfo());
     this.nodeHealthy = context.getNodeHealthStatus().getIsNodeHealthy();
     this.lastNodeUpdateTime = context.getNodeHealthStatus()
         .getLastHealthReportTime();
@@ -144,6 +149,10 @@ public class NodeInfo {
 
   public boolean isPmemCheckEnabled() {
     return this.pmemCheckEnabled;
+  }
+
+  public String getResourceTypes() {
+    return this.resourceTypes;
   }
 
   public long getNMStartupTime() {

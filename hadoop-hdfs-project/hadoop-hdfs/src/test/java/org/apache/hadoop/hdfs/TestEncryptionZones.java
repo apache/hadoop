@@ -1705,7 +1705,8 @@ public class TestEncryptionZones {
     Credentials credentials = new Credentials();
     // Key provider uri should be in the secret map of credentials object with
     // namenode uri as key
-    Text lookUpKey = client.getKeyProviderMapKey();
+    Text lookUpKey = HdfsKMSUtil.getKeyProviderMapKey(
+        cluster.getFileSystem().getUri());
     credentials.addSecretKey(lookUpKey,
         DFSUtilClient.string2Bytes(dummyKeyProvider));
     client.ugi.addCredentials(credentials);
@@ -1856,7 +1857,8 @@ public class TestEncryptionZones {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
     DFSClient client = cluster.getFileSystem().getClient();
     Credentials credentials = new Credentials();
-    Text lookUpKey = client.getKeyProviderMapKey();
+    Text lookUpKey = HdfsKMSUtil.
+        getKeyProviderMapKey(cluster.getFileSystem().getUri());
     credentials.addSecretKey(lookUpKey,
         DFSUtilClient.string2Bytes(getKeyProviderURI()));
     client.ugi.addCredentials(credentials);
@@ -1920,4 +1922,38 @@ public class TestEncryptionZones {
         dfsAdmin.listEncryptionZones().hasNext());
   }
 
+  /**
+  * This test returns mocked kms token when
+  * {@link WebHdfsFileSystem#addDelegationTokens(String, Credentials)} method
+  * is called.
+  * @throws Exception
+  */
+  @Test
+  public void addMockKmsToken() throws Exception {
+    UserGroupInformation.createRemoteUser("JobTracker");
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    KeyProvider keyProvider = Mockito.mock(KeyProvider.class, withSettings()
+        .extraInterfaces(DelegationTokenExtension.class,
+         CryptoExtension.class));
+    Mockito.when(keyProvider.getConf()).thenReturn(conf);
+    byte[] testIdentifier = "Test identifier for delegation token".getBytes();
+
+    Token<?> testToken = new Token(testIdentifier, new byte[0],
+        new Text("kms-dt"), new Text());
+    Mockito.when(((DelegationTokenExtension) keyProvider)
+        .addDelegationTokens(anyString(), (Credentials) any()))
+        .thenReturn(new Token<?>[] {testToken});
+
+    WebHdfsFileSystem webfsSpy = Mockito.spy(webfs);
+    Mockito.doReturn(keyProvider).when(webfsSpy).getKeyProvider();
+
+    Credentials creds = new Credentials();
+    final Token<?>[] tokens =
+        webfsSpy.addDelegationTokens("JobTracker", creds);
+
+    Assert.assertEquals(2, tokens.length);
+    Assert.assertEquals(tokens[1], testToken);
+    Assert.assertEquals(1, creds.numberOfTokens());
+  }
 }

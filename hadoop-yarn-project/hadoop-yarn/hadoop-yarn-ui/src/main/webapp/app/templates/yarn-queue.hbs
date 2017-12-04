@@ -18,34 +18,61 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
-<div class="col-md-12 container-fluid">
-  <div class="row">
-
-    <div class="col-md-2 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h4>Queue</h4>
+<div class="panel-group">
+  <div class="panel panel-default">
+    <div class="yarn-app-header">
+      <div class="flex">
+        <div class="top-1">
+          <h3>{{model.selected}}</h3>
+          {{#if model.selectedQueue.state}}
+          <div>
+            {{em-table-simple-status-cell content=model.selectedQueue.state}}
+          </div>
+          {{/if}}
+          <div class="top-1">
+            <span class="yarn-label secondary">
+              <span class="label-key">configured capacity</span>
+              <span class="label-value">{{model.selectedQueue.capacity}}%</span>
+            </span>
+            <span class="yarn-label secondary">
+              <span class="label-key">configured max capacity</span>
+              <span class="label-value">{{model.selectedQueue.maxCapacity}}%</span>
+            </span>
+            {{#if model.selectedQueue.isLeafQueue}}
+            <span class="yarn-label secondary">
+              <span class="label-key">user limit</span>
+              <span class="label-value">{{model.selectedQueue.userLimit}}%</span>
+            </span>
+            <span class="yarn-label secondary">
+              <span class="label-key">user limit factor</span>
+              <span class="label-value">{{model.selectedQueue.userLimitFactor}}</span>
+            </span>
+            {{/if}}
+          </div>
         </div>
-        <div class="panel-body">
-          <ul class="nav nav-pills nav-stacked" id="stacked-menu">
-            <ul class="nav nav-pills nav-stacked collapse in">
-              {{#link-to 'yarn-queue.info' tagName="li"}}
-                {{#link-to 'yarn-queue.info' model.selected}}Information
-                {{/link-to}}
-              {{/link-to}}
-              {{#link-to 'yarn-queue.apps' tagName="li"}}
-                {{#link-to 'yarn-queue.apps' model.selected}}Applications List
-                {{/link-to}}
-              {{/link-to}}
-            </ul>
-          </ul>
+        <div class="flex-right">
+          {{#each model.selectedQueue.capacitiesBarChartData as |item|}}
+            <span class="yarn-label primary">
+              <span class="label-key"> {{lower item.label}}</span>
+              <span class="label-value">{{item.value}}%</span>
+            </span>
+          {{/each}}
         </div>
       </div>
     </div>
-
-    <div class="col-md-10 container-fluid">
+        <div class="panel-heading">
+      <div class="clearfix">
+        <ul class="nav nav-pills">
+          <ul class="nav nav-pills collapse in">
+            {{#link-to 'yarn-queue.apps' tagName="li" class=(if (eq target.currentPath 'yarn-queue.apps') "active")}}
+              {{#link-to 'yarn-queue.apps' appId (query-params service=model.serviceName)}}Applications{{/link-to}}
+            {{/link-to}}
+          </ul>
+        </ul>
+      </div>
+    </div>
+    <div class="panel-body yarn-app-body">
       {{outlet}}
     </div>
-
   </div>
 </div>

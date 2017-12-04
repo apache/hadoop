@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.service;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
@@ -65,6 +66,14 @@ public class ClientAMService extends AbstractService
     InetSocketAddress address = new InetSocketAddress(0);
     server = rpc.getServer(ClientAMProtocol.class, this, address, conf,
         context.secretManager, 1);
+
+    // Enable service authorization?
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      this.server.refreshServiceAcl(getConfig(), new ClientAMPolicyProvider());
+    }
+
     server.start();
 
     String nodeHostString =

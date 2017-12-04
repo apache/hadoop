@@ -3512,7 +3512,8 @@
   <property>
     <description>
       Enable additional discovery/isolation of resources on the NodeManager,
-      split by comma. By default, this is empty. Acceptable values: { "yarn-io/gpu" }.
+      split by comma. By default, this is empty.
+      Acceptable values: { "yarn-io/gpu", "yarn-io/fpga"}.
     </description>
     <name>yarn.nodemanager.resource-plugins</name>
     <value></value>
@@ -3559,6 +3560,43 @@
     <value>http://localhost:3476/v1.0/docker/cli</value>
   </property>
 
->>>>>>> theirs
+  <property>
+    <description>
+      Specify one vendor plugin to handle FPGA devices discovery/IP download/configure.
+      Only IntelFpgaOpenclPlugin is supported by default.
+      We only allow one NM configured with one vendor FPGA plugin now since the end user can put the same
+      vendor's cards in one host. And this also simplify our design.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fpga.vendor-plugin.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin</value>
+  </property>
+
+  <property>
+    <description>
+      When yarn.nodemanager.resource.fpga.allowed-fpga-devices=auto specified,
+      YARN NodeManager needs to run FPGA discovery binary (now only support
+      IntelFpgaOpenclPlugin) to get FPGA information.
+      When value is empty (default), YARN NodeManager will try to locate
+      discovery executable from vendor plugin's preference
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fpga.path-to-discovery-executables</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Specify FPGA devices which can be managed by YARN NodeManager, split by comma
+      Number of FPGA devices will be reported to RM to make scheduling decisions.
+      Set to auto (default) let YARN automatically discover FPGA resource from
+      system.
+
+      Manually specify FPGA devices if admin only want subset of FPGA devices managed by YARN.
+      At present, since we can only configure one major number in c-e.cfg, FPGA device is
+      identified by their minor device number. A common approach to get minor
+      device number of FPGA is using "aocl diagnose" and check uevent with device name.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fpga.allowed-fpga-devices</name>
+    <value>0,1</value>
+  </property>
 
 </configuration>

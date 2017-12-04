@@ -136,4 +136,17 @@ public class OpportunisticContainersStatusPBImpl
     maybeInitBuilder();
     builder.setEstimatedQueueWaitTime(queueWaitTime);
   }
+
+  @Override
+  public int getOpportQueueCapacity() {
+    YarnServerCommonProtos.OpportunisticContainersStatusProtoOrBuilder p =
+        viaProto ? proto : builder;
+    return p.getOpportQueueCapacity();
+  }
+
+  @Override
+  public void setOpportQueueCapacity(int maxOpportQueueLength) {
+    maybeInitBuilder();
+    builder.setOpportQueueCapacity(maxOpportQueueLength);
+  }
 }

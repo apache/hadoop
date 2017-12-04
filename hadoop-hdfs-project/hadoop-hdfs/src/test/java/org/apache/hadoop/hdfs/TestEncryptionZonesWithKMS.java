@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.base.Supplier;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
+import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
 import org.apache.hadoop.security.Credentials;
@@ -28,6 +29,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -133,5 +137,24 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
         return kspy.getEncKeyQueueSize(TEST_KEY) > 0;
       }
     }, 1000, 60000);
+  }
+
+  /**
+   * This method fetches the kms delegation token
+   * for {@link WebHdfsFileSystem}.
+   * @throws Exception
+   */
+  @Test
+  public void addDelegationTokenFromWebhdfsFileSystem() throws Exception {
+    UserGroupInformation.createRemoteUser("JobTracker");
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+        conf, WebHdfsConstants.WEBHDFS_SCHEME);
+    Credentials creds = new Credentials();
+    final Token<?>[] tokens = webfs.addDelegationTokens("JobTracker", creds);
+
+    Assert.assertEquals(2, tokens.length);
+    Assert.assertEquals(KMSDelegationToken.TOKEN_KIND_STR,
+        tokens[1].getKind().toString());
+    Assert.assertEquals(2, creds.numberOfTokens());
   }
 }

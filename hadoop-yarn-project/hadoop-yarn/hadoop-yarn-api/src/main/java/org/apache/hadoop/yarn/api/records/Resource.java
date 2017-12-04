@@ -21,11 +21,9 @@ package org.apache.hadoop.yarn.api.records;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
-import com.google.common.collect.Lists;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.curator.shaded.com.google.common.reflect.ClassPath;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -87,6 +85,29 @@ public abstract class Resource implements Comparable<Resource> {
   @Stable
   public static Resource newInstance(long memory, int vCores) {
     return new LightWeightResource(memory, vCores);
+  }
+
+  /**
+   * Create a new {@link Resource} instance with the given CPU and memory
+   * values and additional resource values as set in the {@code others}
+   * parameter. Note that the CPU and memory settings in the {@code others}
+   * parameter will be ignored.
+   *
+   * @param memory the memory value
+   * @param vCores the CPU value
+   * @param others a map of other resource values indexed by resource name
+   * @return a {@link Resource} instance with the given resource values
+   */
+  @Public
+  @Stable
+  public static Resource newInstance(long memory, int vCores,
+      Map<String, Long> others) {
+    if (others != null) {
+      return new LightWeightResource(memory, vCores,
+          ResourceUtils.createResourceTypesArray(others));
+    } else {
+      return newInstance(memory, vCores);
+    }
   }
 
   @InterfaceAudience.Private
