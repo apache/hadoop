@@ -456,17 +456,17 @@ public class TestNMWebServices extends JerseyTestBase {
         ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON, response.getType().toString());
 
-    // Access resource-2 should fail (null NMResourceInfo returned).
+    // Access resource-2 should fail (empty NMResourceInfo returned).
     JSONObject json = response.getEntity(JSONObject.class);
-    assertIncludesException(json);
+    assertEquals(0, json.length());
 
-    // Access resource-3 should fail (unkown plugin)
+    // Access resource-3 should fail (unknown plugin)
     response = r.path("ws").path("v1").path("node").path(
         "resources").path("resource-3").accept(MediaType.APPLICATION_JSON).get(
         ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON, response.getType().toString());
     json = response.getEntity(JSONObject.class);
-    assertIncludesException(json);
+    assertEquals(0, json.length());
 
     // Access resource-1 should success
     response = r.path("ws").path("v1").path("node").path(
@@ -531,10 +531,6 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals(3, json.getJSONArray("totalGpuDevices").length());
     assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
     assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
-  }
-
-  private void assertIncludesException(JSONObject json) {
-    assertTrue(json.has("RemoteException"));
   }
 
   private void testContainerLogs(WebResource r, ContainerId containerId)
