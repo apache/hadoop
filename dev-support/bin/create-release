@@ -202,6 +202,8 @@ function set_defaults
     | head -1 \
     | sed  -e 's|^ *<version>||' -e 's|</version>.*$||')
 
+  DEPLOY=false
+
   DOCKER=false
   DOCKERCACHE=false
   DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile"
@@ -283,6 +285,7 @@ function usage
 {
   echo "--artifactsdir=[path]   Path to use to store release bits"
   echo "--asfrelease            Make an ASF release"
+  echo "--deploy                Deploy Maven artifacts using ~/.m2/settings.xml"
   echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
   echo "--dockercache           Use a Docker-private maven cache"
   echo "--logdir=[path]         Path to store logs"
@@ -304,9 +307,13 @@ function option_parse
         ASFRELEASE=true
         NATIVE=true
         SIGN=true
+        DEPLOY=true
       ;;
       --artifactsdir=*)
         ARTIFACTS_DIR=${i#*=}
+      ;;
+      --deploy)
+        DEPLOY=true
       ;;
       --docker)
         DOCKER=true
@@ -358,6 +365,11 @@ function option_parse
       hadoop_error "ERROR: No gpg-agent. Disabling signing capability."
       SIGN=false
     fi
+  fi
+
+  if [[ "${DEPLOY}" = true && ! -f "${HOME}/.m2/settings.xml" ]]; then
+    hadoop_error "ERROR: No ~/.m2/settings.xml file, cannot deploy Maven artifacts."
+    exit 1
   fi
 
   DOCKERCMD=$(command -v docker)
@@ -452,6 +464,11 @@ function dockermode
     extrad+=("-v" "${lines}:${lines}")
   fi
 
+  if [[ "${DEPLOY}" = true ]]; then
+    modp+=("--deploy")
+    extrad+=("-v" "${HOME}/.m2/settings.xml:/home/${user_name}/.m2/settings.xml")
+  fi
+
   if [[ "${DOCKERCACHE}" = true ]]; then
     modp+=("--mvncache=/maven")
   else
@@ -540,13 +557,31 @@ function makearelease
     signflags=("-Psign" "-Dgpg.useagent=true" "-Dgpg.executable=${GPG}")
   fi
 
+  local target="install"
+  if [[ "${DEPLOY}" = true ]]; then
+    target="deploy"
+  fi
+
   # Create SRC and BIN tarballs for release,
   # shellcheck disable=SC2046
-  run_and_redirect "${LOGDIR}/mvn_install.log" \
-    "${MVN}" "${MVN_ARGS[@]}" install \
+  run_and_redirect "${LOGDIR}/mvn_${target}.log" \
+    "${MVN}" "${MVN_ARGS[@]}" ${target} \
       -Pdist,src,yarn-ui \
       "${signflags[@]}" \
       -DskipTests -Dtar $(hadoop_native_flags)
+
+  # Stage BIN tarball
+  run cd "${BASEDIR}"
+  run mv \
+    "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}.tar.gz" \
+    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
+
+  # Stage SRC tarball
+  run mv \
+    "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-src.tar.gz" \
+    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-src.tar.gz"
+
+  big_console_header "Maven Site"
 
   if [[ "${SECURITYRELEASE}" = true ]]; then
     DOCFLAGS="-Pdocs"
@@ -554,7 +589,6 @@ function makearelease
   else
     DOCFLAGS="-Preleasedocs,docs"
   fi
-
 
   # Create site for release
   # we need to do install again so that jdiff and
@@ -568,12 +602,16 @@ function makearelease
       -Pdist,src \
       "${DOCFLAGS}"
 
-  big_console_header "Staging the release"
-
+  # Create the site tarball
   run mv "${BASEDIR}/target/staging/hadoop-project" "${BASEDIR}/target/r${HADOOP_VERSION}/"
   run cd "${BASEDIR}/target/"
   run tar czpf "hadoop-site-${HADOOP_VERSION}.tar.gz" "r${HADOOP_VERSION}"/*
   run cd "${BASEDIR}"
+
+  # Stage SITE tarball
+  run mv \
+     "${BASEDIR}/target/hadoop-site-${HADOOP_VERSION}.tar.gz" \
+    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-site.tar.gz"
 
   # Stage RAT report
   #shellcheck disable=SC2038
@@ -586,25 +624,14 @@ function makearelease
         "${ARTIFACTS_DIR}/${i}.md"
   done
 
-  # Prepare and stage BIN tarball
-  run cd "${BASEDIR}/hadoop-dist/target/"
-  run tar -xzpf "hadoop-${HADOOP_VERSION}.tar.gz"
+  # We need to fixup the BIN tarball at the end to contain the site docs.
+  run cd "${ARTIFACTS_DIR}"
+  run tar -xzpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
+  run mkdir -p "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
   run cp -r "${BASEDIR}/target/r${HADOOP_VERSION}"/* "hadoop-${HADOOP_VERSION}/share/doc/hadoop/"
-  run tar -czpf "hadoop-${HADOOP_VERSION}.tar.gz" "hadoop-${HADOOP_VERSION}"
-  run cd "${BASEDIR}"
-  run mv \
-    "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}.tar.gz" \
-    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
+  run tar -czpf "hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz" "hadoop-${HADOOP_VERSION}"
+  run rm -rf "hadoop-${HADOOP_VERSION}"
 
-  # Stage SRC tarball
-  run mv \
-    "${BASEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-src.tar.gz" \
-    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-src.tar.gz"
-
-  # Stage SITE tarball
-  run mv \
-     "${BASEDIR}/target/hadoop-site-${HADOOP_VERSION}.tar.gz" \
-    "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-site.tar.gz"
 }
 
 function signartifacts
