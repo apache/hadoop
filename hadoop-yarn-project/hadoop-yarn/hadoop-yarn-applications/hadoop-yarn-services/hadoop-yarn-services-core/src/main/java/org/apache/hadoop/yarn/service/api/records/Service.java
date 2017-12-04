@@ -71,6 +71,9 @@ public class Service extends BaseResource {
   private ServiceState state = null;
   private Map<String, String> quicklinks = new HashMap<>();
   private String queue = null;
+  @JsonProperty("kerberos_principal")
+  @XmlElement(name = "kerberos_principal")
+  private KerberosPrincipal kerberosPrincipal = new KerberosPrincipal();
 
   /**
    * A unique service name.
@@ -335,6 +338,24 @@ public class Service extends BaseResource {
     this.queue = queue;
   }
 
+  public Service kerberosPrincipal(KerberosPrincipal kerberosPrincipal) {
+    this.kerberosPrincipal = kerberosPrincipal;
+    return this;
+  }
+
+  /**
+   * The Kerberos Principal of the service.
+   * @return kerberosPrincipal
+   **/
+  @ApiModelProperty(value = "The Kerberos Principal of the service")
+  public KerberosPrincipal getKerberosPrincipal() {
+    return kerberosPrincipal;
+  }
+
+  public void setKerberosPrincipal(KerberosPrincipal kerberosPrincipal) {
+    this.kerberosPrincipal = kerberosPrincipal;
+  }
+
   @Override
   public boolean equals(java.lang.Object o) {
     if (this == o) {
@@ -376,6 +397,8 @@ public class Service extends BaseResource {
     sb.append("    quicklinks: ").append(toIndentedString(quicklinks))
         .append("\n");
     sb.append("    queue: ").append(toIndentedString(queue)).append("\n");
+    sb.append("    kerberosPrincipal: ")
+        .append(toIndentedString(kerberosPrincipal)).append("\n");
     sb.append("}");
     return sb.toString();
   }

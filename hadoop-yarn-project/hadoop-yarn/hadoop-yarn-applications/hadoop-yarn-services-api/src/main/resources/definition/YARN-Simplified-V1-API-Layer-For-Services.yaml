@@ -244,6 +244,10 @@ definitions:
       queue:
         type: string
         description: The YARN queue that this service should be submitted to.
+      kerberos_principal:
+        description: The Kerberos Principal of the service
+        $ref: '#/definitions/KerberosPrincipal'
+
   Resource:
     description:
       Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or service. The resource specified at the service (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are expected. It raises a validation exception otherwise.
@@ -469,3 +473,15 @@ definitions:
         type: integer
         format: int32
         description: An error code specific to a scenario which service owners should be able to use to understand the failure in addition to the diagnostic information.
+  KerberosPrincipal:
+    description: The kerberos principal info of the user who launches the service.
+    properties:
+      principal_name:
+        type: string
+        description: The principal name of the user who launches the service.
+      keytab:
+        type: string
+        description: |
+          The URI of the kerberos keytab. It supports two modes:
+          URI starts with "hdfs://": A path on hdfs where the keytab is stored. The keytab will be localized by YARN to each host.
+          URI starts with "file://": A path on the local host where the keytab is stored. It is assumed that the keytabs are pre-installed by admins before AM launches.

@@ -44,5 +44,8 @@
         <Field name="registryClient" />
         <Bug pattern="IS2_INCONSISTENT_SYNC"/>
     </Match>
-
+    <Match>
+        <Class name="org.apache.hadoop.yarn.service.ClientAMPolicyProvider"/>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
 </FindBugsFilter>

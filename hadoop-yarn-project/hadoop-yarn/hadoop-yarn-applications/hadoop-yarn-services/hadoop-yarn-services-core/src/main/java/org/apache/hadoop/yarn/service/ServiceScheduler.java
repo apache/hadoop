@@ -22,6 +22,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,6 +35,7 @@ import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
+import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -142,11 +144,29 @@ public class ServiceScheduler extends CompositeService {
   }
 
   public void buildInstance(ServiceContext context, Configuration configuration)
-      throws YarnException {
+      throws YarnException, IOException {
     app = context.service;
     executorService = Executors.newScheduledThreadPool(10);
-    RegistryOperations registryClient = RegistryOperationsFactory
-        .createInstance("ServiceScheduler", configuration);
+    RegistryOperations registryClient = null;
+    if (UserGroupInformation.isSecurityEnabled() &&
+        !StringUtils.isEmpty(context.principal)
+        && !StringUtils.isEmpty(context.keytab)) {
+      Configuration conf = getConfig();
+      // Only take the first section of the principal
+      // e.g. hdfs-demo@EXAMPLE.COM will take hdfs-demo
+      // This is because somehow zookeeper client only uses the first section
+      // for acl validations.
+      String username = new HadoopKerberosName(context.principal.trim())
+          .getServiceName();
+      LOG.info("Set registry user accounts: sasl:" + username);
+      conf.set(KEY_REGISTRY_USER_ACCOUNTS, "sasl:" + username);
+      registryClient = RegistryOperationsFactory
+          .createKerberosInstance(conf,
+              "Client", context.principal, context.keytab);
+    } else {
+      registryClient = RegistryOperationsFactory
+          .createInstance("ServiceScheduler", configuration);
+    }
     addIfService(registryClient);
     yarnRegistryOperations =
         createYarnRegistryOperations(context, registryClient);
@@ -171,7 +191,7 @@ public class ServiceScheduler extends CompositeService {
     dispatcher.setDrainEventsOnStop();
     addIfService(dispatcher);
 
-    containerLaunchService = new ContainerLaunchService(context.fs);
+    containerLaunchService = new ContainerLaunchService(context);
     addService(containerLaunchService);
 
     if (YarnConfiguration.timelineServiceV2Enabled(configuration)) {
@@ -408,7 +428,7 @@ public class ServiceScheduler extends CompositeService {
           }
         } catch (IOException e) {
           LOG.error(
-              "Failed to register app " + app.getName() + " in registry");
+              "Failed to register app " + app.getName() + " in registry", e);
         }
       }
     });
