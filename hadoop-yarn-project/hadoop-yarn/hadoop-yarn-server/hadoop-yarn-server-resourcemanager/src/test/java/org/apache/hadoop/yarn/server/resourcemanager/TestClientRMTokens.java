@@ -36,7 +36,11 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.delegation.TestDelegationToken;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
 import org.junit.AfterClass;
 import org.junit.Assert;
 
@@ -350,6 +354,46 @@ public class TestClientRMTokens {
         rmAddr,
         new InetSocketAddress("1.1.1.1", rmAddr.getPort()+1),
         false);
+  }
+
+  @Test
+  public void testReadOldFormatFields() throws IOException {
+    RMDelegationTokenIdentifier token = new RMDelegationTokenIdentifier(
+        new Text("alice"), new Text("bob"), new Text("colin"));
+    token.setIssueDate(123);
+    token.setMasterKeyId(321);
+    token.setMaxDate(314);
+    token.setSequenceNumber(12345);
+    DataInputBuffer inBuf = new DataInputBuffer();
+    DataOutputBuffer outBuf = new DataOutputBuffer();
+    token.writeInOldFormat(outBuf);
+    outBuf.writeLong(42);   // renewDate
+    inBuf.reset(outBuf.getData(), 0, outBuf.getLength());
+
+    RMDelegationTokenIdentifier identifier = null;
+
+    try {
+      RMDelegationTokenIdentifierData identifierData =
+          new RMDelegationTokenIdentifierData();
+      identifierData.readFields(inBuf);
+      fail("Should have thrown a "
+          + InvalidProtocolBufferException.class.getName()
+          + " because the token is not a protobuf");
+    } catch (InvalidProtocolBufferException e) {
+      identifier = new RMDelegationTokenIdentifier();
+      inBuf.reset();
+      identifier.readFieldsInOldFormat(inBuf);
+      assertEquals(42, inBuf.readLong());
+    }
+
+    assertEquals("alice", identifier.getUser().getUserName());
+    assertEquals(new Text("bob"), identifier.getRenewer());
+    assertEquals("colin", identifier.getUser().getRealUser().getUserName());
+    assertEquals(123, identifier.getIssueDate());
+    assertEquals(321, identifier.getMasterKeyId());
+    assertEquals(314, identifier.getMaxDate());
+    assertEquals(12345, identifier.getSequenceNumber());
+
   }
 
   @SuppressWarnings("unchecked")
