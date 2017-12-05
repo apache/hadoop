@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
@@ -29,6 +31,8 @@ import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 /**
  * Null sink for region information emitted from FSImage.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class NullBlockAliasMap extends BlockAliasMap<FileRegion> {
 
   @Override

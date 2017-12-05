@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
@@ -24,6 +27,8 @@ import java.util.Iterator;
 /**
  * Traversal yielding a hierarchical sequence of paths.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public abstract class TreeWalk implements Iterable<TreePath> {
 
   /**

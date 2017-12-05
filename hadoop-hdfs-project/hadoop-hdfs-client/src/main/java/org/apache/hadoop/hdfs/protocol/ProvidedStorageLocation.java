@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 
 import javax.annotation.Nonnull;
@@ -25,6 +27,8 @@ import java.util.Arrays;
  * ProvidedStorageLocation is a location in an external storage system
  * containing the data for a block (~Replica).
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class ProvidedStorageLocation {
   private final Path path;
   private final long offset;

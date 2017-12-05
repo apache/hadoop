@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import com.google.protobuf.ByteString;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -37,6 +39,8 @@ import static org.apache.hadoop.hdfs.server.namenode.DirectoryWithQuotaFeature.D
  * Traversal cursor in external filesystem.
  * TODO: generalize, move FS/FileRegion to FSTreePath
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class TreePath {
   private long id = -1;
   private final long parentId;

@@ -18,6 +18,8 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.KeyValueProto;
@@ -40,6 +42,8 @@ import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.*;
  * AliasMapProtocolServerSideTranslatorPB is responsible for translating RPC
  * calls and forwarding them to the internal InMemoryAliasMap.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class AliasMapProtocolServerSideTranslatorPB
     implements AliasMapProtocolPB {
 

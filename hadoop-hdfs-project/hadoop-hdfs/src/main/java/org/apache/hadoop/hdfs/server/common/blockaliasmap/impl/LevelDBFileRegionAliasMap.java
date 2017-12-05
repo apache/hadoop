@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import static org.fusesource.leveldbjni.JniDBFactory.factory;
@@ -45,6 +47,8 @@ import org.slf4j.LoggerFactory;
 /**
  * A LevelDB based implementation of {@link BlockAliasMap}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class LevelDBFileRegionAliasMap
       extends BlockAliasMap<FileRegion> implements Configurable {
 

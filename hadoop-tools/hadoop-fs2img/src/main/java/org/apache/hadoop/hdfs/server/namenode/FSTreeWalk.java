@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,6 +33,8 @@ import org.apache.hadoop.fs.Path;
 /**
  * Traversal of an external FileSystem.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class FSTreeWalk extends TreeWalk {
 
   private final Path root;

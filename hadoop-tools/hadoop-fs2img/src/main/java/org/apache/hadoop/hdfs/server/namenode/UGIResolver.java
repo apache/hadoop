@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -28,6 +30,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
  * Pluggable class for mapping ownership and permissions from an external
  * store to an FSImage.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public abstract class UGIResolver {
 
   static final int USER_STRID_OFFSET = 40;

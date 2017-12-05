@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -28,6 +30,8 @@ import org.apache.hadoop.fs.FileStatus;
 /**
  * Resolver mapping all files to a configurable, uniform blocksize.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class FixedBlockResolver extends BlockResolver implements Configurable {
 
   public static final String BLOCKSIZE =

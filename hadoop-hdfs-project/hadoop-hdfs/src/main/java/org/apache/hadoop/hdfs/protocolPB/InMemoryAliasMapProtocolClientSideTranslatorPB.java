@@ -17,6 +17,8 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
@@ -47,6 +49,8 @@ import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.*;
  * {@link InMemoryAliasMapProtocol} interface to the RPC server implementing
  * {@link AliasMapProtocolPB}.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class InMemoryAliasMapProtocolClientSideTranslatorPB
     implements InMemoryAliasMapProtocol {
 

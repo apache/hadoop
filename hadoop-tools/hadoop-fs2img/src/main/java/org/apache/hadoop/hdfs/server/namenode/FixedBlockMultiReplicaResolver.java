@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 
@@ -24,6 +26,8 @@ import org.apache.hadoop.fs.FileStatus;
  * Resolver mapping all files to a configurable, uniform blocksize
  * and replication.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class FixedBlockMultiReplicaResolver extends FixedBlockResolver {
 
   public static final String REPLICATION =
