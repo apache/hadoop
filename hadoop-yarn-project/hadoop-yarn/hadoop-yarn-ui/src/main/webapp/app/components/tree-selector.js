@@ -42,6 +42,11 @@ export default Ember.Component.extend({
   used: undefined,
   max: undefined,
 
+  didUpdateAttrs: function({oldAttrs, newAttrs}) {
+    if (oldAttrs.filteredPartition.value !== newAttrs.filteredPartition.value) {
+      this.reDraw();
+    }
+  },
   // Init data
   initData: function() {
     this.map = { };
@@ -83,13 +88,17 @@ export default Ember.Component.extend({
   initQueue: function(queueName, depth, node) {
     if ((!queueName) || (!this.map[queueName])) {
       // Queue is not existed
-      return;
+      return false;
     }
     if (depth > this.maxDepth) {
       this.maxDepth = this.maxDepth + 1;
     }
 
     var queue = this.map[queueName];
+
+    if (this.filteredPartition && !queue.get('partitions').contains(this.filteredPartition)) {
+      return false;
+    }
 
     var names = this.getChildrenNamesArray(queue);
 
@@ -103,11 +112,17 @@ export default Ember.Component.extend({
       names.forEach(function(name) {
         var childQueueData = {};
         node.children.push(childQueueData);
-        this.initQueue(name, depth + 1, childQueueData);
+        const status = this.initQueue(name, depth + 1, childQueueData);
+        if (!status) {
+          node.children.pop();
+        }
+
       }.bind(this));
     } else {
       this.numOfLeafQueue = this.numOfLeafQueue + 1;
     }
+
+    return true;
   },
 
   update: function(source, root, tree, diagonal) {
@@ -274,13 +289,17 @@ export default Ember.Component.extend({
     var height = treeHeight + margin.top + margin.bottom;
 
     if (this.mainSvg) {
-      this.mainSvg.remove();
+      this.mainSvg.selectAll("*").remove();
+    } else {
+      this.mainSvg = d3
+        .select("#" + this.get("parentId"))
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("class", "tree-selector");
     }
 
-    this.mainSvg = d3.select("#" + this.get("parentId")).append("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("class", "tree-selector")
+    this.mainSvg
       .append("g")
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 

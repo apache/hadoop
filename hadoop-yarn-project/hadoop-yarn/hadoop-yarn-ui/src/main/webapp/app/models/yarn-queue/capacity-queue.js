@@ -24,6 +24,7 @@ export default DS.Model.extend({
   children: DS.attr('array'),
   parent: DS.attr('string'),
   capacity: DS.attr('number'),
+  partitions: DS.attr('array'),
   maxCapacity: DS.attr('number'),
   usedCapacity: DS.attr('number'),
   absCapacity: DS.attr('number'),

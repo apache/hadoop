@@ -16,7 +16,13 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import Ember from "ember";
 
 export default Ember.Component.extend({
+  actions: {
+    filterQueuesByPartition(filter) {
+      this.set('filteredPartition', filter);
+      this.set('selected', this.model.get('firstObject').get('id'));
+    }
+  }
 });

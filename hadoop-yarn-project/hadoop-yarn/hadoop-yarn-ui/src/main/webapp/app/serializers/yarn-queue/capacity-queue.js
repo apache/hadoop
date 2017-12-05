@@ -73,6 +73,7 @@ export default DS.JSONAPISerializer.extend({
           numPendingApplications: payload.numPendingApplications,
           numActiveApplications: payload.numActiveApplications,
           resources: payload.resources,
+          partitions: payload.capacities.queueCapacitiesByPartition.map(cap => cap.partitionName || 'All queues'),
           type: "capacity",
         },
         // Relationships

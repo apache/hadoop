@@ -23,7 +23,14 @@
       <div class="panel-heading">
         Scheduler: {{model.firstObject.type}}
       </div>
-     {{tree-selector model=model parentId="tree-selector-container" selected=selected used=used max=max}}
+       {{#if (eq model.firstObject.type "capacity")}}
+        <select onchange={{action "filterQueuesByPartition" value="target.value"}} class="form-control flex-right" style="max-width:350px">
+          {{#each model.firstObject.partitions as |part|}}
+            <option value={{part}}>{{part}}</option>
+          {{/each}}
+        </select>
+      {{/if}}
+     {{tree-selector model=model parentId="tree-selector-container" selected=selected used=used max=max filteredPartition=filteredPartition}}
     </div>
   </div>
 </div>
