@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Scheduli
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AbstractContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
@@ -369,7 +370,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   public boolean accept(Resource cluster,
       ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request) {
-    List<ResourceRequest> resourceRequests = null;
+    ContainerRequest containerRequest = null;
     boolean reReservation = false;
 
     try {
@@ -397,8 +398,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
         if (schedulerContainer.isAllocated()) {
           // When allocate a new container
-          resourceRequests =
-              schedulerContainer.getRmContainer().getResourceRequests();
+          containerRequest =
+              schedulerContainer.getRmContainer().getContainerRequest();
 
           // Check pending resource request
           if (!appSchedulingInfo.checkAllocation(allocation.getAllocationLocalityType(),
@@ -471,8 +472,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
 
     // When rejected, recover resource requests for this app
-    if (!accepted && resourceRequests != null) {
-      recoverResourceRequestsForContainer(resourceRequests);
+    if (!accepted && containerRequest != null) {
+      recoverResourceRequestsForContainer(containerRequest);
     }
 
     return accepted;
@@ -524,12 +525,12 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           liveContainers.put(containerId, rmContainer);
 
           // Deduct pending resource requests
-          List<ResourceRequest> requests = appSchedulingInfo.allocate(
+          ContainerRequest containerRequest = appSchedulingInfo.allocate(
               allocation.getAllocationLocalityType(),
               schedulerContainer.getSchedulerNode(),
               schedulerContainer.getSchedulerRequestKey(),
               schedulerContainer.getRmContainer().getContainer());
-          ((RMContainerImpl) rmContainer).setResourceRequests(requests);
+          ((RMContainerImpl) rmContainer).setContainerRequest(containerRequest);
 
           attemptResourceUsage.incUsed(schedulerContainer.getNodePartition(),
               allocation.getAllocatedOrReservedResource());

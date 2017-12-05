@@ -48,7 +48,26 @@
     </div>
     <div class="row">
       {{#if (or model.rmContainers model.tsContainers)}}
-        {{timeline-view parent-id="containers-timeline-div" my-id="timeline-view" height="400" rmModel=model.rmContainers tsModel=model.tsContainers label="shortAppAttemptId" attemptModel=false}}
+        {{timeline-view
+          parent-id="containers-timeline-div"
+          my-id="timeline-view"
+          height="400"
+          rmModel=model.rmContainers
+          tsModel=model.tsContainers
+          label="shortAppAttemptId"
+          attemptModel=false
+        }}
+      {{else}}
+        <div class="col-md-12 container-fluid">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+               Containers
+            </div>
+            <div class="panel-body">
+              <h4 class="text-center">No data available!</h4>
+            </div>
+          </div>
+        </div>
       {{/if}}
     </div>
   </div>

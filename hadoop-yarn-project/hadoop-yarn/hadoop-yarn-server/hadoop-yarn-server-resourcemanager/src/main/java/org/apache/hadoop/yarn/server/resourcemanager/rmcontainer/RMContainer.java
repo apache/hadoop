@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 
@@ -86,8 +87,8 @@ public interface RMContainer extends EventHandler<RMContainerEvent>,
   ContainerReport createContainerReport();
   
   boolean isAMContainer();
-  
-  List<ResourceRequest> getResourceRequests();
+
+  ContainerRequest getContainerRequest();
 
   String getNodeHttpAddress();
   
