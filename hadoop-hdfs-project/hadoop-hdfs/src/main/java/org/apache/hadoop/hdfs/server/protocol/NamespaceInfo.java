@@ -164,6 +164,10 @@ public class NamespaceInfo extends StorageInfo {
     this.clusterID = clusterID;
   }
 
+  public void setBlockPoolID(String blockPoolID) {
+    this.blockPoolID = blockPoolID;
+  }
+
   @Override
   public String toString(){
     return super.toString() + ";bpid=" + blockPoolID;

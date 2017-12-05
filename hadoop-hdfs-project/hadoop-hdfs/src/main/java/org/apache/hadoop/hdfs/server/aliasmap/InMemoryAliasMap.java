@@ -121,7 +121,7 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
         Block block = fromBlockBytes(entry.getKey());
         ProvidedStorageLocation providedStorageLocation =
             fromProvidedStorageLocationBytes(entry.getValue());
-        batch.add(new FileRegion(block, providedStorageLocation, null));
+        batch.add(new FileRegion(block, providedStorageLocation));
         ++i;
       }
       if (iterator.hasNext()) {
@@ -155,6 +155,11 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
     byte[] providedStorageLocationDbFormat =
         toProtoBufBytes(providedStorageLocation);
     levelDb.put(extendedBlockDbFormat, providedStorageLocationDbFormat);
+  }
+
+  @Override
+  public String getBlockPoolId() {
+    return null;
   }
 
   public void close() throws IOException {

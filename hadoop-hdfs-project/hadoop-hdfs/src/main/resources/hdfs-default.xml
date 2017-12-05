@@ -4696,7 +4696,7 @@
   </property>
 
   <property>
-    <name>dfs.provided.aliasmap.text.read.path</name>
+    <name>dfs.provided.aliasmap.text.read.file</name>
     <value></value>
     <description>
         The path specifying the provided block map as a text file, specified as
@@ -4713,11 +4713,30 @@
   </property>
 
   <property>
-    <name>dfs.provided.aliasmap.text.write.path</name>
+    <name>dfs.provided.aliasmap.text.write.dir</name>
     <value></value>
     <description>
         The path to which the provided block map should be written as a text
         file, specified as a URI.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.leveldb.path</name>
+    <value></value>
+    <description>
+      The read/write path for the leveldb-based alias map
+      (org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap).
+      The path has to be explicitly configured when this alias map is used.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.load.retries</name>
+    <value>0</value>
+    <description>
+      The number of retries on the Datanode to load the provided aliasmap;
+      defaults to 0.
     </description>
   </property>
 

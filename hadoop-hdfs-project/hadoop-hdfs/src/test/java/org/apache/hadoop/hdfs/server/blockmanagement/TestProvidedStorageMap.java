@@ -44,6 +44,7 @@ public class TestProvidedStorageMap {
   private BlockManager bm;
   private RwLock nameSystemLock;
   private String providedStorageID;
+  private String blockPoolID;
 
   @Before
   public void setup() {
@@ -55,8 +56,9 @@ public class TestProvidedStorageMap {
     conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         TestProvidedImpl.TestFileRegionBlockAliasMap.class,
         BlockAliasMap.class);
-
+    blockPoolID = "BP-12344-10.1.1.2-12344";
     bm = mock(BlockManager.class);
+    when(bm.getBlockPoolId()).thenReturn(blockPoolID);
     nameSystemLock = mock(RwLock.class);
   }
 

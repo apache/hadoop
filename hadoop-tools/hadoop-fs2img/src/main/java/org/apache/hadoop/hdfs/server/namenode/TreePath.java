@@ -107,8 +107,7 @@ public class TreePath {
       long genStamp, String blockPoolID,
       BlockAliasMap.Writer<FileRegion> out) throws IOException {
     FileStatus s = getFileStatus();
-    out.store(new FileRegion(blockId, s.getPath(), offset, length,
-        blockPoolID, genStamp));
+    out.store(new FileRegion(blockId, s.getPath(), offset, length, genStamp));
   }
 
   INode toFile(UGIResolver ugi, BlockResolver blk,

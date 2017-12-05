@@ -36,7 +36,8 @@ import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 public class NullBlockAliasMap extends BlockAliasMap<FileRegion> {
 
   @Override
-  public Reader<FileRegion> getReader(Reader.Options opts) throws IOException {
+  public Reader<FileRegion> getReader(Reader.Options opts, String blockPoolID)
+      throws IOException {
     return new Reader<FileRegion>() {
       @Override
       public Iterator<FileRegion> iterator() {
@@ -69,7 +70,8 @@ public class NullBlockAliasMap extends BlockAliasMap<FileRegion> {
   }
 
   @Override
-  public Writer getWriter(Writer.Options opts) throws IOException {
+  public Writer getWriter(Writer.Options opts, String blockPoolID)
+      throws IOException {
     return new Writer<FileRegion>() {
       @Override
       public void store(FileRegion token) throws IOException {

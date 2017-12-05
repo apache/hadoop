@@ -55,11 +55,13 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
   private RPC.Server aliasMapServer;
   private Configuration conf;
   private InMemoryAliasMap aliasMap;
+  private String blockPoolId;
 
   public InMemoryLevelDBAliasMapServer(
-      CheckedFunction<Configuration, InMemoryAliasMap> initFun) {
+      CheckedFunction<Configuration, InMemoryAliasMap> initFun,
+      String blockPoolId) {
     this.initFun = initFun;
-
+    this.blockPoolId = blockPoolId;
   }
 
   public void start() throws IOException {
@@ -92,7 +94,7 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
         .setVerbose(true)
         .build();
 
-    LOG.info("Starting InMemoryLevelDBAliasMapServer on ", rpcAddress);
+    LOG.info("Starting InMemoryLevelDBAliasMapServer on {}", rpcAddress);
     aliasMapServer.start();
   }
 
@@ -114,6 +116,11 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
       @Nonnull ProvidedStorageLocation providedStorageLocation)
       throws IOException {
     aliasMap.write(block, providedStorageLocation);
+  }
+
+  @Override
+  public String getBlockPoolId() {
+    return blockPoolId;
   }
 
   @Override

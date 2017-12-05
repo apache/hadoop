@@ -73,6 +73,7 @@ public class FileSystemImage implements Tool {
     options.addOption("i", "blockidclass", true, "Block resolver class");
     options.addOption("c", "cachedirs", true, "Max active dirents");
     options.addOption("cid", "clusterID", true, "Cluster ID");
+    options.addOption("bpid", "blockPoolID", true, "Block Pool ID");
     options.addOption("h", "help", false, "Print usage");
     return options;
   }
@@ -119,6 +120,9 @@ public class FileSystemImage implements Tool {
         break;
       case "cid":
         opts.clusterID(o.getValue());
+        break;
+      case "bpid":
+        opts.blockPoolID(o.getValue());
         break;
       default:
         throw new UnsupportedOperationException("Internal error");
