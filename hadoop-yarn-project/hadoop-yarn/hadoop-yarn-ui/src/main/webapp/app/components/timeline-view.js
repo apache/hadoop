@@ -472,9 +472,5 @@ export default Ember.Component.extend({
       prop = 'http://' + prop;
     }
     return prop;
-  },
-
-  isDataEmpty: Ember.computed(function() {
-    return this.modelArr.length === 0;
-  })
+  }
 });

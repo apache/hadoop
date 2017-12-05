@@ -16,31 +16,12 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import AbstractRoute from '../abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
+import DS from 'ember-data';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param, transition) {
-    const {app_id} = this.paramsFor('yarn-app');
-    const {service} = param;
-
-    transition.send('updateBreadcrumbs', app_id, service, [{text: 'Attempts'}]);
-    return Ember.RSVP.hash({
-      appId: app_id,
-      serviceName: service,
-      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
-        return Ember.A();
-      })
-    });
-  },
-
-  refresh() {
-    window.location.reload();
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-timeline-appattempt');
-  }
+export default DS.Model.extend({
+  fileName: DS.attr('string'),
+  fileSize: DS.attr('string'),
+  lastModifiedTime: DS.attr('string'),
+  containerId: DS.attr('string'),
+  nodeId: DS.attr('string')
 });
