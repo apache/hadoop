@@ -278,8 +278,8 @@ public class TestRMContainerImpl {
 
     // Verify whether list of ResourceRequest is present in RMContainer
     // while moving to ALLOCATED state
-    Assert.assertNotNull(scheduler.getRMContainer(containerId2)
-        .getResourceRequests());
+    Assert.assertNotNull(
+        scheduler.getRMContainer(containerId2).getContainerRequest());
 
     // Allocate container
     am1.allocate(new ArrayList<ResourceRequest>(), new ArrayList<ContainerId>())
@@ -288,8 +288,8 @@ public class TestRMContainerImpl {
 
     // After RMContainer moving to ACQUIRED state, list of ResourceRequest will
     // be empty
-    Assert.assertNull(scheduler.getRMContainer(containerId2)
-        .getResourceRequests());
+    Assert.assertNull(
+        scheduler.getRMContainer(containerId2).getContainerRequest());
   }
 
   @Test (timeout = 180000)

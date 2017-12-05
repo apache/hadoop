@@ -299,7 +299,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       }
       // If we have only ANY requests for this schedulerKey, we should not
       // delay its scheduling.
-      if (application.getResourceRequests(schedulerKey).size() == 1) {
+      if (application.getAppPlacementAllocator(schedulerKey)
+          .getUniqueLocationAsks() == 1) {
         return true;
       }
 

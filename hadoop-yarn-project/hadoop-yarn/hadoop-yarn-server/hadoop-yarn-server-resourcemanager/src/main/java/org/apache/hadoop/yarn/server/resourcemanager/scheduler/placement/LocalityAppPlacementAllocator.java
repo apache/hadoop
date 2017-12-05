@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
@@ -44,7 +45,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * into account locality preferences (node, rack, any) when allocating
  * containers.
  */
-public class LocalityAppPlacementAllocator<N extends SchedulerNode>
+public class LocalityAppPlacementAllocator <N extends SchedulerNode>
     implements AppPlacementAllocator<N> {
   private static final Log LOG =
       LogFactory.getLog(LocalityAppPlacementAllocator.class);
@@ -122,13 +123,13 @@ public class LocalityAppPlacementAllocator<N extends SchedulerNode>
   }
 
   @Override
-  public ResourceRequestUpdateResult updateResourceRequests(
+  public PendingAskUpdateResult updatePendingAsk(
       Collection<ResourceRequest> requests,
       boolean recoverPreemptedRequestForAContainer) {
     try {
       this.writeLock.lock();
 
-      ResourceRequestUpdateResult updateResult = null;
+      PendingAskUpdateResult updateResult = null;
 
       // Update resource requests
       for (ResourceRequest request : requests) {
@@ -156,7 +157,16 @@ public class LocalityAppPlacementAllocator<N extends SchedulerNode>
           //update the applications requested labels set
           appSchedulingInfo.addRequestedPartition(partition);
 
-          updateResult = new ResourceRequestUpdateResult(lastRequest, request);
+          PendingAsk lastPendingAsk =
+              lastRequest == null ? null : new PendingAsk(
+                  lastRequest.getCapability(), lastRequest.getNumContainers());
+          String lastRequestedNodePartition =
+              lastRequest == null ? null : lastRequest.getNodeLabelExpression();
+
+          updateResult = new PendingAskUpdateResult(lastPendingAsk,
+              new PendingAsk(request.getCapability(),
+                  request.getNumContainers()), lastRequestedNodePartition,
+              request.getNodeLabelExpression());
         }
       }
       return updateResult;
@@ -380,7 +390,7 @@ public class LocalityAppPlacementAllocator<N extends SchedulerNode>
   }
 
   @Override
-  public List<ResourceRequest> allocate(SchedulerRequestKey schedulerKey,
+  public ContainerRequest allocate(SchedulerRequestKey schedulerKey,
       NodeType type, SchedulerNode node) {
     try {
       writeLock.lock();
@@ -404,19 +414,9 @@ public class LocalityAppPlacementAllocator<N extends SchedulerNode>
         allocateOffSwitch(schedulerKey, request, resourceRequests);
       }
 
-      return resourceRequests;
+      return new ContainerRequest(resourceRequests);
     } finally {
       writeLock.unlock();
-    }
-  }
-
-  @Override
-  public Iterator<String> getAcceptedResouceNames() {
-    try {
-      readLock.lock();
-      return resourceRequestMap.keySet().iterator();
-    } finally {
-      readLock.unlock();
     }
   }
 }
