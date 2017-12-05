@@ -15,8 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The name of the script being executed.
+HADOOP_SHELL_EXECNAME="hdfs"
 MYNAME="${BASH_SOURCE-$0}"
-HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 
 ## @description  build up the hdfs command's usage text.
 ## @audience     public
@@ -126,6 +127,10 @@ function hdfscmd_case
       echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
       echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
       echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
+      if [[ -n "${QATESTMODE}" ]]; then
+        echo "MYNAME=${MYNAME}"
+        echo "HADOOP_SHELL_EXECNAME=${HADOOP_SHELL_EXECNAME}"
+      fi
       exit 0
     ;;
     ec)
