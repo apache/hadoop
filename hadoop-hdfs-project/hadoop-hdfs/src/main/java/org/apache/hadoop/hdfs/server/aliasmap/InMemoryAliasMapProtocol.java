@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.hdfs.server.aliasmap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
@@ -30,6 +32,8 @@ import java.util.Optional;
  * provided blocks for an in-memory implementation of the
  * {@link org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap}.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public interface InMemoryAliasMapProtocol {
 
   /**

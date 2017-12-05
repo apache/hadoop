@@ -38,6 +38,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.google.common.base.Charsets;
 import com.google.protobuf.CodedOutputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -72,6 +74,8 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageUtil.MAGIC_HEADER;
  * a valid FSImage/NN storage.
  */
 // TODO: generalize to types beyond FileRegion
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class ImageWriter implements Closeable {
 
   private static final int ONDISK_VERSION = 1;

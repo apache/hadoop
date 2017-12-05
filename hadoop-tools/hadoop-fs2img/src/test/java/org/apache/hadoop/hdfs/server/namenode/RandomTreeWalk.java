@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -32,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 /**
  * Random, repeatable hierarchy generator.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class RandomTreeWalk extends TreeWalk {
 
   private final Path root;

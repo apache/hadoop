@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.aliasmap;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -47,6 +49,8 @@ import java.util.Optional;
  * InMemoryAliasMap is an implementation of the InMemoryAliasMapProtocol for
  * use with LevelDB.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
     Configurable {
 

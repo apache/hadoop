@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.common;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -27,6 +29,8 @@ import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
  * This class is used to represent provided blocks that are file regions,
  * i.e., can be described using (path, offset, length).
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class FileRegion implements BlockAlias {
 
   private final Pair<Block, ProvidedStorageLocation> pair;

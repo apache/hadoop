@@ -26,6 +26,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +39,8 @@ import org.apache.hadoop.util.ToolRunner;
 /**
  * Create FSImage from an external namespace.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class FileSystemImage implements Tool {
 
   private Configuration conf;

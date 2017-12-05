@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 
@@ -27,6 +29,8 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
  * Given an external reference, create a sequence of blocks and associated
  * metadata.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public abstract class BlockResolver {
 
   protected BlockProto buildBlock(long blockId, long bytes) {

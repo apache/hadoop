@@ -25,6 +25,8 @@ import java.net.URI;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.input.BoundedInputStream;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,6 +44,8 @@ import org.slf4j.LoggerFactory;
 /**
  * This abstract class is used as a base class for provided replicas.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public abstract class ProvidedReplica extends ReplicaInfo {
 
   public static final Logger LOG =

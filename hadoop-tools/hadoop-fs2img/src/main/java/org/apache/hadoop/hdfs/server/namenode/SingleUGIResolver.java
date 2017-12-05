@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -27,6 +29,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * Map all owners/groups in external system to a single user in FSImage.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class SingleUGIResolver extends UGIResolver implements Configurable {
 
   public static final String UID   = "hdfs.image.writer.ugi.single.uid";
