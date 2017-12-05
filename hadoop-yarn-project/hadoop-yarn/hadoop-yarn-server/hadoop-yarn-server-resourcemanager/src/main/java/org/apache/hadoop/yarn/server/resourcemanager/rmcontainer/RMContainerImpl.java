@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -178,7 +179,7 @@ public class RMContainerImpl implements RMContainer {
   private long finishTime;
   private ContainerStatus finishedStatus;
   private boolean isAMContainer;
-  private List<ResourceRequest> resourceRequests;
+  private ContainerRequest containerRequestForRecovery;
 
   // Only used for container resource increase and decrease. This is the
   // resource to rollback to should container resource increase token expires.
@@ -233,7 +234,6 @@ public class RMContainerImpl implements RMContainer {
     this.eventHandler = rmContext.getDispatcher().getEventHandler();
     this.containerAllocationExpirer = rmContext.getContainerAllocationExpirer();
     this.isAMContainer = false;
-    this.resourceRequests = null;
     this.nodeLabelExpression = nodeLabelExpression;
     this.lastConfirmedResource = container.getResource();
     this.isExternallyAllocated = isExternallyAllocated;
@@ -412,21 +412,21 @@ public class RMContainerImpl implements RMContainer {
       readLock.unlock();
     }
   }
-  
+
   @Override
-  public List<ResourceRequest> getResourceRequests() {
+  public ContainerRequest getContainerRequest() {
     try {
       readLock.lock();
-      return resourceRequests;
+      return containerRequestForRecovery;
     } finally {
       readLock.unlock();
     }
   }
-  
-  public void setResourceRequests(List<ResourceRequest> requests) {
+
+  public void setContainerRequest(ContainerRequest request) {
+    writeLock.lock();
     try {
-      writeLock.lock();
-      this.resourceRequests = requests;
+      this.containerRequestForRecovery = request;
     } finally {
       writeLock.unlock();
     }
@@ -576,7 +576,7 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Clear ResourceRequest stored in RMContainer, we don't need to remember
       // this anymore.
-      container.setResourceRequests(null);
+      container.setContainerRequest(null);
       
       // Register with containerAllocationExpirer.
       container.containerAllocationExpirer.register(

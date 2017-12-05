@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
@@ -57,14 +58,14 @@ public interface AppPlacementAllocator<N extends SchedulerNode> {
   Iterator<N> getPreferredNodeIterator(CandidateNodeSet<N> candidateNodeSet);
 
   /**
-   * Replace existing ResourceRequest by the new requests
+   * Replace existing pending asks by the new requests
    *
-   * @param requests new ResourceRequests
+   * @param requests new asks
    * @param recoverPreemptedRequestForAContainer if we're recovering resource
    * requests for preempted container
    * @return true if total pending resource changed
    */
-  ResourceRequestUpdateResult updateResourceRequests(
+  PendingAskUpdateResult updatePendingAsk(
       Collection<ResourceRequest> requests,
       boolean recoverPreemptedRequestForAContainer);
 
@@ -97,16 +98,12 @@ public interface AppPlacementAllocator<N extends SchedulerNode> {
    * @param schedulerKey SchedulerRequestKey for this ResourceRequest
    * @param type Type of the allocation
    * @param node Which node this container allocated on
-   * @return list of ResourceRequests deducted
+   * @return ContainerRequest which include resource requests associated with
+   *         the container. This will be used by scheduler to recover requests.
+   *         Please refer to {@link ContainerRequest} for more details.
    */
-  List<ResourceRequest> allocate(SchedulerRequestKey schedulerKey,
+  ContainerRequest allocate(SchedulerRequestKey schedulerKey,
       NodeType type, SchedulerNode node);
-
-  /**
-   * Returns list of accepted resourceNames.
-   * @return Iterator of accepted resourceNames
-   */
-  Iterator<String> getAcceptedResouceNames();
 
   /**
    * We can still have pending requirement for a given NodeType and node

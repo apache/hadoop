@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerUpda
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeUpdateContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
@@ -449,11 +450,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
   
   public void recoverResourceRequestsForContainer(
-      List<ResourceRequest> requests) {
+      ContainerRequest containerRequest) {
     try {
       writeLock.lock();
       if (!isStopped) {
-        appSchedulingInfo.updateResourceRequests(requests, true);
+        appSchedulingInfo.updateResourceRequests(
+            containerRequest.getResourceRequests(), true);
       }
     } finally {
       writeLock.unlock();
@@ -913,7 +915,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         RMContainer c = tempIter.next();
         // Mark container for release (set RRs to null, so RM does not think
         // it is a recoverable container)
-        ((RMContainerImpl) c).setResourceRequests(null);
+        ((RMContainerImpl) c).setContainerRequest(null);
 
         // Release this container async-ly so as to prevent
         // 'LeafQueue::completedContainer()' from trying to acquire a lock
@@ -1383,13 +1385,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       SchedulerRequestKey schedulerRequestKey) {
     return appSchedulingInfo.getAppPlacementAllocator(schedulerRequestKey);
   }
-
-  public Map<String, ResourceRequest> getResourceRequests(
-      SchedulerRequestKey schedulerRequestKey) {
-    return appSchedulingInfo.getAppPlacementAllocator(schedulerRequestKey)
-        .getResourceRequests();
-  }
-
   public void incUnconfirmedRes(Resource res) {
     unconfirmedAllocatedMem.addAndGet(res.getMemorySize());
     unconfirmedAllocatedVcores.addAndGet(res.getVirtualCores());
