@@ -78,6 +78,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -2423,6 +2424,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         metadataStore.close();
         metadataStore = null;
       }
+      IOUtils.closeQuietly(instrumentation);
+      instrumentation = null;
     }
   }
 
