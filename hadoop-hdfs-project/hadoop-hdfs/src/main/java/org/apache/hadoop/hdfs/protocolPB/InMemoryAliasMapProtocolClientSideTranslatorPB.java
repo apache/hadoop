@@ -73,7 +73,8 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
           RPC.getProtocolVersion(AliasMapProtocolPB.class), aliasMapAddr, null,
           conf, NetUtils.getDefaultSocketFactory(conf), 0);
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new RuntimeException(
+          "Error in connecting to " + addr + " Got: " + e);
     }
   }
 
@@ -93,8 +94,7 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
           .stream()
           .map(kv -> new FileRegion(
               PBHelperClient.convert(kv.getKey()),
-              PBHelperClient.convert(kv.getValue()),
-              null
+              PBHelperClient.convert(kv.getValue())
           ))
           .collect(Collectors.toList());
       BlockProto nextMarker = response.getNextMarker();
@@ -152,6 +152,17 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
 
     try {
       rpcProxy.write(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public String getBlockPoolId() throws IOException {
+    try {
+      BlockPoolResponseProto response = rpcProxy.getBlockPoolId(null,
+          BlockPoolRequestProto.newBuilder().build());
+      return response.getBlockPoolId();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

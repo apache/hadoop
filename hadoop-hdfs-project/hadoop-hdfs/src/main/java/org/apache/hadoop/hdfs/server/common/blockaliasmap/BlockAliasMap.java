@@ -61,20 +61,22 @@ public abstract class BlockAliasMap<T extends BlockAlias> {
 
     /**
      * @param ident block to resolve
-     * @return BlockAlias correspoding to the provided block.
+     * @return BlockAlias corresponding to the provided block.
      * @throws IOException
      */
     public abstract Optional<U> resolve(Block ident) throws IOException;
-
   }
 
   /**
    * Returns a reader to the alias map.
    * @param opts reader options
-   * @return {@link Reader} to the alias map.
+   * @param blockPoolID block pool id to use
+   * @return {@link Reader} to the alias map. If a Reader for the blockPoolID
+   * cannot be created, this will return null.
    * @throws IOException
    */
-  public abstract Reader<T> getReader(Reader.Options opts) throws IOException;
+  public abstract Reader<T> getReader(Reader.Options opts, String blockPoolID)
+      throws IOException;
 
   /**
    * An abstract class used as a writer for the provided block map.
@@ -93,10 +95,12 @@ public abstract class BlockAliasMap<T extends BlockAlias> {
   /**
    * Returns the writer for the alias map.
    * @param opts writer options.
+   * @param blockPoolID block pool id to use
    * @return {@link Writer} to the alias map.
    * @throws IOException
    */
-  public abstract Writer<T> getWriter(Writer.Options opts) throws IOException;
+  public abstract Writer<T> getWriter(Writer.Options opts, String blockPoolID)
+      throws IOException;
 
   /**
    * Refresh the alias map.

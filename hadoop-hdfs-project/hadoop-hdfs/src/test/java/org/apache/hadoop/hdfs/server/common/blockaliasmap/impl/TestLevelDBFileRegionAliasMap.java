@@ -35,6 +35,8 @@ import static org.junit.Assert.assertNotEquals;
  */
 public class TestLevelDBFileRegionAliasMap {
 
+  private static final String BPID = "BPID-0";
+
   /**
    * A basic test to verify that we can write data and read it back again.
    * @throws Exception
@@ -48,13 +50,13 @@ public class TestLevelDBFileRegionAliasMap {
       LevelDBFileRegionAliasMap.LevelDBOptions opts =
           new LevelDBFileRegionAliasMap.LevelDBOptions()
               .filename(dbFile.getAbsolutePath());
-      BlockAliasMap.Writer<FileRegion> writer = frf.getWriter(opts);
+      BlockAliasMap.Writer<FileRegion> writer = frf.getWriter(opts, BPID);
 
       FileRegion fr = new FileRegion(1, new Path("/file"), 1, 1, 1);
       writer.store(fr);
       writer.close();
 
-      BlockAliasMap.Reader<FileRegion> reader = frf.getReader(opts);
+      BlockAliasMap.Reader<FileRegion> reader = frf.getReader(opts, BPID);
       FileRegion fr2 = reader.resolve(new Block(1, 1, 1)).get();
       assertEquals(fr, fr2);
       reader.close();
@@ -86,14 +88,14 @@ public class TestLevelDBFileRegionAliasMap {
       LevelDBFileRegionAliasMap.LevelDBOptions opts =
           new LevelDBFileRegionAliasMap.LevelDBOptions()
               .filename(dbFile.getAbsolutePath());
-      BlockAliasMap.Writer<FileRegion> writer = frf.getWriter(opts);
+      BlockAliasMap.Writer<FileRegion> writer = frf.getWriter(opts, BPID);
 
       for (FileRegion fr : regions) {
         writer.store(fr);
       }
       writer.close();
 
-      BlockAliasMap.Reader<FileRegion> reader = frf.getReader(opts);
+      BlockAliasMap.Reader<FileRegion> reader = frf.getReader(opts, BPID);
       Iterator<FileRegion> it = reader.iterator();
       int last = -1;
       int count = 0;

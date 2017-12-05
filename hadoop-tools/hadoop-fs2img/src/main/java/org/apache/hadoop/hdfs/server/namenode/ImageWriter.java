@@ -134,6 +134,11 @@ public class ImageWriter implements Closeable {
         if (opts.clusterID.length() > 0) {
           info.setClusterID(opts.clusterID);
         }
+        // if block pool id is given
+        if (opts.blockPoolID.length() > 0) {
+          info.setBlockPoolID(opts.blockPoolID);
+        }
+
         stor.format(info);
         blockPoolID = info.getBlockPoolID();
       }
@@ -165,7 +170,7 @@ public class ImageWriter implements Closeable {
     BlockAliasMap<FileRegion> fmt = null == opts.blocks
         ? ReflectionUtils.newInstance(opts.aliasMap, opts.getConf())
         : opts.blocks;
-    blocks = fmt.getWriter(null);
+    blocks = fmt.getWriter(null, blockPoolID);
     blockIds = null == opts.blockIds
         ? ReflectionUtils.newInstance(opts.blockIdsClass, opts.getConf())
         : opts.blockIds;
@@ -525,6 +530,7 @@ public class ImageWriter implements Closeable {
     private Class<? extends UGIResolver> ugisClass;
     private BlockAliasMap<FileRegion> blocks;
     private String clusterID;
+    private String blockPoolID;
 
     @SuppressWarnings("rawtypes")
     private Class<? extends BlockAliasMap> aliasMap;
@@ -552,6 +558,7 @@ public class ImageWriter implements Closeable {
       blockIdsClass = conf.getClass(BLOCK_RESOLVER_CLASS,
           FixedBlockResolver.class, BlockResolver.class);
       clusterID = "";
+      blockPoolID = "";
     }
 
     @Override
@@ -612,6 +619,11 @@ public class ImageWriter implements Closeable {
 
     public Options clusterID(String clusterID) {
       this.clusterID = clusterID;
+      return this;
+    }
+
+    public Options blockPoolID(String blockPoolID) {
+      this.blockPoolID = blockPoolID;
       return this;
     }
   }

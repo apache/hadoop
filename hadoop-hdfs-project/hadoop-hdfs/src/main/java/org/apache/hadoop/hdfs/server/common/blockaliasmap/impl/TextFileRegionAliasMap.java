@@ -82,7 +82,7 @@ public class TextFileRegionAliasMap
   }
 
   @Override
-  public Reader<FileRegion> getReader(Reader.Options opts)
+  public Reader<FileRegion> getReader(Reader.Options opts, String blockPoolID)
       throws IOException {
     if (null == opts) {
       opts = readerOpts;
@@ -94,23 +94,29 @@ public class TextFileRegionAliasMap
     Configuration readerConf = (null == o.getConf())
         ? new Configuration()
             : o.getConf();
-    return createReader(o.file, o.delim, readerConf);
+    return createReader(o.file, o.delim, readerConf, blockPoolID);
   }
 
   @VisibleForTesting
-  TextReader createReader(Path file, String delim, Configuration cfg)
-      throws IOException {
+  TextReader createReader(Path file, String delim, Configuration cfg,
+      String blockPoolID) throws IOException {
     FileSystem fs = file.getFileSystem(cfg);
     if (fs instanceof LocalFileSystem) {
       fs = ((LocalFileSystem)fs).getRaw();
     }
     CompressionCodecFactory factory = new CompressionCodecFactory(cfg);
     CompressionCodec codec = factory.getCodec(file);
-    return new TextReader(fs, file, codec, delim);
+    String filename = fileNameFromBlockPoolID(blockPoolID);
+    if (codec != null) {
+      filename = filename + codec.getDefaultExtension();
+    }
+    Path bpidFilePath = new Path(file.getParent(), filename);
+    return new TextReader(fs, bpidFilePath, codec, delim);
   }
 
   @Override
-  public Writer<FileRegion> getWriter(Writer.Options opts) throws IOException {
+  public Writer<FileRegion> getWriter(Writer.Options opts, String blockPoolID)
+      throws IOException {
     if (null == opts) {
       opts = writerOpts;
     }
@@ -121,14 +127,15 @@ public class TextFileRegionAliasMap
     Configuration cfg = (null == o.getConf())
         ? new Configuration()
             : o.getConf();
+    String baseName = fileNameFromBlockPoolID(blockPoolID);
+    Path blocksFile = new Path(o.dir, baseName);
     if (o.codec != null) {
       CompressionCodecFactory factory = new CompressionCodecFactory(cfg);
       CompressionCodec codec = factory.getCodecByName(o.codec);
-      String name = o.file.getName() + codec.getDefaultExtension();
-      o.filename(new Path(o.file.getParent(), name));
-      return createWriter(o.file, codec, o.delim, cfg);
+      blocksFile = new Path(o.dir, baseName + codec.getDefaultExtension());
+      return createWriter(blocksFile, codec, o.delim, cfg);
     }
-    return createWriter(o.file, null, o.delim, conf);
+    return createWriter(blocksFile, null, o.delim, conf);
   }
 
   @VisibleForTesting
@@ -154,15 +161,15 @@ public class TextFileRegionAliasMap
     private String delim =
         DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT;
     private Path file = new Path(
-        new File(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT).toURI()
-            .toString());
+        new File(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE_DEFAULT)
+            .toURI().toString());
 
     @Override
     public void setConf(Configuration conf) {
       this.conf = conf;
       String tmpfile =
-          conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_PATH,
-              DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);
+          conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE,
+              DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE_DEFAULT);
       file = new Path(tmpfile);
       delim = conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER,
           DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT);
@@ -195,17 +202,17 @@ public class TextFileRegionAliasMap
 
     private Configuration conf;
     private String codec = null;
-    private Path file =
-        new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);
+    private Path dir =
+        new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR_DEFAULT);
     private String delim =
         DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT;
 
     @Override
     public void setConf(Configuration conf) {
       this.conf = conf;
-      String tmpfile = conf.get(
-          DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_PATH, file.toString());
-      file = new Path(tmpfile);
+      String tmpDir = conf.get(
+          DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR, dir.toString());
+      dir = new Path(tmpDir);
       codec = conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_CODEC);
       delim = conf.get(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER,
           DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT);
@@ -217,8 +224,8 @@ public class TextFileRegionAliasMap
     }
 
     @Override
-    public WriterOptions filename(Path file) {
-      this.file = file;
+    public WriterOptions dirName(Path dir) {
+      this.dir = dir;
       return this;
     }
 
@@ -226,8 +233,8 @@ public class TextFileRegionAliasMap
       return codec;
     }
 
-    public Path getFile() {
-      return file;
+    public Path getDir() {
+      return dir;
     }
 
     @Override
@@ -267,6 +274,7 @@ public class TextFileRegionAliasMap
     private final FileSystem fs;
     private final CompressionCodec codec;
     private final Map<FRIterator, BufferedReader> iterators;
+    private final String blockPoolID;
 
     protected TextReader(FileSystem fs, Path file, CompressionCodec codec,
         String delim) {
@@ -281,6 +289,7 @@ public class TextFileRegionAliasMap
       this.codec = codec;
       this.delim = delim;
       this.iterators = Collections.synchronizedMap(iterators);
+      this.blockPoolID = blockPoolIDFromFileName(file);
     }
 
     @Override
@@ -344,12 +353,11 @@ public class TextFileRegionAliasMap
         return null;
       }
       String[] f = line.split(delim);
-      if (f.length != 6) {
+      if (f.length != 5) {
         throw new IOException("Invalid line: " + line);
       }
       return new FileRegion(Long.parseLong(f[0]), new Path(f[1]),
-          Long.parseLong(f[2]), Long.parseLong(f[3]), f[4],
-          Long.parseLong(f[5]));
+          Long.parseLong(f[2]), Long.parseLong(f[3]), Long.parseLong(f[4]));
     }
 
     public InputStream createStream() throws IOException {
@@ -409,7 +417,7 @@ public class TextFileRegionAliasMap
      */
     public interface Options extends Writer.Options {
       Options codec(String codec);
-      Options filename(Path file);
+      Options dirName(Path dir);
       Options delimiter(String delim);
     }
 
@@ -434,7 +442,6 @@ public class TextFileRegionAliasMap
       out.append(psl.getPath().toString()).append(delim);
       out.append(Long.toString(psl.getOffset())).append(delim);
       out.append(Long.toString(psl.getLength())).append(delim);
-      out.append(token.getBlockPoolId()).append(delim);
       out.append(Long.toString(block.getGenerationStamp())).append(delim);
       out.append("\n");
     }
@@ -457,4 +464,17 @@ public class TextFileRegionAliasMap
     //nothing to do;
   }
 
+  @VisibleForTesting
+  public static String blockPoolIDFromFileName(Path file) {
+    if (file == null) {
+      return "";
+    }
+    String fileName = file.getName();
+    return fileName.substring("blocks_".length()).split("\\.")[0];
+  }
+
+  @VisibleForTesting
+  public static String fileNameFromBlockPoolID(String blockPoolID) {
+    return "blocks_" + blockPoolID + ".csv";
+  }
 }

@@ -729,6 +729,7 @@ public class NameNode extends ReconfigurableBase implements
     }
 
     loadNamesystem(conf);
+    startAliasMapServerIfNecessary(conf);
 
     rpcServer = createRpcServer(conf);
 
@@ -749,7 +750,6 @@ public class NameNode extends ReconfigurableBase implements
 
     startCommonServices(conf);
     startMetricsLogger(conf);
-    startAliasMapServerIfNecessary(conf);
   }
 
   private void startAliasMapServerIfNecessary(Configuration conf)
@@ -758,8 +758,8 @@ public class NameNode extends ReconfigurableBase implements
         DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT)
         && conf.getBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED,
             DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED_DEFAULT)) {
-      levelDBAliasMapServer =
-          new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init);
+      levelDBAliasMapServer = new InMemoryLevelDBAliasMapServer(
+          InMemoryAliasMap::init, namesystem.getBlockPoolId());
       levelDBAliasMapServer.setConf(conf);
       levelDBAliasMapServer.start();
     }

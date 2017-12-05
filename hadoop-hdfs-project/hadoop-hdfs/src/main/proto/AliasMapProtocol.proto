@@ -53,8 +53,16 @@ message ListResponseProto {
   optional BlockProto nextMarker = 2;
 }
 
+message BlockPoolRequestProto {
+}
+
+message BlockPoolResponseProto {
+  required string blockPoolId = 1;
+}
+
 service AliasMapProtocolService {
   rpc write(WriteRequestProto) returns(WriteResponseProto);
   rpc read(ReadRequestProto) returns(ReadResponseProto);
   rpc list(ListRequestProto) returns(ListResponseProto);
+  rpc getBlockPoolId(BlockPoolRequestProto) returns(BlockPoolResponseProto);
 }

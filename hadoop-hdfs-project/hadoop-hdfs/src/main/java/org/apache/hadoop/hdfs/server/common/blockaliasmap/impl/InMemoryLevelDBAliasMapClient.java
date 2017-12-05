@@ -46,6 +46,7 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
 
   private Configuration conf;
   private InMemoryAliasMapProtocolClientSideTranslatorPB aliasMap;
+  private String blockPoolID;
 
   @Override
   public void close() {
@@ -57,7 +58,7 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
     @Override
     public Optional<FileRegion> resolve(Block block) throws IOException {
       Optional<ProvidedStorageLocation> read = aliasMap.read(block);
-      return read.map(psl -> new FileRegion(block, psl, null));
+      return read.map(psl -> new FileRegion(block, psl));
     }
 
     @Override
@@ -133,12 +134,29 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
 
 
   @Override
-  public Reader<FileRegion> getReader(Reader.Options opts) throws IOException {
+  public Reader<FileRegion> getReader(Reader.Options opts, String blockPoolID)
+      throws IOException {
+    if (this.blockPoolID == null) {
+      this.blockPoolID = aliasMap.getBlockPoolId();
+    }
+    // if a block pool id has been supplied, and doesn't match the associated
+    // block pool id, return null.
+    if (blockPoolID != null && this.blockPoolID != null
+        && !this.blockPoolID.equals(blockPoolID)) {
+      return null;
+    }
     return new LevelDbReader();
   }
 
   @Override
-  public Writer<FileRegion> getWriter(Writer.Options opts) throws IOException {
+  public Writer<FileRegion> getWriter(Writer.Options opts, String blockPoolID)
+      throws IOException {
+    if (this.blockPoolID == null) {
+      this.blockPoolID = aliasMap.getBlockPoolId();
+    }
+    if (blockPoolID != null && !this.blockPoolID.equals(blockPoolID)) {
+      return null;
+    }
     return new LevelDbWriter();
   }
 

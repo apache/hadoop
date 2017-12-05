@@ -56,11 +56,10 @@ public class TestInMemoryLevelDBAliasMapClient {
   private InMemoryLevelDBAliasMapClient inMemoryLevelDBAliasMapClient;
   private File tempDir;
   private Configuration conf;
+  private final static String BPID = "BPID-0";
 
   @Before
   public void setUp() throws IOException {
-    levelDBAliasMapServer =
-        new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init);
     conf = new Configuration();
     int port = 9876;
 
@@ -69,6 +68,8 @@ public class TestInMemoryLevelDBAliasMapClient {
     tempDir = Files.createTempDir();
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
         tempDir.getAbsolutePath());
+    levelDBAliasMapServer =
+        new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init, BPID);
     inMemoryLevelDBAliasMapClient = new InMemoryLevelDBAliasMapClient();
   }
 
@@ -81,20 +82,20 @@ public class TestInMemoryLevelDBAliasMapClient {
 
   @Test
   public void writeRead() throws Exception {
-    inMemoryLevelDBAliasMapClient.setConf(conf);
     levelDBAliasMapServer.setConf(conf);
     levelDBAliasMapServer.start();
+    inMemoryLevelDBAliasMapClient.setConf(conf);
     Block block = new Block(42, 43, 44);
     byte[] nonce = "blackbird".getBytes();
     ProvidedStorageLocation providedStorageLocation
         = new ProvidedStorageLocation(new Path("cuckoo"),
         45, 46, nonce);
     BlockAliasMap.Writer<FileRegion> writer =
-        inMemoryLevelDBAliasMapClient.getWriter(null);
+        inMemoryLevelDBAliasMapClient.getWriter(null, BPID);
     writer.store(new FileRegion(block, providedStorageLocation));
 
     BlockAliasMap.Reader<FileRegion> reader =
-        inMemoryLevelDBAliasMapClient.getReader(null);
+        inMemoryLevelDBAliasMapClient.getReader(null, BPID);
     Optional<FileRegion> fileRegion = reader.resolve(block);
     assertEquals(new FileRegion(block, providedStorageLocation),
         fileRegion.get());
@@ -102,9 +103,9 @@ public class TestInMemoryLevelDBAliasMapClient {
 
   @Test
   public void iterateSingleBatch() throws Exception {
-    inMemoryLevelDBAliasMapClient.setConf(conf);
     levelDBAliasMapServer.setConf(conf);
     levelDBAliasMapServer.start();
+    inMemoryLevelDBAliasMapClient.setConf(conf);
     Block block1 = new Block(42, 43, 44);
     Block block2 = new Block(43, 44, 45);
     byte[] nonce1 = "blackbird".getBytes();
@@ -116,14 +117,14 @@ public class TestInMemoryLevelDBAliasMapClient {
         new ProvidedStorageLocation(new Path("falcon"),
             46, 47, nonce2);
     BlockAliasMap.Writer<FileRegion> writer1 =
-        inMemoryLevelDBAliasMapClient.getWriter(null);
+        inMemoryLevelDBAliasMapClient.getWriter(null, BPID);
     writer1.store(new FileRegion(block1, providedStorageLocation1));
     BlockAliasMap.Writer<FileRegion> writer2 =
-        inMemoryLevelDBAliasMapClient.getWriter(null);
+        inMemoryLevelDBAliasMapClient.getWriter(null, BPID);
     writer2.store(new FileRegion(block2, providedStorageLocation2));
 
     BlockAliasMap.Reader<FileRegion> reader =
-        inMemoryLevelDBAliasMapClient.getReader(null);
+        inMemoryLevelDBAliasMapClient.getReader(null, BPID);
     List<FileRegion> actualFileRegions =
         Lists.newArrayListWithCapacity(2);
     for (FileRegion fileRegion : reader) {
@@ -140,8 +141,8 @@ public class TestInMemoryLevelDBAliasMapClient {
   public void iterateThreeBatches() throws Exception {
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_BATCH_SIZE, "2");
     levelDBAliasMapServer.setConf(conf);
-    inMemoryLevelDBAliasMapClient.setConf(conf);
     levelDBAliasMapServer.start();
+    inMemoryLevelDBAliasMapClient.setConf(conf);
     Block block1 = new Block(42, 43, 44);
     Block block2 = new Block(43, 44, 45);
     Block block3 = new Block(44, 45, 46);
@@ -173,26 +174,26 @@ public class TestInMemoryLevelDBAliasMapClient {
         new ProvidedStorageLocation(new Path("duck"),
             56, 57, nonce6);
     inMemoryLevelDBAliasMapClient
-        .getWriter(null)
+        .getWriter(null, BPID)
         .store(new FileRegion(block1, providedStorageLocation1));
     inMemoryLevelDBAliasMapClient
-        .getWriter(null)
+        .getWriter(null, BPID)
         .store(new FileRegion(block2, providedStorageLocation2));
     inMemoryLevelDBAliasMapClient
-        .getWriter(null)
+        .getWriter(null, BPID)
         .store(new FileRegion(block3, providedStorageLocation3));
     inMemoryLevelDBAliasMapClient
-        .getWriter(null)
+        .getWriter(null, BPID)
         .store(new FileRegion(block4, providedStorageLocation4));
     inMemoryLevelDBAliasMapClient
-        .getWriter(null)
+        .getWriter(null, BPID)
         .store(new FileRegion(block5, providedStorageLocation5));
     inMemoryLevelDBAliasMapClient
-        .getWriter(null)
+        .getWriter(null, BPID)
         .store(new FileRegion(block6, providedStorageLocation6));
 
     BlockAliasMap.Reader<FileRegion> reader =
-        inMemoryLevelDBAliasMapClient.getReader(null);
+        inMemoryLevelDBAliasMapClient.getReader(null, BPID);
     List<FileRegion> actualFileRegions =
         Lists.newArrayListWithCapacity(6);
     for (FileRegion fileRegion : reader) {
@@ -278,9 +279,9 @@ public class TestInMemoryLevelDBAliasMapClient {
 
   @Test
   public void multipleReads() throws IOException {
-    inMemoryLevelDBAliasMapClient.setConf(conf);
     levelDBAliasMapServer.setConf(conf);
     levelDBAliasMapServer.start();
+    inMemoryLevelDBAliasMapClient.setConf(conf);
 
     Random r = new Random();
     List<FileRegion> expectedFileRegions = r.ints(0, 200)
@@ -291,9 +292,9 @@ public class TestInMemoryLevelDBAliasMapClient {
 
 
     BlockAliasMap.Reader<FileRegion> reader =
-        inMemoryLevelDBAliasMapClient.getReader(null);
+        inMemoryLevelDBAliasMapClient.getReader(null, BPID);
     BlockAliasMap.Writer<FileRegion> writer =
-        inMemoryLevelDBAliasMapClient.getWriter(null);
+        inMemoryLevelDBAliasMapClient.getWriter(null, BPID);
 
     ExecutorService executor = Executors.newCachedThreadPool();
 

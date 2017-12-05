@@ -1122,6 +1122,6 @@ public class PBHelper {
     ProvidedStorageLocation providedStorageLocation =
         PBHelperClient.convert(providedStorageLocationProto);
 
-    return new FileRegion(block, providedStorageLocation, null);
+    return new FileRegion(block, providedStorageLocation);
   }
 }

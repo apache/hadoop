@@ -31,7 +31,10 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.junit.Test;
+
+import static org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap.fileNameFromBlockPoolID;
 import static org.junit.Assert.*;
 
 /**
@@ -39,7 +42,10 @@ import static org.junit.Assert.*;
  */
 public class TestTextBlockAliasMap {
 
-  static final Path OUTFILE = new Path("hdfs://dummyServer:0000/dummyFile.txt");
+  static final String OUTFILE_PATH = "hdfs://dummyServer:0000/";
+  static final String OUTFILE_BASENAME = "dummyFile";
+  static final Path OUTFILE = new Path(OUTFILE_PATH, OUTFILE_BASENAME + "txt");
+  static final String BPID = "BPID-0";
 
   void check(TextWriter.Options opts, final Path vp,
       final Class<? extends CompressionCodec> vc) throws IOException {
@@ -56,7 +62,25 @@ public class TestTextBlockAliasMap {
         return null; // ignored
       }
     };
-    mFmt.getWriter(opts);
+    mFmt.getWriter(opts, BPID);
+  }
+
+  void check(TextReader.Options opts, final Path vp,
+      final Class<? extends CompressionCodec> vc) throws IOException {
+    TextFileRegionAliasMap aliasMap = new TextFileRegionAliasMap() {
+      @Override
+      public TextReader createReader(Path file, String delim, Configuration cfg,
+          String blockPoolID) throws IOException {
+        assertEquals(vp, file);
+        if (null != vc) {
+          CompressionCodecFactory factory = new CompressionCodecFactory(cfg);
+          CompressionCodec codec = factory.getCodec(file);
+          assertEquals(vc, codec.getClass());
+        }
+        return null; // ignored
+      }
+    };
+    aliasMap.getReader(opts, BPID);
   }
 
   @Test
@@ -64,18 +88,33 @@ public class TestTextBlockAliasMap {
     TextWriter.Options opts = TextWriter.defaults();
     assertTrue(opts instanceof WriterOptions);
     WriterOptions wopts = (WriterOptions) opts;
-    Path def = new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_PATH_DEFAULT);
-    assertEquals(def, wopts.getFile());
+    Path def =
+        new Path(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR_DEFAULT);
+    assertEquals(def, wopts.getDir());
     assertNull(wopts.getCodec());
 
-    opts.filename(OUTFILE);
-    check(opts, OUTFILE, null);
+    Path cp = new Path(OUTFILE_PATH, "blocks_" + BPID + ".csv");
+    opts.dirName(new Path(OUTFILE_PATH));
+    check(opts, cp, null);
 
-    opts.filename(OUTFILE);
     opts.codec("gzip");
-    Path cp = new Path(OUTFILE.getParent(), OUTFILE.getName() + ".gz");
+    cp = new Path(OUTFILE_PATH, "blocks_" + BPID + ".csv.gz");
     check(opts, cp, org.apache.hadoop.io.compress.GzipCodec.class);
+  }
 
+  @Test
+  public void testReaderOptions() throws Exception {
+    TextReader.Options opts = TextReader.defaults();
+    assertTrue(opts instanceof ReaderOptions);
+    ReaderOptions ropts = (ReaderOptions) opts;
+
+    Path cp = new Path(OUTFILE_PATH, fileNameFromBlockPoolID(BPID));
+    opts.filename(cp);
+    check(opts, cp, null);
+
+    cp = new Path(OUTFILE_PATH, "blocks_" + BPID + ".csv.gz");
+    opts.filename(cp);
+    check(opts, cp, org.apache.hadoop.io.compress.GzipCodec.class);
   }
 
   @Test
