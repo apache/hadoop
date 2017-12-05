@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.BlockMissingException;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -79,6 +78,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap.fileNameFromBlockPoolID;
 import static org.apache.hadoop.net.NodeBase.PATH_SEPARATOR_STR;
 import static org.junit.Assert.*;
 
@@ -93,7 +93,6 @@ public class TestNameNodeProvidedImplementation {
   final Path BASE = new Path(fBASE.toURI().toString());
   final Path NAMEPATH = new Path(BASE, "providedDir");
   final Path NNDIRPATH = new Path(BASE, "nnDir");
-  final Path BLOCKFILE = new Path(NNDIRPATH, "blocks.csv");
   final String SINGLEUSER = "usr1";
   final String SINGLEGROUP = "grp1";
   private final int numFiles = 10;
@@ -101,6 +100,7 @@ public class TestNameNodeProvidedImplementation {
   private final String fileSuffix = ".dat";
   private final int baseFileLen = 1024;
   private long providedDataSize = 0;
+  private final String bpid = "BP-1234-10.1.1.1-1224";
 
   Configuration conf;
   MiniDFSCluster cluster;
@@ -123,10 +123,10 @@ public class TestNameNodeProvidedImplementation {
 
     conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         TextFileRegionAliasMap.class, BlockAliasMap.class);
-    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_PATH,
-        BLOCKFILE.toString());
-    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_PATH,
-        BLOCKFILE.toString());
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR,
+        NNDIRPATH.toString());
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE,
+        new Path(NNDIRPATH, fileNameFromBlockPoolID(bpid)).toString());
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER, ",");
 
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR_PROVIDED,
@@ -189,14 +189,14 @@ public class TestNameNodeProvidedImplementation {
     opts.output(out.toString())
         .blocks(aliasMapClass)
         .blockIds(blockIdsClass)
-        .clusterID(clusterID);
+        .clusterID(clusterID)
+        .blockPoolID(bpid);
     try (ImageWriter w = new ImageWriter(opts)) {
       for (TreePath e : t) {
         w.accept(e);
       }
     }
   }
-
   void startCluster(Path nspath, int numDatanodes,
       StorageType[] storageTypes,
       StorageType[][] storageTypesPerDatanode,
@@ -743,9 +743,7 @@ public class TestNameNodeProvidedImplementation {
   }
 
 
-  // This test will fail until there is a refactoring of the FileRegion
-  // (HDFS-12713).
-  @Test(expected=BlockMissingException.class)
+  @Test
   public void testInMemoryAliasMap() throws Exception {
     conf.setClass(ImageWriter.Options.UGI_CLASS,
         FsUGIResolver.class, UGIResolver.class);
@@ -758,9 +756,9 @@ public class TestNameNodeProvidedImplementation {
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
         tempDirectory.getAbsolutePath());
     conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
-
+    conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
     InMemoryLevelDBAliasMapServer levelDBAliasMapServer =
-        new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init);
+        new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init, bpid);
     levelDBAliasMapServer.setConf(conf);
     levelDBAliasMapServer.start();
 

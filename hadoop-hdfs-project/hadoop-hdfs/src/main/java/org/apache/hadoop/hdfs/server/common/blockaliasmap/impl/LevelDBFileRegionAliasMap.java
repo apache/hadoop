@@ -70,7 +70,8 @@ public class LevelDBFileRegionAliasMap
   }
 
   @Override
-  public Reader<FileRegion> getReader(Reader.Options opts) throws IOException {
+  public Reader<FileRegion> getReader(Reader.Options opts, String blockPoolID)
+      throws IOException {
     if (null == opts) {
       opts = this.opts;
     }
@@ -79,11 +80,12 @@ public class LevelDBFileRegionAliasMap
     }
     LevelDBOptions o = (LevelDBOptions) opts;
     return new LevelDBFileRegionAliasMap.LevelDBReader(
-        createDB(o.levelDBPath, false));
+        createDB(o.levelDBPath, false, blockPoolID));
   }
 
   @Override
-  public Writer<FileRegion> getWriter(Writer.Options opts) throws IOException {
+  public Writer<FileRegion> getWriter(Writer.Options opts, String blockPoolID)
+      throws IOException {
     if (null == opts) {
       opts = this.opts;
     }
@@ -92,11 +94,11 @@ public class LevelDBFileRegionAliasMap
     }
     LevelDBOptions o = (LevelDBOptions) opts;
     return new LevelDBFileRegionAliasMap.LevelDBWriter(
-        createDB(o.levelDBPath, true));
+        createDB(o.levelDBPath, true, blockPoolID));
   }
 
-  private static DB createDB(String levelDBPath, boolean createIfMissing)
-      throws IOException {
+  private static DB createDB(String levelDBPath, boolean createIfMissing,
+      String blockPoolID) throws IOException {
     if (levelDBPath == null || levelDBPath.length() == 0) {
       throw new IllegalArgumentException(
           "A valid path needs to be specified for "
@@ -105,7 +107,13 @@ public class LevelDBFileRegionAliasMap
     }
     org.iq80.leveldb.Options options = new org.iq80.leveldb.Options();
     options.createIfMissing(createIfMissing);
-    return factory.open(new File(levelDBPath), options);
+    File dbFile;
+    if (blockPoolID != null) {
+      dbFile = new File(levelDBPath, blockPoolID);
+    } else {
+      dbFile = new File(levelDBPath);
+    }
+    return factory.open(dbFile, options);
   }
 
   @Override

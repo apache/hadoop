@@ -34,39 +34,21 @@ import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 public class FileRegion implements BlockAlias {
 
   private final Pair<Block, ProvidedStorageLocation> pair;
-  private final String bpid;
-
-  public FileRegion(long blockId, Path path, long offset,
-      long length, String bpid, long genStamp) {
-    this(new Block(blockId, length, genStamp),
-        new ProvidedStorageLocation(path, offset, length, new byte[0]), bpid);
-  }
-
-  public FileRegion(long blockId, Path path, long offset,
-      long length, String bpid) {
-    this(blockId, path, offset, length, bpid,
-        HdfsConstants.GRANDFATHER_GENERATION_STAMP);
-  }
 
   public FileRegion(long blockId, Path path, long offset,
       long length, long genStamp) {
-    this(blockId, path, offset, length, null, genStamp);
+    this(new Block(blockId, length, genStamp),
+        new ProvidedStorageLocation(path, offset, length, new byte[0]));
+  }
+
+  public FileRegion(long blockId, Path path, long offset, long length) {
+    this(blockId, path, offset, length,
+        HdfsConstants.GRANDFATHER_GENERATION_STAMP);
   }
 
   public FileRegion(Block block,
       ProvidedStorageLocation providedStorageLocation) {
     this.pair  = Pair.of(block, providedStorageLocation);
-    this.bpid = null;
-  }
-
-  public FileRegion(Block block,
-      ProvidedStorageLocation providedStorageLocation, String bpid) {
-    this.pair  = Pair.of(block, providedStorageLocation);
-    this.bpid = bpid;
-  }
-
-  public FileRegion(long blockId, Path path, long offset, long length) {
-    this(blockId, path, offset, length, null);
   }
 
   public Block getBlock() {
@@ -75,10 +57,6 @@ public class FileRegion implements BlockAlias {
 
   public ProvidedStorageLocation getProvidedStorageLocation() {
     return pair.getValue();
-  }
-
-  public String getBlockPoolId() {
-    return this.bpid;
   }
 
   @Override

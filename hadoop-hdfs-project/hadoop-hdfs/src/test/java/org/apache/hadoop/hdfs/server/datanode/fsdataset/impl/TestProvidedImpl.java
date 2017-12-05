@@ -150,7 +150,7 @@ public class TestProvidedImpl {
           }
         }
         region = new FileRegion(currentCount, new Path(newFile.toString()),
-            0, BLK_LEN, BLOCK_POOL_IDS[CHOSEN_BP_ID]);
+            0, BLK_LEN);
         currentCount++;
       }
       return region;
@@ -194,9 +194,12 @@ public class TestProvidedImpl {
     }
 
     @Override
-    public Reader<FileRegion> getReader(Reader.Options opts)
+    public Reader<FileRegion> getReader(Reader.Options opts, String blockPoolId)
         throws IOException {
 
+      if (!blockPoolId.equals(BLOCK_POOL_IDS[CHOSEN_BP_ID])) {
+        return null;
+      }
       BlockAliasMap.Reader<FileRegion> reader =
           new BlockAliasMap.Reader<FileRegion>() {
             @Override
@@ -224,7 +227,7 @@ public class TestProvidedImpl {
     }
 
     @Override
-    public Writer<FileRegion> getWriter(Writer.Options opts)
+    public Writer<FileRegion> getWriter(Writer.Options opts, String blockPoolId)
         throws IOException {
       // not implemented
       return null;

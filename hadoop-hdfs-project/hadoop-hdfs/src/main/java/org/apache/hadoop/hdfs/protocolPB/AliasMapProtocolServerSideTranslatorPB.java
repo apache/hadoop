@@ -121,4 +121,14 @@ public class AliasMapProtocolServerSideTranslatorPB
       throw new ServiceException(e);
     }
   }
+
+  public BlockPoolResponseProto getBlockPoolId(RpcController controller,
+      BlockPoolRequestProto req) throws ServiceException {
+    try {
+      String bpid = aliasMap.getBlockPoolId();
+      return BlockPoolResponseProto.newBuilder().setBlockPoolId(bpid).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
 }

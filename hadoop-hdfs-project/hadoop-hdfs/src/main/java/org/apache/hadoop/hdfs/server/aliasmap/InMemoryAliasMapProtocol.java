@@ -93,4 +93,11 @@ public interface InMemoryAliasMapProtocol {
   void write(@Nonnull Block block,
       @Nonnull ProvidedStorageLocation providedStorageLocation)
       throws IOException;
+
+  /**
+   * Get the associated block pool id.
+   * @return the block pool id associated with the Namenode running
+   * the in-memory alias map.
+   */
+  String getBlockPoolId() throws IOException;
 }

@@ -152,8 +152,12 @@ public class ProvidedStorageMap {
       LOG.info("Calling process first blk report from storage: "
           + providedStorageInfo);
       // first pass; periodic refresh should call bm.processReport
-      bm.processFirstBlockReport(providedStorageInfo,
-          new ProvidedBlockList(aliasMap.getReader(null).iterator()));
+      BlockAliasMap.Reader<BlockAlias> reader =
+          aliasMap.getReader(null, bm.getBlockPoolId());
+      if (reader != null) {
+        bm.processFirstBlockReport(providedStorageInfo,
+                new ProvidedBlockList(reader.iterator()));
+      }
     }
   }
 

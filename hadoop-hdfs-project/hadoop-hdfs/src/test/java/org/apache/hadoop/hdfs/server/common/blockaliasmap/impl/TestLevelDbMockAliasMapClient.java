@@ -36,6 +36,7 @@ import java.io.IOException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests the in-memory alias map with a mock level-db implementation.
@@ -46,12 +47,14 @@ public class TestLevelDbMockAliasMapClient {
   private File tempDir;
   private Configuration conf;
   private InMemoryAliasMap aliasMapMock;
+  private final String bpid = "BPID-0";
 
   @Before
   public void setUp() throws IOException {
     aliasMapMock = mock(InMemoryAliasMap.class);
+    when(aliasMapMock.getBlockPoolId()).thenReturn(bpid);
     levelDBAliasMapServer = new InMemoryLevelDBAliasMapServer(
-        config -> aliasMapMock);
+        config -> aliasMapMock, bpid);
     conf = new Configuration();
     int port = 9877;
 
@@ -60,10 +63,10 @@ public class TestLevelDbMockAliasMapClient {
     tempDir = Files.createTempDir();
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
         tempDir.getAbsolutePath());
-    inMemoryLevelDBAliasMapClient = new InMemoryLevelDBAliasMapClient();
-    inMemoryLevelDBAliasMapClient.setConf(conf);
     levelDBAliasMapServer.setConf(conf);
     levelDBAliasMapServer.start();
+    inMemoryLevelDBAliasMapClient = new InMemoryLevelDBAliasMapClient();
+    inMemoryLevelDBAliasMapClient.setConf(conf);
   }
 
   @After
@@ -83,11 +86,13 @@ public class TestLevelDbMockAliasMapClient {
 
     assertThatExceptionOfType(IOException.class)
         .isThrownBy(() ->
-            inMemoryLevelDBAliasMapClient.getReader(null).resolve(block));
+            inMemoryLevelDBAliasMapClient.getReader(null, bpid)
+                .resolve(block));
 
     assertThatExceptionOfType(IOException.class)
         .isThrownBy(() ->
-            inMemoryLevelDBAliasMapClient.getReader(null).resolve(block));
+            inMemoryLevelDBAliasMapClient.getReader(null, bpid)
+                .resolve(block));
   }
 
   @Test
@@ -104,12 +109,12 @@ public class TestLevelDbMockAliasMapClient {
 
     assertThatExceptionOfType(IOException.class)
         .isThrownBy(() ->
-            inMemoryLevelDBAliasMapClient.getWriter(null)
+            inMemoryLevelDBAliasMapClient.getWriter(null, bpid)
                 .store(new FileRegion(block, providedStorageLocation)));
 
     assertThatExceptionOfType(IOException.class)
         .isThrownBy(() ->
-            inMemoryLevelDBAliasMapClient.getWriter(null)
+            inMemoryLevelDBAliasMapClient.getWriter(null, bpid)
                 .store(new FileRegion(block, providedStorageLocation)));
   }
 

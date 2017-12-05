@@ -63,6 +63,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES;
+
 /**
  * This class is used to create provided volumes.
  */
@@ -125,6 +127,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     private ReplicaMap bpVolumeMap;
     private ProvidedVolumeDF df;
     private AtomicLong numOfBlocks = new AtomicLong();
+    private int numRetries;
 
     ProvidedBlockPoolSlice(String bpid, ProvidedVolumeImpl volume,
         Configuration conf) {
@@ -138,6 +141,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       this.bpid = bpid;
       this.df = new ProvidedVolumeDF();
       bpVolumeMap.initBlockPool(bpid);
+      this.numRetries = conf.getInt(DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 0);
       LOG.info("Created alias map using class: " + aliasMap.getClass());
     }
 
@@ -153,18 +157,27 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     void fetchVolumeMap(ReplicaMap volumeMap,
         RamDiskReplicaTracker ramDiskReplicaMap, FileSystem remoteFS)
         throws IOException {
-      BlockAliasMap.Reader<FileRegion> reader = aliasMap.getReader(null);
+      BlockAliasMap.Reader<FileRegion> reader = null;
+      int tries = 1;
+      do {
+        try {
+          reader = aliasMap.getReader(null, bpid);
+          break;
+        } catch (IOException e) {
+          tries++;
+          reader = null;
+        }
+      } while (tries <= numRetries);
+
       if (reader == null) {
-        LOG.warn("Got null reader from BlockAliasMap " + aliasMap
+        LOG.error("Got null reader from BlockAliasMap " + aliasMap
             + "; no blocks will be populated");
         return;
       }
       Path blockPrefixPath = new Path(providedVolume.getBaseURI());
       for (FileRegion region : reader) {
-        if (region.getBlockPoolId() != null
-            && region.getBlockPoolId().equals(bpid)
-            && containsBlock(providedVolume.baseURI,
-                region.getProvidedStorageLocation().getPath().toUri())) {
+        if (containsBlock(providedVolume.baseURI,
+            region.getProvidedStorageLocation().getPath().toUri())) {
           String blockSuffix = getSuffix(blockPrefixPath,
               new Path(region.getProvidedStorageLocation().getPath().toUri()));
           ReplicaInfo newReplica = new ReplicaBuilder(ReplicaState.FINALIZED)
@@ -215,14 +228,12 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
        * the ids remain the same.
        */
       aliasMap.refresh();
-      BlockAliasMap.Reader<FileRegion> reader = aliasMap.getReader(null);
+      BlockAliasMap.Reader<FileRegion> reader = aliasMap.getReader(null, bpid);
       for (FileRegion region : reader) {
         reportCompiler.throttle();
-        if (region.getBlockPoolId().equals(bpid)) {
-          report.add(new ScanInfo(region.getBlock().getBlockId(),
-              providedVolume, region,
-              region.getProvidedStorageLocation().getLength()));
-        }
+        report.add(new ScanInfo(region.getBlock().getBlockId(),
+            providedVolume, region,
+            region.getProvidedStorageLocation().getLength()));
       }
     }
 
@@ -415,9 +426,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
         if (temp.getBlock().getBlockId() < state.lastBlockId) {
           continue;
         }
-        if (temp.getBlockPoolId().equals(bpid)) {
-          nextRegion = temp;
-        }
+        nextRegion = temp;
       }
       if (null == nextRegion) {
         return null;
@@ -435,7 +444,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     public void rewind() {
       BlockAliasMap.Reader<FileRegion> reader = null;
       try {
-        reader = blockAliasMap.getReader(null);
+        reader = blockAliasMap.getReader(null, bpid);
       } catch (IOException e) {
         LOG.warn("Exception in getting reader from provided alias map");
       }
