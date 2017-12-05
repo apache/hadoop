@@ -125,6 +125,9 @@
             {{#link-to 'yarn-app.info' tagName="li" class=(if (eq target.currentPath 'yarn-app.info') "active")}}
               {{#link-to 'yarn-app.info' appId (query-params service=model.serviceName)}}Diagnostics{{/link-to}}
             {{/link-to}}
+            {{#link-to 'yarn-app.logs' tagName="li" class=(if (eq target.currentPath 'yarn-app.logs') "active")}}
+              {{#link-to 'yarn-app.logs' appId (query-params service=serviceName)}}Logs{{/link-to}}
+            {{/link-to}}
           </ul>
         </ul>
       </div>

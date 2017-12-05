@@ -16,31 +16,24 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
-import AbstractRoute from '../abstract';
-import AppAttemptMixin from 'yarn-ui/mixins/app-attempt';
+import AbstractAdapter from './abstract';
 
-export default AbstractRoute.extend(AppAttemptMixin, {
-  model(param, transition) {
-    const {app_id} = this.paramsFor('yarn-app');
-    const {service} = param;
+export default AbstractAdapter.extend({
+  address: "timelineWebAddress",
+  // restNameSpace: "timelineV2", // Use ATSv2 when it supports log APIs.
+  restNameSpace: "timeline", //Using ATSv1.5 now, would be supported by ATSv2 very soon.
+  serverName: "ATS",
 
-    transition.send('updateBreadcrumbs', app_id, service, [{text: 'Attempts'}]);
-    return Ember.RSVP.hash({
-      appId: app_id,
-      serviceName: service,
-      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
-        return Ember.A();
-      })
-    });
+  urlForQuery(query/*, modelName*/) {
+    var url = this._buildURL();
+    var containerId = query['containerId'];
+    delete query.containerId;
+    return url + '/containers/' + containerId + '/logs';
   },
 
-  refresh() {
-    window.location.reload();
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-app-attempt');
-    this.store.unloadAll('yarn-timeline-appattempt');
+  fetchLogFileContent(containerId, logFile) {
+    var url = this._buildURL();
+    url = url + '/containers/' + containerId + '/logs/' + logFile;
+    return Ember.$.ajax({url: url, type: 'GET', dataType: 'text'});
   }
 });
