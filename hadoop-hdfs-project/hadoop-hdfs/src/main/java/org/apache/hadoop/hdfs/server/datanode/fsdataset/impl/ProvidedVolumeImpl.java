@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -65,7 +66,8 @@ import org.apache.hadoop.util.Time;
 /**
  * This class is used to create provided volumes.
  */
-public class ProvidedVolumeImpl extends FsVolumeImpl {
+@InterfaceAudience.Private
+class ProvidedVolumeImpl extends FsVolumeImpl {
 
   /**
    * Get a suffix of the full path, excluding the given prefix.

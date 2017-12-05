@@ -17,6 +17,7 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos;
 import org.apache.hadoop.ipc.ProtocolInfo;
 
@@ -30,6 +31,7 @@ import org.apache.hadoop.ipc.ProtocolInfo;
         "org.apache.hadoop.hdfs.server.aliasmap.AliasMapProtocol",
     protocolVersion = 1)
 @InterfaceAudience.Private
+@InterfaceStability.Unstable
 public interface AliasMapProtocolPB extends
     AliasMapProtocolProtos.AliasMapProtocolService.BlockingInterface {
 }

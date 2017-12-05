@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -24,6 +27,8 @@ import java.util.Set;
  * Dynamically assign ids to users/groups as they appear in the external
  * filesystem.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class FsUGIResolver extends UGIResolver {
 
   private int id;

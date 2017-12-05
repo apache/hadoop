@@ -30,6 +30,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -57,6 +59,8 @@ import com.google.protobuf.ByteString;
  * This class allows us to manage and multiplex between storages local to
  * datanodes, and provided storage.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class ProvidedStorageMap {
 
   private static final Logger LOG =

@@ -17,6 +17,8 @@
 package org.apache.hadoop.hdfs.server.aliasmap;
 
 import com.google.protobuf.BlockingService;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -42,6 +44,8 @@ import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.CheckedFun
  * InMemoryLevelDBAliasMapServer is the entry point from the Namenode into
  * the {@link InMemoryAliasMap}.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
     Configurable, Closeable {
 
