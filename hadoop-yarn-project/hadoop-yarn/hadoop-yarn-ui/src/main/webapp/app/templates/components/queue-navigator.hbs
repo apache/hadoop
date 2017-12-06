@@ -21,14 +21,21 @@
   <div class="col-md-12 container-fluid">
     <div class="panel panel-default" id="tree-selector-container">
       <div class="panel-heading">
-        Scheduler: {{model.firstObject.type}}
+        {{#if filteredPartition}}
+           Scheduler: {{model.firstObject.type}} for partition {{lower filteredPartition}}
+        {{else}}
+          Scheduler: {{model.firstObject.type}} for all partitions
+        {{/if}}
       </div>
        {{#if (eq model.firstObject.type "capacity")}}
-        <select onchange={{action "filterQueuesByPartition" value="target.value"}} class="form-control flex-right" style="max-width:350px">
-          {{#each model.firstObject.partitions as |part|}}
-            <option value={{part}}>{{part}}</option>
-          {{/each}}
-        </select>
+       <div class="filter-partitions">
+        <label><i class="glyphicon glyphicon-filter"/> Partitions: </label>
+          <select onchange={{action "filterQueuesByPartition" value="target.value"}} class="form-control">
+            {{#each model.firstObject.partitions as |part|}}
+              <option value={{part}}>{{part}}</option>
+            {{/each}}
+          </select>
+       </div>
       {{/if}}
      {{tree-selector model=model parentId="tree-selector-container" selected=selected used=used max=max filteredPartition=filteredPartition}}
     </div>
