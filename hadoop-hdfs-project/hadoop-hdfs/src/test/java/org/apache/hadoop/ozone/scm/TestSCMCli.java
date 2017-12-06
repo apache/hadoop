@@ -329,7 +329,7 @@ public class TestSCMCli {
     assertTrue(errContent.toString()
         .contains("Unrecognized options:[-nothingUseful]"));
     String expectedOut =
-        "usage: hdfs scm <commands> [<options>]\n" +
+        "usage: hdfs scmcli <commands> [<options>]\n" +
         "where <commands> can be one of the following\n" +
         " -container   Container related options\n";
     assertEquals(expectedOut, testContent.toString());
@@ -470,7 +470,7 @@ public class TestSCMCli {
     String[] args = {"-help"};
     assertEquals(ResultCode.SUCCESS, cli.run(args));
     String expected =
-        "usage: hdfs scm <commands> [<options>]\n" +
+        "usage: hdfs scmcli <commands> [<options>]\n" +
         "where <commands> can be one of the following\n" +
         " -container   Container related options\n";
     assertEquals(expected, testContent.toString());
