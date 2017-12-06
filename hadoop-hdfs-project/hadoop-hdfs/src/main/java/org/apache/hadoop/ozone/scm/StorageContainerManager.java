@@ -897,7 +897,6 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     unregisterMXBean();
     IOUtils.cleanupWithLogger(LOG, scmContainerManager);
-    IOUtils.cleanupWithLogger(LOG, scmBlockManager);
     IOUtils.cleanupWithLogger(LOG, scmNodeManager);
   }
 
