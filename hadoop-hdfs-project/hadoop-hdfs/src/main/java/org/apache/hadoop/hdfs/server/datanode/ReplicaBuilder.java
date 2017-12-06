@@ -22,6 +22,7 @@ import java.net.URI;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -53,6 +54,7 @@ public class ReplicaBuilder {
   private Configuration conf;
   private FileRegion fileRegion;
   private FileSystem remoteFS;
+  private PathHandle pathHandle;
   private String pathSuffix;
   private Path pathPrefix;
 
@@ -66,6 +68,7 @@ public class ReplicaBuilder {
     fromReplica = null;
     uri = null;
     this.state = state;
+    pathHandle = null;
   }
 
   public ReplicaBuilder setState(ReplicaState state) {
@@ -167,6 +170,11 @@ public class ReplicaBuilder {
    */
   public ReplicaBuilder setPathPrefix(Path prefix) {
     this.pathPrefix = prefix;
+    return this;
+  }
+
+  public ReplicaBuilder setPathHandle(PathHandle pathHandle) {
+    this.pathHandle = pathHandle;
     return this;
   }
 
@@ -309,10 +317,10 @@ public class ReplicaBuilder {
     if (fileRegion == null) {
       if (uri != null) {
         info = new FinalizedProvidedReplica(blockId, uri, offset,
-            length, genStamp, volume, conf, remoteFS);
+            length, genStamp, pathHandle, volume, conf, remoteFS);
       } else {
         info = new FinalizedProvidedReplica(blockId, pathPrefix, pathSuffix,
-            offset, length, genStamp, volume, conf, remoteFS);
+            offset, length, genStamp, pathHandle, volume, conf, remoteFS);
       }
     } else {
       info = new FinalizedProvidedReplica(fileRegion, volume, conf, remoteFS);

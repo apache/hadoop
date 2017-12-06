@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
@@ -353,11 +354,16 @@ public class TextFileRegionAliasMap
         return null;
       }
       String[] f = line.split(delim);
-      if (f.length != 5) {
+      if (f.length != 5 && f.length != 6) {
         throw new IOException("Invalid line: " + line);
       }
+      byte[] nonce = new byte[0];
+      if (f.length == 6) {
+        nonce = f[5].getBytes(Charset.forName("UTF-8"));
+      }
       return new FileRegion(Long.parseLong(f[0]), new Path(f[1]),
-          Long.parseLong(f[2]), Long.parseLong(f[3]), Long.parseLong(f[4]));
+          Long.parseLong(f[2]), Long.parseLong(f[3]), Long.parseLong(f[4]),
+          nonce);
     }
 
     public InputStream createStream() throws IOException {
@@ -442,7 +448,11 @@ public class TextFileRegionAliasMap
       out.append(psl.getPath().toString()).append(delim);
       out.append(Long.toString(psl.getOffset())).append(delim);
       out.append(Long.toString(psl.getLength())).append(delim);
-      out.append(Long.toString(block.getGenerationStamp())).append(delim);
+      out.append(Long.toString(block.getGenerationStamp()));
+      if (psl.getNonce().length > 0) {
+        out.append(delim)
+            .append(new String(psl.getNonce(), Charset.forName("UTF-8")));
+      }
       out.append("\n");
     }
 

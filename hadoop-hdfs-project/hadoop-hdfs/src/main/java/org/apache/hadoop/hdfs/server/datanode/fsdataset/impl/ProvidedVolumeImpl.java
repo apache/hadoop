@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -32,6 +33,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathHandle;
+import org.apache.hadoop.fs.RawPathHandle;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -180,6 +183,11 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
             region.getProvidedStorageLocation().getPath().toUri())) {
           String blockSuffix = getSuffix(blockPrefixPath,
               new Path(region.getProvidedStorageLocation().getPath().toUri()));
+          PathHandle pathHandle = null;
+          if (region.getProvidedStorageLocation().getNonce().length > 0) {
+            pathHandle = new RawPathHandle(ByteBuffer
+                .wrap(region.getProvidedStorageLocation().getNonce()));
+          }
           ReplicaInfo newReplica = new ReplicaBuilder(ReplicaState.FINALIZED)
               .setBlockId(region.getBlock().getBlockId())
               .setPathPrefix(blockPrefixPath)
@@ -187,6 +195,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
               .setOffset(region.getProvidedStorageLocation().getOffset())
               .setLength(region.getBlock().getNumBytes())
               .setGenerationStamp(region.getBlock().getGenerationStamp())
+              .setPathHandle(pathHandle)
               .setFsVolume(providedVolume)
               .setConf(conf)
               .setRemoteFS(remoteFS)

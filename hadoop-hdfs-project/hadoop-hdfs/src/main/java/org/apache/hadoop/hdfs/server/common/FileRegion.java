@@ -37,8 +37,13 @@ public class FileRegion implements BlockAlias {
 
   public FileRegion(long blockId, Path path, long offset,
       long length, long genStamp) {
+    this(blockId, path, offset, length, genStamp, new byte[0]);
+  }
+
+  public FileRegion(long blockId, Path path, long offset,
+                    long length, long genStamp, byte[] nonce) {
     this(new Block(blockId, length, genStamp),
-        new ProvidedStorageLocation(path, offset, length, new byte[0]));
+            new ProvidedStorageLocation(path, offset, length, nonce));
   }
 
   public FileRegion(long blockId, Path path, long offset, long length) {
