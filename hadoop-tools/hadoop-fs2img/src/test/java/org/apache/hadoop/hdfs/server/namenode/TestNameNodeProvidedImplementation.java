@@ -559,7 +559,9 @@ public class TestNameNodeProvidedImplementation {
     DataNode providedDatanode2 = cluster.getDataNodes().get(1);
 
     DFSClient client = new DFSClient(new InetSocketAddress("localhost",
-            cluster.getNameNodePort()), cluster.getConfiguration(0));
+        cluster.getNameNodePort()), cluster.getConfiguration(0));
+
+    DatanodeStorageInfo providedDNInfo = getProvidedDatanodeStorageInfo();
 
     if (numFiles >= 1) {
       String filename = "/" + filePrefix + (numFiles - 1) + fileSuffix;
@@ -596,9 +598,14 @@ public class TestNameNodeProvidedImplementation {
           providedDatanode2.getDatanodeId().getXferAddr());
       getAndCheckBlockLocations(client, filename, baseFileLen, 1, 0);
 
+      // BR count for the provided ProvidedDatanodeStorageInfo should reset to
+      // 0, when all DNs with PROVIDED storage fail.
+      assertEquals(0, providedDNInfo.getBlockReportCount());
       //restart the provided datanode
       cluster.restartDataNode(providedDNProperties1, true);
       cluster.waitActive();
+
+      assertEquals(1, providedDNInfo.getBlockReportCount());
 
       //should find the block on the 1st provided datanode now
       dnInfos = getAndCheckBlockLocations(client, filename, baseFileLen, 1, 1);
@@ -621,6 +628,8 @@ public class TestNameNodeProvidedImplementation {
         false);
 
     DataNode providedDatanode = cluster.getDataNodes().get(0);
+    DatanodeStorageInfo providedDNInfo = getProvidedDatanodeStorageInfo();
+    int initialBRCount = providedDNInfo.getBlockReportCount();
     for (int i= 0; i < numFiles; i++) {
       // expect to have 2 locations as we have 2 provided Datanodes.
       verifyFileLocation(i, 2);
@@ -631,8 +640,17 @@ public class TestNameNodeProvidedImplementation {
       cluster.waitActive();
       cluster.triggerHeartbeats();
       Thread.sleep(1000);
+      // the report count should just continue to increase.
+      assertEquals(initialBRCount + i + 1,
+          providedDNInfo.getBlockReportCount());
       verifyFileLocation(i, 2);
     }
+  }
+
+  private DatanodeStorageInfo getProvidedDatanodeStorageInfo() {
+    ProvidedStorageMap providedStorageMap =
+        cluster.getNamesystem().getBlockManager().getProvidedStorageMap();
+    return providedStorageMap.getProvidedStorageInfo();
   }
 
   @Test(timeout=30000)
