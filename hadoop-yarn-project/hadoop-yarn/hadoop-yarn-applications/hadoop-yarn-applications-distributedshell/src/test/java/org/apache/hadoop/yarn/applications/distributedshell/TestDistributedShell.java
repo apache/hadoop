@@ -1179,6 +1179,33 @@ public class TestDistributedShell {
           e.getMessage().contains("No shell command or shell script specified " +
           "to be executed by application master"));
     }
+
+    LOG.info("Initializing DS Client with invalid container_type argument");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1",
+          "--shell_command",
+          "date",
+          "--container_type",
+          "UNSUPPORTED_TYPE"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("Invalid container_type: UNSUPPORTED_TYPE"));
+    }
   }
 
   @Test
@@ -1375,6 +1402,35 @@ public class TestDistributedShell {
       } catch (Exception e) {
         continue;
       }
+    }
+  }
+
+  @Test
+  public void testDSShellWithOpportunisticContainers() throws Exception {
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1",
+          "--shell_command",
+          "date",
+          "--container_type",
+          "OPPORTUNISTIC"
+      };
+      client.init(args);
+      client.run();
+    } catch (Exception e) {
+      Assert.fail("Job execution with opportunistic containers failed.");
     }
   }
 }
