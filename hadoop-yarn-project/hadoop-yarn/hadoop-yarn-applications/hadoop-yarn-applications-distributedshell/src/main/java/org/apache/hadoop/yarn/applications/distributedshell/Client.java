@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Arrays;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -72,6 +73,7 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -157,6 +159,8 @@ public class Client {
   // No. of containers in which the shell script needs to be executed
   private int numContainers = 1;
   private String nodeLabelExpression = null;
+  // Container type, default GUARANTEED.
+  private ExecutionType containerType = ExecutionType.GUARANTEED;
 
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
@@ -267,6 +271,8 @@ public class Client {
     opts.addOption("shell_env", true,
         "Environment for shell script. Specified as env_key=env_val pairs");
     opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");
+    opts.addOption("container_type", true,
+        "Container execution type, GUARANTEED or OPPORTUNISTIC");
     opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
@@ -434,6 +440,17 @@ public class Client {
           + " Specified containerMemory=" + containerMemory
           + ", containerVirtualCores=" + containerVirtualCores
           + ", numContainer=" + numContainers);
+    }
+
+    if (cliParser.hasOption("container_type")) {
+      String containerTypeStr = cliParser.getOptionValue("container_type");
+      if (Arrays.stream(ExecutionType.values()).noneMatch(
+          executionType -> executionType.toString()
+              .equals(containerTypeStr))) {
+        throw new IllegalArgumentException("Invalid container_type: "
+            + containerTypeStr);
+      }
+      containerType = ExecutionType.valueOf(containerTypeStr);
     }
     
     nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
@@ -698,6 +715,9 @@ public class Client {
     // Set params for Application Master
     vargs.add("--container_memory " + String.valueOf(containerMemory));
     vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
+    if (containerType != null) {
+      vargs.add("--container_type " + String.valueOf(containerType));
+    }
     vargs.add("--num_containers " + String.valueOf(numContainers));
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);
