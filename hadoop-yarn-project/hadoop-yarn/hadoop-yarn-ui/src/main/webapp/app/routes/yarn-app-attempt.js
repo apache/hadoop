@@ -26,11 +26,13 @@ export default AbstractRoute.extend(AppAttemptMixin, {
       attempt: this.fetchAttemptInfoFromRMorATS(param.app_attempt_id, this.store),
       rmContainers: this.store.query('yarn-container', {
         app_attempt_id: param.app_attempt_id
+      }).catch(function() {
+        return Ember.A();
       }),
       tsContainers: this.store.query('yarn-timeline-container', {
         app_attempt_id: param.app_attempt_id
       }).catch(function() {
-        return [];
+        return Ember.A();
       })
     });
   },

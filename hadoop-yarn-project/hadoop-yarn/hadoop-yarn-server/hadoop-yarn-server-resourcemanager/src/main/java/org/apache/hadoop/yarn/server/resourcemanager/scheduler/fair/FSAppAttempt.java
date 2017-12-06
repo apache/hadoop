@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -460,13 +461,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       liveContainers.put(container.getId(), rmContainer);
 
       // Update consumption and track allocations
-      List<ResourceRequest> resourceRequestList = appSchedulingInfo.allocate(
+      ContainerRequest containerRequest = appSchedulingInfo.allocate(
           type, node, schedulerKey, container);
       this.attemptResourceUsage.incUsed(container.getResource());
       getQueue().incUsedResource(container.getResource());
 
       // Update resource requests related to "request" and store in RMContainer
-      ((RMContainerImpl) rmContainer).setResourceRequests(resourceRequestList);
+      ((RMContainerImpl) rmContainer).setContainerRequest(containerRequest);
 
       // Inform the container
       rmContainer.handle(

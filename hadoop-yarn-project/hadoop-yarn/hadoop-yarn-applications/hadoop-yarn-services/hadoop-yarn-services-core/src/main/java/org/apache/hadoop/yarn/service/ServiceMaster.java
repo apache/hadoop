@@ -20,32 +20,48 @@ package org.apache.hadoop.yarn.service;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
+import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.apache.hadoop.yarn.service.monitor.ServiceMonitor;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
-import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
+import java.util.Iterator;
 import java.util.Map;
+
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants.KEYTAB_LOCATION;
 
 public class ServiceMaster extends CompositeService {
 
@@ -63,13 +79,7 @@ public class ServiceMaster extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    //TODO Deprecate slider conf, make sure works with yarn conf
     printSystemEnv();
-    if (UserGroupInformation.isSecurityEnabled()) {
-      UserGroupInformation.setConfiguration(conf);
-    }
-    LOG.info("Login user is {}", UserGroupInformation.getLoginUser());
-
     context = new ServiceContext();
     Path appDir = getAppDir();
     context.serviceHdfsDir = appDir.toString();
@@ -78,6 +88,10 @@ public class ServiceMaster extends CompositeService {
     fs.setAppDir(appDir);
     loadApplicationJson(context, fs);
 
+    if (UserGroupInformation.isSecurityEnabled()) {
+      context.tokens = recordTokensForContainers();
+      doSecureLogin();
+    }
     // Take yarn config from YarnFile and merge them into YarnConfiguration
     for (Map.Entry<String, String> entry : context.service
         .getConfiguration().getProperties().entrySet()) {
@@ -111,6 +125,100 @@ public class ServiceMaster extends CompositeService {
     super.serviceInit(conf);
   }
 
+  // Record the tokens and use them for launching containers.
+  // e.g. localization requires the hdfs delegation tokens
+  private ByteBuffer recordTokensForContainers() throws IOException {
+    Credentials copy = new Credentials(UserGroupInformation.getCurrentUser()
+        .getCredentials());
+    DataOutputBuffer dob = new DataOutputBuffer();
+    try {
+      copy.writeTokenStorageToStream(dob);
+    } finally {
+      dob.close();
+    }
+    // Now remove the AM->RM token so that task containers cannot access it.
+    Iterator<Token<?>> iter = copy.getAllTokens().iterator();
+    while (iter.hasNext()) {
+      Token<?> token = iter.next();
+      LOG.info(token.toString());
+      if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+        iter.remove();
+      }
+    }
+    return ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+  }
+
+  // 1. First try to use user specified keytabs
+  // 2. If not specified, then try to use pre-installed keytab at localhost
+  // 3. strip off hdfs delegation tokens to ensure use keytab to talk to hdfs
+  private void doSecureLogin()
+      throws IOException, URISyntaxException {
+    // read the localized keytab specified by user
+    File keytab = new File(String.format(KEYTAB_LOCATION,
+        context.service.getName()));
+    if (!keytab.exists()) {
+      LOG.info("No keytab localized at " + keytab);
+      // Check if there exists a pre-installed keytab at host
+      String preInstalledKeytab = context.service.getKerberosPrincipal()
+          .getKeytab();
+      if (!StringUtils.isEmpty(preInstalledKeytab)) {
+        URI uri = new URI(preInstalledKeytab);
+        if (uri.getScheme().equals("file")) {
+          keytab = new File(uri);
+          LOG.info("Using pre-installed keytab from localhost: " +
+              preInstalledKeytab);
+        }
+      }
+    }
+    if (!keytab.exists()) {
+      LOG.info("No keytab exists: " + keytab);
+      return;
+    }
+    String principal = context.service.getKerberosPrincipal()
+        .getPrincipalName();
+    if (StringUtils.isEmpty((principal))) {
+      principal = UserGroupInformation.getLoginUser().getShortUserName();
+      LOG.info("No principal name specified.  Will use AM " +
+          "login identity {} to attempt keytab-based login", principal);
+    }
+
+    Credentials credentials = UserGroupInformation.getCurrentUser()
+        .getCredentials();
+    LOG.info("User before logged in is: " + UserGroupInformation
+        .getCurrentUser());
+    String principalName = SecurityUtil.getServerPrincipal(principal,
+        ServiceUtils.getLocalHostName(getConfig()));
+    UserGroupInformation.loginUserFromKeytab(principalName,
+        keytab.getAbsolutePath());
+    // add back the credentials
+    UserGroupInformation.getCurrentUser().addCredentials(credentials);
+    LOG.info("User after logged in is: " + UserGroupInformation
+        .getCurrentUser());
+    context.principal = principalName;
+    context.keytab = keytab.getAbsolutePath();
+    removeHdfsDelegationToken(UserGroupInformation.getLoginUser());
+  }
+
+  // Remove HDFS delegation token from login user and ensure AM to use keytab
+  // to talk to hdfs
+  private static void removeHdfsDelegationToken(UserGroupInformation user) {
+    if (!user.isFromKeytab()) {
+      LOG.error("AM is not holding on a keytab in a secure deployment:" +
+          " service will fail when tokens expire");
+    }
+    Credentials credentials = user.getCredentials();
+    Iterator<Token<? extends TokenIdentifier>> iter =
+        credentials.getAllTokens().iterator();
+    while (iter.hasNext()) {
+      Token<? extends TokenIdentifier> token = iter.next();
+      if (token.getKind().equals(
+          DelegationTokenIdentifier.HDFS_DELEGATION_KIND)) {
+        LOG.info("Remove HDFS delegation token {}.", token);
+        iter.remove();
+      }
+    }
+  }
+
   protected ContainerId getAMContainerId() throws BadClusterStateException {
     return ContainerId.fromString(ServiceUtils.mandatoryEnvVariable(
         ApplicationConstants.Environment.CONTAINER_ID.name()));
@@ -133,6 +241,17 @@ public class ServiceMaster extends CompositeService {
   }
 
   @Override
+  protected void serviceStart() throws Exception {
+    LOG.info("Starting service as user " + UserGroupInformation
+        .getCurrentUser());
+    UserGroupInformation.getLoginUser().doAs(
+        (PrivilegedExceptionAction<Void>) () -> {
+          super.serviceStart();
+          return null;
+        }
+    );
+  }
+  @Override
   protected void serviceStop() throws Exception {
     LOG.info("Stopping app master");
     super.serviceStop();
@@ -146,7 +265,8 @@ public class ServiceMaster extends CompositeService {
 
   public static void main(String[] args) throws Exception {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
-    StringUtils.startupShutdownMessage(ServiceMaster.class, args, LOG);
+    org.apache.hadoop.util.StringUtils
+        .startupShutdownMessage(ServiceMaster.class, args, LOG);
     try {
       ServiceMaster serviceMaster = new ServiceMaster("Service Master");
       ShutdownHookManager.get()

@@ -410,11 +410,10 @@ public class LeveldbRMStateStore extends RMStateStore {
 
   private RMDelegationTokenIdentifierData loadDelegationToken(byte[] data)
       throws IOException {
-    RMDelegationTokenIdentifierData tokenData =
-        new RMDelegationTokenIdentifierData();
+    RMDelegationTokenIdentifierData tokenData = null;
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
     try {
-      tokenData.readFields(in);
+      tokenData = RMStateStoreUtils.readRMDelegationTokenIdentifierData(in);
     } finally {
       IOUtils.cleanup(LOG, in);
     }

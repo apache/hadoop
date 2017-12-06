@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
+import org.apache.hadoop.yarn.server.resourcemanager.placement
+    .ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
@@ -325,6 +327,11 @@ public class MockRMApp implements RMApp {
   @Override
   public boolean isAppInCompletedStates() {
     return false;
+  }
+
+  @Override
+  public ApplicationPlacementContext getApplicationPlacementContext() {
+    return null;
   }
 
   @Override

@@ -412,6 +412,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       // Single reverse zone
     } else {
       Name reverseLookupZoneName = getReverseZoneName(conf);
+      if (reverseLookupZoneName == null) {
+        // reverse lookup disabled
+        return;
+      }
       Zone reverseLookupZone = configureZone(reverseLookupZoneName, conf);
       zones.put(reverseLookupZone.getOrigin(), reverseLookupZone);
     }
