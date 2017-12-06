@@ -51,9 +51,9 @@ public class AllContainersPage extends NMView {
 
   private String containersTableInit() {
     return tableInit().
-        // containerid, containerid, log-url
+        // containerid, executiontype, containerid, log-url
         append(", aoColumns:[").append(getContainersIdColumnDefs())
-        .append(", null, {bSearchable:false}]} ").toString();
+        .append(", null, null, {bSearchable:false}]} ").toString();
   }
 
   private String getContainersIdColumnDefs() {
@@ -83,6 +83,7 @@ public class AllContainersPage extends NMView {
           .thead()
             .tr()
               .td().__("ContainerId").__()
+              .td().__("ExecutionType").__()
               .td().__("ContainerState").__()
               .td().__("logs").__()
             .__()
@@ -94,6 +95,7 @@ public class AllContainersPage extends NMView {
           .tr()
             .td().a(url("container", info.getId()), info.getId())
             .__()
+            .td().__(info.getExecutionType()).__()
             .td().__(info.getState()).__()
             .td()
                 .a(url(info.getShortLogLink()), "logs").__()
