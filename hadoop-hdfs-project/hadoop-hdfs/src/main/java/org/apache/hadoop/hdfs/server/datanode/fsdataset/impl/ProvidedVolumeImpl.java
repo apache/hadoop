@@ -208,8 +208,8 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
             incrNumBlocks();
             incDfsUsed(region.getBlock().getNumBytes());
           } else {
-            throw new IOException("A block with id " + newReplica.getBlockId()
-                + " already exists in the volumeMap");
+            LOG.warn("A block with id " + newReplica.getBlockId()
+                + " exists locally. Skipping PROVIDED replica");
           }
         }
       }
