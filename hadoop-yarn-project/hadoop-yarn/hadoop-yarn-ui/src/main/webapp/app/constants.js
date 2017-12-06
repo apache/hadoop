@@ -35,3 +35,5 @@ export const Entities = {
   Resource: 'resource',
   Unit: 'unit'
 }
+
+export const PARTITION_LABEL = 'All partitions';

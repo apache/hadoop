@@ -17,6 +17,7 @@
  */
 
 import DS from 'ember-data';
+import {PARTITION_LABEL} from '../../constants';
 
 export default DS.JSONAPISerializer.extend({
 
@@ -73,7 +74,11 @@ export default DS.JSONAPISerializer.extend({
           numPendingApplications: payload.numPendingApplications,
           numActiveApplications: payload.numActiveApplications,
           resources: payload.resources,
-          partitions: payload.capacities.queueCapacitiesByPartition.map(cap => cap.partitionName || 'All partitions'),
+          partitions: payload.capacities.queueCapacitiesByPartition.map(cap => cap.partitionName || PARTITION_LABEL),
+          partitionMap: payload.capacities.queueCapacitiesByPartition.reduce((init, cap) => {
+            init[cap.partitionName || PARTITION_LABEL] = cap;
+            return init;
+          }, {}),
           type: "capacity",
         },
         // Relationships

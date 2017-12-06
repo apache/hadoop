@@ -22,13 +22,9 @@ export default Ember.Component.extend({
   actions: {
     filterQueuesByPartition(filter) {
       this.set('filteredPartition', filter);
-      // if the selected queue does not have the filtered partition, reset the selection to root. 
-      if (!(filter && this
-          .get("selected")
-          .get("partitions")
-          .contains(filter))) {
-        this.set("selected", this.model.get("firstObject").get("id"));
-      }
+      this.sendAction('setFilter', filter);
+
+      this.set("selected", this.model.get("firstObject").get("id"));
     }
   }
 });

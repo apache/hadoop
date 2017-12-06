@@ -17,19 +17,30 @@
  */
 
 import Ember from 'ember';
+import {PARTITION_LABEL} from '../constants';
 
 export default Ember.Controller.extend({
   needReload: true,
   selectedQueue: undefined,
   showLoading: true,
+  filteredPartition: PARTITION_LABEL,
 
-  breadcrumbs: [{
-    text: "Home",
-    routeName: 'application'
-  }, {
-    text: "Queues",
-    routeName: 'yarn-queues',
-    model: 'root'
-  }]
+  breadcrumbs: [
+    {
+      text: "Home",
+      routeName: "application"
+    },
+    {
+      text: "Queues",
+      routeName: "yarn-queues",
+      model: "root"
+    }
+  ],
 
+  actions: {
+    setFilter(partition) {
+      console.log(partition);
+      this.set("filteredPartition", partition);
+    }
+  }
 });

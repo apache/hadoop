@@ -18,9 +18,10 @@
 <div class="queue-page-breadcrumb">
   {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 </div>
+
 <div class="container-fluid">
   {{#if (eq model.queues.firstObject.type "capacity")}}
-    {{yarn-queue.capacity-queue model=model}}
+    {{yarn-queue.capacity-queue model=model setFilter=(action "setFilter") filteredPartition=filteredPartition}}
   {{else if (eq model.queues.firstObject.type "fair")}}
     {{yarn-queue.fair-queue model=model}}
   {{else}}
