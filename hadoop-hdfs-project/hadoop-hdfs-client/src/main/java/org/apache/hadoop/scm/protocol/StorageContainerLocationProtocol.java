@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
@@ -117,4 +118,12 @@ public interface StorageContainerLocationProtocol {
    * @throws IOException
    */
   void closeContainer(String containerName) throws IOException;
+
+  /**
+   * Returns information about SCM.
+   *
+   * @return {@link ScmInfo}
+   * @throws IOException
+   */
+  ScmInfo getScmInfo() throws IOException;
 }

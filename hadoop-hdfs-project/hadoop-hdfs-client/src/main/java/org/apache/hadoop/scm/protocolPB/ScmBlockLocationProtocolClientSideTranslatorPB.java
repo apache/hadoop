@@ -33,8 +33,6 @@ import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.Del
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmBlockLocationsRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmBlockLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.ScmLocatedBlockProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmInfoRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.GetScmInfoRespsonseProto;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.scm.ScmInfo;
@@ -185,9 +183,9 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
    */
   @Override
   public ScmInfo getScmInfo() throws IOException {
-    GetScmInfoRequestProto request =
-        GetScmInfoRequestProto.getDefaultInstance();
-    GetScmInfoRespsonseProto resp;
+    OzoneProtos.GetScmInfoRequestProto request =
+        OzoneProtos.GetScmInfoRequestProto.getDefaultInstance();
+    OzoneProtos.GetScmInfoRespsonseProto resp;
     try {
       resp = rpcProxy.getScmInfo(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {

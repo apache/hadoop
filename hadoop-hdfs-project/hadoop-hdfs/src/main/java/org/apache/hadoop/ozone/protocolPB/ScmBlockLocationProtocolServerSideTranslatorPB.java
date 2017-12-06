@@ -22,6 +22,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto.ScmBlockLocationProtocolProtos.DeleteKeyBlocksResultProto;
 import org.apache.hadoop.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
@@ -44,10 +45,6 @@ import org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.GetScmBlockLocationsResponseProto;
 import org.apache.hadoop.ozone.protocol.proto
     .ScmBlockLocationProtocolProtos.ScmLocatedBlockProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .ScmBlockLocationProtocolProtos.GetScmInfoRequestProto;
-import org.apache.hadoop.ozone.protocol.proto
-    .ScmBlockLocationProtocolProtos.GetScmInfoRespsonseProto;
 
 import java.io.IOException;
 import java.util.List;
@@ -155,15 +152,16 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public GetScmInfoRespsonseProto getScmInfo(RpcController controller,
-      GetScmInfoRequestProto req) throws ServiceException {
+  public OzoneProtos.GetScmInfoRespsonseProto getScmInfo(
+      RpcController controller, OzoneProtos.GetScmInfoRequestProto req)
+      throws ServiceException {
     ScmInfo scmInfo;
     try {
       scmInfo = impl.getScmInfo();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
-    return GetScmInfoRespsonseProto.newBuilder()
+    return OzoneProtos.GetScmInfoRespsonseProto.newBuilder()
         .setClusterId(scmInfo.getClusterId())
         .setScmId(scmInfo.getScmId())
         .build();

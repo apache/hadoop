@@ -211,4 +211,10 @@ service StorageContainerLocationProtocolService {
   */
   rpc allocatePipeline(PipelineRequestProto)
       returns (PipelineResponseProto);
+
+  /**
+  *  Returns information about SCM.
+  */
+  rpc getScmInfo(hadoop.hdfs.ozone.GetScmInfoRequestProto)
+      returns (hadoop.hdfs.ozone.GetScmInfoRespsonseProto);
 }
