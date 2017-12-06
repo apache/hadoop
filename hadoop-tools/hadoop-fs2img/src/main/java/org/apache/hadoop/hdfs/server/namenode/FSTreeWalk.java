@@ -55,7 +55,7 @@ public class FSTreeWalk extends TreeWalk {
     try {
       ArrayList<TreePath> ret = new ArrayList<>();
       for (FileStatus s : fs.listStatus(path.getFileStatus().getPath())) {
-        ret.add(new TreePath(s, id, i));
+        ret.add(new TreePath(s, id, i, fs));
       }
       return ret;
     } catch (FileNotFoundException e) {
@@ -72,13 +72,13 @@ public class FSTreeWalk extends TreeWalk {
 
     FSTreeIterator(TreePath p) {
       getPendingQueue().addFirst(
-          new TreePath(p.getFileStatus(), p.getParentId(), this));
+          new TreePath(p.getFileStatus(), p.getParentId(), this, fs));
     }
 
     FSTreeIterator(Path p) throws IOException {
       try {
         FileStatus s = fs.getFileStatus(root);
-        getPendingQueue().addFirst(new TreePath(s, -1L, this));
+        getPendingQueue().addFirst(new TreePath(s, -1L, this, fs));
       } catch (FileNotFoundException e) {
         if (p.equals(root)) {
           throw e;

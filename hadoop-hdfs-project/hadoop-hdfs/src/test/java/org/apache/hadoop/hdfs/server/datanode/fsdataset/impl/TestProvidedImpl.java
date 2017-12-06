@@ -18,8 +18,10 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,14 +46,20 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -63,6 +71,7 @@ import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
@@ -71,6 +80,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.BlockIterator;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
@@ -619,4 +629,51 @@ public class TestProvidedImpl {
     assertEquals(0, report.get(BLOCK_POOL_IDS[CHOSEN_BP_ID]).length);
   }
 
+  /**
+   * Tests that a ProvidedReplica supports path handles.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testProvidedReplicaWithPathHandle() throws Exception {
+
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+
+    DistributedFileSystem fs = cluster.getFileSystem();
+
+    // generate random data
+    int chunkSize = 512;
+    Random r = new Random(12345L);
+    byte[] data = new byte[chunkSize];
+    r.nextBytes(data);
+
+    Path file = new Path("/testfile");
+    try (FSDataOutputStream fout = fs.create(file)) {
+      fout.write(data);
+    }
+
+    PathHandle pathHandle = fs.getPathHandle(fs.getFileStatus(file),
+        Options.HandleOpt.changed(true), Options.HandleOpt.moved(true));
+    FinalizedProvidedReplica replica = new FinalizedProvidedReplica(0,
+        file.toUri(), 0, chunkSize, 0, pathHandle, null, conf, fs);
+    byte[] content = new byte[chunkSize];
+    IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
+    assertArrayEquals(data, content);
+
+    fs.rename(file, new Path("/testfile.1"));
+    // read should continue succeeding after the rename operation
+    IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
+    assertArrayEquals(data, content);
+
+    replica.setPathHandle(null);
+    try {
+      // expected to fail as URI of the provided replica is no longer valid.
+      replica.getDataInputStream(0);
+      fail("Expected an exception");
+    } catch (IOException e) {
+      LOG.info("Expected exception " + e);
+    }
+  }
 }

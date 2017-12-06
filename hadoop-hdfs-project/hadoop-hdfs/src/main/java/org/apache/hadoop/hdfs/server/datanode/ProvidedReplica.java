@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.ScanInfo;
@@ -40,6 +41,9 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
 /**
  * This abstract class is used as a base class for provided replicas.
@@ -60,6 +64,7 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   private String pathSuffix;
   private long fileOffset;
   private Configuration conf;
+  private PathHandle pathHandle;
   private FileSystem remoteFS;
 
   /**
@@ -75,12 +80,13 @@ public abstract class ProvidedReplica extends ReplicaInfo {
    * @param remoteFS reference to the remote filesystem to use for this replica.
    */
   public ProvidedReplica(long blockId, URI fileURI, long fileOffset,
-      long blockLen, long genStamp, FsVolumeSpi volume, Configuration conf,
-      FileSystem remoteFS) {
+      long blockLen, long genStamp, PathHandle pathHandle, FsVolumeSpi volume,
+      Configuration conf, FileSystem remoteFS) {
     super(volume, blockId, blockLen, genStamp);
     this.fileURI = fileURI;
     this.fileOffset = fileOffset;
     this.conf = conf;
+    this.pathHandle = pathHandle;
     if (remoteFS != null) {
       this.remoteFS = remoteFS;
     } else {
@@ -114,14 +120,15 @@ public abstract class ProvidedReplica extends ReplicaInfo {
    * @param remoteFS reference to the remote filesystem to use for this replica.
    */
   public ProvidedReplica(long blockId, Path pathPrefix, String pathSuffix,
-      long fileOffset, long blockLen, long genStamp, FsVolumeSpi volume,
-      Configuration conf, FileSystem remoteFS) {
+      long fileOffset, long blockLen, long genStamp, PathHandle pathHandle,
+      FsVolumeSpi volume, Configuration conf, FileSystem remoteFS) {
     super(volume, blockId, blockLen, genStamp);
     this.fileURI = null;
     this.pathPrefix = pathPrefix;
     this.pathSuffix = pathSuffix;
     this.fileOffset = fileOffset;
     this.conf = conf;
+    this.pathHandle = pathHandle;
     if (remoteFS != null) {
       this.remoteFS = remoteFS;
     } else {
@@ -142,6 +149,7 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     this.fileOffset = r.fileOffset;
     this.conf = r.conf;
     this.remoteFS = r.remoteFS;
+    this.pathHandle = r.pathHandle;
     this.pathPrefix = r.pathPrefix;
     this.pathSuffix = r.pathSuffix;
   }
@@ -174,7 +182,18 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   @Override
   public InputStream getDataInputStream(long seekOffset) throws IOException {
     if (remoteFS != null) {
-      FSDataInputStream ins = remoteFS.open(new Path(getRemoteURI()));
+      FSDataInputStream ins;
+      try {
+        if (pathHandle != null) {
+          ins = remoteFS.open(pathHandle, conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+              IO_FILE_BUFFER_SIZE_DEFAULT));
+        } else {
+          ins = remoteFS.open(new Path(getRemoteURI()));
+        }
+      } catch (UnsupportedOperationException e) {
+        throw new IOException("PathHandle specified, but unsuported", e);
+      }
+
       ins.seek(fileOffset + seekOffset);
       return new BoundedInputStream(
           new FSDataInputStream(ins), getBlockDataLength());
@@ -323,5 +342,10 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   public void copyBlockdata(URI destination) throws IOException {
     throw new UnsupportedOperationException(
         "ProvidedReplica does not yet support copy data");
+  }
+
+  @VisibleForTesting
+  public void setPathHandle(PathHandle pathHandle) {
+    this.pathHandle = pathHandle;
   }
 }

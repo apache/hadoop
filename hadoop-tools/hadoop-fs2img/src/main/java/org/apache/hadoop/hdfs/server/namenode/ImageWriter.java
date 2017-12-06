@@ -208,7 +208,7 @@ public class ImageWriter implements Closeable {
     long id = curInode.getAndIncrement();
     e.accept(id);
     assert e.getId() < curInode.get();
-    INode n = e.toINode(ugis, blockIds, blocks, blockPoolID);
+    INode n = e.toINode(ugis, blockIds, blocks);
     writeInode(n);
 
     if (e.getParentId() > 0) {
