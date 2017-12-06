@@ -133,6 +133,15 @@ message SCMContainerInfo {
     optional Owner owner = 8 [default = OZONE];
 }
 
+message GetScmInfoRequestProto {
+}
+
+message GetScmInfoRespsonseProto {
+    required string clusterId = 1;
+    required string scmId = 2;
+}
+
+
 enum ReplicationType {
     RATIS = 1;
     STAND_ALONE = 2;

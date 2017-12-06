@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerLocationProtocolProtos;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 
@@ -194,5 +195,21 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       throws ServiceException {
     // TODO : Wiring this up requires one more patch.
     return null;
+  }
+
+  @Override
+  public OzoneProtos.GetScmInfoRespsonseProto getScmInfo(
+      RpcController controller, OzoneProtos.GetScmInfoRequestProto req)
+      throws ServiceException {
+    try {
+      ScmInfo scmInfo = impl.getScmInfo();
+      return OzoneProtos.GetScmInfoRespsonseProto.newBuilder()
+          .setClusterId(scmInfo.getClusterId())
+          .setScmId(scmInfo.getScmId())
+          .build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
+
   }
 }

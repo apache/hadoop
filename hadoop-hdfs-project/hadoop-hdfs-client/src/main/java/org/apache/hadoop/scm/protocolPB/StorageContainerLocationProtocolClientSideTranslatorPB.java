@@ -25,6 +25,7 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
+import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerRequestProto;
@@ -285,6 +286,23 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
+  }
+
+  @Override
+  public ScmInfo getScmInfo() throws IOException {
+    OzoneProtos.GetScmInfoRequestProto request =
+        OzoneProtos.GetScmInfoRequestProto.getDefaultInstance();
+    try {
+      OzoneProtos.GetScmInfoRespsonseProto resp = rpcProxy.getScmInfo(
+          NULL_RPC_CONTROLLER, request);
+      ScmInfo.Builder builder = new ScmInfo.Builder()
+          .setClusterId(resp.getClusterId())
+          .setScmId(resp.getScmId());
+      return builder.build();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
   }
 
   @Override
