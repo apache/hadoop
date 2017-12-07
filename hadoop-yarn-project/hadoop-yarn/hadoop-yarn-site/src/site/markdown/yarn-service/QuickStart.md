@@ -208,7 +208,25 @@ If you are building from source code, make sure you use `-Pyarn-ui` in the `mvn`
   </property>
 ```
 
-# Try with Docker
+# Run with security
+YARN service framework supports running in a secure(kerberized) environment. User needs to specify the kerberos principal name and keytab when they launch the service.
+E.g. A typical configuration looks like below:
+```
+{
+  "name": "sample-service",
+  ...
+  ...
+  "kerberos_principal" : {
+    "principal_name" : "hdfs-demo@EXAMPLE.COM",
+    "keytab" : "hdfs:///etc/security/keytabs/hdfs.headless.keytab"
+  }
+}
+```
+* principal_name : the principal name of the user who launches the service
+* keytab : URI of the keytab. It supports two modes:
+    * URI starts with `hdfs://`: The URI where the keytab is stored on hdfs. The keytab will be localized to each node by YARN.
+    * URI starts with `file://`: The URI where the keytab is stored on local host. It is assumed that admin pre-installs the keytabs on the local host before AM launches.
+# Run with Docker
 The above example is only for a non-docker container based service. YARN Service Framework also provides first-class support for managing docker based services.
 Most of the steps for managing docker based services are the same except that in docker the `Artifact` type for a component is `DOCKER` and the Artifact `id` is the name of the docker image.
 For details in how to setup docker on YARN, please check [Docker on YARN](../DockerContainers.md).

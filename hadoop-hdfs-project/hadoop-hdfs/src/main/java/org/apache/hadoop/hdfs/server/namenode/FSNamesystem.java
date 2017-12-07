@@ -87,6 +87,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 
@@ -95,6 +97,8 @@ import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import static org.apache.hadoop.util.Time.now;
@@ -211,7 +215,6 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -426,6 +429,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final UserGroupInformation fsOwner;
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
+  private final int snapshotDiffReportLimit;
 
   /** Interval between each check of lease to release. */
   private final long leaseRecheckIntervalMs;
@@ -761,6 +765,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                                  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
       this.isPermissionEnabled = conf.getBoolean(DFS_PERMISSIONS_ENABLED_KEY,
                                                  DFS_PERMISSIONS_ENABLED_DEFAULT);
+      this.snapshotDiffReportLimit =
+          conf.getInt(DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT,
+              DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT);
+
       LOG.info("fsOwner             = " + fsOwner);
       LOG.info("supergroup          = " + supergroup);
       LOG.info("isPermissionEnabled = " + isPermissionEnabled);
@@ -3310,25 +3318,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + "Removed empty last block and closed file " + src);
         return true;
       }
-      // start recovery of the last block for this file
-      long blockRecoveryId = nextGenerationStamp(
-          blockManager.isLegacyBlock(lastBlock));
-      lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
-      if(copyOnTruncate) {
-        lastBlock.setGenerationStamp(blockRecoveryId);
-      } else if(truncateRecovery) {
-        recoveryBlock.setGenerationStamp(blockRecoveryId);
-      }
-      uc.initializeBlockRecovery(lastBlock, blockRecoveryId, true);
-      leaseManager.renewLease(lease);
-      // Cannot close file right now, since the last block requires recovery.
-      // This may potentially cause infinite loop in lease recovery
-      // if there are no valid replicas on data-nodes.
-      NameNode.stateChangeLog.warn(
-                "DIR* NameSystem.internalReleaseLease: " +
+      // Start recovery of the last block for this file
+      // Only do so if there is no ongoing recovery for this block,
+      // or the previous recovery for this block timed out.
+      if (blockManager.addBlockRecoveryAttempt(lastBlock)) {
+        long blockRecoveryId = nextGenerationStamp(
+            blockManager.isLegacyBlock(lastBlock));
+        if(copyOnTruncate) {
+          lastBlock.setGenerationStamp(blockRecoveryId);
+        } else if(truncateRecovery) {
+          recoveryBlock.setGenerationStamp(blockRecoveryId);
+        }
+        uc.initializeBlockRecovery(lastBlock, blockRecoveryId, true);
+
+        // Cannot close file right now, since the last block requires recovery.
+        // This may potentially cause infinite loop in lease recovery
+        // if there are no valid replicas on data-nodes.
+        NameNode.stateChangeLog.warn(
+            "DIR* NameSystem.internalReleaseLease: " +
                 "File " + src + " has not been closed." +
-               " Lease recovery is in progress. " +
+                " Lease recovery is in progress. " +
                 "RecoveryId = " + blockRecoveryId + " for block " + lastBlock);
+      }
+      lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
+      leaseManager.renewLease(lease);
       break;
     }
     return false;
@@ -3596,6 +3609,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // If this commit does not want to close the file, persist blocks
         FSDirWriteFileOp.persistBlocks(dir, src, iFile, false);
       }
+      blockManager.successfulBlockRecovery(storedBlock);
     } finally {
       writeUnlock("commitBlockSynchronization");
     }
@@ -6364,16 +6378,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the difference between two snapshots (or between a snapshot and the
    * current status) of a snapshottable directory.
-   * 
+   *
    * @param path The full path of the snapshottable directory.
    * @param fromSnapshot Name of the snapshot to calculate the diff from. Null
    *          or empty string indicates the current tree.
    * @param toSnapshot Name of the snapshot to calculated the diff to. Null or
    *          empty string indicates the current tree.
-   * @return A report about the difference between {@code fromSnapshot} and 
-   *         {@code toSnapshot}. Modified/deleted/created/renamed files and 
-   *         directories belonging to the snapshottable directories are listed 
-   *         and labeled as M/-/+/R respectively. 
+   * @return A report about the difference between {@code fromSnapshot} and
+   *         {@code toSnapshot}. Modified/deleted/created/renamed files and
+   *         directories belonging to the snapshottable directories are listed
+   *         and labeled as M/-/+/R respectively.
    * @throws IOException
    */
   SnapshotDiffReport getSnapshotDiffReport(String path,
@@ -6401,6 +6415,63 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     logAuditEvent(success, operationName, fromSnapshotRoot,
         toSnapshotRoot, null);
+    return diffs;
+  }
+
+  /**
+   * Get the difference between two snapshots (or between a snapshot and the
+   * current status) of a snapshottable directory.
+   *
+   * @param path The full path of the snapshottable directory.
+   * @param fromSnapshot Name of the snapshot to calculate the diff from. Null
+   *          or empty string indicates the current tree.
+   * @param toSnapshot Name of the snapshot to calculated the diff to. Null or
+   *          empty string indicates the current tree.
+   * @param startPath
+   *          path relative to the snapshottable root directory from where the
+   *          snapshotdiff computation needs to start across multiple rpc calls
+   * @param index
+   *           index in the created or deleted list of the directory at which
+   *           the snapshotdiff computation stopped during the last rpc call
+   *           as the no of entries exceeded the snapshotdiffentry limit. -1
+   *           indicates, the snapshotdiff compuatation needs to start right
+   *           from the startPath provided.
+   * @return A partial report about the difference between {@code fromSnapshot}
+   *         and {@code toSnapshot}. Modified/deleted/created/renamed files and
+   *         directories belonging to the snapshottable directories are listed
+   *         and labeled as M/-/+/R respectively.
+   * @throws IOException
+   */
+  SnapshotDiffReportListing getSnapshotDiffReportListing(String path,
+      String fromSnapshot, String toSnapshot, byte[] startPath, int index)
+      throws IOException {
+    final String operationName = "computeSnapshotDiff";
+    SnapshotDiffReportListing diffs = null;
+    checkOperation(OperationCategory.READ);
+    boolean success = false;
+    String fromSnapshotRoot =
+        (fromSnapshot == null || fromSnapshot.isEmpty()) ? path :
+            Snapshot.getSnapshotPath(path, fromSnapshot);
+    String toSnapshotRoot =
+        (toSnapshot == null || toSnapshot.isEmpty()) ? path :
+            Snapshot.getSnapshotPath(path, toSnapshot);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      diffs = FSDirSnapshotOp
+          .getSnapshotDiffReportListing(dir, snapshotManager, path,
+              fromSnapshot, toSnapshot, startPath, index,
+              snapshotDiffReportLimit);
+      success = true;
+    } catch (AccessControlException ace) {
+      logAuditEvent(success, operationName, fromSnapshotRoot, toSnapshotRoot,
+          null);
+      throw ace;
+    } finally {
+      readUnlock(operationName);
+    }
+    logAuditEvent(success, operationName, fromSnapshotRoot, toSnapshotRoot,
+        null);
     return diffs;
   }
   

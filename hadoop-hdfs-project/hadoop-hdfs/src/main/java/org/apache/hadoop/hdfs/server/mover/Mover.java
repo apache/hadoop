@@ -395,7 +395,7 @@ public class Mover {
           status.getReplication());
 
       final ErasureCodingPolicy ecPolicy = status.getErasureCodingPolicy();
-      final LocatedBlocks locatedBlocks = status.getBlockLocations();
+      final LocatedBlocks locatedBlocks = status.getLocatedBlocks();
       final boolean lastBlkComplete = locatedBlocks.isLastBlockComplete();
       List<LocatedBlock> lbs = locatedBlocks.getLocatedBlocks();
       for (int i = 0; i < lbs.size(); i++) {

@@ -383,7 +383,92 @@ cleanup:
 #endif
 }
 
+/*
+ * Class:     org_apache_hadoop_io_nativeio_NativeIO_POSIX
+ * Method:    stat
+ * Signature: (Ljava/lang/String;)Lorg/apache/hadoop/io/nativeio/NativeIO$POSIX$Stat;
+ * public static native Stat stat(String path);
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT jobject JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_stat(
+  JNIEnv *env, jclass clazz, jstring j_path)
+{
+#ifdef UNIX
+  jobject ret = NULL;
 
+  const char *c_path = (*env)->GetStringUTFChars(env, j_path, NULL);
+  if (c_path == NULL) {
+    goto cleanup;
+  }
+
+  struct stat s;
+  int rc = stat(c_path, &s);
+  if (rc != 0) {
+    throw_ioe(env, errno);
+    goto cleanup;
+  }
+
+  // Construct result
+  ret = (*env)->NewObject(env, stat_clazz, stat_ctor,
+    (jint)s.st_uid, (jint)s.st_gid, (jint)s.st_mode);
+
+cleanup:
+  if (c_path != NULL) {
+    (*env)->ReleaseStringUTFChars(env, j_path, c_path);
+  }
+  return ret;
+#endif
+
+#ifdef WINDOWS
+  LPWSTR owner = NULL;
+  LPWSTR group = NULL;
+  int mode = 0;
+  jstring jstr_owner = NULL;
+  jstring jstr_group = NULL;
+  int rc;
+  jobject ret = NULL;
+
+  LPCWSTR path = (LPCWSTR) (*env)->GetStringChars(env, j_path, NULL);
+  if (path == NULL) {
+    goto cleanup;
+  }
+
+  rc = FindFileOwnerAndPermission(path, TRUE, &owner, &group, &mode);
+  if (rc != ERROR_SUCCESS) {
+    throw_ioe(env, rc);
+    goto cleanup;
+  }
+
+  jstr_owner = (*env)->NewString(env, owner, (jsize) wcslen(owner));
+  if (jstr_owner == NULL) goto cleanup;
+
+  jstr_group = (*env)->NewString(env, group, (jsize) wcslen(group));
+  if (jstr_group == NULL) goto cleanup;
+
+  ret = (*env)->NewObject(env, stat_clazz, stat_ctor2,
+    jstr_owner, jstr_group, (jint)mode);
+
+cleanup:
+  if (path != NULL)
+    (*env)->ReleaseStringChars(env, j_path, (const jchar*) path);
+
+  if (ret == NULL) {
+    if (jstr_owner != NULL)
+      (*env)->ReleaseStringChars(env, jstr_owner, owner);
+
+    if (jstr_group != NULL)
+      (*env)->ReleaseStringChars(env, jstr_group, group);
+  }
+
+  LocalFree(owner);
+  LocalFree(group);
+
+  return ret;
+#endif
+}
 
 /**
  * public static native void posix_fadvise(

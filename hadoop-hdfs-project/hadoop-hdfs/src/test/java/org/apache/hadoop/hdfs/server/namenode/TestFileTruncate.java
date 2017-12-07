@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -1153,6 +1154,46 @@ public class TestFileTruncate {
     checkFullFile(file, newLength, contents);
 
     fs.delete(parent, true);
+  }
+
+  /**
+   * While rolling upgrade is in-progress the test truncates a file
+   * such that copy-on-truncate is triggered, then deletes the file,
+   * and makes sure that no blocks involved in truncate are hanging around.
+   */
+  @Test
+  public void testTruncateWithRollingUpgrade() throws Exception {
+    final DFSAdmin dfsadmin = new DFSAdmin(cluster.getConfiguration(0));
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    //start rolling upgrade
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    int status = dfsadmin.run(new String[]{"-rollingUpgrade", "prepare"});
+    assertEquals("could not prepare for rolling upgrade", 0, status);
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    Path dir = new Path("/testTruncateWithRollingUpgrade");
+    fs.mkdirs(dir);
+    final Path p = new Path(dir, "file");
+    final byte[] data = new byte[3];
+    ThreadLocalRandom.current().nextBytes(data);
+    writeContents(data, data.length, p);
+
+    assertEquals("block num should 1", 1,
+        cluster.getNamesystem().getFSDirectory().getBlockManager()
+            .getTotalBlocks());
+
+    final boolean isReady = fs.truncate(p, 2);
+    assertFalse("should be copy-on-truncate", isReady);
+    assertEquals("block num should 2", 2,
+        cluster.getNamesystem().getFSDirectory().getBlockManager()
+            .getTotalBlocks());
+    fs.delete(p, true);
+
+    assertEquals("block num should 0", 0,
+        cluster.getNamesystem().getFSDirectory().getBlockManager()
+            .getTotalBlocks());
+    status = dfsadmin.run(new String[]{"-rollingUpgrade", "finalize"});
+    assertEquals("could not finalize rolling upgrade", 0, status);
   }
 
   static void writeContents(byte[] contents, int fileLength, Path p)

@@ -431,7 +431,7 @@ public class Application {
     if (type == NodeType.NODE_LOCAL) {
       for (String host : task.getHosts()) {
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updateResourceRequests:" + " application=" + applicationId
+          LOG.debug("updatePendingAsk:" + " application=" + applicationId
             + " type=" + type + " host=" + host
             + " request=" + ((requests == null) ? "null" : requests.get(host)));
         }
@@ -442,7 +442,7 @@ public class Application {
     if (type == NodeType.NODE_LOCAL || type == NodeType.RACK_LOCAL) {
       for (String rack : task.getRacks()) {
         if(LOG.isDebugEnabled()) {
-          LOG.debug("updateResourceRequests:" + " application=" + applicationId
+          LOG.debug("updatePendingAsk:" + " application=" + applicationId
             + " type=" + type + " rack=" + rack
             + " request=" + ((requests == null) ? "null" : requests.get(rack)));
         }
@@ -453,7 +453,7 @@ public class Application {
     updateResourceRequest(requests.get(ResourceRequest.ANY));
     
     if(LOG.isDebugEnabled()) {
-      LOG.debug("updateResourceRequests:" + " application=" + applicationId
+      LOG.debug("updatePendingAsk:" + " application=" + applicationId
         + " #asks=" + ask.size());
     }
   }

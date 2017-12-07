@@ -173,6 +173,7 @@ public class ApiServer {
       return Response.status(Status.BAD_REQUEST).entity(serviceStatus)
           .build();
     } catch (Exception e) {
+      LOG.error("Fail to stop service:", e);
       ServiceStatus serviceStatus = new ServiceStatus();
       serviceStatus.setDiagnostics(e.getMessage());
       return Response.status(Status.INTERNAL_SERVER_ERROR)

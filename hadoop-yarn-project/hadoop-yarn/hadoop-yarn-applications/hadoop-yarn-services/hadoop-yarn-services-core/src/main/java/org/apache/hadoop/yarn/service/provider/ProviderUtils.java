@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.service.provider;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -28,21 +27,18 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.ConfigFormat;
-import org.apache.hadoop.yarn.service.api.records.Configuration;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
-import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
 import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.PublishedConfiguration;
 import org.apache.hadoop.yarn.service.utils.PublishedConfigurationOutputter;
-import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
+import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,53 +156,6 @@ public class ProviderUtils implements YarnServiceConstants {
         }
       }
       entry.setValue(value);
-    }
-  }
-
-  /**
-   * Localize the service keytabs for the service.
-   * @param launcher container launcher
-   * @param fileSystem file system
-   * @throws IOException trouble uploading to HDFS
-   */
-  public void localizeServiceKeytabs(AbstractLauncher launcher,
-      SliderFileSystem fileSystem, Service service) throws IOException {
-
-    Configuration conf = service.getConfiguration();
-    String keytabPathOnHost =
-        conf.getProperty(YarnServiceConf.KEY_AM_KEYTAB_LOCAL_PATH);
-    if (ServiceUtils.isUnset(keytabPathOnHost)) {
-      String amKeytabName =
-          conf.getProperty(YarnServiceConf.KEY_AM_LOGIN_KEYTAB_NAME);
-      String keytabDir =
-          conf.getProperty(YarnServiceConf.KEY_HDFS_KEYTAB_DIR);
-      // we need to localize the keytab files in the directory
-      Path keytabDirPath = fileSystem.buildKeytabPath(keytabDir, null,
-          service.getName());
-      boolean serviceKeytabsDeployed = false;
-      if (fileSystem.getFileSystem().exists(keytabDirPath)) {
-        FileStatus[] keytabs = fileSystem.getFileSystem().listStatus(
-            keytabDirPath);
-        LocalResource keytabRes;
-        for (FileStatus keytab : keytabs) {
-          if (!amKeytabName.equals(keytab.getPath().getName())
-              && keytab.getPath().getName().endsWith(".keytab")) {
-            serviceKeytabsDeployed = true;
-            log.info("Localizing keytab {}", keytab.getPath().getName());
-            keytabRes = fileSystem.createAmResource(keytab.getPath(),
-                LocalResourceType.FILE);
-            launcher.addLocalResource(KEYTAB_DIR + "/" +
-                    keytab.getPath().getName(),
-                keytabRes);
-          }
-        }
-      }
-      if (!serviceKeytabsDeployed) {
-        log.warn("No service keytabs for the service have been localized.  "
-            + "If the service requires keytabs for secure operation, "
-            + "please ensure that the required keytabs have been uploaded "
-            + "to the folder {}", keytabDirPath);
-      }
     }
   }
 

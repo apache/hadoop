@@ -155,7 +155,7 @@ public final class FederationUtil {
    * Creates an instance of an ActiveNamenodeResolver from the configuration.
    *
    * @param conf Configuration that defines the namenode resolver class.
-   * @param obj Context object passed to class constructor.
+   * @param stateStore State store passed to class constructor.
    * @return New active namenode resolver.
    */
   public static ActiveNamenodeResolver newActiveNamenodeResolver(

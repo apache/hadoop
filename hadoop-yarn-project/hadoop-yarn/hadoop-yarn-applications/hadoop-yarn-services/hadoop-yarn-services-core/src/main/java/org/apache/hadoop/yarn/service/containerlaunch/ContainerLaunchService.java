@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.service.containerlaunch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.provider.ProviderService;
@@ -40,10 +41,11 @@ public class ContainerLaunchService extends AbstractService{
 
   private ExecutorService executorService;
   private SliderFileSystem fs;
-
-  public ContainerLaunchService(SliderFileSystem fs) {
+  private ServiceContext context;
+  public ContainerLaunchService(ServiceContext context) {
     super(ContainerLaunchService.class.getName());
-    this.fs = fs;
+    this.fs = context.fs;
+    this.context = context;
   }
 
   @Override
@@ -84,7 +86,7 @@ public class ContainerLaunchService extends AbstractService{
       Component compSpec = instance.getCompSpec();
       ProviderService provider = ProviderFactory.getProviderService(
           compSpec.getArtifact());
-      AbstractLauncher launcher = new AbstractLauncher(fs, null);
+      AbstractLauncher launcher = new AbstractLauncher(context);
       try {
         provider.buildContainerLaunchContext(launcher, service,
             instance, fs, getConfig(), container);

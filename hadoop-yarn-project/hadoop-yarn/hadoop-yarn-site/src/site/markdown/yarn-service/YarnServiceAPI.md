@@ -291,6 +291,15 @@ The current state of the container of a service.
 |----|----|----|----|----|
 |state|enum of the state of the container|false|enum (INIT, STARTED, READY)||
 
+### KerberosPrincipal
+
+The kerberos principal info of the user who launches the service.
+
+|Name|Description|Required|Schema|Default|
+|----|----|----|----|----|
+|principal_name|The principal name of the user who launches the service.|false|string||
+|keytab|The URI of the kerberos keytab. It supports two modes, URI starts with "hdfs://": A path on hdfs where the keytab is stored. The keytab will be localized by YARN to each host; URI starts with "file://": A path on the local host where the keytab is stored. It is assumed that the keytabs are pre-installed by admins before AM launches.|false|string||
+
 
 ### PlacementPolicy
 
@@ -342,7 +351,7 @@ a service resource has the following attributes.
 |state|State of the service. Specifying a value for this attribute for the PUT payload means update the service to this desired state.|false|ServiceState||
 |quicklinks|A blob of key-value pairs of quicklinks to be exported for a service.|false|object||
 |queue|The YARN queue that this service should be submitted to.|false|string||
-
+|kerberos_principal | The principal info of the user who launches the service|false||
 
 ### ServiceState
 

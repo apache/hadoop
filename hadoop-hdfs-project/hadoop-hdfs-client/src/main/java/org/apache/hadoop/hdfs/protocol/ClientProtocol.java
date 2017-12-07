@@ -1289,6 +1289,35 @@ public interface ClientProtocol {
       String fromSnapshot, String toSnapshot) throws IOException;
 
   /**
+   * Get the difference between two snapshots, or between a snapshot and the
+   * current tree of a directory.
+   *
+   * @param snapshotRoot
+   *          full path of the directory where snapshots are taken
+   * @param fromSnapshot
+   *          snapshot name of the from point. Null indicates the current
+   *          tree
+   * @param toSnapshot
+   *          snapshot name of the to point. Null indicates the current
+   *          tree.
+   * @param startPath
+   *          path relative to the snapshottable root directory from where the
+   *          snapshotdiff computation needs to start across multiple rpc calls
+   * @param index
+   *           index in the created or deleted list of the directory at which
+   *           the snapshotdiff computation stopped during the last rpc call
+   *           as the no of entries exceeded the snapshotdiffentry limit. -1
+   *           indicates, the snapshotdiff compuatation needs to start right
+   *           from the startPath provided.
+   * @return The difference report represented as a {@link SnapshotDiffReport}.
+   * @throws IOException on error
+   */
+  @Idempotent
+  SnapshotDiffReportListing getSnapshotDiffReportListing(String snapshotRoot,
+      String fromSnapshot, String toSnapshot, byte[] startPath, int index)
+      throws IOException;
+
+  /**
    * Add a CacheDirective to the CacheManager.
    *
    * @param directive A CacheDirectiveInfo to be added

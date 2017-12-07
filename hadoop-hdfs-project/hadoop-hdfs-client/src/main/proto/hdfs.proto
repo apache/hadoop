@@ -531,6 +531,32 @@ message SnapshotDiffReportProto {
 }
 
 /**
+ * Snapshot diff report listing entry
+ */
+message SnapshotDiffReportListingEntryProto {
+  required bytes fullpath = 1;
+  required uint64 dirId = 2;
+  required bool isReference = 3;
+  optional bytes targetPath = 4;
+  optional uint64 fileId = 5;
+}
+
+message SnapshotDiffReportCursorProto {
+  required bytes startPath = 1;
+  required int32 index = 2 [default = -1];
+}
+/**
+ * Snapshot diff report listing
+ */
+message SnapshotDiffReportListingProto {
+  // full path of the directory where snapshots were taken
+  repeated SnapshotDiffReportListingEntryProto modifiedEntries = 1;
+  repeated SnapshotDiffReportListingEntryProto createdEntries = 2;
+  repeated SnapshotDiffReportListingEntryProto deletedEntries = 3;
+  required bool isFromEarlier = 4;
+  optional SnapshotDiffReportCursorProto cursor = 5;
+}
+/**
  * Block information
  *
  * Please be wary of adding additional fields here, since INodeFiles

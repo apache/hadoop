@@ -456,18 +456,18 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
 
-    // Access resource-2 should fail (null NMResourceInfo returned).
+    // Access resource-2 should fail (empty NMResourceInfo returned).
     JSONObject json = response.getEntity(JSONObject.class);
-    assertIncludesException(json);
+    Assert.assertEquals(0, json.length());
 
-    // Access resource-3 should fail (unkown plugin)
+    // Access resource-3 should fail (unknown plugin)
     response = r.path("ws").path("v1").path("node").path(
         "resources").path("resource-3").accept(MediaType.APPLICATION_JSON).get(
         ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     json = response.getEntity(JSONObject.class);
-    assertIncludesException(json);
+    Assert.assertEquals(0, json.length());
 
     // Access resource-1 should success
     response = r.path("ws").path("v1").path("node").path(
@@ -535,10 +535,6 @@ public class TestNMWebServices extends JerseyTestBase {
     Assert.assertEquals(3, json.getJSONArray("totalGpuDevices").length());
     Assert.assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
     Assert.assertEquals(2, json.getJSONArray("assignedGpuDevices").length());
-  }
-
-  private void assertIncludesException(JSONObject json) {
-    Assert.assertTrue(json.has("RemoteException"));
   }
 
   private void testContainerLogs(WebResource r, ContainerId containerId)
@@ -749,14 +745,15 @@ public class TestNMWebServices extends JerseyTestBase {
           WebServicesTestUtils.getXmlString(element,
               "nodeManagerVersionBuiltOn"), WebServicesTestUtils.getXmlString(
               element, "nodeManagerBuildVersion"),
-          WebServicesTestUtils.getXmlString(element, "nodeManagerVersion"));
+          WebServicesTestUtils.getXmlString(element, "nodeManagerVersion"),
+          WebServicesTestUtils.getXmlString(element, "resourceTypes"));
     }
   }
 
   public void verifyNodeInfo(JSONObject json) throws JSONException, Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject info = json.getJSONObject("nodeInfo");
-    assertEquals("incorrect number of elements", 17, info.length());
+    assertEquals("incorrect number of elements", 18, info.length());
     verifyNodeInfoGeneric(info.getString("id"), info.getString("healthReport"),
         info.getLong("totalVmemAllocatedContainersMB"),
         info.getLong("totalPmemAllocatedContainersMB"),
@@ -768,7 +765,9 @@ public class TestNMWebServices extends JerseyTestBase {
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
         info.getString("nodeManagerVersionBuiltOn"),
         info.getString("nodeManagerBuildVersion"),
-        info.getString("nodeManagerVersion"));
+        info.getString("nodeManagerVersion"),
+        info.getString("resourceTypes")
+        );
 
   }
 
@@ -779,7 +778,8 @@ public class TestNMWebServices extends JerseyTestBase {
       long lastNodeUpdateTime, Boolean nodeHealthy, String nodeHostName,
       String hadoopVersionBuiltOn, String hadoopBuildVersion,
       String hadoopVersion, String resourceManagerVersionBuiltOn,
-      String resourceManagerBuildVersion, String resourceManagerVersion) {
+      String resourceManagerBuildVersion, String resourceManagerVersion,
+      String resourceTypes) {
 
     WebServicesTestUtils.checkStringMatch("id", "testhost.foo.com:8042", id);
     WebServicesTestUtils.checkStringMatch("healthReport", "Healthy",
@@ -811,6 +811,8 @@ public class TestNMWebServices extends JerseyTestBase {
         YarnVersionInfo.getBuildVersion(), resourceManagerBuildVersion);
     WebServicesTestUtils.checkStringMatch("resourceManagerVersion",
         YarnVersionInfo.getVersion(), resourceManagerVersion);
+
+    assertEquals("memory-mb (unit=Mi), vcores", resourceTypes);
   }
 
   private String getLogContext(String fullMessage) {

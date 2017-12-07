@@ -142,7 +142,7 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_CONTAINER_DEBUG_INFO =
       YarnConfiguration.NM_PREFIX + "log-container-debug-info.enabled";
 
-  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = false;
+  public static final boolean DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO = true;
 
   ////////////////////////////////
   // IPC Configs
@@ -1514,13 +1514,36 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
       "http://localhost:3476/v1.0/docker/cli";
 
+  /**
+   * Prefix for FPGA configurations. Work in progress: This configuration
+   * parameter may be changed/removed in the future.
+   */
+  @Private
+  public static final String NM_FPGA_RESOURCE_PREFIX =
+          NM_RESOURCE_PLUGINS + ".fpga.";
+
+  @Private
+  public static final String NM_FPGA_ALLOWED_DEVICES =
+          NM_FPGA_RESOURCE_PREFIX + "allowed-fpga-devices";
+
+  @Private
+  public static final String NM_FPGA_PATH_TO_EXEC =
+          NM_FPGA_RESOURCE_PREFIX + "path-to-discovery-executables";
+
+  @Private
+  public static final String NM_FPGA_VENDOR_PLUGIN =
+      NM_FPGA_RESOURCE_PREFIX + "vendor-plugin.class";
+
+  @Private
+  public static final String DEFAULT_NM_FPGA_VENDOR_PLUGIN =
+      "org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin";
 
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
   public static final int DEFAULT_NM_WEBAPP_PORT = 8042;
   public static final String DEFAULT_NM_WEBAPP_ADDRESS = "0.0.0.0:" +
     DEFAULT_NM_WEBAPP_PORT;
-  
+
   /** NM Webapp https address.**/
   public static final String NM_WEBAPP_HTTPS_ADDRESS = NM_PREFIX
       + "webapp.https.address";

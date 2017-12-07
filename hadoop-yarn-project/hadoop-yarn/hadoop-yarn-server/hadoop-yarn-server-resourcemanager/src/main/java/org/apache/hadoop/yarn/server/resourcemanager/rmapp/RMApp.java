@@ -43,6 +43,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
+import org.apache.hadoop.yarn.server.resourcemanager.placement
+    .ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
@@ -303,4 +305,10 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return True/False to confirm whether app is in final states
    */
   boolean isAppInCompletedStates();
+
+  /**
+   * Get the application -> queue placement context
+   * @return ApplicationPlacementContext
+   */
+  ApplicationPlacementContext getApplicationPlacementContext();
 }

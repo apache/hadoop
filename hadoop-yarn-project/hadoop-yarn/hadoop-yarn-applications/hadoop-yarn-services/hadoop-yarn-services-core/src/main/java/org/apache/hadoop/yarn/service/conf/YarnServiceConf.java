@@ -53,13 +53,6 @@ public class YarnServiceConf {
    */
   public static final String YARN_SERVICE_BASE_PATH = "yarn.service.base.path";
 
-  //TODO rename
-  /** Declare that a keytab must be provided */
-  public static final String KEY_AM_LOGIN_KEYTAB_REQUIRED = "slider.am.login.keytab.required";
-  public static final String KEY_AM_LOGIN_KEYTAB_NAME = "slider.am.login.keytab.name";
-  public static final String KEY_HDFS_KEYTAB_DIR = "slider.hdfs.keytab.dir";
-  public static final String KEY_AM_KEYTAB_LOCAL_PATH = "slider.am.keytab.local.path";
-
   /**
    * maximum number of failed containers (in a single component)
    * before the app exits

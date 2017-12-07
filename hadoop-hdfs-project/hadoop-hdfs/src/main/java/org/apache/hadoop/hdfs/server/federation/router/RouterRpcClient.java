@@ -264,7 +264,7 @@ public class RouterRpcClient {
   /**
    * If we should retry the RPC call.
    *
-   * @param ex Exception reported.
+   * @param ioe IOException reported.
    * @param retryCount Number of retries.
    * @return Retry decision.
    * @throws IOException Original exception if the retry policy generates one.
@@ -675,8 +675,8 @@ public class RouterRpcClient {
   /**
    * Checks if a result matches the required result class.
    *
-   * @param expectedResultClass Required result class, null to skip the check.
-   * @param result The result to check.
+   * @param expectedClass Required result class, null to skip the check.
+   * @param clazz The result to check.
    * @return True if the result is an instance of the required class or if the
    *         expected class is null.
    */
@@ -693,8 +693,8 @@ public class RouterRpcClient {
   /**
    * Checks if a result matches the expected value.
    *
-   * @param expectedResultValue The expected value, null to skip the check.
-   * @param result The result to check.
+   * @param expectedValue The expected value, null to skip the check.
+   * @param value The result to check.
    * @return True if the result is equals to the expected value or if the
    *         expected value is null.
    */
@@ -717,7 +717,7 @@ public class RouterRpcClient {
    *
    * @param <T> The type of the remote location.
    * @param locations List of remote locations to call concurrently.
-   * @param remoteMethod The remote method and parameters to invoke.
+   * @param method The remote method and parameters to invoke.
    * @param requireResponse If true an exception will be thrown if all calls do
    *          not complete. If false exceptions are ignored and all data results
    *          successfully received are returned.
@@ -740,12 +740,12 @@ public class RouterRpcClient {
    * RemoteException or IOException.
    *
    * @param locations List of remote locations to call concurrently.
-   * @param remoteMethod The remote method and parameters to invoke.
+   * @param method The remote method and parameters to invoke.
    * @param requireResponse If true an exception will be thrown if all calls do
    *          not complete. If false exceptions are ignored and all data results
    *          successfully received are returned.
    * @param standby If the requests should go to the standby namenodes too.
-   * @param timeoutMs Timeout for each individual call.
+   * @param timeOutMs Timeout for each individual call.
    * @return Result of invoking the method per subcluster: nsId -> result.
    * @throws IOException If requiredResponse=true and any of the calls throw an
    *           exception.
@@ -877,7 +877,7 @@ public class RouterRpcClient {
    * Get a prioritized list of NNs that share the same nameservice ID (in the
    * same namespace). NNs that are reported as ACTIVE will be first in the list.
    *
-   * @param nameserviceId The nameservice ID for the namespace.
+   * @param nsId The nameservice ID for the namespace.
    * @return A prioritized list of NNs to use for communication.
    * @throws IOException If a NN cannot be located for the nameservice ID.
    */
@@ -898,7 +898,7 @@ public class RouterRpcClient {
    * Get a prioritized list of NNs that share the same block pool ID (in the
    * same namespace). NNs that are reported as ACTIVE will be first in the list.
    *
-   * @param blockPoolId The blockpool ID for the namespace.
+   * @param bpId The blockpool ID for the namespace.
    * @return A prioritized list of NNs to use for communication.
    * @throws IOException If a NN cannot be located for the block pool ID.
    */

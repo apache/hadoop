@@ -696,11 +696,34 @@ public class RawLocalFileSystem extends FileSystem {
       return super.getGroup();
     }
 
+    /**
+     * Load file permission information (UNIX symbol rwxrwxrwx, sticky bit info).
+     *
+     * To improve peformance, give priority to native stat() call. First try get
+     * permission information by using native JNI call then fall back to use non
+     * native (ProcessBuilder) call in case native lib is not loaded or native
+     * call is not successful
+     */
+    private synchronized void loadPermissionInfo() {
+      if (!isPermissionLoaded() && NativeIO.isAvailable()) {
+        try {
+          loadPermissionInfoByNativeIO();
+        } catch (IOException ex) {
+          LOG.debug("Native call failed", ex);
+        }
+      }
+
+      if (!isPermissionLoaded()) {
+        loadPermissionInfoByNonNativeIO();
+      }
+    }
+
     /// loads permissions, owner, and group from `ls -ld`
-    private void loadPermissionInfo() {
+    @VisibleForTesting
+    void loadPermissionInfoByNonNativeIO() {
       IOException e = null;
       try {
-        String output = FileUtil.execCommand(new File(getPath().toUri()), 
+        String output = FileUtil.execCommand(new File(getPath().toUri()),
             Shell.getGetPermissionCommand());
         StringTokenizer t =
             new StringTokenizer(output, Shell.TOKEN_SEPARATOR_REGEX);
@@ -716,16 +739,16 @@ public class RawLocalFileSystem extends FileSystem {
         t.nextToken();
 
         String owner = t.nextToken();
+        String group = t.nextToken();
         // If on windows domain, token format is DOMAIN\\user and we want to
         // extract only the user name
+        // same as to the group name
         if (Shell.WINDOWS) {
-          int i = owner.indexOf('\\');
-          if (i != -1)
-            owner = owner.substring(i + 1);
+          owner = removeDomain(owner);
+          group = removeDomain(group);
         }
         setOwner(owner);
-
-        setGroup(t.nextToken());
+        setGroup(group);
       } catch (Shell.ExitCodeException ioe) {
         if (ioe.getExitCode() != 1) {
           e = ioe;
@@ -742,6 +765,46 @@ public class RawLocalFileSystem extends FileSystem {
                                      "file permissions : " + 
                                      StringUtils.stringifyException(e));
         }
+      }
+    }
+
+    // In Windows, domain name is added.
+    // For example, given machine name (domain name) dname, user name i, then
+    // the result for user is dname\\i and for group is dname\\None. So we need
+    // remove domain name as follows:
+    // DOMAIN\\user => user, DOMAIN\\group => group
+    private String removeDomain(String str) {
+      int index = str.indexOf("\\");
+      if (index != -1) {
+        str = str.substring(index + 1);
+      }
+      return str;
+    }
+
+    // loads permissions, owner, and group from `ls -ld`
+    // but use JNI to more efficiently get file mode (permission, owner, group)
+    // by calling file stat() in *nix or some similar calls in Windows
+    @VisibleForTesting
+    void loadPermissionInfoByNativeIO() throws IOException {
+      Path path = getPath();
+      String pathName = path.toUri().getPath();
+      // remove leading slash for Windows path
+      if (Shell.WINDOWS && pathName.startsWith("/")) {
+        pathName = pathName.substring(1);
+      }
+      try {
+        NativeIO.POSIX.Stat stat = NativeIO.POSIX.getStat(pathName);
+        String owner = stat.getOwner();
+        String group = stat.getGroup();
+        int mode = stat.getMode();
+        setOwner(owner);
+        setGroup(group);
+        setPermission(new FsPermission(mode));
+      } catch (IOException e) {
+        setOwner(null);
+        setGroup(null);
+        setPermission(null);
+        throw e;
       }
     }
 
