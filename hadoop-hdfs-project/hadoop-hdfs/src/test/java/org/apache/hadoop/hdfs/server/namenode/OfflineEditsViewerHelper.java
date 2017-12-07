@@ -98,8 +98,10 @@ public class OfflineEditsViewerHelper {
     config.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     config.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    final int numDataNodes = 9;
     cluster =
-      new MiniDFSCluster.Builder(config).manageNameDfsDirs(false).build();
+      new MiniDFSCluster.Builder(config).manageNameDfsDirs(false)
+          .numDataNodes(numDataNodes).build();
     cluster.waitClusterUp();
   }
 
