@@ -39,7 +39,6 @@ export default Ember.Controller.extend({
 
   actions: {
     setFilter(partition) {
-      console.log(partition);
       this.set("filteredPartition", partition);
     }
   }
