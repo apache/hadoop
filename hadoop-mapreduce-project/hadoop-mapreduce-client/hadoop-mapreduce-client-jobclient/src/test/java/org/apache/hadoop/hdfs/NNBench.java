@@ -30,8 +30,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -57,6 +55,8 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This program executes a specified operation that applies load to 
@@ -78,8 +78,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 
 public class NNBench extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(
-          "org.apache.hadoop.hdfs.NNBench");
+  private static final Logger LOG = LoggerFactory.getLogger(NNBench.class);
   
   private static String CONTROL_DIR_NAME = "control";
   private static String OUTPUT_DIR_NAME = "output";
