@@ -1535,7 +1535,7 @@ public class ContainerImpl implements Container {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
       container.exitCode = exitEvent.getExitCode();
       if (exitEvent.getDiagnosticInfo() != null) {
-        container.addDiagnostics(exitEvent.getDiagnosticInfo(), "\n");
+        container.addDiagnostics(exitEvent.getDiagnosticInfo() + "\n");
       }
 
       // TODO: Add containerWorkDir to the deletion service.
@@ -1572,7 +1572,7 @@ public class ContainerImpl implements Container {
           container.addDiagnostics("Diagnostic message from attempt "
               + n + " : ", "\n");
         }
-        container.addDiagnostics(exitEvent.getDiagnosticInfo(), "\n");
+        container.addDiagnostics(exitEvent.getDiagnosticInfo() + "\n");
       }
 
       if (container.shouldRetry(container.exitCode)) {
@@ -1731,7 +1731,7 @@ public class ContainerImpl implements Container {
 
       ContainerResourceFailedEvent rsrcFailedEvent =
           (ContainerResourceFailedEvent) event;
-      container.addDiagnostics(rsrcFailedEvent.getDiagnosticMessage(), "\n");
+      container.addDiagnostics(rsrcFailedEvent.getDiagnosticMessage() + "\n");
 
       // Inform the localizer to decrement reference counts and cleanup
       // resources.
@@ -1754,7 +1754,7 @@ public class ContainerImpl implements Container {
       container.metrics.endInitingContainer();
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
       container.exitCode = killEvent.getContainerExitStatus();
-      container.addDiagnostics(killEvent.getDiagnostic(), "\n");
+      container.addDiagnostics(killEvent.getDiagnostic() + "\n");
       container.addDiagnostics("Container is killed before being launched.\n");
     }
   }
@@ -1793,7 +1793,7 @@ public class ContainerImpl implements Container {
           new ContainersLauncherEvent(container,
               ContainersLauncherEventType.CLEANUP_CONTAINER));
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
-      container.addDiagnostics(killEvent.getDiagnostic(), "\n");
+      container.addDiagnostics(killEvent.getDiagnostic() + "\n");
       container.exitCode = killEvent.getContainerExitStatus();
     }
   }
@@ -1832,7 +1832,7 @@ public class ContainerImpl implements Container {
       }
 
       if (exitEvent.getDiagnosticInfo() != null) {
-        container.addDiagnostics(exitEvent.getDiagnosticInfo(), "\n");
+        container.addDiagnostics(exitEvent.getDiagnosticInfo() + "\n");
       }
 
       // The process/process-grp is killed. Decrement reference counts and
@@ -1884,7 +1884,7 @@ public class ContainerImpl implements Container {
       } else {
         ContainerKillEvent killEvent = (ContainerKillEvent) event;
         container.exitCode = killEvent.getContainerExitStatus();
-        container.addDiagnostics(killEvent.getDiagnostic(), "\n");
+        container.addDiagnostics(killEvent.getDiagnostic() + "\n");
         container.addDiagnostics("Container is killed before being launched.\n");
         container.metrics.killedContainer();
         NMAuditLogger.logSuccess(container.user,
@@ -2004,7 +2004,7 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerDiagnosticsUpdateEvent updateEvent =
           (ContainerDiagnosticsUpdateEvent) event;
-      container.addDiagnostics(updateEvent.getDiagnosticsUpdate(), "\n");
+      container.addDiagnostics(updateEvent.getDiagnosticsUpdate() + "\n");
     }
   }
 
@@ -2022,7 +2022,7 @@ public class ContainerImpl implements Container {
           new ContainersLauncherEvent(container,
               ContainersLauncherEventType.PAUSE_CONTAINER));
       ContainerPauseEvent pauseEvent = (ContainerPauseEvent) event;
-      container.addDiagnostics(pauseEvent.getDiagnostic(), "\n");
+      container.addDiagnostics(pauseEvent.getDiagnostic() + "\n");
     }
   }
 
@@ -2055,7 +2055,7 @@ public class ContainerImpl implements Container {
           new ContainersLauncherEvent(container,
               ContainersLauncherEventType.RESUME_CONTAINER));
       ContainerResumeEvent resumeEvent = (ContainerResumeEvent) event;
-      container.addDiagnostics(resumeEvent.getDiagnostic(), "\n");
+      container.addDiagnostics(resumeEvent.getDiagnostic() + "\n");
     }
   }
 
