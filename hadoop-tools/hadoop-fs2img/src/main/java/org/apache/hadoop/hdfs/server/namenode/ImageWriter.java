@@ -183,9 +183,9 @@ public class ImageWriter implements Closeable {
       dirsTmp.deleteOnExit();
       dirsTmpStream = new FileOutputStream(dirsTmp);
       dirs = beginSection(dirsTmpStream);
-    } catch (IOException e) {
+    } catch (Throwable e) {
       IOUtils.cleanupWithLogger(null, raw, dirsTmpStream);
-      throw e;
+      throw new IOException(e);
     }
 
     try {
