@@ -22,8 +22,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.CustomOutputCommitter;
 import org.apache.hadoop.FailMapper;
 import org.apache.hadoop.conf.Configuration;
@@ -46,10 +44,13 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestMROldApiJobs {
 
-  private static final Log LOG = LogFactory.getLog(TestMROldApiJobs.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMROldApiJobs.class);
 
   protected static MiniMRYarnCluster mrCluster;
   private static Configuration conf = new Configuration();

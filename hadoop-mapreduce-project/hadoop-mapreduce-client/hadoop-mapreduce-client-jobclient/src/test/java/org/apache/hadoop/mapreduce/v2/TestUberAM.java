@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobCounter;
@@ -35,10 +33,12 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestUberAM extends TestMRJobs {
 
-  private static final Log LOG = LogFactory.getLog(TestUberAM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestUberAM.class);
 
   @BeforeClass
   public static void setup() throws IOException {

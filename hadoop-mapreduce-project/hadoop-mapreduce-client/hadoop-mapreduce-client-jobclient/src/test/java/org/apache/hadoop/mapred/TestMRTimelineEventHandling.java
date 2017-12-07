@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -59,14 +57,16 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
 
 public class TestMRTimelineEventHandling {
 
   private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
-  private static final Log LOG =
-      LogFactory.getLog(TestMRTimelineEventHandling.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRTimelineEventHandling.class);
 
   @Test
   public void testTimelineServiceStartInMiniCluster() throws Exception {
