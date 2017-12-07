@@ -16,6 +16,10 @@ These release notes include new developer and user-facing incompatibilities, fea
      Major bug reported by Jason Lowe and fixed by Jason Lowe <br>
      <b>TestSchedulingMonitor#testRMStarts fails sporadically</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-6959">YARN-6959</a>.
+     Major bug reported by Yuqi Wang and fixed by Yuqi Wang (capacity scheduler , fairscheduler , scheduler)<br>
+     <b>RM may allocate wrong AM Container for new attempt</b><br>
+     <blockquote>ResourceManager will now record ResourceRequests from different attempts into different objects.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-5195">YARN-5195</a>.
      Major bug reported by Karam Singh and fixed by sandflee (resourcemanager)<br>
      <b>RM intermittently crashed with NPE while handling APP_ATTEMPT_REMOVED event when async-scheduling enabled in CapacityScheduler</b><br>
@@ -39,6 +43,10 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6750">MAPREDUCE-6750</a>.
      Minor bug reported by Kihwal Lee and fixed by Kihwal Lee (test)<br>
      <b>TestHSAdminServer.testRefreshSuperUserGroups is failing</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6165">MAPREDUCE-6165</a>.
+     Minor bug reported by Wei Yan and fixed by Akira Ajisaka <br>
+     <b>[JDK8] TestCombineFileInputFormat failed on JDK8</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-12832">HDFS-12832</a>.
      Critical bug reported by DENG FEI and fixed by Konstantin Shvachko (namenode)<br>

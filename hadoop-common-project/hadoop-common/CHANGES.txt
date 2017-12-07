@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.7.5 - 2017-12-01
+Release 2.7.5 - 2017-12-07
 
   INCOMPATIBLE CHANGES
 
