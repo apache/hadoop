@@ -23,8 +23,6 @@ export default Ember.Component.extend({
     filterQueuesByPartition(filter) {
       this.set('filteredPartition', filter);
       this.sendAction('setFilter', filter);
-
-      this.set("selected", this.model.get("firstObject").get("id"));
     }
   }
 });

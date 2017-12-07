@@ -40,6 +40,16 @@ export default Ember.Controller.extend({
   actions: {
     setFilter(partition) {
       this.set("filteredPartition", partition);
+      const model = this.get('model');
+      const {selectedQueue} = model;
+      // If the selected queue does not have the filtered partition
+      // reset it to root
+      if (!selectedQueue.get('partitions').contains(partition)) {
+        const root = model.queues.get('firstObject');
+        document.location.href = "#/yarn-queues/" + root.get("id") + "!";
+        this.set("model.selectedQueue", root);
+        this.set("model.selected", root.get('id'));
+      }
     }
   }
 });
