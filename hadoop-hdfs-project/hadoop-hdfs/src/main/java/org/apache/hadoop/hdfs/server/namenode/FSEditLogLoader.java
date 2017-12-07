@@ -385,7 +385,7 @@ public class FSEditLogLoader {
             addCloseOp.xAttrs, replication, addCloseOp.mtime,
             addCloseOp.atime, addCloseOp.blockSize, true,
             addCloseOp.clientName, addCloseOp.clientMachine,
-            addCloseOp.storagePolicyId);
+            addCloseOp.storagePolicyId, addCloseOp.erasureCodingPolicyId);
         assert newFile != null;
         iip = INodesInPath.replace(iip, iip.length() - 1, newFile);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, newFile.getId());

@@ -816,7 +816,8 @@ public class FSEditLog implements LogsPurgeable {
       .setClientMachine(
           newNode.getFileUnderConstructionFeature().getClientMachine())
       .setOverwrite(overwrite)
-      .setStoragePolicyId(newNode.getLocalStoragePolicyID());
+      .setStoragePolicyId(newNode.getLocalStoragePolicyID())
+      .setErasureCodingPolicyId(newNode.getErasureCodingPolicyID());
 
     AclFeature f = newNode.getAclFeature();
     if (f != null) {

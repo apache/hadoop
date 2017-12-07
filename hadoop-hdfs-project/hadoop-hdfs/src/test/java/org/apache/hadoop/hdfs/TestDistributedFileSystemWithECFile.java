@@ -19,11 +19,13 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,6 +34,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -193,5 +197,56 @@ public class TestDistributedFileSystemWithECFile {
     assertTrue(lastBlock.getHosts().length == 1 + parityBlocks);
     assertTrue(lastBlock.getOffset() == blockGroupSize);
     assertTrue(lastBlock.getLength() == lastBlockSize);
+  }
+
+  @Test(timeout=60000)
+  public void testReplayEditLogsForReplicatedFile() throws Exception {
+    cluster.shutdown();
+
+    ErasureCodingPolicy rs63 = SystemErasureCodingPolicies.getByID(
+        SystemErasureCodingPolicies.RS_6_3_POLICY_ID
+    );
+    ErasureCodingPolicy rs32 = SystemErasureCodingPolicies.getByID(
+        SystemErasureCodingPolicies.RS_3_2_POLICY_ID
+    );
+    // Test RS(6,3) as default policy
+    int numDataNodes = rs63.getNumDataUnits() + rs63.getNumParityUnits();
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(numDataNodes)
+        .build();
+
+    cluster.transitionToActive(0);
+    fs = cluster.getFileSystem(0);
+    fs.enableErasureCodingPolicy(rs63.getName());
+    fs.enableErasureCodingPolicy(rs32.getName());
+
+    Path dir = new Path("/ec");
+    fs.mkdirs(dir);
+    fs.setErasureCodingPolicy(dir, rs63.getName());
+
+    // Create an erasure coded file with the default policy.
+    Path ecFile = new Path(dir, "ecFile");
+    createFile(ecFile.toString(), 10);
+    // Create a replicated file.
+    Path replicatedFile = new Path(dir, "replicated");
+    try (FSDataOutputStream out = fs.createFile(replicatedFile)
+      .replicate().build()) {
+      out.write(123);
+    }
+    // Create an EC file with a different policy.
+    Path ecFile2 = new Path(dir, "RS-3-2");
+    try (FSDataOutputStream out = fs.createFile(ecFile2)
+         .ecPolicyName(rs32.getName()).build()) {
+      out.write(456);
+    }
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+
+    fs = cluster.getFileSystem(1);
+    assertNull(fs.getErasureCodingPolicy(replicatedFile));
+    assertEquals(rs63, fs.getErasureCodingPolicy(ecFile));
+    assertEquals(rs32, fs.getErasureCodingPolicy(ecFile2));
   }
 }
