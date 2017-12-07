@@ -21,8 +21,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.nativetask.Constants;
@@ -31,6 +29,8 @@ import org.apache.hadoop.mapred.nativetask.buffer.ByteBufferDataReader;
 import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
 import org.apache.hadoop.mapred.nativetask.serde.KVSerializer;
 import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * collect data when signaled
@@ -38,7 +38,7 @@ import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
 @InterfaceAudience.Private
 public class BufferPushee<OK, OV> implements Closeable {
 
-  private static Log LOG = LogFactory.getLog(BufferPushee.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BufferPushee.class);
   
   public final static int KV_HEADER_LENGTH = Constants.SIZEOF_KV_LENGTH;
 
