@@ -22,9 +22,9 @@
     <div class="panel panel-default" id="tree-selector-container">
       <div class="panel-heading">
         {{#if filteredPartition}}
-           Scheduler: {{model.firstObject.type}} for partition {{lower filteredPartition}}
+           {{model.firstObject.type}} scheduler - Showing queues from partition {{lower filteredPartition}}
         {{else}}
-          Scheduler: {{model.firstObject.type}} for all partitions
+          {{model.firstObject.type}} scheduler - Showing queues from all partitions
         {{/if}}
       </div>
        {{#if (eq model.firstObject.type "capacity")}}
