@@ -20,6 +20,11 @@ Release 2.7.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6937. Backport MAPREDUCE-6870 to branch-2 while preserving
+    compatibility. (Peter Bacsko via Haibo Chen)
+
+    MAPREDUCE-6975. Logging task counters. (Prabhu Joseph via Naganarasimha)
+
   OPTIMIZATIONS
 
   BUG FIXES
