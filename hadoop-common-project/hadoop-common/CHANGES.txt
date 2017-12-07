@@ -13,6 +13,10 @@ Release 2.7.5 - 2017-12-01
     HADOOP-14827. Allow StopWatch to accept a Timer parameter for tests.
     (Erik Krogen via jlowe)
 
+    HADOOP-14867. Update HDFS Federation setup document, for incorrect
+    property name for secondary name node http address.
+    (Bharat Viswanadham via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -25,6 +29,8 @@ Release 2.7.5 - 2017-12-01
 
     HADOOP-14902. LoadGenerator#genFile write close timing is incorrectly
     calculated. (Hanisha Koneru via jlowe)
+
+    HADOOP-14919. BZip2 drops records when reading data in splits. (Jason Lowe)
 
 Release 2.7.4 - 2017-08-04
 

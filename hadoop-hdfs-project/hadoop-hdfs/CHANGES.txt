@@ -21,8 +21,11 @@ Release 2.7.5 - 2017-12-01
     HDFS-10984. Expose nntop output as metrics. (Siddharth Wagle via xyao, zhz)
 
     HDFS-9259. Make SO_SNDBUF size configurable at DFSClient side for hdfs write
-    scenario. (original patch Mingliang Liu via Ming Ma, branch-2.7 backport done
-    under HDFS-12823, Erik Krogen via zhz).
+    scenario. (original patch Mingliang Liu via Ming Ma, branch-2.7 backport
+    done under HDFS-12823, Erik Krogen via zhz).
+
+    HDFS-12596. Add TestFsck#testFsckCorruptWhenOneReplicaIsCorrupt
+    back to branch-2.7. (Xiao Chen)
 
   OPTIMIZATIONS
 
@@ -31,6 +34,10 @@ Release 2.7.5 - 2017-12-01
 
     HDFS-12323. NameNode terminates after full GC thinking QJM unresponsive
     if full GC is much longer than timeout. (Erik Krogen via shv)
+
+    HDFS-8829. Make SO_RCVBUF and SO_SNDBUF size configurable for
+    DataTransferProtocol sockets and allow configuring auto-tuning (He Tianyi
+    via Colin P. McCabe)
 
   BUG FIXES
 
@@ -47,6 +54,9 @@ Release 2.7.5 - 2017-12-01
     HDFS-8865. Improve quota initialization performance. Contributed by Kihwal Lee.
 
     HDFS-9003. ForkJoin thread pool leaks. (Kihwal Lee via jing9)
+
+    HDFS-12578. TestDeadDatanode#testNonDFSUsedONDeadNodeReReg failing
+    in branch-2.7. (Ajay Kumar via Xiao Chen)
 
     HDFS-12832. INode.getFullPathName may throw ArrayIndexOutOfBoundsException
     lead to NameNode exit. (shv)
@@ -526,10 +536,6 @@ Release 2.7.3 - 2016-08-25
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
     Colin P. McCabe)
-
-    HDFS-8829. Make SO_RCVBUF and SO_SNDBUF size configurable for
-    DataTransferProtocol sockets and allow configuring auto-tuning (He Tianyi
-    via Colin P. McCabe)
 
   BUG FIXES
 
