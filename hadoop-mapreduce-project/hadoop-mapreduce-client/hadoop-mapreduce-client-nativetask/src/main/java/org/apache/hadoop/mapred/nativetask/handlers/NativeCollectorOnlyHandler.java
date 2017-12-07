@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred.nativetask.handlers;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +35,8 @@ import org.apache.hadoop.mapred.nativetask.TaskContext;
 import org.apache.hadoop.mapred.nativetask.util.NativeTaskOutput;
 import org.apache.hadoop.mapred.nativetask.util.OutputUtil;
 import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Java Record Reader + Java Mapper + Native Collector
@@ -46,7 +46,8 @@ import org.apache.hadoop.mapred.nativetask.util.ReadWriteBuffer;
 public class NativeCollectorOnlyHandler<K, V> implements CommandDispatcher, Closeable {
 
   public static final String NAME = "NativeTask.MCollectorOutputHandler";
-  private static Log LOG = LogFactory.getLog(NativeCollectorOnlyHandler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NativeCollectorOnlyHandler.class);
   public static final Command GET_OUTPUT_PATH =
       new Command(100, "GET_OUTPUT_PATH");
   public static final Command GET_OUTPUT_INDEX_PATH =
