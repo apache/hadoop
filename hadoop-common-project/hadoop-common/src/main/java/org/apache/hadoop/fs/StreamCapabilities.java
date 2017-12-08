@@ -23,27 +23,49 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Interface to query streams for supported capabilities.
+ *
+ * Capability strings must be in lower case.
+ *
+ * Constant strings are chosen over enums in order to allow other file systems
+ * to define their own capabilities.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface StreamCapabilities {
   /**
+   * Stream hflush capability implemented by {@link Syncable#hflush()}.
+   */
+  String HFLUSH = "hflush";
+
+  /**
+   * Stream hsync capability implemented by {@link Syncable#hsync()}.
+   */
+  String HSYNC = "hsync";
+
+  /**
+   * Stream setReadahead capability implemented by
+   * {@link CanSetReadahead#setReadahead(Long)}.
+   */
+  String READAHEAD = "in:readahead";
+
+  /**
+   * Stream setDropBehind capability implemented by
+   * {@link CanSetDropBehind#setDropBehind(Boolean)}.
+   */
+  String DROPBEHIND = "dropbehind";
+
+  /**
+   * Stream unbuffer capability implemented by {@link CanUnbuffer#unbuffer()}.
+   */
+  String UNBUFFER = "in:unbuffer";
+
+  /**
    * Capabilities that a stream can support and be queried for.
    */
+  @Deprecated
   enum StreamCapability {
-    /**
-     * Stream hflush capability to flush out the data in client's buffer.
-     * Streams with this capability implement {@link Syncable} and support
-     * {@link Syncable#hflush()}.
-     */
-    HFLUSH("hflush"),
-
-    /**
-     * Stream hsync capability to flush out the data in client's buffer and
-     * the disk device. Streams with this capability implement {@link Syncable}
-     * and support {@link Syncable#hsync()}.
-     */
-    HSYNC("hsync");
+    HFLUSH(StreamCapabilities.HFLUSH),
+    HSYNC(StreamCapabilities.HSYNC);
 
     private final String capability;
 
