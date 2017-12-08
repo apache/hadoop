@@ -66,19 +66,9 @@ class CSQueueUtils {
   private static void capacitiesSanityCheck(String queueName,
       QueueCapacities queueCapacities) {
     for (String label : queueCapacities.getExistingNodeLabels()) {
-      float capacity = queueCapacities.getCapacity(label);
-      float maximumCapacity = queueCapacities.getMaximumCapacity(label);
-      if (capacity > maximumCapacity) {
-        throw new IllegalArgumentException("Illegal queue capacity setting, "
-            + "(capacity=" + capacity + ") > (maximum-capacity="
-            + maximumCapacity + "). When label=[" + label + "]");
-      }
-     
-      // Actually, this may not needed since we have verified capacity <=
-      // maximumCapacity. And the way we compute absolute capacity (abs(x) =
-      // cap(x) * cap(x.parent) * ...) is a monotone increasing function. But
-      // just keep it here to make sure our compute abs capacity method works
-      // correctly. 
+      // The only thing we should care about is absolute capacity <=
+      // absolute max capacity otherwise the absolute max capacity is
+      // no longer an absolute maximum.
       float absCapacity = queueCapacities.getAbsoluteCapacity(label);
       float absMaxCapacity = queueCapacities.getAbsoluteMaximumCapacity(label);
       if (absCapacity > absMaxCapacity) {
