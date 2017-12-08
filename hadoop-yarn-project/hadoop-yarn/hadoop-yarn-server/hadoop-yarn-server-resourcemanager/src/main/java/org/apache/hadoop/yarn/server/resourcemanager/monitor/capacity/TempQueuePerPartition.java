@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .ParentQueue;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -56,6 +59,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   final ArrayList<TempQueuePerPartition> children;
   private Collection<TempAppPerPartition> apps;
   LeafQueue leafQueue;
+  ParentQueue parentQueue;
   boolean preemptionDisabled;
 
   protected Resource pendingDeductReserved;
@@ -88,6 +92,10 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     } else {
       pending = Resources.createResource(0);
       pendingDeductReserved = Resources.createResource(0);
+    }
+
+    if (ParentQueue.class.isAssignableFrom(queue.getClass())) {
+      parentQueue = (ParentQueue) queue;
     }
 
     this.normalizedGuarantee = new double[ResourceUtils

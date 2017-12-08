@@ -29,9 +29,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.collect.Sets;
 
-class CSQueueUtils {
+public class CSQueueUtils {
 
-  final static float EPSILON = 0.0001f;
+  public final static float EPSILON = 0.0001f;
   
   /*
    * Used only by tests
@@ -123,12 +123,12 @@ class CSQueueUtils {
 
     for (String label : configuredNodelabels) {
       if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
-        queueCapacities.setCapacity(CommonNodeLabelsManager.NO_LABEL,
+        queueCapacities.setCapacity(label,
             csConf.getNonLabeledQueueCapacity(queuePath) / 100);
-        queueCapacities.setMaximumCapacity(CommonNodeLabelsManager.NO_LABEL,
+        queueCapacities.setMaximumCapacity(label,
             csConf.getNonLabeledQueueMaximumCapacity(queuePath) / 100);
         queueCapacities.setMaxAMResourcePercentage(
-            CommonNodeLabelsManager.NO_LABEL,
+            label,
             csConf.getMaximumAMResourcePercentPerPartition(queuePath, label));
       } else {
         queueCapacities.setCapacity(label,
@@ -183,8 +183,31 @@ class CSQueueUtils {
 
     if (Resources.greaterThan(rc, totalPartitionResource,
         totalPartitionResource, Resources.none())) {
+
       Resource queueGuranteedResource = childQueue
           .getEffectiveCapacity(nodePartition);
+
+      //TODO : Modify below code to support Absolute Resource configurations
+      // (YARN-5881) for AutoCreatedLeafQueue
+      if (Float.compare(queueCapacities.getAbsoluteCapacity
+              (nodePartition), 0f) == 0
+          && childQueue instanceof AutoCreatedLeafQueue) {
+
+        //If absolute capacity is 0 for a leaf queue (could be a managed leaf
+        // queue, then use the leaf queue's template capacity to compute
+        // guaranteed resource for used capacity)
+
+        // queueGuaranteed = totalPartitionedResource *
+        // absolute_capacity(partition)
+        ManagedParentQueue parentQueue = (ManagedParentQueue)
+            childQueue.getParent();
+        QueueCapacities leafQueueTemplateCapacities = parentQueue
+            .getLeafQueueTemplate()
+            .getQueueCapacities();
+        queueGuranteedResource = Resources.multiply(totalPartitionResource,
+            leafQueueTemplateCapacities.getAbsoluteCapacity
+                (nodePartition));
+      }
 
       // make queueGuranteed >= minimum_allocation to avoid divided by 0.
       queueGuranteedResource =

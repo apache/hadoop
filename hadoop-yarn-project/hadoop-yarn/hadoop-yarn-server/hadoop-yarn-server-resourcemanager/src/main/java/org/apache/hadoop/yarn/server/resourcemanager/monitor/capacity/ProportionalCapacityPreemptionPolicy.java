@@ -37,6 +37,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuot
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
@@ -377,7 +380,9 @@ public class ProportionalCapacityPreemptionPolicy
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
-    if (q.children == null || q.children.isEmpty()) {
+    // If its a ManagedParentQueue, it might not have any children
+    if ((q.children == null || q.children.isEmpty())
+        && !(q.parentQueue instanceof ManagedParentQueue)) {
       return ImmutableSet.of(q.queueName);
     }
 

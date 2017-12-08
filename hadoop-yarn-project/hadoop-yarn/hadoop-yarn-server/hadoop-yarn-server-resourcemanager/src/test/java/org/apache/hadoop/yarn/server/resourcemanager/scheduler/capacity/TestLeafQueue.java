@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
+    .NO_LABEL;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .capacity.CSQueueUtils.EPSILON;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -44,6 +52,7 @@ import java.util.concurrent.CyclicBarrier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -189,7 +198,7 @@ public class TestLeafQueue {
 
     root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
-            CapacitySchedulerConfiguration.ROOT, 
+            ROOT,
             queues, queues, 
             TestUtils.spyHook);
     root.updateClusterResource(Resources.createResource(100 * 16 * GB, 100 * 32),
@@ -222,12 +231,12 @@ public class TestLeafQueue {
       final String newRoot) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {newRoot});
-    conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT, 100);
-    conf.setAcl(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT, new String[] {newRoot});
+    conf.setMaximumCapacity(ROOT, 100);
+    conf.setAcl(ROOT,
       QueueACL.SUBMIT_APPLICATIONS, " ");
     
-    final String Q_newRoot = CapacitySchedulerConfiguration.ROOT + "." + newRoot;
+    final String Q_newRoot = ROOT + "." + newRoot;
     conf.setQueues(Q_newRoot, new String[] {A, B, C, D, E});
     conf.setCapacity(Q_newRoot, 100);
     conf.setMaximumCapacity(Q_newRoot, 100);
@@ -410,7 +419,7 @@ public class TestLeafQueue {
     CapacitySchedulerConfiguration testConf = 
         new CapacitySchedulerConfiguration();
     
-    String tproot = CapacitySchedulerConfiguration.ROOT + "." + 
+    String tproot = ROOT + "." +
       "testPolicyRoot" + System.currentTimeMillis();
 
     OrderingPolicy<FiCaSchedulerApp> comPol =    
@@ -485,7 +494,7 @@ public class TestLeafQueue {
     CapacitySchedulerConfiguration testConf =
         new CapacitySchedulerConfiguration();
 
-    String tproot = CapacitySchedulerConfiguration.ROOT + "." +
+    String tproot = ROOT + "." +
       "testPolicyRoot" + System.currentTimeMillis();
 
     OrderingPolicy<FiCaSchedulerApp> schedOrder =
@@ -722,12 +731,12 @@ public class TestLeafQueue {
     Priority priority = TestUtils.createMockPriority(1);
     app0.updateResourceRequests(Collections.singletonList(TestUtils
         .createResourceRequest(ResourceRequest.ANY, 20 * GB, 29, 1, true,
-            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+            priority, recordFactory, NO_LABEL)));
     assign = b.assignContainers(clusterResource, node0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     app0.updateResourceRequests(Collections.singletonList(TestUtils
         .createResourceRequest(ResourceRequest.ANY, 10 * GB, 29, 2, true,
-            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+            priority, recordFactory, NO_LABEL)));
     assign = b.assignContainers(clusterResource, node0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     assertTrue("Still within limits, should assign",
@@ -796,11 +805,11 @@ public class TestLeafQueue {
     Priority priority = TestUtils.createMockPriority(1);
     app0.updateResourceRequests(Collections.singletonList(TestUtils
         .createResourceRequest(ResourceRequest.ANY, 1 * GB, 40, 10, true,
-            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+            priority, recordFactory, NO_LABEL)));
 
     app2.updateResourceRequests(Collections.singletonList(TestUtils
         .createResourceRequest(ResourceRequest.ANY, 2 * GB, 10, 10, true,
-            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+            priority, recordFactory, NO_LABEL)));
 
     /**
      * Start testing...
@@ -2277,7 +2286,7 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY, 1);
     Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
     CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
-        csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
+        csConf, null, ROOT, newQueues, queues,
         TestUtils.spyHook);
     root.reinitialize(newRoot, cs.getClusterResource());
 
@@ -2712,9 +2721,12 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT
             * 2);
     Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
-        csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
-        TestUtils.spyHook);
+    CSQueue newRoot =
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+            ROOT,
+            newQueues, queues,
+            TestUtils.spyHook);
+    queues = newQueues;
     root.reinitialize(newRoot, csContext.getClusterResource());
 
     // after reinitialization
@@ -2738,7 +2750,7 @@ public class TestLeafQueue {
     Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
     CSQueue newRoot =
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
-            CapacitySchedulerConfiguration.ROOT,
+            ROOT,
             newQueues, queues,
             TestUtils.spyHook);
     root.reinitialize(newRoot, cs.getClusterResource());
@@ -3621,7 +3633,7 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB,
         e.getTotalPendingResourcesConsideringUserLimit(clusterResource,
-            RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+            NO_LABEL, false).getMemorySize());
 
     // Assign 2nd container of 1GB
     applyCSAssignment(clusterResource,
@@ -3635,7 +3647,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
 
     // Can't allocate 3rd container due to user-limit. Headroom still 0.
     applyCSAssignment(clusterResource,
@@ -3645,7 +3657,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
 
     // Increase user-limit-factor from 1GB to 10GB (1% * 10 * 100GB = 10GB).
     // Pending for both app_0 and app_1 are still 3GB, so user-limit-factor
@@ -3653,7 +3665,7 @@ public class TestLeafQueue {
     // getTotalPendingResourcesConsideringUserLimit()
     e.setUserLimitFactor(10.0f);
     assertEquals(3*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
 
     applyCSAssignment(clusterResource,
         e.assignContainers(clusterResource, node_0,
@@ -3663,7 +3675,7 @@ public class TestLeafQueue {
     assertEquals(3*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
 
     // Get the last 2 containers for app_1, no more pending requests.
     applyCSAssignment(clusterResource,
@@ -3677,7 +3689,7 @@ public class TestLeafQueue {
     assertEquals(3*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
 
     // Release each container from app_0
     for (RMContainer rmContainer : app_0.getLiveContainers()) {
@@ -3788,7 +3800,7 @@ public class TestLeafQueue {
     // With queue capacity set at 1% of 100GB and user-limit-factor set to 1.0,
     // queue 'e' should be able to consume 1GB per user.
     assertEquals(2*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     // None of the apps have assigned resources
     // user_0's apps:
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemorySize());
@@ -3805,7 +3817,7 @@ public class TestLeafQueue {
    // The first container was assigned to user_0's app_0. Queues total headroom
     // has 1GB left for user_1.
     assertEquals(1*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3823,7 +3835,7 @@ public class TestLeafQueue {
     // this container went to user_0's app_1. so, headroom for queue 'e'e is
     // still 1GB for user_1
     assertEquals(1*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3839,7 +3851,7 @@ public class TestLeafQueue {
     // Container was allocated to user_1's app_2 since user_1, Now, no headroom
     // is left.
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3855,7 +3867,7 @@ public class TestLeafQueue {
     // Allocated to user_1's app_2 since scheduler allocates 1 container
     // above user resource limit. Available headroom still 0.
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     // user_0's apps:
     long app_0_consumption = app_0.getCurrentConsumption().getMemorySize();
     assertEquals(1*GB, app_0_consumption);
@@ -3875,7 +3887,7 @@ public class TestLeafQueue {
     // Cannot allocate 5th container because both users are above their allowed
     // user resource limit. Values should be the same as previously.
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(app_0_consumption, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(app_1_consumption, app_1.getCurrentConsumption().getMemorySize());
@@ -3894,7 +3906,7 @@ public class TestLeafQueue {
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), e, nodes, apps);
     // Next container goes to user_0's app_1, since it still wanted 1GB.
     assertEquals(1*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     // user_0's apps:
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, app_1.getCurrentConsumption().getMemorySize());
@@ -3909,7 +3921,7 @@ public class TestLeafQueue {
     // Last container goes to user_1's app_3, since it still wanted 1GB.
     // user_0's apps:
     assertEquals(0*GB, e.getTotalPendingResourcesConsideringUserLimit(
-        clusterResource, RMNodeLabelsManager.NO_LABEL, false).getMemorySize());
+        clusterResource, NO_LABEL, false).getMemorySize());
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(2*GB, app_1.getCurrentConsumption().getMemorySize());
     // user_1's apps:
@@ -4025,6 +4037,59 @@ public class TestLeafQueue {
         0.01f);
     assertEquals(15.0f,
         app.getResourceUsageReport().getClusterUsagePercentage(), 0.01f);
+  }
+
+  @Test
+  public void testSetupQueueConfigsWithSpecifiedConfiguration()
+      throws IOException {
+
+    try {
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(
+          new Configuration(false), false);
+
+      final String leafQueueName =
+          "testSetupQueueConfigsWithSpecifiedConfiguration";
+
+      assertEquals(0, conf.size());
+      conf.setNodeLocalityDelay(60);
+      conf.setCapacity(ROOT + DOT + leafQueueName, 10);
+      conf.setMaximumCapacity(ROOT + DOT + leafQueueName, 100);
+      conf.setUserLimitFactor(ROOT + DOT +leafQueueName, 0.1f);
+
+      csConf.setNodeLocalityDelay(30);
+      csConf.setGlobalMaximumApplicationsPerQueue(20);
+
+      LeafQueue leafQueue = new LeafQueue(csContext, conf,
+          leafQueueName, cs.getRootQueue(),
+          null);
+
+      assertEquals(30, leafQueue.getNodeLocalityDelay());
+      assertEquals(20, leafQueue.getMaxApplications());
+      assertEquals(2, leafQueue.getMaxApplicationsPerUser());
+
+      //check queue configs
+      conf.setMaximumAMResourcePercentPerPartition(leafQueue.getQueueName(),
+          NO_LABEL, 10);
+      conf.setMaximumCapacity(leafQueue.getQueueName(), 10);
+
+      assertEquals(0.1, leafQueue.getMaxAMResourcePerQueuePercent(),
+          EPSILON);
+      assertEquals(1, leafQueue.getMaximumCapacity(),
+          EPSILON);
+      assertEquals(0.1, leafQueue.getCapacity(),
+          EPSILON);
+      assertEquals(0.1, leafQueue.getAbsoluteCapacity(),
+          EPSILON);
+      assertEquals(1.0, leafQueue.getAbsoluteMaximumCapacity(),
+          EPSILON);
+
+     } finally {
+        //revert config changes
+        csConf.setNodeLocalityDelay(
+            CapacitySchedulerConfiguration.DEFAULT_NODE_LOCALITY_DELAY);
+        csConf.setGlobalMaximumApplicationsPerQueue(
+            (int) CapacitySchedulerConfiguration.UNDEFINED);
+     }
   }
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {

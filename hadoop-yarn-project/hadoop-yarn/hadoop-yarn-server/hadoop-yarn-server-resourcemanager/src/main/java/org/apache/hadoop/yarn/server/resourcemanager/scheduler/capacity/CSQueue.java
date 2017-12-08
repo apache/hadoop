@@ -230,7 +230,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @param newlyParsedQueue new queue to re-initalize from
    * @param clusterResource resources in the cluster
    */
-  public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource) 
+  public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
   throws IOException;
 
    /**
