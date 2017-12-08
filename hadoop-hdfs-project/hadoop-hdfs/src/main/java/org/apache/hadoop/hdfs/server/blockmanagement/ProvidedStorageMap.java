@@ -342,14 +342,25 @@ public class ProvidedStorageMap {
           return dn;
         }
       }
+      // prefer live nodes first.
+      DatanodeDescriptor dn = chooseRandomNode(excludedUUids, true);
+      if (dn == null) {
+        dn = chooseRandomNode(excludedUUids, false);
+      }
+      return dn;
+    }
 
+    private DatanodeDescriptor chooseRandomNode(Set<String> excludedUUids,
+        boolean preferLiveNodes) {
       Random r = new Random();
       for (int i = dnR.size() - 1; i >= 0; --i) {
         int pos = r.nextInt(i + 1);
         DatanodeDescriptor node = dnR.get(pos);
         String uuid = node.getDatanodeUuid();
         if (!excludedUUids.contains(uuid)) {
-          return node;
+          if (!preferLiveNodes || node.getAdminState() == AdminStates.NORMAL) {
+            return node;
+          }
         }
         Collections.swap(dnR, i, pos);
       }
