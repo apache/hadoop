@@ -450,6 +450,104 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
   }
 
   @Test
+  public void testRecoverWithAMRMProxyHA() throws Exception {
+    testRecover(registry);
+  }
+
+  @Test
+  public void testRecoverWithoutAMRMProxyHA() throws Exception {
+    testRecover(null);
+  }
+
+  public void testRecover(RegistryOperations registryObj) throws Exception {
+    ApplicationUserInfo userInfo = getApplicationUserInfo(testAppId);
+    userInfo.getUser().doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        interceptor = new TestableFederationInterceptor();
+        interceptor.init(new AMRMProxyApplicationContextImpl(nmContext,
+            getConf(), attemptId, "test-user", null, null, null, registryObj));
+        interceptor.cleanupRegistry();
+
+        // Register the application
+        RegisterApplicationMasterRequest registerReq =
+            Records.newRecord(RegisterApplicationMasterRequest.class);
+        registerReq.setHost(Integer.toString(testAppId));
+        registerReq.setRpcPort(testAppId);
+        registerReq.setTrackingUrl("");
+
+        RegisterApplicationMasterResponse registerResponse =
+            interceptor.registerApplicationMaster(registerReq);
+        Assert.assertNotNull(registerResponse);
+
+        Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+
+        // Allocate one batch of containers
+        registerSubCluster(SubClusterId.newInstance("SC-1"));
+        registerSubCluster(SubClusterId.newInstance(HOME_SC_ID));
+
+        int numberOfContainers = 3;
+        List<Container> containers =
+            getContainersAndAssert(numberOfContainers, numberOfContainers * 2);
+        Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+
+        // Prepare for Federation Interceptor restart and recover
+        Map<String, byte[]> recoveredDataMap =
+            recoverDataMapForAppAttempt(nmStateStore, attemptId);
+        String scEntry =
+            FederationInterceptor.NMSS_SECONDARY_SC_PREFIX + "SC-1";
+        if (registryObj == null) {
+          Assert.assertTrue(recoveredDataMap.containsKey(scEntry));
+        } else {
+          // When AMRMPRoxy HA is enabled, NMSS should not have the UAM token,
+          // it should be in Registry
+          Assert.assertFalse(recoveredDataMap.containsKey(scEntry));
+        }
+
+        // Preserve the mock RM instances
+        MockResourceManagerFacade homeRM = interceptor.getHomeRM();
+        ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
+            interceptor.getSecondaryRMs();
+
+        // Create a new intercepter instance and recover
+        interceptor = new TestableFederationInterceptor(homeRM, secondaries);
+        interceptor.init(new AMRMProxyApplicationContextImpl(nmContext,
+            getConf(), attemptId, "test-user", null, null, null, registryObj));
+        interceptor.recover(recoveredDataMap);
+
+        Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+
+        // Release all containers
+        releaseContainersAndAssert(containers);
+
+        // Finish the application
+        FinishApplicationMasterRequest finishReq =
+            Records.newRecord(FinishApplicationMasterRequest.class);
+        finishReq.setDiagnostics("");
+        finishReq.setTrackingUrl("");
+        finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+
+        FinishApplicationMasterResponse finshResponse =
+            interceptor.finishApplicationMaster(finishReq);
+        Assert.assertNotNull(finshResponse);
+        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+
+        // After the application succeeds, the registry/NMSS entry should be
+        // cleaned up
+        if (registryObj != null) {
+          Assert.assertEquals(0,
+              interceptor.getRegistryClient().getAllApplications().size());
+        } else {
+          recoveredDataMap =
+              recoverDataMapForAppAttempt(nmStateStore, attemptId);
+          Assert.assertFalse(recoveredDataMap.containsKey(scEntry));
+        }
+        return null;
+      }
+    });
+  }
+
+  @Test
   public void testRequestInterceptorChainCreation() throws Exception {
     RequestInterceptor root =
         super.getAMRMProxyService().createRequestInterceptorChain();
@@ -636,6 +734,12 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
             interceptor.finishApplicationMaster(finishReq);
         Assert.assertNotNull(finshResponse);
         Assert.assertEquals(true, finshResponse.getIsUnregistered());
+
+        // After the application succeeds, the registry entry should be deleted
+        if (interceptor.getRegistryClient() != null) {
+          Assert.assertEquals(0,
+              interceptor.getRegistryClient().getAllApplications().size());
+        }
         return null;
       }
     });
