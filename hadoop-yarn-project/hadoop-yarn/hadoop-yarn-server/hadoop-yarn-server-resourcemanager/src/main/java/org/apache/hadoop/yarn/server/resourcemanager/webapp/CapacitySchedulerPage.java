@@ -66,6 +66,7 @@ class CapacitySchedulerPage extends RmView {
   static final String Q_END = "left:101%";
   static final String Q_GIVEN =
       "left:0%;background:none;border:1px dashed #BFBFBF";
+  static final String Q_AUTO_CREATED = "background:#F4F0CB";
   static final String Q_OVER = "background:#FFA333";
   static final String Q_UNDER = "background:#5BD75B";
   static final String ACTIVE_USER = "background:#FFFF00"; // Yellow highlight
@@ -299,9 +300,16 @@ class CapacitySchedulerPage extends RmView {
         absMaxCap = partitionQueueCapsInfo.getAbsoluteMaxCapacity() / 100;
         absUsedCap = partitionQueueCapsInfo.getAbsoluteUsedCapacity() / 100;
 
+        boolean isAutoCreatedLeafQueue = info.isLeafQueue() ?
+            ((CapacitySchedulerLeafQueueInfo) info).isAutoCreatedLeafQueue()
+            : false;
+
+        String Q_WIDTH = width(absMaxCap * Q_MAX_WIDTH);
         LI<UL<Hamlet>> li = ul.
           li().
-            a(_Q).$style(width(absMaxCap * Q_MAX_WIDTH)).
+            a(_Q).$style(isAutoCreatedLeafQueue? join( Q_AUTO_CREATED, ";",
+            Q_WIDTH)
+            :  Q_WIDTH).
               $title(join("Absolute Capacity:", percent(absCap))).
               span().$style(join(Q_GIVEN, ";font-size:1px;", width(absCap/absMaxCap))).
             __('.').__().
@@ -313,7 +321,7 @@ class CapacitySchedulerPage extends RmView {
             __(join(percent(used), " used")).__();
 
         csqinfo.qinfo = info;
-        if (info.getQueues() == null) {
+        if (info.isLeafQueue()) {
           li.ul("#lq").li().__(LeafQueueInfoBlock.class).__().__();
           li.ul("#lq").li().__(QueueUsersInfoBlock.class).__().__();
         } else {
@@ -422,6 +430,8 @@ class CapacitySchedulerPage extends RmView {
               __("Max Capacity").__().
             span().$class("qlegend ui-corner-all").$style(ACTIVE_USER).
             __("Users Requesting Resources").__().
+            span().$class("qlegend ui-corner-all").$style(Q_AUTO_CREATED).
+            __("Auto Created Queues").__().
           __();
 
         float used = 0;

@@ -27,6 +27,8 @@ import javax.xml.bind.annotation.XmlTransient;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
@@ -49,6 +51,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected boolean preemptionDisabled;
   protected String defaultNodeLabelExpression;
   protected int defaultPriority;
+  protected boolean isAutoCreatedLeafQueue;
 
   @XmlTransient
   protected String orderingPolicyInfo;
@@ -81,6 +84,10 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
       userAMResourceLimit = usersList.get(0).getResourceUsageInfo()
           .getPartitionResourceUsageInfo(RMNodeLabelsManager.NO_LABEL)
           .getAMLimit();
+    }
+
+    if ( q instanceof AutoCreatedLeafQueue) {
+      isAutoCreatedLeafQueue = true;
     }
   }
 
@@ -154,5 +161,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public int getDefaultApplicationPriority() {
     return defaultPriority;
+  }
+
+  public boolean isAutoCreatedLeafQueue() {
+    return isAutoCreatedLeafQueue;
   }
 }
