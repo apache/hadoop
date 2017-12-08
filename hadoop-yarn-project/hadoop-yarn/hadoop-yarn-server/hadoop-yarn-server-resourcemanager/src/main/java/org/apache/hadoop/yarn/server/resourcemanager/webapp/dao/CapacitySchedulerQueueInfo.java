@@ -219,4 +219,8 @@ public class CapacitySchedulerQueueInfo {
   public ResourceInfo getMaxEffectiveCapacity(){
     return maxEffectiveCapacity;
   }
+
+  public boolean isLeafQueue() {
+    return getQueues() == null;
+  }
 }
