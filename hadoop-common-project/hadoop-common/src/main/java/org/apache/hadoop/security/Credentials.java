@@ -27,7 +27,6 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -60,6 +59,28 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class Credentials implements Writable {
+  public enum SerializedFormat {
+    WRITABLE((byte) 0x00),
+    PROTOBUF((byte) 0x01);
+
+    // Caching to avoid reconstructing the array each time.
+    private static final SerializedFormat[] FORMATS = values();
+
+    final byte value;
+
+    SerializedFormat(byte val) {
+      this.value = val;
+    }
+
+    public static SerializedFormat valueOf(int val) {
+      try {
+        return FORMATS[val];
+      } catch (ArrayIndexOutOfBoundsException e) {
+        throw new IllegalArgumentException("Unknown credential format: " + val);
+      }
+    }
+  }
+
   private static final Logger LOG = LoggerFactory.getLogger(Credentials.class);
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();
@@ -224,63 +245,74 @@ public class Credentials implements Writable {
     if (!Arrays.equals(magic, TOKEN_STORAGE_MAGIC)) {
       throw new IOException("Bad header found in token storage.");
     }
-    byte version = in.readByte();
-    if (version != TOKEN_STORAGE_VERSION &&
-        version != OLD_TOKEN_STORAGE_VERSION) {
-      throw new IOException("Unknown version " + version +
-                            " in token storage.");
+    SerializedFormat format;
+    try {
+      format = SerializedFormat.valueOf(in.readByte());
+    } catch (IllegalArgumentException e) {
+      throw new IOException(e);
     }
-    if (version == OLD_TOKEN_STORAGE_VERSION) {
+    switch (format) {
+    case WRITABLE:
       readFields(in);
-    } else if (version == TOKEN_STORAGE_VERSION) {
+      break;
+    case PROTOBUF:
       readProto(in);
+      break;
+    default:
+      throw new IOException("Unsupported format " + format);
     }
   }
 
   private static final byte[] TOKEN_STORAGE_MAGIC =
       "HDTS".getBytes(StandardCharsets.UTF_8);
-  private static final byte TOKEN_STORAGE_VERSION = 1;
-
-  /**
-   *  For backward compatibility.
-   */
-  private static final byte OLD_TOKEN_STORAGE_VERSION = 0;
-
 
   public void writeTokenStorageToStream(DataOutputStream os)
       throws IOException {
+    // by default store in the oldest supported format for compatibility
+    writeTokenStorageToStream(os, SerializedFormat.WRITABLE);
+  }
+
+  public void writeTokenStorageToStream(DataOutputStream os,
+      SerializedFormat format) throws IOException {
+    switch (format) {
+    case WRITABLE:
+      writeWritableOutputStream(os);
+      break;
+    case PROTOBUF:
+      writeProtobufOutputStream(os);
+      break;
+    default:
+      throw new IllegalArgumentException("Unsupported serialized format: "
+          + format);
+    }
+  }
+
+  private void writeWritableOutputStream(DataOutputStream os)
+      throws IOException {
     os.write(TOKEN_STORAGE_MAGIC);
-    os.write(TOKEN_STORAGE_VERSION);
+    os.write(SerializedFormat.WRITABLE.value);
+    write(os);
+  }
+
+  private void writeProtobufOutputStream(DataOutputStream os)
+      throws IOException {
+    os.write(TOKEN_STORAGE_MAGIC);
+    os.write(SerializedFormat.PROTOBUF.value);
     writeProto(os);
   }
 
   public void writeTokenStorageFile(Path filename,
                                     Configuration conf) throws IOException {
-    FSDataOutputStream os = filename.getFileSystem(conf).create(filename);
-    writeTokenStorageToStream(os);
-    os.close();
+    // by default store in the oldest supported format for compatibility
+    writeTokenStorageFile(filename, conf, SerializedFormat.WRITABLE);
   }
 
-  /**
-   *  For backward compatibility.
-   */
-  public void writeLegacyTokenStorageLocalFile(File f) throws IOException {
-    writeLegacyOutputStream(new DataOutputStream(new FileOutputStream(f)));
-  }
-
-  /**
-   *  For backward compatibility.
-   */
-  public void writeLegacyTokenStorageFile(Path filename, Configuration conf)
-      throws IOException {
-    writeLegacyOutputStream(filename.getFileSystem(conf).create(filename));
-  }
-
-  private void writeLegacyOutputStream(DataOutputStream os) throws IOException {
-    os.write(TOKEN_STORAGE_MAGIC);
-    os.write(OLD_TOKEN_STORAGE_VERSION);
-    write(os);
-    os.close();
+  public void writeTokenStorageFile(Path filename, Configuration conf,
+      SerializedFormat format) throws IOException {
+    try (FSDataOutputStream os =
+             filename.getFileSystem(conf).create(filename)) {
+      writeTokenStorageToStream(os, format);
+    }
   }
 
   /**
@@ -312,7 +344,7 @@ public class Credentials implements Writable {
    * @param out
    * @throws IOException
    */
-  public void writeProto(DataOutput out) throws IOException {
+  void writeProto(DataOutput out) throws IOException {
     CredentialsProto.Builder storage = CredentialsProto.newBuilder();
     for (Map.Entry<Text, Token<? extends TokenIdentifier>> e :
                                                          tokenMap.entrySet()) {
@@ -337,7 +369,7 @@ public class Credentials implements Writable {
    * Populates keys/values from proto buffer storage.
    * @param in - stream ready to read a serialized proto buffer message
    */
-  public void readProto(DataInput in) throws IOException {
+  void readProto(DataInput in) throws IOException {
     CredentialsProto storage = CredentialsProto.parseDelimitedFrom((DataInputStream)in);
     for (CredentialsKVProto kv : storage.getTokensList()) {
       addToken(new Text(kv.getAliasBytes().toByteArray()),
