@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
+import org.apache.hadoop.yarn.server.resourcemanager.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
@@ -107,6 +108,7 @@ public class RMActiveServiceContext {
 
   private RMAppLifetimeMonitor rmAppLifetimeMonitor;
   private QueueLimitCalculator queueLimitCalculator;
+  private AllocationTagsManager allocationTagsManager;
 
   public RMActiveServiceContext() {
     queuePlacementManager = new PlacementManager();
@@ -394,6 +396,19 @@ public class RMActiveServiceContext {
   @Unstable
   public void setNodeLabelManager(RMNodeLabelsManager mgr) {
     nodeLabelManager = mgr;
+  }
+
+  @Private
+  @Unstable
+  public AllocationTagsManager getAllocationTagsManager() {
+    return allocationTagsManager;
+  }
+
+  @Private
+  @Unstable
+  public void setAllocationTagsManager(
+      AllocationTagsManager allocationTagsManager) {
+    this.allocationTagsManager = allocationTagsManager;
   }
 
   @Private

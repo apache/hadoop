@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -188,6 +189,9 @@ public class RMContainerImpl implements RMContainer {
 
   private boolean isExternallyAllocated;
   private SchedulerRequestKey allocatedSchedulerKey;
+
+  // TODO, set it when container allocated by scheduler (From SchedulingRequest)
+  private Set<String> allocationTags = null;
 
   public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
@@ -501,6 +505,11 @@ public class RMContainerImpl implements RMContainer {
     return nodeId;
   }
 
+  @Override
+  public Set<String> getAllocationTags() {
+    return allocationTags;
+  }
+
   private static class BaseTransition implements
       SingleArcTransition<RMContainerImpl, RMContainerEvent> {
 
@@ -565,6 +574,12 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
+      // Notify placementManager
+      container.rmContext.getAllocationTagsManager().addContainer(
+          container.getNodeId(),
+          container.getApplicationAttemptId().getApplicationId(),
+          container.getContainerId(), container.getAllocationTags());
+
       container.eventHandler.handle(new RMAppAttemptEvent(
           container.appAttemptId, RMAppAttemptEventType.CONTAINER_ALLOCATED));
     }
@@ -676,6 +691,12 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
+      // Notify placementManager
+      container.rmContext.getAllocationTagsManager().removeContainer(
+          container.getNodeId(),
+          container.getApplicationAttemptId().getApplicationId(),
+          container.getContainerId(), container.getAllocationTags());
+
       RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
 
       container.finishTime = System.currentTimeMillis();
