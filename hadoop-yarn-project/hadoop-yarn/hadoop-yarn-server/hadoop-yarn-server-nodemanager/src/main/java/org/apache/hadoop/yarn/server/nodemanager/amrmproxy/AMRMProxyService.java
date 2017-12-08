@@ -128,11 +128,8 @@ public class AMRMProxyService extends CompositeService implements
         new AMRMProxyTokenSecretManager(this.nmContext.getNMStateStore());
     this.secretManager.init(conf);
 
-    // Both second app attempt and NM restart within Federation need registry
     if (conf.getBoolean(YarnConfiguration.AMRM_PROXY_HA_ENABLED,
-        YarnConfiguration.DEFAULT_AMRM_PROXY_HA_ENABLED)
-        || conf.getBoolean(YarnConfiguration.NM_RECOVERY_ENABLED,
-            YarnConfiguration.DEFAULT_NM_RECOVERY_ENABLED)) {
+        YarnConfiguration.DEFAULT_AMRM_PROXY_HA_ENABLED)) {
       this.registry = FederationStateStoreFacade.createInstance(conf,
           YarnConfiguration.YARN_REGISTRY_CLASS,
           YarnConfiguration.DEFAULT_YARN_REGISTRY_CLASS,
