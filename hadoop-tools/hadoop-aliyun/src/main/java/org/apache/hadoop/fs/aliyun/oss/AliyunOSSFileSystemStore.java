@@ -94,8 +94,9 @@ public class AliyunOSSFileSystemStore {
         ESTABLISH_TIMEOUT_DEFAULT));
     clientConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT_KEY,
         SOCKET_TIMEOUT_DEFAULT));
-    clientConf.setUserAgent(VersionInfo.getVersion());
-    LOG.warn("Hadoop version is " + VersionInfo.getVersion());
+    clientConf.setUserAgent(
+        conf.get(USER_AGENT_PREFIX, USER_AGENT_PREFIX_DEFAULT) + ", Hadoop/"
+            + VersionInfo.getVersion());
 
     String proxyHost = conf.getTrimmed(PROXY_HOST_KEY, "");
     int proxyPort = conf.getInt(PROXY_PORT_KEY, -1);
