@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ProvidedStorageMap;
@@ -795,4 +796,98 @@ public class TestNameNodeProvidedImplementation {
     FileUtils.deleteDirectory(tempDirectory);
   }
 
+  private DatanodeDescriptor getDatanodeDescriptor(DatanodeManager dnm,
+      int dnIndex) throws Exception {
+    return dnm.getDatanode(cluster.getDataNodes().get(dnIndex).getDatanodeId());
+  }
+
+  private void startDecommission(FSNamesystem namesystem, DatanodeManager dnm,
+      int dnIndex) throws Exception {
+    namesystem.writeLock();
+    DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
+    dnm.getDatanodeAdminManager().startDecommission(dnDesc);
+    namesystem.writeUnlock();
+  }
+
+  private void startMaintenance(FSNamesystem namesystem, DatanodeManager dnm,
+      int dnIndex) throws Exception {
+    namesystem.writeLock();
+    DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
+    dnm.getDatanodeAdminManager().startMaintenance(dnDesc, Long.MAX_VALUE);
+    namesystem.writeUnlock();
+  }
+
+  private void stopMaintenance(FSNamesystem namesystem, DatanodeManager dnm,
+      int dnIndex) throws Exception {
+    namesystem.writeLock();
+    DatanodeDescriptor dnDesc = getDatanodeDescriptor(dnm, dnIndex);
+    dnm.getDatanodeAdminManager().stopMaintenance(dnDesc);
+    namesystem.writeUnlock();
+  }
+
+  @Test
+  public void testDatanodeLifeCycle() throws Exception {
+    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+        FixedBlockResolver.class);
+    startCluster(NNDIRPATH, 3,
+        new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
+        null, false);
+
+    int fileIndex = numFiles -1;
+
+    final BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+    final DatanodeManager dnm = blockManager.getDatanodeManager();
+
+    // to start, all 3 DNs are live in ProvidedDatanodeDescriptor.
+    verifyFileLocation(fileIndex, 3);
+
+    // de-commision first DN; still get 3 replicas.
+    startDecommission(cluster.getNamesystem(), dnm, 0);
+    verifyFileLocation(fileIndex, 3);
+
+    // remains the same even after heartbeats.
+    cluster.triggerHeartbeats();
+    verifyFileLocation(fileIndex, 3);
+
+    // start maintenance for 2nd DN; still get 3 replicas.
+    startMaintenance(cluster.getNamesystem(), dnm, 1);
+    verifyFileLocation(fileIndex, 3);
+
+    DataNode dn1 = cluster.getDataNodes().get(0);
+    DataNode dn2 = cluster.getDataNodes().get(1);
+
+    // stop the 1st DN while being decomissioned.
+    MiniDFSCluster.DataNodeProperties dn1Properties = cluster.stopDataNode(0);
+    BlockManagerTestUtil.noticeDeadDatanode(cluster.getNameNode(),
+        dn1.getDatanodeId().getXferAddr());
+
+    // get 2 locations
+    verifyFileLocation(fileIndex, 2);
+
+    // stop dn2 while in maintenance.
+    MiniDFSCluster.DataNodeProperties dn2Properties = cluster.stopDataNode(1);
+    BlockManagerTestUtil.noticeDeadDatanode(cluster.getNameNode(),
+        dn2.getDatanodeId().getXferAddr());
+
+    // 2 valid locations will be found as blocks on nodes that die during
+    // maintenance are not marked for removal.
+    verifyFileLocation(fileIndex, 2);
+
+    // stop the maintenance; get only 1 replicas
+    stopMaintenance(cluster.getNamesystem(), dnm, 0);
+    verifyFileLocation(fileIndex, 1);
+
+    // restart the stopped DN.
+    cluster.restartDataNode(dn1Properties, true);
+    cluster.waitActive();
+
+    // reports all 3 replicas
+    verifyFileLocation(fileIndex, 2);
+
+    cluster.restartDataNode(dn2Properties, true);
+    cluster.waitActive();
+
+    // reports all 3 replicas
+    verifyFileLocation(fileIndex, 3);
+  }
 }
