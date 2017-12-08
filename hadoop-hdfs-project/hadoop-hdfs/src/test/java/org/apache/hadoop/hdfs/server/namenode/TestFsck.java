@@ -902,7 +902,7 @@ public class TestFsck {
     System.out.println(outStr);
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     assertTrue(outStr.contains("UNDER MIN REPL'D BLOCKS:\t1 (100.0 %)"));
-    assertTrue(outStr.contains("dfs.namenode.replication.min:\t2"));
+    assertTrue(outStr.contains("MINIMAL BLOCK REPLICATION:\t2"));
   }
 
   @Test(timeout = 90000)
