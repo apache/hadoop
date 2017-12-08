@@ -66,7 +66,7 @@ public final class Constants {
 
   // Number of times we should retry errors
   public static final String MAX_ERROR_RETRIES_KEY = "fs.oss.attempts.maximum";
-  public static final int MAX_ERROR_RETRIES_DEFAULT = 20;
+  public static final int MAX_ERROR_RETRIES_DEFAULT = 10;
 
   // Time until we give up trying to establish a connection to oss
   public static final String ESTABLISH_TIMEOUT_KEY =
