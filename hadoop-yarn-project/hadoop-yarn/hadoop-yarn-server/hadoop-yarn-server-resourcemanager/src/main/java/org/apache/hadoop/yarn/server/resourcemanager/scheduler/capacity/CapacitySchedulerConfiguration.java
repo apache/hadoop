@@ -923,6 +923,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
   }
 
+  @VisibleForTesting
+  public void setNodeLocalityDelay(int nodeLocalityDelay) {
+    setInt(NODE_LOCALITY_DELAY, nodeLocalityDelay);
+  }
+
   public int getRackLocalityAdditionalDelay() {
     return getInt(RACK_LOCALITY_ADDITIONAL_DELAY,
         DEFAULT_RACK_LOCALITY_ADDITIONAL_DELAY);
@@ -1401,6 +1406,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return maxApplicationsPerQueue;
   }
 
+  public void setGlobalMaximumApplicationsPerQueue(int val) {
+    setInt(QUEUE_GLOBAL_MAX_APPLICATION, val);
+  }
+
   /**
    * Ordering policy inside a parent queue to sort queues
    */
@@ -1621,8 +1630,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final boolean DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED = false;
 
   @Private
+  private static final String AUTO_CREATE_CHILD_QUEUE_PREFIX =
+      "auto-create-child-queue.";
+
+  @Private
   public static final String AUTO_CREATE_CHILD_QUEUE_ENABLED =
-      "auto-create-child-queue.enabled";
+      AUTO_CREATE_CHILD_QUEUE_PREFIX + "enabled";
 
   @Private
   public static final String AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX =
@@ -1722,8 +1735,83 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Private
+  public static final String AUTO_CREATED_QUEUE_MANAGEMENT_POLICY =
+      AUTO_CREATE_CHILD_QUEUE_PREFIX + "management-policy";
+
+  @Private
+  public static final String DEFAULT_AUTO_CREATED_QUEUE_MANAGEMENT_POLICY =
+      "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity"
+          + ".queuemanagement."
+          + "GuaranteedOrZeroCapacityOverTimePolicy";
+
+  @Private
+  private static final String QUEUE_MANAGEMENT_CONFIG_PREFIX =
+      "yarn.resourcemanager.monitor.capacity.queue-management.";
+
+  /**
+   * Time in milliseconds between invocations of this policy
+   */
+  @Private
+  public static final String QUEUE_MANAGEMENT_MONITORING_INTERVAL =
+      QUEUE_MANAGEMENT_CONFIG_PREFIX + "monitoring-interval";
+
+  @Private
+  public static final long DEFAULT_QUEUE_MANAGEMENT_MONITORING_INTERVAL =
+      1500L;
+
+  /**
+   * Queue Management computation policy for Auto Created queues
+   * @param queue The queue's path
+   * @return Configured policy class name
+   */
+  @Private
+  public String getAutoCreatedQueueManagementPolicy(String queue) {
+    String autoCreatedQueueManagementPolicy =
+        get(getQueuePrefix(queue) + AUTO_CREATED_QUEUE_MANAGEMENT_POLICY,
+            DEFAULT_AUTO_CREATED_QUEUE_MANAGEMENT_POLICY);
+    return autoCreatedQueueManagementPolicy;
+  }
+
+  /**
+   * Get The policy class configured to manage capacities for auto created leaf
+   * queues under the specified parent
+   *
+   * @param queueName The parent queue's name
+   * @return The policy class configured to manage capacities for auto created
+   * leaf queues under the specified parent queue
+   */
+  @Private
+  protected AutoCreatedQueueManagementPolicy
+  getAutoCreatedQueueManagementPolicyClass(
+      String queueName) {
+
+    String queueManagementPolicyClassName =
+        getAutoCreatedQueueManagementPolicy(queueName);
+    LOG.info("Using Auto Created Queue Management Policy: "
+        + queueManagementPolicyClassName + " for queue: " + queueName);
+    try {
+      Class<?> queueManagementPolicyClazz = getClassByName(
+          queueManagementPolicyClassName);
+      if (AutoCreatedQueueManagementPolicy.class.isAssignableFrom(
+          queueManagementPolicyClazz)) {
+        return (AutoCreatedQueueManagementPolicy) ReflectionUtils.newInstance(
+            queueManagementPolicyClazz, this);
+      } else{
+        throw new YarnRuntimeException(
+            "Class: " + queueManagementPolicyClassName + " not instance of "
+                + AutoCreatedQueueManagementPolicy.class.getCanonicalName());
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate " + "AutoCreatedQueueManagementPolicy: "
+              + queueManagementPolicyClassName + " for queue: " + queueName,
+          e);
+    }
+  }
+
   @VisibleForTesting
-  public void setAutoCreatedLeafQueueTemplateCapacity(String queuePath,
+  @Private
+  public void setAutoCreatedLeafQueueConfigCapacity(String queuePath,
       float val) {
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
@@ -1732,11 +1820,29 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   @VisibleForTesting
-  public void setAutoCreatedLeafQueueTemplateMaxCapacity(String queuePath,
+  public void setAutoCreatedLeafQueueConfigMaxCapacity(String queuePath,
       float val) {
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
     setMaximumCapacity(leafQueueConfPrefix, val);
+  }
+
+  @VisibleForTesting
+  @Private
+  public void setAutoCreatedLeafQueueConfigUserLimit(String queuePath,
+      int val) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setUserLimit(leafQueueConfPrefix, val);
+  }
+
+  @VisibleForTesting
+  @Private
+  public void setAutoCreatedLeafQueueConfigUserLimitFactor(String queuePath,
+      float val) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setUserLimitFactor(leafQueueConfPrefix, val);
   }
 
   public static String getUnits(String resourceValue) {
