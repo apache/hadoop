@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWri
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
+import org.apache.hadoop.yarn.server.resourcemanager.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
@@ -501,6 +502,17 @@ public class RMContextImpl implements RMContext {
   @Override
   public void setNodeLabelManager(RMNodeLabelsManager mgr) {
     activeServiceContext.setNodeLabelManager(mgr);
+  }
+
+  @Override
+  public AllocationTagsManager getAllocationTagsManager() {
+    return activeServiceContext.getAllocationTagsManager();
+  }
+
+  @Override
+  public void setAllocationTagsManager(
+      AllocationTagsManager allocationTagsManager) {
+    activeServiceContext.setAllocationTagsManager(allocationTagsManager);
   }
 
   @Override
