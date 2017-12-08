@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAl
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -201,8 +202,15 @@ public class TestNameNodeProvidedImplementation {
   void startCluster(Path nspath, int numDatanodes,
       StorageType[] storageTypes,
       StorageType[][] storageTypesPerDatanode,
-      boolean doFormat)
-      throws IOException {
+      boolean doFormat) throws IOException {
+    startCluster(nspath, numDatanodes, storageTypes, storageTypesPerDatanode,
+        doFormat, null);
+  }
+
+  void startCluster(Path nspath, int numDatanodes,
+      StorageType[] storageTypes,
+      StorageType[][] storageTypesPerDatanode,
+      boolean doFormat, String[] racks) throws IOException {
     conf.set(DFS_NAMENODE_NAME_DIR_KEY, nspath.toString());
 
     if (storageTypesPerDatanode != null) {
@@ -211,6 +219,7 @@ public class TestNameNodeProvidedImplementation {
           .manageNameDfsDirs(doFormat)
           .numDataNodes(numDatanodes)
           .storageTypes(storageTypesPerDatanode)
+          .racks(racks)
           .build();
     } else if (storageTypes != null) {
       cluster = new MiniDFSCluster.Builder(conf)
@@ -219,12 +228,14 @@ public class TestNameNodeProvidedImplementation {
           .numDataNodes(numDatanodes)
           .storagesPerDatanode(storageTypes.length)
           .storageTypes(storageTypes)
+          .racks(racks)
           .build();
     } else {
       cluster = new MiniDFSCluster.Builder(conf)
           .format(doFormat)
           .manageNameDfsDirs(doFormat)
           .numDataNodes(numDatanodes)
+          .racks(racks)
           .build();
     }
     cluster.waitActive();
@@ -515,11 +526,12 @@ public class TestNameNodeProvidedImplementation {
             StorageType.PROVIDED, StorageType.DISK},
         null,
         false);
+    setAndUnsetReplication("/" + filePrefix + (numFiles - 1) + fileSuffix);
+  }
 
-    String filename = "/" + filePrefix + (numFiles - 1) + fileSuffix;
+  private void setAndUnsetReplication(String filename) throws Exception {
     Path file = new Path(filename);
     FileSystem fs = cluster.getFileSystem();
-
     // set the replication to 4, and test that the file has
     // the required replication.
     short newReplication = 4;
@@ -833,7 +845,7 @@ public class TestNameNodeProvidedImplementation {
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
         null, false);
 
-    int fileIndex = numFiles -1;
+    int fileIndex = numFiles - 1;
 
     final BlockManager blockManager = cluster.getNamesystem().getBlockManager();
     final DatanodeManager dnm = blockManager.getDatanodeManager();
@@ -889,5 +901,32 @@ public class TestNameNodeProvidedImplementation {
 
     // reports all 3 replicas
     verifyFileLocation(fileIndex, 3);
+  }
+
+  @Test
+  public void testProvidedWithHierarchicalTopology() throws Exception {
+    conf.setClass(ImageWriter.Options.UGI_CLASS, FsUGIResolver.class,
+        UGIResolver.class);
+    String packageName = "org.apache.hadoop.hdfs.server.blockmanagement";
+    String[] policies = new String[] {
+        "BlockPlacementPolicyDefault",
+        "BlockPlacementPolicyRackFaultTolerant",
+        "BlockPlacementPolicyWithNodeGroup",
+        "BlockPlacementPolicyWithUpgradeDomain"};
+    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+        FixedBlockResolver.class);
+    String[] racks =
+        {"/pod0/rack0", "/pod0/rack0", "/pod0/rack1", "/pod0/rack1",
+            "/pod1/rack0", "/pod1/rack0", "/pod1/rack1", "/pod1/rack1" };
+    for (String policy: policies) {
+      LOG.info("Using policy: " + packageName + "." + policy);
+      conf.set(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, packageName + "." + policy);
+      startCluster(NNDIRPATH, racks.length,
+          new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
+          null, false, racks);
+      verifyFileSystemContents();
+      setAndUnsetReplication("/" + filePrefix + (numFiles - 1) + fileSuffix);
+      cluster.shutdown();
+    }
   }
 }
