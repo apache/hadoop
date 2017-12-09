@@ -320,6 +320,11 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     RMContainer reservedContainerOnNode =
         schedulerContainer.getSchedulerNode().getReservedContainer();
     if (reservedContainerOnNode != null) {
+      // adding NP check as this proposal could not be allocated from reserved
+      // container in async-scheduling mode
+      if (allocation.getAllocateFromReservedContainer() == null) {
+        return false;
+      }
       RMContainer fromReservedContainer =
           allocation.getAllocateFromReservedContainer().getRmContainer();
 

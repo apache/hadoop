@@ -1260,6 +1260,10 @@ public class CapacityScheduler extends
     if (reservedContainer != null) {
       FiCaSchedulerApp reservedApplication = getCurrentAttemptForContainer(
           reservedContainer.getContainerId());
+      if (reservedApplication == null) {
+        LOG.error("Trying to schedule for a finished app, please double check.");
+        return null;
+      }
 
       // Try to fulfill the reservation
       LOG.info(

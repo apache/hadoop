@@ -1176,7 +1176,14 @@ public class LeafQueue extends AbstractCSQueue {
             allocation.getSchedulingMode(), null);
 
         // Deduct resources that we can release
-        Resource usedResource = Resources.clone(getUser(username).getUsed(p));
+        User user = getUser(username);
+        if (user == null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("User " + username + " has been removed!");
+          }
+          return false;
+        }
+        Resource usedResource = Resources.clone(user.getUsed(p));
         Resources.subtractFrom(usedResource,
             request.getTotalReleasedResource());
 
@@ -1381,6 +1388,12 @@ public class LeafQueue extends AbstractCSQueue {
       SchedulingMode schedulingMode, Resource userLimit) {
     String user = application.getUser();
     User queueUser = getUser(user);
+    if (queueUser == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("User " + user + " has been removed!");
+      }
+      return Resources.none();
+    }
 
     // Compute user limit respect requested labels,
     // TODO, need consider headroom respect labels also
@@ -1475,6 +1488,12 @@ public class LeafQueue extends AbstractCSQueue {
     try {
       readLock.lock();
       User user = getUser(userName);
+      if (user == null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("User " + userName + " has been removed!");
+        }
+        return false;
+      }
 
       currentResourceLimits.setAmountNeededUnreserve(Resources.none());
 
