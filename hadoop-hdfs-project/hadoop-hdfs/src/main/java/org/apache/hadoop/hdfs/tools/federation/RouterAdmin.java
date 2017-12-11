@@ -77,7 +77,7 @@ public class RouterAdmin extends Configured implements Tool {
   public void printUsage() {
     String usage = "Federation Admin Tools:\n"
         + "\t[-add <source> <nameservice> <destination> "
-        + "[-readonly] [-order HASH|LOCAL|RANDOM|HASH_ALL]]\n"
+        + "[-readonly]\n"
         + "\t[-rm <source>]\n"
         + "\t[-ls <path>]\n";
     System.out.println(usage);

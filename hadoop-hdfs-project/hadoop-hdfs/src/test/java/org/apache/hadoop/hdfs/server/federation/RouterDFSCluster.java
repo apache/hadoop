@@ -747,8 +747,7 @@ public class RouterDFSCluster {
     }
   }
 
-  public void waitNamenodeRegistration()
-      throws InterruptedException, IllegalStateException, IOException {
+  public void waitNamenodeRegistration() throws Exception {
     for (RouterContext r : this.routers) {
       Router router = r.router;
       for (NamenodeContext nn : this.namenodes) {
@@ -761,7 +760,7 @@ public class RouterDFSCluster {
 
   public void waitRouterRegistrationQuorum(RouterContext router,
       FederationNamenodeServiceState state, String nsId, String nnId)
-          throws InterruptedException, IOException {
+          throws Exception {
     LOG.info("Waiting for NN {} {} to transition to {}", nsId, nnId, state);
     ActiveNamenodeResolver nnResolver = router.router.getNamenodeResolver();
     waitNamenodeRegistered(nnResolver, nsId, nnId, state);
