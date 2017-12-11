@@ -184,6 +184,10 @@ For example, to create three mount points and list them:
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data/app2 ns3 /data/app2
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -ls
 
+It also supports mount points that disallow writes:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /readonly ns1 / -readonly
+
 If a mount point is not set, the Router will map it to the default namespace `dfs.federation.router.default.nameserviceId`.
 
 
