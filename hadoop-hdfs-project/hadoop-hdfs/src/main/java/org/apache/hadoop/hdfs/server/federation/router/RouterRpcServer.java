@@ -95,8 +95,10 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
@@ -1871,6 +1873,17 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
             this.subclusterResolver);
       }
 
+      // We may block some write operations
+      if (opCategory.get() == OperationCategory.WRITE) {
+        // Check if the path is in a read only mount point
+        if (isPathReadOnly(path)) {
+          if (this.rpcMonitor != null) {
+            this.rpcMonitor.routerFailureReadOnly();
+          }
+          throw new IOException(path + " is in a read only mount point");
+        }
+      }
+
       return location.getDestinations();
     } catch (IOException ioe) {
       if (this.rpcMonitor != null) {
@@ -1878,6 +1891,27 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
       }
       throw ioe;
     }
+  }
+
+  /**
+   * Check if a path is in a read only mount point.
+   *
+   * @param path Path to check.
+   * @return If the path is in a read only mount point.
+   */
+  private boolean isPathReadOnly(final String path) {
+    if (subclusterResolver instanceof MountTableResolver) {
+      try {
+        MountTableResolver mountTable = (MountTableResolver)subclusterResolver;
+        MountTable entry = mountTable.getMountPoint(path);
+        if (entry != null && entry.isReadOnly()) {
+          return true;
+        }
+      } catch (IOException e) {
+        LOG.error("Cannot get mount point: {}", e.getMessage());
+      }
+    }
+    return false;
   }
 
   /**

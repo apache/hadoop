@@ -409,7 +409,7 @@ Runs the DFS router. See [Router](./HDFSRouterFederation.html#Router) for more i
 Usage:
 
       hdfs dfsrouteradmin
-          [-add <source> <nameservice> <destination>]
+          [-add <source> <nameservice> <destination> [-readonly]]
           [-rm <source>]
           [-ls <path>]
 

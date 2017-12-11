@@ -144,6 +144,37 @@ public class TestRouterAdmin {
   }
 
   @Test
+  public void testAddReadOnlyMountTable() throws IOException {
+    MountTable newEntry = MountTable.newInstance(
+        "/readonly", Collections.singletonMap("ns0", "/testdir"),
+        Time.now(), Time.now());
+    newEntry.setReadOnly(true);
+
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTable = client.getMountTableManager();
+
+    // Existing mount table size
+    List<MountTable> records = getMountTableEntries(mountTable);
+    assertEquals(records.size(), mockMountTable.size());
+
+    // Add
+    AddMountTableEntryRequest addRequest =
+        AddMountTableEntryRequest.newInstance(newEntry);
+    AddMountTableEntryResponse addResponse =
+        mountTable.addMountTableEntry(addRequest);
+    assertTrue(addResponse.getStatus());
+
+    // New mount table size
+    List<MountTable> records2 = getMountTableEntries(mountTable);
+    assertEquals(records2.size(), mockMountTable.size() + 1);
+
+    // Check that we have the read only entry
+    MountTable record = getMountTableEntry("/readonly");
+    assertEquals("/readonly", record.getSourcePath());
+    assertTrue(record.isReadOnly());
+  }
+
+  @Test
   public void testRemoveMountTable() throws IOException {
 
     RouterClient client = routerContext.getAdminClient();
