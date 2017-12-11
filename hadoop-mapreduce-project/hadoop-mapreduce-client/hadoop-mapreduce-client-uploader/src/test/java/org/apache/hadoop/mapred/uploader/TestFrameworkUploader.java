@@ -30,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -171,46 +172,54 @@ public class TestFrameworkUploader {
    */
   @Test
   public void testBuildTarBall() throws IOException, UploaderException {
-    File parent = new File(testDir);
-    try {
-      parent.deleteOnExit();
-      FrameworkUploader uploader = prepareTree(parent);
-
-      File gzipFile = new File("upload.tar.gz");
-      gzipFile.deleteOnExit();
-      Assert.assertTrue("Creating output", gzipFile.createNewFile());
-      uploader.targetStream = new FileOutputStream(gzipFile);
-
-      uploader.buildPackage();
-
-      TarArchiveInputStream result = null;
+    String[] testFiles = {"upload.tar", "upload.tar.gz"};
+    for (String testFile: testFiles) {
+      File parent = new File(testDir);
       try {
-        result =
-            new TarArchiveInputStream(
-                new GZIPInputStream(new FileInputStream(gzipFile)));
-        Set<String> fileNames = new HashSet<>();
-        Set<Long> sizes = new HashSet<>();
-        TarArchiveEntry entry1 = result.getNextTarEntry();
-        fileNames.add(entry1.getName());
-        sizes.add(entry1.getSize());
-        TarArchiveEntry entry2 = result.getNextTarEntry();
-        fileNames.add(entry2.getName());
-        sizes.add(entry2.getSize());
-        Assert.assertTrue(
-            "File name error", fileNames.contains("a.jar"));
-        Assert.assertTrue(
-            "File size error", sizes.contains((long) 13));
-        Assert.assertTrue(
-            "File name error", fileNames.contains("b.jar"));
-        Assert.assertTrue(
-            "File size error", sizes.contains((long) 14));
-      } finally {
-        if (result != null) {
-          result.close();
+        parent.deleteOnExit();
+        FrameworkUploader uploader = prepareTree(parent);
+
+        File gzipFile =
+            new File(parent.getAbsolutePath() + "/" + testFile);
+        gzipFile.deleteOnExit();
+
+        uploader.target =
+            "file:///" + gzipFile.getAbsolutePath();
+        uploader.beginUpload();
+        uploader.buildPackage();
+        InputStream stream = new FileInputStream(gzipFile);
+        if (gzipFile.getName().endsWith(".gz")) {
+          stream = new GZIPInputStream(stream);
         }
+
+        TarArchiveInputStream result = null;
+        try {
+          result =
+              new TarArchiveInputStream(stream);
+          Set<String> fileNames = new HashSet<>();
+          Set<Long> sizes = new HashSet<>();
+          TarArchiveEntry entry1 = result.getNextTarEntry();
+          fileNames.add(entry1.getName());
+          sizes.add(entry1.getSize());
+          TarArchiveEntry entry2 = result.getNextTarEntry();
+          fileNames.add(entry2.getName());
+          sizes.add(entry2.getSize());
+          Assert.assertTrue(
+              "File name error", fileNames.contains("a.jar"));
+          Assert.assertTrue(
+              "File size error", sizes.contains((long) 13));
+          Assert.assertTrue(
+              "File name error", fileNames.contains("b.jar"));
+          Assert.assertTrue(
+              "File size error", sizes.contains((long) 14));
+        } finally {
+          if (result != null) {
+            result.close();
+          }
+        }
+      } finally {
+        FileUtils.deleteDirectory(parent);
       }
-    } finally {
-      FileUtils.deleteDirectory(parent);
     }
   }
 
