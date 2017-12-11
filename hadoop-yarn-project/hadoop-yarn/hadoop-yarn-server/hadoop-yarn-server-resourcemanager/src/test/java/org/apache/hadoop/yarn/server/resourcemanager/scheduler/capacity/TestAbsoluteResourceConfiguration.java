@@ -513,7 +513,7 @@ public class TestAbsoluteResourceConfiguration {
   }
 
   @Test
-  public void testEffectiveResourceAfterIncreasinClusterResource()
+  public void testEffectiveResourceAfterIncreasingClusterResource()
       throws Exception {
     // create conf with basic queue configuration.
     CapacitySchedulerConfiguration csConf = setupComplexQueueConfiguration(
