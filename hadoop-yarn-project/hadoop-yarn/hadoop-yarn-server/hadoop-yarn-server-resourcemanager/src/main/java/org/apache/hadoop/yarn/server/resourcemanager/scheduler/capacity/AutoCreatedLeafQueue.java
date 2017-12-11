@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
+
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,14 +103,23 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
   private void mergeCapacities(QueueCapacities capacities) {
     for ( String nodeLabel : capacities.getExistingNodeLabels()) {
-      this.queueCapacities.setCapacity(nodeLabel,
+      queueCapacities.setCapacity(nodeLabel,
           capacities.getCapacity(nodeLabel));
-      this.queueCapacities.setAbsoluteCapacity(nodeLabel, capacities
+      queueCapacities.setAbsoluteCapacity(nodeLabel, capacities
           .getAbsoluteCapacity(nodeLabel));
-      this.queueCapacities.setMaximumCapacity(nodeLabel, capacities
+      queueCapacities.setMaximumCapacity(nodeLabel, capacities
           .getMaximumCapacity(nodeLabel));
-      this.queueCapacities.setAbsoluteMaximumCapacity(nodeLabel, capacities
+      queueCapacities.setAbsoluteMaximumCapacity(nodeLabel, capacities
           .getAbsoluteMaximumCapacity(nodeLabel));
+
+      Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
+          csContext.getClusterResource());
+      getQueueResourceQuotas().setEffectiveMinResource(nodeLabel,
+          Resources.multiply(resourceByLabel,
+              queueCapacities.getAbsoluteCapacity(nodeLabel)));
+      getQueueResourceQuotas().setEffectiveMaxResource(nodeLabel,
+          Resources.multiply(resourceByLabel, queueCapacities
+              .getAbsoluteMaximumCapacity(nodeLabel)));
     }
   }
 

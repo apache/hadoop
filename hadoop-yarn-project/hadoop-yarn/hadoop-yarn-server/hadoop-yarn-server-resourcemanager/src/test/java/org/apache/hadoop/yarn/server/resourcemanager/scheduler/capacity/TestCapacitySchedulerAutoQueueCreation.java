@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -64,6 +65,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security
 import org.apache.hadoop.yarn.server.resourcemanager.security
     .RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -91,12 +94,19 @@ public class TestCapacitySchedulerAutoQueueCreation
   private static final Log LOG = LogFactory.getLog(
       TestCapacitySchedulerAutoQueueCreation.class);
 
+  private static final Resource TEMPLATE_MAX_RES = Resource.newInstance(16 *
+          GB,
+      48);
+  private static final Resource TEMPLATE_MIN_RES = Resource.newInstance(1638,
+      4);
+
+
   @Test(timeout = 10000)
   public void testAutoCreateLeafQueueCreation() throws Exception {
 
     try {
       // submit an app
-      submitApp(cs, USER0, USER0, PARENT_QUEUE);
+      submitApp(mockRM, cs.getQueue(PARENT_QUEUE), USER0, USER0, 1, 1);
 
       // check preconditions
       List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
@@ -419,7 +429,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
   @Test
   public void testAutoCreationFailsWhenParentCapacityExceeded()
-      throws IOException, SchedulerDynamicEditException {
+      throws Exception {
     MockRM newMockRM = setupSchedulerInstance();
     CapacityScheduler newCS =
         (CapacityScheduler) newMockRM.getResourceScheduler();
@@ -468,11 +478,6 @@ public class TestCapacitySchedulerAutoQueueCreation
   public void testAutoCreatedQueueActivationDeactivation() throws Exception {
 
     try {
-      String host = "127.0.0.1";
-      RMNode node = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1,
-          host);
-      cs.handle(new NodeAddedSchedulerEvent(node));
-
       CSQueue parentQueue = cs.getQueue(PARENT_QUEUE);
 
       //submit app1 as USER1
@@ -531,6 +536,100 @@ public class TestCapacitySchedulerAutoQueueCreation
   }
 
   @Test
+  public void testClusterResourceUpdationOnAutoCreatedLeafQueues() throws
+      Exception {
+
+    MockRM newMockRM = setupSchedulerInstance();
+    try {
+      CapacityScheduler newCS =
+          (CapacityScheduler) newMockRM.getResourceScheduler();
+
+      CSQueue parentQueue = newCS.getQueue(PARENT_QUEUE);
+
+      //submit app1 as USER1
+      submitApp(newMockRM, parentQueue, USER1, USER1, 1, 1);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER1, 0.1f);
+      CSQueue user1LeafQueue = newCS.getQueue(USER1);
+
+      //submit another app2 as USER2
+      submitApp(newMockRM, parentQueue, USER2, USER2, 2, 1);
+      validateInitialQueueEntitlement(newCS, parentQueue, USER2, 0.2f);
+      CSQueue user2LeafQueue = newCS.getQueue(USER2);
+
+      //validate total activated abs capacity remains the same
+      GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
+          (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)
+              parentQueue)
+              .getAutoCreatedQueueManagementPolicy();
+      assertEquals(autoCreatedQueueManagementPolicy
+          .getAbsoluteActivatedChildQueueCapacity(), 0.2f, EPSILON);
+
+      //submit user_3 app. This cant be scheduled since there is no capacity
+      submitApp(newMockRM, parentQueue, USER3, USER3, 3, 1);
+      final CSQueue user3LeafQueue = newCS.getQueue(USER3);
+      validateCapacities((AutoCreatedLeafQueue) user3LeafQueue, 0.0f, 0.0f,
+          1.0f, 1.0f);
+
+      assertEquals(autoCreatedQueueManagementPolicy
+          .getAbsoluteActivatedChildQueueCapacity(), 0.2f, EPSILON);
+
+      // add new NM.
+      newMockRM.registerNode("127.0.0.3:1234", 125 * GB, 20);
+
+      // There will be change in effective resource when nodes are added
+      // since we deal with percentages
+
+      Resource MAX_RES = Resources.addTo(TEMPLATE_MAX_RES,
+          Resources.createResource(125 * GB, 20));
+
+      Resource MIN_RES = Resources.createResource(14438, 6);
+
+      Assert.assertEquals("Effective Min resource for USER3 is not correct",
+          Resources.none(),
+          user3LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+      Assert.assertEquals("Effective Max resource for USER3 is not correct",
+          MAX_RES,
+          user3LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+
+      Assert.assertEquals("Effective Min resource for USER2 is not correct",
+          MIN_RES,
+          user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+      Assert.assertEquals("Effective Max resource for USER2 is not correct",
+          MAX_RES,
+          user1LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+
+      Assert.assertEquals("Effective Min resource for USER1 is not correct",
+          MIN_RES,
+          user2LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+      Assert.assertEquals("Effective Max resource for USER1 is not correct",
+          MAX_RES,
+          user2LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+
+      // unregister one NM.
+      newMockRM.unRegisterNode(nm3);
+      Resource MIN_RES_UPDATED = Resources.createResource(12800, 2);
+      Resource MAX_RES_UPDATED = Resources.createResource(128000, 20);
+
+      // After loosing one NM, resources will reduce
+      Assert.assertEquals("Effective Min resource for USER2 is not correct",
+          MIN_RES_UPDATED,
+          user1LeafQueue.getQueueResourceQuotas().getEffectiveMinResource());
+      Assert.assertEquals("Effective Max resource for USER2 is not correct",
+          MAX_RES_UPDATED,
+          user2LeafQueue.getQueueResourceQuotas().getEffectiveMaxResource());
+
+    } finally {
+      cleanupQueue(USER1);
+      cleanupQueue(USER2);
+      cleanupQueue(USER3);
+      if (newMockRM != null) {
+        ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+        newMockRM.stop();
+      }
+    }
+  }
+
+  @Test
   public void testAutoCreatedQueueInheritsNodeLabels() throws Exception {
 
     try {
@@ -558,11 +657,6 @@ public class TestCapacitySchedulerAutoQueueCreation
       CapacityScheduler newCS =
           (CapacityScheduler) newMockRM.getResourceScheduler();
       CapacitySchedulerConfiguration conf = newCS.getConfiguration();
-
-      String host = "127.0.0.1";
-      RMNode node = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1,
-          host);
-      newCS.handle(new NodeAddedSchedulerEvent(node));
 
       CSQueue parentQueue = newCS.getQueue(PARENT_QUEUE);
 
