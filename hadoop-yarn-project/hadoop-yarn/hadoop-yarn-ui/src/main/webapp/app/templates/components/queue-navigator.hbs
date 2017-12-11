@@ -28,13 +28,15 @@
         {{/if}}
       </div>
        {{#if (eq model.firstObject.type "capacity")}}
-       <div class="filter-partitions">
-        <label><i class="glyphicon glyphicon-filter"/> Partitions: </label>
-          <select onchange={{action "filterQueuesByPartition" value="target.value"}} class="form-control">
-            {{#each model.firstObject.partitions as |part|}}
-              <option value={{part}}>{{part}}</option>
-            {{/each}}
-          </select>
+       <div class="flex">
+        <div class="filter-partitions flex-right">
+          <label><i class="glyphicon glyphicon-filter"/> Partitions: </label>
+            <select onchange={{action "filterQueuesByPartition" value="target.value"}} class="form-control js-filter-queue-by-labels">
+              {{#each model.firstObject.partitions as |part|}}
+                <option value={{part}}>{{part}}</option>
+              {{/each}}
+            </select>
+        </div>
        </div>
       {{/if}}
      {{tree-selector model=model parentId="tree-selector-container" selected=selected used=used max=max filteredPartition=filteredPartition}}

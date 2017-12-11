@@ -17,13 +17,12 @@
  */
 
 .filter-partitions {
-  text-align: right;
   padding: 15px;
-  
+  margin-left: auto;
   label {
     font-weight: 500;
   }
-  select {
+  .filter-queue-by-labels {
     display: inline-block;
     max-width: 350px;
   }
