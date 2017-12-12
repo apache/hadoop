@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyI
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
@@ -52,6 +53,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OPEN_KEY_ID_DELIMINATOR;
@@ -68,7 +71,7 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
 
   private final MetadataStore store;
   private final ReadWriteLock lock;
-
+  private final long openKeyExpireThresholdMS;
 
   public KSMMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     File metaDir = OzoneUtils.getScmMetadirPath(conf);
@@ -81,6 +84,9 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
         .setCacheSize(cacheSize * OzoneConsts.MB)
         .build();
     this.lock = new ReentrantReadWriteLock();
+    this.openKeyExpireThresholdMS = 1000 * conf.getInt(
+        OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,
+        OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT);
   }
 
   /**
@@ -466,6 +472,36 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
     for (Map.Entry<byte[], byte[]> entry : rangeResult) {
       KsmKeyInfo info =
           KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(entry.getValue()));
+      // Get block keys as a list.
+      List<String> item = info.getKeyLocationList().stream()
+          .map(KsmKeyLocationInfo::getBlockID)
+          .collect(Collectors.toList());
+      BlockGroup keyBlocks = BlockGroup.newBuilder()
+          .setKeyName(DFSUtil.bytes2String(entry.getKey()))
+          .addAllBlockIDs(item)
+          .build();
+      keyBlocksList.add(keyBlocks);
+    }
+    return keyBlocksList;
+  }
+
+  @Override
+  public List<BlockGroup> getExpiredOpenKeys() throws IOException {
+    List<BlockGroup> keyBlocksList = Lists.newArrayList();
+    long now = Time.now();
+    final MetadataKeyFilter openKeyFilter =
+        new KeyPrefixFilter(OPEN_KEY_PREFIX);
+    List<Map.Entry<byte[], byte[]>> rangeResult =
+        store.getSequentialRangeKVs(null, Integer.MAX_VALUE,
+            openKeyFilter);
+    for (Map.Entry<byte[], byte[]> entry : rangeResult) {
+      KsmKeyInfo info =
+          KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(entry.getValue()));
+      long lastModify = info.getModificationTime();
+      if (now - lastModify < this.openKeyExpireThresholdMS) {
+        // consider as may still be active, not hanging.
+        continue;
+      }
       // Get block keys as a list.
       List<String> item = info.getKeyLocationList().stream()
           .map(KsmKeyLocationInfo::getBlockID)

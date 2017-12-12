@@ -171,6 +171,23 @@ public final class OzoneConfigKeys {
   public static final int OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT
       = 60000;
 
+  /**
+   * The interval of open key clean service.
+   */
+  public static final String OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS =
+      "ozone.open.key.cleanup.service.interval.seconds";
+  public static final int
+      OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS_DEFAULT
+      = 24 * 3600; // a total of 24 hour
+
+  /**
+   * An open key gets cleaned up when it is being in open state for too long.
+   */
+  public static final String OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS =
+      "ozone.open.key.expire.threshold";
+  public static final int OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT =
+      24 * 3600;
+
   public static final String OZONE_BLOCK_DELETING_SERVICE_TIMEOUT =
       "ozone.block.deleting.service.timeout";
   public static final int OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT

@@ -1196,4 +1196,25 @@
       connection is limited by ozone.rest.client.http.connection.max property.
     </description>
   </property>
+
+  <property>
+    <name>ozone.open.key.cleanup.service.interval.seconds</name>
+    <value>86400</value>
+    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <description>
+      A background job periodically checks open key entries and delete the expired ones. This entry controls the
+      interval of this cleanup check.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.open.key.expire.threshold </name>
+    <value>86400</value>
+    <tag>OZONE, KSM, PERFORMANCE</tag>
+    <description>
+      Controls how long an open key operation is considered active. Specifically, if a key
+      has been open longer than the value of this config entry, that open key is considered as
+      expired (e.g. due to client crash). Default to 24 hours.
+    </description>
+  </property>
 </configuration>
