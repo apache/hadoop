@@ -18,18 +18,46 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
+import java.io.IOException;
 
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager
+    .BaseContainerManagerTest;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager
+    .monitor.MockResourceCalculatorPlugin;
+
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.timeout;
 
 public class TestNodeResourceMonitor extends BaseContainerManagerTest {
   public TestNodeResourceMonitor() throws UnsupportedFileSystemException {
     super();
   }
 
+  @Before
+  public void setup() throws IOException {
+    // Enable node resource monitor with a mocked resource calculator.
+    conf.set(
+        YarnConfiguration.NM_MON_RESOURCE_CALCULATOR,
+        MockResourceCalculatorPlugin.class.getCanonicalName());
+    super.setup();
+  }
+
   @Test
-  public void testNodeResourceMonitor() {
-    NodeResourceMonitor nrm = new NodeResourceMonitorImpl();
+  public void testMetricsUpdate() throws Exception {
+    // This test doesn't verify the correction of those metrics
+    // updated by the monitor, it only verifies that the monitor
+    // do publish these info to node manager metrics system in
+    // each monitor interval.
+    Context spyContext = spy(context);
+    NodeResourceMonitor nrm = new NodeResourceMonitorImpl(spyContext);
+    nrm.init(conf);
+    nrm.start();
+    Mockito.verify(spyContext, timeout(500).atLeastOnce())
+        .getNodeManagerMetrics();
   }
 }

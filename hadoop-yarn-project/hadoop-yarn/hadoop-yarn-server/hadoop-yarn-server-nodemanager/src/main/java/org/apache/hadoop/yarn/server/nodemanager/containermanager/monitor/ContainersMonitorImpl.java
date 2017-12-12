@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -487,6 +488,18 @@ public class ContainersMonitorImpl extends AbstractService implements
 
         // Save the aggregated utilization of the containers
         setContainersUtilization(trackedContainersUtilization);
+
+        // Publish the container utilization metrics to node manager
+        // metrics system.
+        NodeManagerMetrics nmMetrics = context.getNodeManagerMetrics();
+        if (nmMetrics != null) {
+          nmMetrics.setContainerUsedMemGB(
+              trackedContainersUtilization.getPhysicalMemory());
+          nmMetrics.setContainerUsedVMemGB(
+              trackedContainersUtilization.getVirtualMemory());
+          nmMetrics.setContainerCpuUtilization(
+              trackedContainersUtilization.getCPU());
+        }
 
         try {
           Thread.sleep(monitoringInterval);
