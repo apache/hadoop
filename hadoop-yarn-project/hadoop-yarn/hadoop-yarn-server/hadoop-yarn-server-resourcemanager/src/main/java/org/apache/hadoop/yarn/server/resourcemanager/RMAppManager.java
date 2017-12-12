@@ -410,7 +410,15 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       String queueName = submissionContext.getQueue();
       String appName = submissionContext.getApplicationName();
       CSQueue csqueue = ((CapacityScheduler) scheduler).getQueue(queueName);
-      if (null != csqueue
+
+      if (csqueue == null && placementContext != null) {
+        //could be an auto created queue through queue mapping. Validate
+        // parent queue exists and has valid acls
+        String parentQueueName = placementContext.getParentQueue();
+        csqueue = ((CapacityScheduler) scheduler).getQueue(parentQueueName);
+      }
+
+      if (csqueue != null
           && !authorizer.checkPermission(
               new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
                   SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
