@@ -35,8 +35,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -116,8 +117,8 @@ public class TestStandbyInProgressTail {
       cluster.getNameNode(1).getNamesystem().getEditLogTailer().doTailEdits();
 
       // StandbyNameNode should not finish tailing in-progress logs
-      assertNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-              "/test", true));
+      assertNull(getFileInfo(cluster.getNameNode(1),
+              "/test", true, false, false));
 
       // Restarting the standby should not finalize any edits files
       // in the shared directory when it starts up!
@@ -132,8 +133,8 @@ public class TestStandbyInProgressTail {
       // the current log segment, and on the next roll, it would have to
       // either replay starting in the middle of the segment (not allowed)
       // or double-replay the edits (incorrect).
-      assertNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-              "/test", true));
+      assertNull(getFileInfo(cluster.getNameNode(1),
+              "/test", true, false, false));
 
       cluster.getNameNode(0).getRpcServer().mkdirs("/test2",
               FsPermission.createImmutable((short) 0755), true);
@@ -145,10 +146,10 @@ public class TestStandbyInProgressTail {
 
       // NN1 should have both the edits that came before its restart,
       // and the edits that came after its restart.
-      assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-              "/test", true));
-      assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-              "/test2", true));
+      assertNotNull(getFileInfo(cluster.getNameNode(1),
+              "/test", true, false, false));
+      assertNotNull(getFileInfo(cluster.getNameNode(1),
+              "/test2", true, false, false));
     } finally {
       if (qjmhaCluster != null) {
         qjmhaCluster.shutdown();
@@ -182,8 +183,8 @@ public class TestStandbyInProgressTail {
 
     // After waiting for 5 seconds, StandbyNameNode should finish tailing
     // in-progress logs
-    assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-            "/test", true));
+    assertNotNull(getFileInfo(cluster.getNameNode(1),
+            "/test", true, false, false));
 
     // Restarting the standby should not finalize any edits files
     // in the shared directory when it starts up!
@@ -194,8 +195,8 @@ public class TestStandbyInProgressTail {
     assertNoEditFiles(cluster.getNameDirs(1));
 
     // Because we're using in-progress tailer, this should not be null
-    assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-            "/test", true));
+    assertNotNull(getFileInfo(cluster.getNameNode(1),
+            "/test", true, false, false));
 
     cluster.getNameNode(0).getRpcServer().mkdirs("/test2",
             FsPermission.createImmutable((short) 0755), true);
@@ -207,10 +208,10 @@ public class TestStandbyInProgressTail {
 
     // NN1 should have both the edits that came before its restart,
     // and the edits that came after its restart.
-    assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-            "/test", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
-            "/test2", true));
+    assertNotNull(getFileInfo(cluster.getNameNode(1),
+            "/test", true, false, false));
+    assertNotNull(getFileInfo(cluster.getNameNode(1),
+            "/test2", true, false, false));
   }
 
   @Test
@@ -229,7 +230,7 @@ public class TestStandbyInProgressTail {
     nn1.getNamesystem().getEditLogTailer().doTailEdits();
 
     // StandbyNameNode should tail the in-progress edit
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test", true));
+    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
 
     // Create a new edit and finalized it
     cluster.getNameNode(0).getRpcServer().mkdirs("/test2",
@@ -237,7 +238,7 @@ public class TestStandbyInProgressTail {
     nn0.getRpcServer().rollEditLog();
 
     // StandbyNameNode shouldn't tail the edit since we do not call the method
-    assertNull(NameNodeAdapter.getFileInfo(nn1, "/test2", true));
+    assertNull(getFileInfo(nn1, "/test2", true, false, false));
 
     // Create a new in-progress edit and let SBNN do the tail
     cluster.getNameNode(0).getRpcServer().mkdirs("/test3",
@@ -245,9 +246,9 @@ public class TestStandbyInProgressTail {
     nn1.getNamesystem().getEditLogTailer().doTailEdits();
 
     // StandbyNameNode should tail the finalized edit and the new in-progress
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test2", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test3", true));
+    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
+    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
+    assertNotNull(getFileInfo(nn1, "/test3", true, false, false));
   }
 
   @Test
@@ -270,16 +271,16 @@ public class TestStandbyInProgressTail {
     cluster.getNameNode(0).getRpcServer().mkdirs("/test3",
             FsPermission.createImmutable((short) 0755), true);
 
-    assertNull(NameNodeAdapter.getFileInfo(nn1, "/test", true));
-    assertNull(NameNodeAdapter.getFileInfo(nn1, "/test2", true));
-    assertNull(NameNodeAdapter.getFileInfo(nn1, "/test3", true));
+    assertNull(getFileInfo(nn1, "/test", true, false, false));
+    assertNull(getFileInfo(nn1, "/test2", true, false, false));
+    assertNull(getFileInfo(nn1, "/test3", true, false, false));
 
     nn1.getNamesystem().getEditLogTailer().doTailEdits();
 
     // StandbyNameNode shoudl tail the finalized edit and the new in-progress
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test2", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test3", true));
+    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
+    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
+    assertNotNull(getFileInfo(nn1, "/test3", true, false, false));
   }
 
   @Test
@@ -296,17 +297,36 @@ public class TestStandbyInProgressTail {
             FsPermission.createImmutable((short) 0755), true);
     nn1.getNamesystem().getEditLogTailer().doTailEdits();
     nn0.getRpcServer().rollEditLog();
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test2", true));
+    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
+    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
 
     cluster.getNameNode(0).getRpcServer().mkdirs("/test3",
             FsPermission.createImmutable((short) 0755), true);
     nn1.getNamesystem().getEditLogTailer().doTailEdits();
 
     // StandbyNameNode shoudl tail the finalized edit and the new in-progress
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test2", true));
-    assertNotNull(NameNodeAdapter.getFileInfo(nn1, "/test3", true));
+    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
+    assertNotNull(getFileInfo(nn1, "/test2", true, false, false));
+    assertNotNull(getFileInfo(nn1, "/test3", true, false, false));
+  }
+
+  @Test
+  public void testNonUniformConfig() throws Exception {
+    // Test case where some NNs (in this case the active NN) in the cluster
+    // do not have in-progress tailing enabled.
+    Configuration newConf = cluster.getNameNode(0).getConf();
+    newConf.setBoolean(
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        false);
+    cluster.restartNameNode(0);
+    cluster.transitionToActive(0);
+
+    cluster.getNameNode(0).getRpcServer().mkdirs("/test",
+        FsPermission.createImmutable((short) 0755), true);
+    cluster.getNameNode(0).getRpcServer().rollEdits();
+
+    cluster.getNameNode(1).getNamesystem().getEditLogTailer().doTailEdits();
+    assertNotNull(getFileInfo(nn1, "/test", true, false, false));
   }
 
   /**

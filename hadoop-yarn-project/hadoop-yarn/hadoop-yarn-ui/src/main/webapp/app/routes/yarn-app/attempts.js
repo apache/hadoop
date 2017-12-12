@@ -29,7 +29,9 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     return Ember.RSVP.hash({
       appId: app_id,
       serviceName: service,
-      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store)
+      attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
+        return Ember.A();
+      })
     });
   },
 

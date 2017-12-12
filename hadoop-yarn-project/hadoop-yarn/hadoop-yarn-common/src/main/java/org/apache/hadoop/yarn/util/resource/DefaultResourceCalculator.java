@@ -112,6 +112,14 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
+  public Resource multiplyAndNormalizeUp(Resource r, double[] by,
+      Resource stepFactor) {
+    return Resources.createResource(
+        roundUp((long) (r.getMemorySize() * by[0] + 0.5),
+            stepFactor.getMemorySize()));
+  }
+
+  @Override
   public Resource multiplyAndNormalizeDown(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
@@ -130,5 +138,11 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public boolean isAnyMajorResourceZero(Resource resource) {
     return resource.getMemorySize() == 0f;
+  }
+
+  @Override
+  public Resource normalizeDown(Resource r, Resource stepFactor) {
+    return Resources.createResource(
+        roundDown((r.getMemorySize()), stepFactor.getMemorySize()));
   }
 }

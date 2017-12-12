@@ -46,6 +46,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
+import org.apache.hadoop.yarn.server.resourcemanager.placement
+    .ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -240,6 +242,11 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public boolean isAppInCompletedStates() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ApplicationPlacementContext getApplicationPlacementContext() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 

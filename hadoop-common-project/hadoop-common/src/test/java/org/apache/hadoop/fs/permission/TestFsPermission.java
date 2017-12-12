@@ -264,6 +264,37 @@ public class TestFsPermission {
            msg.contains("octal or symbolic");
   }
 
+  /**
+   *  test FsPermission(int) constructor.
+   */
+  @Test
+  public void testIntPermission() {
+    // Octal           Decimals        Masked OCT      Masked DEC
+    // 100644          33188           644             420
+    // 101644          33700           1644            932
+    // 40644           16804           644             420
+    // 41644           17316           1644            932
+    // 644             420             644             420
+    // 1644            932             1644            932
+
+    int[][] permission_mask_maps = {
+      // Octal                 Decimal    Unix Symbolic
+      { 0100644,  0644, 0 },   // 33188    -rw-r--
+      { 0101644, 01644, 1 },   // 33700    -rw-r-t
+      { 040644,   0644, 0 },   // 16804    drw-r--
+      { 041644,  01644, 1 }    // 17316    drw-r-t
+    };
+
+    for (int[] permission_mask_map : permission_mask_maps) {
+      int original_permission_value = permission_mask_map[0];
+      int masked_permission_value = permission_mask_map[1];
+      boolean hasStickyBit = permission_mask_map[2] == 1;
+      FsPermission fsPermission = new FsPermission(original_permission_value);
+      assertEquals(masked_permission_value, fsPermission.toShort());
+      assertEquals(hasStickyBit, fsPermission.getStickyBit());
+    }
+  }
+
   // Symbolic umask list is generated in linux shell using by the command:
   // umask 0; umask <octal number>; umask -S
   static final String[][] SYMBOLIC = new String[][] {

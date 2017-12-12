@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
+import { moduleFor, test } from 'ember-qunit';
 
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
+moduleFor('adapter:yarn-log', 'Unit | Adapter | yarn log', {
+  // Specify the other units that are required for this test.
+  // needs: ['serializer:foo']
+});
 
-/**
- * Result of ResourceRequest update
- */
-public class ResourceRequestUpdateResult {
-  private final ResourceRequest lastAnyResourceRequest;
-  private final ResourceRequest newResourceRequest;
-
-  public ResourceRequestUpdateResult(ResourceRequest lastAnyResourceRequest,
-      ResourceRequest newResourceRequest) {
-    this.lastAnyResourceRequest = lastAnyResourceRequest;
-    this.newResourceRequest = newResourceRequest;
-  }
-
-  public ResourceRequest getLastAnyResourceRequest() {
-    return lastAnyResourceRequest;
-  }
-
-  public ResourceRequest getNewResourceRequest() {
-    return newResourceRequest;
-  }
-}
+// Replace this with your real tests.
+test('it exists', function(assert) {
+  let adapter = this.subject();
+  assert.ok(adapter);
+});

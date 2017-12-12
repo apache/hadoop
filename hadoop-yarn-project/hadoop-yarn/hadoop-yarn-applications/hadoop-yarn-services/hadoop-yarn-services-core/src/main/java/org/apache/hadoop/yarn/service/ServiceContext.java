@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 
+import java.nio.ByteBuffer;
+
 public class ServiceContext {
   public Service service = null;
   public SliderFileSystem fs;
@@ -34,6 +36,12 @@ public class ServiceContext {
   public ServiceScheduler scheduler;
   public ClientToAMTokenSecretManager secretManager;
   public ClientAMService clientAMService;
+  // tokens used for container launch
+  public ByteBuffer tokens;
+  // AM keytab principal
+  public String principal;
+  // AM keytab location
+  public String keytab;
 
   public ServiceContext() {
 

@@ -26,7 +26,8 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
@@ -114,7 +115,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -124,7 +125,8 @@ import java.util.stream.Collectors;
  *****************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
-public class DistributedFileSystem extends FileSystem {
+public class DistributedFileSystem extends FileSystem
+    implements KeyProviderTokenIssuer {
   private Path workingDir;
   private URI uri;
   private String homeDirPrefix =
@@ -338,11 +340,14 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(PathHandle fd, int bufferSize)
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.OPEN);
     if (!(fd instanceof HdfsPathHandle)) {
       fd = new HdfsPathHandle(fd.bytes());
     }
     HdfsPathHandle id = (HdfsPathHandle) fd;
-    return open(DFSUtilClient.makePathFromFileId(id.getInodeId()), bufferSize);
+    final DFSInputStream dfsis = dfs.open(id, bufferSize, verifyChecksum);
+    return dfs.createWrappedInputStream(dfsis);
   }
 
   /**
@@ -356,7 +361,7 @@ public class DistributedFileSystem extends FileSystem {
    * @return A handle to the file.
    */
   @Override
-  protected PathHandle createPathHandle(FileStatus st, HandleOpt... opts) {
+  protected HdfsPathHandle createPathHandle(FileStatus st, HandleOpt... opts) {
     if (!(st instanceof HdfsFileStatus)) {
       throw new IllegalArgumentException("Invalid FileStatus "
           + st.getClass().getSimpleName());
@@ -371,12 +376,21 @@ public class DistributedFileSystem extends FileSystem {
         .orElse(HandleOpt.changed(false));
     HandleOpt.Location loc = HandleOpt.getOpt(HandleOpt.Location.class, opts)
         .orElse(HandleOpt.moved(false));
-    if (!data.allowChange() || !loc.allowChange()) {
-      throw new UnsupportedOperationException("Unsupported opts "
-          + Arrays.stream(opts)
-                  .map(HandleOpt::toString).collect(Collectors.joining(",")));
+
+    HdfsFileStatus hst = (HdfsFileStatus) st;
+    final Path p;
+    final Optional<Long> inodeId;
+    if (loc.allowChange()) {
+      p = DFSUtilClient.makePathFromFileId(hst.getFileId());
+      inodeId = Optional.empty();
+    } else {
+      p = hst.getPath();
+      inodeId = Optional.of(hst.getFileId());
     }
-    return new HdfsPathHandle((HdfsFileStatus)st);
+    final Optional<Long> mtime = !data.allowChange()
+        ? Optional.of(hst.getModificationTime())
+        : Optional.empty();
+    return new HdfsPathHandle(getPathName(p), inodeId, mtime);
   }
 
   @Override
@@ -2605,28 +2619,21 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
+  public URI getKeyProviderUri() throws IOException {
+    return dfs.getKeyProviderUri();
+  }
+
+  @Override
+  public KeyProvider getKeyProvider() throws IOException {
+    return dfs.getKeyProvider();
+  }
+
+  @Override
   public Token<?>[] addDelegationTokens(
       final String renewer, Credentials credentials) throws IOException {
     Token<?>[] tokens = super.addDelegationTokens(renewer, credentials);
-    URI keyProviderUri = dfs.getKeyProviderUri();
-    if (keyProviderUri != null) {
-      KeyProviderDelegationTokenExtension keyProviderDelegationTokenExtension =
-          KeyProviderDelegationTokenExtension.
-              createKeyProviderDelegationTokenExtension(dfs.getKeyProvider());
-      Token<?>[] kpTokens = keyProviderDelegationTokenExtension.
-          addDelegationTokens(renewer, credentials);
-      credentials.addSecretKey(dfs.getKeyProviderMapKey(),
-          DFSUtilClient.string2Bytes(keyProviderUri.toString()));
-      if (tokens != null && kpTokens != null) {
-        Token<?>[] all = new Token<?>[tokens.length + kpTokens.length];
-        System.arraycopy(tokens, 0, all, 0, tokens.length);
-        System.arraycopy(kpTokens, 0, all, tokens.length, kpTokens.length);
-        tokens = all;
-      } else {
-        tokens = (tokens != null) ? tokens : kpTokens;
-      }
-    }
-    return tokens;
+    return HdfsKMSUtil.addDelegationTokensForKeyProvider(
+        this, renewer, credentials, uri, tokens);
   }
 
   public DFSInotifyEventInputStream getInotifyEventStream() throws IOException {

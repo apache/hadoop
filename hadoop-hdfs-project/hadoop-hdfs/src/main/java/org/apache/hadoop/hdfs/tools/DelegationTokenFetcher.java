@@ -182,7 +182,8 @@ public class DelegationTokenFetcher {
       Credentials cred = new Credentials();
       cred.addToken(token.getService(), token);
       // dtutil is replacing this tool; preserve legacy functionality
-      cred.writeLegacyTokenStorageFile(tokenFile, conf);
+      cred.writeTokenStorageFile(tokenFile, conf,
+          Credentials.SerializedFormat.WRITABLE);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Fetched token " + fs.getUri() + " for " +

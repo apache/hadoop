@@ -38,16 +38,15 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 public class TestTextInputFormat {
-  private static final Log LOG =
-    LogFactory.getLog(TestTextInputFormat.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestTextInputFormat.class);
 
   private static int MAX_LENGTH = 10000;
   

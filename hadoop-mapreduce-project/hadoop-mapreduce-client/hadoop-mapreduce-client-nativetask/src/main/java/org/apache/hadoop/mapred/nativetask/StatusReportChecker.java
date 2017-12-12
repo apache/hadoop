@@ -19,11 +19,11 @@ package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Will periodically check status from native and report to MR framework.
@@ -31,7 +31,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
  */
 class StatusReportChecker implements Runnable {
 
-  private static Log LOG = LogFactory.getLog(StatusReportChecker.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StatusReportChecker.class);
   public static final int INTERVAL = 1000; // milliseconds
 
   private Thread checker;

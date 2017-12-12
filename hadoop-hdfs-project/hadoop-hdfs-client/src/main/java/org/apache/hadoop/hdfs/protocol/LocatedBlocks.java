@@ -192,6 +192,7 @@ public class LocatedBlocks {
         + "\n  underConstruction=" + underConstruction
         + "\n  blocks=" + blocks
         + "\n  lastLocatedBlock=" + lastLocatedBlock
-        + "\n  isLastBlockComplete=" + isLastBlockComplete + "}";
+        + "\n  isLastBlockComplete=" + isLastBlockComplete
+        + "\n  ecPolicy=" + ecPolicy + "}";
   }
 }

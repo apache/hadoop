@@ -61,11 +61,20 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     Map<String, ResourceInformation> riMap = new HashMap<>();
 
     // Initialize mandatory resources
-    riMap.put(ResourceInformation.MEMORY_URI, ResourceInformation.MEMORY_MB);
-    riMap.put(ResourceInformation.VCORES_URI, ResourceInformation.VCORES);
-    riMap.put(RESOURCE_1, ResourceInformation
-        .newInstance(RESOURCE_1, "", 0, ResourceTypes.COUNTABLE, 0,
-            Integer.MAX_VALUE));
+    ResourceInformation memory = ResourceInformation.newInstance(
+        ResourceInformation.MEMORY_MB.getName(),
+        ResourceInformation.MEMORY_MB.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    ResourceInformation vcores = ResourceInformation.newInstance(
+        ResourceInformation.VCORES.getName(),
+        ResourceInformation.VCORES.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    riMap.put(ResourceInformation.MEMORY_URI, memory);
+    riMap.put(ResourceInformation.VCORES_URI, vcores);
+    riMap.put(RESOURCE_1, ResourceInformation.newInstance(RESOURCE_1, "", 0,
+        ResourceTypes.COUNTABLE, 0, Integer.MAX_VALUE));
 
     ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
 
@@ -107,7 +116,7 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-    Assert.assertEquals(Resource.newInstance(1 * GB, 0),
+    Assert.assertEquals(Resource.newInstance(1 * GB, 1),
         leafQueue.getUsedResources());
 
     RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
@@ -123,9 +132,9 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     // Do node heartbeats 1 time and check container allocated.
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
-    // Now used resource = <mem=1GB, vcore=0> + <mem=2GB,vcore=2,res_1=2>
+    // Now used resource = <mem=1GB, vcore=1> + <mem=2GB,vcore=2,res_1=2>
     Assert.assertEquals(
-        TestUtils.createResource(3 * GB, 2, ImmutableMap.of(RESOURCE_1, 2)),
+        TestUtils.createResource(3 * GB, 3, ImmutableMap.of(RESOURCE_1, 2)),
         leafQueue.getUsedResources());
 
     // Acquire container

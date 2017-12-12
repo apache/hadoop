@@ -34,8 +34,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -60,6 +58,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Supplier;
 
@@ -69,7 +69,7 @@ import com.google.common.base.Supplier;
  */
 public class UtilsForTests {
 
-  static final Log LOG = LogFactory.getLog(UtilsForTests.class);
+  static final Logger LOG = LoggerFactory.getLogger(UtilsForTests.class);
 
   final static long KB = 1024L * 1;
   final static long MB = 1024L * KB;

@@ -111,6 +111,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -622,7 +623,20 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
     validateRunning();
 
-    return GetContainersResponse.newInstance(null);
+    ApplicationAttemptId attemptId = request.getApplicationAttemptId();
+    List<ContainerReport> containers = new ArrayList<>();
+    synchronized (applicationContainerIdMap) {
+      // Return the list of running containers that were being tracked for this
+      // application
+      Assert.assertTrue("The application id is NOT registered: " + attemptId,
+          applicationContainerIdMap.containsKey(attemptId));
+      List<ContainerId> ids = applicationContainerIdMap.get(attemptId);
+      for (ContainerId c : ids) {
+        containers.add(ContainerReport.newInstance(c, null, null, null, 0, 0,
+            null, null, 0, null, null));
+      }
+    }
+    return GetContainersResponse.newInstance(containers);
   }
 
   @Override

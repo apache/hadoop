@@ -21,8 +21,6 @@ import java.io.IOException;
 
 import com.google.common.base.Charsets;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.mapred.InvalidJobConfException;
@@ -36,6 +34,8 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.util.QuickSort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * native map output collector wrapped in Java interface
@@ -43,7 +43,8 @@ import org.apache.hadoop.util.QuickSort;
 @InterfaceAudience.Private
 public class NativeMapOutputCollectorDelegator<K, V> implements MapOutputCollector<K, V> {
 
-  private static Log LOG = LogFactory.getLog(NativeMapOutputCollectorDelegator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NativeMapOutputCollectorDelegator.class);
   private JobConf job;
   private NativeCollectorOnlyHandler<K, V> handler;
 

@@ -239,7 +239,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
             queueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
 
         List<CSQueue> childQueues = new ArrayList<>();
-        AutoCreatedLeafQueue resQueue = new AutoCreatedLeafQueue(csContext,
+        ReservationQueue resQueue = new ReservationQueue(csContext,
             defReservationId, (PlanQueue) queue);
         try {
           resQueue.setEntitlement(new QueueEntitlement(1.0f, 1.0f));
@@ -312,7 +312,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       Map<String, CSQueue> newQueues) throws IOException {
     // check that all static queues are included in the newQueues list
     for (Map.Entry<String, CSQueue> e : queues.entrySet()) {
-      if (!(e.getValue() instanceof AutoCreatedLeafQueue)) {
+      if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(e.getValue()
+          .getClass()))) {
         String queueName = e.getKey();
         CSQueue oldQueue = e.getValue();
         CSQueue newQueue = newQueues.get(queueName);
@@ -394,7 +395,6 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       String queueName = e.getKey();
       CSQueue existingQueue = e.getValue();
 
-      //TODO - Handle case when auto create is disabled on parent queues
       if (!newQueues.containsKey(queueName) && !(
           existingQueue instanceof AutoCreatedLeafQueue && conf
               .isAutoCreateChildQueueEnabled(

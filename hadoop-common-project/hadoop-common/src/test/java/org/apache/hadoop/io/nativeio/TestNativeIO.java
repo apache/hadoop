@@ -29,36 +29,44 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.io.FileUtils;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assume.*;
-import static org.junit.Assert.*;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.StatUtils;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.Time;
+import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.*;
+import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat.*;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.Time;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assume.*;
+import static org.junit.Assert.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.*;
-import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat.*;
 
 public class TestNativeIO {
   static final Logger LOG = LoggerFactory.getLogger(TestNativeIO.class);
@@ -161,6 +169,110 @@ public class TestNativeIO {
       LOG.info("Got expected exception", nioe);
       assertEquals(Errno.EBADF, nioe.getErrno());
     }
+  }
+
+  @Test (timeout = 30000)
+  public void testStat() throws Exception {
+    Configuration conf = new Configuration();
+    FileSystem fileSystem = FileSystem.getLocal(conf).getRawFileSystem();
+    Path path = new Path(TEST_DIR.getPath(), "teststat2");
+    fileSystem.createNewFile(path);
+    String testFilePath = path.toString();
+
+    try {
+      doStatTest(testFilePath);
+      LOG.info("testStat() is successful.");
+    } finally {
+      ContractTestUtils.cleanup("cleanup test file: " + path.toString(),
+          fileSystem, path);
+    }
+  }
+
+  private boolean doStatTest(String testFilePath) throws Exception {
+    NativeIO.POSIX.Stat stat = NativeIO.POSIX.getStat(testFilePath);
+    String owner = stat.getOwner();
+    String group = stat.getGroup();
+    int mode = stat.getMode();
+
+    // direct check with System
+    String expectedOwner = System.getProperty("user.name");
+    assertEquals(expectedOwner, owner);
+    assertNotNull(group);
+    assertTrue(!group.isEmpty());
+
+    // cross check with ProcessBuilder
+    StatUtils.Permission expected =
+        StatUtils.getPermissionFromProcess(testFilePath);
+    StatUtils.Permission permission =
+        new StatUtils.Permission(owner, group, new FsPermission(mode));
+
+    assertEquals(expected.getOwner(), permission.getOwner());
+    assertEquals(expected.getGroup(), permission.getGroup());
+    assertEquals(expected.getFsPermission(), permission.getFsPermission());
+
+    LOG.info("Load permission test is successful for path: {}, stat: {}",
+        testFilePath, stat);
+    LOG.info("On mask, stat is owner: {}, group: {}, permission: {}",
+        owner, group, permission.getFsPermission().toOctal());
+    return true;
+  }
+
+  @Test
+  public void testStatOnError() throws Exception {
+    final String testNullFilePath = null;
+    LambdaTestUtils.intercept(IOException.class,
+            "Path is null",
+            () -> NativeIO.POSIX.getStat(testNullFilePath));
+
+    final String testInvalidFilePath = "C:\\nonexisting_path\\nonexisting_file";
+    LambdaTestUtils.intercept(IOException.class,
+            PathIOException.class.getName(),
+            () -> NativeIO.POSIX.getStat(testInvalidFilePath));
+  }
+
+  @Test (timeout = 30000)
+  public void testMultiThreadedStat() throws Exception {
+    Configuration conf = new Configuration();
+    FileSystem fileSystem = FileSystem.getLocal(conf).getRawFileSystem();
+    Path path = new Path(TEST_DIR.getPath(), "teststat2");
+    fileSystem.createNewFile(path);
+    String testFilePath = path.toString();
+
+    int numOfThreads = 10;
+    ExecutorService executorService =
+        Executors.newFixedThreadPool(numOfThreads);
+    executorService.awaitTermination(1000, TimeUnit.MILLISECONDS);
+    try {
+      for (int i = 0; i < numOfThreads; i++){
+        Future<Boolean> result =
+            executorService.submit(() -> doStatTest(testFilePath));
+        assertTrue(result.get());
+      }
+      LOG.info("testMultiThreadedStat() is successful.");
+    } finally {
+      executorService.shutdown();
+      ContractTestUtils.cleanup("cleanup test file: " + path.toString(),
+          fileSystem, path);
+    }
+  }
+
+  @Test
+  public void testMultiThreadedStatOnError() throws Exception {
+    final String testInvalidFilePath = "C:\\nonexisting_path\\nonexisting_file";
+
+    int numOfThreads = 10;
+    ExecutorService executorService =
+        Executors.newFixedThreadPool(numOfThreads);
+    for (int i = 0; i < numOfThreads; i++) {
+      try {
+        Future<Boolean> result =
+            executorService.submit(() -> doStatTest(testInvalidFilePath));
+        result.get();
+      } catch (Exception e) {
+        assertTrue(e.getCause() instanceof PathIOException);
+      }
+    }
+    executorService.shutdown();
   }
 
   @Test (timeout = 30000)

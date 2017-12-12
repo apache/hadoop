@@ -20,10 +20,10 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Reducer that accumulates values based on their type.
@@ -47,7 +47,9 @@ public class AccumulatingReducer extends MapReduceBase
   static final String VALUE_TYPE_LONG = "l:";
   static final String VALUE_TYPE_FLOAT = "f:";
   static final String VALUE_TYPE_STRING = "s:";
-  private static final Log LOG = LogFactory.getLog(AccumulatingReducer.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AccumulatingReducer.class);
   
   protected String hostName;
   

@@ -22,6 +22,7 @@
 #include "util.h"
 #include "get_executable.h"
 #include "modules/gpu/gpu-module.h"
+#include "modules/fpga/fpga-module.h"
 #include "modules/cgroups/cgroups-operations.h"
 
 #include <errno.h>
@@ -241,6 +242,11 @@ static int validate_arguments(int argc, char **argv , int *operation) {
    */
   if (strcmp("--module-gpu", argv[1]) == 0) {
     return handle_gpu_request(&update_cgroups_parameters, "gpu", argc - 1,
+           &argv[1]);
+  }
+
+  if (strcmp("--module-fpga", argv[1]) == 0) {
+    return handle_fpga_request(&update_cgroups_parameters, "fpga", argc - 1,
            &argv[1]);
   }
 

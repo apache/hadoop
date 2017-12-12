@@ -20,8 +20,6 @@ package org.apache.hadoop.mapred.nativetask.handlers;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.nativetask.NativeDataTarget;
@@ -29,6 +27,8 @@ import org.apache.hadoop.mapred.nativetask.buffer.ByteBufferDataWriter;
 import org.apache.hadoop.mapred.nativetask.serde.IKVSerializer;
 import org.apache.hadoop.mapred.nativetask.serde.KVSerializer;
 import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * actively push data into a buffer and signal a {@link BufferPushee} to collect it
@@ -36,7 +36,7 @@ import org.apache.hadoop.mapred.nativetask.util.SizedWritable;
 @InterfaceAudience.Private
 public class BufferPusher<K, V> implements OutputCollector<K, V> {
   
-  private static Log LOG = LogFactory.getLog(BufferPusher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BufferPusher.class);
 
   private final SizedWritable<K> tmpInputKey;
   private final SizedWritable<V> tmpInputValue;

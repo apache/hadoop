@@ -108,7 +108,7 @@
 
   <property>
     <name>fs.contract.supports-content-check</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
 </configuration>

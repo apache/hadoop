@@ -147,4 +147,80 @@ public abstract class QueueConfigurations {
   @Private
   @Unstable
   public abstract void setMaxAMPercentage(float maxAMPercentage);
+
+  /**
+   * Get the effective minimum capacity of queue (from absolute resource).
+   *
+   * @return minimum resource capability
+   */
+  @Public
+  @Unstable
+  public abstract Resource getEffectiveMinCapacity();
+
+  /**
+   * Set the effective minimum capacity of queue (from absolute resource).
+   *
+   * @param capacity
+   *          minimum resource capability
+   */
+  @Private
+  @Unstable
+  public abstract void setEffectiveMinCapacity(Resource capacity);
+
+  /**
+   * Get the effective maximum capacity of queue (from absolute resource).
+   *
+   * @return maximum resource capability
+   */
+  @Public
+  @Unstable
+  public abstract Resource getEffectiveMaxCapacity();
+
+  /**
+   * Set the effective maximum capacity of queue (from absolute resource).
+   *
+   * @param capacity
+   *          maximum resource capability
+   */
+  @Private
+  @Unstable
+  public abstract void setEffectiveMaxCapacity(Resource capacity);
+
+  /**
+   * Get the configured minimum capacity of queue (from absolute resource).
+   *
+   * @return minimum resource capability
+   */
+  @Public
+  @Unstable
+  public abstract Resource getConfiguredMinCapacity();
+
+  /**
+   * Set the configured minimum capacity of queue (from absolute resource).
+   *
+   * @param configuredMinResource
+   *          minimum resource capability
+   */
+  @Public
+  @Unstable
+  public abstract void setConfiguredMinCapacity(Resource configuredMinResource);
+
+  /**
+   * Get the configured maximum capacity of queue (from absolute resource).
+   *
+   * @return maximum resource capability
+   */
+  @Public
+  @Unstable
+  public abstract Resource getConfiguredMaxCapacity();
+
+  /**
+   * Set the configured maximum capacity of queue (from absolute resource).
+   *
+   * @param configuredMaxResource
+   *          maximum resource capability
+   */
+  @Public
+  @Unstable
+  public abstract void setConfiguredMaxCapacity(Resource configuredMaxResource);
 }

@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuResourcePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.FPGA_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 
 /**
@@ -42,7 +44,7 @@ public class ResourcePluginManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(ResourcePluginManager.class);
   private static final Set<String> SUPPORTED_RESOURCE_PLUGINS = ImmutableSet.of(
-      GPU_URI);
+      GPU_URI, FPGA_URI);
 
   private Map<String, ResourcePlugin> configuredPlugins = Collections.EMPTY_MAP;
 
@@ -75,6 +77,10 @@ public class ResourcePluginManager {
         ResourcePlugin plugin = null;
         if (resourceName.equals(GPU_URI)) {
           plugin = new GpuResourcePlugin();
+        }
+
+        if (resourceName.equals(FPGA_URI)) {
+          plugin = new FpgaResourcePlugin();
         }
 
         if (plugin == null) {

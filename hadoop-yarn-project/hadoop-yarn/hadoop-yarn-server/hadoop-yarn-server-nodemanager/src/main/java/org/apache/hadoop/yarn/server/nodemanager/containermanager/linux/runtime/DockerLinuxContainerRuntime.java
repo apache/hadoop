@@ -337,7 +337,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     return false;
   }
 
-  private void runDockerVolumeCommand(DockerVolumeCommand dockerVolumeCommand,
+  private String runDockerVolumeCommand(DockerVolumeCommand dockerVolumeCommand,
       Container container) throws ContainerExecutionException {
     try {
       String commandFile = dockerClient.writeCommandToTempFile(
@@ -351,6 +351,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       LOG.info("ContainerId=" + container.getContainerId()
           + ", docker volume output for " + dockerVolumeCommand + ": "
           + output);
+      return output;
     } catch (ContainerExecutionException e) {
       LOG.error("Error when writing command to temp file, command="
               + dockerVolumeCommand,
@@ -378,13 +379,71 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
             plugin.getDockerCommandPluginInstance();
         if (dockerCommandPlugin != null) {
           DockerVolumeCommand dockerVolumeCommand =
-              dockerCommandPlugin.getCreateDockerVolumeCommand(ctx.getContainer());
+              dockerCommandPlugin.getCreateDockerVolumeCommand(
+                  ctx.getContainer());
           if (dockerVolumeCommand != null) {
             runDockerVolumeCommand(dockerVolumeCommand, container);
+
+            // After volume created, run inspect to make sure volume properly
+            // created.
+            if (dockerVolumeCommand.getSubCommand().equals(
+                DockerVolumeCommand.VOLUME_CREATE_SUB_COMMAND)) {
+              checkDockerVolumeCreated(dockerVolumeCommand, container);
+            }
           }
         }
       }
     }
+  }
+
+  private void checkDockerVolumeCreated(
+      DockerVolumeCommand dockerVolumeCreationCommand, Container container)
+      throws ContainerExecutionException {
+    DockerVolumeCommand dockerVolumeInspectCommand = new DockerVolumeCommand(
+        DockerVolumeCommand.VOLUME_LS_SUB_COMMAND);
+    dockerVolumeInspectCommand.setFormat("{{.Name}},{{.Driver}}");
+    String output = runDockerVolumeCommand(dockerVolumeInspectCommand,
+        container);
+
+    // Parse output line by line and check if it matches
+    String volumeName = dockerVolumeCreationCommand.getVolumeName();
+    String driverName = dockerVolumeCreationCommand.getDriverName();
+    if (driverName == null) {
+      driverName = "local";
+    }
+
+    for (String line : output.split("\n")) {
+      line = line.trim();
+      String[] arr = line.split(",");
+      String v = arr[0].trim();
+      String d = null;
+      if (arr.length > 1) {
+        d = arr[1].trim();
+      }
+      if (d != null && volumeName.equals(v) && driverName.equals(d)) {
+        // Good we found it.
+        LOG.info(
+            "Docker volume-name=" + volumeName + " driver-name=" + driverName
+                + " already exists for container=" + container
+                .getContainerId() + ", continue...");
+        return;
+      }
+    }
+
+    // Couldn't find the volume
+    String message =
+        " Couldn't find volume=" + volumeName + " driver=" + driverName
+            + " for container=" + container.getContainerId()
+            + ", please check error message in log to understand "
+            + "why this happens.";
+    LOG.error(message);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("All docker volumes in the system, command="
+          + dockerVolumeInspectCommand.toString());
+    }
+
+    throw new ContainerExecutionException(message);
   }
 
   private void validateContainerNetworkType(String network)

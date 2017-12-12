@@ -686,10 +686,7 @@ public class UsersManager implements AbstractUsersManager {
      * * If we're running over capacity, then its (usedResources + required)
      * (which extra resources we are allocating)
      */
-    Resource queueCapacity = Resources.multiplyAndNormalizeUp(
-        resourceCalculator, partitionResource,
-        lQueue.getQueueCapacities().getAbsoluteCapacity(nodePartition),
-        lQueue.getMinimumAllocation());
+    Resource queueCapacity = lQueue.getEffectiveCapacity(nodePartition);
 
     /*
      * Assume we have required resource equals to minimumAllocation, this can
