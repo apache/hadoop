@@ -60,6 +60,10 @@ import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE;
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS_DEFAULT;
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone
@@ -85,6 +89,7 @@ public class KeyManagerImpl implements KeyManager {
   private final long scmBlockSize;
   private final boolean useRatis;
   private final BackgroundService keyDeletingService;
+  private final BackgroundService openKeyCleanupService;
 
   private final long preallocateMax;
   private final Random random;
@@ -97,7 +102,7 @@ public class KeyManagerImpl implements KeyManager {
         OZONE_SCM_BLOCK_SIZE_DEFAULT) * OzoneConsts.MB;
     this.useRatis = conf.getBoolean(DFS_CONTAINER_RATIS_ENABLED_KEY,
         DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
-    int svcInterval = conf.getInt(
+    int blockDeleteInterval = conf.getInt(
         OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
         OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
     long serviceTimeout = conf.getTimeDuration(
@@ -107,18 +112,25 @@ public class KeyManagerImpl implements KeyManager {
         OZONE_KEY_PREALLOCATION_MAXSIZE,
         OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT);
     keyDeletingService = new KeyDeletingService(
-        scmBlockClient, this, svcInterval, serviceTimeout, conf);
+        scmBlockClient, this, blockDeleteInterval, serviceTimeout, conf);
+    int openkeyCheckInterval = conf.getInt(
+        OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS,
+        OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS_DEFAULT);
+    openKeyCleanupService = new OpenKeyCleanupService(
+        scmBlockClient, this, openkeyCheckInterval, serviceTimeout);
     random = new Random();
   }
 
   @Override
   public void start() {
     keyDeletingService.start();
+    openKeyCleanupService.start();
   }
 
   @Override
   public void stop() throws IOException {
     keyDeletingService.shutdown();
+    openKeyCleanupService.shutdown();
   }
 
   private void validateBucket(String volumeName, String bucketName)
@@ -186,6 +198,7 @@ public class KeyManagerImpl implements KeyManager {
           .setIndex(keyInfo.getKeyLocationList().size())
           .build();
       keyInfo.appendKeyLocation(info);
+      keyInfo.updateModifcationTime();
       metadataManager.put(openKey, keyInfo.getProtobuf().toByteArray());
       return info;
     } finally {
@@ -431,6 +444,39 @@ public class KeyManagerImpl implements KeyManager {
             + " because it is not found in DB");
       }
       metadataManager.delete(pendingDelKey);
+    } finally {
+      metadataManager.writeLock().unlock();
+    }
+  }
+
+  @Override
+  public List<BlockGroup> getExpiredOpenKeys() throws IOException {
+    metadataManager.readLock().lock();
+    try {
+      return metadataManager.getExpiredOpenKeys();
+    } finally {
+      metadataManager.readLock().unlock();
+    }
+  }
+
+  @Override
+  public void deleteExpiredOpenKey(String objectKeyName) throws IOException {
+    Preconditions.checkNotNull(objectKeyName);
+    if (!objectKeyName.startsWith(OzoneConsts.OPEN_KEY_PREFIX)) {
+      throw new IllegalArgumentException("Invalid key name,"
+          + " the name should be the key name with open key prefix");
+    }
+
+    // Simply removes the entry from KSM DB.
+    metadataManager.writeLock().lock();
+    try {
+      byte[] openKey = DFSUtil.string2Bytes(objectKeyName);
+      byte[] delKeyValue = metadataManager.get(openKey);
+      if (delKeyValue == null) {
+        throw new IOException("Failed to delete key " + objectKeyName
+            + " because it is not found in DB");
+      }
+      metadataManager.delete(openKey);
     } finally {
       metadataManager.writeLock().unlock();
     }

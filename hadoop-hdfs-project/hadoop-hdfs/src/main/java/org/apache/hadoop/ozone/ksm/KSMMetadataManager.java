@@ -240,4 +240,14 @@ public interface KSMMetadataManager {
    * @throws IOException
    */
   List<BlockGroup> getPendingDeletionKeys(int count) throws IOException;
+
+  /**
+   * Returns a list of all still open key info. Which contains the info about
+   * the key name and all its associated block IDs. A pending open key has
+   * prefix #open# in KSM DB.
+   *
+   * @return a list of {@link BlockGroup} representing keys and blocks.
+   * @throws IOException
+   */
+  List<BlockGroup> getExpiredOpenKeys() throws IOException;
 }

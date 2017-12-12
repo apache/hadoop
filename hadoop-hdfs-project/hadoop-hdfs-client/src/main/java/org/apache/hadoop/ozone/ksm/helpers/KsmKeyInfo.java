@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.ksm.helpers;
 
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
+import org.apache.hadoop.util.Time;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -71,6 +72,10 @@ public final class KsmKeyInfo {
 
   public List<KsmKeyLocationInfo> getKeyLocationList() {
     return keyLocationList;
+  }
+
+  public void updateModifcationTime() {
+    this.modificationTime = Time.monotonicNow();
   }
 
   public void appendKeyLocation(KsmKeyLocationInfo newLocation) {
