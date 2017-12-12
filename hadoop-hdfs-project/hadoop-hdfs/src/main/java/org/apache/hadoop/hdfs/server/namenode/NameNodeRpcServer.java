@@ -104,6 +104,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.ReencryptAction;
@@ -1138,12 +1139,25 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public HdfsFileStatus getFileInfo(String src)  throws IOException {
+  public HdfsFileStatus getFileInfo(String src) throws IOException {
     checkNNStartup();
     metrics.incrFileInfoOps();
-    return namesystem.getFileInfo(src, true);
+    return namesystem.getFileInfo(src, true, false, false);
   }
-  
+
+  @Override // ClientProtocol
+  public HdfsLocatedFileStatus getLocatedFileInfo(String src,
+      boolean needBlockToken) throws IOException {
+    checkNNStartup();
+    if (needBlockToken) {
+      metrics.incrGetBlockLocations();
+    } else {
+      metrics.incrFileInfoOps();
+    }
+    return (HdfsLocatedFileStatus)
+        namesystem.getFileInfo(src, true, true, needBlockToken);
+  }
+
   @Override // ClientProtocol
   public boolean isFileClosed(String src) throws IOException{
     checkNNStartup();
@@ -1154,7 +1168,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException {
     checkNNStartup();
     metrics.incrFileInfoOps();
-    return namesystem.getFileInfo(src, false);
+    return namesystem.getFileInfo(src, false, false, false);
   }
   
   @Override // ClientProtocol
@@ -1429,7 +1443,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     metrics.incrGetLinkTargetOps();
     HdfsFileStatus stat = null;
     try {
-      stat = namesystem.getFileInfo(path, false);
+      stat = namesystem.getFileInfo(path, false, false, false);
     } catch (UnresolvedPathException e) {
       return e.getResolvedPath().toString();
     } catch (UnresolvedLinkException e) {

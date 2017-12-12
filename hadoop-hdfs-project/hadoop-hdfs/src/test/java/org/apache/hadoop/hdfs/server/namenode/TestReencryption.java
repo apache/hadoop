@@ -163,7 +163,8 @@ public class TestReencryption {
   }
 
   private FileEncryptionInfo getFileEncryptionInfo(Path path) throws Exception {
-    return fsn.getFileInfo(path.toString(), false).getFileEncryptionInfo();
+    return fsn.getFileInfo(path.toString(), false, false, false)
+        .getFileEncryptionInfo();
   }
 
   @Test

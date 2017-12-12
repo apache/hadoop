@@ -115,7 +115,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -340,11 +340,14 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public FSDataInputStream open(PathHandle fd, int bufferSize)
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.OPEN);
     if (!(fd instanceof HdfsPathHandle)) {
       fd = new HdfsPathHandle(fd.bytes());
     }
     HdfsPathHandle id = (HdfsPathHandle) fd;
-    return open(DFSUtilClient.makePathFromFileId(id.getInodeId()), bufferSize);
+    final DFSInputStream dfsis = dfs.open(id, bufferSize, verifyChecksum);
+    return dfs.createWrappedInputStream(dfsis);
   }
 
   /**
@@ -358,7 +361,7 @@ public class DistributedFileSystem extends FileSystem
    * @return A handle to the file.
    */
   @Override
-  protected PathHandle createPathHandle(FileStatus st, HandleOpt... opts) {
+  protected HdfsPathHandle createPathHandle(FileStatus st, HandleOpt... opts) {
     if (!(st instanceof HdfsFileStatus)) {
       throw new IllegalArgumentException("Invalid FileStatus "
           + st.getClass().getSimpleName());
@@ -373,12 +376,21 @@ public class DistributedFileSystem extends FileSystem
         .orElse(HandleOpt.changed(false));
     HandleOpt.Location loc = HandleOpt.getOpt(HandleOpt.Location.class, opts)
         .orElse(HandleOpt.moved(false));
-    if (!data.allowChange() || !loc.allowChange()) {
-      throw new UnsupportedOperationException("Unsupported opts "
-          + Arrays.stream(opts)
-                  .map(HandleOpt::toString).collect(Collectors.joining(",")));
+
+    HdfsFileStatus hst = (HdfsFileStatus) st;
+    final Path p;
+    final Optional<Long> inodeId;
+    if (loc.allowChange()) {
+      p = DFSUtilClient.makePathFromFileId(hst.getFileId());
+      inodeId = Optional.empty();
+    } else {
+      p = hst.getPath();
+      inodeId = Optional.of(hst.getFileId());
     }
-    return new HdfsPathHandle((HdfsFileStatus)st);
+    final Optional<Long> mtime = !data.allowChange()
+        ? Optional.of(hst.getModificationTime())
+        : Optional.empty();
+    return new HdfsPathHandle(getPathName(p), inodeId, mtime);
   }
 
   @Override

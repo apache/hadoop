@@ -1025,6 +1025,21 @@ public interface ClientProtocol {
   HdfsFileStatus getFileLinkInfo(String src) throws IOException;
 
   /**
+   * Get the file info for a specific file or directory with
+   * {@link LocatedBlocks}.
+   * @param src The string representation of the path to the file
+   * @param needBlockToken Generate block tokens for {@link LocatedBlocks}
+   * @return object containing information regarding the file
+   *         or null if file not found
+   * @throws org.apache.hadoop.security.AccessControlException permission denied
+   * @throws java.io.FileNotFoundException file <code>src</code> is not found
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  HdfsLocatedFileStatus getLocatedFileInfo(String src, boolean needBlockToken)
+      throws IOException;
+
+  /**
    * Get {@link ContentSummary} rooted at the specified directory.
    * @param path The string representation of the path
    *

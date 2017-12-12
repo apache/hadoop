@@ -90,11 +90,13 @@ class FSDirStatAndListingOp {
    * @param resolveLink whether to throw UnresolvedLinkException
    *        if src refers to a symlink
    *
+   * @param needLocation Include {@link LocatedBlocks} in result.
+   * @param needBlockToken Include block tokens in {@link LocatedBlocks}.
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  static HdfsFileStatus getFileInfo(
-      FSDirectory fsd, String srcArg, boolean resolveLink)
+  static HdfsFileStatus getFileInfo(FSDirectory fsd, String srcArg,
+      boolean resolveLink, boolean needLocation, boolean needBlockToken)
       throws IOException {
     DirOp dirOp = resolveLink ? DirOp.READ : DirOp.READ_LINK;
     FSPermissionChecker pc = fsd.getPermissionChecker();
@@ -111,7 +113,7 @@ class FSDirStatAndListingOp {
     } else {
       iip = fsd.resolvePath(pc, srcArg, dirOp);
     }
-    return getFileInfo(fsd, iip);
+    return getFileInfo(fsd, iip, needLocation, needBlockToken);
   }
 
   /**
@@ -234,7 +236,7 @@ class FSDirStatAndListingOp {
         // target INode
         return new DirectoryListing(
             new HdfsFileStatus[]{ createFileStatus(
-                fsd, iip, null, parentStoragePolicy, needLocation)
+                fsd, iip, null, parentStoragePolicy, needLocation, false)
             }, 0);
       }
 
@@ -253,8 +255,8 @@ class FSDirStatAndListingOp {
             ? getStoragePolicyID(child.getLocalStoragePolicyID(),
                                  parentStoragePolicy)
             : parentStoragePolicy;
-        listing[i] =
-            createFileStatus(fsd, iip, child, childStoragePolicy, needLocation);
+        listing[i] = createFileStatus(fsd, iip, child, childStoragePolicy,
+            needLocation, false);
         listingCnt++;
         if (listing[i] instanceof HdfsLocatedFileStatus) {
             // Once we  hit lsLimit locations, stop.
@@ -305,7 +307,7 @@ class FSDirStatAndListingOp {
     for (int i = 0; i < numOfListing; i++) {
       Snapshot.Root sRoot = snapshots.get(i + skipSize).getRoot();
       listing[i] = createFileStatus(fsd, iip, sRoot,
-          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, false);
+          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, false, false);
     }
     return new DirectoryListing(
         listing, snapshots.size() - skipSize - numOfListing);
@@ -324,11 +326,14 @@ class FSDirStatAndListingOp {
    * @param fsd FSDirectory
    * @param iip The path to the file, the file is included
    * @param includeStoragePolicy whether to include storage policy
+   * @param needLocation Include {@link LocatedBlocks} in response
+   * @param needBlockToken Generate block tokens for {@link LocatedBlocks}
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  static HdfsFileStatus getFileInfo(FSDirectory fsd,
-      INodesInPath iip, boolean includeStoragePolicy) throws IOException {
+  static HdfsFileStatus getFileInfo(FSDirectory fsd, INodesInPath iip,
+      boolean includeStoragePolicy, boolean needLocation,
+      boolean needBlockToken) throws IOException {
     fsd.readLock();
     try {
       final INode node = iip.getLastINode();
@@ -338,14 +343,15 @@ class FSDirStatAndListingOp {
       byte policy = (includeStoragePolicy && !node.isSymlink())
           ? node.getStoragePolicyID()
           : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      return createFileStatus(fsd, iip, null, policy, false);
+      return createFileStatus(fsd, iip, null, policy, needLocation,
+          needBlockToken);
     } finally {
       fsd.readUnlock();
     }
   }
 
-  static HdfsFileStatus getFileInfo(FSDirectory fsd, INodesInPath iip)
-    throws IOException {
+  static HdfsFileStatus getFileInfo(FSDirectory fsd, INodesInPath iip,
+      boolean needLocation, boolean needBlockToken) throws IOException {
     fsd.readLock();
     try {
       HdfsFileStatus status = null;
@@ -356,7 +362,7 @@ class FSDirStatAndListingOp {
           status = FSDirectory.DOT_SNAPSHOT_DIR_STATUS;
         }
       } else {
-        status = getFileInfo(fsd, iip, true);
+        status = getFileInfo(fsd, iip, true, needLocation, needBlockToken);
       }
       return status;
     } finally {
@@ -373,7 +379,7 @@ class FSDirStatAndListingOp {
   static HdfsFileStatus createFileStatusForEditLog(
       FSDirectory fsd, INodesInPath iip) throws IOException {
     return createFileStatus(fsd, iip,
-        null, HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, false);
+        null, HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, false, false);
   }
 
   /**
@@ -384,12 +390,13 @@ class FSDirStatAndListingOp {
    * @param child for a directory listing of the iip, else null
    * @param storagePolicy for the path or closest ancestor
    * @param needLocation if block locations need to be included or not
+   * @param needBlockToken
    * @return a file status
    * @throws java.io.IOException if any error occurs
    */
   private static HdfsFileStatus createFileStatus(
       FSDirectory fsd, INodesInPath iip, INode child, byte storagePolicy,
-      boolean needLocation) throws IOException {
+      boolean needLocation, boolean needBlockToken) throws IOException {
     assert fsd.hasReadLock();
     // only directory listing sets the status name.
     byte[] name = HdfsFileStatus.EMPTY_NAME;
@@ -429,8 +436,8 @@ class FSDirStatAndListingOp {
         final long fileSize = !inSnapshot && isUc
             ? fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
         loc = fsd.getBlockManager().createLocatedBlocks(
-            fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size, false,
-            inSnapshot, feInfo, ecPolicy);
+            fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size,
+            needBlockToken, inSnapshot, feInfo, ecPolicy);
         if (loc == null) {
           loc = new LocatedBlocks();
         }
