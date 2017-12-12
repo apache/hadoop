@@ -21,13 +21,14 @@ import java.io.IOException;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -35,7 +36,8 @@ public class TestMultiFileInputFormat {
 
   private static JobConf job = new JobConf();
 
-  private static final Log LOG = LogFactory.getLog(TestMultiFileInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMultiFileInputFormat.class);
   
   private static final int MAX_SPLIT_COUNT  = 10000;
   private static final int SPLIT_COUNT_INCR = 6000;

@@ -23,8 +23,6 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -38,7 +36,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Mapper for TimelineServicePerformanceV1 that replays job history files to the
@@ -48,8 +47,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 class JobHistoryFileReplayMapperV1 extends
     org.apache.hadoop.mapreduce.
         Mapper<IntWritable,IntWritable,Writable,Writable> {
-  private static final Log LOG =
-      LogFactory.getLog(JobHistoryFileReplayMapperV1.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobHistoryFileReplayMapperV1.class);
 
   public void map(IntWritable key, IntWritable val, Context context) throws IOException {
     // collect the apps it needs to process

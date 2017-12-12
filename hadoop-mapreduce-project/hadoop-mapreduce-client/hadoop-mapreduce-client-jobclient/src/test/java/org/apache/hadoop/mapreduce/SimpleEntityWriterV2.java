@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TimelineServicePerformance.PerfCounters;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -35,6 +33,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Adds simple entities with random string payload, events, metrics, and
@@ -42,7 +42,8 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
  */
 class SimpleEntityWriterV2 extends EntityWriterV2
     implements SimpleEntityWriterConstants {
-  private static final Log LOG = LogFactory.getLog(SimpleEntityWriterV2.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SimpleEntityWriterV2.class);
 
   protected void writeEntities(Configuration tlConf,
       TimelineCollectorManager manager, Context context) throws IOException {

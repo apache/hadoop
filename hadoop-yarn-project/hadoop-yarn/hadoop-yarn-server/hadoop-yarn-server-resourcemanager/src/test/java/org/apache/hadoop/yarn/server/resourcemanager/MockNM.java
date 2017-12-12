@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -140,6 +141,13 @@ public class MockNM {
 
   public Map<ApplicationId, AppCollectorData> getRegisteringCollectors() {
     return this.registeringCollectors;
+  }
+
+  public void unRegisterNode() throws Exception {
+    UnRegisterNodeManagerRequest request = Records
+        .newRecord(UnRegisterNodeManagerRequest.class);
+    request.setNodeId(nodeId);
+    resourceTracker.unRegisterNodeManager(request);
   }
 
   public RegisterNodeManagerResponse registerNode() throws Exception {

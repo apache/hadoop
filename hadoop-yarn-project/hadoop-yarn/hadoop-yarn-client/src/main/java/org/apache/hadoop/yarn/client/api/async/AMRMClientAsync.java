@@ -486,6 +486,14 @@ extends AbstractService {
      * stop() is the recommended action.
      */
     public abstract void onError(Throwable e);
+
+    /**
+     * Called when the ResourceManager responds to a heartbeat with containers
+     * from previous attempt.
+     */
+    public void onContainersReceivedFromPreviousAttempts(
+        List<Container> containers) {
+    }
   }
 
   /**
@@ -531,5 +539,7 @@ extends AbstractService {
      * @param e
      */
     void onError(Throwable e);
+
+    void onContainersReceivedFromPreviousAttempts(List<Container> containers);
   }
 }

@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,16 +39,19 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-
 import org.apache.hadoop.util.ReflectionUtils;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.*;
 
 public class TestFixedLengthInputFormat {
 
-  private static Log LOG;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFixedLengthInputFormat.class);
+
   private static Configuration defaultConf;
   private static FileSystem localFs;
   private static Path workDir;
@@ -62,7 +63,6 @@ public class TestFixedLengthInputFormat {
   @BeforeClass
   public static void onlyOnce() {
     try {
-      LOG = LogFactory.getLog(TestFixedLengthInputFormat.class.getName());
       defaultConf = new Configuration();
       defaultConf.set("fs.defaultFS", "file:///");
       localFs = FileSystem.getLocal(defaultConf);

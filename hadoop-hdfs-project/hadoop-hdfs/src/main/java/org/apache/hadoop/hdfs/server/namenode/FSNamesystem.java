@@ -2990,6 +2990,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param resolveLink whether to throw UnresolvedLinkException
    *        if src refers to a symlink
    *
+   * @param needLocation Include {@link LocatedBlocks} in result.
+   * @param needBlockToken Include block tokens in {@link LocatedBlocks}
    * @throws AccessControlException if access is denied
    * @throws UnresolvedLinkException if a symlink is encountered.
    *
@@ -2997,15 +2999,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *         or null if file not found
    * @throws StandbyException
    */
-  HdfsFileStatus getFileInfo(final String src, boolean resolveLink)
-    throws IOException {
-    final String operationName = "getfileinfo";
+  HdfsFileStatus getFileInfo(final String src, boolean resolveLink,
+      boolean needLocation, boolean needBlockToken) throws IOException {
+    // if the client requests block tokens, then it can read data blocks
+    // and should appear in the audit log as if getBlockLocations had been
+    // called
+    final String operationName = needBlockToken ? "open" : "getfileinfo";
     checkOperation(OperationCategory.READ);
     HdfsFileStatus stat = null;
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      stat = FSDirStatAndListingOp.getFileInfo(dir, src, resolveLink);
+      stat = FSDirStatAndListingOp.getFileInfo(
+          dir, src, resolveLink, needLocation, needBlockToken);
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
       throw e;
@@ -6158,7 +6164,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     for (CorruptFileBlockInfo c : corruptFileBlocks) {
-      if (getFileInfo(c.path, true) != null) {
+      if (getFileInfo(c.path, true, false, false) != null) {
         list.add(c.toString());
       }
       final Collection<String> snaps = FSDirSnapshotOp

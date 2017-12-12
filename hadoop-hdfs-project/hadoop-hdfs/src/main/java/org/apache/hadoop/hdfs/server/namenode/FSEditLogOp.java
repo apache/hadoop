@@ -127,6 +127,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -425,10 +426,12 @@ public abstract class FSEditLogOp {
     String clientMachine;
     boolean overwrite;
     byte storagePolicyId;
+    byte erasureCodingPolicyId;
     
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
       storagePolicyId = HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+      erasureCodingPolicyId = ErasureCodeConstants.REPLICATION_POLICY_ID;
       assert(opCode == OP_ADD || opCode == OP_CLOSE || opCode == OP_APPEND);
     }
 
@@ -449,6 +452,7 @@ public abstract class FSEditLogOp {
       clientMachine = null;
       overwrite = false;
       storagePolicyId = 0;
+      erasureCodingPolicyId = ErasureCodeConstants.REPLICATION_POLICY_ID;
     }
 
     <T extends AddCloseOp> T setInodeId(long inodeId) {
@@ -535,6 +539,11 @@ public abstract class FSEditLogOp {
       return (T)this;
     }
 
+    <T extends AddCloseOp> T setErasureCodingPolicyId(byte ecPolicyId) {
+      this.erasureCodingPolicyId = ecPolicyId;
+      return (T)this;
+    }
+
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeLong(inodeId, out);
@@ -555,6 +564,7 @@ public abstract class FSEditLogOp {
         FSImageSerialization.writeString(clientMachine,out);
         FSImageSerialization.writeBoolean(overwrite, out);
         FSImageSerialization.writeByte(storagePolicyId, out);
+        FSImageSerialization.writeByte(erasureCodingPolicyId, out);
         // write clientId and callId
         writeRpcIds(rpcClientId, rpcCallId, out);
       }
@@ -633,6 +643,14 @@ public abstract class FSEditLogOp {
           this.storagePolicyId =
               HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
         }
+
+        if (NameNodeLayoutVersion.supports(
+            NameNodeLayoutVersion.Feature.ERASURE_CODING, logVersion)) {
+          this.erasureCodingPolicyId = FSImageSerialization.readByte(in);
+        } else {
+          this.erasureCodingPolicyId =
+              ErasureCodeConstants.REPLICATION_POLICY_ID;
+        }
         // read clientId and callId
         readRpcIds(in, logVersion);
       } else {
@@ -695,6 +713,8 @@ public abstract class FSEditLogOp {
       }
       builder.append(", storagePolicyId=");
       builder.append(storagePolicyId);
+      builder.append(", erasureCodingPolicyId=");
+      builder.append(erasureCodingPolicyId);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");
@@ -730,6 +750,8 @@ public abstract class FSEditLogOp {
         if (aclEntries != null) {
           appendAclEntriesToXml(contentHandler, aclEntries);
         }
+        XMLUtils.addSaxString(contentHandler, "ERASURE_CODING_POLICY_ID",
+            Byte.toString(erasureCodingPolicyId));
         appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
       }
     }
@@ -758,6 +780,10 @@ public abstract class FSEditLogOp {
       }
       this.permissions = permissionStatusFromXml(st);
       aclEntries = readAclEntriesFromXml(st);
+      if (st.hasChildren("ERASURE_CODING_POLICY_ID")) {
+        this.erasureCodingPolicyId = Byte.parseByte(st.getValue(
+            "ERASURE_CODING_POLICY_ID"));
+      }
       readRpcIdsFromXml(st);
     }
   }

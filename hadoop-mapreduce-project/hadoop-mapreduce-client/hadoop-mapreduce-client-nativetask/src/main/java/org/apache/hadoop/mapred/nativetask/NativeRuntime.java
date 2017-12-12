@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred.nativetask;
 import java.io.IOException;
 
 import com.google.common.base.Charsets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -33,6 +31,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapred.nativetask.util.ConfigUtil;
 import org.apache.hadoop.util.VersionInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class stands for the native runtime It has three functions:
@@ -42,7 +42,8 @@ import org.apache.hadoop.util.VersionInfo;
  */
 @InterfaceAudience.Private
 public class NativeRuntime {
-  private static Log LOG = LogFactory.getLog(NativeRuntime.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NativeRuntime.class);
   private static boolean nativeLibraryLoaded = false;
 
   private static Configuration conf = new Configuration();

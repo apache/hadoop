@@ -20,13 +20,13 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is an MR2 replacement for older MR1 MiniMRCluster, that was used
@@ -45,7 +45,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class MiniMRCluster {
-  private static final Log LOG = LogFactory.getLog(MiniMRCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MiniMRCluster.class);
 
   private MiniMRClientCluster mrClientCluster;
 
@@ -98,7 +99,7 @@ public class MiniMRCluster {
     try {
       jobConf = new JobConf(mrClientCluster.getConfig());
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.getMessage());
     }
     return jobConf;
   }
@@ -108,7 +109,7 @@ public class MiniMRCluster {
     try {
       jobConf = new JobConf(mrClientCluster.getConfig());
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.getMessage());
     }
     return jobConf;
   }
@@ -224,7 +225,7 @@ public class MiniMRCluster {
     try {
       jobConf = new JobConf(mrClientCluster.getConfig());
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.getMessage());
     }
     return jobConf;
   }
@@ -266,7 +267,7 @@ public class MiniMRCluster {
     try {
       mrClientCluster.stop();
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.getMessage());
     }
   }
 

@@ -67,9 +67,9 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
     conf.set(CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ORDER_POLICY,
         "priority_first");
 
-    String labelsConfig = "=100:200,true;";
+    String labelsConfig = "=100:50,true;";
     String nodesConfig = // n1 has no label
-        "n1= res=100:200";
+        "n1= res=100:50";
     String queuesConfig =
         // guaranteed,max,used,pending,reserved
         "root(=[100:50 100:50 80:40 120:60 0]);" + // root
@@ -105,7 +105,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
     verify(mDisp, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(7)).handle(argThat(
+    verify(mDisp, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }

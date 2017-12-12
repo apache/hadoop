@@ -205,7 +205,7 @@ public class NodeManager extends CompositeService
   }
 
   protected NodeResourceMonitor createNodeResourceMonitor() {
-    return new NodeResourceMonitorImpl();
+    return new NodeResourceMonitorImpl(context);
   }
 
   protected ContainerManagerImpl createContainerManager(Context context,
@@ -242,6 +242,7 @@ public class NodeManager extends CompositeService
     NMContext nmContext = new NMContext(containerTokenSecretManager,
         nmTokenSecretManager, dirsHandler, aclsManager, stateStore,
         isDistSchedulerEnabled, conf);
+    nmContext.setNodeManagerMetrics(metrics);
     DefaultContainerStateListener defaultListener =
         new DefaultContainerStateListener();
     nmContext.setContainerStateTransitionListener(defaultListener);
@@ -574,6 +575,8 @@ public class NodeManager extends CompositeService
 
     private Configuration conf = null;
 
+    private NodeManagerMetrics metrics = null;
+
     protected final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
 
@@ -821,6 +824,20 @@ public class NodeManager extends CompositeService
 
     public ResourcePluginManager getResourcePluginManager() {
       return resourcePluginManager;
+    }
+
+    /**
+     * Returns the {@link NodeManagerMetrics} instance of this node.
+     * This might return a null if the instance was not set to the context.
+     * @return node manager metrics.
+     */
+    @Override
+    public NodeManagerMetrics getNodeManagerMetrics() {
+      return metrics;
+    }
+
+    public void setNodeManagerMetrics(NodeManagerMetrics nmMetrics) {
+      this.metrics = nmMetrics;
     }
 
     public void setResourcePluginManager(

@@ -1236,7 +1236,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                 ((float) (numUnderMinReplicatedBlocks * 100) / (float) totalBlocks))
                 .append(" %)");
           }
-          res.append("\n  ").append(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY + ":\t")
+          res.append("\n  ").append("MINIMAL BLOCK REPLICATION:\t")
              .append(minReplication);
         }
         if(corruptFiles>0) {

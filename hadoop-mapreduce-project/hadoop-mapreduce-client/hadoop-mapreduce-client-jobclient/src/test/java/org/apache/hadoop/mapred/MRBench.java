@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,13 +31,15 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Runs a job multiple times and takes average of all runs.
  */
 public class MRBench extends Configured implements Tool{
   
-  private static final Log LOG = LogFactory.getLog(MRBench.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MRBench.class);
   private static final String DEFAULT_INPUT_SUB = "mr_input";
   private static final String DEFAULT_OUTPUT_SUB = "mr_output";
 

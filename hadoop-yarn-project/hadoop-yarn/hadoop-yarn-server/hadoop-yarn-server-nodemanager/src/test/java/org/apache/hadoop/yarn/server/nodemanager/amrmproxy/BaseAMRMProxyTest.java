@@ -55,8 +55,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -178,6 +180,20 @@ public abstract class BaseAMRMProxyTest {
     stateStore.init(this.conf);
     stateStore.start();
     return new NMContext(null, null, null, null, stateStore, false, this.conf);
+  }
+
+  // A utility method for intercepter recover unit test
+  protected Map<String, byte[]> recoverDataMapForAppAttempt(
+      NMStateStoreService nmStateStore, ApplicationAttemptId attemptId)
+      throws IOException {
+    RecoveredAMRMProxyState state = nmStateStore.loadAMRMProxyState();
+    for (Map.Entry<ApplicationAttemptId, Map<String, byte[]>> entry : state
+        .getAppContexts().entrySet()) {
+      if (entry.getKey().equals(attemptId)) {
+        return entry.getValue();
+      }
+    }
+    return null;
   }
 
   protected List<ContainerId> getCompletedContainerIds(
@@ -785,6 +801,11 @@ public abstract class BaseAMRMProxyTest {
     }
 
     public ResourcePluginManager getResourcePluginManager() {
+      return null;
+    }
+
+    @Override
+    public NodeManagerMetrics getNodeManagerMetrics() {
       return null;
     }
   }

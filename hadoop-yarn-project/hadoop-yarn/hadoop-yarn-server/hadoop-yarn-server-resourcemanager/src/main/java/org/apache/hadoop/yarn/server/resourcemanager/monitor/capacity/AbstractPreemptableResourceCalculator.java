@@ -19,8 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
@@ -198,18 +201,33 @@ public class AbstractPreemptableResourceCalculator {
   private void resetCapacity(Resource clusterResource,
       Collection<TempQueuePerPartition> queues, boolean ignoreGuar) {
     Resource activeCap = Resource.newInstance(0, 0);
+    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
 
     if (ignoreGuar) {
       for (TempQueuePerPartition q : queues) {
-        q.normalizedGuarantee = 1.0f / queues.size();
+        for (int i = 0; i < maxLength; i++) {
+          q.normalizedGuarantee[i] = 1.0f / queues.size();
+        }
       }
     } else {
       for (TempQueuePerPartition q : queues) {
         Resources.addTo(activeCap, q.getGuaranteed());
       }
       for (TempQueuePerPartition q : queues) {
-        q.normalizedGuarantee = Resources.divide(rc, clusterResource,
-            q.getGuaranteed(), activeCap);
+        for (int i = 0; i < maxLength; i++) {
+          ResourceInformation nResourceInformation = q.getGuaranteed()
+              .getResourceInformation(i);
+          ResourceInformation dResourceInformation = activeCap
+              .getResourceInformation(i);
+
+          long nValue = nResourceInformation.getValue();
+          long dValue = UnitsConversionUtil.convert(
+              dResourceInformation.getUnits(), nResourceInformation.getUnits(),
+              dResourceInformation.getValue());
+          if (dValue != 0) {
+            q.normalizedGuarantee[i] = (float) nValue / dValue;
+          }
+        }
       }
     }
   }

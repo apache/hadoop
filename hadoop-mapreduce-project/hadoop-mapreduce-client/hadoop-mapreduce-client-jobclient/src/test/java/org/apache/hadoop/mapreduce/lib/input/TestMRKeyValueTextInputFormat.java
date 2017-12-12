@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -42,16 +41,15 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 public class TestMRKeyValueTextInputFormat {
-  private static final Log LOG =
-    LogFactory.getLog(TestMRKeyValueTextInputFormat.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRKeyValueTextInputFormat.class);
 
   private static Configuration defaultConf = new Configuration();
   private static FileSystem localFs = null; 

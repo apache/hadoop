@@ -26,8 +26,6 @@ import java.util.List;
 import org.junit.Assert;
 
 import org.apache.avro.AvroRemoteException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,11 +50,13 @@ import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestMRJobsWithHistoryService {
 
-  private static final Log LOG =
-    LogFactory.getLog(TestMRJobsWithHistoryService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRJobsWithHistoryService.class);
 
   private static final EnumSet<RMAppState> TERMINAL_RM_APP_STATES =
     EnumSet.of(RMAppState.FINISHED, RMAppState.FAILED, RMAppState.KILLED);

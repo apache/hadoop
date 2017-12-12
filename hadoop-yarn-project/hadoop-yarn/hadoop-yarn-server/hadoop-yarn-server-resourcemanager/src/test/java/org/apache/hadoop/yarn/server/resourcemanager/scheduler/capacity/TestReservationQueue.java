@@ -38,9 +38,9 @@ import org.junit.Test;
 
 /**
  * Test class for dynamic auto created leaf queues.
- * @see AutoCreatedLeafQueue
+ * @see ReservationQueue
  */
-public class TestAutoCreatedLeafQueue {
+public class TestReservationQueue {
 
   private CapacitySchedulerConfiguration csConf;
   private CapacitySchedulerContext csContext;
@@ -48,12 +48,13 @@ public class TestAutoCreatedLeafQueue {
   final static int GB = 1024;
   private final ResourceCalculator resourceCalculator =
       new DefaultResourceCalculator();
-  private AutoCreatedLeafQueue autoCreatedLeafQueue;
+  private ReservationQueue autoCreatedLeafQueue;
 
   @Before
   public void setup() throws IOException {
     // setup a context / conf
     csConf = new CapacitySchedulerConfiguration();
+
     YarnConfiguration conf = new YarnConfiguration();
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
@@ -70,7 +71,7 @@ public class TestAutoCreatedLeafQueue {
 
     // create a queue
     PlanQueue pq = new PlanQueue(csContext, "root", null, null);
-    autoCreatedLeafQueue = new AutoCreatedLeafQueue(csContext, "a", pq);
+    autoCreatedLeafQueue = new ReservationQueue(csContext, "a", pq);
   }
 
   private void validateAutoCreatedLeafQueue(double capacity) {

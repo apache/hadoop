@@ -79,7 +79,7 @@ public class SchedulingMonitor extends AbstractService {
   }
 
   private void schedulePreemptionChecker() {
-    handler = ses.scheduleAtFixedRate(new PreemptionChecker(),
+    handler = ses.scheduleAtFixedRate(new PolicyInvoker(),
         0, monitorInterval, TimeUnit.MILLISECONDS);
   }
 
@@ -99,7 +99,7 @@ public class SchedulingMonitor extends AbstractService {
     scheduleEditPolicy.editSchedule();
   }
 
-  private class PreemptionChecker implements Runnable {
+  private class PolicyInvoker implements Runnable {
     @Override
     public void run() {
       try {

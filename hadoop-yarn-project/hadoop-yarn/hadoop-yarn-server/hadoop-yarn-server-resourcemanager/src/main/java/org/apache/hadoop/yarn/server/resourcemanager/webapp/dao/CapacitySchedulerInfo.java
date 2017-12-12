@@ -59,7 +59,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
       max = 1f;
     this.maxCapacity = max * 100;
 
-    capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(), false);
+    capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(),
+        parent.getQueueResourceQuotas(), false);
     queues = getQueues(parent);
     health = new CapacitySchedulerHealthInfo(cs);
   }
