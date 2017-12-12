@@ -20,15 +20,21 @@ package org.apache.hadoop.yarn.service;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.component.ComponentState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +44,9 @@ import static org.apache.hadoop.registry.client.api.RegistryConstants
     .KEY_REGISTRY_ZK_QUORUM;
 
 public class TestServiceAM extends ServiceTestUtils{
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestServiceAM.class);
 
   private File basedir;
   YarnConfiguration conf = new YarnConfiguration();
@@ -54,7 +63,7 @@ public class TestServiceAM extends ServiceTestUtils{
     zkCluster = new TestingCluster(1);
     zkCluster.start();
     conf.set(KEY_REGISTRY_ZK_QUORUM, zkCluster.getConnectString());
-    System.out.println("ZK cluster: " +  zkCluster.getConnectString());
+    LOG.info("ZK cluster: {}", zkCluster.getConnectString());
   }
 
   @After
@@ -91,7 +100,7 @@ public class TestServiceAM extends ServiceTestUtils{
     am.feedContainerToComp(exampleApp, 1, "compa");
     am.waitForCompInstanceState(compa0, ComponentInstanceState.STARTED);
 
-    System.out.println("Fail the container 1");
+    LOG.info("Fail the container 1");
     // fail the container
     am.feedFailedContainerToComp(exampleApp, 1, "compa");
 
@@ -104,6 +113,91 @@ public class TestServiceAM extends ServiceTestUtils{
     // still 1 pending instance
     Assert.assertEquals(1,
         am.getComponent("compa").getPendingInstances().size());
+    am.stop();
+  }
+
+  // Test to verify that the containers of previous attempt are not prematurely
+  // released. These containers are sent by the RM to the AM in the
+  // heartbeat response.
+  @Test(timeout = 200000)
+  public void testContainersFromPreviousAttemptsWithRMRestart()
+      throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(
+        System.currentTimeMillis(), 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setName("testContainersRecovers");
+    String comp1Name = "comp1";
+    String comp1InstName = "comp1-0";
+
+    org.apache.hadoop.yarn.service.api.records.Component compA =
+        createComponent(comp1Name, 1, "sleep");
+    exampleApp.addComponent(compA);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    ContainerId containerId = am.createContainerId(1);
+    am.feedRegistryComponent(containerId, comp1Name, comp1InstName);
+    am.init(conf);
+    am.start();
+
+    ComponentInstance comp10 = am.getCompInstance(comp1Name, comp1InstName);
+    am.feedRecoveredContainer(containerId, comp1Name);
+    am.waitForCompInstanceState(comp10, ComponentInstanceState.STARTED);
+
+    // 0 pending instance
+    Assert.assertEquals(0,
+        am.getComponent(comp1Name).getPendingInstances().size());
+
+    GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
+        .getContainerStatus() != null, 2000, 200000);
+
+    Assert.assertEquals("container state",
+        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+            .getState());
+    am.stop();
+  }
+
+  // Test to verify that the containers of previous attempt are released and the
+  // component instance is added to the pending queue when the recovery wait
+  // time interval elapses.
+  @Test(timeout = 200000)
+  public void testContainersReleasedWhenExpired()
+      throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(
+        System.currentTimeMillis(), 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setName("testContainersRecovers");
+    String comp1Name = "comp1";
+    String comp1InstName = "comp1-0";
+
+    org.apache.hadoop.yarn.service.api.records.Component compA =
+        createComponent(comp1Name, 1, "sleep");
+    exampleApp.addComponent(compA);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    ContainerId containerId = am.createContainerId(1);
+    am.feedRegistryComponent(containerId, comp1Name, comp1InstName);
+    conf.setLong(YarnServiceConf.CONTAINER_RECOVERY_TIMEOUT_MS, 10);
+    am.init(conf);
+    am.start();
+    Thread.sleep(100);
+    GenericTestUtils.waitFor(() -> am.getComponent(comp1Name).getState().equals(
+        ComponentState.FLEXING), 100, 2000);
+
+    // 1 pending instance
+    Assert.assertEquals(1,
+        am.getComponent(comp1Name).getPendingInstances().size());
+
+    am.feedContainerToComp(exampleApp, 2, comp1Name);
+
+    GenericTestUtils.waitFor(() -> am.getCompInstance(comp1Name, comp1InstName)
+        .getContainerStatus() != null, 2000, 200000);
+    Assert.assertEquals("container state",
+        org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
+        am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
+            .getState());
     am.stop();
   }
 }

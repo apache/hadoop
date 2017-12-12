@@ -22,6 +22,8 @@ import org.apache.hadoop.yarn.service.api.records.Configuration;
 
 public class YarnServiceConf {
 
+  private static final String YARN_SERVICE_PREFIX = "yarn.service.";
+
   // Retry settings for the ServiceClient to talk to Service AppMaster
   public static final String CLIENT_AM_RETRY_MAX_WAIT_MS = "yarn.service.client-am.retry.max-wait-ms";
   public static final String CLIENT_AM_RETRY_MAX_INTERVAL_MS = "yarn.service.client-am.retry-interval-ms";
@@ -82,6 +84,14 @@ public class YarnServiceConf {
    * JVM opts.
    */
   public static final String JVM_OPTS = "yarn.service.am.java.opts";
+
+  /**
+   * How long to wait until a container is considered dead.
+   */
+  public static final String CONTAINER_RECOVERY_TIMEOUT_MS =
+      YARN_SERVICE_PREFIX + "container-recovery.timeout.ms";
+
+  public static final int DEFAULT_CONTAINER_RECOVERY_TIMEOUT_MS = 120000;
 
   /**
    * Get long value for the property. First get from the userConf, if not
