@@ -107,6 +107,10 @@ public class Component implements EventHandler<ComponentEvent> {
           .addTransition(INIT, INIT, CONTAINER_RECOVERED,
               new ContainerRecoveredTransition())
 
+          // container recovered in AM heartbeat
+          .addTransition(FLEXING, FLEXING, CONTAINER_RECOVERED,
+              new ContainerRecoveredTransition())
+
           // container allocated by RM
           .addTransition(FLEXING, FLEXING, CONTAINER_ALLOCATED,
               new ContainerAllocatedTransition())
@@ -307,6 +311,10 @@ public class Component implements EventHandler<ComponentEvent> {
       component.componentSpec.setState(
           org.apache.hadoop.yarn.service.api.records.ComponentState.FLEXING);
     }
+  }
+
+  public void removePendingInstance(ComponentInstance instance) {
+    pendingInstances.remove(instance);
   }
 
   public void reInsertPendingInstance(ComponentInstance instance) {
