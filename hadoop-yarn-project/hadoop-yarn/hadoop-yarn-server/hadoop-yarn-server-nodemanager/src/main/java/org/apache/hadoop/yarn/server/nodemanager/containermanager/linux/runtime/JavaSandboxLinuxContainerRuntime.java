@@ -230,7 +230,6 @@ public class JavaSandboxLinuxContainerRuntime
         throw new ContainerExecutionException("hadoop.tmp.dir not set!");
       }
 
-      OutputStream policyOutputStream = null;
       try {
         String containerID = ctx.getExecutionAttribute(CONTAINER_ID_STR);
         initializePolicyDir();
@@ -241,19 +240,19 @@ public class JavaSandboxLinuxContainerRuntime
             Paths.get(policyFileDir.toString(),
             containerID + "-" + NMContainerPolicyUtils.POLICY_FILE),
             POLICY_ATTR);
-        policyOutputStream = Files.newOutputStream(policyFilePath);
 
-        containerPolicies.put(containerID, policyFilePath);
+        try(OutputStream policyOutputStream =
+                Files.newOutputStream(policyFilePath)) {
 
-        NMContainerPolicyUtils.generatePolicyFile(policyOutputStream,
-            localDirs, groupPolicyFiles, resources, configuration);
-        NMContainerPolicyUtils.appendSecurityFlags(
-            commands, env, policyFilePath, sandboxMode);
+          containerPolicies.put(containerID, policyFilePath);
 
+          NMContainerPolicyUtils.generatePolicyFile(policyOutputStream,
+              localDirs, groupPolicyFiles, resources, configuration);
+          NMContainerPolicyUtils.appendSecurityFlags(
+              commands, env, policyFilePath, sandboxMode);
+        }
       } catch (IOException e) {
         throw new ContainerExecutionException(e);
-      } finally {
-        IOUtils.cleanupWithLogger(LOG, policyOutputStream);
       }
     }
   }
