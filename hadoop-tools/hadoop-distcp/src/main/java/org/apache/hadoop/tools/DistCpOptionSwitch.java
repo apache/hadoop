@@ -73,7 +73,7 @@ public enum DistCpOptionSwitch {
    */
   DELETE_MISSING(DistCpConstants.CONF_LABEL_DELETE_MISSING,
       new Option("delete", false, "Delete from target, " +
-          "files missing in source")),
+          "files missing in source. Delete is applicable only with update or overwrite options")),
   /**
    * Number of threads for building source file listing (before map-reduce
    * phase, max one listStatus per thread at a time).

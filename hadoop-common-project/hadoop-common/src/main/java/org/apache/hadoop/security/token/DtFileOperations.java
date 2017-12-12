@@ -102,11 +102,13 @@ public final class DtFileOperations {
   public static void doFormattedWrite(
       File f, String format, Credentials creds, Configuration conf)
       throws IOException {
-    if (format == null || format.equals(FORMAT_PB)) {
-      creds.writeTokenStorageFile(fileToPath(f), conf);
-    } else { // if (format != null && format.equals(FORMAT_JAVA)) {
-      creds.writeLegacyTokenStorageLocalFile(f);
+    // default to oldest supported format for compatibility
+    Credentials.SerializedFormat credsFormat =
+        Credentials.SerializedFormat.WRITABLE;
+    if (format.equals(FORMAT_PB)) {
+      credsFormat = Credentials.SerializedFormat.PROTOBUF;
     }
+    creds.writeTokenStorageFile(fileToPath(f), conf, credsFormat);
   }
 
   /** Print out a Credentials file from the local filesystem.

@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.mapreduce.lib.partition;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestKeyFieldHelper {
-  private static final Log LOG = LogFactory.getLog(TestKeyFieldHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestKeyFieldHelper.class);
+
   /**
    * Test is key-field-helper's parse option.
    */

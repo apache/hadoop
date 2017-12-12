@@ -293,10 +293,12 @@ class InvalidateBlocks {
       getBlocksToInvalidateByLimit(nodeToECBlocks.get(dn),
           toInvalidate, numECBlocks, remainingLimit);
     }
-    if (toInvalidate.size() > 0 && getBlockSetsSize(dn) == 0) {
-      remove(dn);
+    if (toInvalidate.size() > 0) {
+      if (getBlockSetsSize(dn) == 0) {
+        remove(dn);
+      }
+      dn.addBlocksToBeInvalidated(toInvalidate);
     }
-    dn.addBlocksToBeInvalidated(toInvalidate);
     return toInvalidate;
   }
   

@@ -272,7 +272,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * @param newQueue the queue being added.
    * @throws YarnException
    */
-  void addQueue(Queue newQueue) throws YarnException;
+  void addQueue(Queue newQueue) throws YarnException, IOException;
 
   /**
    * This method increase the entitlement for current queue (must respect

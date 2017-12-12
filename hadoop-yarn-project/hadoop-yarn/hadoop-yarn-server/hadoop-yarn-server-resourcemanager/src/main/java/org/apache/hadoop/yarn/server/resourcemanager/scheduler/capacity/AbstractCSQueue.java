@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AbsoluteResourceType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -87,6 +89,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   final ResourceCalculator resourceCalculator;
   Set<String> accessibleLabels;
+  Set<String> resourceTypes;
   final RMNodeLabelsManager labelManager;
   String defaultLabelExpression;
   
@@ -101,6 +104,14 @@ public abstract class AbstractCSQueue implements CSQueue {
   // Track capacities like used-capcity/abs-used-capacity/capacity/abs-capacity,
   // etc.
   QueueCapacities queueCapacities;
+
+  QueueResourceQuotas queueResourceQuotas;
+
+  protected enum CapacityConfigType {
+    NONE, PERCENTAGE, ABSOLUTE_RESOURCE
+  };
+  protected CapacityConfigType capacityConfigType =
+      CapacityConfigType.NONE;
 
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
@@ -117,39 +128,54 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
+    this(cs, cs.getConfiguration(), queueName, parent, old);
+  }
+
+  public AbstractCSQueue(CapacitySchedulerContext cs,
+      CapacitySchedulerConfiguration configuration, String queueName,
+      CSQueue parent, CSQueue old) {
+
     this.labelManager = cs.getRMContext().getNodeLabelManager();
     this.parent = parent;
     this.queueName = queueName;
-    this.queuePath =
-      ((parent == null) ? "" : (parent.getQueuePath() + ".")) + this.queueName;
+    this.queuePath = ((parent == null) ? "" : (parent.getQueuePath() + "."))
+        + this.queueName;
     this.resourceCalculator = cs.getResourceCalculator();
     this.activitiesManager = cs.getActivitiesManager();
-    
+
     // must be called after parent and queueName is set
-    this.metrics =
-        old != null ? (CSQueueMetrics) old.getMetrics() : CSQueueMetrics
-            .forQueue(getQueuePath(), parent, cs.getConfiguration()
-                .getEnableUserMetrics(), cs.getConf());
+    this.metrics = old != null ?
+        (CSQueueMetrics) old.getMetrics() :
+        CSQueueMetrics.forQueue(getQueuePath(), parent,
+            configuration.getEnableUserMetrics(), cs.getConf());
 
     this.csContext = cs;
     this.minimumAllocation = csContext.getMinimumResourceCapability();
-    
+
     // initialize ResourceUsage
     queueUsage = new ResourceUsage();
     queueEntity = new PrivilegedEntity(EntityType.QUEUE, getQueuePath());
-    
+
     // initialize QueueCapacities
     queueCapacities = new QueueCapacities(parent == null);
+
+    // initialize queueResourceQuotas
+    queueResourceQuotas = new QueueResourceQuotas();
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
   }
-  
+
   protected void setupConfigurableCapacities() {
+    setupConfigurableCapacities(csContext.getConfiguration());
+  }
+
+  protected void setupConfigurableCapacities(
+      CapacitySchedulerConfiguration configuration) {
     CSQueueUtils.loadUpdateAndCheckCapacities(
         getQueuePath(),
-        csContext.getConfiguration(), 
+        configuration,
         queueCapacities,
         parent == null ? null : parent.getQueueCapacities());
   }
@@ -261,6 +287,29 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
+  /**
+   * Set maximum capacity
+   * @param maximumCapacity new max capacity
+   */
+  void setMaxCapacity(String nodeLabel, float maximumCapacity) {
+    try {
+      writeLock.lock();
+      // Sanity check
+      CSQueueUtils.checkMaxCapacity(getQueueName(),
+          queueCapacities.getCapacity(nodeLabel), maximumCapacity);
+      float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
+          maximumCapacity, parent);
+      CSQueueUtils.checkAbsoluteCapacity(getQueueName(),
+          queueCapacities.getAbsoluteCapacity(nodeLabel), absMaxCapacity);
+
+      queueCapacities.setMaximumCapacity(maximumCapacity);
+      queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+
   @Override
   public String getDefaultNodeLabelExpression() {
     return defaultLabelExpression;
@@ -268,14 +317,25 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   void setupQueueConfigs(Resource clusterResource)
       throws IOException {
+    setupQueueConfigs(clusterResource, csContext.getConfiguration());
+  }
+
+  protected void setupQueueConfigs(Resource clusterResource,
+      CapacitySchedulerConfiguration configuration) throws
+      IOException {
+
     try {
       writeLock.lock();
       // get labels
       this.accessibleLabels =
-          csContext.getConfiguration().getAccessibleNodeLabels(getQueuePath());
+          configuration.getAccessibleNodeLabels(getQueuePath());
       this.defaultLabelExpression =
-          csContext.getConfiguration().getDefaultNodeLabelExpression(
+          configuration.getDefaultNodeLabelExpression(
               getQueuePath());
+      this.resourceTypes = new HashSet<String>();
+      for (AbsoluteResourceType type : AbsoluteResourceType.values()) {
+        resourceTypes.add(type.toString().toLowerCase());
+      }
 
       // inherit from parent if labels not set
       if (this.accessibleLabels == null && parent != null) {
@@ -290,23 +350,28 @@ public abstract class AbstractCSQueue implements CSQueue {
       }
 
       // After we setup labels, we can setup capacities
-      setupConfigurableCapacities();
+      setupConfigurableCapacities(configuration);
+
+      // Also fetch minimum/maximum resource constraint for this queue if
+      // configured.
+      capacityConfigType = CapacityConfigType.NONE;
+      updateConfigurableResourceRequirement(getQueuePath(), clusterResource);
 
       this.maximumAllocation =
-          csContext.getConfiguration().getMaximumAllocationPerQueue(
+          configuration.getMaximumAllocationPerQueue(
               getQueuePath());
 
       // initialized the queue state based on previous state, configured state
       // and its parent state.
       QueueState previous = getState();
-      QueueState configuredState = csContext.getConfiguration()
+      QueueState configuredState = configuration
           .getConfiguredState(getQueuePath());
       QueueState parentState = (parent == null) ? null : parent.getState();
       initializeQueueState(previous, configuredState, parentState);
 
       authorizer = YarnAuthorizationProvider.getInstance(csContext.getConf());
 
-      this.acls = csContext.getConfiguration().getAcls(getQueuePath());
+      this.acls = configuration.getAcls(getQueuePath());
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
@@ -338,18 +403,21 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.reservationsContinueLooking =
           csContext.getConfiguration().getReservationContinueLook();
 
-      this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this);
+      this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this,
+          configuration);
 
-      this.priority = csContext.getConfiguration().getQueuePriority(
+      this.priority = configuration.getQueuePriority(
           getQueuePath());
 
-      this.userWeights = getUserWeightsFromHierarchy();
+      this.userWeights = getUserWeightsFromHierarchy(configuration);
     } finally {
       writeLock.unlock();
     }
   }
 
-  private Map<String, Float> getUserWeightsFromHierarchy() throws IOException {
+  private Map<String, Float> getUserWeightsFromHierarchy
+      (CapacitySchedulerConfiguration configuration) throws
+      IOException {
     Map<String, Float> unionInheritedWeights = new HashMap<String, Float>();
     CSQueue parentQ = getParent();
     if (parentQ != null) {
@@ -358,10 +426,126 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
     // Insert this queue's user's weights, overriding parent's user's weights if
     // there is overlap.
-    CapacitySchedulerConfiguration csConf = csContext.getConfiguration();
     unionInheritedWeights.putAll(
-        csConf.getAllUserWeightsForQueue(getQueuePath()));
+        configuration.getAllUserWeightsForQueue(getQueuePath()));
     return unionInheritedWeights;
+  }
+
+  protected void updateConfigurableResourceRequirement(String queuePath,
+      Resource clusterResource) {
+    CapacitySchedulerConfiguration conf = csContext.getConfiguration();
+    Set<String> configuredNodelabels = conf.getConfiguredNodeLabels(queuePath);
+
+    for (String label : configuredNodelabels) {
+      Resource minResource = conf.getMinimumResourceRequirement(label,
+          queuePath, resourceTypes);
+      Resource maxResource = conf.getMaximumResourceRequirement(label,
+          queuePath, resourceTypes);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("capacityConfigType is '" + capacityConfigType
+            + "' for queue '" + getQueueName());
+      }
+      if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {
+        this.capacityConfigType = (!minResource.equals(Resources.none())
+            && queueCapacities.getAbsoluteCapacity(label) == 0f)
+                ? CapacityConfigType.ABSOLUTE_RESOURCE
+                : CapacityConfigType.PERCENTAGE;
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("capacityConfigType is updated as '" + capacityConfigType
+              + "' for queue '" + getQueueName());
+        }
+      }
+
+      validateAbsoluteVsPercentageCapacityConfig(minResource);
+
+      // If min resource for a resource type is greater than its max resource,
+      // throw exception to handle such error configs.
+      if (!maxResource.equals(Resources.none()) && Resources.greaterThan(
+          resourceCalculator, clusterResource, minResource, maxResource)) {
+        throw new IllegalArgumentException("Min resource configuration "
+            + minResource + " is greater than its max value:" + maxResource
+            + " in queue:" + getQueueName());
+      }
+
+      // If parent's max resource is lesser to a specific child's max
+      // resource, throw exception to handle such error configs.
+      if (parent != null) {
+        Resource parentMaxRes = parent.getQueueResourceQuotas()
+            .getConfiguredMaxResource(label);
+        if (Resources.greaterThan(resourceCalculator, clusterResource,
+            parentMaxRes, Resources.none())) {
+          if (Resources.greaterThan(resourceCalculator, clusterResource,
+              maxResource, parentMaxRes)) {
+            throw new IllegalArgumentException("Max resource configuration "
+                + maxResource + " is greater than parents max value:"
+                + parentMaxRes + " in queue:" + getQueueName());
+          }
+
+          // If child's max resource is not set, but its parent max resource is
+          // set, we must set child max resource to its parent's.
+          if (maxResource.equals(Resources.none())
+              && !minResource.equals(Resources.none())) {
+            maxResource = Resources.clone(parentMaxRes);
+          }
+        }
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Updating absolute resource configuration for queue:"
+            + getQueueName() + " as minResource=" + minResource
+            + " and maxResource=" + maxResource);
+      }
+
+      queueResourceQuotas.setConfiguredMinResource(label, minResource);
+      queueResourceQuotas.setConfiguredMaxResource(label, maxResource);
+    }
+  }
+
+  private void validateAbsoluteVsPercentageCapacityConfig(
+      Resource minResource) {
+    CapacityConfigType localType = CapacityConfigType.PERCENTAGE;
+    if (!minResource.equals(Resources.none())) {
+      localType = CapacityConfigType.ABSOLUTE_RESOURCE;
+    }
+
+    if (!queueName.equals("root")
+        && !this.capacityConfigType.equals(localType)) {
+      throw new IllegalArgumentException("Queue '" + getQueueName()
+          + "' should use either percentage based capacity"
+          + " configuration or absolute resource.");
+    }
+  }
+
+  @Override
+  public CapacityConfigType getCapacityConfigType() {
+    return capacityConfigType;
+  }
+
+  @Override
+  public Resource getEffectiveCapacity(String label) {
+    return Resources
+        .clone(getQueueResourceQuotas().getEffectiveMinResource(label));
+  }
+
+  @Override
+  public Resource getEffectiveCapacityDown(String label, Resource factor) {
+    return Resources.normalizeDown(resourceCalculator,
+        getQueueResourceQuotas().getEffectiveMinResource(label),
+        minimumAllocation);
+  }
+
+  @Override
+  public Resource getEffectiveMaxCapacity(String label) {
+    return Resources
+        .clone(getQueueResourceQuotas().getEffectiveMaxResource(label));
+  }
+
+  @Override
+  public Resource getEffectiveMaxCapacityDown(String label, Resource factor) {
+    return Resources.normalizeDown(resourceCalculator,
+        getQueueResourceQuotas().getEffectiveMaxResource(label),
+        minimumAllocation);
   }
 
   private void initializeQueueState(QueueState previousState,
@@ -479,6 +663,14 @@ public abstract class AbstractCSQueue implements CSQueue {
       queueConfiguration.setMaxCapacity(maxCapacity);
       queueConfiguration.setAbsoluteMaxCapacity(absMaxCapacity);
       queueConfiguration.setMaxAMPercentage(maxAMPercentage);
+      queueConfiguration.setConfiguredMinCapacity(
+          queueResourceQuotas.getConfiguredMinResource(nodeLabel));
+      queueConfiguration.setConfiguredMaxCapacity(
+          queueResourceQuotas.getConfiguredMaxResource(nodeLabel));
+      queueConfiguration.setEffectiveMinCapacity(
+          queueResourceQuotas.getEffectiveMinResource(nodeLabel));
+      queueConfiguration.setEffectiveMaxCapacity(
+          queueResourceQuotas.getEffectiveMaxResource(nodeLabel));
       queueConfigurations.put(nodeLabel, queueConfiguration);
     }
     return queueConfigurations;
@@ -555,6 +747,11 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
+  public QueueResourceQuotas getQueueResourceQuotas() {
+    return queueResourceQuotas;
+  }
+
+  @Override
   public ReentrantReadWriteLock.ReadLock getReadLock() {
     return readLock;
   }
@@ -567,10 +764,11 @@ public abstract class AbstractCSQueue implements CSQueue {
    * 
    * @return true if queue has preemption disabled, false otherwise
    */
-  private boolean isQueueHierarchyPreemptionDisabled(CSQueue q) {
-    CapacitySchedulerConfiguration csConf = csContext.getConfiguration();
+  private boolean isQueueHierarchyPreemptionDisabled(CSQueue q,
+      CapacitySchedulerConfiguration configuration) {
     boolean systemWidePreemption =
-        csConf.getBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
+        csContext.getConfiguration()
+            .getBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
                        YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS);
     CSQueue parentQ = q.getParent();
 
@@ -582,14 +780,14 @@ public abstract class AbstractCSQueue implements CSQueue {
     // on, then q does not have preemption disabled (default=false, below)
     // unless the preemption_disabled property is explicitly set.
     if (parentQ == null) {
-      return csConf.getPreemptionDisabled(q.getQueuePath(), false);
+      return configuration.getPreemptionDisabled(q.getQueuePath(), false);
     }
 
     // If this is not the root queue, inherit the default value for the
     // preemption_disabled property from the parent. Preemptability will be
     // inherited from the parent's hierarchy unless explicitly overridden at
     // this level.
-    return csConf.getPreemptionDisabled(q.getQueuePath(),
+    return configuration.getPreemptionDisabled(q.getQueuePath(),
                                         parentQ.getPreemptionDisabled());
   }
   
@@ -604,7 +802,7 @@ public abstract class AbstractCSQueue implements CSQueue {
        * limit-set-by-parent)
        */
       Resource queueMaxResource =
-          getQueueMaxResource(nodePartition, clusterResource);
+          getQueueMaxResource(nodePartition);
 
       return Resources.min(resourceCalculator, clusterResource,
           queueMaxResource, currentResourceLimits.getLimit());
@@ -617,11 +815,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     return Resources.none();
   }
 
-  Resource getQueueMaxResource(String nodePartition, Resource clusterResource) {
-    return Resources.multiplyAndNormalizeDown(resourceCalculator,
-        labelManager.getResourceByLabel(nodePartition, clusterResource),
-        queueCapacities.getAbsoluteMaximumCapacity(nodePartition),
-        minimumAllocation);
+  Resource getQueueMaxResource(String nodePartition) {
+    return getEffectiveMaxCapacity(nodePartition);
   }
 
   public boolean hasChildQueues() {
@@ -904,7 +1099,7 @@ public abstract class AbstractCSQueue implements CSQueue {
         Resource maxResourceLimit;
         if (allocation.getSchedulingMode()
             == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-          maxResourceLimit = getQueueMaxResource(partition, cluster);
+          maxResourceLimit = getQueueMaxResource(partition);
         } else{
           maxResourceLimit = labelManager.getResourceByLabel(
               schedulerContainer.getNodePartition(), cluster);

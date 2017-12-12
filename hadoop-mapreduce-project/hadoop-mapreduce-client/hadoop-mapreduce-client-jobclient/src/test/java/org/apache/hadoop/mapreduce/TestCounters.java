@@ -19,20 +19,19 @@ package org.apache.hadoop.mapreduce;
 
 import java.util.Random;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.counters.LimitExceededException;
 import org.apache.hadoop.mapreduce.counters.Limits;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.junit.Test;
 
+import static org.junit.Assert.*;
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
  */
 public class TestCounters {
 
-  static final Log LOG = LogFactory.getLog(TestCounters.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestCounters.class);
 
   /**
    * Verify counter value works

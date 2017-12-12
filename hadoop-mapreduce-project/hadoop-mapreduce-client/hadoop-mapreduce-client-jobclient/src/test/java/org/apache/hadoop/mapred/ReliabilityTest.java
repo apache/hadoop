@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,6 +39,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class tests reliability of the framework in the face of failures of
@@ -73,7 +73,8 @@ import org.apache.hadoop.util.ToolRunner;
 public class ReliabilityTest extends Configured implements Tool {
 
   private String dir;
-  private static final Log LOG = LogFactory.getLog(ReliabilityTest.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReliabilityTest.class);
 
   private void displayUsage() {
     LOG.info("This must be run in only the distributed mode " +
@@ -207,7 +208,7 @@ public class ReliabilityTest extends Configured implements Tool {
               args);
           checkJobExitStatus(status, jobClass);
         } catch (Exception e) {
-          LOG.fatal("JOB " + jobClass + " failed to run");
+          LOG.error("JOB " + jobClass + " failed to run");
           System.exit(-1);
         }
       }
@@ -325,7 +326,7 @@ public class ReliabilityTest extends Configured implements Tool {
           killed = true;
           return;
         } catch (Exception e) {
-          LOG.fatal(StringUtils.stringifyException(e));
+          LOG.error(StringUtils.stringifyException(e));
         }
       }
     }
@@ -495,7 +496,7 @@ public class ReliabilityTest extends Configured implements Tool {
         } catch (InterruptedException ie) {
           killed = true;
         } catch (Exception e) {
-          LOG.fatal(StringUtils.stringifyException(e));
+          LOG.error(StringUtils.stringifyException(e));
         }
       }
     }

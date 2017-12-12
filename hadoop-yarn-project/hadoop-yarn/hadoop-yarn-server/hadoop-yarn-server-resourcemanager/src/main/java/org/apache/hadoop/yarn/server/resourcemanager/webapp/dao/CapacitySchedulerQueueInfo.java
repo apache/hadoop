@@ -28,6 +28,7 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
@@ -62,6 +63,8 @@ public class CapacitySchedulerQueueInfo {
   protected long pendingContainers;
   protected QueueCapacitiesInfo capacities;
   protected ResourcesInfo resources;
+  protected ResourceInfo minEffectiveCapacity;
+  protected ResourceInfo maxEffectiveCapacity;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -101,18 +104,26 @@ public class CapacitySchedulerQueueInfo {
       Collections.sort(nodeLabels);
     }
     QueueCapacities qCapacities = q.getQueueCapacities();
-    populateQueueCapacities(qCapacities);
+    QueueResourceQuotas qResQuotas = q.getQueueResourceQuotas();
+    populateQueueCapacities(qCapacities, qResQuotas);
 
     ResourceUsage queueResourceUsage = q.getQueueResourceUsage();
     populateQueueResourceUsage(queueResourceUsage);
+
+    minEffectiveCapacity = new ResourceInfo(
+        q.getQueueResourceQuotas().getEffectiveMinResource());
+    maxEffectiveCapacity = new ResourceInfo(
+        q.getQueueResourceQuotas().getEffectiveMaxResource());
   }
 
   protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
     resources = new ResourcesInfo(queueResourceUsage, false);
   }
 
-  protected void populateQueueCapacities(QueueCapacities qCapacities) {
-    capacities = new QueueCapacitiesInfo(qCapacities, false);
+  protected void populateQueueCapacities(QueueCapacities qCapacities,
+      QueueResourceQuotas qResQuotas) {
+    capacities = new QueueCapacitiesInfo(qCapacities, qResQuotas,
+        false);
   }
 
   public float getCapacity() {
@@ -199,5 +210,17 @@ public class CapacitySchedulerQueueInfo {
 
   public ResourcesInfo getResources() {
     return resources;
+  }
+
+  public ResourceInfo getMinEffectiveCapacity(){
+    return minEffectiveCapacity;
+  }
+
+  public ResourceInfo getMaxEffectiveCapacity(){
+    return maxEffectiveCapacity;
+  }
+
+  public boolean isLeafQueue() {
+    return getQueues() == null;
   }
 }

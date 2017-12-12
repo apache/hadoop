@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.util.LongBitFormat;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.util.StringUtils;
 
 /** I-node for closed file. */
@@ -200,9 +201,10 @@ public class INodeFile extends INodeWithAdditionalFields
         // as the PolicyID can never be in negative.
         layoutRedundancy |= erasureCodingPolicyID;
       } else {
-        Preconditions.checkArgument(replication != null &&
-            erasureCodingPolicyID == null);
-        Preconditions.checkArgument(replication >= 0 &&
+        Preconditions.checkArgument(erasureCodingPolicyID == null ||
+                erasureCodingPolicyID ==
+                    ErasureCodeConstants.REPLICATION_POLICY_ID);
+        Preconditions.checkArgument(replication != null && replication >= 0 &&
             replication <= MAX_REDUNDANCY,
             "Invalid replication value " + replication);
         layoutRedundancy |= replication;
@@ -588,10 +590,8 @@ public class INodeFile extends INodeWithAdditionalFields
     setStoragePolicyID(storagePolicyId);
   }
 
-
   /**
-   * @return The ID of the erasure coding policy on the file. -1 represents no
-   *          EC policy.
+   * @return The ID of the erasure coding policy on the file.
    */
   @VisibleForTesting
   @Override
@@ -599,7 +599,7 @@ public class INodeFile extends INodeWithAdditionalFields
     if (isStriped()) {
       return HeaderFormat.getECPolicyID(header);
     }
-    return -1;
+    return ErasureCodeConstants.REPLICATION_POLICY_ID;
   }
 
   /**

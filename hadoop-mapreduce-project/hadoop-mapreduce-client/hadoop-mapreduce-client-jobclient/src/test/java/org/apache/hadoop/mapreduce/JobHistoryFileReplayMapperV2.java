@@ -23,8 +23,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapreduce.JobHistoryFileReplayHelper.JobFiles;
@@ -38,6 +36,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Mapper for TimelineServicePerformance that replays job history files to the
@@ -45,8 +45,8 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
  *
  */
 class JobHistoryFileReplayMapperV2 extends EntityWriterV2 {
-  private static final Log LOG =
-      LogFactory.getLog(JobHistoryFileReplayMapperV2.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(JobHistoryFileReplayMapperV2.class);
 
   @Override
   protected void writeEntities(Configuration tlConf,

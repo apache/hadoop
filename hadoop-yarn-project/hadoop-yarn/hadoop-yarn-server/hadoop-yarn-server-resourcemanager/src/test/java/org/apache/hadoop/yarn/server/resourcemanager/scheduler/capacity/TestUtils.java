@@ -309,7 +309,7 @@ public class TestUtils {
     
     return conf;
   }
-  
+
   public static Configuration getComplexConfigurationWithQueueLabels(
       Configuration config) {
     CapacitySchedulerConfiguration conf =

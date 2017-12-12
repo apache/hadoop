@@ -81,7 +81,6 @@ public class FrameworkUploader implements Runnable {
 
   @VisibleForTesting
   OutputStream targetStream = null;
-  private Path targetPath = null;
   private String alias = null;
 
   private void printHelp(Options options) {
@@ -140,11 +139,12 @@ public class FrameworkUploader implements Runnable {
     }
   }
 
-  private void beginUpload() throws IOException, UploaderException {
+  @VisibleForTesting
+  void beginUpload() throws IOException, UploaderException {
     if (targetStream == null) {
       validateTargetPath();
       int lastIndex = target.indexOf('#');
-      targetPath =
+      Path targetPath =
           new Path(
               target.substring(
                   0, lastIndex == -1 ? target.length() : lastIndex));
@@ -153,7 +153,37 @@ public class FrameworkUploader implements Runnable {
           targetPath.getName();
       LOG.info("Target " + targetPath);
       FileSystem fileSystem = targetPath.getFileSystem(new Configuration());
-      targetStream = fileSystem.create(targetPath, true);
+
+      targetStream = null;
+      if (fileSystem instanceof DistributedFileSystem) {
+        LOG.info("Set replication to " +
+            replication + " for path: " + targetPath);
+        LOG.info("Disabling Erasure Coding for path: " + targetPath);
+        DistributedFileSystem dfs = (DistributedFileSystem)fileSystem;
+        DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
+            dfs.createFile(targetPath)
+            .overwrite(true)
+            .ecPolicyName(
+                SystemErasureCodingPolicies.getReplicationPolicy().getName());
+        if (replication > 0) {
+          builder.replication(replication);
+        }
+        targetStream = builder.build();
+      } else {
+        LOG.warn("Cannot set replication to " +
+            replication + " for path: " + targetPath +
+            " on a non-distributed fileystem " +
+            fileSystem.getClass().getName());
+      }
+      if (targetStream == null) {
+        targetStream = fileSystem.create(targetPath, true);
+      }
+
+      if (targetPath.getName().endsWith("gz") ||
+          targetPath.getName().endsWith("tgz")) {
+        LOG.info("Creating GZip");
+        targetStream = new GZIPOutputStream(targetStream);
+      }
     }
   }
 
@@ -162,7 +192,7 @@ public class FrameworkUploader implements Runnable {
     beginUpload();
     LOG.info("Compressing tarball");
     try (TarArchiveOutputStream out = new TarArchiveOutputStream(
-        new GZIPOutputStream(targetStream))) {
+        targetStream)) {
       for (String fullPath : filteredInputFiles) {
         LOG.info("Adding " + fullPath);
         File file = new File(fullPath);
@@ -177,25 +207,6 @@ public class FrameworkUploader implements Runnable {
       if (targetStream != null) {
         targetStream.close();
       }
-    }
-
-    if (targetPath == null) {
-      return;
-    }
-
-    // Set file attributes
-    FileSystem fileSystem = targetPath.getFileSystem(new Configuration());
-    if (fileSystem instanceof DistributedFileSystem) {
-      LOG.info("Disabling Erasure Coding for path: " + targetPath);
-      DistributedFileSystem dfs = (DistributedFileSystem) fileSystem;
-      dfs.setErasureCodingPolicy(targetPath,
-          SystemErasureCodingPolicies.getReplicationPolicy().getName());
-    }
-
-    if (replication > 0) {
-      LOG.info("Set replication to " +
-          replication + " for path: " + targetPath);
-      fileSystem.setReplication(targetPath, replication);
     }
   }
 
