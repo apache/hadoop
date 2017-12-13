@@ -113,6 +113,11 @@ public class LevelDBFileRegionAliasMap
     } else {
       dbFile = new File(levelDBPath);
     }
+    if (createIfMissing && !dbFile.exists()) {
+      if (!dbFile.mkdirs()) {
+        throw new IOException("Unable to create " + dbFile);
+      }
+    }
     return factory.open(dbFile, options);
   }
 

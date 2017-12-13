@@ -134,7 +134,7 @@ hadoop org.apache.hadoop.hdfs.server.namenode.FileSystemImage \
 Assign ownership based on a custom `UGIResolver`, in LevelDB:
 ```
 hadoop org.apache.hadoop.hdfs.server.namenode.FileSystemImage \
-  -Ddfs.provided.aliasmap.leveldb.path=file:///path/to/leveldb/map/dingos.db \
+  -Ddfs.provided.aliasmap.leveldb.path=/path/to/leveldb/map/dingos.db \
   -b org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap \
   -o file:///tmp/name \
   -u CustomResolver \
@@ -180,7 +180,7 @@ Datanodes contact this alias map using the `org.apache.hadoop.hdfs.server.aliasm
 
   <property>
     <name>dfs.provided.aliasmap.inmemory.leveldb.dir</name>
-    <value>file:///path/to/leveldb/map/dingos.db</value>
+    <value>/path/to/leveldb/map/dingos.db</value>
     <description>
       The directory where the leveldb files will be kept
     </description>

@@ -66,6 +66,8 @@ public class TestInMemoryLevelDBAliasMapClient {
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
         "localhost:" + port);
     tempDir = Files.createTempDir();
+    File levelDBDir = new File(tempDir, BPID);
+    levelDBDir.mkdirs();
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
         tempDir.getAbsolutePath());
     levelDBAliasMapServer =

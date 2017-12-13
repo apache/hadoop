@@ -44,14 +44,17 @@ import java.util.Optional;
 public class ITestInMemoryAliasMap {
   private InMemoryAliasMap aliasMap;
   private File tempDirectory;
+  private static String bpid = "bpid-0";
 
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    tempDirectory = Files.createTempDirectory("seagull").toFile();
+    File temp = Files.createTempDirectory("seagull").toFile();
+    tempDirectory = new File(temp, bpid);
+    tempDirectory.mkdirs();
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
-        tempDirectory.getAbsolutePath());
-    aliasMap = InMemoryAliasMap.init(conf);
+        temp.getAbsolutePath());
+    aliasMap = InMemoryAliasMap.init(conf, bpid);
   }
 
   @After
