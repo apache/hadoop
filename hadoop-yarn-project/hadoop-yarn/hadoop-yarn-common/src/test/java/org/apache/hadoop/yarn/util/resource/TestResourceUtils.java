@@ -108,9 +108,10 @@ public class TestResourceUtils {
         new ResourceFileInformation("resource-types-3.xml", 3);
     testFile3.resourceNameUnitsMap.put("resource2", "");
     ResourceFileInformation testFile4 =
-        new ResourceFileInformation("resource-types-4.xml", 4);
+        new ResourceFileInformation("resource-types-4.xml", 5);
     testFile4.resourceNameUnitsMap.put("resource1", "G");
     testFile4.resourceNameUnitsMap.put("resource2", "m");
+    testFile4.resourceNameUnitsMap.put("yarn.io/gpu", "");
 
     ResourceFileInformation[] tests = {testFile1, testFile2, testFile3,
         testFile4};
@@ -276,6 +277,8 @@ public class TestResourceUtils {
         ResourceInformation.newInstance("resource1", "Gi", 5L));
     test3Resources.setResourceInformation("resource2",
         ResourceInformation.newInstance("resource2", "m", 2L));
+    test3Resources.setResourceInformation("yarn.io/gpu",
+        ResourceInformation.newInstance("yarn.io/gpu", "", 1));
     testRun.put("node-resources-2.xml", test3Resources);
 
     for (Map.Entry<String, Resource> entry : testRun.entrySet()) {

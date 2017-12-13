@@ -465,21 +465,18 @@ public class ResourceUtils {
     for (Map.Entry<String, String> entry : conf) {
       String key = entry.getKey();
       String value = entry.getValue();
-
-      if (key.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
-        addResourceInformation(key, value, nodeResources);
-      }
+      addResourceTypeInformation(key, value, nodeResources);
     }
 
     return nodeResources;
   }
 
-  private static void addResourceInformation(String prop, String value,
+  private static void addResourceTypeInformation(String prop, String value,
       Map<String, ResourceInformation> nodeResources) {
-    String[] parts = prop.split("\\.");
-    LOG.info("Found resource entry " + prop);
-    if (parts.length == 4) {
-      String resourceType = parts[3];
+    if (prop.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
+      LOG.info("Found resource entry " + prop);
+      String resourceType = prop.substring(
+          YarnConfiguration.NM_RESOURCES_PREFIX.length());
       if (!nodeResources.containsKey(resourceType)) {
         nodeResources
             .put(resourceType, ResourceInformation.newInstance(resourceType));
