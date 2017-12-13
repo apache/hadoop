@@ -34,6 +34,11 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     });
   },
 
+  activate() {
+    const controller = this.controllerFor("yarn-app.logs");
+    controller.initializeSelect();
+  },
+
   unloadAll() {
     this.store.unloadAll('yarn-app-attempt');
     this.store.unloadAll('yarn-timeline-appattempt');
