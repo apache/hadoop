@@ -366,22 +366,20 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       String user, boolean isRecovery, long startTime) throws YarnException {
 
     ApplicationPlacementContext placementContext = null;
+    try {
+      placementContext = placeApplication(rmContext, submissionContext, user);
+    } catch (YarnException e) {
+      String msg =
+          "Failed to place application " + submissionContext.getApplicationId()
+              + " to queue and specified " + "queue is invalid : "
+              + submissionContext.getQueue();
+      LOG.error(msg, e);
+      throw e;
+    }
 
-    // We only do queue mapping when it's a new application
+    // We only replace the queue when it's a new application
     if (!isRecovery) {
-      try {
-        // Do queue mapping
-        placementContext = placeApplication(rmContext,
-            submissionContext, user);
-        replaceQueueFromPlacementContext(placementContext,
-            submissionContext);
-      } catch (YarnException e) {
-        String msg = "Failed to place application " +
-            submissionContext.getApplicationId() + " to queue and specified "
-            + "queue is invalid : " + submissionContext.getQueue();
-        LOG.error(msg, e);
-        throw e;
-      }
+      replaceQueueFromPlacementContext(placementContext, submissionContext);
 
       // fail the submission if configured application timeout value is invalid
       RMServerUtils.validateApplicationTimeouts(

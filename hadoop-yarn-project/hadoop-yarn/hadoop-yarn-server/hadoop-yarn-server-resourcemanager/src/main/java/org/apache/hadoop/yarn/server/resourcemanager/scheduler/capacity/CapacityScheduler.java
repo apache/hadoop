@@ -650,24 +650,28 @@ public class CapacityScheduler extends
     return this.queueManager.getQueue(queueName);
   }
 
-  private void addApplicationOnRecovery(
-      ApplicationId applicationId, String queueName, String user,
-      Priority priority) {
+  private void addApplicationOnRecovery(ApplicationId applicationId,
+      String queueName, String user,
+      Priority priority, ApplicationPlacementContext placementContext) {
     try {
       writeLock.lock();
-      CSQueue queue = getQueue(queueName);
+      //check if the queue needs to be auto-created during recovery
+      CSQueue queue = getOrCreateQueueFromPlacementContext(applicationId, user,
+           queueName, placementContext, true);
+
       if (queue == null) {
         //During a restart, this indicates a queue was removed, which is
         //not presently supported
         if (!YarnConfiguration.shouldRMFailFast(getConfig())) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
-                  "Application killed on recovery as it was submitted to queue "
-                      + queueName + " which no longer exists after restart."));
+                  "Application killed on recovery as it"
+                      + " was submitted to queue " + queueName
+                      + " which no longer exists after restart."));
           return;
         } else{
-          String queueErrorMsg = "Queue named " + queueName
-              + " missing during application recovery."
+          String queueErrorMsg = "Queue named " + queueName + " missing "
+              + "during application recovery."
               + " Queue removal during recovery is not presently "
               + "supported by the capacity scheduler, please "
               + "restart with all queues configured"
@@ -682,8 +686,8 @@ public class CapacityScheduler extends
         if (!YarnConfiguration.shouldRMFailFast(getConfig())) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
-                  "Application killed on recovery as it was submitted to queue "
-                      + queueName
+                  "Application killed on recovery as it was "
+                      + "submitted to queue " + queueName
                       + " which is no longer a leaf queue after restart."));
           return;
         } else{
@@ -719,6 +723,51 @@ public class CapacityScheduler extends
     }
   }
 
+  private CSQueue getOrCreateQueueFromPlacementContext(ApplicationId
+      applicationId, String user, String queueName,
+      ApplicationPlacementContext placementContext,
+       boolean isRecovery) {
+
+    CSQueue queue = getQueue(queueName);
+
+    if (queue == null) {
+      if (placementContext != null && placementContext.hasParentQueue()) {
+        try {
+          return autoCreateLeafQueue(placementContext);
+        } catch (YarnException | IOException e) {
+          if (isRecovery) {
+            if (!YarnConfiguration.shouldRMFailFast(getConfig())) {
+              LOG.error("Could not auto-create leaf queue " + queueName +
+                  " due to : ", e);
+              this.rmContext.getDispatcher().getEventHandler().handle(
+                  new RMAppEvent(applicationId, RMAppEventType.KILL,
+                      "Application killed on recovery"
+                          + " as it was submitted to queue " + queueName
+                          + " which could not be auto-created"));
+            } else{
+              String queueErrorMsg =
+                  "Queue named " + queueName + " could not be "
+                      + "auto-created during application recovery.";
+              LOG.fatal(queueErrorMsg, e);
+              throw new QueueInvalidException(queueErrorMsg);
+            }
+          } else{
+            LOG.error("Could not auto-create leaf queue due to : ", e);
+            final String message =
+                "Application " + applicationId + " submission by user : "
+                    + user
+                    + " to  queue : " + queueName + " failed : " + e
+                    .getMessage();
+            this.rmContext.getDispatcher().getEventHandler().handle(
+                new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
+                    message));
+          }
+        }
+      }
+    }
+    return queue;
+  }
+
   private void addApplication(ApplicationId applicationId, String queueName,
       String user, Priority priority,
       ApplicationPlacementContext placementContext) {
@@ -732,23 +781,10 @@ public class CapacityScheduler extends
                 message));
         return;
       }
-      // Sanity checks.
-      CSQueue queue = getQueue(queueName);
 
-      if (queue == null && placementContext != null) {
-        //Could be a potential auto-created leaf queue
-        try {
-          queue = autoCreateLeafQueue(placementContext);
-        } catch (YarnException | IOException e) {
-          LOG.error("Could not auto-create leaf queue due to : ", e);
-          final String message =
-              "Application " + applicationId + " submission by user : " + user
-                  + " to  queue : " + queueName + " failed : " + e.getMessage();
-          this.rmContext.getDispatcher().getEventHandler().handle(
-              new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
-                  message));
-        }
-      }
+      //Could be a potential auto-created leaf queue
+      CSQueue queue = getOrCreateQueueFromPlacementContext(applicationId, user,
+            queueName, placementContext, false);
 
       if (queue == null) {
         final String message =
@@ -1534,7 +1570,8 @@ public class CapacityScheduler extends
               appAddedEvent.getPlacementContext());
         } else {
           addApplicationOnRecovery(appAddedEvent.getApplicationId(), queueName,
-              appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority());
+              appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
+              appAddedEvent.getPlacementContext());
         }
       }
     }
@@ -2058,10 +2095,10 @@ public class CapacityScheduler extends
                 + " (should be set and be a PlanQueue or ManagedParentQueue)");
       }
 
-      AbstractManagedParentQueue parentPlan =
+      AbstractManagedParentQueue parent =
           (AbstractManagedParentQueue) newQueue.getParent();
       String queuename = newQueue.getQueueName();
-      parentPlan.addChildQueue(newQueue);
+      parent.addChildQueue(newQueue);
       this.queueManager.addQueue(queuename, newQueue);
 
       LOG.info("Creation of AutoCreatedLeafQueue " + newQueue + " succeeded");
