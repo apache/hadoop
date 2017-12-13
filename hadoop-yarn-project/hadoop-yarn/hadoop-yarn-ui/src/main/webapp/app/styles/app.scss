@@ -2,6 +2,7 @@
 @import 'layout.scss';
 @import 'yarn-app.scss';
 @import './compose-box.scss';
+@import 'em-table.scss';
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -657,81 +658,6 @@ div.service-action-mask img {
   z-index: 9999;
 }
 
-.yarn-applications-container .table-panel-left .em-table-facet-panel {
-  width: 240px;
-  margin-right: 15px;
-  padding: 0 0 15px 0;
-  background: none;
-  border: none;
-  border-radius: 0;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .field-list > li .em-table-facet-panel-values{
-  margin-top: 0px;
-  margin-bottom: -4px;
-  background: $yarn-panel-bg;
-  border: 1px solid $yarn-border-color;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .field-name {
-  background-color: $yarn-header-bg;
-  border-bottom: 1px solid $yarn-border-color;
-  padding: 10px 15px;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .all-button {
-  right: 5px !important;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .field-name::before {
-  margin-right: 5px;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .value-list {
-  padding: 0 10px;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .filter-box {
-  padding: 5px;
-  margin: 5px 0;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .more-less {
-  padding: 5px 0;
-}
-
-.yarn-applications-container .table-panel-left .em-table-facet-panel .field-list {
-  padding-top: 0px;
-}
-
-.yarn-applications-container .em-table .table-column .table-header-cell {
-  padding: 7.5px 0 7.5px 7.5px;
-}
-
-.yarn-applications-container .ember-view.table-cell {
-  padding: 10px 15px;
-  height: auto;
-}
-
-.yarn-applications-container .resize-column {
-    position: absolute;
-    right: -14px;
-    display: inline-block;
-    padding: 10px 0;
-    top: -36px;
-    font-size: 42px;
-    line-height: 2em;
-}
-
-.yarn-app-body > div:not(:first-child) {
-  margin-top: 15px;
-}
-
-.em-table .table-column .table-header-cell {
-  background-color: $yarn-header-bg;
-  border-bottom: 1px solid $yarn-border-color;
-}
-
 .muted-text {
   color: $yarn-muted-text;
 }
@@ -754,10 +680,6 @@ div.service-action-mask img {
 
 #tree-selector-container {
   overflow: scroll;
-}
-
-.flex {
-  display: flex;
 }
 
 .yarn-label {
