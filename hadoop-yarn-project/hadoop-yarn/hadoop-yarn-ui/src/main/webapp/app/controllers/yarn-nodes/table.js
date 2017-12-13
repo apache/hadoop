@@ -31,6 +31,7 @@ export default Ember.Controller.extend({
     rowCount: Ember.computed.alias('tableDefinition.rowCount'),
     tableDefinition: TableDefinition.create({
         enableFaceting: true,
+        minValuesToDisplay: 1,
         rowCount: 25
     }),
     columns: function() {
