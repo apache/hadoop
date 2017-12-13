@@ -1107,9 +1107,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     public void verifyRMHeartbeatResponseForNodeLabels(
         NodeHeartbeatResponse response) {
       if (areLabelsSentToRM) {
-        if (response.getAreNodeLabelsAcceptedByRM() && LOG.isDebugEnabled()) {
-          LOG.debug("Node Labels {" + StringUtils.join(",", previousNodeLabels)
-              + "} were Accepted by RM ");
+        if (response.getAreNodeLabelsAcceptedByRM()) {
+          if(LOG.isDebugEnabled()){
+            LOG.debug(
+                "Node Labels {" + StringUtils.join(",", previousNodeLabels)
+                    + "} were Accepted by RM ");
+          }
         } else {
           // case where updated labels from NodeLabelsProvider is sent to RM and
           // RM rejected the labels
