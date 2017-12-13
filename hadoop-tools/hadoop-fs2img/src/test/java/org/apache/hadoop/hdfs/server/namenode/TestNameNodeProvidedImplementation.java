@@ -784,6 +784,8 @@ public class TestNameNodeProvidedImplementation {
         "localhost:32445");
     File tempDirectory =
         Files.createTempDirectory("in-memory-alias-map").toFile();
+    File leveDBPath = new File(tempDirectory, bpid);
+    leveDBPath.mkdirs();
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
         tempDirectory.getAbsolutePath());
     conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
