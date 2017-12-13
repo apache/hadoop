@@ -38,7 +38,7 @@ import java.util.Optional;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.*;
-import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.CheckedFunction;
+import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.CheckedFunction2;
 
 /**
  * InMemoryLevelDBAliasMapServer is the entry point from the Namenode into
@@ -51,14 +51,15 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
 
   private static final Logger LOG = LoggerFactory
       .getLogger(InMemoryLevelDBAliasMapServer.class);
-  private final CheckedFunction<Configuration, InMemoryAliasMap> initFun;
+  private final CheckedFunction2<Configuration, String, InMemoryAliasMap>
+      initFun;
   private RPC.Server aliasMapServer;
   private Configuration conf;
   private InMemoryAliasMap aliasMap;
   private String blockPoolId;
 
   public InMemoryLevelDBAliasMapServer(
-      CheckedFunction<Configuration, InMemoryAliasMap> initFun,
+          CheckedFunction2<Configuration, String, InMemoryAliasMap> initFun,
       String blockPoolId) {
     this.initFun = initFun;
     this.blockPoolId = blockPoolId;
@@ -127,7 +128,7 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
   public void setConf(Configuration conf) {
     this.conf = conf;
     try {
-      this.aliasMap = initFun.apply(conf);
+      this.aliasMap = initFun.apply(conf, blockPoolId);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

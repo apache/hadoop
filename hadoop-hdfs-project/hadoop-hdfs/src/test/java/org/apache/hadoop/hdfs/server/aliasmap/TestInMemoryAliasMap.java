@@ -39,7 +39,7 @@ public class TestInMemoryAliasMap {
         nonExistingDirectory);
 
     assertThatExceptionOfType(IOException.class)
-        .isThrownBy(() -> InMemoryAliasMap.init(conf)).withMessage(
+        .isThrownBy(() -> InMemoryAliasMap.init(conf, "bpid")).withMessage(
             InMemoryAliasMap.createPathErrorMessage(nonExistingDirectory));
   }
 }

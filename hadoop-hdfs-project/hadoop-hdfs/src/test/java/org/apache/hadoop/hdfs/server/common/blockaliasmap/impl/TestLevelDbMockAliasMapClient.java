@@ -54,7 +54,7 @@ public class TestLevelDbMockAliasMapClient {
     aliasMapMock = mock(InMemoryAliasMap.class);
     when(aliasMapMock.getBlockPoolId()).thenReturn(bpid);
     levelDBAliasMapServer = new InMemoryLevelDBAliasMapServer(
-        config -> aliasMapMock, bpid);
+        (config, blockPoolID) -> aliasMapMock, bpid);
     conf = new Configuration();
     int port = 9877;
 
