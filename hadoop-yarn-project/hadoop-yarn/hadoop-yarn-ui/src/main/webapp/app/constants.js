@@ -36,4 +36,4 @@ export const Entities = {
   Unit: 'unit'
 }
 
-export const PARTITION_LABEL = 'All partitions';
+export const PARTITION_LABEL = 'Default partition';

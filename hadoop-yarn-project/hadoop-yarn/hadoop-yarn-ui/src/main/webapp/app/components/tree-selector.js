@@ -17,6 +17,7 @@
  */
 
 import Ember from "ember";
+import {PARTITION_LABEL} from '../constants';
 
 const INBETWEEN_HEIGHT = 130;
 
@@ -191,15 +192,13 @@ export default Ember.Component.extend({
       .style(
         "fill",
         function(d) {
-          var maxCap = d.queueData.get(this.max);
-          maxCap = maxCap === undefined ? 100 : maxCap;
-          var usedCap = d.queueData.get(this.used) / maxCap * 100.0;
-          if (usedCap <= 60.0) {
-            return "mediumaquamarine";
-          } else if (usedCap <= 100.0) {
-            return "coral";
+          const usedCapacity = getUsedCapacity(d.queueData.get("partitionMap"), this.filteredPartition);
+          if (usedCapacity <= 60.0) {
+            return "#60cea5";
+          } else if (usedCapacity <= 100.0) {
+            return "#ffbc0b";
           } else {
-            return "salmon";
+            return "#ef6162";
           }
         }.bind(this)
       );
@@ -217,13 +216,11 @@ export default Ember.Component.extend({
       })
       .text(
         function(d) {
-          var maxCap = d.queueData.get(this.max);
-          maxCap = maxCap === undefined ? 100 : maxCap;
-          var usedCap = d.queueData.get(this.used) / maxCap * 100.0;
-          if (usedCap >= 100.0) {
-            return usedCap.toFixed(0) + "%";
+          const usedCapacity = getUsedCapacity(d.queueData.get("partitionMap"), this.filteredPartition);
+          if (usedCapacity >= 100.0) {
+            return usedCapacity.toFixed(0) + "%";
           } else {
-            return usedCap.toFixed(1) + "%";
+            return usedCapacity.toFixed(1) + "%";
           }
         }.bind(this)
       )
@@ -373,3 +370,8 @@ export default Ember.Component.extend({
     this.reDraw();
   }
 });
+
+
+const getUsedCapacity = (partitionMap, filter=PARTITION_LABEL) => {
+  return partitionMap[filter].absoluteUsedCapacity;
+};

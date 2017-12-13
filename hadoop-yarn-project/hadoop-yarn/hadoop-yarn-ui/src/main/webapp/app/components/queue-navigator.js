@@ -32,7 +32,6 @@ export default Ember.Component.extend(Ember.TargetActionSupport,{
     });
 
     $(".js-filter-queue-by-labels").on("select2:select", e => {
-      debugger;
       this.triggerAction({
         action: "filterQueuesByPartition",
         target: this,

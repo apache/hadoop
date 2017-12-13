@@ -20,14 +20,14 @@ import Ember from "ember";
 import { PARTITION_LABEL } from "../constants";
 
 export default Ember.Component.extend({
-  didUpdateAttrs: function({oldAttrs, newAttrs}) {
+  didUpdateAttrs: function({ oldAttrs, newAttrs }) {
     this._super(...arguments);
-    this.set('data', this.initData());
+    this.set("data", this.initData());
   },
 
   init() {
     this._super(...arguments);
-    this.set('data', this.initData());
+    this.set("data", this.initData());
   },
 
   initData() {
@@ -37,7 +37,7 @@ export default Ember.Component.extend({
     const userLimit = queue.get("userLimit");
     const userLimitFactor = queue.get("userLimitFactor");
     const isLeafQueue = queue.get("isLeafQueue");
-    
+
     return {
       ...partitionMap[filteredParition],
       userLimit,
@@ -45,5 +45,4 @@ export default Ember.Component.extend({
       isLeafQueue
     };
   }
-    
 });
