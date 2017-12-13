@@ -107,6 +107,7 @@
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
+    <traute.version>1.0.10</traute.version>
 
     <!-- The java version enforced by the maven enforcer -->
     <!-- more complex patterns can be used here, such as
@@ -1353,6 +1354,13 @@
           <version>${snakeyaml.version}</version>
         </dependency>
 
+        <dependency>
+          <groupId>tech.harmonysoft</groupId>
+          <artifactId>traute-javac</artifactId>
+          <version>${traute.version}</version>
+          <scope>provided</scope> <!-- make the jar eligible for compilation only -->
+        </dependency>
+
     </dependencies>
   </dependencyManagement>
 
@@ -1405,6 +1413,9 @@
             <source>${javac.version}</source>
             <target>${javac.version}</target>
             <useIncrementalCompilation>false</useIncrementalCompilation>
+            <compilerArgs>
+              <arg>-Xplugin:Traute</arg>
+            </compilerArgs>
           </configuration>
         </plugin>
         <plugin>

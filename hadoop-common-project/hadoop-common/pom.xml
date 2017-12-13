@@ -324,6 +324,10 @@
       <artifactId>mockwebserver</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>tech.harmonysoft</groupId>
+      <artifactId>traute-javac</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

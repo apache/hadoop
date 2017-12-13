@@ -120,8 +120,6 @@ public abstract class FSDataOutputStreamBuilder
    */
   protected FSDataOutputStreamBuilder(@Nonnull FileSystem fileSystem,
       @Nonnull Path p) {
-    Preconditions.checkNotNull(fileSystem);
-    Preconditions.checkNotNull(p);
     fs = fileSystem;
     path = p;
     bufferSize = fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
@@ -149,7 +147,6 @@ public abstract class FSDataOutputStreamBuilder
    * Set permission for the file.
    */
   public B permission(@Nonnull final FsPermission perm) {
-    Preconditions.checkNotNull(perm);
     permission = perm;
     return getThisBuilder();
   }
@@ -213,7 +210,6 @@ public abstract class FSDataOutputStreamBuilder
    * Set the facility of reporting progress.
    */
   public B progress(@Nonnull final Progressable prog) {
-    Preconditions.checkNotNull(prog);
     progress = prog;
     return getThisBuilder();
   }
@@ -260,7 +256,6 @@ public abstract class FSDataOutputStreamBuilder
    * Set checksum opt.
    */
   public B checksumOpt(@Nonnull final ChecksumOpt chksumOpt) {
-    Preconditions.checkNotNull(chksumOpt);
     checksumOpt = chksumOpt;
     return getThisBuilder();
   }
