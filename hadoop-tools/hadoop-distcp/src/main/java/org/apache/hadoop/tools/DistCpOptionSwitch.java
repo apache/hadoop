@@ -73,7 +73,8 @@ public enum DistCpOptionSwitch {
    */
   DELETE_MISSING(DistCpConstants.CONF_LABEL_DELETE_MISSING,
       new Option("delete", false, "Delete from target, " +
-          "files missing in source")),
+          "files missing in source. Delete is applicable only"
+          + " with update or overwrite options")),
 
   /**
    * Configuration file to use with hftps:// for securely copying
