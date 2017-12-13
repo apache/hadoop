@@ -605,7 +605,7 @@ public class DirectoryCollection {
     if (totalSpace != 0) {
       long tmp = ((totalSpace - usableSpace) * 100) / totalSpace;
       if (Integer.MIN_VALUE < tmp && Integer.MAX_VALUE > tmp) {
-        goodDirsDiskUtilizationPercentage = (int) tmp;
+        goodDirsDiskUtilizationPercentage = Math.toIntExact(tmp);
       }
     } else {
       // got no good dirs
