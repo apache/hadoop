@@ -18,7 +18,7 @@ limitations under the License. See accompanying LICENSE file.
 
  <property>
    <name>yarn.resource-types</name>
-   <value>resource1,resource2</value>
+   <value>resource1,resource2,yarn.io/gpu</value>
  </property>
 
  <property>
@@ -29,6 +29,11 @@ limitations under the License. See accompanying LICENSE file.
  <property>
    <name>yarn.resource-types.resource2.units</name>
    <value>m</value>
+ </property>
+
+ <property>
+   <name>yarn.resource-types.yarn.io/gpu.units</name>
+   <value></value>
  </property>
 
 </configuration>
