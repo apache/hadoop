@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
-import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,10 +46,12 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.hadoop.yarn.service.api.records.ServiceState.ACCEPTED;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.*;
+import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_SUCCESS;
 
 /**
  * The rest API endpoints for users to manage services on YARN.
@@ -102,9 +103,13 @@ public class ApiServer {
     LOG.info("POST: createService = {}", service);
     ServiceStatus serviceStatus = new ServiceStatus();
     try {
-      ApplicationId applicationId = SERVICE_CLIENT.actionCreate(service);
-      LOG.info("Successfully created service " + service.getName()
+      if(service.getState()==ServiceState.STOPPED) {
+        SERVICE_CLIENT.actionBuild(service);
+      } else {
+        ApplicationId applicationId = SERVICE_CLIENT.actionCreate(service);
+        LOG.info("Successfully created service " + service.getName()
           + " applicationId = " + applicationId);
+      }
       serviceStatus.setState(ACCEPTED);
       serviceStatus.setUri(
           CONTEXT_ROOT + SERVICE_ROOT_PATH + "/" + service
@@ -223,6 +228,29 @@ public class ApiServer {
     // path param
     updateServiceData.setName(appName);
 
+    if (updateServiceData.getState() == ServiceState.FLEX) {
+      Map<String, String> componentCountStrings = new HashMap<String, String>();
+      for (Component c : updateServiceData.getComponents()) {
+        componentCountStrings.put(c.getName(), c.getNumberOfContainers().toString());
+      }
+      ServiceStatus status = new ServiceStatus();
+      try {
+        int result = SERVICE_CLIENT
+            .actionFlex(appName, componentCountStrings);
+        if (result == EXIT_SUCCESS) {
+          LOG.info("Successfully flex service " + appName);
+          status.setDiagnostics("Service " + appName +
+              " is successfully flexed.");
+          status.setState(ServiceState.ACCEPTED);
+        }
+      } catch (YarnException | IOException e) {
+        String message = "Failed to flex service " + appName;
+        LOG.info(message, e);
+        status.setDiagnostics(message);
+        return Response.status(Status.INTERNAL_SERVER_ERROR)
+            .entity(status).build();
+      }
+    }
     // For STOP the app should be running. If already stopped then this
     // operation will be a no-op. For START it should be in stopped state.
     // If already running then this operation will be a no-op.
