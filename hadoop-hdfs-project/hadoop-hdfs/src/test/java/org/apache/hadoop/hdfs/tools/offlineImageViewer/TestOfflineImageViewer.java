@@ -340,9 +340,11 @@ public class TestOfflineImageViewer {
       in = new FileInputStream(src);
       out = new FileOutputStream(dest);
       in.getChannel().transferTo(0, MAX_BYTES, out.getChannel());
+      out.close();
+      out = null;
     } finally {
-      IOUtils.cleanup(null, in);
-      IOUtils.cleanup(null, out);
+      IOUtils.closeStream(in);
+      IOUtils.closeStream(out);
     }
   }
 
