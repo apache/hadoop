@@ -402,7 +402,7 @@ public class ResourceUtils {
   }
 
   @VisibleForTesting
-  synchronized static void resetResourceTypes() {
+  public synchronized static void resetResourceTypes() {
     initializedResources = false;
   }
 
@@ -416,16 +416,37 @@ public class ResourceUtils {
   }
 
   public static String getUnits(String resourceValue) {
-    String units;
-    for (int i = 0; i < resourceValue.length(); i++) {
+    return parseResourceValue(resourceValue)[0];
+  }
+
+  /**
+   * Extract unit and actual value from resource value.
+   * @param resourceValue Value of the resource
+   * @return Array containing unit and value. [0]=unit, [1]=value
+   * @throws IllegalArgumentExcpetion if units contain non alpha characters
+   */
+  public static String[] parseResourceValue(String resourceValue) {
+    String[] resource = new String[2];
+    int i = 0;
+    for (; i < resourceValue.length(); i++) {
       if (Character.isAlphabetic(resourceValue.charAt(i))) {
-        units = resourceValue.substring(i);
-        if (StringUtils.isAlpha(units)) {
-          return units;
-        }
+        break;
       }
     }
-    return "";
+    String units = resourceValue.substring(i);
+
+    if((StringUtils.isAlpha(units))) {
+      resource[0] = units;
+      resource[1] = resourceValue.substring(0, i);
+      return resource;
+    } else {
+      throw new IllegalArgumentException("Units '" + units + "'"
+          + " contains non alphabet characters, which is not allowed.");
+    }
+  }
+
+  public static long getValue(String resourceValue) {
+    return Long.parseLong(parseResourceValue(resourceValue)[1]);
   }
 
   /**
@@ -607,6 +628,49 @@ public class ResourceUtils {
       result.add(resourceInformation);
     }
     return result;
+  }
+  /**
+   * Are mandatory resources like memory-mb, vcores available?
+   * If not, throw exceptions. On availability, ensure those values are
+   * within boundary.
+   * @param res resource
+   * @throws IllegalArgumentException if mandatory resource is not available or
+   * value is not within boundary
+   */
+  public static void areMandatoryResourcesAvailable(Resource res) {
+    ResourceInformation memoryResourceInformation =
+        res.getResourceInformation(MEMORY);
+    if (memoryResourceInformation != null) {
+      long value = memoryResourceInformation.getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("Value '" + value + "' for "
+            + "resource memory is more than the maximum for an integer.");
+      }
+      if (value == 0) {
+        throw new IllegalArgumentException("Invalid value for resource '" +
+            MEMORY + "'. Value cannot be 0(zero).");
+      }
+    } else {
+      throw new IllegalArgumentException("Mandatory resource 'memory-mb' "
+          + "is missing.");
+    }
+
+    ResourceInformation vcoresResourceInformation =
+        res.getResourceInformation(VCORES);
+    if (vcoresResourceInformation != null) {
+      long value = vcoresResourceInformation.getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("Value '" + value + "' for resource"
+            + " vcores is more than the maximum for an integer.");
+      }
+      if (value == 0) {
+        throw new IllegalArgumentException("Invalid value for resource '" +
+            VCORES + "'. Value cannot be 0(zero).");
+      }
+    } else {
+      throw new IllegalArgumentException("Mandatory resource 'vcores' "
+          + "is missing.");
+    }
   }
 
   /**

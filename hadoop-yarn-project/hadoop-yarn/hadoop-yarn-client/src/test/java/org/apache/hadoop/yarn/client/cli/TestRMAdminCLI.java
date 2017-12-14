@@ -34,13 +34,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -50,6 +53,7 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -70,7 +74,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -92,6 +98,27 @@ public class TestRMAdminCLI {
   private boolean remoteAdminServiceAccessed = false;
   private static final String HOST_A = "1.2.3.1";
   private static final String HOST_B = "1.2.3.2";
+  private static File dest;
+
+  @Before
+  public void setup() throws Exception {
+    ResourceUtils.resetResourceTypes();
+    Configuration yarnConf = new YarnConfiguration();
+    String resourceTypesFile = "resource-types-4.xml";
+    InputStream source =
+        yarnConf.getClassLoader().getResourceAsStream(resourceTypesFile);
+    dest = new File(yarnConf.getClassLoader().
+        getResource(".").getPath(), "resource-types.xml");
+    FileUtils.copyInputStreamToFile(source, dest);
+    ResourceUtils.getResourceTypes();
+  }
+
+  @After
+  public void teardown() {
+    if (dest.exists()) {
+      dest.delete();
+    }
+  }
 
   @SuppressWarnings("static-access")
   @Before
@@ -257,16 +284,180 @@ public class TestRMAdminCLI {
   }
 
   @Test
+  public void testUpdateNodeResourceWithOverCommitTimeout() throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    int memSize = 2048;
+    int cores = 2;
+    int timeout = 1000;
+    String[] args = {"-updateNodeResource", nodeIdStr,
+        Integer.toString(memSize), Integer.toString(cores),
+        Integer.toString(timeout)};
+    assertEquals(0, rmAdminCLI.run(args));
+    ArgumentCaptor<UpdateNodeResourceRequest> argument =
+        ArgumentCaptor.forClass(UpdateNodeResourceRequest.class);
+    verify(admin).updateNodeResource(argument.capture());
+    UpdateNodeResourceRequest request = argument.getValue();
+    Map<NodeId, ResourceOption> resourceMap = request.getNodeResourceMap();
+    NodeId nodeId = NodeId.fromString(nodeIdStr);
+    Resource expectedResource = Resources.createResource(memSize, cores);
+    ResourceOption resource = resourceMap.get(nodeId);
+    assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
+        resource);
+    assertEquals("resource value for " + nodeIdStr + " is not as expected.",
+        ResourceOption.newInstance(expectedResource, timeout), resource);
+  }
+
+  @Test
   public void testUpdateNodeResourceWithInvalidValue() throws Exception {
     String nodeIdStr = "0.0.0.0:0";
     int memSize = -2048;
     int cores = 2;
-    String[] args = { "-updateNodeResource", nodeIdStr,
-        Integer.toString(memSize), Integer.toString(cores) };
+    String[] args = {"-updateNodeResource", nodeIdStr,
+        Integer.toString(memSize), Integer.toString(cores)};
     // execution of command line is expected to be failed
     assertEquals(-1, rmAdminCLI.run(args));
     // verify admin protocol never calls. 
-    verify(admin,times(0)).updateNodeResource(
+    verify(admin, times(0)).updateNodeResource(
+        any(UpdateNodeResourceRequest.class));
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypes() throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes =
+        "memory-mb=1024Mi,vcores=1,resource1=3Gi,resource2=2m";
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
+    assertEquals(0, rmAdminCLI.run(args));
+    ArgumentCaptor<UpdateNodeResourceRequest> argument =
+        ArgumentCaptor.forClass(UpdateNodeResourceRequest.class);
+    verify(admin).updateNodeResource(argument.capture());
+    UpdateNodeResourceRequest request = argument.getValue();
+    Map<NodeId, ResourceOption> resourceMap = request.getNodeResourceMap();
+    NodeId nodeId = NodeId.fromString(nodeIdStr);
+
+    Resource expectedResource = Resource.newInstance(1024, 1);
+    expectedResource.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "Gi", 3));
+    expectedResource.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "m", 2));
+
+    ResourceOption resource = resourceMap.get(nodeId);
+    assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
+        resource);
+    assertEquals("resource value for " + nodeIdStr + " is not as expected.",
+        ResourceOption.newInstance(expectedResource,
+            ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), resource);
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypesWithOverCommitTimeout()
+      throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes =
+        "memory-mb=1024Mi,vcores=1,resource1=3Gi,resource2=2m";
+    int timeout = 1000;
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes,
+        Integer.toString(timeout)};
+    assertEquals(0, rmAdminCLI.run(args));
+    ArgumentCaptor<UpdateNodeResourceRequest> argument =
+        ArgumentCaptor.forClass(UpdateNodeResourceRequest.class);
+    verify(admin).updateNodeResource(argument.capture());
+    UpdateNodeResourceRequest request = argument.getValue();
+    Map<NodeId, ResourceOption> resourceMap = request.getNodeResourceMap();
+    NodeId nodeId = NodeId.fromString(nodeIdStr);
+
+    Resource expectedResource = Resource.newInstance(1024, 1);
+    expectedResource.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "Gi", 3));
+    expectedResource.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "m", 2));
+
+    ResourceOption resource = resourceMap.get(nodeId);
+    assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",
+        resource);
+    assertEquals("resource value for " + nodeIdStr + " is not as expected.",
+        ResourceOption.newInstance(expectedResource, timeout), resource);
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypesWithoutMandatoryResources()
+      throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes = "resource1=3Gi,resource2=2m";
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
+    assertEquals(-1, rmAdminCLI.run(args));
+
+    // verify admin protocol never calls.
+    verify(admin, times(0)).updateNodeResource(
+        any(UpdateNodeResourceRequest.class));
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypesWithInvalidResource()
+      throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes =
+        "memory-mb=1024Mi,vcores=1,resource1=3Gi,resource3=2m";
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
+    // execution of command line is expected to be failed
+    assertEquals(-1, rmAdminCLI.run(args));
+    // verify admin protocol never calls.
+    verify(admin, times(0)).updateNodeResource(
+        any(UpdateNodeResourceRequest.class));
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypesWithInvalidResourceValue()
+      throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes =
+        "memory-mb=1024Mi,vcores=1,resource1=ABDC,resource2=2m";
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
+    // execution of command line is expected to be failed
+    assertEquals(-1, rmAdminCLI.run(args));
+    // verify admin protocol never calls.
+    verify(admin, times(0)).updateNodeResource(
+        any(UpdateNodeResourceRequest.class));
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypesWithInvalidResourceUnit()
+      throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes =
+        "memory-mb=1024Mi,vcores=1,resource1=2XYZ,resource2=2m";
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
+    // execution of command line is expected to be failed
+    assertEquals(-1, rmAdminCLI.run(args));
+    // verify admin protocol never calls.
+    verify(admin, times(0)).updateNodeResource(
+        any(UpdateNodeResourceRequest.class));
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypesWithNonAlphaResourceUnit()
+      throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes =
+        "memory-mb=1024M i,vcores=1,resource1=2G,resource2=2m";
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
+    // execution of command line is expected to be failed
+    assertEquals(-1, rmAdminCLI.run(args));
+    // verify admin protocol never calls.
+    verify(admin, times(0)).updateNodeResource(
+        any(UpdateNodeResourceRequest.class));
+  }
+
+  @Test
+  public void testUpdateNodeResourceTypesWithInvalidResourceFormat()
+      throws Exception {
+    String nodeIdStr = "0.0.0.0:0";
+    String resourceTypes = "memory-mb=1024Mi,vcores=1,resource2";
+    String[] args = {"-updateNodeResource", nodeIdStr, resourceTypes};
+    // execution of command line is expected to be failed
+    assertEquals(-1, rmAdminCLI.run(args));
+    // verify admin protocol never calls.
+    verify(admin, times(0)).updateNodeResource(
         any(UpdateNodeResourceRequest.class));
   }
 
@@ -513,8 +704,10 @@ public class TestRMAdminCLI {
               "<\"node1[:port]=label1,label2 node2[:port]=label1\"> " +
               "[-failOnUnknownNodes]] " +
               "[-directlyAccessNodeLabelStore] [-refreshClusterMaxPriority] " +
-              "[-updateNodeResource [NodeID] [MemSize] [vCores] " +
-              "([OvercommitTimeout]) [-help [cmd]]"));
+              "[-updateNodeResource [NodeID] [MemSize] [vCores] "
+              + "([OvercommitTimeout]) or -updateNodeResource "
+              + "[NodeID] [ResourceTypes] ([OvercommitTimeout])] "
+              + "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -610,6 +803,8 @@ public class TestRMAdminCLI {
               + "[-refreshClusterMaxPriority] "
               + "[-updateNodeResource [NodeID] [MemSize] [vCores] "
               + "([OvercommitTimeout]) "
+              + "or -updateNodeResource [NodeID] [ResourceTypes] "
+              + "([OvercommitTimeout])] "
               + "[-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
               + "[-getServiceState <serviceId>] [-getAllServiceState] "
