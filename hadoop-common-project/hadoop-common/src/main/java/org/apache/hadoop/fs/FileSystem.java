@@ -27,11 +27,13 @@ import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -3354,7 +3356,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   static class Cache {
     private final ClientFinalizer clientFinalizer = new ClientFinalizer();
 
-    private final Map<Key, FileSystem> map = new HashMap<>();
+    private final Map<Key, FileSystem> map = new LinkedHashMap<>();
     private final Set<Key> toAutoClose = new HashSet<>();
 
     /** A variable that makes all objects in the cache unique. */
@@ -3447,6 +3449,11 @@ public abstract class FileSystem extends Configured implements Closeable {
       // the map while iterating over it, which isn't safe.
       List<Key> keys = new ArrayList<>();
       keys.addAll(map.keySet());
+      // Make sure fs close in an appropriate order (last add first close)
+      // in case HDFS-10323.
+      // In this order a ViewFileSystem will close first, then
+      // DistributedFileSystem owned by this ViewFileSystem.
+      Collections.reverse(keys);
 
       for (Key key : keys) {
         final FileSystem fs = map.get(key);
@@ -3496,6 +3503,12 @@ public abstract class FileSystem extends Configured implements Closeable {
           targetFSList.add(fs);
         }
       }
+      // Make sure fs close in an appropriate order (last add first close)
+      // in case HDFS-10323.
+      // In this order a ViewFileSystem will close first, then
+      // DistributedFileSystem owned by this ViewFileSystem.
+      Collections.reverse(targetFSList);
+
       List<IOException> exceptions = new ArrayList<>();
       //now make a pass over the target list and close each
       for (FileSystem fs : targetFSList) {

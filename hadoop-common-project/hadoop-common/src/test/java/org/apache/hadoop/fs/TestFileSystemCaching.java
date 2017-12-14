@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.fs.FileSystemTestHelper.addFileSystemForTesting;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertNotSame;
 
@@ -26,11 +27,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
+import org.mockito.InOrder;
+
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Semaphore;
 
@@ -275,7 +277,41 @@ public class TestFileSystemCaching {
     });
     assertNotSame(fsA, fsA1);
   }
-  
+
+  @Test
+  public void testCloseAllShouldCloseViewFileSystemFirstBeforeItsDistributedFileSystem()
+      throws Exception {
+    final Configuration conf = new Configuration();
+    FileSystem viewfs = mock(FileSystem.class);
+    FileSystem dfsOwnedByViewfs = mock(FileSystem.class);
+    addFileSystemForTesting(URI.create("hdfs://authority"), conf,
+        dfsOwnedByViewfs);
+    addFileSystemForTesting(URI.create("viewfs://authority"), conf, viewfs);
+
+    FileSystem.closeAll();
+
+    InOrder inOrder = inOrder(dfsOwnedByViewfs, viewfs);
+    inOrder.verify(viewfs).close();
+    inOrder.verify(dfsOwnedByViewfs).close();
+  }
+
+  @Test
+  public void testCloseAllForUGIShouldCloseViewFileSystemFirstBeforeItsDistributedFileSystem()
+      throws Exception {
+    final Configuration conf = new Configuration();
+    FileSystem viewfs = mock(FileSystem.class);
+    FileSystem dfsOwnedByViewfs = mock(FileSystem.class);
+    addFileSystemForTesting(URI.create("hdfs://authority"), conf,
+        dfsOwnedByViewfs);
+    addFileSystemForTesting(URI.create("viewfs://authority"), conf, viewfs);
+
+    FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
+
+    InOrder inOrder = inOrder(dfsOwnedByViewfs, viewfs);
+    inOrder.verify(viewfs).close();
+    inOrder.verify(dfsOwnedByViewfs).close();
+  }
+
   @Test
   public void testDelete() throws IOException {
     FileSystem mockFs = mock(FileSystem.class);
