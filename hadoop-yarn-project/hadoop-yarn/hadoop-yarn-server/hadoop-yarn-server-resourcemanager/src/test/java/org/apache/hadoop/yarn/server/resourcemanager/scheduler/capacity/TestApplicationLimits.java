@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
@@ -86,6 +87,7 @@ public class TestApplicationLimits {
   final static int GB = 1024;
 
   LeafQueue queue;
+  CSQueue root;
   
   private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
 
@@ -100,7 +102,7 @@ public class TestApplicationLimits {
     setupQueueConfiguration(csConf);
     
     rmContext = TestUtils.getMockRMContext();
-
+    Resource clusterResource = Resources.createResource(10 * 16 * GB, 10 * 32);
 
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
@@ -110,10 +112,11 @@ public class TestApplicationLimits {
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 32));
     when(csContext.getClusterResource()).
-        thenReturn(Resources.createResource(10 * 16 * GB, 10 * 32));
+        thenReturn(clusterResource);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
@@ -122,13 +125,17 @@ public class TestApplicationLimits {
         containerTokenSecretManager);
 
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
-    CSQueue root = CapacitySchedulerQueueManager
+    root = CapacitySchedulerQueueManager
         .parseQueue(csContext, csConf, null, "root",
             queues, queues,
             TestUtils.spyHook);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
-    
     queue = spy(new LeafQueue(csContext, A, root, null));
+    QueueResourceQuotas queueResourceQuotas = ((LeafQueue) queues.get(A))
+        .getQueueResourceQuotas();
+    doReturn(queueResourceQuotas).when(queue).getQueueResourceQuotas();
 
     // Stub out ACL checks
     doReturn(true).
@@ -189,6 +196,8 @@ public class TestApplicationLimits {
     // when there is only 1 user, and drops to 2G (the userlimit) when there
     // is a second user
     Resource clusterResource = Resource.newInstance(80 * GB, 40);
+    root.updateClusterResource(clusterResource, new ResourceLimits(
+        clusterResource));
     queue.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
     
@@ -287,6 +296,8 @@ public class TestApplicationLimits {
     CSQueue root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             "root", queues, queues, TestUtils.spyHook);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     LeafQueue queue = (LeafQueue)queues.get(A);
     
@@ -357,6 +368,8 @@ public class TestApplicationLimits {
         csContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
+    root.updateClusterResource(clusterResource, new ResourceLimits(
+        clusterResource));
 
     queue = (LeafQueue)queues.get(A);
 
@@ -378,6 +391,8 @@ public class TestApplicationLimits {
     root = CapacitySchedulerQueueManager.parseQueue(
         csContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
+    root.updateClusterResource(clusterResource, new ResourceLimits(
+        clusterResource));
 
     queue = (LeafQueue)queues.get(A);
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
@@ -393,7 +408,7 @@ public class TestApplicationLimits {
     final String user_0 = "user_0";
     final String user_1 = "user_1";
     final String user_2 = "user_2";
-    
+
     assertEquals(Resource.newInstance(16 * GB, 1),
         queue.calculateAndGetAMResourceLimit());
     assertEquals(Resource.newInstance(8 * GB, 1),
@@ -578,6 +593,7 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(16*GB));
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
@@ -586,6 +602,8 @@ public class TestApplicationLimits {
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
+    rootQueue.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
     when(csContext.getClusterResourceUsage())
@@ -693,6 +711,8 @@ public class TestApplicationLimits {
 
     // Now reduce cluster size and check for the smaller headroom
     clusterResource = Resources.createResource(90*16*GB);
+    rootQueue.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Any change is cluster resource needs to enforce user-limit recomputation.
     // In existing code, LeafQueue#updateClusterResource handled this. However

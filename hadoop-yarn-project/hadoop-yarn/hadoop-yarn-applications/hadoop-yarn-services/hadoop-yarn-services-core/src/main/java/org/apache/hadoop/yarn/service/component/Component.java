@@ -107,6 +107,10 @@ public class Component implements EventHandler<ComponentEvent> {
           .addTransition(INIT, INIT, CONTAINER_RECOVERED,
               new ContainerRecoveredTransition())
 
+          // container recovered in AM heartbeat
+          .addTransition(FLEXING, FLEXING, CONTAINER_RECOVERED,
+              new ContainerRecoveredTransition())
+
           // container allocated by RM
           .addTransition(FLEXING, FLEXING, CONTAINER_ALLOCATED,
               new ContainerAllocatedTransition())
@@ -309,6 +313,10 @@ public class Component implements EventHandler<ComponentEvent> {
     }
   }
 
+  public void removePendingInstance(ComponentInstance instance) {
+    pendingInstances.remove(instance);
+  }
+
   public void reInsertPendingInstance(ComponentInstance instance) {
     pendingInstances.add(instance);
   }
@@ -344,7 +352,7 @@ public class Component implements EventHandler<ComponentEvent> {
   @SuppressWarnings({ "unchecked" })
   public void requestContainers(long count) {
     Resource resource = Resource
-        .newInstance(componentSpec.getResource().getMemoryMB(),
+        .newInstance(componentSpec.getResource().calcMemoryMB(),
             componentSpec.getResource().getCpus());
 
     for (int i = 0; i < count; i++) {

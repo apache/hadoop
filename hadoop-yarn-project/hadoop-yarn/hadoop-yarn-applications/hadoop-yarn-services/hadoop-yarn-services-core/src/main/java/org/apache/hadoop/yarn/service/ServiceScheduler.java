@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventT
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.ComponentEventType;
+import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.provider.ProviderUtils;
@@ -137,6 +138,9 @@ public class ServiceScheduler extends CompositeService {
   private YarnRegistryViewForProviders yarnRegistryOperations;
   private ServiceContext context;
   private ContainerLaunchService containerLaunchService;
+  private final Map<ContainerId, ComponentInstance> unRecoveredInstances =
+      new ConcurrentHashMap<>();
+  private long containerRecoveryTimeout;
 
   public ServiceScheduler(ServiceContext context) {
     super(context.service.getName());
@@ -212,6 +216,9 @@ public class ServiceScheduler extends CompositeService {
     createConfigFileCache(context.fs.getFileSystem());
 
     createAllComponents();
+    containerRecoveryTimeout = getConfig().getInt(
+        YarnServiceConf.CONTAINER_RECOVERY_TIMEOUT_MS,
+        YarnServiceConf.DEFAULT_CONTAINER_RECOVERY_TIMEOUT_MS);
   }
 
   protected YarnRegistryViewForProviders createYarnRegistryOperations(
@@ -320,7 +327,7 @@ public class ServiceScheduler extends CompositeService {
     }
     for (Container container : containersFromPrevAttempt) {
       LOG.info("Handling {} from previous attempt", container.getId());
-      ServiceRecord record = existingRecords.get(RegistryPathUtils
+      ServiceRecord record = existingRecords.remove(RegistryPathUtils
           .encodeYarnID(container.getId().toString()));
       if (record != null) {
         Component comp = componentsById.get(container.getAllocationRequestId());
@@ -336,6 +343,40 @@ public class ServiceScheduler extends CompositeService {
             " attempt, releasing", container.getId());
         amRMClient.releaseAssignedContainer(container.getId());
       }
+    }
+
+    existingRecords.forEach((encodedContainerId, record) -> {
+      String componentName = record.get(YarnRegistryAttributes.YARN_COMPONENT);
+      if (componentName != null) {
+        Component component = componentsByName.get(componentName);
+        ComponentInstance compInstance = component.getComponentInstance(
+            record.description);
+        ContainerId containerId = ContainerId.fromString(record.get(
+            YarnRegistryAttributes.YARN_ID));
+        unRecoveredInstances.put(containerId, compInstance);
+        component.removePendingInstance(compInstance);
+      }
+    });
+
+    if (unRecoveredInstances.size() > 0) {
+      executorService.schedule(() -> {
+        synchronized (unRecoveredInstances) {
+          // after containerRecoveryTimeout, all the containers that haven't be
+          // recovered by the RM will released. The corresponding Component
+          // Instances are added to the pending queues of their respective
+          // component.
+          unRecoveredInstances.forEach((containerId, instance) -> {
+            LOG.info("{}, wait on container {} expired",
+                instance.getCompInstanceId(), containerId);
+            instance.cleanupRegistryAndCompHdfsDir(containerId);
+            Component component = componentsByName.get(instance.getCompName());
+            component.requestContainers(1);
+            component.reInsertPendingInstance(instance);
+            amRMClient.releaseAssignedContainer(containerId);
+          });
+          unRecoveredInstances.clear();
+        }
+      }, containerRecoveryTimeout, TimeUnit.MILLISECONDS);
     }
   }
 
@@ -517,6 +558,35 @@ public class ServiceScheduler extends CompositeService {
           //TODO Due to YARN-7490, exception may be thrown, catch and ignore for
           //now.
           LOG.error("Exception when removing the matching requests. ", e);
+        }
+      }
+    }
+
+
+    @Override
+    public void onContainersReceivedFromPreviousAttempts(
+        List<Container> containers) {
+      if (containers == null || containers.isEmpty()) {
+        return;
+      }
+      for (Container container : containers) {
+        ComponentInstance compInstance;
+        synchronized (unRecoveredInstances) {
+          compInstance = unRecoveredInstances.remove(container.getId());
+        }
+        if (compInstance != null) {
+          Component component = componentsById.get(
+              container.getAllocationRequestId());
+          ComponentEvent event = new ComponentEvent(component.getName(),
+              CONTAINER_RECOVERED)
+              .setInstance(compInstance)
+              .setContainerId(container.getId())
+              .setContainer(container);
+          component.handle(event);
+        } else {
+          LOG.info("Not waiting to recover container {}, releasing",
+              container.getId());
+          amRMClient.releaseAssignedContainer(container.getId());
         }
       }
     }

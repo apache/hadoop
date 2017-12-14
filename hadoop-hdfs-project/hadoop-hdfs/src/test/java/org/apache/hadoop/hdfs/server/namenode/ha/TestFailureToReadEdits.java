@@ -213,13 +213,13 @@ public class TestFailureToReadEdits {
     
     // Null because it was deleted.
     assertNull(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR1, false));
+        TEST_DIR1, false, false, false));
     // Should have been successfully created.
     assertTrue(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR2, false).isDirectory());
+        TEST_DIR2, false, false, false).isDirectory());
     // Null because it hasn't been created yet.
     assertNull(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR3, false));
+        TEST_DIR3, false, false, false));
 
     // Now let the standby read ALL the edits.
     answer.setThrowExceptionOnRead(false);
@@ -227,13 +227,13 @@ public class TestFailureToReadEdits {
     
     // Null because it was deleted.
     assertNull(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR1, false));
+        TEST_DIR1, false, false, false));
     // Should have been successfully created.
     assertTrue(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR2, false).isDirectory());
+        TEST_DIR2, false, false, false).isDirectory());
     // Should now have been successfully created.
     assertTrue(NameNodeAdapter.getFileInfo(nn1,
-        TEST_DIR3, false).isDirectory());
+        TEST_DIR3, false, false, false).isDirectory());
   }
   
   /**

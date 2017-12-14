@@ -17,20 +17,20 @@
  */
 package org.apache.hadoop.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.util.ToolRunner;
-
-import java.io.IOException;
-import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A sleep job whose mappers create 1MB buffer for every record.
  */
 public class GrowingSleepJob extends SleepJob {
-  private static final Log LOG = LogFactory.getLog(GrowingSleepJob.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GrowingSleepJob.class);
 
   public static class GrowingSleepMapper extends SleepMapper {
     private final int MB = 1024 * 1024;

@@ -22,17 +22,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
+import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -43,8 +43,8 @@ import static org.junit.Assert.assertFalse;
  */
 public class TestMapReduceJobControl extends HadoopTestCase {
 
-  public static final Log LOG = 
-      LogFactory.getLog(TestMapReduceJobControl.class.getName());
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestMapReduceJobControl.class);
 
   static Path rootDataDir = new Path(
     System.getProperty("test.build.data", "."), "TestData");

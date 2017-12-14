@@ -45,10 +45,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.PendingAsk;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.LocalityAppPlacementAllocator;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceRequestUpdateResult;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.PendingAskUpdateResult;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.Resources;
 /**
@@ -220,16 +221,14 @@ public class AppSchedulingInfo {
       }
 
       // Update AppPlacementAllocator
-      ResourceRequestUpdateResult pendingAmountChanges =
+      PendingAskUpdateResult pendingAmountChanges =
           schedulerKeyToAppPlacementAllocator.get(schedulerRequestKey)
-              .updateResourceRequests(
-                  entry.getValue().values(),
+              .updatePendingAsk(entry.getValue().values(),
                   recoverPreemptedRequestForAContainer);
 
       if (null != pendingAmountChanges) {
         updatePendingResources(
-            pendingAmountChanges.getLastAnyResourceRequest(),
-            pendingAmountChanges.getNewResourceRequest(), schedulerRequestKey,
+            pendingAmountChanges, schedulerRequestKey,
             queue.getMetrics());
         offswitchResourcesUpdated = true;
       }
@@ -237,12 +236,17 @@ public class AppSchedulingInfo {
     return offswitchResourcesUpdated;
   }
 
-  private void updatePendingResources(ResourceRequest lastRequest,
-      ResourceRequest request, SchedulerRequestKey schedulerKey,
-      QueueMetrics metrics) {
+  private void updatePendingResources(PendingAskUpdateResult updateResult,
+      SchedulerRequestKey schedulerKey, QueueMetrics metrics) {
+
+    PendingAsk lastPendingAsk = updateResult.getLastPendingAsk();
+    PendingAsk newPendingAsk = updateResult.getNewPendingAsk();
+    String lastNodePartition = updateResult.getLastNodePartition();
+    String newNodePartition = updateResult.getNewNodePartition();
+
     int lastRequestContainers =
-        (lastRequest != null) ? lastRequest.getNumContainers() : 0;
-    if (request.getNumContainers() <= 0) {
+        (lastPendingAsk != null) ? lastPendingAsk.getCount() : 0;
+    if (newPendingAsk.getCount() <= 0) {
       if (lastRequestContainers >= 0) {
         schedulerKeys.remove(schedulerKey);
         schedulerKeyToAppPlacementAllocator.remove(schedulerKey);
@@ -258,31 +262,23 @@ public class AppSchedulingInfo {
       }
     }
 
-    Resource lastRequestCapability =
-        lastRequest != null ? lastRequest.getCapability() : Resources.none();
-    metrics.incrPendingResources(request.getNodeLabelExpression(), user,
-        request.getNumContainers(), request.getCapability());
-
-    if(lastRequest != null) {
-      metrics.decrPendingResources(lastRequest.getNodeLabelExpression(), user,
-          lastRequestContainers, lastRequestCapability);
+    if (lastPendingAsk != null) {
+      // Deduct resources from metrics / pending resources of queue/app.
+      metrics.decrPendingResources(lastNodePartition, user,
+          lastPendingAsk.getCount(), lastPendingAsk.getPerAllocationResource());
+      Resource decreasedResource = Resources.multiply(
+          lastPendingAsk.getPerAllocationResource(), lastRequestContainers);
+      queue.decPendingResource(lastNodePartition, decreasedResource);
+      appResourceUsage.decPending(lastNodePartition, decreasedResource);
     }
 
-    // update queue:
-    Resource increasedResource =
-        Resources.multiply(request.getCapability(), request.getNumContainers());
-    queue.incPendingResource(request.getNodeLabelExpression(),
-        increasedResource);
-    appResourceUsage.incPending(request.getNodeLabelExpression(),
-        increasedResource);
-    if (lastRequest != null) {
-      Resource decreasedResource =
-          Resources.multiply(lastRequestCapability, lastRequestContainers);
-      queue.decPendingResource(lastRequest.getNodeLabelExpression(),
-          decreasedResource);
-      appResourceUsage.decPending(lastRequest.getNodeLabelExpression(),
-          decreasedResource);
-    }
+    // Increase resources to metrics / pending resources of queue/app.
+    metrics.incrPendingResources(newNodePartition, user,
+        newPendingAsk.getCount(), newPendingAsk.getPerAllocationResource());
+    Resource increasedResource = Resources.multiply(
+        newPendingAsk.getPerAllocationResource(), newPendingAsk.getCount());
+    queue.incPendingResource(newNodePartition, increasedResource);
+    appResourceUsage.incPending(newNodePartition, increasedResource);
   }
 
   public void addRequestedPartition(String partition) {
@@ -417,7 +413,7 @@ public class AppSchedulingInfo {
     }
   }
 
-  public List<ResourceRequest> allocate(NodeType type,
+  public ContainerRequest allocate(NodeType type,
       SchedulerNode node, SchedulerRequestKey schedulerKey,
       Container containerAllocated) {
     try {

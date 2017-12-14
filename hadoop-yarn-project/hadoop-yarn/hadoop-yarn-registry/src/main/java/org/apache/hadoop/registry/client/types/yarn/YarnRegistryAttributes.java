@@ -38,4 +38,5 @@ public final class YarnRegistryAttributes {
   public static final String YARN_PATH = "yarn:path";
   public static final String YARN_HOSTNAME = "yarn:hostname";
   public static final String YARN_IP = "yarn:ip";
+  public static final String YARN_COMPONENT = "yarn:component";
 }

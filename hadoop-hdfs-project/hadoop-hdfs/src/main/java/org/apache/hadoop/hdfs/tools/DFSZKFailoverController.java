@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -190,14 +191,13 @@ public class DFSZKFailoverController extends ZKFailoverController {
         new HdfsConfiguration(), args);
     DFSZKFailoverController zkfc = DFSZKFailoverController.create(
         parser.getConfiguration());
-    int retCode = 0;
     try {
-      retCode = zkfc.run(parser.getRemainingArgs());
+      System.exit(zkfc.run(parser.getRemainingArgs()));
     } catch (Throwable t) {
       LOG.fatal("DFSZKFailOverController exiting due to earlier exception "
           + t);
+      terminate(1, t);
     }
-    System.exit(retCode);
   }
 
   @Override

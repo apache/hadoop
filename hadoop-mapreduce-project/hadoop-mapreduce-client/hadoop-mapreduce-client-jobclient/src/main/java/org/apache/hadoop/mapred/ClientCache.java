@@ -23,8 +23,6 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.JobID;
@@ -35,13 +33,15 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ClientCache {
 
   private final Configuration conf;
   private final ResourceMgrDelegate rm;
 
-  private static final Log LOG = LogFactory.getLog(ClientCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientCache.class);
 
   private Map<JobID, ClientServiceDelegate> cache = 
       new HashMap<JobID, ClientServiceDelegate>();

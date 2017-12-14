@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,6 +33,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Random;
@@ -42,8 +42,8 @@ import java.util.Random;
 import static org.junit.Assert.assertEquals;
 
 public class TestMRSequenceFileInputFilter {
-  private static final Log LOG =
-    LogFactory.getLog(TestMRSequenceFileInputFilter.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMRSequenceFileInputFilter.class);
 
   private static final int MAX_LENGTH = 15000;
   private static final Configuration conf = new Configuration();

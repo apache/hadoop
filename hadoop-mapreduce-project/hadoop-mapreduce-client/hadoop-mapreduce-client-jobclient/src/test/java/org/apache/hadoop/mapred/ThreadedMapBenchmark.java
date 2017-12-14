@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.io.File;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +34,8 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Distributed threaded map benchmark.
@@ -52,7 +52,8 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class ThreadedMapBenchmark extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(ThreadedMapBenchmark.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ThreadedMapBenchmark.class);
   private static Path BASE_DIR =
     new Path(System.getProperty("test.build.data", 
                                 File.separator + "benchmarks" + File.separator 

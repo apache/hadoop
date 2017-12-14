@@ -126,6 +126,7 @@ class BlockReceiver implements Closeable {
 
   private boolean syncOnClose;
   private volatile boolean dirSyncOnFinalize;
+  private boolean dirSyncOnHSyncDone = false;
   private long restartBudget;
   /** the reference of the volume where the block receiver writes to */
   private ReplicaHandler replicaHandler;
@@ -423,6 +424,10 @@ class BlockReceiver implements Closeable {
         datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
+    }
+    if (isSync && !dirSyncOnHSyncDone && replicaInfo instanceof LocalReplica) {
+      ((LocalReplica) replicaInfo).fsyncDirectory();
+      dirSyncOnHSyncDone = true;
     }
     if (checksumOut != null || streams.getDataOut() != null) {
       datanode.metrics.addFlushNanos(flushTotalNanos);

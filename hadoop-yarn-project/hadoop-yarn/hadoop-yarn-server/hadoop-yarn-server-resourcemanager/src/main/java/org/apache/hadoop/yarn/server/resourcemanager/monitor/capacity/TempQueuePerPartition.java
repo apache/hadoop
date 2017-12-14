@@ -21,10 +21,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .ParentQueue;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -46,11 +51,15 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   Resource untouchableExtra;
   Resource preemptableExtra;
 
-  double normalizedGuarantee;
+  double[] normalizedGuarantee;
+
+  private Resource effMinRes;
+  private Resource effMaxRes;
 
   final ArrayList<TempQueuePerPartition> children;
   private Collection<TempAppPerPartition> apps;
   LeafQueue leafQueue;
+  ParentQueue parentQueue;
   boolean preemptionDisabled;
 
   protected Resource pendingDeductReserved;
@@ -68,7 +77,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   TempQueuePerPartition(String queueName, Resource current,
       boolean preemptionDisabled, String partition, Resource killable,
       float absCapacity, float absMaxCapacity, Resource totalPartitionResource,
-      Resource reserved, CSQueue queue) {
+      Resource reserved, CSQueue queue, Resource effMinRes,
+      Resource effMaxRes) {
     super(queueName, current, Resource.newInstance(0, 0), reserved,
         Resource.newInstance(0, 0));
 
@@ -84,7 +94,12 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
       pendingDeductReserved = Resources.createResource(0);
     }
 
-    this.normalizedGuarantee = Float.NaN;
+    if (ParentQueue.class.isAssignableFrom(queue.getClass())) {
+      parentQueue = (ParentQueue) queue;
+    }
+
+    this.normalizedGuarantee = new double[ResourceUtils
+        .getNumberOfKnownResourceTypes()];
     this.children = new ArrayList<>();
     this.apps = new ArrayList<>();
     this.untouchableExtra = Resource.newInstance(0, 0);
@@ -95,6 +110,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     this.absCapacity = absCapacity;
     this.absMaxCapacity = absMaxCapacity;
     this.totalPartitionResource = totalPartitionResource;
+    this.effMinRes = effMinRes;
+    this.effMaxRes = effMaxRes;
   }
 
   public void setLeafQueue(LeafQueue l) {
@@ -177,10 +194,18 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   }
 
   public Resource getGuaranteed() {
+    if(!effMinRes.equals(Resources.none())) {
+      return Resources.clone(effMinRes);
+    }
+
     return Resources.multiply(totalPartitionResource, absCapacity);
   }
 
   public Resource getMax() {
+    if(!effMaxRes.equals(Resources.none())) {
+      return Resources.clone(effMaxRes);
+    }
+
     return Resources.multiply(totalPartitionResource, absMaxCapacity);
   }
 
@@ -226,8 +251,9 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     sb.append(" NAME: " + queueName).append(" CUR: ").append(current)
         .append(" PEN: ").append(pending).append(" RESERVED: ").append(reserved)
         .append(" GAR: ").append(getGuaranteed()).append(" NORM: ")
-        .append(normalizedGuarantee).append(" IDEAL_ASSIGNED: ")
-        .append(idealAssigned).append(" IDEAL_PREEMPT: ").append(toBePreempted)
+        .append(Arrays.toString(normalizedGuarantee))
+        .append(" IDEAL_ASSIGNED: ").append(idealAssigned)
+        .append(" IDEAL_PREEMPT: ").append(toBePreempted)
         .append(" ACTUAL_PREEMPT: ").append(getActuallyToBePreempted())
         .append(" UNTOUCHABLE: ").append(untouchableExtra)
         .append(" PREEMPTABLE: ").append(preemptableExtra).append("\n");

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,9 +20,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
+    .RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,7 +51,8 @@ import java.util.function.Supplier;
  *   other is under: The queue that is under its capacity guarantee gets the
  *   resources.
  */
-public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPolicy {
+public class PriorityUtilizationQueueOrderingPolicy
+    implements QueueOrderingPolicy {
   private List<CSQueue> queues;
   private boolean respectPriority;
 
@@ -76,7 +81,7 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
     if (priority1 == priority2) {
       // The queue with less relative used-capacity goes first
       return Double.compare(relativeAssigned1, relativeAssigned2);
-    } else {
+    } else{
       // When priority is different:
       if ((relativeAssigned1 < 1.0f && relativeAssigned2 < 1.0f) || (
           relativeAssigned1 >= 1.0f && relativeAssigned2 >= 1.0f)) {
@@ -84,7 +89,7 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
         // Or both the queues are over or meeting their guaranteed capacities
         // queue with higher used-capacity goes first
         return Integer.compare(priority2, priority1);
-      } else {
+      } else{
         // Otherwise, when one of the queues is over or meeting their
         // guaranteed capacities and the other is under: The queue that is
         // under its capacity guarantee gets the resources.
@@ -96,7 +101,7 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
   /**
    * Comparator that both looks at priority and utilization
    */
-  private class PriorityQueueComparator implements  Comparator<CSQueue> {
+  private class PriorityQueueComparator implements Comparator<CSQueue> {
 
     @Override
     public int compare(CSQueue q1, CSQueue q2) {
@@ -107,8 +112,38 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
         return rc;
       }
 
-      float used1 = q1.getQueueCapacities().getUsedCapacity(p);
-      float used2 = q2.getQueueCapacities().getUsedCapacity(p);
+      float q1AbsCapacity = q1.getQueueCapacities().getAbsoluteCapacity(p);
+      float q2AbsCapacity = q2.getQueueCapacities().getAbsoluteCapacity(p);
+
+      //If q1's abs capacity > 0 and q2 is 0, then prioritize q1
+      if (Float.compare(q1AbsCapacity, 0f) > 0 && Float.compare(q2AbsCapacity,
+          0f) == 0) {
+        return -1;
+        //If q2's abs capacity > 0 and q1 is 0, then prioritize q2
+      } else if (Float.compare(q2AbsCapacity, 0f) > 0 && Float.compare(
+          q1AbsCapacity, 0f) == 0) {
+        return 1;
+      } else if (Float.compare(q1AbsCapacity, 0f) == 0 && Float.compare(
+          q2AbsCapacity, 0f) == 0) {
+        // both q1 has 0 and q2 has 0 capacity, then fall back to using
+        // priority, abs used capacity to prioritize
+        float used1 = q1.getQueueCapacities().getAbsoluteUsedCapacity(p);
+        float used2 = q2.getQueueCapacities().getAbsoluteUsedCapacity(p);
+
+        return compare(q1, q2, used1, used2, p);
+      } else{
+        // both q1 has positive abs capacity and q2 has positive abs
+        // capacity
+        float used1 = q1.getQueueCapacities().getUsedCapacity(p);
+        float used2 = q2.getQueueCapacities().getUsedCapacity(p);
+
+        return compare(q1, q2, used1, used2, p);
+      }
+    }
+
+    private int compare(CSQueue q1, CSQueue q2, float q1Used, float q2Used,
+        String partition) {
+
       int p1 = 0;
       int p2 = 0;
       if (respectPriority) {
@@ -116,20 +151,31 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
         p2 = q2.getPriority().getPriority();
       }
 
-      rc = PriorityUtilizationQueueOrderingPolicy.compare(used1, used2, p1, p2);
+      int rc = PriorityUtilizationQueueOrderingPolicy.compare(q1Used, q2Used,
+          p1, p2);
 
       // For queue with same used ratio / priority, queue with higher configured
       // capacity goes first
       if (0 == rc) {
-        float abs1 = q1.getQueueCapacities().getAbsoluteCapacity(p);
-        float abs2 = q2.getQueueCapacities().getAbsoluteCapacity(p);
+        Resource minEffRes1 =
+            q1.getQueueResourceQuotas().getConfiguredMinResource(partition);
+        Resource minEffRes2 =
+            q2.getQueueResourceQuotas().getConfiguredMinResource(partition);
+        if (!minEffRes1.equals(Resources.none()) && !minEffRes2.equals(
+            Resources.none())) {
+          return minEffRes2.compareTo(minEffRes1);
+        }
+
+        float abs1 = q1.getQueueCapacities().getAbsoluteCapacity(partition);
+        float abs2 = q2.getQueueCapacities().getAbsoluteCapacity(partition);
         return Float.compare(abs2, abs1);
       }
 
       return rc;
     }
 
-    private int compareQueueAccessToPartition(CSQueue q1, CSQueue q2, String partition) {
+    private int compareQueueAccessToPartition(CSQueue q1, CSQueue q2,
+        String partition) {
       // Everybody has access to default partition
       if (StringUtils.equals(partition, RMNodeLabelsManager.NO_LABEL)) {
         return 0;
@@ -179,9 +225,11 @@ public class PriorityUtilizationQueueOrderingPolicy implements QueueOrderingPoli
   @Override
   public String getConfigName() {
     if (respectPriority) {
-      return CapacitySchedulerConfiguration.QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY;
+      return CapacitySchedulerConfiguration.
+          QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY;
     } else{
-      return CapacitySchedulerConfiguration.QUEUE_UTILIZATION_ORDERING_POLICY;
+      return CapacitySchedulerConfiguration.
+          QUEUE_UTILIZATION_ORDERING_POLICY;
     }
   }
 

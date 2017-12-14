@@ -401,6 +401,8 @@ message AddErasureCodingPolicyResponseProto {
  */
 message HdfsPathHandleProto {
   optional uint64 inodeId = 1;
+  optional uint64 mtime = 2;
+  optional string path = 3;
 }
 
 /**

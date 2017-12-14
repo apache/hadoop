@@ -22,13 +22,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
 import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Operation which selects a random file and a random number of bytes to create
@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.slive.OperationOutput.OutputType;
  */
 class CreateOp extends Operation {
 
-  private static final Log LOG = LogFactory.getLog(CreateOp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CreateOp.class);
 
   private static int DEF_IO_BUFFER_SIZE = 4096;
 

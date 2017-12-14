@@ -220,15 +220,13 @@ public class ContainerLaunch implements Callable<Integer> {
               containerIdStr));
       Path nmPrivateClasspathJarDir = dirsHandler.getLocalPathForWrite(
           getContainerPrivateDir(appIdStr, containerIdStr));
-      DataOutputStream containerScriptOutStream = null;
-      DataOutputStream tokensOutStream = null;
 
       // Select the working directory for the container
       Path containerWorkDir = deriveContainerWorkDir();
       recordContainerWorkDir(containerID, containerWorkDir.toString());
 
       String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
-      // pid file should be in nm private dir so that it is not 
+      // pid file should be in nm private dir so that it is not
       // accessible by users
       pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
       List<String> localDirs = dirsHandler.getLocalDirs();
@@ -243,24 +241,24 @@ public class ContainerLaunch implements Callable<Integer> {
         throw new IOException("Most of the disks failed. "
             + dirsHandler.getDisksHealthReport(false));
       }
-      try {
-        // /////////// Write out the container-script in the nmPrivate space.
-        List<Path> appDirs = new ArrayList<Path>(localDirs.size());
-        for (String localDir : localDirs) {
-          Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
-          Path userdir = new Path(usersdir, user);
-          Path appsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
-          appDirs.add(new Path(appsdir, appIdStr));
-        }
-        containerScriptOutStream =
-            lfs.create(nmPrivateContainerScriptPath,
-                EnumSet.of(CREATE, OVERWRITE));
+      List<Path> appDirs = new ArrayList<Path>(localDirs.size());
+      for (String localDir : localDirs) {
+        Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
+        Path userdir = new Path(usersdir, user);
+        Path appsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
+        appDirs.add(new Path(appsdir, appIdStr));
+      }
 
-        // Set the token location too.
-        environment.put(
-            ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME,
-            new Path(containerWorkDir,
-                FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
+      // Set the token location too.
+      environment.put(
+          ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME,
+          new Path(containerWorkDir,
+              FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
+
+      // /////////// Write out the container-script in the nmPrivate space.
+      try (DataOutputStream containerScriptOutStream =
+               lfs.create(nmPrivateContainerScriptPath,
+                   EnumSet.of(CREATE, OVERWRITE))) {
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
             containerLogDirs, localResources, nmPrivateClasspathJarDir);
@@ -271,18 +269,16 @@ public class ContainerLaunch implements Callable<Integer> {
         exec.writeLaunchEnv(containerScriptOutStream, environment,
             localResources, launchContext.getCommands(),
             new Path(containerLogDirs.get(0)), user);
-        // /////////// End of writing out container-script
+      }
+      // /////////// End of writing out container-script
 
-        // /////////// Write out the container-tokens in the nmPrivate space.
-        tokensOutStream =
-            lfs.create(nmPrivateTokensPath, EnumSet.of(CREATE, OVERWRITE));
+      // /////////// Write out the container-tokens in the nmPrivate space.
+      try (DataOutputStream tokensOutStream =
+               lfs.create(nmPrivateTokensPath, EnumSet.of(CREATE, OVERWRITE))) {
         Credentials creds = container.getCredentials();
         creds.writeTokenStorageToStream(tokensOutStream);
-        // /////////// End of writing out container-tokens
-      } finally {
-        IOUtils.cleanupWithLogger(LOG, containerScriptOutStream,
-            tokensOutStream);
       }
+      // /////////// End of writing out container-tokens
 
       ret = launchContainer(new ContainerStartContext.Builder()
           .setContainer(container)

@@ -1,0 +1,64 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import java.util.List;
+
+public interface AutoCreatedQueueManagementPolicy {
+
+  /**
+   * Initialize policy
+   * @param schedulerContext Capacity Scheduler context
+   */
+  void init(CapacitySchedulerContext schedulerContext, ParentQueue parentQueue);
+
+  /**
+   * Reinitialize policy state ( if required )
+   * @param schedulerContext Capacity Scheduler context
+   */
+  void reinitialize(CapacitySchedulerContext schedulerContext,
+      ParentQueue parentQueue);
+
+  /**
+   * Get initial template for the specified leaf queue
+   * @param leafQueue the leaf queue
+   * @return initial leaf queue template configurations and capacities for
+   * auto created queue
+   */
+  AutoCreatedLeafQueueConfig getInitialLeafQueueConfiguration(
+      AbstractAutoCreatedLeafQueue leafQueue)
+      throws SchedulerDynamicEditException;
+
+  /**
+   * Compute/Adjust child queue capacities
+   * for auto created leaf queues
+   *
+   * @return returns a list of suggested QueueEntitlementChange(s) which may
+   * or may not be be enforced by the scheduler
+   */
+  List<QueueManagementChange> computeQueueManagementChanges()
+      throws SchedulerDynamicEditException;
+
+  /**
+   * Commit/Update state for the specified queue management changes.
+   */
+  void commitQueueManagementChanges(
+      List<QueueManagementChange> queueManagementChanges)
+      throws SchedulerDynamicEditException;
+}

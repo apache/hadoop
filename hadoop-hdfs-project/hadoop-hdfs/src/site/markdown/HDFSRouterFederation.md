@@ -184,6 +184,10 @@ For example, to create three mount points and list them:
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /data/app2 ns3 /data/app2
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -ls
 
+It also supports mount points that disallow writes:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /readonly ns1 / -readonly
+
 If a mount point is not set, the Router will map it to the default namespace `dfs.federation.router.default.nameserviceId`.
 
 
@@ -309,3 +313,9 @@ Monitor the namenodes in the subclusters for forwarding the client requests.
 | dfs.federation.router.heartbeat.interval | 5000 | How often the Router should heartbeat into the State Store in milliseconds. |
 | dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
 | dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
+
+Metrics
+-------
+
+The Router and State Store statistics are exposed in metrics/JMX. These info will be very useful for monitoring.
+More metrics info can see [Router RPC Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RouterRPCMetrics) and [State Store Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#StateStoreMetrics).
