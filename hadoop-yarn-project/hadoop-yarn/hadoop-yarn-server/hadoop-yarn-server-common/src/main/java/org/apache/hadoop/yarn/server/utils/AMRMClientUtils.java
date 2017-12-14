@@ -163,8 +163,12 @@ public final class AMRMClientUtils {
       LOG.info("Creating RMProxy to RM {} for protocol {} for user {}",
           rmClusterId, protocol.getSimpleName(), user);
       if (token != null) {
-        token.setService(ClientRMProxy.getAMRMTokenService(configuration));
+        // preserve the token service sent by the RM when adding the token
+        // to ensure we replace the previous token setup by the RM.
+        // Afterwards we can update the service address for the RPC layer.
+        // Same as YarnServerSecurityUtils.updateAMRMToken()
         user.addToken(token);
+        token.setService(ClientRMProxy.getAMRMTokenService(configuration));
         setAuthModeInConf(configuration);
       }
       final T proxyConnection = user.doAs(new PrivilegedExceptionAction<T>() {
