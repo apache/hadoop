@@ -23,6 +23,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -45,6 +46,7 @@ import org.apache.hadoop.utils.MetadataStoreBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -473,7 +475,11 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
       KsmKeyInfo info =
           KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(entry.getValue()));
       // Get block keys as a list.
-      List<String> item = info.getKeyLocationList().stream()
+      KsmKeyLocationInfoGroup latest = info.getLatestVersionLocations();
+      if (latest == null) {
+        return Collections.emptyList();
+      }
+      List<String> item = latest.getLocationList().stream()
           .map(KsmKeyLocationInfo::getBlockID)
           .collect(Collectors.toList());
       BlockGroup keyBlocks = BlockGroup.newBuilder()
@@ -503,7 +509,8 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
         continue;
       }
       // Get block keys as a list.
-      List<String> item = info.getKeyLocationList().stream()
+      List<String> item = info.getLatestVersionLocations()
+          .getBlocksLatestVersionOnly().stream()
           .map(KsmKeyLocationInfo::getBlockID)
           .collect(Collectors.toList());
       BlockGroup keyBlocks = BlockGroup.newBuilder()

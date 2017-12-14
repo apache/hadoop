@@ -419,6 +419,9 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setType(xceiverClientManager.getType())
             .setFactor(xceiverClientManager.getFactor())
             .build();
+    groupOutputStream.addPreallocateBlocks(
+        openKey.getKeyInfo().getLatestVersionLocations(),
+        openKey.getOpenVersion());
     return new OzoneOutputStream(groupOutputStream);
   }
 

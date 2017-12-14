@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client.io;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Maintaining a list of ChunkInputStream. Write based on offset.
@@ -98,6 +100,11 @@ public class ChunkGroupOutputStream extends OutputStream {
     streamEntries.add(new ChunkOutputStreamEntry(outputStream, length));
   }
 
+  @VisibleForTesting
+  public List<ChunkOutputStreamEntry> getStreamEntries() {
+    return streamEntries;
+  }
+
   public ChunkGroupOutputStream(
       OpenKeySession handler, XceiverClientManager xceiverClientManager,
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
@@ -122,12 +129,31 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.chunkSize = chunkSize;
     this.requestID = requestId;
     LOG.debug("Expecting open key with one block, but got" +
-        info.getKeyLocationList().size());
+        info.getKeyLocationVersions().size());
+  }
+
+  /**
+   * When a key is opened, it is possible that there are some blocks already
+   * allocated to it for this open session. In this case, to make use of these
+   * blocks, we need to add these blocks to stream entries. But, a key's version
+   * also includes blocks from previous versions, we need to avoid adding these
+   * old blocks to stream entries, because these old blocks should not be picked
+   * for write. To do this, the following method checks that, only those
+   * blocks created in this particular open version are added to stream entries.
+   *
+   * @param version the set of blocks that are pre-allocated.
+   * @param openVersion the version corresponding to the pre-allocation.
+   * @throws IOException
+   */
+  public void addPreallocateBlocks(KsmKeyLocationInfoGroup version,
+      long openVersion) throws IOException {
     // server may return any number of blocks, (0 to any)
-    int idx = 0;
-    for (KsmKeyLocationInfo subKeyInfo : info.getKeyLocationList()) {
-      subKeyInfo.setIndex(idx++);
-      checkKeyLocationInfo(subKeyInfo);
+    // only the blocks allocated in this open session (block createVersion
+    // equals to open session version)
+    for (KsmKeyLocationInfo subKeyInfo : version.getLocationList()) {
+      if (subKeyInfo.getCreateVersion() == openVersion) {
+        checkKeyLocationInfo(subKeyInfo);
+      }
     }
   }
 
@@ -255,7 +281,6 @@ public class ChunkGroupOutputStream extends OutputStream {
    */
   private void allocateNewBlock(int index) throws IOException {
     KsmKeyLocationInfo subKeyInfo = ksmClient.allocateBlock(keyArgs, openID);
-    subKeyInfo.setIndex(index);
     checkKeyLocationInfo(subKeyInfo);
   }
 

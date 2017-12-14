@@ -28,19 +28,27 @@ public final class KsmKeyLocationInfo {
   private final String blockID;
   private final boolean shouldCreateContainer;
   // the id of this subkey in all the subkeys.
-  private int index;
   private final long length;
   private final long offset;
+  // the version number indicating when this block was added
+  private long createVersion;
 
   private KsmKeyLocationInfo(String containerName,
-      String blockID, boolean shouldCreateContainer, int index,
+      String blockID, boolean shouldCreateContainer,
       long length, long offset) {
     this.containerName = containerName;
     this.blockID = blockID;
     this.shouldCreateContainer = shouldCreateContainer;
-    this.index = index;
     this.length = length;
     this.offset = offset;
+  }
+
+  public void setCreateVersion(long version) {
+    createVersion = version;
+  }
+
+  public long getCreateVersion() {
+    return createVersion;
   }
 
   public String getContainerName() {
@@ -53,14 +61,6 @@ public final class KsmKeyLocationInfo {
 
   public boolean getShouldCreateContainer() {
     return shouldCreateContainer;
-  }
-
-  public int getIndex() {
-    return index;
-  }
-
-  public void setIndex(int idx) {
-    index = idx;
   }
 
   public long getLength() {
@@ -78,10 +78,9 @@ public final class KsmKeyLocationInfo {
     private String containerName;
     private String blockID;
     private boolean shouldCreateContainer;
-    // the id of this subkey in all the subkeys.
-    private int index;
     private long length;
     private long offset;
+
     public Builder setContainerName(String container) {
       this.containerName = container;
       return this;
@@ -97,11 +96,6 @@ public final class KsmKeyLocationInfo {
       return this;
     }
 
-    public Builder setIndex(int id) {
-      this.index = id;
-      return this;
-    }
-
     public Builder setLength(long len) {
       this.length = len;
       return this;
@@ -114,7 +108,7 @@ public final class KsmKeyLocationInfo {
 
     public KsmKeyLocationInfo build() {
       return new KsmKeyLocationInfo(containerName, blockID,
-          shouldCreateContainer, index, length, offset);
+          shouldCreateContainer, length, offset);
     }
   }
 
@@ -123,19 +117,20 @@ public final class KsmKeyLocationInfo {
         .setContainerName(containerName)
         .setBlockID(blockID)
         .setShouldCreateContainer(shouldCreateContainer)
-        .setIndex(index)
         .setLength(length)
         .setOffset(offset)
+        .setCreateVersion(createVersion)
         .build();
   }
 
   public static KsmKeyLocationInfo getFromProtobuf(KeyLocation keyLocation) {
-    return new KsmKeyLocationInfo(
+    KsmKeyLocationInfo info = new KsmKeyLocationInfo(
         keyLocation.getContainerName(),
         keyLocation.getBlockID(),
         keyLocation.getShouldCreateContainer(),
-        keyLocation.getIndex(),
         keyLocation.getLength(),
         keyLocation.getOffset());
+    info.setCreateVersion(keyLocation.getCreateVersion());
+    return info;
   }
 }

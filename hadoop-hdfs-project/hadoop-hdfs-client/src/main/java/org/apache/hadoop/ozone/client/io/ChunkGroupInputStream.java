@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.client.io;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
@@ -166,13 +165,11 @@ public class ChunkGroupInputStream extends InputStream {
       StorageContainerLocationProtocolClientSideTranslatorPB
           storageContainerLocationClient, String requestId)
       throws IOException {
-    int index = 0;
     long length = 0;
     String containerKey;
     ChunkGroupInputStream groupInputStream = new ChunkGroupInputStream();
-    for (KsmKeyLocationInfo ksmKeyLocationInfo : keyInfo.getKeyLocationList()) {
-      // check index as sanity check
-      Preconditions.checkArgument(index++ == ksmKeyLocationInfo.getIndex());
+    for (KsmKeyLocationInfo ksmKeyLocationInfo :
+        keyInfo.getLatestVersionLocations().getBlocksLatestVersionOnly()) {
       String containerName = ksmKeyLocationInfo.getContainerName();
       Pipeline pipeline =
           storageContainerLocationClient.getContainer(containerName);

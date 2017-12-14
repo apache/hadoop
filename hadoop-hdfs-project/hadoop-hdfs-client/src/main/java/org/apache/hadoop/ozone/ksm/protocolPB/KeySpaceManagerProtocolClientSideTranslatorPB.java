@@ -538,7 +538,7 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
       throw new IOException("Create key failed, error:" + resp.getStatus());
     }
     return new OpenKeySession(resp.getID(),
-        KsmKeyInfo.getFromProtobuf(resp.getKeyInfo()));
+        KsmKeyInfo.getFromProtobuf(resp.getKeyInfo()), resp.getOpenVersion());
   }
 
   @Override
