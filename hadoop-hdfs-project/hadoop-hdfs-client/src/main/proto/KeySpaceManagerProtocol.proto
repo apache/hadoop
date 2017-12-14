@@ -235,7 +235,13 @@ message KeyLocation {
     required bool shouldCreateContainer = 3;
     required uint64 offset = 4;
     required uint64 length = 5;
-    required uint32 index = 6;
+    // indicated at which version this block gets created.
+    optional uint64 createVersion = 6;
+}
+
+message KeyLocationList {
+    optional uint64 version = 1;
+    repeated KeyLocation keyLocations = 2;
 }
 
 message KeyInfo {
@@ -243,9 +249,10 @@ message KeyInfo {
     required string bucketName = 2;
     required string keyName = 3;
     required uint64 dataSize = 4;
-    repeated KeyLocation keyLocationList = 5;
+    repeated KeyLocationList keyLocationList = 5;
     required uint64 creationTime = 6;
     required uint64 modificationTime = 7;
+    optional uint64 latestVersion = 8;
 }
 
 message LocateKeyRequest {
@@ -258,6 +265,8 @@ message LocateKeyResponse {
     // clients' followup request may carry this ID for stateful operations (similar
     // to a cookie).
     optional uint32 ID = 3;
+    // TODO : allow specifiying a particular version to read.
+    optional uint64 openVersion = 4;
 }
 
 message SetBucketPropertyRequest {

@@ -387,7 +387,8 @@ public class TestOzoneRpcClient {
     OzoneProtos.ReplicationFactor replicationFactor =
         OzoneProtos.ReplicationFactor.valueOf(factor.getValue());
     KsmKeyInfo keyInfo = keySpaceManager.lookupKey(keyArgs);
-    for (KsmKeyLocationInfo info: keyInfo.getKeyLocationList()) {
+    for (KsmKeyLocationInfo info:
+        keyInfo.getLatestVersionLocations().getLocationList()) {
       Pipeline pipeline =
           storageContainerLocationClient.getContainer(info.getContainerName());
       if ((pipeline.getFactor() != replicationFactor) ||

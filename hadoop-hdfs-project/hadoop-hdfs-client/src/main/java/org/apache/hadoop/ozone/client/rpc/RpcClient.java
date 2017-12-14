@@ -464,6 +464,9 @@ public class RpcClient implements ClientProtocol {
             .setType(OzoneProtos.ReplicationType.valueOf(type.toString()))
             .setFactor(OzoneProtos.ReplicationFactor.valueOf(factor.getValue()))
             .build();
+    groupOutputStream.addPreallocateBlocks(
+        openKey.getKeyInfo().getLatestVersionLocations(),
+        openKey.getOpenVersion());
     return new OzoneOutputStream(groupOutputStream);
   }
 

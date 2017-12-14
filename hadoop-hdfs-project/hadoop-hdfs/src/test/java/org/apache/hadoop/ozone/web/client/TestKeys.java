@@ -618,7 +618,8 @@ public class TestKeys {
       // Memorize chunks that has been created,
       // so we can verify actual deletions at DN side later.
       for (KsmKeyInfo keyInfo : createdKeys) {
-        List<KsmKeyLocationInfo> locations = keyInfo.getKeyLocationList();
+        List<KsmKeyLocationInfo> locations =
+            keyInfo.getLatestVersionLocations().getLocationList();
         for (KsmKeyLocationInfo location : locations) {
           String containerName = location.getContainerName();
           KeyData keyData = new KeyData(containerName, location.getBlockID());

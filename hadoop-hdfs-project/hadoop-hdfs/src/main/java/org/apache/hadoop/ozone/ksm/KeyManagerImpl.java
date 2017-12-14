@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
+import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.KeyInfo;
@@ -40,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -195,9 +197,10 @@ public class KeyManagerImpl implements KeyManager {
           .setShouldCreateContainer(allocatedBlock.getCreateContainer())
           .setLength(scmBlockSize)
           .setOffset(0)
-          .setIndex(keyInfo.getKeyLocationList().size())
           .build();
-      keyInfo.appendKeyLocation(info);
+      // current version not committed, so new blocks coming now are added to
+      // the same version
+      keyInfo.appendNewBlocks(Collections.singletonList(info));
       keyInfo.updateModifcationTime();
       metadataManager.put(openKey, keyInfo.getProtobuf().toByteArray());
       return info;
@@ -237,7 +240,6 @@ public class KeyManagerImpl implements KeyManager {
       // the point, if client needs more blocks, client can always call
       // allocateBlock. But if requested size is not 0, KSM will preallocate
       // some blocks and piggyback to client, to save RPC calls.
-      int idx = 0;
       while (requestedSize > 0) {
         long allocateSize = Math.min(scmBlockSize, requestedSize);
         AllocatedBlock allocatedBlock =
@@ -246,28 +248,45 @@ public class KeyManagerImpl implements KeyManager {
             .setContainerName(allocatedBlock.getPipeline().getContainerName())
             .setBlockID(allocatedBlock.getKey())
             .setShouldCreateContainer(allocatedBlock.getCreateContainer())
-            .setIndex(idx++)
             .setLength(allocateSize)
             .setOffset(0)
             .build();
         locations.add(subKeyInfo);
         requestedSize -= allocateSize;
       }
-      long currentTime = Time.now();
       // NOTE size of a key is not a hard limit on anything, it is a value that
       // client should expect, in terms of current size of key. If client sets a
       // value, then this value is used, otherwise, we allocate a single block
       // which is the current size, if read by the client.
       long size = args.getDataSize() >= 0 ? args.getDataSize() : scmBlockSize;
-      KsmKeyInfo keyInfo = new KsmKeyInfo.Builder()
-          .setVolumeName(args.getVolumeName())
-          .setBucketName(args.getBucketName())
-          .setKeyName(args.getKeyName())
-          .setKsmKeyLocationInfos(locations)
-          .setCreationTime(currentTime)
-          .setModificationTime(currentTime)
-          .setDataSize(size)
-          .build();
+      byte[] keyKey = metadataManager.getDBKeyBytes(
+          volumeName, bucketName, keyName);
+      byte[] value = metadataManager.get(keyKey);
+      KsmKeyInfo keyInfo;
+      long openVersion;
+      if (value != null) {
+        // the key already exist, the new blocks will be added as new version
+        keyInfo = KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(value));
+        // when locations.size = 0, the new version will have identical blocks
+        // as its previous version
+        openVersion = keyInfo.addNewVersion(locations);
+        keyInfo.setDataSize(size + keyInfo.getDataSize());
+      } else {
+        // the key does not exist, create a new object, the new blocks are the
+        // version 0
+        long currentTime = Time.now();
+        keyInfo = new KsmKeyInfo.Builder()
+            .setVolumeName(args.getVolumeName())
+            .setBucketName(args.getBucketName())
+            .setKeyName(args.getKeyName())
+            .setKsmKeyLocationInfos(Collections.singletonList(
+                new KsmKeyLocationInfoGroup(0, locations)))
+            .setCreationTime(currentTime)
+            .setModificationTime(currentTime)
+            .setDataSize(size)
+            .build();
+        openVersion = 0;
+      }
       // Generate a random ID which is not already in meta db.
       int id = -1;
       // in general this should finish in a couple times at most. putting some
@@ -285,7 +304,7 @@ public class KeyManagerImpl implements KeyManager {
       }
       LOG.debug("Key {} allocated in volume {} bucket {}",
           keyName, volumeName, bucketName);
-      return new OpenKeySession(id, keyInfo);
+      return new OpenKeySession(id, keyInfo, openVersion);
     } catch (KSMException e) {
       throw e;
     } catch (IOException ex) {

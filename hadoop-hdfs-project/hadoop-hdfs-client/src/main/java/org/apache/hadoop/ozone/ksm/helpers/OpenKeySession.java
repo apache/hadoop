@@ -25,10 +25,19 @@ package org.apache.hadoop.ozone.ksm.helpers;
 public class OpenKeySession {
   private final int id;
   private final KsmKeyInfo keyInfo;
+  // the version of the key when it is being opened in this session.
+  // a block that has a create version equals to open version means it will
+  // be committed only when this open session is closed.
+  private long openVersion;
 
-  public OpenKeySession(int id, KsmKeyInfo info) {
+  public OpenKeySession(int id, KsmKeyInfo info, long version) {
     this.id = id;
     this.keyInfo = info;
+    this.openVersion = version;
+  }
+
+  public long getOpenVersion() {
+    return this.openVersion;
   }
 
   public KsmKeyInfo getKeyInfo() {

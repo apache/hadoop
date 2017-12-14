@@ -323,7 +323,7 @@ public class TestStorageContainerManager {
     // on datanodes.
     Set<String> containerNames = new HashSet<>();
     for (Map.Entry<String, KsmKeyInfo> entry : keyLocations.entrySet()) {
-      entry.getValue().getKeyLocationList()
+      entry.getValue().getLatestVersionLocations().getLocationList()
           .forEach(loc -> containerNames.add(loc.getContainerName()));
     }
 
@@ -331,7 +331,7 @@ public class TestStorageContainerManager {
     // total number of containerBlocks via creation call.
     int totalCreatedBlocks = 0;
     for (KsmKeyInfo info : keyLocations.values()) {
-      totalCreatedBlocks += info.getKeyLocationList().size();
+      totalCreatedBlocks += info.getKeyLocationVersions().size();
     }
     Assert.assertTrue(totalCreatedBlocks > 0);
     Assert.assertEquals(totalCreatedBlocks,
@@ -340,7 +340,8 @@ public class TestStorageContainerManager {
     // Create a deletion TX for each key.
     Map<String, List<String>> containerBlocks = Maps.newHashMap();
     for (KsmKeyInfo info : keyLocations.values()) {
-      List<KsmKeyLocationInfo> list = info.getKeyLocationList();
+      List<KsmKeyLocationInfo> list =
+          info.getLatestVersionLocations().getLocationList();
       list.forEach(location -> {
         if (containerBlocks.containsKey(location.getContainerName())) {
           containerBlocks.get(location.getContainerName())

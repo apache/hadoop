@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.ozone.ksm.helpers;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.KeyInfo;
 import org.apache.hadoop.util.Time;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,18 +36,29 @@ public final class KsmKeyInfo {
   // name of key client specified
   private final String keyName;
   private long dataSize;
-  private List<KsmKeyLocationInfo> keyLocationList;
+  private List<KsmKeyLocationInfoGroup> keyLocationVersions;
   private final long creationTime;
   private long modificationTime;
 
   private KsmKeyInfo(String volumeName, String bucketName, String keyName,
-      List<KsmKeyLocationInfo> locationInfos, long dataSize, long creationTime,
-      long modificationTime) {
+      List<KsmKeyLocationInfoGroup> versions, long dataSize,
+      long creationTime, long modificationTime) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
     this.dataSize = dataSize;
-    this.keyLocationList = locationInfos;
+    // it is important that the versions are ordered from old to new.
+    // Do this sanity check when versions got loaded on creating KsmKeyInfo.
+    // TODO : this is not necessary, here only because versioning is still a
+    // work in-progress, remove this following check when versioning is
+    // complete and prove correctly functioning
+    long currentVersion = -1;
+    for (KsmKeyLocationInfoGroup version : versions) {
+      Preconditions.checkArgument(
+            currentVersion + 1 == version.getVersion());
+      currentVersion = version.getVersion();
+    }
+    this.keyLocationVersions = versions;
     this.creationTime = creationTime;
     this.modificationTime = modificationTime;
   }
@@ -70,16 +83,64 @@ public final class KsmKeyInfo {
     this.dataSize = size;
   }
 
-  public List<KsmKeyLocationInfo> getKeyLocationList() {
-    return keyLocationList;
+  public synchronized KsmKeyLocationInfoGroup getLatestVersionLocations()
+      throws IOException {
+    return keyLocationVersions.size() == 0? null :
+        keyLocationVersions.get(keyLocationVersions.size() - 1);
+  }
+
+  public List<KsmKeyLocationInfoGroup> getKeyLocationVersions() {
+    return keyLocationVersions;
   }
 
   public void updateModifcationTime() {
     this.modificationTime = Time.monotonicNow();
   }
 
-  public void appendKeyLocation(KsmKeyLocationInfo newLocation) {
-    keyLocationList.add(newLocation);
+  /**
+   * Append a set of blocks to the latest version. Note that these blocks are
+   * part of the latest version, not a new version.
+   *
+   * @param newLocationList the list of new blocks to be added.
+   * @throws IOException
+   */
+  public synchronized void appendNewBlocks(
+      List<KsmKeyLocationInfo> newLocationList) throws IOException {
+    if (keyLocationVersions.size() == 0) {
+      throw new IOException("Appending new block, but no version exist");
+    }
+    KsmKeyLocationInfoGroup currentLatestVersion =
+        keyLocationVersions.get(keyLocationVersions.size() - 1);
+    currentLatestVersion.appendNewBlocks(newLocationList);
+    setModificationTime(Time.now());
+  }
+
+  /**
+   * Add a new set of blocks. The new blocks will be added as appending a new
+   * version to the all version list.
+   *
+   * @param newLocationList the list of new blocks to be added.
+   * @throws IOException
+   */
+  public synchronized long addNewVersion(
+      List<KsmKeyLocationInfo> newLocationList) throws IOException {
+    long latestVersionNum;
+    if (keyLocationVersions.size() == 0) {
+      // no version exist, these blocks are the very first version.
+      keyLocationVersions.add(new KsmKeyLocationInfoGroup(0, newLocationList));
+      latestVersionNum = 0;
+    } else {
+      // it is important that the new version are always at the tail of the list
+      KsmKeyLocationInfoGroup currentLatestVersion =
+          keyLocationVersions.get(keyLocationVersions.size() - 1);
+      // the new version is created based on the current latest version
+      KsmKeyLocationInfoGroup newVersion =
+          currentLatestVersion.generateNextVersion(newLocationList);
+      keyLocationVersions.add(newVersion);
+      latestVersionNum = newVersion.getVersion();
+    }
+    setModificationTime(Time.now());
+    return latestVersionNum;
   }
 
   public long getCreationTime() {
@@ -102,7 +163,7 @@ public final class KsmKeyInfo {
     private String bucketName;
     private String keyName;
     private long dataSize;
-    private List<KsmKeyLocationInfo> ksmKeyLocationInfos;
+    private List<KsmKeyLocationInfoGroup> ksmKeyLocationInfoGroups;
     private long creationTime;
     private long modificationTime;
 
@@ -122,8 +183,8 @@ public final class KsmKeyInfo {
     }
 
     public Builder setKsmKeyLocationInfos(
-        List<KsmKeyLocationInfo> ksmKeyLocationInfoList) {
-      this.ksmKeyLocationInfos = ksmKeyLocationInfoList;
+        List<KsmKeyLocationInfoGroup> ksmKeyLocationInfoList) {
+      this.ksmKeyLocationInfoGroups = ksmKeyLocationInfoList;
       return this;
     }
 
@@ -144,19 +205,23 @@ public final class KsmKeyInfo {
 
     public KsmKeyInfo build() {
       return new KsmKeyInfo(
-          volumeName, bucketName, keyName, ksmKeyLocationInfos,
+          volumeName, bucketName, keyName, ksmKeyLocationInfoGroups,
           dataSize, creationTime, modificationTime);
     }
   }
 
   public KeyInfo getProtobuf() {
+    long latestVersion = keyLocationVersions.size() == 0 ? -1 :
+        keyLocationVersions.get(keyLocationVersions.size() - 1).getVersion();
     return KeyInfo.newBuilder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(dataSize)
-        .addAllKeyLocationList(keyLocationList.stream()
-            .map(KsmKeyLocationInfo::getProtobuf).collect(Collectors.toList()))
+        .addAllKeyLocationList(keyLocationVersions.stream()
+            .map(KsmKeyLocationInfoGroup::getProtobuf)
+            .collect(Collectors.toList()))
+        .setLatestVersion(latestVersion)
         .setCreationTime(creationTime)
         .setModificationTime(modificationTime)
         .build();
@@ -168,7 +233,7 @@ public final class KsmKeyInfo {
         keyInfo.getBucketName(),
         keyInfo.getKeyName(),
         keyInfo.getKeyLocationListList().stream()
-            .map(KsmKeyLocationInfo::getFromProtobuf)
+            .map(KsmKeyLocationInfoGroup::getFromProtobuf)
             .collect(Collectors.toList()),
         keyInfo.getDataSize(),
         keyInfo.getCreationTime(),

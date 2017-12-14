@@ -334,6 +334,7 @@ public class KeySpaceManagerProtocolServerSideTranslatorPB implements
       OpenKeySession openKey = impl.openKey(ksmKeyArgs);
       resp.setKeyInfo(openKey.getKeyInfo().getProtobuf());
       resp.setID(openKey.getId());
+      resp.setOpenVersion(openKey.getOpenVersion());
       resp.setStatus(Status.OK);
     } catch (IOException e) {
       resp.setStatus(exceptionToResponseStatus(e));
