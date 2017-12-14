@@ -986,23 +986,22 @@ public class MapFile {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     MapFile.Reader reader = null;
-    MapFile.Writer writer = null;
     try {
       reader = new MapFile.Reader(fs, in, conf);
-      writer =
-        new MapFile.Writer(conf, fs, out,
-            reader.getKeyClass().asSubclass(WritableComparable.class),
-            reader.getValueClass());
-
       WritableComparable<?> key = ReflectionUtils.newInstance(
           reader.getKeyClass().asSubclass(WritableComparable.class), conf);
       Writable value = ReflectionUtils.newInstance(reader.getValueClass()
         .asSubclass(Writable.class), conf);
 
-      while (reader.next(key, value))               // copy all entries
-        writer.append(key, value);
+      try (MapFile.Writer writer = new MapFile.Writer(conf, fs, out,
+            reader.getKeyClass().asSubclass(WritableComparable.class),
+            reader.getValueClass())) {
+        while (reader.next(key, value)) {             // copy all entries
+          writer.append(key, value);
+        }
+      }
     } finally {
-      IOUtils.cleanupWithLogger(LOG, writer, reader);
+      IOUtils.cleanupWithLogger(LOG, reader);
     }
   }
 }
