@@ -360,8 +360,11 @@ extends AMRMClientAsync<T> {
           }
 
           if (!response.getContainersFromPreviousAttempts().isEmpty()) {
-            handler.onContainersReceivedFromPreviousAttempts(
-                response.getContainersFromPreviousAttempts());
+            if (handler instanceof AMRMClientAsync.AbstractCallbackHandler) {
+              ((AMRMClientAsync.AbstractCallbackHandler) handler)
+                  .onContainersReceivedFromPreviousAttempts(
+                      response.getContainersFromPreviousAttempts());
+            }
           }
           progress = handler.getProgress();
         } catch (Throwable ex) {
