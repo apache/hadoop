@@ -12,6 +12,9 @@ Release 2.7.6 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-12881. Output streams closed with IOUtils suppressing write errors.
+    (Ajay Kumar via jlowe)
+
 Release 2.7.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
