@@ -376,7 +376,7 @@
     </test>
 
     <test>
-      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
+      <description>getPolicy : get EC policy information at specified path, which has an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
@@ -394,7 +394,7 @@
     </test>
 
     <test>
-      <description>getPolicy : get EC policy information at specified path, which doesn't have an EC policy</description>
+      <description>getPolicy : get EC policy information at specified path, which has an EC policy</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
         <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
