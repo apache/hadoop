@@ -15,7 +15,7 @@ Release 2.7.6 - UNRELEASED
     MAPREDUCE-5124. AM lacks flow control for task events. (Peter Bacsko via
     jlowe)
 
-Release 2.7.5 - UNRELEASED
+Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
 

@@ -12,7 +12,7 @@ Release 2.7.6 - UNRELEASED
 
   BUG FIXES
 
-Release 2.7.5 - UNRELEASED
+Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
 
