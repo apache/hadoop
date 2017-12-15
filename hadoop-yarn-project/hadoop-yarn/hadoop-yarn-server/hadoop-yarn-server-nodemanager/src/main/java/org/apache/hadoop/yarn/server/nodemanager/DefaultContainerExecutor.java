@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.util.Shell.ExitCodeException;
@@ -314,15 +313,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     }
 
     public void writeLocalWrapperScript(Path launchDst, Path pidFile) throws IOException {
-      DataOutputStream out = null;
-      PrintStream pout = null;
-
-      try {
-        out = lfs.create(wrapperScriptPath, EnumSet.of(CREATE, OVERWRITE));
-        pout = new PrintStream(out, false, "UTF-8");
+      try (DataOutputStream out =
+               lfs.create(wrapperScriptPath, EnumSet.of(CREATE, OVERWRITE));
+           PrintStream pout =
+               new PrintStream(out, false, "UTF-8")) {
         writeLocalWrapperScript(launchDst, pidFile, pout);
-      } finally {
-        IOUtils.cleanup(LOG, pout, out);
       }
     }
 
@@ -368,11 +363,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
     private void writeSessionScript(Path launchDst, Path pidFile)
         throws IOException {
-      DataOutputStream out = null;
-      PrintStream pout = null;
-      try {
-        out = lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
-        pout = new PrintStream(out, false, "UTF-8");
+      try (DataOutputStream out =
+               lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
+           PrintStream pout =
+               new PrintStream(out, false, "UTF-8")) {
         // We need to do a move as writing to a file is not atomic
         // Process reading a file being written to may get garbled data
         // hence write pid to tmp file first followed by a mv
@@ -383,8 +377,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         String exec = Shell.isSetsidAvailable? "exec setsid" : "exec";
         pout.println(exec + " /bin/bash \"" +
             launchDst.toUri().getPath().toString() + "\"");
-      } finally {
-        IOUtils.cleanup(LOG, pout, out);
       }
       lfs.setPermission(sessionScriptPath,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
