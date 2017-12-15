@@ -220,11 +220,14 @@ Below are the details about each command.
 Limitations
 -----------
 
-Certain HDFS file write operations, i.e., `hflush`, `hsync` and `append`,
+Certain HDFS operations, i.e., `hflush`, `hsync`, `concat`, `setReplication`, `truncate` and `append`,
 are not supported on erasure coded files due to substantial technical
 challenges.
 
-* `append()` on an erasure coded file will throw `IOException`.
+* `append()` and `truncate()` on an erasure coded file will throw `IOException`.
+* `concat()` will throw `IOException` if files are mixed with different erasure
+coding policies or with replicated files.
+* `setReplication()` is no-op on erasure coded files.
 * `hflush()` and `hsync()` on `DFSStripedOutputStream` are no-op. Thus calling
 `hflush()` or `hsync()` on an erasure coded file can not guarantee data
 being persistent.
