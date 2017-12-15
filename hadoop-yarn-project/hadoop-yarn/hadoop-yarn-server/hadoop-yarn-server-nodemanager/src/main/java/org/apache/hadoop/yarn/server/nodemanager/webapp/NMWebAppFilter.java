@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-
+import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.servlet.FilterChain;
@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import com.google.inject.Injector;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.http.NameValuePair;
 
 @Singleton
 public class NMWebAppFilter extends GuiceContainer{
@@ -93,8 +94,24 @@ public class NMWebAppFilter extends GuiceContainer{
         ApplicationId appId =
             containerId.getApplicationAttemptId().getApplicationId();
         Application app = nmContext.getApplications().get(appId);
+
+        boolean fetchAggregatedLog = false;
+        List<NameValuePair> params = WebAppUtils.getURLEncodedQueryParam(
+            request);
+        if (params != null) {
+          for (NameValuePair param : params) {
+            if (param.getName().equals(ContainerLogsPage
+                .LOG_AGGREGATION_TYPE)) {
+              if (param.getValue().equals(ContainerLogsPage
+                  .LOG_AGGREGATION_REMOTE_TYPE)) {
+                fetchAggregatedLog = true;
+              }
+            }
+          }
+        }
+
         Configuration nmConf = nmContext.getLocalDirsHandler().getConfig();
-        if (app == null
+        if ((app == null || fetchAggregatedLog)
             && nmConf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
               YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
           String logServerUrl =

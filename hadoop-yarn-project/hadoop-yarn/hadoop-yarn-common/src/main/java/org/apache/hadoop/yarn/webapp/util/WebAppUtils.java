@@ -499,6 +499,27 @@ public class WebAppUtils {
   }
 
   /**
+   * Get a query string.
+   * @param request HttpServletRequest with the request details
+   * @return the query parameter string
+  */
+  public static List<NameValuePair> getURLEncodedQueryParam(
+      HttpServletRequest request) {
+    String queryString = request.getQueryString();
+    if (queryString != null && !queryString.isEmpty()) {
+      String reqEncoding = request.getCharacterEncoding();
+      if (reqEncoding == null || reqEncoding.isEmpty()) {
+        reqEncoding = "ISO-8859-1";
+      }
+      Charset encoding = Charset.forName(reqEncoding);
+      List<NameValuePair> params = URLEncodedUtils.parse(queryString,
+          encoding);
+      return params;
+    }
+    return null;
+  }
+
+  /**
     * Get a query string which removes the passed parameter.
     * @param httpRequest HttpServletRequest with the request details
     * @param parameterName the query parameters must be removed
