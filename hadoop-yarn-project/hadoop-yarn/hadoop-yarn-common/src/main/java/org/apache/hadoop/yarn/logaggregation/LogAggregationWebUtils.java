@@ -121,4 +121,34 @@ public final class LogAggregationWebUtils {
     }
     return appOwner;
   }
+
+  /**
+   * Parse log start time from html.
+   * @param startStr the start time string
+   * @return the startIndex
+   */
+  public static long getLogStartTime(String startStr)
+      throws NumberFormatException {
+    long start = 0;
+
+    if (startStr != null && !startStr.isEmpty()) {
+      start = Long.parseLong(startStr);
+    }
+    return start;
+  }
+
+  /**
+   * Parse log end time from html.
+   * @param endStr the end time string
+   * @return the endIndex
+   */
+  public static long getLogEndTime(String endStr)
+      throws NumberFormatException {
+    long end = Long.MAX_VALUE;
+
+    if (endStr != null && !endStr.isEmpty()) {
+      end = Long.parseLong(endStr);
+    }
+    return end;
+  }
 }

@@ -85,6 +85,8 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
     ContainerId containerId = params.getContainerId();
     long start = params.getStartIndex();
     long end = params.getEndIndex();
+    long startTime = params.getStartTime();
+    long endTime = params.getEndTime();
 
     boolean foundLog = false;
     String desiredLogType = $(CONTAINER_LOG_TYPE);
@@ -107,6 +109,9 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
             continue;
           }
           long logUploadedTime = thisNodeFile.getModificationTime();
+          if (logUploadedTime < startTime || logUploadedTime > endTime) {
+            continue;
+          }
           reader = new AggregatedLogFormat.LogReader(
               conf, thisNodeFile.getPath());
 
@@ -138,7 +143,7 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
           }
 
           foundLog = readContainerLogs(html, logReader, start, end,
-              desiredLogType, logUploadedTime);
+              desiredLogType, logUploadedTime, startTime, endTime);
         } catch (IOException ex) {
           LOG.error("Error getting logs for " + logEntity, ex);
           continue;
@@ -165,8 +170,8 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
 
   private boolean readContainerLogs(Block html,
       AggregatedLogFormat.ContainerLogsReader logReader, long startIndex,
-      long endIndex, String desiredLogType, long logUpLoadTime)
-      throws IOException {
+      long endIndex, String desiredLogType, long logUpLoadTime,
+      long startTime, long endTime) throws IOException {
     int bufferSize = 65536;
     char[] cbuf = new char[bufferSize];
 
@@ -199,7 +204,8 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
           html.p().__("Showing " + toRead + " bytes of " + logLength
             + " total. Click ").a(url("logs", $(NM_NODENAME), $(CONTAINER_ID),
                 $(ENTITY_STRING), $(APP_OWNER),
-                logType, "?start=0"), "here").
+                logType, "?start=0&start.time=" + startTime
+                + "&end.time=" + endTime), "here").
             __(" for the full log.").__();
         }
 
