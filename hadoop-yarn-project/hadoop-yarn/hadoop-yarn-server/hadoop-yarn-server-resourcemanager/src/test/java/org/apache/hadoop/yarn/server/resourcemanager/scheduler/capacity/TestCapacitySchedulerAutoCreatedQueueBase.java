@@ -184,7 +184,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
-    setupQueueMappings(conf, PARENT_QUEUE, true, new int[] {0, 1, 2, 3});
+    setupQueueMappings(conf, PARENT_QUEUE, true, new int[] { 0, 1, 2, 3 });
 
     dispatcher = new SpyDispatcher();
     rmAppEventEventHandler = new SpyDispatcher.SpyRMAppEventHandler();
@@ -233,8 +233,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     queuePlacementRules.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings = conf
-        .getQueueMappings();
+    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings =
+        conf.getQueueMappings();
 
     //set queue mapping
     List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
@@ -244,8 +244,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
       UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
           new UserGroupMappingPlacementRule.QueueMapping(
               UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-              USER + userIds[i], getQueueMapping(parentQueue, USER +
-              userIds[i]));
+              USER + userIds[i],
+              getQueueMapping(parentQueue, USER + userIds[i]));
       queueMappings.add(userQueueMapping);
     }
 
@@ -437,34 +437,6 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     ((CapacityScheduler) newMockRM.getResourceScheduler()).start();
     setupNodes(newMockRM);
     return newMockRM;
-  }
-
-  protected void checkQueueCapacities(CapacityScheduler newCS, float capacityC,
-      float capacityD) {
-    CSQueue rootQueue = newCS.getRootQueue();
-    CSQueue queueC = tcs.findQueue(rootQueue, C);
-    CSQueue queueD = tcs.findQueue(rootQueue, D);
-    CSQueue queueC1 = tcs.findQueue(queueC, C1);
-    CSQueue queueC2 = tcs.findQueue(queueC, C2);
-    CSQueue queueC3 = tcs.findQueue(queueC, C3);
-
-    float capC = capacityC / 100.0f;
-    float capD = capacityD / 100.0f;
-
-    tcs.checkQueueCapacity(queueC, capC, capC, 1.0f, 1.0f);
-    tcs.checkQueueCapacity(queueD, capD, capD, 1.0f, 1.0f);
-    tcs.checkQueueCapacity(queueC1, C1_CAPACITY / 100.0f,
-        (C1_CAPACITY / 100.0f) * capC, 1.0f, 1.0f);
-    tcs.checkQueueCapacity(queueC2, C2_CAPACITY / 100.0f,
-        (C2_CAPACITY / 100.0f) * capC, 1.0f, 1.0f);
-
-    if (queueC3 != null) {
-      ManagedParentQueue parentQueue = (ManagedParentQueue) queueC;
-      QueueCapacities cap =
-          parentQueue.getLeafQueueTemplate().getQueueCapacities();
-      tcs.checkQueueCapacity(queueC3, cap.getCapacity(),
-          (cap.getCapacity()) * capC, 1.0f, 1.0f);
-    }
   }
 
   static String getQueueMapping(String parentQueue, String leafQueue) {
