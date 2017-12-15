@@ -1795,7 +1795,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           "testVar", "version${foo}" );
       List<String> commands = new ArrayList<String>();
       DefaultContainerExecutor executor = new DefaultContainerExecutor();
-      executor.setConf(new Configuration());
+      Configuration execConf = new Configuration();
+      execConf.setBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO, false);
+      executor.setConf(execConf);
       executor.writeLaunchEnv(fos, env, resources, commands,
           new Path(localLogDir.getAbsolutePath()), user);
       fos.flush();
