@@ -299,6 +299,24 @@
     </test>
 
     <test>
+      <description>setPolicy : set policy on non-empty directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Warning: setting erasure coding policy on an non-empty directory will not automatically convert existing data to RS-6-3-1024</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>unsetPolicy : unset inherited EC policy, has no effect</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
@@ -317,6 +335,25 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>RS-6-3-1024k</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>unsetPolicy : unset policy on non-empty directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -policy RS-6-3-1024k -path /ecdir</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <ec-admin-command>-fs NAMENODE -unsetPolicy -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Warning: unsetting erasure coding policy on an non-empty directory will not automatically convert existing data to replicated data</expected-output>
         </comparator>
       </comparators>
     </test>
