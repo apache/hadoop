@@ -66,6 +66,8 @@ The `CapacityScheduler` supports the following features:
 
 * **Absolute Resource Configuration** - Administrators could specify absolute resources to a queue instead of providing percentage based values. This provides better control for admins to configure required amount of resources for a given queue.
 
+* **Dynamic Auto-Creation and Management of Leaf Queues** - This feature supports auto-creation of **leaf queues** in conjunction with **queue-mapping** which currently supports **user-group** based queue mappings for application placement to a queue. The scheduler also supports capacity management for these queues based on a policy configured on the parent queue.
+
 Configuration
 -------------
 
@@ -273,6 +275,92 @@ The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierach
 | `yarn.scheduler.capacity.<queue-path>.average-capacity` | *Optional* parameter: the average allowed capacity which will aggregated over the *ReservationWindow* in percentage (%) as a float that the `SharingPolicy` allows a single user to reserve. The default value is 1, i.e. 100%. |
 | `yarn.scheduler.capacity.<queue-path>.reservation-planner` | *Optional* parameter: the class name that will be used to determine the implementation of the *Planner*  which will be invoked if the `Plan` capacity fall below (due to scheduled maintenance or node failuers) the user reserved resources. The default value is *org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.SimpleCapacityReplanner* which scans the `Plan` and greedily removes reservations in reversed order of acceptance (LIFO) till the reserved resources are within the `Plan` capacity |
 | `yarn.scheduler.capacity.<queue-path>.reservation-enforcement-window` | *Optional* parameter representing the time in milliseconds for which the `Planner` will validate if the constraints in the Plan are satisfied. Long value expected. The default value is one hour. |
+
+###Dynamic Auto-Creation and Management of Leaf Queues
+
+The `CapacityScheduler` supports auto-creation of **leaf queues** under parent queues which have been configured to enable this feature.
+
+  * Setup for dynamic auto-created leaf queues through queue mapping
+
+  **user-group queue mapping(s)** listed in `yarn.scheduler.capacity.queue-mappings` need to specify an additional parent queue parameter to
+  identify which parent queue the auto-created leaf queues need to be created
+   under. Refer above `Queue Mapping based on User or Group` section for more
+    details. Please note that such parent queues also need to enable
+    auto-creation of child queues as mentioned in `Parent queue configuration
+     for dynamic leaf queue creation and management` section below
+
+Example:
+
+```
+ <property>
+   <name>yarn.scheduler.capacity.queue-mappings</name>
+   <value>u:user1:queue1,g:group1:queue2,u:user2:%primary_group,u:%user:parent1.%user</value>
+   <description>
+     Here, u:%user:parent1.%user mapping allows any <user> other than user1,
+     user2 to be mapped to its own user specific leaf queue which
+     will be auto-created under <parent1>.
+   </description>
+ </property>
+```
+
+ * Parent queue configuration for dynamic leaf queue auto-creation and management
+
+The `Dynamic Queue Auto-Creation and Management` feature is integrated with the
+`CapacityScheduler` queue hierarchy and can be configured for a **ParentQueue** currently to auto-create leaf queues. Such parent queues do not
+support other pre-configured queues to co-exist along with auto-created queues. The `CapacityScheduler` supports the following parameters to enable auto-creation of queues
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.enabled` | *Mandatory* parameter: Indicates to the `CapacityScheduler` that auto leaf queue creation needs to be enabled for the specified parent queue.  Boolean value expected. The default value is *false*, i.e. auto leaf queue creation is not enabled in *ParentQueue* by default. |
+| `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.management-policy` | *Optional* parameter: the class name that will be used to determine the implementation of the `AutoCreatedQueueManagementPolicy`  which will manage leaf queues and their capacities dynamically under this parent queue. The default value is *org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy*. Users or groups might submit applications to the auto-created leaf queues for a limited time and stop using them. Hence there could be more number of leaf queues auto-created under the parent queue than its guaranteed capacity. The current policy implementation allots either configured or zero capacity on a **best-effort** basis based on availability of capacity on the parent queue and the application submission order across leaf queues. |
+
+
+* Configuring `Auto-Created Leaf Queues` with `CapacityScheduler`
+
+The parent queue which has been enabled for auto leaf queue creation,supports
+ the configuration of template parameters for automatic configuration of the auto-created leaf queues. The auto-created queues support all of the
+ leaf queue configuration parameters except for **Queue ACL**, **Absolute
+ Resource** configurations and **Node Labels**. Queue ACLs and Node Labels are
+ currently inherited from the parent queue i.e they are not configurable on the leaf queue template
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.capacity` | *Mandatory* parameter: Specifies the minimum guaranteed capacity for the  auto-created leaf queues. Currently *Absolute Resource* configurations are not supported on auto-created leaf queues |
+| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.<leaf-queue-property>` |  *Optional* parameter: For other queue parameters that can be configured on auto-created leaf queues like maximum-capacity, user-limit-factor, maximum-am-resource-percent ...  - Refer **Queue Properties** section |
+
+Example:
+
+```
+ <property>
+   <name>yarn.scheduler.capacity.root.parent1.auto-create-child-queue.enabled</name>
+   <value>true</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.capacity</name>
+    <value>5</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.maximum-capacity</name>
+    <value>100</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.user-limit-factor</name>
+    <value>3.0</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.ordering-policy</name>
+    <value>fair</value>
+ </property>
+```
+
+* Scheduling Edit Policy configuration for auto-created queue management
+
+Admins need to specify an additional `org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementDynamicEditPolicy` scheduling edit policy to the
+list of current scheduling edit policies as a comma separated string in `yarn.resourcemanager.scheduler.monitor.policies` configuration. For more details, refer `Capacity Scheduler container preemption` section above
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.resourcemanager.monitor.capacity.queue-management.monitoring-interval` | Time in milliseconds between invocations of this QueueManagementDynamicEditPolicy policy. Default value is 1500 |
 
 ###Other Properties
 
