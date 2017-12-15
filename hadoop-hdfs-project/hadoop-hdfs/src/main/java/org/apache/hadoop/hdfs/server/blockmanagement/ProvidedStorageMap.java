@@ -294,6 +294,7 @@ public class ProvidedStorageMap {
 
     @Override
     LocatedBlocks build(DatanodeDescriptor client) {
+      // TODO choose provided locations close to the client.
       return new LocatedBlocks(
           flen, isUC, blocks, last, lastComplete, feInfo, ecPolicy);
     }
@@ -333,7 +334,6 @@ public class ProvidedStorageMap {
         DatanodeDescriptor dn, DatanodeStorage s) {
       dns.put(dn.getDatanodeUuid(), dn);
       dnR.add(dn);
-      // TODO: maintain separate RPC ident per dn
       return storageMap.get(s.getStorageID());
     }
 
@@ -522,7 +522,7 @@ public class ProvidedStorageMap {
 
     @Override
     public int getNumberOfBlocks() {
-      // VERIFY: only printed for debugging
+      // is ignored for ProvidedBlockList.
       return -1;
     }
 

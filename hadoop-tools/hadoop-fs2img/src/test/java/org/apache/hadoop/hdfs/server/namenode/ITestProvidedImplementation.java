@@ -84,19 +84,22 @@ import static org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRe
 import static org.apache.hadoop.net.NodeBase.PATH_SEPARATOR_STR;
 import static org.junit.Assert.*;
 
-public class TestNameNodeProvidedImplementation {
+/**
+ * Integration tests for the Provided implementation.
+ */
+public class ITestProvidedImplementation {
 
   @Rule public TestName name = new TestName();
   public static final Logger LOG =
-      LoggerFactory.getLogger(TestNameNodeProvidedImplementation.class);
+      LoggerFactory.getLogger(ITestProvidedImplementation.class);
 
-  final Random r = new Random();
-  final File fBASE = new File(MiniDFSCluster.getBaseDirectory());
-  final Path BASE = new Path(fBASE.toURI().toString());
-  final Path NAMEPATH = new Path(BASE, "providedDir");
-  final Path NNDIRPATH = new Path(BASE, "nnDir");
-  final String SINGLEUSER = "usr1";
-  final String SINGLEGROUP = "grp1";
+  private final Random r = new Random();
+  private final File fBASE = new File(MiniDFSCluster.getBaseDirectory());
+  private final Path pBASE = new Path(fBASE.toURI().toString());
+  private final Path providedPath = new Path(pBASE, "providedDir");
+  private final Path nnDirPath = new Path(pBASE, "nnDir");
+  private final String singleUser = "usr1";
+  private final String singleGroup = "grp1";
   private final int numFiles = 10;
   private final String filePrefix = "file";
   private final String fileSuffix = ".dat";
@@ -104,8 +107,8 @@ public class TestNameNodeProvidedImplementation {
   private long providedDataSize = 0;
   private final String bpid = "BP-1234-10.1.1.1-1224";
 
-  Configuration conf;
-  MiniDFSCluster cluster;
+  private Configuration conf;
+  private MiniDFSCluster cluster;
 
   @Before
   public void setSeed() throws Exception {
@@ -116,8 +119,8 @@ public class TestNameNodeProvidedImplementation {
     r.setSeed(seed);
     System.out.println(name.getMethodName() + " seed: " + seed);
     conf = new HdfsConfiguration();
-    conf.set(SingleUGIResolver.USER, SINGLEUSER);
-    conf.set(SingleUGIResolver.GROUP, SINGLEGROUP);
+    conf.set(SingleUGIResolver.USER, singleUser);
+    conf.set(SingleUGIResolver.GROUP, singleGroup);
 
     conf.set(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID,
         DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT);
@@ -126,28 +129,28 @@ public class TestNameNodeProvidedImplementation {
     conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         TextFileRegionAliasMap.class, BlockAliasMap.class);
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR,
-        NNDIRPATH.toString());
+        nnDirPath.toString());
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE,
-        new Path(NNDIRPATH, fileNameFromBlockPoolID(bpid)).toString());
+        new Path(nnDirPath, fileNameFromBlockPoolID(bpid)).toString());
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER, ",");
 
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR_PROVIDED,
-        new File(NAMEPATH.toUri()).toString());
-    File imageDir = new File(NAMEPATH.toUri());
+        new File(providedPath.toUri()).toString());
+    File imageDir = new File(providedPath.toUri());
     if (!imageDir.exists()) {
       LOG.info("Creating directory: " + imageDir);
       imageDir.mkdirs();
     }
 
-    File nnDir = new File(NNDIRPATH.toUri());
+    File nnDir = new File(nnDirPath.toUri());
     if (!nnDir.exists()) {
       nnDir.mkdirs();
     }
 
-    // create 10 random files under BASE
+    // create 10 random files under pBASE
     for (int i=0; i < numFiles; i++) {
       File newFile = new File(
-          new Path(NAMEPATH, filePrefix + i + fileSuffix).toUri());
+          new Path(providedPath, filePrefix + i + fileSuffix).toUri());
       if(!newFile.exists()) {
         try {
           LOG.info("Creating " + newFile.toString());
@@ -244,9 +247,9 @@ public class TestNameNodeProvidedImplementation {
   @Test(timeout=20000)
   public void testLoadImage() throws Exception {
     final long seed = r.nextLong();
-    LOG.info("NAMEPATH: " + NAMEPATH);
-    createImage(new RandomTreeWalk(seed), NNDIRPATH, FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 0,
+    LOG.info("providedPath: " + providedPath);
+    createImage(new RandomTreeWalk(seed), nnDirPath, FixedBlockResolver.class);
+    startCluster(nnDirPath, 0,
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
         false);
 
@@ -260,8 +263,8 @@ public class TestNameNodeProvidedImplementation {
                    hs.getPath().toUri().getPath());
       assertEquals(rs.getPermission(), hs.getPermission());
       assertEquals(rs.getLen(), hs.getLen());
-      assertEquals(SINGLEUSER, hs.getOwner());
-      assertEquals(SINGLEGROUP, hs.getGroup());
+      assertEquals(singleUser, hs.getOwner());
+      assertEquals(singleGroup, hs.getGroup());
       assertEquals(rs.getAccessTime(), hs.getAccessTime());
       assertEquals(rs.getModificationTime(), hs.getModificationTime());
     }
@@ -271,10 +274,10 @@ public class TestNameNodeProvidedImplementation {
   public void testProvidedReporting() throws Exception {
     conf.setClass(ImageWriter.Options.UGI_CLASS,
         SingleUGIResolver.class, UGIResolver.class);
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     int numDatanodes = 10;
-    startCluster(NNDIRPATH, numDatanodes,
+    startCluster(nnDirPath, numDatanodes,
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
         false);
     long diskCapacity = 1000;
@@ -350,10 +353,10 @@ public class TestNameNodeProvidedImplementation {
   public void testDefaultReplication() throws Exception {
     int targetReplication = 2;
     conf.setInt(FixedBlockMultiReplicaResolver.REPLICATION, targetReplication);
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockMultiReplicaResolver.class);
     // make the last Datanode with only DISK
-    startCluster(NNDIRPATH, 3, null,
+    startCluster(nnDirPath, 3, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.PROVIDED, StorageType.DISK},
@@ -364,15 +367,10 @@ public class TestNameNodeProvidedImplementation {
 
     FileSystem fs = cluster.getFileSystem();
     int count = 0;
-    for (TreePath e : new FSTreeWalk(NAMEPATH, conf)) {
+    for (TreePath e : new FSTreeWalk(providedPath, conf)) {
       FileStatus rs = e.getFileStatus();
-      Path hp = removePrefix(NAMEPATH, rs.getPath());
-      LOG.info("hp " + hp.toUri().getPath());
-      //skip HDFS specific files, which may have been created later on.
-      if (hp.toString().contains("in_use.lock")
-          || hp.toString().contains("current")) {
-        continue;
-      }
+      Path hp = removePrefix(providedPath, rs.getPath());
+      LOG.info("path: " + hp.toUri().getPath());
       e.accept(count++);
       assertTrue(fs.exists(hp));
       FileStatus hs = fs.getFileStatus(hp);
@@ -383,7 +381,7 @@ public class TestNameNodeProvidedImplementation {
         int i = 0;
         for(; i < bl.length; i++) {
           int currentRep = bl[i].getHosts().length;
-          assertEquals(targetReplication , currentRep);
+          assertEquals(targetReplication, currentRep);
         }
       }
     }
@@ -411,15 +409,10 @@ public class TestNameNodeProvidedImplementation {
     FileSystem fs = cluster.getFileSystem();
     int count = 0;
     // read NN metadata, verify contents match
-    for (TreePath e : new FSTreeWalk(NAMEPATH, conf)) {
+    for (TreePath e : new FSTreeWalk(providedPath, conf)) {
       FileStatus rs = e.getFileStatus();
-      Path hp = removePrefix(NAMEPATH, rs.getPath());
-      LOG.info("hp " + hp.toUri().getPath());
-      //skip HDFS specific files, which may have been created later on.
-      if(hp.toString().contains("in_use.lock")
-          || hp.toString().contains("current")) {
-        continue;
-      }
+      Path hp = removePrefix(providedPath, rs.getPath());
+      LOG.info("path: " + hp.toUri().getPath());
       e.accept(count++);
       assertTrue(fs.exists(hp));
       FileStatus hs = fs.getFileStatus(hp);
@@ -462,7 +455,7 @@ public class TestNameNodeProvidedImplementation {
   private BlockLocation[] createFile(Path path, short replication,
       long fileLen, long blockLen) throws IOException {
     FileSystem fs = cluster.getFileSystem();
-    //create a sample file that is not provided
+    // create a file that is not provided
     DFSTestUtil.createFile(fs, path, false, (int) blockLen,
         fileLen, blockLen, replication, 0, true);
     return fs.getFileBlockLocations(path, 0, fileLen);
@@ -471,7 +464,7 @@ public class TestNameNodeProvidedImplementation {
   @Test(timeout=30000)
   public void testClusterWithEmptyImage() throws IOException {
     // start a cluster with 2 datanodes without any provided storage
-    startCluster(NNDIRPATH, 2, null,
+    startCluster(nnDirPath, 2, null,
         new StorageType[][] {
             {StorageType.DISK},
             {StorageType.DISK}},
@@ -518,10 +511,10 @@ public class TestNameNodeProvidedImplementation {
    */
   @Test(timeout=50000)
   public void testSetReplicationForProvidedFiles() throws Exception {
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     // 10 Datanodes with both DISK and PROVIDED storage
-    startCluster(NNDIRPATH, 10,
+    startCluster(nnDirPath, 10,
         new StorageType[]{
             StorageType.PROVIDED, StorageType.DISK},
         null,
@@ -559,9 +552,9 @@ public class TestNameNodeProvidedImplementation {
 
   @Test(timeout=30000)
   public void testProvidedDatanodeFailures() throws Exception {
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
             FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 3, null,
+    startCluster(nnDirPath, 3, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.PROVIDED, StorageType.DISK},
@@ -581,23 +574,23 @@ public class TestNameNodeProvidedImplementation {
       // 2 locations returned as there are 2 PROVIDED datanodes
       DatanodeInfo[] dnInfos =
           getAndCheckBlockLocations(client, filename, baseFileLen, 1, 2);
-      //the location should be one of the provided DNs available
+      // the location should be one of the provided DNs available
       assertTrue(
           dnInfos[0].getDatanodeUuid().equals(
               providedDatanode1.getDatanodeUuid())
           || dnInfos[0].getDatanodeUuid().equals(
               providedDatanode2.getDatanodeUuid()));
 
-      //stop the 1st provided datanode
+      // stop the 1st provided datanode
       MiniDFSCluster.DataNodeProperties providedDNProperties1 =
           cluster.stopDataNode(0);
 
-      //make NameNode detect that datanode is down
+      // make NameNode detect that datanode is down
       BlockManagerTestUtil.noticeDeadDatanode(
           cluster.getNameNode(),
           providedDatanode1.getDatanodeId().getXferAddr());
 
-      //should find the block on the 2nd provided datanode
+      // should find the block on the 2nd provided datanode
       dnInfos = getAndCheckBlockLocations(client, filename, baseFileLen, 1, 1);
       assertEquals(providedDatanode2.getDatanodeUuid(),
           dnInfos[0].getDatanodeUuid());
@@ -614,15 +607,15 @@ public class TestNameNodeProvidedImplementation {
       // BR count for the provided ProvidedDatanodeStorageInfo should reset to
       // 0, when all DNs with PROVIDED storage fail.
       assertEquals(0, providedDNInfo.getBlockReportCount());
-      //restart the provided datanode
+      // restart the provided datanode
       cluster.restartDataNode(providedDNProperties1, true);
       cluster.waitActive();
 
       assertEquals(1, providedDNInfo.getBlockReportCount());
 
-      //should find the block on the 1st provided datanode now
+      // should find the block on the 1st provided datanode now
       dnInfos = getAndCheckBlockLocations(client, filename, baseFileLen, 1, 1);
-      //not comparing UUIDs as the datanode can now have a different one.
+      // not comparing UUIDs as the datanode can now have a different one.
       assertEquals(providedDatanode1.getDatanodeId().getXferAddr(),
           dnInfos[0].getXferAddr());
     }
@@ -630,10 +623,10 @@ public class TestNameNodeProvidedImplementation {
 
   @Test(timeout=300000)
   public void testTransientDeadDatanodes() throws Exception {
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
             FixedBlockResolver.class);
     // 3 Datanodes, 2 PROVIDED and other DISK
-    startCluster(NNDIRPATH, 3, null,
+    startCluster(nnDirPath, 3, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.PROVIDED, StorageType.DISK},
@@ -668,10 +661,10 @@ public class TestNameNodeProvidedImplementation {
 
   @Test(timeout=30000)
   public void testNamenodeRestart() throws Exception {
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     // 3 Datanodes, 2 PROVIDED and other DISK
-    startCluster(NNDIRPATH, 3, null,
+    startCluster(nnDirPath, 3, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.PROVIDED, StorageType.DISK},
@@ -696,7 +689,7 @@ public class TestNameNodeProvidedImplementation {
         cluster.getConfiguration(0));
     if (fileIndex < numFiles && fileIndex >= 0) {
       String filename = filePrefix + fileIndex + fileSuffix;
-      File file = new File(new Path(NAMEPATH, filename).toUri());
+      File file = new File(new Path(providedPath, filename).toUri());
       long fileLen = file.length();
       long blockSize = conf.getLong(FixedBlockResolver.BLOCKSIZE,
           FixedBlockResolver.BLOCKSIZE_DEFAULT);
@@ -710,10 +703,10 @@ public class TestNameNodeProvidedImplementation {
   @Test(timeout=30000)
   public void testSetClusterID() throws Exception {
     String clusterID = "PROVIDED-CLUSTER";
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class, clusterID, TextFileRegionAliasMap.class);
     // 2 Datanodes, 1 PROVIDED and other DISK
-    startCluster(NNDIRPATH, 2, null,
+    startCluster(nnDirPath, 2, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.DISK}},
@@ -726,10 +719,10 @@ public class TestNameNodeProvidedImplementation {
   public void testNumberOfProvidedLocations() throws Exception {
     // set default replication to 4
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 4);
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     // start with 4 PROVIDED location
-    startCluster(NNDIRPATH, 4,
+    startCluster(nnDirPath, 4,
         new StorageType[]{
             StorageType.PROVIDED, StorageType.DISK},
         null,
@@ -759,10 +752,10 @@ public class TestNameNodeProvidedImplementation {
     conf.setLong(FixedBlockResolver.BLOCKSIZE, baseFileLen/10);
     // set default replication to 4
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 4);
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     // start with 4 PROVIDED location
-    startCluster(NNDIRPATH, 4,
+    startCluster(nnDirPath, 4,
         new StorageType[]{
             StorageType.PROVIDED, StorageType.DISK},
         null,
@@ -795,15 +788,15 @@ public class TestNameNodeProvidedImplementation {
     levelDBAliasMapServer.setConf(conf);
     levelDBAliasMapServer.start();
 
-    createImage(new FSTreeWalk(NAMEPATH, conf),
-        NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf),
+        nnDirPath,
         FixedBlockResolver.class, "",
         InMemoryLevelDBAliasMapClient.class);
     levelDBAliasMapServer.close();
 
     // start cluster with two datanodes,
     // each with 1 PROVIDED volume and other DISK volume
-    startCluster(NNDIRPATH, 2,
+    startCluster(nnDirPath, 2,
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
         null, false);
     verifyFileSystemContents();
@@ -841,9 +834,9 @@ public class TestNameNodeProvidedImplementation {
 
   @Test
   public void testDatanodeLifeCycle() throws Exception {
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
-    startCluster(NNDIRPATH, 3,
+    startCluster(nnDirPath, 3,
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
         null, false);
 
@@ -915,7 +908,7 @@ public class TestNameNodeProvidedImplementation {
         "BlockPlacementPolicyRackFaultTolerant",
         "BlockPlacementPolicyWithNodeGroup",
         "BlockPlacementPolicyWithUpgradeDomain"};
-    createImage(new FSTreeWalk(NAMEPATH, conf), NNDIRPATH,
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     String[] racks =
         {"/pod0/rack0", "/pod0/rack0", "/pod0/rack1", "/pod0/rack1",
@@ -923,7 +916,7 @@ public class TestNameNodeProvidedImplementation {
     for (String policy: policies) {
       LOG.info("Using policy: " + packageName + "." + policy);
       conf.set(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, packageName + "." + policy);
-      startCluster(NNDIRPATH, racks.length,
+      startCluster(nnDirPath, racks.length,
           new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
           null, false, racks);
       verifyFileSystemContents();

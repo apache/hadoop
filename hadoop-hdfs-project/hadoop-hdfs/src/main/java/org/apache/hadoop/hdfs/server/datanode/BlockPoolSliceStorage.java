@@ -443,7 +443,7 @@ public class BlockPoolSliceStorage extends Storage {
         LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       return;
     }
-    //no upgrades for storage directories that are PROVIDED
+    // no upgrades for storage directories that are PROVIDED
     if (bpSd.getRoot() == null) {
       return;
     }
@@ -640,7 +640,6 @@ public class BlockPoolSliceStorage extends Storage {
    * that holds the snapshot.
    */
   void doFinalize(File dnCurDir) throws IOException {
-    LOG.info("doFinalize: " + dnCurDir);
     if (dnCurDir == null) {
       return; //we do nothing if the directory is null
     }

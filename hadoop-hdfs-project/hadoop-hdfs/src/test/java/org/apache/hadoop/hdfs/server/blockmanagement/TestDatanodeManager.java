@@ -325,11 +325,12 @@ public class TestDatanodeManager {
    */
   @Test
   public void testBadScript() throws IOException, URISyntaxException {
-    HelperFunction("/"+ Shell.appendScriptExtension("topology-broken-script"), 0);
+    HelperFunction("/" + Shell.appendScriptExtension("topology-broken-script"),
+        0);
   }
 
   /**
-   * Test with different sorting functions but include datanodes
+   * Test with different sorting functions but include datanodes.
    * with provided storage
    * @throws IOException
    * @throws URISyntaxException

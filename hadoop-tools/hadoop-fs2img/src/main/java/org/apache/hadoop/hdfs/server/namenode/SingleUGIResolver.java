@@ -84,11 +84,11 @@ public class SingleUGIResolver extends UGIResolver implements Configurable {
 
   @Override
   public void addUser(String name) {
-    //do nothing
+    // do nothing
   }
 
   @Override
   public void addGroup(String name) {
-    //do nothing
+    // do nothing
   }
 }

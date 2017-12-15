@@ -310,7 +310,6 @@ public abstract class ProvidedReplica extends ReplicaInfo {
 
   @Override
   public int compareWith(ScanInfo info) {
-    //local scanning cannot find any provided blocks.
     if (info.getFileRegion().equals(
         new FileRegion(this.getBlockId(), new Path(getRemoteURI()),
             fileOffset, this.getNumBytes(), this.getGenerationStamp()))) {

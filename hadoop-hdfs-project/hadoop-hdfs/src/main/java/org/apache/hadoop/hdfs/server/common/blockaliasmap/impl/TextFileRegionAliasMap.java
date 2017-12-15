@@ -471,7 +471,7 @@ public class TextFileRegionAliasMap
 
   @Override
   public void close() throws IOException {
-    //nothing to do;
+    // nothing to do;
   }
 
   @VisibleForTesting

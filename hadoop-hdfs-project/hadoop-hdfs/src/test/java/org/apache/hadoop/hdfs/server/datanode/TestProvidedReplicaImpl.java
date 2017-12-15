@@ -50,9 +50,9 @@ public class TestProvidedReplicaImpl {
   private static final String BASE_DIR =
       new FileSystemTestHelper().getTestRootDir();
   private static final String FILE_NAME = "provided-test";
-  //length of the file that is associated with the provided blocks.
+  // length of the file that is associated with the provided blocks.
   private static final long FILE_LEN = 128 * 1024 * 10L + 64 * 1024;
-  //length of each provided block.
+  // length of each provided block.
   private static final long BLK_LEN = 128 * 1024L;
 
   private static List<ProvidedReplica> replicas;
@@ -63,7 +63,6 @@ public class TestProvidedReplicaImpl {
     if(!newFile.exists()) {
       newFile.createNewFile();
       OutputStream writer = new FileOutputStream(newFile.getAbsolutePath());
-      //FILE_LEN is length in bytes.
       byte[] bytes = new byte[1];
       bytes[0] = (byte) 0;
       for(int i=0; i< FILE_LEN; i++) {
@@ -106,7 +105,7 @@ public class TestProvidedReplicaImpl {
    * @param dataLength length
    * @throws IOException
    */
-  private void verifyReplicaContents(File file,
+  public static void verifyReplicaContents(File file,
       InputStream ins, long fileOffset, long dataLength)
           throws IOException {
 
@@ -142,9 +141,9 @@ public class TestProvidedReplicaImpl {
   public void testProvidedReplicaRead() throws IOException {
 
     File providedFile = new File(BASE_DIR, FILE_NAME);
-    for(int i=0; i < replicas.size(); i++) {
+    for (int i = 0; i < replicas.size(); i++) {
       ProvidedReplica replica = replicas.get(i);
-      //block data should exist!
+      // block data should exist!
       assertTrue(replica.blockDataExists());
       assertEquals(providedFile.toURI(), replica.getBlockURI());
       verifyReplicaContents(providedFile, replica.getDataInputStream(0),
@@ -153,7 +152,7 @@ public class TestProvidedReplicaImpl {
     LOG.info("All replica contents verified");
 
     providedFile.delete();
-    //the block data should no longer be found!
+    // the block data should no longer be found!
     for(int i=0; i < replicas.size(); i++) {
       ProvidedReplica replica = replicas.get(i);
       assertTrue(!replica.blockDataExists());

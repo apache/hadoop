@@ -125,7 +125,8 @@ public class FileSystemImage implements Tool {
         opts.blockPoolID(o.getValue());
         break;
       default:
-        throw new UnsupportedOperationException("Internal error");
+        throw new UnsupportedOperationException(
+            "Unknown option: " + o.getOpt());
       }
     }
 
