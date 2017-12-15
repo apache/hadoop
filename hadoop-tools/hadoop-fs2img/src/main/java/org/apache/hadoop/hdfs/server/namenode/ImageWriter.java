@@ -236,7 +236,7 @@ public class ImageWriter implements Closeable {
       if (null == e) {
         return super.put(p, b);
       }
-      //merge
+      // merge
       e.addAllChildren(b.getChildrenList());
       // not strictly conforming
       return e;
@@ -265,7 +265,6 @@ public class ImageWriter implements Closeable {
     e.writeDelimitedTo(dirs);
   }
 
-  // from FSImageFormatProtobuf... why not just read position from the stream?
   private static int getOndiskSize(com.google.protobuf.GeneratedMessage s) {
     return CodedOutputStream.computeRawVarint32Size(s.getSerializedSize())
         + s.getSerializedSize();
@@ -283,7 +282,7 @@ public class ImageWriter implements Closeable {
     dircache.clear();
 
     // close side files
-    IOUtils.cleanup(null, dirs, inodes, blocks);
+    IOUtils.cleanupWithLogger(null, dirs, inodes, blocks);
     if (null == dirs || null == inodes) {
       // init failed
       if (raw != null) {
@@ -317,7 +316,6 @@ public class ImageWriter implements Closeable {
    */
   void writeMD5(String imagename) throws IOException {
     if (null == outdir) {
-      //LOG.warn("Not writing MD5");
       return;
     }
     MD5Hash md5 = new MD5Hash(digest.digest());
@@ -382,7 +380,6 @@ public class ImageWriter implements Closeable {
 
   void writeDirSection() throws IOException {
     // No header, so dirs can be written/compressed independently
-    //INodeDirectorySection.Builder b = INodeDirectorySection.newBuilder();
     OutputStream sec = raw;
     // copy dirs
     try (FileInputStream in = new FileInputStream(dirsTmp)) {

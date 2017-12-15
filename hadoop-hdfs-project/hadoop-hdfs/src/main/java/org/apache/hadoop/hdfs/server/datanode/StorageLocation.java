@@ -108,10 +108,10 @@ public class StorageLocation
     }
     if (sd.getStorageLocation().getStorageType() == StorageType.PROVIDED ||
         storageType == StorageType.PROVIDED) {
-      //only one of these is PROVIDED; so it cannot be a match!
+      // only one PROVIDED storage directory can exist; so this cannot match!
       return false;
     }
-    //both storage directories are local
+    // both storage directories are local
     return this.getBpURI(bpid, Storage.STORAGE_DIR_CURRENT).normalize()
         .equals(sd.getRoot().toURI().normalize());
   }
@@ -212,7 +212,9 @@ public class StorageLocation
       conf = new HdfsConfiguration();
     }
     if (storageType == StorageType.PROVIDED) {
-      //skip creation if the storage type is PROVIDED
+      // skip creation if the storage type is PROVIDED
+      Storage.LOG.info("Skipping creating directory for block pool "
+          + blockPoolID + " for PROVIDED storage location " + this);
       return;
     }
 
@@ -231,8 +233,8 @@ public class StorageLocation
 
   @Override  // Checkable
   public VolumeCheckResult check(CheckContext context) throws IOException {
-    //we assume provided storage locations are always healthy,
-    //and check only for local storages.
+    // assume provided storage locations are always healthy,
+    // and check only for local storages.
     if (storageType != StorageType.PROVIDED) {
       DiskChecker.checkDir(
           context.localFileSystem,

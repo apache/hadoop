@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,7 +42,6 @@ public class RandomTreeWalk extends TreeWalk {
   private final float depth;
   private final int children;
   private final Map<Long, Long> mSeed;
-  //private final AtomicLong blockIds = new AtomicLong(1L << 30);
 
   RandomTreeWalk(long seed) {
     this(seed, 10);
@@ -54,7 +52,7 @@ public class RandomTreeWalk extends TreeWalk {
   }
 
   RandomTreeWalk(long seed, int children, float depth) {
-    this(randomRoot(seed), seed, children, 0.15f);
+    this(randomRoot(seed), seed, children, depth);
   }
 
   RandomTreeWalk(Path root, long seed, int children, float depth) {

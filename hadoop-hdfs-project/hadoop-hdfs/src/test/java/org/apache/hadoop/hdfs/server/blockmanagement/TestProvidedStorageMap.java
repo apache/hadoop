@@ -73,13 +73,13 @@ public class TestProvidedStorageMap {
         nameSystemLock, bm, conf);
     DatanodeStorageInfo providedMapStorage =
         providedMap.getProvidedStorageInfo();
-    //the provided storage cannot be null
+    // the provided storage cannot be null
     assertNotNull(providedMapStorage);
 
-    //create a datanode
+    // create a datanode
     DatanodeDescriptor dn1 = createDatanodeDescriptor(5000);
 
-    //associate two storages to the datanode
+    // associate two storages to the datanode
     DatanodeStorage dn1ProvidedStorage = new DatanodeStorage(
         providedStorageID,
         DatanodeStorage.State.NORMAL,
@@ -96,15 +96,15 @@ public class TestProvidedStorageMap {
         dns1Provided == providedMapStorage);
     assertTrue("Disk storage has not yet been registered with block manager",
         dns1Disk == null);
-    //add the disk storage to the datanode.
+    // add the disk storage to the datanode.
     DatanodeStorageInfo dnsDisk = new DatanodeStorageInfo(dn1, dn1DiskStorage);
     dn1.injectStorage(dnsDisk);
     assertTrue("Disk storage must match the injected storage info",
         dnsDisk == providedMap.getStorage(dn1, dn1DiskStorage));
 
-    //create a 2nd datanode
+    // create a 2nd datanode
     DatanodeDescriptor dn2 = createDatanodeDescriptor(5010);
-    //associate a provided storage with the datanode
+    // associate a provided storage with the datanode
     DatanodeStorage dn2ProvidedStorage = new DatanodeStorage(
         providedStorageID,
         DatanodeStorage.State.NORMAL,

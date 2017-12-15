@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -40,6 +41,32 @@ import com.google.common.collect.Lists;
 @InterfaceStability.Evolving
 public class LocatedBlock {
 
+  /**
+   * Comparator that ensures that a PROVIDED storage type is greater than any
+   * other storage type. Any other storage types are considered equal.
+   */
+  private static class ProvidedLastComparator
+      implements Comparator<DatanodeInfoWithStorage>, Serializable {
+
+    private static final long serialVersionUID = 6441720011443190984L;
+
+    @Override
+    public int compare(DatanodeInfoWithStorage dns1,
+        DatanodeInfoWithStorage dns2) {
+      if (StorageType.PROVIDED.equals(dns1.getStorageType())
+          && !StorageType.PROVIDED.equals(dns2.getStorageType())) {
+        return 1;
+      }
+      if (!StorageType.PROVIDED.equals(dns1.getStorageType())
+          && StorageType.PROVIDED.equals(dns2.getStorageType())) {
+        return -1;
+      }
+      // Storage types of dns1 and dns2 are now both provided or not provided;
+      // thus, are essentially equal for the purpose of this comparator.
+      return 0;
+    }
+  }
+
   private final ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
   private final DatanodeInfoWithStorage[] locs;
@@ -52,6 +79,10 @@ public class LocatedBlock {
   // their locations are not part of this object
   private boolean corrupt;
   private Token<BlockTokenIdentifier> blockToken = new Token<>();
+
+  // use one instance of the Provided comparator as it uses no state.
+  private static ProvidedLastComparator providedLastComparator =
+      new ProvidedLastComparator();
   /**
    * List of cached datanode locations
    */
@@ -157,29 +188,6 @@ public class LocatedBlock {
   }
 
   /**
-   * Comparator that ensures that a PROVIDED storage type is greater than
-   * any other storage type. Any other storage types are considered equal.
-   */
-  private class ProvidedLastComparator
-    implements Comparator<DatanodeInfoWithStorage> {
-    @Override
-    public int compare(DatanodeInfoWithStorage dns1,
-        DatanodeInfoWithStorage dns2) {
-      if (StorageType.PROVIDED.equals(dns1.getStorageType())
-          && !StorageType.PROVIDED.equals(dns2.getStorageType())) {
-        return 1;
-      }
-      if (!StorageType.PROVIDED.equals(dns1.getStorageType())
-          && StorageType.PROVIDED.equals(dns2.getStorageType())) {
-        return -1;
-      }
-      // Storage types of dns1 and dns2 are now both provided or not provided;
-      // thus, are essentially equal for the purpose of this comparator.
-      return 0;
-    }
-  }
-
-  /**
    * Moves all locations that have {@link StorageType}
    * {@code PROVIDED} to the end of the locations array without
    * changing the relative ordering of the remaining locations
@@ -196,9 +204,8 @@ public class LocatedBlock {
     }
     // as this is a stable sort, for elements that are equal,
     // the current order of the elements is maintained
-    Arrays.sort(locs, 0,
-        (activeLen < locs.length) ? activeLen : locs.length,
-        new ProvidedLastComparator());
+    Arrays.sort(locs, 0, (activeLen < locs.length) ? activeLen : locs.length,
+        providedLastComparator);
   }
 
   public long getStartOffset() {
