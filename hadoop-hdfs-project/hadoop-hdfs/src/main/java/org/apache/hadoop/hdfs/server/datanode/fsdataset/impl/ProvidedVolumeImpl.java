@@ -224,7 +224,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     }
 
     public void shutdown(BlockListAsLongs blocksListsAsLongs) {
-      //nothing to do!
+      // nothing to do!
     }
 
     public void compileReport(LinkedList<ScanInfo> report,
@@ -264,7 +264,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       new ConcurrentHashMap<String, ProvidedBlockPoolSlice>();
 
   private ProvidedVolumeDF df;
-  //the remote FileSystem to which this ProvidedVolume points to.
+  // the remote FileSystem to which this ProvidedVolume points to.
   private FileSystem remoteFS;
 
   ProvidedVolumeImpl(FsDatasetImpl dataset, String storageID,
@@ -395,9 +395,9 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     @JsonProperty
     private boolean atEnd;
 
-    //The id of the last block read when the state of the iterator is saved.
-    //This implementation assumes that provided blocks are returned
-    //in sorted order of the block ids.
+    // The id of the last block read when the state of the iterator is saved.
+    // This implementation assumes that provided blocks are returned
+    // in sorted order of the block ids.
     @JsonProperty
     private long lastBlockId;
   }
@@ -421,7 +421,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
 
     @Override
     public void close() throws IOException {
-      //No action needed
+      blockAliasMap.close();
     }
 
     @Override
@@ -467,14 +467,14 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
 
     @Override
     public void save() throws IOException {
-      //We do not persist the state of this iterator anywhere, locally.
-      //We just re-scan provided volumes as necessary.
+      // We do not persist the state of this iterator locally.
+      // We just re-scan provided volumes as necessary.
       state.lastSavedMs = Time.now();
     }
 
     @Override
     public void setMaxStalenessMs(long maxStalenessMs) {
-      //do not use max staleness
+      // do not use max staleness
     }
 
     @Override
@@ -493,7 +493,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     }
 
     public void load() throws IOException {
-      //on load, we just rewind the iterator for provided volumes.
+      // on load, we just rewind the iterator for provided volumes.
       rewind();
       LOG.trace("load({}, {}): loaded iterator {}: {}", getStorageID(),
           bpid, name, WRITER.writeValueAsString(state));
@@ -615,7 +615,6 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
       throws InterruptedException, IOException {
     LOG.info("Compiling report for volume: " + this + " bpid " + bpid);
-    //get the report from the appropriate block pool.
     if(bpSlices.containsKey(bpid)) {
       bpSlices.get(bpid).compileReport(report, reportCompiler);
     }

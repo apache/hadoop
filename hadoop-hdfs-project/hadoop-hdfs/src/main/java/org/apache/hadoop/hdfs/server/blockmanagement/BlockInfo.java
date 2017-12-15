@@ -192,7 +192,7 @@ public abstract class BlockInfo extends Block
       DatanodeStorageInfo cur = getStorageInfo(idx);
       if(cur != null) {
         if (cur.getStorageType() == StorageType.PROVIDED) {
-          //if block resides on provided storage, only match the storage ids
+          // if block resides on provided storage, only match the storage ids
           if (dn.getStorageInfo(cur.getStorageID()) != null) {
             // do not return here as we have to check the other
             // DatanodeStorageInfos for this block which could be local

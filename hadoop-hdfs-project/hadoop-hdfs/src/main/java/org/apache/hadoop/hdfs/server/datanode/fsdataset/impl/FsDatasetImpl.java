@@ -1760,7 +1760,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       Set<String> missingVolumesReported = new HashSet<>();
       for (ReplicaInfo b : volumeMap.replicas(bpid)) {
-        //skip blocks in PROVIDED storage
+        // skip PROVIDED replicas.
         if (b.getVolume().getStorageType() == StorageType.PROVIDED) {
           continue;
         }
@@ -2281,7 +2281,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       if (vol.getStorageType() == StorageType.PROVIDED) {
         if (memBlockInfo == null) {
-          //replica exists on provided store but not in memory
+          // replica exists on provided store but not in memory
           ReplicaInfo diskBlockInfo =
               new ReplicaBuilder(ReplicaState.FINALIZED)
               .setFileRegion(scanInfo.getFileRegion())
@@ -2292,7 +2292,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           volumeMap.add(bpid, diskBlockInfo);
           LOG.warn("Added missing block to memory " + diskBlockInfo);
         } else {
-          //replica exists in memory but not in the provided store
+          // replica exists in memory but not in the provided store
           volumeMap.remove(bpid, blockId);
           LOG.warn("Deleting missing provided block " + memBlockInfo);
         }

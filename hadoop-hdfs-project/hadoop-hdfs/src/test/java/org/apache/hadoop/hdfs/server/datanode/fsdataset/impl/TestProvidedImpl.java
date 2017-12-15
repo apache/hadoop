@@ -26,8 +26,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,9 +33,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -76,6 +71,7 @@ import org.apache.hadoop.hdfs.server.datanode.ProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.TestProvidedReplicaImpl;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.BlockIterator;
@@ -97,7 +93,7 @@ public class TestProvidedImpl {
   private static final String BASE_DIR =
       new FileSystemTestHelper().getTestRootDir();
   private static final int NUM_LOCAL_INIT_VOLUMES = 1;
-  //only support one provided volume for now.
+  // only support one provided volume for now.
   private static final int NUM_PROVIDED_INIT_VOLUMES = 1;
   private static final String[] BLOCK_POOL_IDS = {"bpid-0", "bpid-1"};
   private static final int NUM_PROVIDED_BLKS = 10;
@@ -168,7 +164,7 @@ public class TestProvidedImpl {
 
     @Override
     public void remove() {
-      //do nothing.
+      // do nothing.
     }
 
     public void resetMinBlockId(int minId) {
@@ -314,33 +310,6 @@ public class TestProvidedImpl {
     }
   }
 
-  private void compareBlkFile(InputStream ins, String filepath)
-      throws FileNotFoundException, IOException {
-    try (ReadableByteChannel i = Channels.newChannel(
-        new FileInputStream(new File(filepath)))) {
-      try (ReadableByteChannel j = Channels.newChannel(ins)) {
-        ByteBuffer ib = ByteBuffer.allocate(4096);
-        ByteBuffer jb = ByteBuffer.allocate(4096);
-        while (true) {
-          int il = i.read(ib);
-          int jl = j.read(jb);
-          if (il < 0 || jl < 0) {
-            assertEquals(il, jl);
-            break;
-          }
-          ib.flip();
-          jb.flip();
-          int cmp = Math.min(ib.remaining(), jb.remaining());
-          for (int k = 0; k < cmp; ++k) {
-            assertEquals(ib.get(), jb.get());
-          }
-          ib.compact();
-          jb.compact();
-        }
-      }
-    }
-  }
-
   @Before
   public void setUp() throws IOException {
     datanode = mock(DataNode.class);
@@ -392,7 +361,7 @@ public class TestProvidedImpl {
     assertEquals(0, dataset.getNumFailedVolumes());
 
     for (int i = 0; i < providedVolumes.size(); i++) {
-      //check basic information about provided volume
+      // check basic information about provided volume
       assertEquals(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT,
           providedVolumes.get(i).getStorageID());
       assertEquals(StorageType.PROVIDED,
@@ -400,7 +369,7 @@ public class TestProvidedImpl {
 
       long space = providedVolumes.get(i).getBlockPoolUsed(
               BLOCK_POOL_IDS[CHOSEN_BP_ID]);
-      //check the df stats of the volume
+      // check the df stats of the volume
       assertEquals(spaceUsed, space);
       assertEquals(NUM_PROVIDED_BLKS, providedVolumes.get(i).getNumBlocks());
 
@@ -409,7 +378,7 @@ public class TestProvidedImpl {
       try {
         assertEquals(0, providedVolumes.get(i)
             .getBlockPoolUsed(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID]));
-        //should not be triggered
+        // should not be triggered
         assertTrue(false);
       } catch (IOException e) {
         LOG.info("Expected exception: " + e);
@@ -428,7 +397,7 @@ public class TestProvidedImpl {
       assertEquals(vol.getBlockPoolList().length, BLOCK_POOL_IDS.length);
       for (int j = 0; j < BLOCK_POOL_IDS.length; j++) {
         if (j != CHOSEN_BP_ID) {
-          //this block pool should not have any blocks
+          // this block pool should not have any blocks
           assertEquals(null, volumeMap.replicas(BLOCK_POOL_IDS[j]));
         }
       }
@@ -445,7 +414,8 @@ public class TestProvidedImpl {
           HdfsConstants.GRANDFATHER_GENERATION_STAMP);
       InputStream ins = dataset.getBlockInputStream(eb, 0);
       String filepath = blkToPathMap.get((long) id);
-      compareBlkFile(ins, filepath);
+      TestProvidedReplicaImpl.verifyReplicaContents(new File(filepath), ins, 0,
+          BLK_LEN);
     }
   }
 
@@ -462,7 +432,7 @@ public class TestProvidedImpl {
         ExtendedBlock eb = iter.nextBlock();
         long blkId = eb.getBlockId();
         assertTrue(blkId >= MIN_BLK_ID && blkId < NUM_PROVIDED_BLKS);
-        //all block ids must be unique!
+        // all block ids must be unique!
         assertTrue(!blockIdsUsed.contains(blkId));
         blockIdsUsed.add(blkId);
       }
@@ -473,14 +443,14 @@ public class TestProvidedImpl {
       while(!iter.atEnd()) {
         ExtendedBlock eb = iter.nextBlock();
         long blkId = eb.getBlockId();
-        //the block should have already appeared in the first scan.
+        // the block should have already appeared in the first scan.
         assertTrue(blockIdsUsed.contains(blkId));
         blockIdsUsed.remove(blkId);
       }
-      //none of the blocks should remain in blockIdsUsed
+      // none of the blocks should remain in blockIdsUsed
       assertEquals(0, blockIdsUsed.size());
 
-      //the other block pool should not contain any blocks!
+      // the other block pool should not contain any blocks!
       BlockIterator nonProvidedBpIter =
           vol.newBlockIterator(BLOCK_POOL_IDS[1 - CHOSEN_BP_ID], "temp");
       assertEquals(null, nonProvidedBpIter.nextBlock());
@@ -513,8 +483,8 @@ public class TestProvidedImpl {
   public void testProvidedVolumeContents() throws IOException {
     int expectedBlocks = 5;
     int minId = 0;
-    //use a path which has the same prefix as providedBasePath
-    //all these blocks can belong to the provided volume
+    // use a path which has the same prefix as providedBasePath
+    // all these blocks can belong to the provided volume
     int blocksFound = getBlocksInProvidedVolumes(providedBasePath + "/test1/",
         expectedBlocks, minId);
     assertEquals(
@@ -525,8 +495,8 @@ public class TestProvidedImpl {
     assertEquals(
         "Number of blocks in provided volumes should be " + expectedBlocks,
         expectedBlocks, blocksFound);
-    //use a path that is entirely different from the providedBasePath
-    //none of these blocks can belong to the volume
+    // use a path that is entirely different from the providedBasePath
+    // none of these blocks can belong to the volume
     blocksFound =
         getBlocksInProvidedVolumes("randomtest1/", expectedBlocks, minId);
     assertEquals("Number of blocks in provided volumes should be 0", 0,

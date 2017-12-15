@@ -422,7 +422,7 @@ public abstract class Storage extends StorageInfo {
     public void clearDirectory() throws IOException {
       File curDir = this.getCurrentDir();
       if (curDir == null) {
-        //if the directory is null, there is nothing to do.
+        // if the directory is null, there is nothing to do.
         return;
       }
       if (curDir.exists()) {
@@ -638,7 +638,7 @@ public abstract class Storage extends StorageInfo {
 
       if (location != null &&
           location.getStorageType() == StorageType.PROVIDED) {
-        //currently we assume that PROVIDED storages are always NORMAL
+        // currently we assume that PROVIDED storages are always NORMAL
         return StorageState.NORMAL;
       }
 
@@ -764,7 +764,7 @@ public abstract class Storage extends StorageInfo {
     public void doRecover(StorageState curState) throws IOException {
       File curDir = getCurrentDir();
       if (curDir == null || root == null) {
-        //at this point, we do not support recovery on PROVIDED storages
+        // at this point, we do not support recovery on PROVIDED storages
         return;
       }
       String rootPath = root.getCanonicalPath();

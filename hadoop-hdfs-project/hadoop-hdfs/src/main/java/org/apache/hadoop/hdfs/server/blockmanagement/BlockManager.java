@@ -1240,7 +1240,6 @@ public class BlockManager implements BlockStatsMXBean {
         final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
         final ExtendedBlock eb = new ExtendedBlock(getBlockPoolId(),
             blk);
-        //TODO use locatedBlocks builder??
         return newLocatedStripedBlock(eb, storages, uc.getBlockIndices(), pos,
             false);
       } else {
@@ -2497,8 +2496,8 @@ public class BlockManager implements BlockStatsMXBean {
 
       // To minimize startup time, we discard any second (or later) block reports
       // that we receive while still in startup phase.
-      // !#! Register DN with provided storage, not with storage owned by DN
-      // !#! DN should still have a ref to the DNStorageInfo
+      // Register DN with provided storage, not with storage owned by DN
+      // DN should still have a ref to the DNStorageInfo.
       DatanodeStorageInfo storageInfo =
           providedStorageMap.getStorage(node, storage);
 
