@@ -108,6 +108,8 @@ public abstract class FSImageTestUtil {
       try {
         raf.seek(IMAGE_TXID_POS);
         raf.writeLong(0);
+        raf.close();
+        raf = null;
       } finally {
         IOUtils.closeStream(raf);
       }
@@ -542,9 +544,11 @@ public abstract class FSImageTestUtil {
       
       out = new FileOutputStream(versionFile);
       props.store(out, null);
-      
+      out.close();
+      out = null;
     } finally {
-      IOUtils.cleanup(null, fis, out);
+      IOUtils.closeStream(fis);
+      IOUtils.closeStream(out);
     }    
   }
 
