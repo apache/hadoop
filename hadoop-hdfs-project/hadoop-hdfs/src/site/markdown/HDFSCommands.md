@@ -425,7 +425,7 @@ Runs the DFS router. See [Router](./HDFSRouterFederation.html#Router) for more i
 Usage:
 
       hdfs dfsrouteradmin
-          [-add <source> <nameservice> <destination> [-readonly]]
+          [-add <source> <nameservice> <destination> [-readonly] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls <path>]
 
