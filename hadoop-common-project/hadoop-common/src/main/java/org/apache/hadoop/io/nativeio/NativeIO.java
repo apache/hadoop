@@ -922,28 +922,23 @@ public class NativeIO {
     if (nativeLoaded && Shell.WINDOWS) {
       copyFileUnbuffered0(src.getAbsolutePath(), dst.getAbsolutePath());
     } else {
-      FileInputStream fis = null;
-      FileOutputStream fos = null;
+      FileInputStream fis = new FileInputStream(src);
       FileChannel input = null;
-      FileChannel output = null;
       try {
-        fis = new FileInputStream(src);
-        fos = new FileOutputStream(dst);
         input = fis.getChannel();
-        output = fos.getChannel();
-        long remaining = input.size();
-        long position = 0;
-        long transferred = 0;
-        while (remaining > 0) {
-          transferred = input.transferTo(position, remaining, output);
-          remaining -= transferred;
-          position += transferred;
+        try (FileOutputStream fos = new FileOutputStream(dst);
+             FileChannel output = fos.getChannel()) {
+          long remaining = input.size();
+          long position = 0;
+          long transferred = 0;
+          while (remaining > 0) {
+            transferred = input.transferTo(position, remaining, output);
+            remaining -= transferred;
+            position += transferred;
+          }
         }
       } finally {
-        IOUtils.cleanupWithLogger(LOG, output);
-        IOUtils.cleanupWithLogger(LOG, fos);
-        IOUtils.cleanupWithLogger(LOG, input);
-        IOUtils.cleanupWithLogger(LOG, fis);
+        IOUtils.cleanupWithLogger(LOG, input, fis);
       }
     }
   }
