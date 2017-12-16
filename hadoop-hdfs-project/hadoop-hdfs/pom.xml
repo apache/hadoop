@@ -191,7 +191,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.fusesource.leveldbjni</groupId>
       <artifactId>leveldbjni-all</artifactId>
-      <version>1.8</version>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
@@ -207,6 +206,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -341,6 +345,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>fsimage.proto</include>
                   <include>FederationProtocol.proto</include>
                   <include>RouterProtocol.proto</include>
+                  <include>AliasMapProtocol.proto</include>
                 </includes>
               </source>
             </configuration>

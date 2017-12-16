@@ -300,7 +300,7 @@ public class TestDatanodeManager {
    */
   @Test
   public void testSortLocatedBlocks() throws IOException, URISyntaxException {
-    HelperFunction(null);
+    HelperFunction(null, 0);
   }
 
   /**
@@ -312,7 +312,7 @@ public class TestDatanodeManager {
    */
   @Test
   public void testgoodScript() throws IOException, URISyntaxException {
-    HelperFunction("/" + Shell.appendScriptExtension("topology-script"));
+    HelperFunction("/" + Shell.appendScriptExtension("topology-script"), 0);
   }
 
 
@@ -325,7 +325,22 @@ public class TestDatanodeManager {
    */
   @Test
   public void testBadScript() throws IOException, URISyntaxException {
-    HelperFunction("/"+ Shell.appendScriptExtension("topology-broken-script"));
+    HelperFunction("/" + Shell.appendScriptExtension("topology-broken-script"),
+        0);
+  }
+
+  /**
+   * Test with different sorting functions but include datanodes.
+   * with provided storage
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testWithProvidedTypes() throws IOException, URISyntaxException {
+    HelperFunction(null, 1);
+    HelperFunction(null, 3);
+    HelperFunction("/" + Shell.appendScriptExtension("topology-script"), 1);
+    HelperFunction("/" + Shell.appendScriptExtension("topology-script"), 2);
   }
 
   /**
@@ -333,11 +348,12 @@ public class TestDatanodeManager {
    * we invoke this function with and without topology scripts
    *
    * @param scriptFileName - Script Name or null
+   * @param providedStorages - number of provided storages to add
    *
    * @throws URISyntaxException
    * @throws IOException
    */
-  public void HelperFunction(String scriptFileName)
+  public void HelperFunction(String scriptFileName, int providedStorages)
     throws URISyntaxException, IOException {
     // create the DatanodeManager which will be tested
     Configuration conf = new Configuration();
@@ -352,17 +368,25 @@ public class TestDatanodeManager {
     }
     DatanodeManager dm = mockDatanodeManager(fsn, conf);
 
+    int totalDNs = 5 + providedStorages;
+
     // register 5 datanodes, each with different storage ID and type
-    DatanodeInfo[] locs = new DatanodeInfo[5];
-    String[] storageIDs = new String[5];
-    StorageType[] storageTypes = new StorageType[]{
-      StorageType.ARCHIVE,
-      StorageType.DEFAULT,
-      StorageType.DISK,
-      StorageType.RAM_DISK,
-      StorageType.SSD
-    };
-    for (int i = 0; i < 5; i++) {
+    DatanodeInfo[] locs = new DatanodeInfo[totalDNs];
+    String[] storageIDs = new String[totalDNs];
+    List<StorageType> storageTypesList = new ArrayList<>(
+        Arrays.asList(StorageType.ARCHIVE,
+            StorageType.DEFAULT,
+            StorageType.DISK,
+            StorageType.RAM_DISK,
+            StorageType.SSD));
+
+    for (int i = 0; i < providedStorages; i++) {
+      storageTypesList.add(StorageType.PROVIDED);
+    }
+
+    StorageType[] storageTypes= storageTypesList.toArray(new StorageType[0]);
+
+    for (int i = 0; i < totalDNs; i++) {
       // register new datanode
       String uuid = "UUID-" + i;
       String ip = "IP-" + i;
@@ -398,9 +422,9 @@ public class TestDatanodeManager {
     DatanodeInfo[] sortedLocs = block.getLocations();
     storageIDs = block.getStorageIDs();
     storageTypes = block.getStorageTypes();
-    assertThat(sortedLocs.length, is(5));
-    assertThat(storageIDs.length, is(5));
-    assertThat(storageTypes.length, is(5));
+    assertThat(sortedLocs.length, is(totalDNs));
+    assertThat(storageIDs.length, is(totalDNs));
+    assertThat(storageTypes.length, is(totalDNs));
     for (int i = 0; i < sortedLocs.length; i++) {
       assertThat(((DatanodeInfoWithStorage) sortedLocs[i]).getStorageID(),
         is(storageIDs[i]));
@@ -414,6 +438,14 @@ public class TestDatanodeManager {
       is(DatanodeInfo.AdminStates.DECOMMISSIONED));
     assertThat(sortedLocs[sortedLocs.length - 2].getAdminState(),
       is(DatanodeInfo.AdminStates.DECOMMISSIONED));
+    // check that the StorageType of datanoodes immediately
+    // preceding the decommissioned datanodes is PROVIDED
+    for (int i = 0; i < providedStorages; i++) {
+      assertThat(
+          ((DatanodeInfoWithStorage)
+              sortedLocs[sortedLocs.length - 3 - i]).getStorageType(),
+          is(StorageType.PROVIDED));
+    }
   }
 
   /**

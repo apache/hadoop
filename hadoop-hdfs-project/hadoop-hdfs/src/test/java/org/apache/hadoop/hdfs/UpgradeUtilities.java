@@ -384,8 +384,10 @@ public class UpgradeUtilities {
           new File(datanodeStorage.toString()));
       sd.setStorageUuid(DatanodeStorage.generateUuid());
       Properties properties = Storage.readPropertiesFile(sd.getVersionFile());
-      properties.setProperty("storageID", sd.getStorageUuid());
-      Storage.writeProperties(sd.getVersionFile(), properties);
+      if (properties != null) {
+        properties.setProperty("storageID", sd.getStorageUuid());
+        Storage.writeProperties(sd.getVersionFile(), properties);
+      }
 
       retVal[i] = newDir;
     }
@@ -461,8 +463,9 @@ public class UpgradeUtilities {
    * @param bpid Block pool Id
    */
   public static void createDataNodeVersionFile(File[] parent,
-      StorageInfo version, String bpid) throws IOException {
-    createDataNodeVersionFile(parent, version, bpid, bpid);
+      StorageInfo version, String bpid, Configuration conf)
+          throws IOException {
+    createDataNodeVersionFile(parent, version, bpid, bpid, conf);
   }
   
   /**
@@ -477,7 +480,8 @@ public class UpgradeUtilities {
    * @param bpidToWrite Block pool Id to write into the version file
    */
   public static void createDataNodeVersionFile(File[] parent,
-      StorageInfo version, String bpid, String bpidToWrite) throws IOException {
+      StorageInfo version, String bpid, String bpidToWrite, Configuration conf)
+          throws IOException {
     DataStorage storage = new DataStorage(version);
     storage.setDatanodeUuid("FixedDatanodeUuid");
 
@@ -485,7 +489,7 @@ public class UpgradeUtilities {
     for (int i = 0; i < parent.length; i++) {
       File versionFile = new File(parent[i], "VERSION");
       StorageDirectory sd = new StorageDirectory(parent[i].getParentFile());
-      DataStorage.createStorageID(sd, false);
+      DataStorage.createStorageID(sd, false, conf);
       storage.writeProperties(versionFile, sd);
       versionFiles[i] = versionFile;
       File bpDir = BlockPoolSliceStorage.getBpRoot(bpid, parent[i]);

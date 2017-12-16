@@ -68,7 +68,10 @@ public class TestClusterId {
       fsImage.getStorage().dirIterator(NNStorage.NameNodeDirType.IMAGE);
     StorageDirectory sd = sdit.next();
     Properties props = Storage.readPropertiesFile(sd.getVersionFile());
-    String cid = props.getProperty("clusterID");
+    String cid = null;
+    if (props != null) {
+      cid = props.getProperty("clusterID");
+    }
     LOG.info("successfully formated : sd="+sd.getCurrentDir() + ";cid="+cid);
     return cid;
   }

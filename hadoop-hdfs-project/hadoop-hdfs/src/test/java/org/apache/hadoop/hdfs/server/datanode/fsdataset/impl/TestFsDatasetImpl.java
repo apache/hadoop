@@ -119,11 +119,12 @@ public class TestFsDatasetImpl {
   
   private final static String BLOCKPOOL = "BP-TEST";
 
-  private static Storage.StorageDirectory createStorageDirectory(File root)
+  private static Storage.StorageDirectory createStorageDirectory(File root,
+      Configuration conf)
       throws SecurityException, IOException {
     Storage.StorageDirectory sd = new Storage.StorageDirectory(
         StorageLocation.parse(root.toURI().toString()));
-    DataStorage.createStorageID(sd, false);
+    DataStorage.createStorageID(sd, false, conf);
     return sd;
   }
 
@@ -137,7 +138,7 @@ public class TestFsDatasetImpl {
       File loc = new File(BASE_DIR + "/data" + i);
       dirStrings.add(new Path(loc.toString()).toUri().toString());
       loc.mkdirs();
-      dirs.add(createStorageDirectory(loc));
+      dirs.add(createStorageDirectory(loc, conf));
       when(storage.getStorageDir(i)).thenReturn(dirs.get(i));
     }
 
@@ -197,7 +198,8 @@ public class TestFsDatasetImpl {
       String pathUri = new Path(path).toUri().toString();
       expectedVolumes.add(new File(pathUri).getAbsolutePath());
       StorageLocation loc = StorageLocation.parse(pathUri);
-      Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+      Storage.StorageDirectory sd = createStorageDirectory(
+          new File(path), conf);
       DataStorage.VolumeBuilder builder =
           new DataStorage.VolumeBuilder(storage, sd);
       when(storage.prepareVolume(eq(datanode), eq(loc),
@@ -315,7 +317,8 @@ public class TestFsDatasetImpl {
     String newVolumePath = BASE_DIR + "/newVolumeToRemoveLater";
     StorageLocation loc = StorageLocation.parse(newVolumePath);
 
-    Storage.StorageDirectory sd = createStorageDirectory(new File(newVolumePath));
+    Storage.StorageDirectory sd = createStorageDirectory(
+        new File(newVolumePath), conf);
     DataStorage.VolumeBuilder builder =
         new DataStorage.VolumeBuilder(storage, sd);
     when(storage.prepareVolume(eq(datanode), eq(loc),
@@ -348,7 +351,7 @@ public class TestFsDatasetImpl {
         any(ReplicaMap.class),
         any(RamDiskReplicaLruTracker.class));
 
-    Storage.StorageDirectory sd = createStorageDirectory(badDir);
+    Storage.StorageDirectory sd = createStorageDirectory(badDir, conf);
     sd.lock();
     DataStorage.VolumeBuilder builder = new DataStorage.VolumeBuilder(storage, sd);
     when(storage.prepareVolume(eq(datanode),
@@ -492,7 +495,7 @@ public class TestFsDatasetImpl {
     String path = BASE_DIR + "/newData0";
     String pathUri = new Path(path).toUri().toString();
     StorageLocation loc = StorageLocation.parse(pathUri);
-    Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+    Storage.StorageDirectory sd = createStorageDirectory(new File(path), conf);
     DataStorage.VolumeBuilder builder =
         new DataStorage.VolumeBuilder(storage, sd);
     when(

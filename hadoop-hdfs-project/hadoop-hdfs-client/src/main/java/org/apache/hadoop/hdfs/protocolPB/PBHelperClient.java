@@ -96,6 +96,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
@@ -403,6 +404,8 @@ public class PBHelperClient {
       return StorageTypeProto.ARCHIVE;
     case RAM_DISK:
       return StorageTypeProto.RAM_DISK;
+    case PROVIDED:
+      return StorageTypeProto.PROVIDED;
     default:
       throw new IllegalStateException(
           "BUG: StorageType not found, type=" + type);
@@ -419,6 +422,8 @@ public class PBHelperClient {
       return StorageType.ARCHIVE;
     case RAM_DISK:
       return StorageType.RAM_DISK;
+    case PROVIDED:
+      return StorageType.PROVIDED;
     default:
       throw new IllegalStateException(
           "BUG: StorageTypeProto not found, type=" + type);
@@ -3223,4 +3228,35 @@ public class PBHelperClient {
     }
     return ret;
   }
+
+  public static ProvidedStorageLocation convert(
+      HdfsProtos.ProvidedStorageLocationProto providedStorageLocationProto) {
+    if (providedStorageLocationProto == null) {
+      return null;
+    }
+    String path = providedStorageLocationProto.getPath();
+    long length = providedStorageLocationProto.getLength();
+    long offset = providedStorageLocationProto.getOffset();
+    ByteString nonce = providedStorageLocationProto.getNonce();
+
+    if (path == null || length == -1 || offset == -1 || nonce == null) {
+      return null;
+    } else {
+      return new ProvidedStorageLocation(new Path(path), offset, length,
+          nonce.toByteArray());
+    }
+  }
+
+  public static HdfsProtos.ProvidedStorageLocationProto convert(
+      ProvidedStorageLocation providedStorageLocation) {
+    String path = providedStorageLocation.getPath().toString();
+    return HdfsProtos.ProvidedStorageLocationProto.newBuilder()
+        .setPath(path)
+        .setLength(providedStorageLocation.getLength())
+        .setOffset(providedStorageLocation.getOffset())
+        .setNonce(ByteString.copyFrom(providedStorageLocation.getNonce()))
+        .build();
+  }
+
+
 }
