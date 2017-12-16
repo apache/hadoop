@@ -22,41 +22,25 @@ Here is a short overview of the major features and improvements.
 
 *   Common
 
-    *   Authentication improvements when using an HTTP proxy server. This is
-        useful when accessing WebHDFS via a proxy server.
+    *   Multiple unit test failures fixed across all subprojects.
 
-    *   A new Hadoop metrics sink that allows writing directly to Graphite.
+    *   Optimized UGI group handling.
 
-    *   [Specification work](./hadoop-project-dist/hadoop-common/filesystem/index.html)
-        related to the Hadoop Compatible Filesystem (HCFS) effort.
+    *   Improved reading of compressed splits.
 
 *   HDFS
 
-    *   Support for POSIX-style filesystem extended attributes. See the
-        [user documentation](./hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html)
-        for more details.
+    *   Fixed bugs to prevent NameNode from crashing due to NPE and full GC.
 
-    *   Using the OfflineImageViewer, clients can now browse an fsimage via
-        the WebHDFS API.
+    *   NameNode performance improvements for path handling.
 
-    *   The NFS gateway received a number of supportability improvements and
-        bug fixes. The Hadoop portmapper is no longer required to run the gateway,
-        and the gateway is now able to reject connections from unprivileged ports.
-
-    *   The SecondaryNameNode, JournalNode, and DataNode web UIs have been
-        modernized with HTML5 and Javascript.
+    *   Namesystem metrics improvements.
 
 *   YARN
 
-    *   YARN's REST APIs now support write/modify operations. Users can submit and
-        kill applications through REST APIs.
+    *   Resource Manager improvements and bug fixes.
 
-    *   The timeline store in YARN, used for storing generic and
-        application-specific information for applications, supports authentication
-        through Kerberos.
-
-    *   The Fair Scheduler supports dynamic hierarchical user queues, user queues
-        are created dynamically at runtime under any specified parent-queue.
+    *   Handling Node Manager timeouts during shuffle stage.
 
 Getting Started
 ===============
