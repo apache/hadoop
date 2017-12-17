@@ -78,6 +78,16 @@ public class MembershipStatsPBImpl extends MembershipStats
   }
 
   @Override
+  public void setProvidedSpace(long capacity) {
+    this.translator.getBuilder().setProvidedSpace(capacity);
+  }
+
+  @Override
+  public long getProvidedSpace() {
+    return this.translator.getProtoOrBuilder().getProvidedSpace();
+  }
+
+  @Override
   public void setNumOfFiles(long files) {
     this.translator.getBuilder().setNumOfFiles(files);
   }

@@ -169,6 +169,11 @@ public class NamenodeBeanMetrics
   }
 
   @Override
+  public long getProvidedCapacity() {
+    return getFederationMetrics().getProvidedSpace();
+  }
+
+  @Override
   public String getSafemode() {
     // We assume that the global federated view is never in safe mode
     return "";
@@ -447,6 +452,11 @@ public class NamenodeBeanMetrics
   @Override
   public long getCapacityUsed() {
     return this.getUsed();
+  }
+
+  @Override
+  public long getProvidedCapacityTotal() {
+    return getProvidedCapacity();
   }
 
   @Override

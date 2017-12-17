@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -35,6 +36,7 @@ import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.RMHAServiceTarget;
@@ -74,6 +77,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.base.Preconditions;
@@ -96,6 +100,8 @@ public class RMAdminCLI extends HAAdmin {
   private static final String ADD_LABEL_FORMAT_ERR_MSG =
       "Input format for adding node-labels is not correct, it should be "
           + "labelName1[(exclusive=true/false)],LabelName2[] ..";
+  private static final Pattern RESOURCE_TYPES_ARGS_PATTERN =
+      Pattern.compile("^[0-9]*$");
 
   protected final static Map<String, UsageInfo> ADMIN_USAGE =
       ImmutableMap.<String, UsageInfo>builder()
@@ -159,7 +165,9 @@ public class RMAdminCLI extends HAAdmin {
               new UsageInfo("",
                   "Refresh cluster max priority"))
           .put("-updateNodeResource",
-              new UsageInfo("[NodeID] [MemSize] [vCores] ([OvercommitTimeout])",
+              new UsageInfo("[NodeID] [MemSize] [vCores] ([OvercommitTimeout])"
+                  + " \n\t\tor\n\t\t[NodeID] [resourcetypes] "
+                  + "([OvercommitTimeout]). ",
                   "Update resource on specific node."))
           .build();
 
@@ -262,26 +270,27 @@ public class RMAdminCLI extends HAAdmin {
     StringBuilder summary = new StringBuilder();
     summary.append("rmadmin is the command to execute YARN administrative " +
         "commands.\n");
-    summary.append("The full syntax is: \n\n" +
-        "yarn rmadmin" +
-        " [-refreshQueues]" +
-        " [-refreshNodes [-g|graceful [timeout in seconds] -client|server]]" +
-        " [-refreshNodesResources]" +
-        " [-refreshSuperUserGroupsConfiguration]" +
-        " [-refreshUserToGroupsMappings]" +
-        " [-refreshAdminAcls]" +
-        " [-refreshServiceAcl]" +
-        " [-getGroup [username]]" +
-        " [-addToClusterNodeLabels <\"label1(exclusive=true),"
-            + "label2(exclusive=false),label3\">]" +
-        " [-removeFromClusterNodeLabels <label1,label2,label3>]" +
-        " [-replaceLabelsOnNode " +
-            "<\"node1[:port]=label1,label2 node2[:port]=label1\"> " +
-            "[-failOnUnknownNodes]]" +
-        " [-directlyAccessNodeLabelStore]" +
-        " [-refreshClusterMaxPriority]" +
-        " [-updateNodeResource [NodeID] [MemSize] [vCores]" +
-        " ([OvercommitTimeout])");
+    summary.append("The full syntax is: \n\n"
+        + "yarn rmadmin"
+        + " [-refreshQueues]"
+        + " [-refreshNodes [-g|graceful [timeout in seconds] -client|server]]"
+        + " [-refreshNodesResources]"
+        + " [-refreshSuperUserGroupsConfiguration]"
+        + " [-refreshUserToGroupsMappings]"
+        + " [-refreshAdminAcls]"
+        + " [-refreshServiceAcl]"
+        + " [-getGroup [username]]"
+        + " [-addToClusterNodeLabels <\"label1(exclusive=true),"
+        + "label2(exclusive=false),label3\">]"
+        + " [-removeFromClusterNodeLabels <label1,label2,label3>]"
+        + " [-replaceLabelsOnNode "
+        + "<\"node1[:port]=label1,label2 node2[:port]=label1\"> "
+        + "[-failOnUnknownNodes]]"
+        + " [-directlyAccessNodeLabelStore]"
+        + " [-refreshClusterMaxPriority]"
+        + " [-updateNodeResource [NodeID] [MemSize] [vCores]"
+        + " ([OvercommitTimeout]) or -updateNodeResource [NodeID] "
+        + "[ResourceTypes] ([OvercommitTimeout])]");
     if (isHAEnabled) {
       appendHAUsage(summary);
     }
@@ -471,20 +480,14 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int updateNodeResource(String nodeIdStr, int memSize,
-      int cores, int overCommitTimeout) throws IOException, YarnException {
-    // check resource value first
-    if (invalidResourceValue(memSize, cores)) {
-      throw new IllegalArgumentException("Invalid resource value: " + "(" +
-          memSize + "," + cores + ") for updateNodeResource.");
-    }
-    // Refresh the nodes
+  private int updateNodeResource(String nodeIdStr, Resource resource,
+      int overCommitTimeout) throws YarnException, IOException {
+
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     UpdateNodeResourceRequest request =
       recordFactory.newRecordInstance(UpdateNodeResourceRequest.class);
     NodeId nodeId = NodeId.fromString(nodeIdStr);
-    
-    Resource resource = Resources.createResource(memSize, cores);
+
     Map<NodeId, ResourceOption> resourceMap =
         new HashMap<NodeId, ResourceOption>();
     resourceMap.put(
@@ -919,26 +922,95 @@ public class RMAdminCLI extends HAAdmin {
     }
   }
 
+  /**
+   * Handle resources of two different formats:
+   *
+   * 1. -updateNodeResource [NodeID] [MemSize] [vCores] ([overCommitTimeout])
+   * 2. -updateNodeResource [NodeID] [ResourceTypes] ([overCommitTimeout])
+   *
+   * Incase of No. of args is 4 or 5, 2nd arg should contain only numbers to
+   * satisfy the 1st format. Otherwise, 2nd format flow continues.
+   * @param args arguments of the command
+   * @param cmd whole command to be parsed
+   * @param isHAEnabled Is HA enabled or not?
+   * @return 1 on success, -1 on errors
+   * @throws IOException if any issues thrown from RPC layer
+   * @throws YarnException if any issues thrown from server
+   */
   private int handleUpdateNodeResource(
       String[] args, String cmd, boolean isHAEnabled)
-          throws NumberFormatException, IOException, YarnException {
+          throws YarnException, IOException {
     int i = 1;
-    if (args.length < 4 || args.length > 5) {
+    int overCommitTimeout = ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT;
+    String nodeID = args[i++];
+    Resource resource = Resource.newInstance(0, 0);
+    if (args.length < 3 || args.length > 5) {
       System.err.println("Number of parameters specified for " +
           "updateNodeResource is wrong.");
       printUsage(cmd, isHAEnabled);
       return -1;
-    } else {
-      String nodeID = args[i++];
-      String memSize = args[i++];
-      String cores = args[i++];
-      int overCommitTimeout = ResourceOption.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT;
-      if (i == args.length - 1) {
-        overCommitTimeout = Integer.parseInt(args[i]);
+    } else if ((args.length == 4 || args.length == 5) &&
+        RESOURCE_TYPES_ARGS_PATTERN.matcher(args[2]).matches()) {
+      int memSize = Integer.parseInt(args[i++]);
+      int cores = Integer.parseInt(args[i++]);
+
+      // check resource value first
+      if (invalidResourceValue(memSize, cores)) {
+        throw new IllegalArgumentException("Invalid resource value: " + "(" +
+            memSize + "," + cores + ") for updateNodeResource.");
       }
-      return updateNodeResource(nodeID, Integer.parseInt(memSize),
-          Integer.parseInt(cores), overCommitTimeout);
+      resource = Resources.createResource(memSize, cores);
+    } else {
+      String resourceTypes = args[i++];
+      if (!resourceTypes.contains("=")) {
+        System.err.println("Resource Types parameter specified for "
+            + "updateNodeResource is wrong. It should be comma-delimited "
+            + "key value pairs. For example, memory-mb=1024Mi,"
+            + "vcores=1,resource1=3Gi,resource2=2");
+        printUsage(cmd, isHAEnabled);
+        return -1;
+      }
+      resource = parseCommandAndCreateResource(resourceTypes);
+      ResourceUtils.areMandatoryResourcesAvailable(resource);
     }
+    if (i == args.length - 1) {
+      overCommitTimeout = Integer.parseInt(args[i]);
+    }
+    return updateNodeResource(nodeID, resource, overCommitTimeout);
+  }
+
+  private Resource parseCommandAndCreateResource(String resourceTypes) {
+    Resource resource = Resource.newInstance(0, 0);
+    Map<String, ResourceInformation> resourceTypesFromRM =
+        ResourceUtils.getResourceTypes();
+    String[] resourceTypesArr = resourceTypes.split(",");
+    for (int k = 0; k < resourceTypesArr.length; k++) {
+      String resourceType = resourceTypesArr[k];
+      String[] resourceTypeArray = resourceType.split("=");
+      if (resourceTypeArray.length == 2) {
+        String resName = StringUtils.trim(resourceTypeArray[0]);
+        String resValue = StringUtils.trim(resourceTypeArray[1]);
+        if (resourceTypesFromRM.containsKey(resName)) {
+          String[] resourceValue = ResourceUtils.parseResourceValue(resValue);
+          if (resourceValue.length == 2) {
+            ResourceInformation ri = ResourceInformation.newInstance(resName,
+                resourceValue[0], Long.parseLong(resourceValue[1]));
+            resource.setResourceInformation(resName, ri);
+          } else {
+            throw new IllegalArgumentException("Invalid resource value: " +
+                resValue + ". Unable to extract unit and actual value.");
+          }
+        } else {
+          throw new IllegalArgumentException("Invalid resource type: " +
+              resName + ". Not allowed.");
+        }
+      } else {
+        throw new IllegalArgumentException("Invalid resource type value: " +
+            "("+ resourceType + ") for updateNodeResource. "
+                + "It should be key value pairs separated using '=' symbol.");
+      }
+    }
+    return resource;
   }
 
   private int validateTimeout(String strTimeout) {

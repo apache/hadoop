@@ -147,7 +147,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.metrics = old != null ?
         (CSQueueMetrics) old.getMetrics() :
         CSQueueMetrics.forQueue(getQueuePath(), parent,
-            configuration.getEnableUserMetrics(), cs.getConf());
+            cs.getConfiguration().getEnableUserMetrics(), cs.getConf());
 
     this.csContext = cs;
     this.minimumAllocation = csContext.getMinimumResourceCapability();

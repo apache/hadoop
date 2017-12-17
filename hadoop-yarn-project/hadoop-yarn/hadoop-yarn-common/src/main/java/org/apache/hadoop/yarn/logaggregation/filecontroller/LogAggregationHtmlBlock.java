@@ -77,10 +77,35 @@ public abstract class LogAggregationHtmlBlock extends HtmlBlock {
       end = LogAggregationWebUtils.getLogEndIndex(
           html, $("end"));
     } catch (NumberFormatException ne) {
-      html.h1().__("Invalid log start value: " + $("end")).__();
+      html.h1().__("Invalid log end value: " + $("end")).__();
       isValid = false;
     }
     params.setEndIndex(end);
+
+    long startTime = 0;
+    try {
+      startTime = LogAggregationWebUtils.getLogStartTime(
+          $("start.time"));
+    } catch (NumberFormatException ne) {
+      html.h1().__("Invalid log start time value: " + $("start.time")).__();
+      isValid = false;
+    }
+    params.setStartTime(startTime);
+
+    long endTime = Long.MAX_VALUE;
+    try {
+      endTime = LogAggregationWebUtils.getLogEndTime(
+          $("end.time"));
+      if (endTime < startTime) {
+        html.h1().__("Invalid log end time value: " + $("end.time") +
+            ". It should be larger than start time value:" + startTime).__();
+        isValid = false;
+      }
+    } catch (NumberFormatException ne) {
+      html.h1().__("Invalid log end time value: " + $("end.time")).__();
+      isValid = false;
+    }
+    params.setEndTime(endTime);
 
     if (containerId == null || nodeId == null || appOwner == null
         || appOwner.isEmpty() || !isValid) {
@@ -126,6 +151,8 @@ public abstract class LogAggregationHtmlBlock extends HtmlBlock {
     private long start;
     private long end;
     private String logEntity;
+    private long startTime;
+    private long endTime;
 
     public ApplicationId getAppId() {
       return appId;
@@ -181,6 +208,22 @@ public abstract class LogAggregationHtmlBlock extends HtmlBlock {
 
     public void setLogEntity(String logEntity) {
       this.logEntity = logEntity;
+    }
+
+    public long getStartTime() {
+      return startTime;
+    }
+
+    public void setStartTime(long startTime) {
+      this.startTime = startTime;
+    }
+
+    public long getEndTime() {
+      return endTime;
+    }
+
+    public void setEndTime(long endTime) {
+      this.endTime = endTime;
     }
   }
 }

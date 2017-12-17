@@ -539,7 +539,5 @@ extends AbstractService {
      * @param e
      */
     void onError(Throwable e);
-
-    void onContainersReceivedFromPreviousAttempts(List<Container> containers);
   }
 }

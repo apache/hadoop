@@ -352,7 +352,7 @@ public class Component implements EventHandler<ComponentEvent> {
   @SuppressWarnings({ "unchecked" })
   public void requestContainers(long count) {
     Resource resource = Resource
-        .newInstance(componentSpec.getResource().getMemoryMB(),
+        .newInstance(componentSpec.getResource().calcMemoryMB(),
             componentSpec.getResource().getCpus());
 
     for (int i = 0; i < count; i++) {
