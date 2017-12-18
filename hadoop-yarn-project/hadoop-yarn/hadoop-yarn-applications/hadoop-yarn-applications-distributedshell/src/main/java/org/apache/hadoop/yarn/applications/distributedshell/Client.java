@@ -175,6 +175,8 @@ public class Client {
   private String nodeLabelExpression = null;
   // Container type, default GUARANTEED.
   private ExecutionType containerType = ExecutionType.GUARANTEED;
+  // Whether to auto promote opportunistic containers
+  private boolean autoPromoteContainers = false;
 
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
@@ -292,6 +294,9 @@ public class Client {
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("container_resource_profile", true, "Resource profile for the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
+    opts.addOption("promote_opportunistic_after_start", false,
+        "Flag to indicate whether to automatically promote opportunistic"
+            + " containers to guaranteed.");
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("keep_containers_across_application_attempts", false,
       "Flag to indicate whether to keep containers across application attempts." +
@@ -448,6 +453,9 @@ public class Client {
             + containerTypeStr);
       }
       containerType = ExecutionType.valueOf(containerTypeStr);
+    }
+    if (cliParser.hasOption("promote_opportunistic_after_start")) {
+      autoPromoteContainers = true;
     }
     containerMemory =
         Integer.parseInt(cliParser.getOptionValue("container_memory", "-1"));
@@ -758,6 +766,9 @@ public class Client {
     // Set params for Application Master
     if (containerType != null) {
       vargs.add("--container_type " + String.valueOf(containerType));
+    }
+    if (autoPromoteContainers) {
+      vargs.add("--promote_opportunistic_after_start");
     }
     if (containerMemory > 0) {
       vargs.add("--container_memory " + String.valueOf(containerMemory));
