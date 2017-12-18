@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys
@@ -54,7 +55,7 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
-    .DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS;
+    .DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE;
 
@@ -198,7 +199,8 @@ public class TestCBlockReadWrite {
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
-    flushTestConfig.setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 3);
+    flushTestConfig.setTimeDuration(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL, 3,
+        TimeUnit.SECONDS);
     XceiverClientManager xcm = new XceiverClientManager(flushTestConfig);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
     String userName = "user" + RandomStringUtils.randomNumeric(4);
@@ -287,7 +289,9 @@ public class TestCBlockReadWrite {
     flushTestConfig.set(DFS_CBLOCK_DISK_CACHE_PATH_KEY, path);
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
-    flushTestConfig.setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 3);
+    flushTestConfig.setTimeDuration(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL,
+        3,
+        TimeUnit.SECONDS);
 
     int numblocks = 10;
     flushTestConfig.setInt(DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE, numblocks);

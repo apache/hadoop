@@ -75,7 +75,8 @@ public class TestDatanodeStateMachine {
   @Before
   public void setUp() throws Exception {
     conf = SCMTestUtils.getConf();
-    conf.setInt(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500,
+        TimeUnit.MILLISECONDS);
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
     serverAddresses = new LinkedList<>();
     scmServers = new LinkedList<>();

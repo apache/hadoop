@@ -52,7 +52,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.HEALTHY;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_SECONDS;
+    .OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT;
 import static org.apache.ratis.shaded.com.google.common.util.concurrent
     .Uninterruptibles.sleepUninterruptibly;
 
@@ -108,7 +108,8 @@ public class TestContainerReplicationManager {
       }
     }
     OzoneConfiguration config = SCMTestUtils.getOzoneConf();
-    config.setInt(OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_SECONDS, 1);
+    config.setTimeDuration(OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT, 1,
+        TimeUnit.SECONDS);
     replicationManager = new ContainerReplicationManager(config,
         nodeManager, poolManager, commandQueue);
     datanodeStateManager = new ReplicationDatanodeStateManager(nodeManager,

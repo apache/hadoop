@@ -63,18 +63,17 @@ public final class InProgressPool {
   private AtomicInteger nodeCount;
   private AtomicInteger nodeProcessed;
   private AtomicInteger containerProcessedCount;
-  private int maxWaitTime;
+  private long maxWaitTime;
   /**
    * Constructs an pool that is being processed.
-   *
-   * @param maxWaitTime - Maximum wait time in milliseconds.
+   *  @param maxWaitTime - Maximum wait time in milliseconds.
    * @param pool - Pool that we are working against
    * @param nodeManager - Nodemanager
    * @param poolManager - pool manager
    * @param commandQueue - Command queue
    * @param executorService - Shared Executor service.
    */
-  InProgressPool(int maxWaitTime, PeriodicPool pool,
+  InProgressPool(long maxWaitTime, PeriodicPool pool,
       NodeManager nodeManager, NodePoolManager poolManager,
       CommandQueue commandQueue, ExecutorService executorService) {
     Preconditions.checkNotNull(pool);

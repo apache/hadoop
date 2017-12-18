@@ -25,6 +25,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerReportManage
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.util.Time;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -46,9 +47,10 @@ public class ContainerReportManagerImpl implements ContainerReportManager {
     this.config = config;
     this.lastContainerReportTime = -1;
     this.reportCount = new AtomicLong(0L);
-    this.containerReportInterval = config.getLong(
-        OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL_MS,
-        OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL_MS_DEFAULT);
+    this.containerReportInterval = config.getTimeDuration(
+        OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL,
+        OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
   }
 
   public ReportState getContainerReportState() {

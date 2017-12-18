@@ -47,9 +47,10 @@ public class CBlockVolumeClient {
     InetSocketAddress address = serverAddress != null ? serverAddress :
         OzoneClientUtils.getCblockServiceRpcAddr(conf);
     long version = RPC.getProtocolVersion(CBlockServiceProtocolPB.class);
-    int rpcTimeout =
-        conf.getInt(CBlockConfigKeys.DFS_CBLOCK_RPC_TIMEOUT_SECONDS,
-        CBlockConfigKeys.DFS_CBLOCK_RPC_TIMEOUT_SECONDS_DEFAULT) * 1000;
+    int rpcTimeout = Math.toIntExact(
+        conf.getTimeDuration(CBlockConfigKeys.DFS_CBLOCK_RPC_TIMEOUT,
+            CBlockConfigKeys.DFS_CBLOCK_RPC_TIMEOUT_DEFAULT,
+            TimeUnit.MILLISECONDS));
     cblockClient = new CBlockServiceProtocolClientSideTranslatorPB(
         RPC.getProtocolProxy(CBlockServiceProtocolPB.class, version,
             address, UserGroupInformation.getCurrentUser(), conf,

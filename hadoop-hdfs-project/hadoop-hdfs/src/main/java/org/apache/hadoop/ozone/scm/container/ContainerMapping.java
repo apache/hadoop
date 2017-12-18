@@ -50,6 +50,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -117,9 +118,10 @@ public class ContainerMapping implements Mapping {
         ScmConfigKeys.OZONE_SCM_CONTAINER_CLOSE_THRESHOLD_DEFAULT);
     LOG.trace("Container State Manager created.");
 
-    long containerCreationLeaseTimeout = conf.getLong(
+    long containerCreationLeaseTimeout = conf.getTimeDuration(
         ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT,
-        ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT);
+        ScmConfigKeys.OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
     LOG.trace("Starting Container Lease Manager.");
     containerLeaseManager = new LeaseManager<>(containerCreationLeaseTimeout);
     containerLeaseManager.start();

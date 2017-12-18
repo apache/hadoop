@@ -51,9 +51,9 @@ import static org.apache.hadoop.ozone
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
 import static org.apache.hadoop.ozone
-    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
+    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone
-    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
+    .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone
     .OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone
@@ -104,12 +104,14 @@ public class KeyManagerImpl implements KeyManager {
         OZONE_SCM_BLOCK_SIZE_DEFAULT) * OzoneConsts.MB;
     this.useRatis = conf.getBoolean(DFS_CONTAINER_RATIS_ENABLED_KEY,
         DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
-    int blockDeleteInterval = conf.getInt(
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
+    long  blockDeleteInterval = conf.getTimeDuration(
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
     long serviceTimeout = conf.getTimeDuration(
         OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
-        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
+        OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
+        TimeUnit.MILLISECONDS);
     this.preallocateMax = conf.getLong(
         OZONE_KEY_PREALLOCATION_MAXSIZE,
         OZONE_KEY_PREALLOCATION_MAXSIZE_DEFAULT);

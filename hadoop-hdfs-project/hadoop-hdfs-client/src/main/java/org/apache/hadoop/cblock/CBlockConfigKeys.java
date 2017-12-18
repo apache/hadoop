@@ -103,9 +103,9 @@ public final class CBlockConfigKeys {
   /**
    * Number of seconds to keep the Thread alive when it is idle.
    */
-  public static final String DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS =
-      "dfs.cblock.cache.keep.alive.seconds";
-  public static final long DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS_DEFAULT = 60;
+  public static final String DFS_CBLOCK_CACHE_KEEP_ALIVE =
+      "dfs.cblock.cache.keep.alive";
+  public static final String DFS_CBLOCK_CACHE_KEEP_ALIVE_DEFAULT = "60s";
 
   /**
    * Priority of cache flusher thread, affecting the relative performance of
@@ -123,10 +123,10 @@ public final class CBlockConfigKeys {
       "dfs.cblock.cache.block.buffer.size";
   public static final int DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT = 512;
 
-  public static final String DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS =
-      "dfs.cblock.block.buffer.flush.interval.seconds";
-  public static final int
-      DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS_DEFAULT = 60;
+  public static final String DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL =
+      "dfs.cblock.block.buffer.flush.interval";
+  public static final String DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_DEFAULT =
+      "60s";
 
   // jscsi server settings
   public static final String DFS_CBLOCK_JSCSI_SERVER_ADDRESS_KEY =
@@ -183,9 +183,9 @@ public final class CBlockConfigKeys {
    * currently the largest supported volume is about 8TB, which might take
    * > 20 seconds to finish creating containers. thus set timeout to 30 sec.
    */
-  public static final String DFS_CBLOCK_RPC_TIMEOUT_SECONDS =
-      "dfs.cblock.rpc.timeout.seconds";
-  public static final int DFS_CBLOCK_RPC_TIMEOUT_SECONDS_DEFAULT = 300;
+  public static final String DFS_CBLOCK_RPC_TIMEOUT =
+      "dfs.cblock.rpc.timeout";
+  public static final String DFS_CBLOCK_RPC_TIMEOUT_DEFAULT = "300s";
 
   private CBlockConfigKeys() {
 
