@@ -100,6 +100,10 @@ public class ContainerInfo
     return allocatedBytes;
   }
 
+  public void setAllocatedBytes(long allocatedBytes) {
+    this.allocatedBytes = allocatedBytes;
+  }
+
   public long getUsedBytes() {
     return usedBytes;
   }

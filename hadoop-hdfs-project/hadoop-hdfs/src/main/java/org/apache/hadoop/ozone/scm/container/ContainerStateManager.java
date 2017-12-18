@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -220,6 +221,17 @@ public class ContainerStateManager implements Closeable {
         LOG.info("Could not list the containers", e);
       }
     }
+  }
+
+  /**
+   * Return the info of all the containers kept by the in-memory mapping.
+   *
+   * @return the list of all container info.
+   */
+  List<ContainerInfo> getAllContainers() {
+    List<ContainerInfo> list = new ArrayList<>();
+    containers.forEach((key, value) -> list.addAll(value));
+    return list;
   }
 
   // 1. Client -> SCM: Begin_create
