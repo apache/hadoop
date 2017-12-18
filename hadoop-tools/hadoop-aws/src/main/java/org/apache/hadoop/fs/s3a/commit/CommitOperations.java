@@ -101,7 +101,7 @@ public class CommitOperations {
     Preconditions.checkArgument(fs != null, "null fs");
     this.fs = fs;
     statistics = fs.newCommitterStatistics();
-    writeOperations = fs.createWriteOperationHelper();
+    writeOperations = fs.getWriteOperationHelper();
   }
 
   /**
