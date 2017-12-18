@@ -27,19 +27,23 @@ import io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
+import java.util.concurrent.Semaphore;
+
 /**
  * Setup the netty pipeline.
  */
 public class XceiverClientInitializer extends
     ChannelInitializer<SocketChannel> {
   private final Pipeline pipeline;
+  private final Semaphore semaphore;
 
   /**
    * Constructs an Initializer for the client pipeline.
    * @param pipeline  - Pipeline.
    */
-  public XceiverClientInitializer(Pipeline pipeline) {
+  public XceiverClientInitializer(Pipeline pipeline, Semaphore semaphore) {
     this.pipeline = pipeline;
+    this.semaphore = semaphore;
   }
 
   /**
@@ -62,7 +66,7 @@ public class XceiverClientInitializer extends
     p.addLast(new ProtobufVarint32LengthFieldPrepender());
     p.addLast(new ProtobufEncoder());
 
-    p.addLast(new XceiverClientHandler(this.pipeline));
+    p.addLast(new XceiverClientHandler(this.pipeline, this.semaphore));
 
   }
 }

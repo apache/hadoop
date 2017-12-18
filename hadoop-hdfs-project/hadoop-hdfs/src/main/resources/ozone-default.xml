@@ -1097,6 +1097,16 @@
   </property>
 
   <property>
+    <name>scm.container.client.max.outstanding.requests</name>
+    <value>100</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Controls the maximum number of outstanding async requests that can be
+      handled by the Standalone as well as Ratis client.
+    </description>
+  </property>
+
+  <property>
     <name>ozone.scm.container.creation.lease.timeout</name>
     <value>60s</value>
     <tag>OZONE, SCM</tag>
