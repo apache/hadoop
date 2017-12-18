@@ -161,6 +161,8 @@ public class Client {
   private String nodeLabelExpression = null;
   // Container type, default GUARANTEED.
   private ExecutionType containerType = ExecutionType.GUARANTEED;
+  // Whether to auto promote opportunistic containers
+  private boolean autoPromoteContainers = false;
 
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
@@ -276,6 +278,9 @@ public class Client {
     opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
+    opts.addOption("promote_opportunistic_after_start", false,
+        "Flag to indicate whether to automatically promote opportunistic"
+            + " containers to guaranteed.");
     opts.addOption("log_properties", true, "log4j.properties file");
     opts.addOption("keep_containers_across_application_attempts", false,
       "Flag to indicate whether to keep containers across application attempts." +
@@ -452,7 +457,10 @@ public class Client {
       }
       containerType = ExecutionType.valueOf(containerTypeStr);
     }
-    
+    if (cliParser.hasOption("promote_opportunistic_after_start")) {
+      autoPromoteContainers = true;
+    }
+
     nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
 
     clientTimeout = Integer.parseInt(cliParser.getOptionValue("timeout", "600000"));
@@ -717,6 +725,9 @@ public class Client {
     vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
     if (containerType != null) {
       vargs.add("--container_type " + String.valueOf(containerType));
+    }
+    if (autoPromoteContainers) {
+      vargs.add("--promote_opportunistic_after_start");
     }
     vargs.add("--num_containers " + String.valueOf(numContainers));
     if (null != nodeLabelExpression) {
