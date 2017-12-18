@@ -198,7 +198,7 @@ public class NodeManagerMetrics {
 
   public void addResource(Resource res) {
     availableMB = availableMB + res.getMemorySize();
-    availableGB.incr((int)Math.floor(availableMB/1024d));
+    availableGB.set((int)Math.floor(availableMB/1024d));
     availableVCores.incr(res.getVirtualCores());
   }
 
