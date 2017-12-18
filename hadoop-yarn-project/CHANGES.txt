@@ -12,6 +12,9 @@ Release 2.7.6 - UNRELEASED
 
   BUG FIXES
 
+    YARN-7661. NodeManager metrics return wrong value after update node
+    resource (Yang Wang via jlowe)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES

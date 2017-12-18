@@ -74,6 +74,12 @@ public class TestNodeManagerMetrics {
     // allocatedGB: 3.5GB allocated memory is shown as 4GB
     // availableGB: 4.5GB available memory is shown as 4GB
     checkMetrics(10, 1, 1, 1, 1, 1, 4, 7, 4, 14, 2);
+
+    // Update resource and check available resource again
+    metrics.addResource(total);
+    MetricsRecordBuilder rb = getMetrics("NodeManagerMetrics");
+    assertGauge("AvailableGB", 12, rb);
+    assertGauge("AvailableVCores", 18, rb);
   }
 
   private void checkMetrics(int launched, int completed, int failed, int killed,
