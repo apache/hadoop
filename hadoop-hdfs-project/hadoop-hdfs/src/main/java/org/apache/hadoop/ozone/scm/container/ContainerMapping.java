@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.scm.container;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -428,8 +429,58 @@ public class ContainerMapping implements Mapping {
     if (containerLeaseManager != null) {
       containerLeaseManager.shutdown();
     }
+    if (containerStateManager != null) {
+      flushContainerInfo();
+      containerStateManager.close();
+    }
     if (containerStore != null) {
       containerStore.close();
     }
+  }
+
+  /**
+   * Since allocatedBytes of a container is only in memory, stored in
+   * containerStateManager, when closing ContainerMapping, we need to update
+   * this in the container store.
+   *
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public void flushContainerInfo() throws IOException {
+    List<ContainerInfo> containers = containerStateManager.getAllContainers();
+    List<String> failedContainers = new ArrayList<>();
+    for (ContainerInfo info : containers) {
+      // even if some container updated failed, others can still proceed
+      try {
+        byte[] dbKey = info.getContainerName().getBytes(encoding);
+        byte[] containerBytes = containerStore.get(dbKey);
+        // TODO : looks like when a container is deleted, the container is
+        // removed from containerStore but not containerStateManager, so it can
+        // return info of a deleted container. may revisit this in the future,
+        // for now, just skip a not-found container
+        if (containerBytes != null) {
+          OzoneProtos.SCMContainerInfo oldInfoProto =
+              OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
+          ContainerInfo oldInfo = ContainerInfo.fromProtobuf(oldInfoProto);
+          oldInfo.setAllocatedBytes(info.getAllocatedBytes());
+          containerStore.put(dbKey, oldInfo.getProtobuf().toByteArray());
+        } else {
+          LOG.debug("Container state manager has container {} but not found " +
+              "in container store, a deleted container?",
+              info.getContainerName());
+        }
+      } catch (IOException ioe) {
+        failedContainers.add(info.getContainerName());
+      }
+    }
+    if (!failedContainers.isEmpty()) {
+      throw new IOException("Error in flushing container info from container " +
+          "state manager: " + failedContainers);
+    }
+  }
+
+  @VisibleForTesting
+  public MetadataStore getContainerStore() {
+    return containerStore;
   }
 }

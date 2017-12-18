@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.util.Random;
 
 /**
  * Tests for ContainerStateManager.
@@ -245,6 +246,43 @@ public class TestContainerStateManager {
         xceiverClientManager.getType(), xceiverClientManager.getFactor(),
         OzoneProtos.LifeCycleState.CLOSED).size();
     Assert.assertEquals(1, containers);
+  }
 
+  @Test
+  public void testUpdatingAllocatedBytes() throws Exception {
+    String container1 = "container" + RandomStringUtils.randomNumeric(5);
+    scm.allocateContainer(xceiverClientManager.getType(),
+        xceiverClientManager.getFactor(), container1);
+    scmContainerMapping.updateContainerState(container1,
+        OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+    scmContainerMapping.updateContainerState(container1,
+        OzoneProtos.LifeCycleEvent.COMPLETE_CREATE);
+
+    Random ran = new Random();
+    long allocatedSize = 0;
+    for (int i = 0; i<5; i++) {
+      long size = Math.abs(ran.nextLong() % OzoneConsts.GB);
+      allocatedSize += size;
+      // trigger allocating bytes by calling getMatchingContainer
+      ContainerInfo info = stateManager
+          .getMatchingContainer(size, OzoneProtos.Owner.OZONE,
+              xceiverClientManager.getType(), xceiverClientManager.getFactor(),
+              OzoneProtos.LifeCycleState.OPEN);
+      Assert.assertEquals(container1, info.getContainerName());
+
+      ContainerMapping containerMapping =
+          (ContainerMapping)scmContainerMapping;
+      // manually trigger a flush, this will persist the allocated bytes value
+      // to disk
+      containerMapping.flushContainerInfo();
+
+      // the persisted value should always be equal to allocated size.
+      byte[] containerBytes =
+          containerMapping.getContainerStore().get(container1.getBytes());
+      OzoneProtos.SCMContainerInfo infoProto =
+          OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
+      ContainerInfo currentInfo = ContainerInfo.fromProtobuf(infoProto);
+      Assert.assertEquals(allocatedSize, currentInfo.getAllocatedBytes());
+    }
   }
 }
