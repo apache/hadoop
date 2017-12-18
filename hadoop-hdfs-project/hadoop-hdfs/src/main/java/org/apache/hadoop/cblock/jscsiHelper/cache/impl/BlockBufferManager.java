@@ -31,17 +31,17 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
-    DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS;
+    DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
-    DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS_DEFAULT;
+    DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
     DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
     DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
-    DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS;
+    DFS_CBLOCK_CACHE_KEEP_ALIVE;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
-    DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS_DEFAULT;
+    DFS_CBLOCK_CACHE_KEEP_ALIVE_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
     DFS_CBLOCK_CACHE_THREAD_PRIORITY;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
@@ -76,7 +76,7 @@ public class BlockBufferManager {
   private final CBlockLocalCache parentCache;
   private final ScheduledThreadPoolExecutor scheduledExecutor;
   private final ThreadPoolExecutor threadPoolExecutor;
-  private final int intervalSeconds;
+  private final long intervalSeconds;
   private final ArrayBlockingQueue<ByteBuffer> acquireQueue;
   private final ArrayBlockingQueue<Runnable> workQueue;
   private ByteBuffer currentBuffer;
@@ -86,11 +86,13 @@ public class BlockBufferManager {
     this.scheduledExecutor = new ScheduledThreadPoolExecutor(1);
 
     this.intervalSeconds =
-        config.getInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS,
-            DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS_DEFAULT);
+        config.getTimeDuration(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL,
+            DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_DEFAULT,
+            TimeUnit.SECONDS);
 
-    long keepAlive = config.getLong(DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS,
-        DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS_DEFAULT);
+    long keepAlive = config.getTimeDuration(DFS_CBLOCK_CACHE_KEEP_ALIVE,
+        DFS_CBLOCK_CACHE_KEEP_ALIVE_DEFAULT,
+        TimeUnit.SECONDS);
     this.workQueue = new ArrayBlockingQueue<>(2, true);
     int threadPri = config.getInt(DFS_CBLOCK_CACHE_THREAD_PRIORITY,
         DFS_CBLOCK_CACHE_THREAD_PRIORITY_DEFAULT);

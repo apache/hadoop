@@ -52,11 +52,11 @@ public abstract class BackgroundService {
   private final ThreadGroup threadGroup;
   private final ThreadFactory threadFactory;
   private final String serviceName;
-  private final int interval;
+  private final long interval;
   private final long serviceTimeout;
   private final TimeUnit unit;
 
-  public BackgroundService(String serviceName, int interval,
+  public BackgroundService(String serviceName, long interval,
       TimeUnit unit, int threadPoolSize, long serviceTimeout) {
     this.interval = interval;
     this.unit = unit;

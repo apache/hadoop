@@ -57,7 +57,7 @@ public class KeyDeletingService extends BackgroundService {
   private final int keyLimitPerTask;
 
   public KeyDeletingService(ScmBlockLocationProtocol scmClient,
-      KeyManager manager, int serviceInterval,
+      KeyManager manager, long serviceInterval,
       long serviceTimeout, Configuration conf) {
     super("KeyDeletingService", serviceInterval, TimeUnit.MILLISECONDS,
         KEY_DELETING_CORE_POOL_SIZE, serviceTimeout);

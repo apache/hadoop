@@ -55,6 +55,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -553,20 +554,25 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
 
     private void configureSCMheartbeat() {
       if (hbSeconds.isPresent()) {
-        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
-            hbSeconds.get());
+        conf.getTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL,
+            hbSeconds.get(), TimeUnit.SECONDS);
 
       } else {
-        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
-            DEFAULT_HB_SECONDS);
+        conf.setTimeDuration(ScmConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL,
+            DEFAULT_HB_SECONDS,
+            TimeUnit.SECONDS);
       }
 
       if (hbProcessorInterval.isPresent()) {
-        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
-            hbProcessorInterval.get());
+        conf.setTimeDuration(
+            ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+            hbProcessorInterval.get(),
+            TimeUnit.MILLISECONDS);
       } else {
-        conf.setInt(ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
-            DEFAULT_PROCESSOR_MS);
+        conf.setTimeDuration(
+            ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+            DEFAULT_PROCESSOR_MS,
+            TimeUnit.MILLISECONDS);
       }
 
     }

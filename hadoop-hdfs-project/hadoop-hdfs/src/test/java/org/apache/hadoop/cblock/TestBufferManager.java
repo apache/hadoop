@@ -18,6 +18,7 @@
 package org.apache.hadoop.cblock;
 
 import com.google.common.primitives.Longs;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.cblock.jscsiHelper.CBlockTargetMetrics;
 import org.apache.hadoop.cblock.jscsiHelper.ContainerCacheFlusher;
@@ -50,7 +51,7 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys.
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
     DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO;
 import static org.apache.hadoop.cblock.CBlockConfigKeys.
-    DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS;
+    DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL;
 
 /**
  * Tests for Local Cache Buffer Manager.
@@ -218,7 +219,7 @@ public class TestBufferManager {
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
     flushTestConfig
-        .setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 5);
+        .setTimeDuration(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL, 5, SECONDS);
 
     String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
     String userName = "user" + RandomStringUtils.randomNumeric(4);
@@ -312,7 +313,7 @@ public class TestBufferManager {
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
     flushTestConfig
-        .setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 120);
+        .setTimeDuration(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL, 120, SECONDS);
 
     String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
     String userName = "user" + RandomStringUtils.randomNumeric(4);
@@ -361,7 +362,8 @@ public class TestBufferManager {
     flushTestConfig.setBoolean(DFS_CBLOCK_TRACE_IO, true);
     flushTestConfig.setBoolean(DFS_CBLOCK_ENABLE_SHORT_CIRCUIT_IO, true);
     flushTestConfig
-        .setInt(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL_SECONDS, 5);
+        .setTimeDuration(DFS_CBLOCK_BLOCK_BUFFER_FLUSH_INTERVAL,
+            5, SECONDS);
 
     String volumeName = "volume" + RandomStringUtils.randomNumeric(4);
     String userName = "user" + RandomStringUtils.randomNumeric(4);

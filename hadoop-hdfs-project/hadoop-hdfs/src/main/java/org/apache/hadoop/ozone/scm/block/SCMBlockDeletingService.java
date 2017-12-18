@@ -74,7 +74,7 @@ public class SCMBlockDeletingService extends BackgroundService {
 
   public SCMBlockDeletingService(DeletedBlockLog deletedBlockLog,
       Mapping mapper, NodeManager nodeManager,
-      int interval, long serviceTimeout, Configuration conf) {
+      long  interval, long serviceTimeout, Configuration conf) {
     super("SCMBlockDeletingService", interval, TimeUnit.MILLISECONDS,
         BLOCK_DELETING_SERVICE_CORE_POOL_SIZE, serviceTimeout);
     this.deletedBlockLog = deletedBlockLog;

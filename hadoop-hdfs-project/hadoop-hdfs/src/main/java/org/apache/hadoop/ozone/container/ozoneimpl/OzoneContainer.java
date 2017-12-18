@@ -52,9 +52,9 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_ROOT_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.INVALID_PORT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT;
@@ -104,9 +104,9 @@ public class OzoneContainer {
     this.keyManager = new KeyManagerImpl(manager, ozoneConfig);
     manager.setKeyManager(this.keyManager);
 
-    int svcInterval = ozoneConfig.getInt(
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
-        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
+    long svcInterval =
+        ozoneConfig.getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+        OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
     long serviceTimeout = ozoneConfig.getTimeDuration(
         OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
         OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);

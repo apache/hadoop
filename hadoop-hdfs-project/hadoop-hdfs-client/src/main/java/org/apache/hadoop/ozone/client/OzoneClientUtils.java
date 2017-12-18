@@ -69,16 +69,16 @@ import static org.apache.hadoop.ozone.ksm.KSMConfigKeys
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_DEADNODE_INTERVAL_MS;
+    .OZONE_SCM_DEADNODE_INTERVAL;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS;
+    .OZONE_SCM_HEARTBEAT_INTERVAL;
 
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_LOG_WARN_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_LOG_WARN_INTERVAL_COUNT;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS;
+    .OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL;
 
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT;
@@ -87,7 +87,7 @@ import static org.apache.hadoop.scm.ScmConfigKeys
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_STALENODE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_STALENODE_INTERVAL_MS;
+    .OZONE_SCM_STALENODE_INTERVAL;
 
 /**
  * Utility methods for Ozone and Container Clients.
@@ -541,8 +541,9 @@ public final class OzoneClientUtils {
    * @return long in Milliseconds.
    */
   public static long getScmheartbeatCheckerInterval(Configuration conf) {
-    return conf.getLong(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS,
-        ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS_DEFAULT);
+    return conf.getTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        ScmConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -553,9 +554,8 @@ public final class OzoneClientUtils {
    * @return - HB interval in seconds.
    */
   public static long getScmHeartbeatInterval(Configuration conf) {
-    return conf.getTimeDuration(
-        OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS,
-        ScmConfigKeys.OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT,
+    return conf.getTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL,
+        ScmConfigKeys.OZONE_SCM_HEARBEAT_INTERVAL_DEFAULT,
         TimeUnit.SECONDS);
   }
 
@@ -568,8 +568,9 @@ public final class OzoneClientUtils {
    */
   public static long getStaleNodeInterval(Configuration conf) {
 
-    long staleNodeIntevalMs = conf.getLong(OZONE_SCM_STALENODE_INTERVAL_MS,
-        OZONE_SCM_STALENODE_INTERVAL_DEFAULT);
+    long staleNodeIntervalMs =
+        conf.getTimeDuration(OZONE_SCM_STALENODE_INTERVAL,
+        OZONE_SCM_STALENODE_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
 
     long heartbeatThreadFrequencyMs = getScmheartbeatCheckerInterval(conf);
 
@@ -582,25 +583,25 @@ public final class OzoneClientUtils {
     // Here we check that staleNodeInterval is at least five times more than the
     // frequency at which the accounting thread is going to run.
     try {
-      sanitizeUserArgs(staleNodeIntevalMs, heartbeatThreadFrequencyMs, 5, 1000);
+      sanitizeUserArgs(staleNodeIntervalMs, heartbeatThreadFrequencyMs,
+          5, 1000);
     } catch (IllegalArgumentException ex) {
-      LOG.error("Stale Node Interval MS is cannot be honored due to " +
+      LOG.error("Stale Node Interval is cannot be honored due to " +
               "mis-configured {}. ex:  {}",
-          OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, ex);
+          OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, ex);
       throw ex;
     }
 
     // Make sure that stale node value is greater than configured value that
     // datanodes are going to send HBs.
     try {
-      sanitizeUserArgs(staleNodeIntevalMs, heartbeatIntervalMs, 3, 1000);
+      sanitizeUserArgs(staleNodeIntervalMs, heartbeatIntervalMs, 3, 1000);
     } catch (IllegalArgumentException ex) {
       LOG.error("Stale Node Interval MS is cannot be honored due to " +
-              "mis-configured {}. ex:  {}",
-          OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, ex);
+              "mis-configured {}. ex:  {}", OZONE_SCM_HEARTBEAT_INTERVAL, ex);
       throw ex;
     }
-    return staleNodeIntevalMs;
+    return staleNodeIntervalMs;
   }
 
   /**
@@ -614,8 +615,9 @@ public final class OzoneClientUtils {
    */
   public static long getDeadNodeInterval(Configuration conf) {
     long staleNodeIntervalMs = getStaleNodeInterval(conf);
-    long deadNodeIntervalMs = conf.getLong(
-        OZONE_SCM_DEADNODE_INTERVAL_MS, OZONE_SCM_DEADNODE_INTERVAL_DEFAULT);
+    long deadNodeIntervalMs = conf.getTimeDuration(OZONE_SCM_DEADNODE_INTERVAL,
+        OZONE_SCM_DEADNODE_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
     try {
       // Make sure that dead nodes Ms is at least twice the time for staleNodes
@@ -623,8 +625,7 @@ public final class OzoneClientUtils {
       sanitizeUserArgs(deadNodeIntervalMs, staleNodeIntervalMs, 2, 1000);
     } catch (IllegalArgumentException ex) {
       LOG.error("Dead Node Interval MS is cannot be honored due to " +
-              "mis-configured {}. ex:  {}",
-          OZONE_SCM_STALENODE_INTERVAL_MS, ex);
+              "mis-configured {}. ex:  {}", OZONE_SCM_STALENODE_INTERVAL, ex);
       throw ex;
     }
     return deadNodeIntervalMs;
@@ -737,24 +738,26 @@ public final class OzoneClientUtils {
    * @return a {@link CloseableHttpClient} instance.
    */
   public static CloseableHttpClient newHttpClient(Configuration conf) {
-    int socketTimeout = OzoneConfigKeys
-        .OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT;
-    int connectionTimeout = OzoneConfigKeys
-        .OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT;
+    long socketTimeout = OzoneConfigKeys
+        .OZONE_CLIENT_SOCKET_TIMEOUT_DEFAULT;
+    long connectionTimeout = OzoneConfigKeys
+        .OZONE_CLIENT_CONNECTION_TIMEOUT_DEFAULT;
     if (conf != null) {
-      socketTimeout = conf.getInt(
-          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_MS,
-          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT);
-      connectionTimeout = conf.getInt(
-          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_MS,
-          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT);
+      socketTimeout = conf.getTimeDuration(
+          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT,
+          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      connectionTimeout = conf.getTimeDuration(
+          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT,
+          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_DEFAULT,
+          TimeUnit.MILLISECONDS);
     }
 
     CloseableHttpClient client = HttpClients.custom()
         .setDefaultRequestConfig(
             RequestConfig.custom()
-                .setSocketTimeout(socketTimeout)
-                .setConnectTimeout(connectionTimeout)
+                .setSocketTimeout(Math.toIntExact(socketTimeout))
+                .setConnectTimeout(Math.toIntExact(connectionTimeout))
                 .build())
         .build();
     return client;

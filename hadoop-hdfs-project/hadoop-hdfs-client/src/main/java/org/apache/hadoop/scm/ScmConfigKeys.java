@@ -29,8 +29,8 @@ public final class ScmConfigKeys {
 
   public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
       "scm.container.client.idle.threshold";
-  public static final int SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT =
-      10000;
+  public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_DEFAULT =
+      "10s";
 
   public static final String SCM_CONTAINER_CLIENT_MAX_SIZE_KEY =
       "scm.container.client.max.size";
@@ -114,29 +114,29 @@ public final class ScmConfigKeys {
       "ozone.scm.handler.count.key";
   public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;
 
-  public static final String OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS =
-      "ozone.scm.heartbeat.interval.seconds";
-  public static final int OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT =
-      30;
+  public static final String OZONE_SCM_HEARTBEAT_INTERVAL =
+      "ozone.scm.heartbeat.interval";
+  public static final String OZONE_SCM_HEARBEAT_INTERVAL_DEFAULT =
+      "30s";
 
-  public static final String OZONE_SCM_DEADNODE_INTERVAL_MS =
-      "ozone.scm.dead.node.interval.ms";
-  public static final long OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =
-      OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 20L;
+  public static final String OZONE_SCM_DEADNODE_INTERVAL =
+      "ozone.scm.dead.node.interval";
+  public static final String OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =
+      "10m";
 
   public static final String OZONE_SCM_MAX_HB_COUNT_TO_PROCESS =
       "ozone.scm.max.hb.count.to.process";
   public static final int OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT = 5000;
 
-  public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS =
-      "ozone.scm.heartbeat.thread.interval.ms";
-  public static final long OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS_DEFAULT =
-      3000;
+  public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL =
+      "ozone.scm.heartbeat.thread.interval";
+  public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_DEFAULT =
+      "3s";
 
-  public static final String OZONE_SCM_STALENODE_INTERVAL_MS =
-      "ozone.scm.stale.node.interval.ms";
-  public static final long OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
-      OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 3L;
+  public static final String OZONE_SCM_STALENODE_INTERVAL =
+      "ozone.scm.stale.node.interval";
+  public static final String OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
+      "90s";
 
   public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT =
       "ozone.scm.heartbeat.rpc-timeout";
@@ -199,18 +199,17 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT =
       "ozone.scm.container.creation.lease.timeout";
 
-  public static final long OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT =
-      60000;
+  public static final String
+      OZONE_SCM_CONTAINER_CREATION_LEASE_TIMEOUT_DEFAULT = "60s";
 
   /**
    * Don't start processing a pool if we have not had a minimum number of
    * seconds from the last processing.
    */
+  public static final String OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL =
+      "ozone.scm.container.report.processing.interval";
   public static final String
-      OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_SECONDS =
-      "ozone.scm.container.report.processing.interval.seconds";
-  public static final int
-      OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_DEFAULT = 60;
+      OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_DEFAULT = "60s";
 
   /**
    * These 2 settings control the number of threads in executor pool and time
@@ -219,10 +218,10 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_MAX_CONTAINER_REPORT_THREADS =
       "ozone.scm.max.container.report.threads";
   public static final int OZONE_SCM_MAX_CONTAINER_REPORT_THREADS_DEFAULT = 100;
-  public static final String OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_SECONDS =
-      "ozone.scm.container.reports.wait.timeout.seconds";
-  public static final int OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT =
-      300; // Default 5 minute wait.
+  public static final String OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT =
+      "ozone.scm.container.reports.wait.timeout";
+  public static final String OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT =
+      "5m";
 
   public static final String OZONE_SCM_BLOCK_DELETION_MAX_RETRY =
       "ozone.scm.block.deletion.max.retry";

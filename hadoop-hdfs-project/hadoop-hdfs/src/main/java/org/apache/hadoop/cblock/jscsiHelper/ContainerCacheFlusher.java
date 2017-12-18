@@ -69,9 +69,9 @@ import static org.apache.hadoop.cblock.CBlockConfigKeys
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_CACHE_CORE_MIN_POOL_SIZE_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
-    .DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS;
+    .DFS_CBLOCK_CACHE_KEEP_ALIVE;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
-    .DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS_DEFAULT;
+    .DFS_CBLOCK_CACHE_KEEP_ALIVE_DEFAULT;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_CACHE_MAX_POOL_SIZE;
 import static org.apache.hadoop.cblock.CBlockConfigKeys
@@ -123,8 +123,8 @@ public class ContainerCacheFlusher implements Runnable {
         DFS_CBLOCK_CACHE_CORE_MIN_POOL_SIZE_DEFAULT);
     int maxPoolSize = config.getInt(DFS_CBLOCK_CACHE_MAX_POOL_SIZE,
         DFS_CBLOCK_CACHE_MAX_POOL_SIZE_DEFAULT);
-    long keepAlive = config.getLong(DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS,
-        DFS_CBLOCK_CACHE_KEEP_ALIVE_SECONDS_DEFAULT);
+    long keepAlive = config.getTimeDuration(DFS_CBLOCK_CACHE_KEEP_ALIVE,
+        DFS_CBLOCK_CACHE_KEEP_ALIVE_DEFAULT, TimeUnit.SECONDS);
     int threadPri = config.getInt(DFS_CBLOCK_CACHE_THREAD_PRIORITY,
         DFS_CBLOCK_CACHE_THREAD_PRIORITY_DEFAULT);
     int blockBufferSize = config.getInt(DFS_CBLOCK_CACHE_BLOCK_BUFFER_SIZE,

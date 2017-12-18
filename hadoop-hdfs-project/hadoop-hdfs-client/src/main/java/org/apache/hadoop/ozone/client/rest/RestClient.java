@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -114,12 +115,14 @@ public class RestClient implements ClientProtocol {
           .setHost(getOzoneRestHandlerHost())
           .setPort(port);
       this.ozoneRestUri = uriBuilder.build();
-      int socketTimeout = conf.getInt(
-          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_MS,
-          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT);
-      int connectionTimeout = conf.getInt(
-          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_MS,
-          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT);
+      long socketTimeout = conf.getTimeDuration(
+          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT,
+          OzoneConfigKeys.OZONE_CLIENT_SOCKET_TIMEOUT_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      long connectionTimeout = conf.getTimeDuration(
+          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT,
+          OzoneConfigKeys.OZONE_CLIENT_CONNECTION_TIMEOUT_DEFAULT,
+          TimeUnit.MILLISECONDS);
       int maxConnection = conf.getInt(
           OzoneConfigKeys.OZONE_REST_CLIENT_HTTP_CONNECTION_MAX,
           OzoneConfigKeys.OZONE_REST_CLIENT_HTTP_CONNECTION_DEFAULT);
@@ -142,8 +145,8 @@ public class RestClient implements ClientProtocol {
           .setConnectionManager(connManager)
           .setDefaultRequestConfig(
               RequestConfig.custom()
-              .setSocketTimeout(socketTimeout)
-                  .setConnectTimeout(connectionTimeout)
+              .setSocketTimeout(Math.toIntExact(socketTimeout))
+                  .setConnectTimeout(Math.toIntExact(connectionTimeout))
                   .build())
           .build();
       this.ugi = UserGroupInformation.getCurrentUser();

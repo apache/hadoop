@@ -28,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.EnumSet;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState.DEAD;
@@ -36,13 +37,13 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
 import static org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeState
     .STALE;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_DEADNODE_INTERVAL_MS;
+    .OZONE_SCM_DEADNODE_INTERVAL;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS;
+    .OZONE_SCM_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS;
+    .OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_STALENODE_INTERVAL_MS;
+    .OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -59,10 +60,11 @@ public class TestQueryNode {
     OzoneConfiguration conf = new OzoneConfiguration();
     final int interval = 100;
 
-    conf.setInt(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS, interval);
-    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS, 1, SECONDS);
-    conf.setInt(OZONE_SCM_STALENODE_INTERVAL_MS, 3 * 1000);
-    conf.setInt(OZONE_SCM_DEADNODE_INTERVAL_MS, 6 * 1000);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        interval, TimeUnit.MILLISECONDS);
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_INTERVAL, 1, SECONDS);
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, SECONDS);
+    conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL, 6, SECONDS);
 
     cluster = new MiniOzoneClassicCluster.Builder(conf)
         .numDataNodes(numOfDatanodes)

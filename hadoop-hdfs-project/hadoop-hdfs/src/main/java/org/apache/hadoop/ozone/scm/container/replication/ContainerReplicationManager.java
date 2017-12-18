@@ -49,11 +49,11 @@ import static com.google.common.util.concurrent.Uninterruptibles
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_SECONDS;
+    .OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_DEFAULT;
 import static org.apache.hadoop.scm.ScmConfigKeys
-    .OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_SECONDS;
+    .OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL;
 import static org.apache.hadoop.scm.ScmConfigKeys
     .OZONE_SCM_MAX_CONTAINER_REPORT_THREADS;
 import static org.apache.hadoop.scm.ScmConfigKeys
@@ -72,10 +72,10 @@ public class ContainerReplicationManager implements Closeable {
   private final HashSet<String> poolNames;
   private final PriorityQueue<PeriodicPool> poolQueue;
   private final NodeManager nodeManager;
-  private final int containerProcessingLag;
+  private final long containerProcessingLag;
   private final AtomicBoolean runnable;
   private final ExecutorService executorService;
-  private final int maxPoolWait;
+  private final long maxPoolWait;
   private long poolProcessCount;
   private final List<InProgressPool> inProgressPoolList;
   private final AtomicInteger threadFaultCount;
@@ -104,17 +104,18 @@ public class ContainerReplicationManager implements Closeable {
     Preconditions.checkNotNull(commandQueue);
     Preconditions.checkNotNull(nodeManager);
     this.containerProcessingLag =
-        conf.getInt(OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_SECONDS,
-            OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_DEFAULT
-
+        conf.getTimeDuration(OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL,
+            OZONE_SCM_CONTAINER_REPORT_PROCESSING_INTERVAL_DEFAULT,
+            TimeUnit.SECONDS
         ) * 1000;
     int maxContainerReportThreads =
         conf.getInt(OZONE_SCM_MAX_CONTAINER_REPORT_THREADS,
             OZONE_SCM_MAX_CONTAINER_REPORT_THREADS_DEFAULT
         );
     this.maxPoolWait =
-        conf.getInt(OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_SECONDS,
-            OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT) * 1000;
+        conf.getTimeDuration(OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT,
+            OZONE_SCM_CONTAINER_REPORTS_WAIT_TIMEOUT_DEFAULT,
+            TimeUnit.MILLISECONDS);
     this.poolManager = poolManager;
     this.commandQueue = commandQueue;
     this.nodeManager = nodeManager;

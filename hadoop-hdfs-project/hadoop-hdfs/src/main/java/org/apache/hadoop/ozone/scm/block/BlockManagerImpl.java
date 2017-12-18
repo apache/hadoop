@@ -54,9 +54,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS;
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT;
+    .OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_BLOCK_DELETING_SERVICE_TIMEOUT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -135,10 +135,10 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
 
     // SCM block deleting transaction log and deleting service.
     deletedBlockLog = new DeletedBlockLogImpl(conf);
-    int svcInterval =
-        conf.getInt(
-            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS,
-            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT);
+    long svcInterval =
+        conf.getTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
+            OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
     long serviceTimeout =
         conf.getTimeDuration(
             OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,

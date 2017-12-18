@@ -27,8 +27,8 @@
 <configuration>
   <!--CBlock Settings-->
   <property>
-    <name>dfs.cblock.block.buffer.flush.interval.seconds</name>
-    <value>60</value>
+    <name>dfs.cblock.block.buffer.flush.interval</name>
+    <value>60s</value>
     <tag>CBLOCK, PERFORMANCE</tag>
     <description>
       Controls the frequency at this the local cache flushes the
@@ -63,12 +63,12 @@
     </description>
   </property>
   <property>
-    <name>dfs.cblock.cache.keep.alive.seconds</name>
-    <value>60</value>
+    <name>dfs.cblock.cache.keep.alive</name>
+    <value>60s</value>
     <tag>CBLOCK, PERFORMANCE</tag>
     <description>
       If the cblock cache has no I/O, then the threads in the cache
-      pool are kept idle for this many seconds before shutting down.
+      pool are kept idle for this amount of time before shutting down.
     </description>
   </property>
   <property>
@@ -191,11 +191,11 @@
     </description>
   </property>
   <property>
-    <name>dfs.cblock.rpc.timeout.seconds</name>
-    <value>300</value>
+    <name>dfs.cblock.rpc.timeout</name>
+    <value>300s</value>
     <tag>CBLOCK, MANAGEMENT</tag>
     <description>
-      RPC timeout in seconds used for cblock CLI operations. When you
+      RPC timeout used for cblock CLI operations. When you
       create very large disks, like 5TB, etc. The number of containers
       allocated in the system is huge. It is will 5TB/5GB, which is 1000
       containers. The client CLI might timeout even though the cblock manager
@@ -347,12 +347,13 @@
     </description>
   </property>
   <property>
-    <name>ozone.container.report.interval.ms</name>
-    <value>60000</value>
+    <name>ozone.container.report.interval</name>
+    <value>60000ms</value>
     <tag>OZONE, CONTAINER, MANAGEMENT</tag>
-    <description>Time interval in milliseconds of the datanode to send container
-      report. Each datanode periodically send container report upon receive
-      sendContainerReport from SCM.</description>
+    <description>Time interval of the datanode to send container report. Each
+      datanode periodically send container report upon receive
+      sendContainerReport from SCM. Unit could be defined with
+      postfix (ns,ms,s,m,h,d)</description>
   </property>
   <!--Ozone Settings-->
   <property>
@@ -388,12 +389,13 @@
     </description>
   </property>
   <property>
-    <name>ozone.block.deleting.service.interval.ms</name>
-    <value>60000</value>
+    <name>ozone.block.deleting.service.interval</name>
+    <value>1m</value>
     <tag>OZONE, PERFORMANCE, SCM</tag>
-    <description>Time interval in milliseconds of the block deleting service.
+    <description>Time interval of the block deleting service.
       The block deleting service runs on each datanode periodically and
-      deletes blocks queued for deletion.
+      deletes blocks queued for deletion. Unit could be defined with
+      postfix (ns,ms,s,m,h,d)
     </description>
   </property>
   <property>
@@ -411,8 +413,8 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.connection.timeout.ms</name>
-    <value>5000</value>
+    <name>ozone.client.connection.timeout</name>
+    <value>5000ms</value>
     <tag>OZONE, PERFORMANCE, CLIENT</tag>
     <description>Connection timeout for Ozone client in milliseconds.
     </description>
@@ -431,10 +433,11 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.socket.timeout.ms</name>
-    <value>5000</value>
+    <name>ozone.client.socket.timeout</name>
+    <value>5000ms</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Socket timeout for Ozone client in milliseconds.</description>
+    <description>Socket timeout for Ozone client. Unit could be defined with
+      postfix (ns,ms,s,m,h,d)</description>
   </property>
   <property>
     <name>ozone.enabled</name>
@@ -748,7 +751,7 @@
     <description>
       The policy used for choosing desire containers for block deletion.
       Datanode selects some containers to process block deletion
-      in a certain interval defined by ozone.block.deleting.service.interval.ms.
+      in a certain interval defined by ozone.block.deleting.service.interval.
       The number of containers to process in each interval is defined
       by ozone.block.deleting.container.limit.per.interval. This property is
       used to configure the policy applied while selecting containers.
@@ -783,17 +786,17 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.report.processing.interval.seconds</name>
-    <value>60</value>
+    <name>ozone.scm.container.report.processing.interval</name>
+    <value>60s</value>
     <tag>OZONE, PERFORMANCE</tag>
-    <description>Time interval in seconds for scm to process container reports
+    <description>Time interval for scm to process container reports
       for a node pool. Scm handles node pool reports in a cyclic clock
       manner, it fetches pools periodically with this time interval.
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.reports.wait.timeout.seconds</name>
-    <value>300</value>
+    <name>ozone.scm.container.reports.wait.timeout</name>
+    <value>300s</value>
     <tag>OZONE, PERFORMANCE, MANAGEMENT</tag>
     <description>Maximum time to wait in seconds for processing all container
       reports from
@@ -871,12 +874,11 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.dead.node.interval.ms</name>
-    <value>600000</value>
+    <name>ozone.scm.dead.node.interval</name>
+    <value>10m</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
-      The interval between heartbeats before a node is tagged as dead. This
-      value is in milliseconds.
+      The interval between heartbeats before a node is tagged as dead.
     </description>
   </property>
   <property>
@@ -896,11 +898,11 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.heartbeat.interval.seconds</name>
-    <value>30</value>
+    <name>ozone.scm.heartbeat.interval</name>
+    <value>30s</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
-      The heartbeat interval from a data node to SCM in seconds. Yes,
+      The heartbeat interval from a data node to SCM. Yes,
       it is not three but 30, since most data nodes will heart beating via Ratis
       heartbeats. If a client is not able to talk to a data node, it will notify
       KSM/SCM eventually. So a 30 second HB seems to work. This assumes that
@@ -929,8 +931,8 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.heartbeat.thread.interval.ms</name>
-    <value>3000</value>
+    <name>ozone.scm.heartbeat.thread.interval</name>
+    <value>3s</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
       When a heartbeat from the data node arrives on SCM, It is queued for
@@ -1022,7 +1024,7 @@
     <description>
       The maximum number of heartbeat to process per loop of the
       heartbeat process thread. Please see
-      ozone.scm.heartbeat.thread.interval.ms
+      ozone.scm.heartbeat.thread.interval
       for more info.
     </description>
   </property>
@@ -1039,12 +1041,12 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.stale.node.interval.ms</name>
-    <value>90000</value>
+    <name>ozone.scm.stale.node.interval</name>
+    <value>90s</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
-      The interval in milliseconds for stale node flagging. Please
-      see ozone.scm.heartbeat.thread.interval.ms before changing this value.
+      The interval for stale node flagging. Please
+      see ozone.scm.heartbeat.thread.interval before changing this value.
     </description>
   </property>
   <property>
@@ -1074,7 +1076,7 @@
   <!--Client Settings-->
   <property>
     <name>scm.container.client.idle.threshold</name>
-    <value>10000</value>
+    <value>10s</value>
     <tag>OZONE, PERFORMANCE</tag>
     <description>
       In the standalone pipelines, the SCM clients use netty to
@@ -1096,7 +1098,7 @@
 
   <property>
     <name>ozone.scm.container.creation.lease.timeout</name>
-    <value>60000</value>
+    <value>60s</value>
     <tag>OZONE, SCM</tag>
     <description>
       Container creation timeout in milliseconds to be used by SCM. When

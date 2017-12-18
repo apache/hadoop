@@ -141,12 +141,12 @@ public final class OzoneConfigKeys {
   public static final int
       OZONE_REST_CLIENT_HTTP_CONNECTION_PER_ROUTE_MAX_DEFAULT = 20;
 
-  public static final String OZONE_CLIENT_SOCKET_TIMEOUT_MS =
-      "ozone.client.socket.timeout.ms";
-  public static final int OZONE_CLIENT_SOCKET_TIMEOUT_MS_DEFAULT = 5000;
-  public static final String OZONE_CLIENT_CONNECTION_TIMEOUT_MS =
-      "ozone.client.connection.timeout.ms";
-  public static final int OZONE_CLIENT_CONNECTION_TIMEOUT_MS_DEFAULT = 5000;
+  public static final String OZONE_CLIENT_SOCKET_TIMEOUT =
+      "ozone.client.socket.timeout";
+  public static final int OZONE_CLIENT_SOCKET_TIMEOUT_DEFAULT = 5000;
+  public static final String OZONE_CLIENT_CONNECTION_TIMEOUT =
+      "ozone.client.connection.timeout";
+  public static final int OZONE_CLIENT_CONNECTION_TIMEOUT_DEFAULT = 5000;
 
   public static final String OZONE_REPLICATION = "ozone.replication";
   public static final int OZONE_REPLICATION_DEFAULT =
@@ -166,10 +166,10 @@ public final class OzoneConfigKeys {
   /**
    * Configuration properties for Ozone Block Deleting Service.
    */
-  public static final String OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS =
-      "ozone.block.deleting.service.interval.ms";
-  public static final int OZONE_BLOCK_DELETING_SERVICE_INTERVAL_MS_DEFAULT
-      = 60000;
+  public static final String OZONE_BLOCK_DELETING_SERVICE_INTERVAL =
+      "ozone.block.deleting.service.interval";
+  public static final String OZONE_BLOCK_DELETING_SERVICE_INTERVAL_DEFAULT
+      = "60s";
 
   /**
    * The interval of open key clean service.
@@ -190,8 +190,8 @@ public final class OzoneConfigKeys {
 
   public static final String OZONE_BLOCK_DELETING_SERVICE_TIMEOUT =
       "ozone.block.deleting.service.timeout";
-  public static final int OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT
-      = 300000; // 300s for default
+  public static final String OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT
+      = "300s"; // 300s for default
 
   public static final String OZONE_KEY_PREALLOCATION_MAXSIZE =
       "ozone.key.preallocation.maxsize";
@@ -208,10 +208,10 @@ public final class OzoneConfigKeys {
   public static final int
       OZONE_BLOCK_DELETING_CONTAINER_LIMIT_PER_INTERVAL_DEFAULT = 10;
 
-  public static final String OZONE_CONTAINER_REPORT_INTERVAL_MS =
-      "ozone.container.report.interval.ms";
-  public static final int OZONE_CONTAINER_REPORT_INTERVAL_MS_DEFAULT =
-      60000;
+  public static final String OZONE_CONTAINER_REPORT_INTERVAL =
+      "ozone.container.report.interval";
+  public static final String OZONE_CONTAINER_REPORT_INTERVAL_DEFAULT =
+      "60s";
 
   public static final String DFS_CONTAINER_RATIS_ENABLED_KEY
       = ScmConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
