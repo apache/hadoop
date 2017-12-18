@@ -279,10 +279,12 @@ public class CSQueueUtils {
    * <p>
    * Update Queue Statistics:
    * </p>
-   *  
-   * <li>used-capacity/absolute-used-capacity by partition</li> 
-   * <li>non-partitioned max-avail-resource to queue</li>
-   * 
+   *
+   * <ul>
+   *   <li>used-capacity/absolute-used-capacity by partition</li>
+   *   <li>non-partitioned max-avail-resource to queue</li>
+   * </ul>
+   *
    * <p>
    * When nodePartition is null, all partition of
    * used-capacity/absolute-used-capacity will be updated.

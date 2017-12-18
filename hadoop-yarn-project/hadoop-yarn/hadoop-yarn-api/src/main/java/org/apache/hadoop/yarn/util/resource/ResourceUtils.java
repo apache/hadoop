@@ -422,7 +422,7 @@ public class ResourceUtils {
    * Extract unit and actual value from resource value.
    * @param resourceValue Value of the resource
    * @return Array containing unit and value. [0]=unit, [1]=value
-   * @throws IllegalArgumentExcpetion if units contain non alpha characters
+   * @throws IllegalArgumentException if units contain non alpha characters
    */
   public static String[] parseResourceValue(String resourceValue) {
     String[] resource = new String[2];
