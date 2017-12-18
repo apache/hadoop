@@ -221,26 +221,26 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
    * While per Intel's guide, the output(should be outdated or prior SDK version's) is as below:
    *
    * "
-   * aocl diagnose: Running diagnostic from ALTERAOCLSDKROOT/board/<board_name>/
-   * <platform>/libexec
+   * aocl diagnose: Running diagnostic from ALTERAOCLSDKROOT/board/&lt;board_name&gt;/
+   * &lt;platform&gt;/libexec
    * Verified that the kernel mode driver is installed on the host machine.
-   * Using board package from vendor: <board_vendor_name>
+   * Using board package from vendor: &lt;board_vendor_name&gt;
    * Querying information for all supported devices that are installed on the host
    * machine ...
    *
    * device_name Status Information
    *
-   * acl0 Passed <descriptive_board_name>
-   *             PCIe dev_id = <device_ID>, bus:slot.func = 02:00.00,
+   * acl0 Passed &lt;descriptive_board_name&gt;
+   *             PCIe dev_id = &lt;device_ID&gt;, bus:slot.func = 02:00.00,
    *               at Gen 2 with 8 lanes.
    *             FPGA temperature=43.0 degrees C.
-   * acl1 Passed <descriptive_board_name>
-   *             PCIe dev_id = <device_ID>, bus:slot.func = 03:00.00,
+   * acl1 Passed &lt;descriptive_board_name&gt;
+   *             PCIe dev_id = &lt;device_ID&gt;, bus:slot.func = 03:00.00,
    *               at Gen 2 with 8 lanes.
    *             FPGA temperature = 35.0 degrees C.
    *
    * Found 2 active device(s) installed on the host machine, to perform a full
-   * diagnostic on a specific device, please run aocl diagnose <device_name>
+   * diagnostic on a specific device, please run aocl diagnose &lt;device_name&gt;
    *
    * DIAGNOSTIC_PASSED
    * "
