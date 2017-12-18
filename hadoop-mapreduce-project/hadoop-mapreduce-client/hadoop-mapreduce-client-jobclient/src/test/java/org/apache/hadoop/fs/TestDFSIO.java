@@ -31,8 +31,8 @@ import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Random;
 import java.util.StringTokenizer;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -582,7 +582,7 @@ public class TestDFSIO implements Tool {
    * 3) Skip-read skips skipSize bytes after every read          : skipSize > 0
    */
   public static class RandomReadMapper extends IOStatMapper {
-    private Random rnd;
+    private ThreadLocalRandom rnd;
     private long fileSize;
     private long skipSize;
 
@@ -593,7 +593,7 @@ public class TestDFSIO implements Tool {
     }
 
     public RandomReadMapper() { 
-      rnd = new Random();
+      rnd = ThreadLocalRandom.current();
     }
 
     @Override // IOMapperBase
@@ -635,8 +635,8 @@ public class TestDFSIO implements Tool {
      * @return
      */
     private long nextOffset(long current) {
-      if(skipSize == 0)
-        return rnd.nextInt((int)(fileSize));
+      if (skipSize == 0)
+        return rnd.nextLong(fileSize);
       if(skipSize > 0)
         return (current < 0) ? 0 : (current + bufferSize + skipSize);
       // skipSize < 0
