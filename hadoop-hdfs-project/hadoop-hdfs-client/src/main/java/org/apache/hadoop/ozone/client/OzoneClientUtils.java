@@ -861,4 +861,14 @@ public final class OzoneClientUtils {
     return ZonedDateTime.parse(date, DATE_FORMAT.get())
         .toInstant().getEpochSecond();
   }
+
+  /**
+   * Returns the maximum no of outstanding async requests to be handled by
+   * Standalone and Ratis client.
+   */
+  public static int getMaxOutstandingRequests(Configuration config) {
+    return config
+        .getInt(ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_OUTSTANDING_REQUESTS,
+            ScmConfigKeys.SCM_CONTAINER_CLIENT_MAX_OUTSTANDING_REQUESTS_DEFAULT);
+  }
 }

@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.ratis.RatisHelper;
@@ -56,19 +57,24 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     final String rpcType = ozoneConf.get(
         ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
         ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
+    final int maxOutstandingRequests =
+        OzoneClientUtils.getMaxOutstandingRequests(ozoneConf);
     return new XceiverClientRatis(pipeline,
-        SupportedRpcType.valueOfIgnoreCase(rpcType));
+        SupportedRpcType.valueOfIgnoreCase(rpcType), maxOutstandingRequests);
   }
 
   private final Pipeline pipeline;
   private final RpcType rpcType;
   private final AtomicReference<RaftClient> client = new AtomicReference<>();
+  private final int maxOutstandingRequests;
 
   /** Constructs a client. */
-  private XceiverClientRatis(Pipeline pipeline, RpcType rpcType) {
+  private XceiverClientRatis(Pipeline pipeline, RpcType rpcType,
+      int maxOutStandingChunks) {
     super();
     this.pipeline = pipeline;
     this.rpcType = rpcType;
+    this.maxOutstandingRequests = maxOutStandingChunks;
   }
 
   /**
@@ -147,6 +153,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
     LOG.debug("Connecting to pipeline:{} leader:{}",
         getPipeline().getPipelineName(),
         RatisHelper.toRaftPeerId(pipeline.getLeader()));
+    // TODO : XceiverClient ratis should pass the config value of
+    // maxOutstandingRequests so as to set the upper bound on max no of async
+    // requests to be handled by raft client
     if (!client.compareAndSet(null,
         RatisHelper.newRaftClient(rpcType, getPipeline()))) {
       throw new IllegalStateException("Client is already connected.");
