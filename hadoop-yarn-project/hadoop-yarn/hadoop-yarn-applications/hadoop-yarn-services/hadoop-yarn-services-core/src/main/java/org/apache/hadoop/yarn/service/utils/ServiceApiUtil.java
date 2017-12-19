@@ -330,13 +330,19 @@ public class ServiceApiUtil {
       org.apache.hadoop.yarn.api.records.Resource maxResource,
       Service service) throws YarnException {
     for (Component component : service.getComponents()) {
-      // only handle mem now.
       long mem = Long.parseLong(component.getResource().getMemory());
       if (mem > maxResource.getMemorySize()) {
         throw new YarnException(
-            "Component " + component.getName() + " memory size (" + mem
-                + ") is larger than configured max container memory size ("
-                + maxResource.getMemorySize() + ")");
+            "Component " + component.getName() + ": specified memory size ("
+                + mem + ") is larger than configured max container memory " +
+                "size (" + maxResource.getMemorySize() + ")");
+      }
+      int cpu = component.getResource().getCpus();
+      if (cpu > maxResource.getVirtualCores()) {
+        throw new YarnException(
+            "Component " + component.getName() + ": specified number of " +
+                "virtual core (" + cpu + ") is larger than configured max " +
+                "virtual core size (" + maxResource.getVirtualCores() + ")");
       }
     }
   }
