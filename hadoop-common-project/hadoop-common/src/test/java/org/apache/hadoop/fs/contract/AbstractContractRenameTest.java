@@ -291,7 +291,7 @@ public abstract class AbstractContractRenameTest extends
   }
 
   @Test
-  public void testRenameFileUnderFile() throws Throwable {
+  public void testRenameFileUnderFile() throws Exception {
     String action = "rename directly under file";
     describe(action);
     Path base = methodPath();
@@ -303,7 +303,7 @@ public abstract class AbstractContractRenameTest extends
   }
 
   @Test
-  public void testRenameFileUnderFileSubdir() throws Throwable {
+  public void testRenameFileUnderFileSubdir() throws Exception {
     String action = "rename directly under file/subdir";
     describe(action);
     Path base = methodPath();
