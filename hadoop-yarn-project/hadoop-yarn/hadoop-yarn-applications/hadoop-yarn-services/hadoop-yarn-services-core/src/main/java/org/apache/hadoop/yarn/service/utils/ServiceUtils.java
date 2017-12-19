@@ -411,6 +411,10 @@ public final class ServiceUtils {
         return;
       }
       for (File jarFile : listOfJars) {
+        if (!jarFile.exists()) {
+          log.debug("File does not exist, skipping: " + jarFile);
+          continue;
+        }
         LocalResource res = sliderFileSystem.submitFile(jarFile, tempPath, libDir, jarFile.getName());
         providerResources.put(libDir + "/" + jarFile.getName(), res);
       }
