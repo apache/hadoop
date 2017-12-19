@@ -132,11 +132,11 @@ public class RouterAdmin extends Configured implements Tool {
     try {
       if ("-add".equals(cmd)) {
         if (addMount(argv, i)) {
-          System.err.println("Successfuly added mount point " + argv[i]);
+          System.out.println("Successfuly added mount point " + argv[i]);
         }
       } else if ("-rm".equals(cmd)) {
         if (removeMount(argv[i])) {
-          System.err.println("Successfully removed mount point " + argv[i]);
+          System.out.println("Successfully removed mount point " + argv[i]);
         }
       } else if ("-ls".equals(cmd)) {
         if (argv.length > 1) {
