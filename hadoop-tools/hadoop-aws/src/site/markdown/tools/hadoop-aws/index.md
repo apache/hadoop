@@ -1490,8 +1490,13 @@ from VMs running on EC2.
 </property>
 ```
 
-### <a name="multipart_purge"></a>Cleaning up after partial Upload Failures: `fs.s3a.multipart.purge`
+### <a name="multipart_purge"></a>Cleaning up after partial Upload Failures
 
+There are two mechanisms for cleaning up after leftover multipart
+uploads:
+- Hadoop s3guard CLI commands for listing and deleting uploads by their
+age. Doumented in the [S3Guard](./s3guard.html) section.
+- The configuration parameter `fs.s3a.multipart.purge`, covered below.
 
 If an large stream writeoperation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.service.client;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -61,15 +62,20 @@ public class TestServiceCLI {
   }
 
   private void buildApp(String serviceName, String appDef) throws Throwable {
-    String[] args = {"app", "-D", basedirProp, "-save", serviceName,
-        ExampleAppJson.resourceName(appDef)};
+    String[] args = {"app",
+        "-D", basedirProp, "-save", serviceName,
+        ExampleAppJson.resourceName(appDef),
+        "-appTypes", AppAdminClient.UNIT_TEST_TYPE};
     runCLI(args);
   }
 
   private void buildApp(String serviceName, String appDef, String lifetime,
       String queue) throws Throwable {
-    String[] args = {"app", "-D", basedirProp, "-save", serviceName,
-        ExampleAppJson.resourceName(appDef), "-updateLifetime", lifetime,
+    String[] args = {"app",
+        "-D", basedirProp, "-save", serviceName,
+        ExampleAppJson.resourceName(appDef),
+        "-appTypes", AppAdminClient.UNIT_TEST_TYPE,
+        "-updateLifetime", lifetime,
         "-changeQueue", queue};
     runCLI(args);
   }

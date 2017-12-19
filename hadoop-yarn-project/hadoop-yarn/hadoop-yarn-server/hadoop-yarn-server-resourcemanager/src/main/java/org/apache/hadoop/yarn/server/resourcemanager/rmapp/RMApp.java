@@ -307,7 +307,7 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   boolean isAppInCompletedStates();
 
   /**
-   * Get the application -> queue placement context
+   * Get the application -&gt; queue placement context
    * @return ApplicationPlacementContext
    */
   ApplicationPlacementContext getApplicationPlacementContext();

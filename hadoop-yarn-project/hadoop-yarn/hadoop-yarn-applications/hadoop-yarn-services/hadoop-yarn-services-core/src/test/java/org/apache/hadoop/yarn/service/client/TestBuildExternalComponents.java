@@ -60,7 +60,7 @@ public class TestBuildExternalComponents {
   private void buildAndCheckComponents(String appName, String appDef,
       SliderFileSystem sfs, Set<String> names) throws Throwable {
     AppAdminClient client = AppAdminClient.createAppAdminClient(AppAdminClient
-        .DEFAULT_TYPE, conf);
+        .UNIT_TEST_TYPE, conf);
     client.actionSave(ExampleAppJson.resourceName(appDef), null, null,
         null);
 

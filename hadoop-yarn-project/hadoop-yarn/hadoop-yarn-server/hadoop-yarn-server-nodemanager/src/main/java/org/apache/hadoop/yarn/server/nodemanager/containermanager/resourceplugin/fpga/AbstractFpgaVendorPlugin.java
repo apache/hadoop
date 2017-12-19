@@ -77,7 +77,7 @@ public interface AbstractFpgaVendorPlugin extends Configurable{
   /**
    * The vendor plugin configure an IP file to a device
    * @param ipPath The absolute path of the IP file
-   * @param majorMinorNumber The device in format <major:minor>
+   * @param majorMinorNumber The device in format &lt;major:minor&gt;
    * @return configure device ok or not
    * */
   boolean configureIP(String ipPath, String majorMinorNumber);

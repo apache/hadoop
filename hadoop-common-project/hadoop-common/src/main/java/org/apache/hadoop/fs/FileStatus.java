@@ -444,18 +444,18 @@ public class FileStatus implements Writable, Comparable<Object>,
     StringBuilder sb = new StringBuilder();
     sb.append(getClass().getSimpleName()); 
     sb.append("{");
-    sb.append("path=" + path);
-    sb.append("; isDirectory=" + isdir);
+    sb.append("path=" + getPath());
+    sb.append("; isDirectory=" + isDirectory());
     if(!isDirectory()){
-      sb.append("; length=" + length);
-      sb.append("; replication=" + block_replication);
-      sb.append("; blocksize=" + blocksize);
+      sb.append("; length=" + getLen());
+      sb.append("; replication=" + getReplication());
+      sb.append("; blocksize=" + getBlockSize());
     }
-    sb.append("; modification_time=" + modification_time);
-    sb.append("; access_time=" + access_time);
-    sb.append("; owner=" + owner);
-    sb.append("; group=" + group);
-    sb.append("; permission=" + permission);
+    sb.append("; modification_time=" + getModificationTime());
+    sb.append("; access_time=" + getAccessTime());
+    sb.append("; owner=" + getOwner());
+    sb.append("; group=" + getGroup());
+    sb.append("; permission=" + getPermission());
     sb.append("; isSymlink=" + isSymlink());
     if(isSymlink()) {
       try {

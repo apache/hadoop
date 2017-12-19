@@ -1381,7 +1381,6 @@
           <artifactId>mssql-jdbc</artifactId>
           <version>${mssql.version}</version>
         </dependency>
-
         <dependency>
           <groupId>io.swagger</groupId>
           <artifactId>swagger-annotations</artifactId>
@@ -1397,7 +1396,12 @@
           <artifactId>snakeyaml</artifactId>
           <version>${snakeyaml.version}</version>
         </dependency>
-
+        <dependency>
+          <groupId>org.assertj</groupId>
+          <artifactId>assertj-core</artifactId>
+          <version>3.8.0</version>
+          <scope>test</scope>
+        </dependency>
     </dependencies>
   </dependencyManagement>
 

@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsPathHandleProto;
 
@@ -55,24 +56,21 @@ public final class HdfsPathHandle implements PathHandle {
     HdfsPathHandleProto p =
         HdfsPathHandleProto.parseFrom(ByteString.copyFrom(bytes));
     path = p.getPath();
-    mtime = p.hasMtime()
-        ? p.getMtime()
-        : null;
-    inodeId = p.hasInodeId()
-        ? p.getInodeId()
-        : null;
+    mtime   = p.hasMtime()   ? p.getMtime()   : null;
+    inodeId = p.hasInodeId() ? p.getInodeId() : null;
   }
 
   public String getPath() {
     return path;
   }
 
-  public void verify(HdfsLocatedFileStatus stat) throws IOException {
+  public void verify(HdfsLocatedFileStatus stat)
+      throws InvalidPathHandleException {
     if (mtime != null && mtime != stat.getModificationTime()) {
-      throw new IOException("Content changed");
+      throw new InvalidPathHandleException("Content changed");
     }
     if (inodeId != null && inodeId != stat.getFileId()) {
-      throw new IOException("Wrong file");
+      throw new InvalidPathHandleException("Wrong file");
     }
   }
 

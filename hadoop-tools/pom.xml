@@ -49,6 +49,7 @@
     <module>hadoop-azure-datalake</module>
     <module>hadoop-aliyun</module>
     <module>hadoop-ozone</module>
+    <module>hadoop-fs2img</module>
   </modules>
 
   <build>

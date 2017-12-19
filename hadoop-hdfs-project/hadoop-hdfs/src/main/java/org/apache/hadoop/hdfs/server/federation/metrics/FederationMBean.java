@@ -65,6 +65,12 @@ public interface FederationMBean {
   long getRemainingCapacity();
 
   /**
+   * Get the total remote storage capacity mounted in the federated cluster.
+   * @return Remote capacity of the federated cluster.
+   */
+  long getProvidedSpace();
+
+  /**
    * Get the number of nameservices in the federation.
    * @return Number of nameservices in the federation.
    */

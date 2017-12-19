@@ -38,7 +38,7 @@ import com.google.common.annotations.VisibleForTesting;
  * Implementations of the JMX interface for the State Store metrics.
  */
 @Metrics(name = "StateStoreActivity", about = "Router metrics",
-    context = "router")
+    context = "dfs")
 public final class StateStoreMetrics implements StateStoreMBean {
 
   private final MetricsRegistry registry = new MetricsRegistry("router");

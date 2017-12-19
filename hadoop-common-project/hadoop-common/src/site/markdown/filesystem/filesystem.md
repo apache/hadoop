@@ -790,7 +790,7 @@ Implementaions without a compliant call MUST throw `UnsupportedOperationExceptio
       (FS.Directories', FS.Files', FS.Symlinks')
       p' in FS.Files' where:
         FS.Files'[p'] = fd
-    if not exists(FS', p') : raise FileNotFoundException
+    if not exists(FS', p') : raise InvalidPathHandleException
 
 The implementation MUST resolve the referent of the `PathHandle` following
 the constraints specified at its creation by `getPathHandle(FileStatus)`.

@@ -56,7 +56,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
@@ -385,11 +384,9 @@ public class TestConfiguration {
       Configuration conf = new Configuration(false);
       conf.addResource(new Path(CONFIG_MULTI_BYTE));
       assertEquals(value, conf.get(name));
-      FileOutputStream fos = new FileOutputStream(CONFIG_MULTI_BYTE_SAVED);
-      try {
+      try (FileOutputStream fos =
+               new FileOutputStream(CONFIG_MULTI_BYTE_SAVED)) {
         conf.writeXml(fos);
-      } finally {
-        IOUtils.closeStream(fos);
       }
 
       conf = new Configuration(false);

@@ -515,9 +515,42 @@ hadoop s3guard bucket-info -guarded -auth s3a://landsat-pds
 Require the bucket to be using S3Guard in authoritative mode. This will normally
 fail against this specific bucket.
 
+### List or Delete Leftover Multipart Uploads: `s3guard uploads`
+
+Lists or deletes all pending (uncompleted) multipart uploads older than
+given age.
+
+```bash
+hadoop s3guard uploads (-list | -abort | -expect <num-uploads>) [-verbose] \
+    [-days <days>] [-hours <hours>] [-minutes <minutes>] [-seconds <seconds>] \
+    [-force] s3a://bucket/prefix
+```
+
+The command lists or deletes all multipart uploads which are older than
+the given age, and that match the prefix supplied, if any.
+
+For example, to delete all uncompleted multipart uploads older than two
+days in the folder at `s3a://my-bucket/path/to/stuff`, use the following
+command:
+
+```bash
+hadoop s3guard uploads -abort -days 2 s3a://my-bucket/path/to/stuff
+```
+
+We recommend running with `-list` first to confirm the parts shown
+are those that you wish to delete. Note that the command will prompt
+you with a "Are you sure?" prompt unless you specify the `-force`
+option. This is to safeguard against accidental deletion of data, which
+is especially risky without a long age parameter as it can affect
+in-fight uploads.
+
+The `-expect` option is similar to `-list`, except it is silent by
+default, and terminates with a success or failure exit code depending
+on whether or not the supplied number matches the number of uploads
+found that match the given options (path, age).
+
 
 ### Delete a table: `s3guard destroy`
-
 
 Deletes a metadata store. With DynamoDB as the store, this means
 the specific DynamoDB table use to store the metadata.

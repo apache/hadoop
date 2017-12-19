@@ -228,7 +228,7 @@ public class NodeManagerHardwareUtils {
           // on a single core machine - tmp can be between 0 and 1
           cores = 1;
         } else {
-          cores = (int) tmp;
+          cores = Math.round(tmp);
         }
       } else {
         message = "Illegal value for "

@@ -2121,17 +2121,13 @@ public class FileContext {
               content.getPath().getName())), deleteSource, overwrite);
         }
       } else {
-        InputStream in=null;
-        OutputStream out = null;
-        try {
-          in = open(qSrc);
-          EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
-              CreateFlag.CREATE, CreateFlag.OVERWRITE) : 
-                EnumSet.of(CreateFlag.CREATE);
-          out = create(qDst, createFlag);
+        EnumSet<CreateFlag> createFlag = overwrite ? EnumSet.of(
+            CreateFlag.CREATE, CreateFlag.OVERWRITE) :
+            EnumSet.of(CreateFlag.CREATE);
+        InputStream in = open(qSrc);
+        try (OutputStream out = create(qDst, createFlag)) {
           IOUtils.copyBytes(in, out, conf, true);
         } finally {
-          IOUtils.closeStream(out);
           IOUtils.closeStream(in);
         }
       }

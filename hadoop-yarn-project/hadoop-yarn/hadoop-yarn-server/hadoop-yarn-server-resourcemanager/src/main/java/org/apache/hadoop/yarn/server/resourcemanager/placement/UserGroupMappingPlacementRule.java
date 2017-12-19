@@ -184,6 +184,8 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         if (mappedQueue != null) {
           // We have a mapping, should we use it?
           if (queueName.equals(YarnConfiguration.DEFAULT_QUEUE_NAME)
+              //queueName will be same as mapped queue name in case of recovery
+              || queueName.equals(mappedQueue.getQueue())
               || overrideWithQueueMappings) {
             LOG.info("Application " + applicationId + " user " + user
                 + " mapping [" + queueName + "] to [" + mappedQueue

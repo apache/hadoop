@@ -32,6 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.ServerSocketChannel;
+import java.net.BindException;
 
 /**
  * Utility class to start a datanode in a secure cluster, first obtaining 
@@ -102,7 +103,13 @@ public class SecureDataNodeStarter implements Daemon {
 
     ServerSocket ss = (socketWriteTimeout > 0) ? 
         ServerSocketChannel.open().socket() : new ServerSocket();
-    ss.bind(streamingAddr, backlogLength);
+    try {
+      ss.bind(streamingAddr, backlogLength);
+    } catch (BindException e) {
+      BindException newBe = appendMessageToBindException(e,
+          streamingAddr.toString());
+      throw newBe;
+    }
 
     // Check that we got the port we need
     if (ss.getLocalPort() != streamingAddr.getPort()) {
@@ -126,13 +133,20 @@ public class SecureDataNodeStarter implements Daemon {
     if (policy.isHttpEnabled()) {
       httpChannel = ServerSocketChannel.open();
       InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
-      httpChannel.socket().bind(infoSocAddr);
+      try {
+        httpChannel.socket().bind(infoSocAddr);
+      } catch (BindException e) {
+        BindException newBe = appendMessageToBindException(e,
+            infoSocAddr.toString());
+        throw newBe;
+      }
       InetSocketAddress localAddr = (InetSocketAddress) httpChannel.socket()
         .getLocalSocketAddress();
 
       if (localAddr.getPort() != infoSocAddr.getPort()) {
-        throw new RuntimeException("Unable to bind on specified info port in secure " +
-            "context. Needed " + streamingAddr.getPort() + ", got " + ss.getLocalPort());
+        throw new RuntimeException("Unable to bind on specified info port in " +
+            "secure context. Needed " + infoSocAddr.getPort() + ", got " +
+             ss.getLocalPort());
       }
       System.err.println("Successfully obtained privileged resources (streaming port = "
           + ss + " ) (http listener port = " + localAddr.getPort() +")");
@@ -149,4 +163,11 @@ public class SecureDataNodeStarter implements Daemon {
     return new SecureResources(ss, httpChannel);
   }
 
+  private static BindException appendMessageToBindException(BindException e,
+      String msg) {
+    BindException newBe = new BindException(e.getMessage() + " " + msg);
+    newBe.initCause(e.getCause());
+    newBe.setStackTrace(e.getStackTrace());
+    return newBe;
+  }
 }
