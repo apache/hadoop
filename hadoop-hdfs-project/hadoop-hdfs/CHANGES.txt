@@ -15,6 +15,9 @@ Release 2.7.6 - UNRELEASED
     HDFS-12881. Output streams closed with IOUtils suppressing write errors.
     (Ajay Kumar via jlowe)
 
+    HDFS-12347. TestBalancerRPCDelay#testBalancerRPCDelay fails very frequently.
+    (Bharat Viswanadham via Tsz-Wo Nicholas Sze)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
