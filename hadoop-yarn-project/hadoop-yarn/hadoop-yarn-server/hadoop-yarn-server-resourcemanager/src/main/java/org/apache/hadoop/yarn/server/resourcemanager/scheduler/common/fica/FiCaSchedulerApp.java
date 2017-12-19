@@ -375,7 +375,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   }
 
   public boolean accept(Resource cluster,
-      ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request) {
+      ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request,
+      boolean checkPending) {
     ContainerRequest containerRequest = null;
     boolean reReservation = false;
 
@@ -408,9 +409,11 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
               schedulerContainer.getRmContainer().getContainerRequest();
 
           // Check pending resource request
-          if (!appSchedulingInfo.checkAllocation(allocation.getAllocationLocalityType(),
-              schedulerContainer.getSchedulerNode(),
-              schedulerContainer.getSchedulerRequestKey())) {
+          if (checkPending &&
+              !appSchedulingInfo.checkAllocation(
+                  allocation.getAllocationLocalityType(),
+                  schedulerContainer.getSchedulerNode(),
+                  schedulerContainer.getSchedulerRequestKey())) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("No pending resource for: nodeType=" + allocation
                   .getAllocationLocalityType() + ", node=" + schedulerContainer
@@ -485,8 +488,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return accepted;
   }
 
-  public void apply(Resource cluster,
-      ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request) {
+  public void apply(Resource cluster, ResourceCommitRequest<FiCaSchedulerApp,
+      FiCaSchedulerNode> request, boolean updatePending) {
     boolean reReservation = false;
 
     try {
@@ -531,12 +534,15 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           liveContainers.put(containerId, rmContainer);
 
           // Deduct pending resource requests
-          ContainerRequest containerRequest = appSchedulingInfo.allocate(
-              allocation.getAllocationLocalityType(),
-              schedulerContainer.getSchedulerNode(),
-              schedulerContainer.getSchedulerRequestKey(),
-              schedulerContainer.getRmContainer().getContainer());
-          ((RMContainerImpl) rmContainer).setContainerRequest(containerRequest);
+          if (updatePending) {
+            ContainerRequest containerRequest = appSchedulingInfo.allocate(
+                allocation.getAllocationLocalityType(),
+                schedulerContainer.getSchedulerNode(),
+                schedulerContainer.getSchedulerRequestKey(),
+                schedulerContainer.getRmContainer().getContainer());
+            ((RMContainerImpl) rmContainer).setContainerRequest(
+                containerRequest);
+          }
 
           attemptResourceUsage.incUsed(schedulerContainer.getNodePartition(),
               allocation.getAllocatedOrReservedResource());
