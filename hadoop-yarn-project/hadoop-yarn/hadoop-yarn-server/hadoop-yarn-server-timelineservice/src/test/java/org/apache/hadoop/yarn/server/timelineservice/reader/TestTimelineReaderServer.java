@@ -40,7 +40,7 @@ public class TestTimelineReaderServer {
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-    config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+    config.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
         "localhost:0");
     config.setClass(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
         FileSystemTimelineReaderImpl.class, TimelineReader.class);
@@ -64,7 +64,7 @@ public class TestTimelineReaderServer {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-    conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
         "localhost:0");
     conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
         Object.class.getName());
@@ -78,7 +78,7 @@ public class TestTimelineReaderServer {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-    conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_WEBAPP_ADDRESS,
         "localhost:0");
     conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
         nonexistentTimelineReaderClass);
