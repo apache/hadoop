@@ -211,6 +211,13 @@ message SendContainerReportProto {
 }
 
 /**
+This command asks the datanode to close a specific container.
+*/
+message SCMCloseContainerCmdResponseProto {
+  required string containerName = 1;
+}
+
+/**
 Type of commands supported by SCM to datanode protocol.
 */
 enum Type {
@@ -219,6 +226,7 @@ enum Type {
   sendContainerReport = 4;
   reregisterCommand = 5;
   deleteBlocksCommand = 6;
+  closeContainerCommand = 7;
 }
 
 /*
@@ -232,6 +240,7 @@ message SCMCommandResponseProto {
   optional SCMReregisterCmdResponseProto reregisterProto = 6;
   optional SCMDeleteBlocksCmdResponseProto deleteBlocksProto = 7;
   required string datanodeUUID = 8;
+  optional SCMCloseContainerCmdResponseProto closeContainerProto = 9;
 }
 
 
