@@ -100,12 +100,16 @@ public class TestJournalNode {
           "qjournal://jn0:9900;jn1:9901");
     } else if (testName.getMethodName().equals(
         "testJournalNodeSyncerNotStartWhenSyncEnabledIncorrectURI")) {
+      conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY,
+          true);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
           "qjournal://journal0\\:9900;journal1:9901");
     } else if (testName.getMethodName().equals(
         "testJournalNodeSyncerNotStartWhenSyncEnabled")) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
           "qjournal://jn0:9900;jn1:9901");
+      conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY,
+          true);
     }
     jn = new JournalNode();
     jn.setConf(conf);
