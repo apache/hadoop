@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine
     .EndpointStateMachine.EndPointStates;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
+import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerNodeIDProto;
@@ -165,6 +166,16 @@ public class HeartbeatEndpointTask
           }
           this.context.addCommand(db);
         }
+        break;
+      case closeContainerCommand:
+        CloseContainerCommand closeContainer =
+            CloseContainerCommand.getFromProtobuf(
+                commandResponseProto.getCloseContainerProto());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received SCM container close request for container {}",
+              closeContainer.getContainerName());
+        }
+        this.context.addCommand(closeContainer);
         break;
       default:
         throw new IllegalArgumentException("Unknown response : "
