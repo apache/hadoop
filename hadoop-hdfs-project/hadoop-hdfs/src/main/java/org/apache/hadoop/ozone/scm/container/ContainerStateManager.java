@@ -251,11 +251,14 @@ public class ContainerStateManager implements Closeable {
   //                                  DELETING----------------->[DELETED]
   //                                           (CLEANUP)
   // SCM Open/Close State Machine
-  // States: OPEN------------------>PENDING_CLOSE---------->[CLOSE]
+  // States: OPEN------------------>PENDING_CLOSE---------->[CLOSED]
   // Events:        (FULL_CONTAINER)               (CLOSE)
   // Delete State Machine
   // States: OPEN------------------>DELETING------------------>[DELETED]
   // Events:         (DELETE)                  (CLEANUP)
+
+  // Should we allow DELETING of OPEN containers? we can always have
+  // OPEN--------->PENDING_CLOSE----->CLOSE---->DELETING---->[DELETED]
   private void initializeStateMachine() {
     stateMachine.addTransition(LifeCycleState.ALLOCATED,
         LifeCycleState.CREATING,
@@ -266,6 +269,10 @@ public class ContainerStateManager implements Closeable {
         LifeCycleEvent.COMPLETE_CREATE);
 
     stateMachine.addTransition(LifeCycleState.OPEN,
+        LifeCycleState.PENDING_CLOSE,
+        LifeCycleEvent.FULL_CONTAINER);
+
+    stateMachine.addTransition(LifeCycleState.PENDING_CLOSE,
         LifeCycleState.CLOSED,
         LifeCycleEvent.CLOSE);
 

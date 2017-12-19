@@ -56,6 +56,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
+import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.FAILED_TO_CHANGE_CONTAINER_STATE;
 
 /**
  * Mapping class contains the mapping from a name to a pipeline mapping. This
@@ -296,8 +297,8 @@ public class ContainerMapping implements Mapping {
               .parseFrom(containerBytes));
 
       Preconditions.checkNotNull(containerInfo);
-
-      if (event == OzoneProtos.LifeCycleEvent.BEGIN_CREATE) {
+      switch (event) {
+      case BEGIN_CREATE:
         // Acquire lease on container
         Lease<ContainerInfo> containerLease =
             containerLeaseManager.acquire(containerInfo);
@@ -307,10 +308,30 @@ public class ContainerMapping implements Mapping {
               OzoneProtos.LifeCycleEvent.TIMEOUT);
           return null;
         });
-      } else if (event == OzoneProtos.LifeCycleEvent.COMPLETE_CREATE) {
+        break;
+      case COMPLETE_CREATE:
         // Release the lease on container
         containerLeaseManager.release(containerInfo);
+        break;
+      case TIMEOUT:
+        break;
+      case CLEANUP:
+        break;
+      case FULL_CONTAINER:
+        break;
+      case CLOSE:
+        break;
+      case UPDATE:
+        break;
+      case DELETE:
+        break;
+      default:
+        throw new SCMException("Unsupported container LifeCycleEvent.",
+            FAILED_TO_CHANGE_CONTAINER_STATE);
       }
+      // If the below updateContainerState call fails, we should revert the
+      // changes made in switch case.
+      // Like releasing the lease in case of BEGIN_CREATE.
       ContainerInfo updatedContainer = containerStateManager
           .updateContainerState(containerInfo, event);
       containerStore.put(dbKey, updatedContainer.getProtobuf().toByteArray());
@@ -383,16 +404,13 @@ public class ContainerMapping implements Mapping {
             // Close container implementation can decide on how to maintain
             // list of containers to be closed, this is the place where we
             // have to add the containers to that list.
-            ContainerInfo updatedContainer =
-                containerStateManager.updateContainerState(
-                    ContainerInfo.fromProtobuf(newContainerInfo),
-                    OzoneProtos.LifeCycleEvent.CLOSE);
-            if (updatedContainer.getState() !=
-                OzoneProtos.LifeCycleState.CLOSED) {
+            OzoneProtos.LifeCycleState state = updateContainerState(
+                ContainerInfo.fromProtobuf(newContainerInfo).getContainerName(),
+                OzoneProtos.LifeCycleEvent.FULL_CONTAINER);
+            if (state != OzoneProtos.LifeCycleState.PENDING_CLOSE) {
               LOG.error("Failed to close container {}, reason : Not able to " +
                       "update container state, current container state: {}." +
-                      "in state {}", containerInfo.getContainerName(),
-                  updatedContainer.getState());
+                      "in state {}", containerInfo.getContainerName(), state);
             }
           }
         } else {

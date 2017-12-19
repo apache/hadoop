@@ -264,6 +264,34 @@ public class TestContainerMapping {
     ContainerInfo updatedContainer = mapping.getContainer(containerName);
     Assert.assertEquals(500000000L, updatedContainer.getNumberOfKeys());
     Assert.assertEquals(5368705120L, updatedContainer.getUsedBytes());
+    List<ContainerInfo> pendingCloseContainers = mapping.getStateManager()
+        .getMatchingContainers(
+            OzoneProtos.Owner.OZONE,
+            xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(),
+            OzoneProtos.LifeCycleState.PENDING_CLOSE);
+    Assert.assertTrue(pendingCloseContainers.stream().map(
+        container -> container.getContainerName()).collect(
+        Collectors.toList()).contains(containerName));
+  }
+
+  @Test
+  public void testCloseContainer() throws IOException {
+    String containerName = UUID.randomUUID().toString();
+    createContainer(containerName);
+    mapping.updateContainerState(containerName,
+        OzoneProtos.LifeCycleEvent.FULL_CONTAINER);
+    List<ContainerInfo> pendingCloseContainers = mapping.getStateManager()
+        .getMatchingContainers(
+            OzoneProtos.Owner.OZONE,
+            xceiverClientManager.getType(),
+            xceiverClientManager.getFactor(),
+            OzoneProtos.LifeCycleState.PENDING_CLOSE);
+    Assert.assertTrue(pendingCloseContainers.stream().map(
+        container -> container.getContainerName()).collect(
+        Collectors.toList()).contains(containerName));
+    mapping.updateContainerState(containerName,
+        OzoneProtos.LifeCycleEvent.CLOSE);
     List<ContainerInfo> closeContainers = mapping.getStateManager()
         .getMatchingContainers(
             OzoneProtos.Owner.OZONE,
