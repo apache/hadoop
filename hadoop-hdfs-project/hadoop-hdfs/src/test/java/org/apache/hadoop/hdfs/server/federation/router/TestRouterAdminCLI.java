@@ -18,16 +18,20 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
@@ -36,6 +40,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -83,10 +88,121 @@ public class TestRouterAdminCLI {
   }
 
   @AfterClass
-  public static void tearDown() {
+  public static void tearDownCluster() {
     cluster.stopRouter(routerContext);
     cluster.shutdown();
     cluster = null;
+  }
+
+  @After
+  public void tearDown() {
+    // set back system out
+    System.setOut(OLD_OUT);
+  }
+
+  @Test
+  public void testAddMountTable() throws Exception {
+    String nsId = "ns0";
+    String src = "/test-addmounttable";
+    String dest = "/addmounttable";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    Assert.assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    MountTable mountTable = getResponse.getEntries().get(0);
+
+    List<RemoteLocation> destinations = mountTable.getDestinations();
+    assertEquals(1, destinations.size());
+
+    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(nsId, destinations.get(0).getNameserviceId());
+    assertEquals(dest, destinations.get(0).getDest());
+    assertFalse(mountTable.isReadOnly());
+
+    // test mount table update behavior
+    dest = dest + "-new";
+    argv = new String[] {"-add", src, nsId, dest, "-readonly"};
+    Assert.assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    assertEquals(2, mountTable.getDestinations().size());
+    assertEquals(nsId, mountTable.getDestinations().get(1).getNameserviceId());
+    assertEquals(dest, mountTable.getDestinations().get(1).getDest());
+    assertTrue(mountTable.isReadOnly());
+  }
+
+  @Test
+  public void testListMountTable() throws Exception {
+    String nsId = "ns0";
+    String src = "/test-lsmounttable";
+    String dest = "/lsmounttable";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    argv = new String[] {"-ls", src};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(src));
+
+    out.reset();
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance("/");
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+
+    // Test ls command without input path, it will list
+    // mount table under root path.
+    argv = new String[] {"-ls"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(src));
+    String outStr = out.toString();
+    // verify if all the mount table are listed
+    for(MountTable entry: getResponse.getEntries()) {
+      assertTrue(outStr.contains(entry.getSourcePath()));
+    }
+  }
+
+  @Test
+  public void testRemoveMountTable() throws Exception {
+    String nsId = "ns0";
+    String src = "/test-rmmounttable";
+    String dest = "/rmmounttable";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    // ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+
+    argv = new String[] {"-rm", src};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    assertEquals(0, getResponse.getEntries().size());
+
+    // remove an invalid mount table
+    String invalidPath = "/invalid";
+    System.setOut(new PrintStream(out));
+    argv = new String[] {"-rm", invalidPath};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(
+        "Cannot remove mount point " + invalidPath));
   }
 
   @Test
@@ -140,8 +256,7 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
     verifyExecutionResult("/testpath2-3", true, 0, 0);
 
-    // set back system out and login user
-    System.setOut(OLD_OUT);
+    // set back login user
     remoteUser = UserGroupInformation.createRemoteUser(superUser);
     UserGroupInformation.setLoginUser(remoteUser);
   }
