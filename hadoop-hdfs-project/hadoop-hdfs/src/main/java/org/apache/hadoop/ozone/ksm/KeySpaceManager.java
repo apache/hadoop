@@ -25,6 +25,8 @@ import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.jmx.ServiceRuntimeInfoImpl;
+import org.apache.hadoop.ozone.common.Storage.StorageState;
+import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketArgs;
 import org.apache.hadoop.ozone.ksm.helpers.KsmBucketInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyArgs;
@@ -34,6 +36,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolPB;
+import org.apache.hadoop.ozone.ksm.exceptions.KSMException.ResultCodes;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
@@ -55,6 +58,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
@@ -81,6 +85,37 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   private static final Logger LOG =
       LoggerFactory.getLogger(KeySpaceManager.class);
 
+  private static final String USAGE =
+      "Usage: \n hdfs ksm [genericOptions] " + "[ "
+          + StartupOption.CREATEOBJECTSTORE.getName() + " ]\n " + "hdfs ksm [ "
+          + StartupOption.HELP.getName() + " ]\n";
+
+  /** Startup options. */
+  public enum StartupOption {
+    CREATEOBJECTSTORE("-createObjectStore"),
+    HELP("-help"),
+    REGULAR("-regular");
+
+    private final String name;
+
+    StartupOption(String arg) {
+      this.name = arg;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public static StartupOption parse(String value) {
+      for (StartupOption option : StartupOption.values()) {
+        if (option.name.equalsIgnoreCase(value)) {
+          return option;
+        }
+      }
+      return null;
+    }
+  }
+
   private final RPC.Server ksmRpcServer;
   private final InetSocketAddress ksmRpcAddress;
   private final KSMMetadataManager metadataManager;
@@ -89,10 +124,24 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   private final KeyManager keyManager;
   private final KSMMetrics metrics;
   private final KeySpaceManagerHttpServer httpServer;
+  private final KSMStorage ksmStorage;
   private ObjectName ksmInfoBeanName;
-  private static final String USAGE = "hdfs ksm [genericOptions]";
 
-  public KeySpaceManager(OzoneConfiguration conf) throws IOException {
+  private KeySpaceManager(OzoneConfiguration conf) throws IOException {
+    ksmStorage = new KSMStorage(conf);
+    ScmBlockLocationProtocol scmBlockClient = getScmBlockClient(conf);
+    if (ksmStorage.getState() != StorageState.INITIALIZED) {
+      throw new KSMException("KSM not initialized.",
+          ResultCodes.KSM_NOT_INITIALIZED);
+    }
+
+    // verifies that the SCM info in the KSM Version file is correct.
+    ScmInfo scmInfo = scmBlockClient.getScmInfo();
+    if (!(scmInfo.getClusterId().equals(ksmStorage.getClusterID()) && scmInfo
+        .getScmId().equals(ksmStorage.getScmId()))) {
+      throw new KSMException("SCM version info mismatch.",
+          ResultCodes.SCM_VERSION_MISMATCH_ERROR);
+    }
     final int handlerCount = conf.getInt(OZONE_KSM_HANDLER_COUNT_KEY,
         OZONE_KSM_HANDLER_COUNT_DEFAULT);
 
@@ -124,8 +173,8 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
    * @return
    * @throws IOException
    */
-  private ScmBlockLocationProtocol getScmBlockClient(OzoneConfiguration conf)
-      throws IOException {
+  private static ScmBlockLocationProtocol getScmBlockClient(
+      OzoneConfiguration conf) throws IOException {
     RPC.setProtocolEngine(conf, ScmBlockLocationProtocolPB.class,
         ProtobufRpcEngine.class);
     long scmVersion =
@@ -144,6 +193,11 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public ScmInfo getScmInfo(OzoneConfiguration conf) throws IOException {
     return getScmBlockClient(conf).getScmInfo();
+  }
+
+  @VisibleForTesting
+  public KSMStorage getKsmStorage() {
+    return ksmStorage;
   }
   /**
    * Starts an RPC server, if configured.
@@ -193,32 +247,122 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
    * @throws IOException if startup fails due to I/O error
    */
   public static void main(String[] argv) throws IOException {
-    if (DFSUtil.parseHelpArgument(argv, USAGE,
-        System.out, true)) {
+    if (DFSUtil.parseHelpArgument(argv, USAGE, System.out, true)) {
       System.exit(0);
     }
     try {
       OzoneConfiguration conf = new OzoneConfiguration();
       GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
-      if (!hParser.isParseSuccessful()
-          || hParser.getRemainingArgs().length > 0) {
+      if (!hParser.isParseSuccessful()) {
         System.err.println("USAGE: " + USAGE + " \n");
         hParser.printGenericCommandUsage(System.err);
         System.exit(1);
       }
-      if (!DFSUtil.isOzoneEnabled(conf)) {
-        System.out.println("KSM cannot be started in secure mode or when " +
-            OZONE_ENABLED + " is set to false");
-        System.exit(1);
-      }
       StringUtils.startupShutdownMessage(KeySpaceManager.class, argv, LOG);
-      KeySpaceManager ksm = new KeySpaceManager(conf);
-      ksm.start();
-      ksm.join();
+      KeySpaceManager ksm = createKSM(hParser.getRemainingArgs(), conf);
+      if (ksm != null) {
+        ksm.start();
+        ksm.join();
+      }
     } catch (Throwable t) {
       LOG.error("Failed to start the KeyspaceManager.", t);
       terminate(1, t);
     }
+  }
+
+  private static void printUsage(PrintStream out) {
+    out.println(USAGE + "\n");
+  }
+
+  /**
+   * Constructs KSM instance based on command line arguments.
+   * @param argv Command line arguments
+   * @param conf OzoneConfiguration
+   * @return KSM instance
+   * @throws IOException in case KSM instance creation fails.
+   */
+
+  public static KeySpaceManager createKSM(String[] argv,
+      OzoneConfiguration conf) throws IOException {
+    if (!DFSUtil.isOzoneEnabled(conf)) {
+      System.err.println("KSM cannot be started in secure mode or when " +
+          OZONE_ENABLED + " is set to false");
+      System.exit(1);
+    }
+    StartupOption startOpt = parseArguments(argv);
+    if (startOpt == null) {
+      printUsage(System.err);
+      terminate(1);
+      return null;
+    }
+    switch (startOpt) {
+    case CREATEOBJECTSTORE:
+      terminate(ksmInit(conf) ? 0 : 1);
+      return null;
+    case HELP:
+      printUsage(System.err);
+      terminate(0);
+      return null;
+    default:
+      return new KeySpaceManager(conf);
+    }
+  }
+
+  /**
+   * Initializes the KSM instance.
+   * @param conf OzoneConfiguration
+   * @return true if KSM initialization succeeds , false otherwise
+   * @throws IOException in case ozone metadata directory path is not accessible
+   */
+
+  private static boolean ksmInit(OzoneConfiguration conf) throws IOException {
+    KSMStorage ksmStorage = new KSMStorage(conf);
+    StorageState state = ksmStorage.getState();
+    if (state != StorageState.INITIALIZED) {
+      try {
+        ScmBlockLocationProtocol scmBlockClient = getScmBlockClient(conf);
+        ScmInfo scmInfo = scmBlockClient.getScmInfo();
+        String clusterId = scmInfo.getClusterId();
+        String scmId = scmInfo.getScmId();
+        if (clusterId == null || clusterId.isEmpty()) {
+          throw new IOException("Invalid Cluster ID");
+        }
+        if (scmId == null || scmId.isEmpty()) {
+          throw new IOException("Invalid SCM ID");
+        }
+        ksmStorage.setClusterId(clusterId);
+        ksmStorage.setScmId(scmId);
+        ksmStorage.initialize();
+        System.out.println(
+            "KSM initialization succeeded.Current cluster id for sd="
+                + ksmStorage.getStorageDir() + ";cid=" + ksmStorage
+                .getClusterID());
+        return true;
+      } catch (IOException ioe) {
+        LOG.error("Could not initialize KSM version file", ioe);
+        return false;
+      }
+    } else {
+      System.out.println(
+          "KSM already initialized.Reusing existing cluster id for sd="
+              + ksmStorage.getStorageDir() + ";cid=" + ksmStorage
+              .getClusterID());
+      return true;
+    }
+  }
+
+  /**
+   * Parses the command line options for KSM initialization.
+   * @param args command line arguments
+   * @return StartupOption if options are valid, null otherwise
+   */
+  private static StartupOption parseArguments(String[] args) {
+    if (args == null || args.length == 0) {
+      return StartupOption.REGULAR;
+    } else if (args.length == 1) {
+      return StartupOption.parse(args[0]);
+    }
+    return null;
   }
 
   /**

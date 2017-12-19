@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.scm;
-
+package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.common.Storage;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeType;
+import org.apache.hadoop.ozone.scm.SCMStorage;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 
 import java.io.IOException;
@@ -28,27 +28,35 @@ import java.util.Properties;
 import java.util.UUID;
 
 /**
- * SCMStorage is responsible for management of the StorageDirectories used by
- * the SCM.
+ * KSMStorage is responsible for management of the StorageDirectories used by
+ * the KSM.
  */
-public class SCMStorage extends Storage {
+public class KSMStorage extends Storage {
 
-  public static final String STORAGE_DIR = "scm";
-  public static final String SCM_ID = "scmUuid";
+  public static final String STORAGE_DIR = "ksm";
+  public static final String KSM_ID = "ksmUuid";
 
   /**
-   * Construct SCMStorage.
+   * Construct KSMStorage.
    * @throws IOException if any directories are inaccessible.
    */
-  public SCMStorage(OzoneConfiguration conf) throws IOException {
-    super(NodeType.SCM, OzoneUtils.getOzoneMetaDirPath(conf), STORAGE_DIR);
+  public KSMStorage(OzoneConfiguration conf) throws IOException {
+    super(NodeType.KSM, OzoneUtils.getOzoneMetaDirPath(conf), STORAGE_DIR);
   }
 
   public void setScmId(String scmId) throws IOException {
     if (getState() == StorageState.INITIALIZED) {
-      throw new IOException("SCM is already initialized.");
+      throw new IOException("KSM is already initialized.");
     } else {
-      getStorageInfo().setProperty(SCM_ID, scmId);
+      getStorageInfo().setProperty(SCMStorage.SCM_ID, scmId);
+    }
+  }
+
+  public void setKsmId(String ksmId) throws IOException {
+    if (getState() == StorageState.INITIALIZED) {
+      throw new IOException("KSM is already initialized.");
+    } else {
+      getStorageInfo().setProperty(KSM_ID, ksmId);
     }
   }
 
@@ -57,18 +65,25 @@ public class SCMStorage extends Storage {
    * @return SCM_ID
    */
   public String getScmId() {
-    return getStorageInfo().getProperty(SCM_ID);
+    return getStorageInfo().getProperty(SCMStorage.SCM_ID);
+  }
+
+  /**
+   * Retrieves the KSM ID from the version file.
+   * @return KSM_ID
+   */
+  public String getKsmId() {
+    return getStorageInfo().getProperty(KSM_ID);
   }
 
   @Override
   protected Properties getNodeProperties() {
-    String scmId = getScmId();
-    if (scmId == null) {
-      scmId = UUID.randomUUID().toString();
+    String ksmId = getKsmId();
+    if (ksmId == null) {
+      ksmId = UUID.randomUUID().toString();
     }
-    Properties scmProperties = new Properties();
-    scmProperties.setProperty(SCM_ID, scmId);
-    return scmProperties;
+    Properties ksmProperties = new Properties();
+    ksmProperties.setProperty(KSM_ID, ksmId);
+    return ksmProperties;
   }
-
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.ksm.KSMConfigKeys;
 import org.apache.hadoop.ozone.ksm.KeySpaceManager;
 import org.apache.hadoop.ozone.scm.SCMStorage;
+import org.apache.hadoop.ozone.ksm.KSMStorage;
 import org.apache.hadoop.ozone.web.client.OzoneRestClient;
 import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.protocolPB
@@ -86,7 +87,7 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
 
   private final OzoneConfiguration conf;
   private final StorageContainerManager scm;
-  private final KeySpaceManager ksm;
+  private KeySpaceManager ksm;
   private final Path tempPath;
 
   /**
@@ -338,6 +339,7 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
     private Optional<String> scmMetadataDir = Optional.empty();
     private Optional<String> clusterId = Optional.empty();
     private Optional<String> scmId = Optional.empty();
+    private Optional<String> ksmId = Optional.empty();
     private Boolean ozoneEnabled = true;
     private Boolean waitForChillModeFinish = true;
     private Boolean randomContainerPort = true;
@@ -436,6 +438,11 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       return this;
     }
 
+    public Builder setKsmId(String kId) {
+      ksmId = Optional.of(kId);
+      return this;
+    }
+
     public String getPath() {
       return path;
     }
@@ -453,6 +460,7 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
       configureSCMheartbeat();
       configScmMetadata();
       initializeScm();
+      initializeKSM();
 
       conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
@@ -474,7 +482,7 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
           null, conf);
       scm.start();
 
-      KeySpaceManager ksm = new KeySpaceManager(conf);
+      KeySpaceManager ksm = KeySpaceManager.createKSM(null, conf);
       ksm.start();
 
       String addressString =  scm.getDatanodeRpcAddress().getHostString() +
@@ -527,9 +535,23 @@ public final class MiniOzoneClassicCluster extends MiniDFSCluster
 
     private void initializeScm() throws IOException {
       SCMStorage scmStore = new SCMStorage(conf);
-      scmStore.setClusterId(clusterId.orElse(runID.toString()));
-      scmStore.setScmId(scmId.orElse(UUID.randomUUID().toString()));
+      if (!clusterId.isPresent()) {
+        clusterId = Optional.of(runID.toString());
+      }
+      scmStore.setClusterId(clusterId.get());
+      if (!scmId.isPresent()) {
+        scmId = Optional.of(UUID.randomUUID().toString());
+      }
+      scmStore.setScmId(scmId.get());
       scmStore.initialize();
+    }
+
+    private void initializeKSM() throws IOException {
+      KSMStorage ksmStore = new KSMStorage(conf);
+      ksmStore.setClusterId(clusterId.get());
+      ksmStore.setScmId(scmId.get());
+      ksmStore.setKsmId(ksmId.orElse(UUID.randomUUID().toString()));
+      ksmStore.initialize();
     }
 
     private void configureHandler() {

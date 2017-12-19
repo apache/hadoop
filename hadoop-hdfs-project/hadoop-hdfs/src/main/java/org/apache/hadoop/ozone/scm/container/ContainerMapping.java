@@ -99,7 +99,7 @@ public class ContainerMapping implements Mapping {
     this.nodeManager = nodeManager;
     this.cacheSize = cacheSizeMB;
 
-    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    File metaDir = OzoneUtils.getOzoneMetaDirPath(conf);
 
     // Write the container name to pipeline mapping.
     File containerDBPath = new File(metaDir, CONTAINER_DB);

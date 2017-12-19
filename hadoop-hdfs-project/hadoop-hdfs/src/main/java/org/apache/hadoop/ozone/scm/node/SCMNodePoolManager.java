@@ -81,7 +81,7 @@ public final class SCMNodePoolManager implements NodePoolManager {
       throws IOException {
     final int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
         OZONE_SCM_DB_CACHE_SIZE_DEFAULT);
-    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    File metaDir = OzoneUtils.getOzoneMetaDirPath(conf);
     String scmMetaDataDir = metaDir.getPath();
     File nodePoolDBPath = new File(scmMetaDataDir, NODEPOOL_DB);
     nodePoolStore = MetadataStoreBuilder.newBuilder()

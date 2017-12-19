@@ -76,7 +76,7 @@ public class KSMMetadataManagerImpl implements KSMMetadataManager {
   private final long openKeyExpireThresholdMS;
 
   public KSMMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
-    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    File metaDir = OzoneUtils.getOzoneMetaDirPath(conf);
     final int cacheSize = conf.getInt(OZONE_KSM_DB_CACHE_SIZE_MB,
         OZONE_KSM_DB_CACHE_SIZE_DEFAULT);
     File ksmDBFile = new File(metaDir.getPath(), KSM_DB_NAME);

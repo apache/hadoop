@@ -28,6 +28,8 @@ import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
+import org.apache.hadoop.ozone.scm.SCMStorage;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -39,6 +41,7 @@ import org.apache.hadoop.ozone.web.response.BucketInfo;
 import org.apache.hadoop.ozone.web.response.KeyInfo;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.protocol.proto
@@ -61,6 +64,8 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -86,6 +91,7 @@ public class TestKeySpaceManager {
   private static OzoneConfiguration conf;
   private static String clusterId;
   private static String scmId;
+  private static String ksmId;
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -103,6 +109,7 @@ public class TestKeySpaceManager {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
+    ksmId = UUID.randomUUID().toString();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
     conf.setInt(OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS, 2);
@@ -111,6 +118,7 @@ public class TestKeySpaceManager {
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED)
         .setClusterId(clusterId)
         .setScmId(scmId)
+        .setKsmId(ksmId)
         .build();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();
     userArgs = new UserArgs(null, OzoneUtils.getRequestID(),
@@ -1129,5 +1137,52 @@ public class TestKeySpaceManager {
     String[] subs = openKeys.get(0).getGroupID().split("/");
     String keyName = subs[subs.length - 1];
     Assert.assertEquals("testKey5", keyName);
+  }
+
+  /**
+   * Tests the KSM Initialization.
+   * @throws IOException
+   */
+  @Test
+  public void testKSMInitialization() throws IOException {
+    // Read the version file info from KSM version file
+    KSMStorage ksmStorage = cluster.getKeySpaceManager().getKsmStorage();
+    SCMStorage scmStorage = new SCMStorage(conf);
+    // asserts whether cluster Id and SCM ID are properly set in SCM Version
+    // file.
+    Assert.assertEquals(clusterId, scmStorage.getClusterID());
+    Assert.assertEquals(scmId, scmStorage.getScmId());
+    // asserts whether KSM Id is properly set in KSM Version file.
+    Assert.assertEquals(ksmId, ksmStorage.getKsmId());
+    // asserts whether the SCM info is correct in KSM Version file.
+    Assert.assertEquals(clusterId, ksmStorage.getClusterID());
+    Assert.assertEquals(scmId, ksmStorage.getScmId());
+  }
+
+  /**
+   * Tests the KSM Initialization Failure.
+   * @throws IOException
+   */
+  @Test
+  public void testKSMInitializationFailure() throws Exception {
+    OzoneConfiguration config = new OzoneConfiguration();
+    final String path =
+        GenericTestUtils.getTempPath(UUID.randomUUID().toString());
+    Path metaDirPath = Paths.get(path, "ksm-meta");
+    config.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
+    config.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    config.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY,
+        conf.get(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY));
+    exception.expect(KSMException.class);
+    exception.expectMessage("KSM not initialized.");
+    KeySpaceManager.createKSM(null, config);
+    KSMStorage ksmStore = new KSMStorage(config);
+    ksmStore.setClusterId("testClusterId");
+    ksmStore.setScmId("testScmId");
+    // writes the version file properties
+    ksmStore.initialize();
+    exception.expect(KSMException.class);
+    exception.expectMessage("SCM version info mismatch.");
+    KeySpaceManager.createKSM(null, conf);
   }
 }

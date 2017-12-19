@@ -250,7 +250,7 @@ public final class OzoneUtils {
    *
    * @return File MetaDir
    */
-  public static File getScmMetadirPath(Configuration conf) {
+  public static File getOzoneMetaDirPath(Configuration conf) {
     String metaDirPath = conf.getTrimmed(OzoneConfigKeys
         .OZONE_METADATA_DIRS);
     Preconditions.checkNotNull(metaDirPath);
