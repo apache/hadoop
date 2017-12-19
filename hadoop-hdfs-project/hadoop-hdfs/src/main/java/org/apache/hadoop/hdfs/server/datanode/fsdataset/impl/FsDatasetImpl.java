@@ -978,6 +978,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo newReplicaInfo = targetVolume.moveBlockToTmpLocation(block,
         replicaInfo, smallBufferSize, conf);
 
+     // Latch here --> wait for the signal.
+
     // Finalize the copied files
     newReplicaInfo = finalizeReplica(block.getBlockPoolId(), newReplicaInfo);
     try (AutoCloseableLock lock = datasetLock.acquire()) {
@@ -1671,8 +1673,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
       assert newReplicaInfo.getState() == ReplicaState.FINALIZED
           : "Replica should be finalized";
-      volumeMap.add(bpid, newReplicaInfo);
-      return newReplicaInfo;
+      if(volumeMap.get(bpid, replicaInfo.getBlockId()).getGenerationStamp() <=
+          newReplicaInfo.getGenerationStamp()) {
+        volumeMap.add(bpid, newReplicaInfo);
+        return newReplicaInfo;
+      } else {
+         throw new IOException("Generation Stamp should be monotonically " +
+             "increased. That assumption is violated here.");
+      }
     }
   }
 
