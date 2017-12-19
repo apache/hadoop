@@ -110,7 +110,7 @@ public abstract class Storage {
   public void setClusterId(String clusterId) throws IOException {
     if (state == StorageState.INITIALIZED) {
       throw new IOException(
-          "Storage directory " + storageDir + "already initialized.");
+          "Storage directory " + storageDir + " already initialized.");
     } else {
       storageInfo.setClusterId(clusterId);
     }

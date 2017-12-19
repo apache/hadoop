@@ -112,7 +112,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
     this.containerSize = OzoneConsts.GB * conf.getInt(
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_GB,
         ScmConfigKeys.OZONE_SCM_CONTAINER_SIZE_DEFAULT);
-    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    File metaDir = OzoneUtils.getOzoneMetaDirPath(conf);
     String scmMetaDataDir = metaDir.getPath();
 
     // Write the block key to container name mapping.

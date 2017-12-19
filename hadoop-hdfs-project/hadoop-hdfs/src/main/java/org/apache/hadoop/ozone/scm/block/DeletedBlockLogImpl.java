@@ -77,7 +77,7 @@ public class DeletedBlockLogImpl implements DeletedBlockLog {
     maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY,
         OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT);
 
-    File metaDir = OzoneUtils.getScmMetadirPath(conf);
+    File metaDir = OzoneUtils.getOzoneMetaDirPath(conf);
     String scmMetaDataDir = metaDir.getPath();
     File deletedLogDbPath = new File(scmMetaDataDir, DELETED_BLOCK_DB);
     int cacheSize = conf.getInt(OZONE_SCM_DB_CACHE_SIZE_MB,
