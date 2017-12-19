@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -59,6 +60,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -82,6 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
@@ -99,7 +102,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
@@ -141,6 +146,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.Candida
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -596,7 +603,7 @@ public class CapacityScheduler extends
 
           try {
             cs.writeLock.lock();
-            cs.tryCommit(cs.getClusterResource(), request);
+            cs.tryCommit(cs.getClusterResource(), request, true);
           } finally {
             cs.writeLock.unlock();
           }
@@ -2551,8 +2558,65 @@ public class CapacityScheduler extends
       resourceCommitterService.addNewCommitRequest(request);
     } else{
       // Otherwise do it sync-ly.
-      tryCommit(cluster, request);
+      tryCommit(cluster, request, true);
     }
+  }
+
+  @Override
+  public boolean attemptAllocationOnNode(SchedulerApplicationAttempt appAttempt,
+      SchedulingRequest schedulingRequest, SchedulerNode schedulerNode) {
+    if (schedulingRequest.getResourceSizing() != null) {
+      if (schedulingRequest.getResourceSizing().getNumAllocations() > 1) {
+        LOG.warn("The SchedulingRequest has requested more than 1 allocation," +
+            " but only 1 will be attempted !!");
+      }
+      if (!appAttempt.isStopped()) {
+        ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>
+            resourceCommitRequest = createResourceCommitRequest(
+            appAttempt, schedulingRequest, schedulerNode);
+        return tryCommit(getClusterResource(), resourceCommitRequest, false);
+      }
+    }
+    return false;
+  }
+
+  // This assumes numContainers = 1 for the request.
+  private ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>
+      createResourceCommitRequest(SchedulerApplicationAttempt appAttempt,
+      SchedulingRequest schedulingRequest, SchedulerNode schedulerNode) {
+    ContainerAllocationProposal<FiCaSchedulerApp, FiCaSchedulerNode> allocated =
+        null;
+    Resource resource = schedulingRequest.getResourceSizing().getResources();
+    if (Resources.greaterThan(calculator, getClusterResource(),
+        resource, Resources.none())) {
+      ContainerId cId =
+          ContainerId.newContainerId(appAttempt.getApplicationAttemptId(),
+              appAttempt.getAppSchedulingInfo().getNewContainerId());
+      Container container = BuilderUtils.newContainer(
+          cId, schedulerNode.getNodeID(), schedulerNode.getHttpAddress(),
+          resource, schedulingRequest.getPriority(), null,
+          ExecutionType.GUARANTEED,
+          schedulingRequest.getAllocationRequestId());
+      RMContainer rmContainer = new RMContainerImpl(container,
+          SchedulerRequestKey.extractFrom(container),
+          appAttempt.getApplicationAttemptId(), container.getNodeId(),
+          appAttempt.getUser(), rmContext, false);
+
+      allocated = new ContainerAllocationProposal<>(
+          getSchedulerContainer(rmContainer, true),
+          null, null, NodeType.NODE_LOCAL, NodeType.NODE_LOCAL,
+          SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY,
+          resource);
+    }
+
+    if (null != allocated) {
+      List<ContainerAllocationProposal<FiCaSchedulerApp, FiCaSchedulerNode>>
+          allocationsList = new ArrayList<>();
+      allocationsList.add(allocated);
+
+      return new ResourceCommitRequest<>(allocationsList, null, null);
+    }
+    return null;
   }
 
   @VisibleForTesting
@@ -2632,7 +2696,8 @@ public class CapacityScheduler extends
   }
 
   @Override
-  public void tryCommit(Resource cluster, ResourceCommitRequest r) {
+  public boolean tryCommit(Resource cluster, ResourceCommitRequest r,
+      boolean updatePending) {
     ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =
         (ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>) r;
 
@@ -2662,15 +2727,17 @@ public class CapacityScheduler extends
       LOG.debug("Try to commit allocation proposal=" + request);
     }
 
+    boolean isSuccess = false;
     if (attemptId != null) {
       FiCaSchedulerApp app = getApplicationAttempt(attemptId);
       // Required sanity check for attemptId - when async-scheduling enabled,
       // proposal might be outdated if AM failover just finished
       // and proposal queue was not be consumed in time
       if (app != null && attemptId.equals(app.getApplicationAttemptId())) {
-        if (app.accept(cluster, request)) {
-          app.apply(cluster, request);
+        if (app.accept(cluster, request, updatePending)) {
+          app.apply(cluster, request, updatePending);
           LOG.info("Allocation proposal accepted");
+          isSuccess = true;
         } else{
           LOG.info("Failed to accept allocation proposal");
         }
@@ -2681,6 +2748,7 @@ public class CapacityScheduler extends
         }
       }
     }
+    return isSuccess;
   }
 
   public int getAsyncSchedulingPendingBacklogs() {
