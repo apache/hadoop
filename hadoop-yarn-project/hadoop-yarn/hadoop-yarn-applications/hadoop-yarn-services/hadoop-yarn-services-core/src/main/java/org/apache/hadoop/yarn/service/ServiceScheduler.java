@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.service.api.ServiceApiConstants;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
@@ -283,6 +284,9 @@ public class ServiceScheduler extends CompositeService {
           .setMasterKey(response.getClientToAMTokenMasterKey().array());
     }
     registerServiceInstance(context.attemptId, app);
+
+    // Since AM has been started and registered, the service is in STARTED state
+    app.setState(ServiceState.STARTED);
 
     // recover components based on containers sent from RM
     recoverComponents(response);

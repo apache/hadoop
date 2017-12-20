@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.apache.hadoop.yarn.service.monitor.ServiceMonitor;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
@@ -237,6 +238,7 @@ public class ServiceMaster extends CompositeService {
       SliderFileSystem fs) throws IOException {
     context.service = ServiceApiUtil
         .loadServiceFrom(fs, new Path(serviceDefPath));
+    context.service.setState(ServiceState.ACCEPTED);
     LOG.info(context.service.toString());
   }
 
@@ -255,6 +257,41 @@ public class ServiceMaster extends CompositeService {
   protected void serviceStop() throws Exception {
     LOG.info("Stopping app master");
     super.serviceStop();
+  }
+
+  // This method should be called whenever there is an increment or decrement
+  // of a READY state component of a service
+  public static synchronized void checkAndUpdateServiceState(
+      ServiceScheduler scheduler, boolean isIncrement) {
+    ServiceState curState = scheduler.getApp().getState();
+    if (!isIncrement) {
+      // set it to STARTED every time a component moves out of STABLE state
+      scheduler.getApp().setState(ServiceState.STARTED);
+    } else {
+      // otherwise check the state of all components
+      boolean isStable = true;
+      for (org.apache.hadoop.yarn.service.api.records.Component comp : scheduler
+          .getApp().getComponents()) {
+        if (comp.getState() !=
+            org.apache.hadoop.yarn.service.api.records.ComponentState.STABLE) {
+          isStable = false;
+          break;
+        }
+      }
+      if (isStable) {
+        scheduler.getApp().setState(ServiceState.STABLE);
+      } else {
+        // mark new state as started only if current state is stable, otherwise
+        // leave it as is
+        if (curState == ServiceState.STABLE) {
+          scheduler.getApp().setState(ServiceState.STARTED);
+        }
+      }
+    }
+    if (curState != scheduler.getApp().getState()) {
+      LOG.info("Service state changed from {} -> {}", curState,
+          scheduler.getApp().getState());
+    }
   }
 
   private void printSystemEnv() {
