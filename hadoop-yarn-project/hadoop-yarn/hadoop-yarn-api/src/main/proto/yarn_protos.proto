@@ -424,6 +424,16 @@ enum AMCommandProto {
   AM_SHUTDOWN = 2;
 }
 
+enum RejectionReasonProto {
+  RRP_COULD_NOT_PLACE_ON_NODE = 1;
+  RRP_COULD_NOT_SCHEDULE_ON_NODE = 2;
+}
+
+message RejectedSchedulingRequestProto {
+  required RejectionReasonProto reason = 1;
+  required SchedulingRequestProto request = 2;
+}
+
 message PreemptionMessageProto {
   optional StrictPreemptionContractProto strictContract = 1;
   optional PreemptionContractProto contract = 2;
