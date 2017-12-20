@@ -1220,7 +1220,7 @@
   </property>
 
   <property>
-    <name>ozone.open.key.expire.threshold </name>
+    <name>ozone.open.key.expire.threshold</name>
     <value>86400</value>
     <tag>OZONE, KSM, PERFORMANCE</tag>
     <description>
