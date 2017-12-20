@@ -165,8 +165,8 @@ public class ConfServlet extends HttpServlet {
       propList = config.readPropertyFromXml(config.getResource("ozone-default"
           + ".xml"));
       propList.stream().forEach(p -> {
-        if (!propertyMap.containsKey(p.getName())) {
-          propertyMap.put(p.getName(), p);
+        if (!propertyMap.containsKey(p.getName().trim())) {
+          propertyMap.put(p.getName().trim(), p);
         }
       });
     } catch (Exception e) {
