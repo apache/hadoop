@@ -414,9 +414,12 @@ public class FSDirAttrOp {
       if (oldBR > targetReplication) {
         FSDirectory.LOG.info("Decreasing replication from {} to {} for {}",
                              oldBR, targetReplication, iip.getPath());
-      } else {
+      } else if (oldBR < targetReplication) {
         FSDirectory.LOG.info("Increasing replication from {} to {} for {}",
                              oldBR, targetReplication, iip.getPath());
+      } else {
+        FSDirectory.LOG.info("Replication remains unchanged at {} for {}",
+                             oldBR, iip.getPath());
       }
     }
     return file.getBlocks();
