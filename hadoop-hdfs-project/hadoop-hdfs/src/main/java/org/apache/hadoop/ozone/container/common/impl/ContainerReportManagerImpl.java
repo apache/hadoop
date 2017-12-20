@@ -33,10 +33,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * // TODO: support incremental/delta container report
  */
 public class ContainerReportManagerImpl implements ContainerReportManager {
-  private Configuration config;
   // Last non-empty container report time
   private long lastContainerReportTime;
   private final long containerReportInterval;
+  private final long heartbeatInterval;
   private AtomicLong reportCount;
   private static final ReportState NO_CONTAINER_REPORTSTATE =
       ReportState.newBuilder()
@@ -44,13 +44,13 @@ public class ContainerReportManagerImpl implements ContainerReportManager {
           .setCount(0).build();
 
   public ContainerReportManagerImpl(Configuration config) {
-    this.config = config;
     this.lastContainerReportTime = -1;
     this.reportCount = new AtomicLong(0L);
     this.containerReportInterval = config.getTimeDuration(
         OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL,
         OzoneConfigKeys.OZONE_CONTAINER_REPORT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
+    this.heartbeatInterval = OzoneClientUtils.getScmHeartbeatInterval(config);
   }
 
   public ReportState getContainerReportState() {
@@ -82,7 +82,6 @@ public class ContainerReportManagerImpl implements ContainerReportManager {
   }
 
   private long getRandomReportDelay() {
-    return RandomUtils.nextLong(0,
-        OzoneClientUtils.getScmHeartbeatInterval(config));
+    return RandomUtils.nextLong(0, heartbeatInterval);
   }
 }
