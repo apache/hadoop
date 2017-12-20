@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -57,6 +58,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.adl.oauth2.AzureADTokenProvider;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -1028,5 +1030,18 @@ public class AdlFileSystem extends FileSystem {
       dest.set(generic, value, key + " via " + origin);
     }
     return dest;
+  }
+
+  @Override
+  public boolean hasCapability(String capability, Path path) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.FS_ACLS:
+    case StreamCapabilities.FS_APPEND:
+    case StreamCapabilities.FS_CONCAT:
+    case StreamCapabilities.FS_PERMISSIONS:
+      return true;
+    default:
+      return super.hasCapability(capability, path);
+    }
   }
 }

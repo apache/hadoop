@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -76,6 +77,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
@@ -2012,6 +2014,27 @@ public class WebHdfsFileSystem extends FileSystem
   @VisibleForTesting
   public void setTestProvider(KeyProvider kp) {
     testProvider = kp;
+  }
+
+  /**
+   * This filesystem's capabilities must be in sync with that of HDFS.
+   * @param capability string to query the stream support for.
+   * @param path
+   * @return true if a capability is supported.
+   */
+  @Override
+  public boolean hasCapability(String capability,
+      Path path) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.FS_ACLS:
+    case StreamCapabilities.FS_APPEND:
+    case StreamCapabilities.FS_CONCAT:
+    case StreamCapabilities.FS_PERMISSIONS:
+    case StreamCapabilities.FS_XATTRS:
+      return true;
+    default:
+      return super.hasCapability(capability, path);
+    }
   }
 
   /**

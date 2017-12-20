@@ -3602,6 +3602,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return instrumentation.newCommitterStatistics();
   }
 
+  @Override
+  public boolean hasCapability(String capability, Path path) {
+    return hasCapability(capability);
+  }
+
   /**
    * Return the capabilities of this filesystem instance.
    * @param capability string to query the stream support for.

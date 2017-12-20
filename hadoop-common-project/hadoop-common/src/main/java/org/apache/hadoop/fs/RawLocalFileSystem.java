@@ -41,6 +41,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Optional;
+import java.util.Locale;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1059,5 +1060,17 @@ public class RawLocalFileSystem extends FileSystem {
     FileStatus fi = getFileLinkStatusInternal(f, false);
     // return an unqualified symlink target
     return fi.getSymlink();
+  }
+
+  @Override
+  public boolean hasCapability(String capability,
+      Path path) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.FS_APPEND:
+    case StreamCapabilities.FS_PERMISSIONS:
+      return true;
+    default:
+      return super.hasCapability(capability, path);
+    }
   }
 }

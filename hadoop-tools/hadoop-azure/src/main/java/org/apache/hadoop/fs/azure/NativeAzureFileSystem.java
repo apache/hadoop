@@ -3866,4 +3866,15 @@ public class NativeAzureFileSystem extends FileSystem {
   void updateDaemonUsers(List<String> daemonUsers) {
     this.daemonUsers = daemonUsers;
   }
+
+  @Override
+  public boolean hasCapability(String capability,
+      Path path) {
+    switch (capability) {
+    case StreamCapabilities.FS_PERMISSIONS:
+      return true;
+    default:
+      return super.hasCapability(capability, path);
+    }
+  }
 }

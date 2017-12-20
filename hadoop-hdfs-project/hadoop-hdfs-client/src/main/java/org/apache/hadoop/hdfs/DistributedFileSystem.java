@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -117,6 +118,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -3401,5 +3403,27 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public HdfsDataOutputStreamBuilder appendFile(Path path) {
     return new HdfsDataOutputStreamBuilder(this, path).append();
+  }
+
+  /**
+   * HDFS client capabilities.
+   * Keep WebHdfsFileSystem in sync.
+   * @param capability string to query the stream support for.
+   * @param path
+   * @return true if a capability is supported.
+   */
+  @Override
+  public boolean hasCapability(String capability,
+      Path path) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.FS_ACLS:
+    case StreamCapabilities.FS_APPEND:
+    case StreamCapabilities.FS_CONCAT:
+    case StreamCapabilities.FS_PERMISSIONS:
+    case StreamCapabilities.FS_XATTRS:
+      return true;
+    default:
+      return super.hasCapability(capability, path);
+    }
   }
 }

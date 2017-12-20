@@ -3213,6 +3213,17 @@ public abstract class FileSystem extends Configured
     return ret;
   }
 
+  /**
+   * Return the base capabilities of all filesystems; subclasses
+   * may override to declare different behavior.
+   * @param capability string to query the stream support for.
+   * @param path path to query the capability of.
+   * @return true if the capability is supported under that part of the FS.
+   */
+  public boolean hasCapability(String capability, Path path) {
+    return false;
+  }
+
   // making it volatile to be able to do a double checked locking
   private volatile static boolean FILE_SYSTEMS_LOADED = false;
 

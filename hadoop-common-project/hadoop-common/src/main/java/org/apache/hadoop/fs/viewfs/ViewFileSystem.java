@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -54,6 +55,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -929,6 +931,28 @@ public class ViewFileSystem extends FileSystem {
       throw new NotInMountpointException(path, "getLinkTarget");
     }
     return res.targetFileSystem.getLinkTarget(res.remainingPath);
+  }
+
+  @Override
+  public boolean hasCapability(String capability, Path path) {
+
+    // fail fast on capabilities whose operations are all write access
+    // (so will always fail later on)
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    case StreamCapabilities.FS_APPEND:
+    case StreamCapabilities.FS_CONCAT:
+      return false;
+    default:
+    }
+    // otherwise, check capabilities of mounted FS.
+    try {
+      InodeTree.ResolveResult<FileSystem> res
+          = fsState.resolve(getUriPath(path), true);
+      return res.targetFileSystem.hasCapability(capability, res.remainingPath);
+    } catch (FileNotFoundException e) {
+      // no mount point, nothing will work.
+      return false;
+    }
   }
 
   /**

@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.fs;
 
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * Interface to query streams for supported capabilities.
@@ -58,6 +61,36 @@ public interface StreamCapabilities {
    * Stream unbuffer capability implemented by {@link CanUnbuffer#unbuffer()}.
    */
   String UNBUFFER = "in:unbuffer";
+
+  /**
+   * Does the Filesystem support
+   * {@link FileSystem#setAcl(Path, List)} and related methods?
+   */
+  String FS_ACLS = "fs:acls";
+
+  /**
+   * Does the Filesystem support
+   * {@link FileSystem#append(Path)} and related methods?
+   */
+  String FS_APPEND = "fs:append";
+
+  /**
+   * Does the Filesystem support
+   * {@link FileSystem#concat(Path, Path[])}?
+   */
+  String FS_CONCAT = "fs:concat";
+
+  /**
+   * Does the Filesystem support
+   * {@link FileSystem#setPermission(Path, FsPermission)} and related methods?
+   */
+  String FS_PERMISSIONS = "fs:permissions";
+
+  /**
+   * Does the Filesystem support
+   * {@link FileSystem#setXAttr(Path, String, byte[])} and related methods?
+   */
+  String FS_XATTRS = "fs:xattrs";
 
   /**
    * Capabilities that a stream can support and be queried for.
