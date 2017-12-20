@@ -147,7 +147,6 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
               new ContainerStatusRetriever(compInstance.scheduler,
                   event.getContainerId(), compInstance), 0, 1,
               TimeUnit.SECONDS);
-      compInstance.component.incRunningContainers();
       long containerStartTime = System.currentTimeMillis();
       try {
         ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
@@ -171,6 +170,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
       compInstance.containerSpec = container;
       compInstance.getCompSpec().addContainer(container);
       compInstance.containerStartedTime = containerStartTime;
+      compInstance.component.incRunningContainers();
 
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
@@ -183,8 +183,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.component.incContainersReady();
       compInstance.containerSpec.setState(ContainerState.READY);
+      compInstance.component.incContainersReady();
       if (compInstance.timelineServiceEnabled) {
         compInstance.serviceTimelinePublisher
             .componentInstanceBecomeReady(compInstance.containerSpec);
@@ -196,8 +196,8 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
     @Override
     public void transition(ComponentInstance compInstance,
         ComponentInstanceEvent event) {
-      compInstance.component.decContainersReady();
       compInstance.containerSpec.setState(ContainerState.RUNNING_BUT_UNREADY);
+      compInstance.component.decContainersReady();
     }
   }
 

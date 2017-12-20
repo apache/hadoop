@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
@@ -90,25 +91,25 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     // check app.json is persisted.
     Assert.assertTrue(
         getFS().exists(new Path(appDir, exampleApp.getName() + ".json")));
-    waitForAllCompToBeReady(client, exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
 
     // Flex two components, each from 2 container to 3 containers.
     flexComponents(client, exampleApp, 3L);
     // wait for flex to be completed, increase from 2 to 3 containers.
-    waitForAllCompToBeReady(client, exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
     // check all instances name for each component are in sequential order.
     checkCompInstancesInOrder(client, exampleApp);
 
     // flex down to 1
     flexComponents(client, exampleApp, 1L);
-    waitForAllCompToBeReady(client, exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
     checkCompInstancesInOrder(client, exampleApp);
 
     // check component dir and registry are cleaned up.
 
     // flex up again to 2
     flexComponents(client, exampleApp, 2L);
-    waitForAllCompToBeReady(client, exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
     checkCompInstancesInOrder(client, exampleApp);
 
     // stop the service
@@ -145,7 +146,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     exampleApp.addComponent(compb);
 
     client.actionCreate(exampleApp);
-    waitForAllCompToBeReady(client, exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
 
     // check that containers for compa are launched before containers for compb
     checkContainerLaunchDependencies(client, exampleApp, "compa", "compb");
@@ -370,6 +371,29 @@ public class TestYarnNativeServices extends ServiceTestUtils {
       }
     }, 2000, 200000);
     return allContainers;
+  }
+
+  /**
+   * Wait until service state becomes stable. A service is stable when all
+   * requested containers of all components are running and in ready state.
+   *
+   * @param client
+   * @param exampleApp
+   * @throws TimeoutException
+   * @throws InterruptedException
+   */
+  private void waitForServiceToBeStable(ServiceClient client,
+      Service exampleApp) throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(() -> {
+      try {
+        Service retrievedApp = client.getStatus(exampleApp.getName());
+        System.out.println(retrievedApp);
+        return retrievedApp.getState() == ServiceState.STABLE;
+      } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+      }
+    }, 2000, 200000);
   }
 
   private ServiceClient createClient() throws Exception {
