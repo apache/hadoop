@@ -24,7 +24,7 @@ function getTimeLineURL(rmhost) {
   var url = window.location.protocol + '//' +
     (ENV.hosts.localBaseAddress? ENV.hosts.localBaseAddress + '/' : '') + rmhost;
 
-  url += '/conf?name=yarn.timeline-service.webapp.address';
+  url += '/conf?name=yarn.timeline-service.reader.webapp.address';
   Ember.Logger.log("Get Timeline Address URL: " + url);
   return url;
 }
