@@ -427,7 +427,11 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     long expectedOpenCount = RANDOM_IO_SEQUENCE.length;
     executeRandomIO(S3AInputPolicy.Normal, expectedOpenCount);
     assertEquals("streams aborted in " + streamStatistics,
-        4, streamStatistics.aborted);
+        1, streamStatistics.aborted);
+    assertEquals("policy changes in " + streamStatistics,
+        2, streamStatistics.policySetCount);
+    assertEquals("input policy in " + streamStatistics,
+        S3AInputPolicy.Random.ordinal(), streamStatistics.inputPolicy);
   }
 
   /**
