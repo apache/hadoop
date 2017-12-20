@@ -120,6 +120,7 @@ message AllocateResponseProto {
   repeated UpdateContainerErrorProto update_errors = 15;
   repeated UpdatedContainerProto updated_containers = 16;
   repeated ContainerProto containers_from_previous_attempts = 17;
+  repeated RejectedSchedulingRequestProto rejected_scheduling_requests = 18;
 }
 
 enum SchedulerResourceTypes {

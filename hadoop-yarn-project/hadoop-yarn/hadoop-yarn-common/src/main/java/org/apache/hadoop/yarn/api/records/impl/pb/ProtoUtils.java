@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.NodeUpdateType;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.RejectionReason;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -230,6 +231,21 @@ public class ProtoUtils {
   }
   public static AMCommand convertFromProtoFormat(AMCommandProto e) {
     return AMCommand.valueOf(e.name());
+  }
+
+  /*
+   * RejectionReason
+   */
+  private static final String REJECTION_REASON_PREFIX = "RRP_";
+  public static YarnProtos.RejectionReasonProto convertToProtoFormat(
+      RejectionReason e) {
+    return YarnProtos.RejectionReasonProto
+        .valueOf(REJECTION_REASON_PREFIX + e.name());
+  }
+  public static RejectionReason convertFromProtoFormat(
+      YarnProtos.RejectionReasonProto e) {
+    return RejectionReason.valueOf(e.name()
+        .replace(REJECTION_REASON_PREFIX, ""));
   }
 
   /*

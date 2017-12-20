@@ -18,7 +18,7 @@
  * /
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.constraint;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;

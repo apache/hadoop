@@ -18,7 +18,7 @@
  * /
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.constraint;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 /**
  * Predefined namespaces for tags

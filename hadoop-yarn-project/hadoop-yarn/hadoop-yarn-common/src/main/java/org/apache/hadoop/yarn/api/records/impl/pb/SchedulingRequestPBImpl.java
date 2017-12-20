@@ -279,4 +279,15 @@ public class SchedulingRequestPBImpl extends SchedulingRequest {
     }
     return false;
   }
+
+  @Override
+  public String toString() {
+    return "SchedulingRequestPBImpl{" +
+        "priority=" + getPriority() +
+        ", allocationReqId=" + getAllocationRequestId() +
+        ", executionType=" + getExecutionType() +
+        ", allocationTags=" + getAllocationTags() +
+        ", resourceSizing=" + getResourceSizing() +
+        '}';
+  }
 }

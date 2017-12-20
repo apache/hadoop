@@ -114,4 +114,12 @@ public class ResourceSizingPBImpl extends ResourceSizing {
   private ResourceProto convertToProtoFormat(Resource r) {
     return ProtoUtils.convertToProtoFormat(r);
   }
+
+  @Override
+  public String toString() {
+    return "ResourceSizingPBImpl{" +
+        "numAllocations=" + getNumAllocations() +
+        ", resources=" + getResources() +
+        '}';
+  }
 }
