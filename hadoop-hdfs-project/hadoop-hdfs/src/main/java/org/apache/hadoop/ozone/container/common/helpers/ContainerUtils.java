@@ -230,13 +230,18 @@ public final class ContainerUtils {
     }
   }
 
+  public static String getContainerDbFileName(String containerName) {
+    return containerName + OzoneConsts.DN_CONTAINER_DB;
+  }
+
   /**
    * creates a Metadata DB for the specified container.
    *
    * @param containerPath - Container Path.
    * @throws IOException
    */
-  public static Path createMetadata(Path containerPath, Configuration conf)
+  public static Path createMetadata(Path containerPath, String containerName,
+      Configuration conf)
       throws IOException {
     Logger log = LoggerFactory.getLogger(ContainerManagerImpl.class);
     Preconditions.checkNotNull(containerPath);
@@ -250,7 +255,8 @@ public final class ContainerUtils {
     MetadataStore store = MetadataStoreBuilder.newBuilder()
         .setConf(conf)
         .setCreateIfMissing(true)
-        .setDbFile(metadataPath.resolve(OzoneConsts.CONTAINER_DB).toFile())
+        .setDbFile(metadataPath
+            .resolve(getContainerDbFileName(containerName)).toFile())
         .build();
 
     // we close since the SCM pre-creates containers.

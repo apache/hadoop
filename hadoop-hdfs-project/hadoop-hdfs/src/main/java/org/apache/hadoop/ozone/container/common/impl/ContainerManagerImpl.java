@@ -387,12 +387,13 @@ public class ContainerManagerImpl implements ContainerManager {
           location);
       File metadataFile = ContainerUtils.getMetadataFile(containerData,
           location);
+      String containerName = containerData.getContainerName();
 
       if(!overwrite) {
         ContainerUtils.verifyIsNewContainer(containerFile, metadataFile);
-        metadataPath = this.locationManager.getDataPath(
-            containerData.getContainerName());
-        metadataPath = ContainerUtils.createMetadata(metadataPath, conf);
+        metadataPath = this.locationManager.getDataPath(containerName);
+        metadataPath = ContainerUtils.createMetadata(metadataPath,
+            containerName, conf);
       }  else {
         metadataPath = ContainerUtils.getMetadataDirectory(containerData);
       }
@@ -402,7 +403,8 @@ public class ContainerManagerImpl implements ContainerManager {
       MessageDigest sha = MessageDigest.getInstance(OzoneConsts.FILE_HASH);
 
       dos = new DigestOutputStream(containerStream, sha);
-      containerData.setDBPath(metadataPath.resolve(OzoneConsts.CONTAINER_DB)
+      containerData.setDBPath(metadataPath.resolve(
+          ContainerUtils.getContainerDbFileName(containerName))
           .toString());
       containerData.setContainerPath(containerFile.toString());
 

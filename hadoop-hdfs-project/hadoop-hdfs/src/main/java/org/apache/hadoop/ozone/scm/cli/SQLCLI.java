@@ -60,7 +60,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_USER_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.KSM_BUCKET_PREFIX;
@@ -293,7 +293,7 @@ public class SQLCLI  extends Configured implements Tool {
       }
     }
     LOG.info("Parent path [{}] db name [{}]", parentPath, dbName);
-    if (dbName.toString().equals(CONTAINER_DB)) {
+    if (dbName.toString().endsWith(CONTAINER_DB_SUFFIX)) {
       LOG.info("Converting container DB");
       convertContainerDB(dbPath, outPath);
     } else if (dbName.toString().equals(BLOCK_DB)) {
