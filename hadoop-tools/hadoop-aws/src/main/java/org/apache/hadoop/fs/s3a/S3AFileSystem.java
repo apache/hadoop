@@ -112,6 +112,7 @@ import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Progressable;
@@ -536,6 +537,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @InterfaceStability.Unstable
   public S3AInputPolicy getInputPolicy() {
     return inputPolicy;
+  }
+
+  /**
+   * Get the encryption algorithm of this endpoint.
+   * @return the encryption algorithm.
+   */
+  public S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
+    return serverSideEncryptionAlgorithm;
   }
 
   /**
@@ -1069,6 +1078,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @throws IOException IO and object access problems.
    */
   @VisibleForTesting
+  @Retries.RetryRaw
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
     return getObjectMetadata(pathToKey(path));
   }
@@ -2932,6 +2942,36 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   public boolean isFile(Path f) throws IOException {
     entryPoint(INVOCATION_IS_FILE);
     return super.isFile(f);
+  }
+
+  /**
+   * Get the etag of a object at the path via HEAD request and return it
+   * as a checksum object. This has the whatever guarantees about equivalence
+   * the S3 implementation offers.
+   * <ol>
+   *   <li>If a tag has not changed, consider the object unchanged.</li>
+   *   <li>Two tags being different does not imply the data is different.</li>
+   * </ol>
+   * Different S3 implementations may offer different guarantees.
+   * @param f The file path
+   * @param length The length of the file range for checksum calculation
+   * @return The EtagChecksum or null if checksums are not supported.
+   * @throws IOException IO failure
+   * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html">Common Response Headers</a>
+   */
+
+  public EtagChecksum getFileChecksum(Path f, final long length)
+      throws IOException {
+    Preconditions.checkArgument(length >= 0);
+    Path path = qualify(f);
+    LOG.debug("getFileChecksum({})", path);
+    return once("getFileChecksum", path.toString(),
+        () -> {
+          // this always does a full HEAD to the object
+          ObjectMetadata headers = getObjectMetadata(path);
+          String eTag = headers.getETag();
+          return eTag != null ? new EtagChecksum(eTag) : null;
+        });
   }
 
   /**
