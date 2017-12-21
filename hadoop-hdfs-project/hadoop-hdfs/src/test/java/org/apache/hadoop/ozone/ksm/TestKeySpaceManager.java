@@ -21,6 +21,7 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -30,6 +31,10 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 import org.apache.hadoop.ozone.ksm.exceptions.KSMException;
 import org.apache.hadoop.ozone.scm.SCMStorage;
+import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
@@ -66,6 +71,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.net.InetSocketAddress;
 import java.text.ParseException;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -80,6 +86,9 @@ import java.util.stream.Stream;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_CLEANUP_SERVICE_INTERVAL_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.OzoneConsts.DELETING_KEY_PREFIX;
+import static org.apache.hadoop.ozone.ksm.KSMConfigKeys.OZONE_KSM_ADDRESS_KEY;
+import static org.apache.hadoop.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
+
 /**
  * Test Key Space Manager operation in distributed handler scenario.
  */
@@ -1063,7 +1072,7 @@ public class TestKeySpaceManager {
    */
   @Test
   public void testGetScmInfo() throws IOException {
-    ScmInfo info = cluster.getKeySpaceManager().getScmInfo(conf);
+    ScmInfo info = cluster.getKeySpaceManager().getScmInfo();
     Assert.assertEquals(clusterId, info.getClusterId());
     Assert.assertEquals(scmId, info.getScmId());
   }
@@ -1184,5 +1193,30 @@ public class TestKeySpaceManager {
     exception.expect(KSMException.class);
     exception.expectMessage("SCM version info mismatch.");
     KeySpaceManager.createKSM(null, conf);
+  }
+
+  @Test
+  public void testGetServiceList() throws IOException {
+    long numGetServiceListCalls = ksmMetrics.getNumGetServiceLists();
+    List<ServiceInfo> services = cluster.getKeySpaceManager().getServiceList();
+
+    Assert.assertEquals(numGetServiceListCalls + 1,
+        ksmMetrics.getNumGetServiceLists());
+
+    ServiceInfo ksmInfo = services.stream().filter(
+        a -> a.getNodeType().equals(OzoneProtos.NodeType.KSM))
+        .collect(Collectors.toList()).get(0);
+    InetSocketAddress ksmAddress = new InetSocketAddress(ksmInfo.getHostname(),
+        ksmInfo.getPort(ServicePort.Type.RPC));
+    Assert.assertEquals(NetUtils.createSocketAddr(
+        conf.get(OZONE_KSM_ADDRESS_KEY)), ksmAddress);
+
+    ServiceInfo scmInfo = services.stream().filter(
+        a -> a.getNodeType().equals(OzoneProtos.NodeType.SCM))
+        .collect(Collectors.toList()).get(0);
+    InetSocketAddress scmAddress = new InetSocketAddress(scmInfo.getHostname(),
+        scmInfo.getPort(ServicePort.Type.RPC));
+    Assert.assertEquals(NetUtils.createSocketAddr(
+        conf.get(OZONE_SCM_CLIENT_ADDRESS_KEY)), scmAddress);
   }
 }

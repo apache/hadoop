@@ -318,6 +318,31 @@ message CommitKeyResponse {
     required Status status = 1;
 }
 
+message ServiceListRequest {
+}
+
+message ServiceListResponse {
+    required Status status = 1;
+    repeated ServiceInfo serviceInfo = 2;
+}
+
+message ServicePort {
+    enum Type {
+        RPC = 1;
+        HTTP = 2;
+        HTTPS = 3;
+        RATIS = 4;
+    };
+    required Type type = 1;
+    required uint32 value = 2;
+}
+
+message ServiceInfo {
+    required NodeType nodeType = 1;
+    required string hostname = 2;
+    repeated ServicePort servicePorts = 3;
+}
+
 /**
  The KSM service that takes care of Ozone namespace.
 */
@@ -423,4 +448,10 @@ service KeySpaceManagerService {
     */
     rpc allocateBlock(AllocateBlockRequest)
     returns(AllocateBlockResponse);
+
+    /**
+      Returns list of Ozone services with its configuration details.
+    */
+    rpc getServiceList(ServiceListRequest)
+    returns(ServiceListResponse);
 }

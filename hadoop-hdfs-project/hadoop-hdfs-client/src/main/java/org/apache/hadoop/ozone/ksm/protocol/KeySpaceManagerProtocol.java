@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
 import java.io.IOException;
@@ -233,4 +234,12 @@ public interface KeySpaceManagerProtocol {
   List<KsmKeyInfo> listKeys(String volumeName,
       String bucketName, String startKeyName, String keyPrefix, int maxKeys)
       throws IOException;
+
+  /**
+   * Returns list of Ozone services with its configuration details.
+   *
+   * @return list of Ozone services
+   * @throws IOException
+   */
+  List<ServiceInfo> getServiceList() throws IOException;
 }
