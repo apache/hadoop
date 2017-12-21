@@ -66,7 +66,8 @@ public class TestOpenFilesWithSnapshot {
   public void setup() throws IOException {
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES, true);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION).build();
     conf.set("dfs.blocksize", "1048576");
     fs = cluster.getFileSystem();
   }
@@ -252,8 +253,6 @@ public class TestOpenFilesWithSnapshot {
    */
   @Test (timeout = 120000)
   public void testPointInTimeSnapshotCopiesForOpenFiles() throws Exception {
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES,
-        true);
     // Construct the directory tree
     final Path level0A = new Path("/level_0_A");
     final Path level0B = new Path("/level_0_B");
@@ -738,8 +737,6 @@ public class TestOpenFilesWithSnapshot {
    */
   @Test (timeout = 120000)
   public void testOpenFilesSnapChecksumWithTrunkAndAppend() throws Exception {
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES,
-        true);
     // Construct the directory tree
     final Path dir = new Path("/A/B/C");
     fs.mkdirs(dir);
