@@ -164,7 +164,7 @@ public class TestContainerPersistence {
     }
 
     // Clean up SCM metadata
-    log.info("Deletting {}", path);
+    log.info("Deleting {}", path);
     FileUtils.deleteDirectory(new File(path));
 
     // Clean up SCM datanode container metadata/data

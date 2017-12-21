@@ -53,7 +53,7 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import static org.apache.hadoop.ozone.OzoneConsts.BLOCK_DB;
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.SCM_CONTAINER_DB;
 import static org.apache.hadoop.ozone.OzoneConsts.KB;
 import static org.apache.hadoop.ozone.OzoneConsts.NODEPOOL_DB;
 //import static org.apache.hadoop.ozone.OzoneConsts.OPEN_CONTAINERS_DB;
@@ -234,7 +234,7 @@ public class TestContainerSQLCli {
     // TODO : the following will fail due to empty Datanode list, need to fix.
     //String dnUUID = cluster.getDataNodes().get(0).getDatanodeUuid();
     String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
-    String dbPath = dbRootPath + "/" + CONTAINER_DB;
+    String dbPath = dbRootPath + "/" + SCM_CONTAINER_DB;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
     Connection conn;
     String sql;

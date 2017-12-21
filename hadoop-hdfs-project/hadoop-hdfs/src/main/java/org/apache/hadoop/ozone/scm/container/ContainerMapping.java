@@ -55,7 +55,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB;
+import static org.apache.hadoop.ozone.OzoneConsts.SCM_CONTAINER_DB;
 import static org.apache.hadoop.ozone.scm.exceptions.SCMException.ResultCodes.FAILED_TO_CHANGE_CONTAINER_STATE;
 
 /**
@@ -102,7 +102,7 @@ public class ContainerMapping implements Mapping {
     File metaDir = OzoneUtils.getOzoneMetaDirPath(conf);
 
     // Write the container name to pipeline mapping.
-    File containerDBPath = new File(metaDir, CONTAINER_DB);
+    File containerDBPath = new File(metaDir, SCM_CONTAINER_DB);
     containerStore =
         MetadataStoreBuilder.newBuilder()
             .setConf(conf)

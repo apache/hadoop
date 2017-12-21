@@ -76,7 +76,9 @@ public final class OzoneConsts {
   /**
    * level DB names used by SCM and data nodes.
    */
-  public static final String CONTAINER_DB = "container.db";
+  public static final String CONTAINER_DB_SUFFIX = "container.db";
+  public static final String SCM_CONTAINER_DB = "scm-" + CONTAINER_DB_SUFFIX;
+  public static final String DN_CONTAINER_DB = "-dn-"+ CONTAINER_DB_SUFFIX;
   public static final String BLOCK_DB = "block.db";
   public static final String NODEPOOL_DB = "nodepool.db";
   public static final String OPEN_CONTAINERS_DB = "openContainers.db";
