@@ -311,7 +311,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Warning: setting erasure coding policy on an non-empty directory will not automatically convert existing data to RS-6-3-1024</expected-output>
+          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to RS-6-3-1024</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -353,7 +353,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Warning: unsetting erasure coding policy on an non-empty directory will not automatically convert existing data to replicated data</expected-output>
+          <expected-output>Warning: unsetting erasure coding policy on a non-empty directory will not automatically convert existing files to replicated data</expected-output>
         </comparator>
       </comparators>
     </test>
