@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmVolumeArgs;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.ksm.protocol.KeySpaceManagerProtocol;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.AllocateBlockRequest;
@@ -90,18 +91,24 @@ import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ListBucketsRequest;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.ListBucketsResponse;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysRequest;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos.ListKeysResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListKeysRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListKeysResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto
     .KeySpaceManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos
-    .ListVolumeRequest;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos
-    .ListVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListVolumeRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ListVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ServiceListRequest;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ServiceListResponse;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -701,6 +708,26 @@ public final class KeySpaceManagerProtocolClientSideTranslatorPB
       return keys;
     } else {
       throw new IOException("List Keys failed, error: "
+          + resp.getStatus());
+    }
+  }
+
+  @Override
+  public List<ServiceInfo> getServiceList() throws IOException {
+    ServiceListRequest request = ServiceListRequest.newBuilder().build();
+    final ServiceListResponse resp;
+    try {
+      resp = rpcProxy.getServiceList(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+
+    if (resp.getStatus() == Status.OK) {
+      return resp.getServiceInfoList().stream()
+              .map(ServiceInfo::getFromProtobuf)
+              .collect(Collectors.toList());
+    } else {
+      throw new IOException("Getting service list failed, error: "
           + resp.getStatus());
     }
   }
