@@ -86,23 +86,15 @@ public abstract class Shell {
    */
   @Deprecated
   public static boolean isJava7OrAbove() {
-    return true;
+    return isJavaSpecAtLeast(7);
   }
 
-  private static final boolean IS_JAVA9_OR_ABOVE;
-  static {
-    int major = 0;
-    try {
-      // 1.8.0 -> 1, 10-ea+30 -> 10, 18.03 -> 18, 11 -> 11 etc.
-      String version = System.getProperty("java.version");
-      major = Integer.parseInt(version.split("\\.")[0].split("-")[0]);
-    } catch (NumberFormatException ignored) {
-    }
-    IS_JAVA9_OR_ABOVE = major >= 9;
-  }
+  // "1.8"->8, "9"->9, "10"->10
+  private static final int JAVA_SPEC_VER = Math.max(8, Integer.parseInt(
+    System.getProperty("java.specification.version").split("\\.")[0]));
 
-  public static boolean isJava9OrAbove() {
-    return IS_JAVA9_OR_ABOVE;
+  public static boolean isJavaSpecAtLeast(int version) {
+    return JAVA_SPEC_VER >= version;
   }
 
   /**

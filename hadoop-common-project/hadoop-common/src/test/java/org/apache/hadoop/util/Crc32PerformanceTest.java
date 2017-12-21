@@ -181,7 +181,7 @@ public class Crc32PerformanceTest {
     this.direct = direct;
 
     crcs.add(Crc32.Zip.class);
-    if (Shell.isJava9OrAbove()) {
+    if (Shell.isJavaSpecAtLeast(9)) {
       crcs.add(Crc32.ZipC.class);
     }
     crcs.add(Crc32.PureJava.class);
