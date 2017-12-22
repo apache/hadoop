@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -47,6 +47,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMoveAttemptFinished;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -84,6 +87,18 @@ public class StoragePolicySatisfier implements Runnable {
   private int spsWorkMultiplier;
   private long blockCount = 0L;
   private int blockMovementMaxRetry;
+  private final Context ctxt;
+
+  /**
+   * An interface for analyzing and assigning the block storage movements to
+   * worker nodes.
+   */
+  // TODO: Now, added one API which is required for sps package. Will refine
+  // this interface via HDFS-12911.
+  public interface Context {
+    int getNumLiveDataNodes();
+  }
+
   /**
    * Represents the collective analysis status for all blocks.
    */
@@ -122,7 +137,7 @@ public class StoragePolicySatisfier implements Runnable {
   }
 
   public StoragePolicySatisfier(final Namesystem namesystem,
-      final BlockManager blkManager, Configuration conf) {
+      final BlockManager blkManager, Configuration conf, Context ctxt) {
     this.namesystem = namesystem;
     this.storageMovementNeeded = new BlockStorageMovementNeeded(namesystem,
         this, conf.getInt(
@@ -141,6 +156,7 @@ public class StoragePolicySatisfier implements Runnable {
     this.blockMovementMaxRetry = conf.getInt(
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_KEY,
         DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT);
+    this.ctxt = ctxt;
   }
 
   /**
@@ -313,8 +329,7 @@ public class StoragePolicySatisfier implements Runnable {
             }
           }
         }
-        int numLiveDn = namesystem.getFSDirectory().getBlockManager()
-            .getDatanodeManager().getNumLiveDataNodes();
+        int numLiveDn = ctxt.getNumLiveDataNodes();
         if (storageMovementNeeded.size() == 0
             || blockCount > (numLiveDn * spsWorkMultiplier)) {
           Thread.sleep(3000);
@@ -816,7 +831,7 @@ public class StoragePolicySatisfier implements Runnable {
    * @param moveAttemptFinishedBlks
    *          set of storage movement attempt finished blocks.
    */
-  void handleStorageMovementAttemptFinishedBlks(
+  public void handleStorageMovementAttemptFinishedBlks(
       BlocksStorageMoveAttemptFinished moveAttemptFinishedBlks) {
     if (moveAttemptFinishedBlks.getBlocks().length <= 0) {
       return;

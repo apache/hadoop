@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
@@ -62,6 +62,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
+import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.Assert;
@@ -520,7 +524,7 @@ public class TestStoragePolicySatisfier {
     try {
       createCluster();
       // Stop SPS
-      hdfsCluster.getNameNode().reconfigurePropertyImpl(
+      hdfsCluster.getNameNode().reconfigureProperty(
           DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "false");
       running = hdfsCluster.getFileSystem()
           .getClient().isStoragePolicySatisfierRunning();
@@ -531,7 +535,7 @@ public class TestStoragePolicySatisfier {
           HdfsServerConstants.MOVER_ID_PATH);
 
       // Restart SPS
-      hdfsCluster.getNameNode().reconfigurePropertyImpl(
+      hdfsCluster.getNameNode().reconfigureProperty(
           DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "true");
 
       running = hdfsCluster.getFileSystem()
@@ -546,7 +550,7 @@ public class TestStoragePolicySatisfier {
           HdfsServerConstants.MOVER_ID_PATH, true);
 
       // Restart SPS again
-      hdfsCluster.getNameNode().reconfigurePropertyImpl(
+      hdfsCluster.getNameNode().reconfigureProperty(
           DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY, "true");
       running = hdfsCluster.getFileSystem()
           .getClient().isStoragePolicySatisfierRunning();
@@ -1295,7 +1299,7 @@ public class TestStoragePolicySatisfier {
     StoragePolicySatisfier sps = Mockito.mock(StoragePolicySatisfier.class);
     Mockito.when(sps.isRunning()).thenReturn(true);
     BlockStorageMovementNeeded movmentNeededQueue =
-        new BlockStorageMovementNeeded(fsDir.getFSNamesystem(), sps, 10);
+        new BlockStorageMovementNeeded(hdfsCluster.getNamesystem(), sps, 10);
     INode rootINode = fsDir.getINode("/root");
     movmentNeededQueue.addToPendingDirQueue(rootINode.getId());
     movmentNeededQueue.init();
@@ -1358,7 +1362,7 @@ public class TestStoragePolicySatisfier {
     // Queue limit can control the traverse logic to wait for some free
     // entry in queue. After 10 files, traverse control will be on U.
     BlockStorageMovementNeeded movmentNeededQueue =
-        new BlockStorageMovementNeeded(fsDir.getFSNamesystem(), sps, 10);
+        new BlockStorageMovementNeeded(hdfsCluster.getNamesystem(), sps, 10);
     movmentNeededQueue.init();
     INode rootINode = fsDir.getINode("/root");
     movmentNeededQueue.addToPendingDirQueue(rootINode.getId());

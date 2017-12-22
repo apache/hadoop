@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 
@@ -33,8 +33,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser.TraverseInfo;
-import org.apache.hadoop.hdfs.server.namenode.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -367,7 +371,6 @@ public class BlockStorageMovementNeeded {
     @Override
     protected boolean processFileInode(INode inode, TraverseInfo traverseInfo)
         throws IOException, InterruptedException {
-      assert getFSDirectory().hasReadLock();
       if (LOG.isTraceEnabled()) {
         LOG.trace("Processing {} for statisy the policy",
             inode.getFullPathName());
@@ -390,12 +393,9 @@ public class BlockStorageMovementNeeded {
 
     @Override
     protected void checkINodeReady(long startId) throws IOException {
-      FSNamesystem fsn = ((FSNamesystem) namesystem);
-      fsn.checkNameNodeSafeMode("NN is in safe mode,"
-          + "cannot satisfy the policy.");
-      // SPS work should be cancelled when NN goes to standby. Just
-      // double checking for sanity.
-      fsn.checkOperation(NameNode.OperationCategory.WRITE);
+      // SPS work won't be scheduled if NN is in standby. So, skipping NN
+      // standby check.
+      return;
     }
 
     @Override
@@ -408,8 +408,6 @@ public class BlockStorageMovementNeeded {
 
     @Override
     protected void throttle() throws InterruptedException {
-      assert !getFSDirectory().hasReadLock();
-      assert !namesystem.hasReadLock();
       if (LOG.isDebugEnabled()) {
         LOG.debug("StorageMovementNeeded queue remaining capacity is zero,"
             + " waiting for some free slots.");
