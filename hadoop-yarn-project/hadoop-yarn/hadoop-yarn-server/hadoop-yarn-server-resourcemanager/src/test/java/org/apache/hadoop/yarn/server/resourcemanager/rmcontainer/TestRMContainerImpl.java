@@ -405,8 +405,8 @@ public class TestRMContainerImpl {
 
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);
-    AllocationTagsManager tagsManager = new AllocationTagsManager();
     RMContext rmContext = mock(RMContext.class);
+    AllocationTagsManager tagsManager = new AllocationTagsManager(rmContext);
     when(rmContext.getDispatcher()).thenReturn(drainDispatcher);
     when(rmContext.getContainerAllocationExpirer()).thenReturn(expirer);
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
