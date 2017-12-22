@@ -531,6 +531,32 @@ public class YarnConfiguration extends Configuration {
   /** The class to use as the resource scheduler.*/
   public static final String RM_SCHEDULER = 
     RM_PREFIX + "scheduler.class";
+
+  /** Placement Algorithm. */
+  public static final String RM_PLACEMENT_CONSTRAINTS_ALGORITHM_CLASS =
+      RM_PREFIX + "placement-constraints.algorithm.class";
+
+  public static final String RM_PLACEMENT_CONSTRAINTS_ENABLED =
+      RM_PREFIX + "placement-constraints.enabled";
+
+  public static final boolean DEFAULT_RM_PLACEMENT_CONSTRAINTS_ENABLED = true;
+
+  public static final String RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS =
+      RM_PREFIX + "placement-constraints.retry-attempts";
+
+  public static final int DEFAULT_RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS = 3;
+
+  public static final String RM_PLACEMENT_CONSTRAINTS_ALGORITHM_POOL_SIZE =
+      RM_PREFIX + "placement-constraints.algorithm.pool-size";
+
+  public static final int DEFAULT_RM_PLACEMENT_CONSTRAINTS_ALGORITHM_POOL_SIZE =
+      1;
+
+  public static final String RM_PLACEMENT_CONSTRAINTS_SCHEDULER_POOL_SIZE =
+      RM_PREFIX + "placement-constraints.scheduler.pool-size";
+
+  public static final int DEFAULT_RM_PLACEMENT_CONSTRAINTS_SCHEDULER_POOL_SIZE =
+      1;
  
   public static final String DEFAULT_RM_SCHEDULER = 
       "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler";

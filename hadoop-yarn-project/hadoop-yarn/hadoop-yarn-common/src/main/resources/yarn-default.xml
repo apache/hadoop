@@ -131,6 +131,36 @@
   </property>
 
   <property>
+    <description>Enable Constraint Placement.</description>
+    <name>yarn.resourcemanager.placement-constraints.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Number of times to retry placing of rejected SchedulingRequests</description>
+    <name>yarn.resourcemanager.placement-constraints.retry-attempts</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>Constraint Placement Algorithm to be used.</description>
+    <name>yarn.resourcemanager.placement-constraints.algorithm.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.SamplePlacementAlgorithm</value>
+  </property>
+
+  <property>
+    <description>Threadpool size for the Algorithm used for placement constraint processing.</description>
+    <name>yarn.resourcemanager.placement-constraints.algorithm.pool-size</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>Threadpool size for the Scheduler invocation phase of placement constraint processing.</description>
+    <name>yarn.resourcemanager.placement-constraints.scheduler.pool-size</name>
+    <value>1</value>
+  </property>
+
+  <property>
     <description>
       Comma separated class names of ApplicationMasterServiceProcessor
       implementations. The processors will be applied in the order
