@@ -21,7 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -39,7 +42,9 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -57,6 +62,9 @@ public class MockAM {
   private ApplicationMasterProtocol amRMProtocol;
   private UserGroupInformation ugi;
   private volatile AllocateResponse lastResponse;
+  private Map<Set<String>, PlacementConstraint> placementConstraints =
+      new HashMap<>();
+  private List<SchedulingRequest> schedulingRequests = new ArrayList<>();
 
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
   private final List<ContainerId> releases = new ArrayList<ContainerId>();
@@ -93,6 +101,16 @@ public class MockAM {
     return registerAppAttempt(true);
   }
 
+  public void addPlacementConstraint(Set<String> tags,
+      PlacementConstraint constraint) {
+    placementConstraints.put(tags, constraint);
+  }
+
+  public MockAM addSchedulingRequest(List<SchedulingRequest> reqs) {
+    schedulingRequests.addAll(reqs);
+    return this;
+  }
+
   public RegisterApplicationMasterResponse registerAppAttempt(boolean wait)
       throws Exception {
     if (wait) {
@@ -104,6 +122,9 @@ public class MockAM {
     req.setHost("");
     req.setRpcPort(1);
     req.setTrackingUrl("");
+    if (!placementConstraints.isEmpty()) {
+      req.setPlacementConstraints(this.placementConstraints);
+    }
     if (ugi == null) {
       ugi = UserGroupInformation.createRemoteUser(
           attemptId.toString());
@@ -247,12 +268,17 @@ public class MockAM {
 
   }
 
+
   public AllocateResponse allocate(
       List<ResourceRequest> resourceRequest, List<ContainerId> releases)
       throws Exception {
     final AllocateRequest req =
         AllocateRequest.newInstance(0, 0F, resourceRequest,
           releases, null);
+    if (!schedulingRequests.isEmpty()) {
+      req.setSchedulingRequests(schedulingRequests);
+      schedulingRequests.clear();
+    }
     return allocate(req);
   }
   

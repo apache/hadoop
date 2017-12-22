@@ -190,8 +190,7 @@ public class RMContainerImpl implements RMContainer {
   private boolean isExternallyAllocated;
   private SchedulerRequestKey allocatedSchedulerKey;
 
-  // TODO, set it when container allocated by scheduler (From SchedulingRequest)
-  private Set<String> allocationTags = null;
+  private volatile Set<String> allocationTags = null;
 
   public RMContainerImpl(Container container, SchedulerRequestKey schedulerKey,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
@@ -508,6 +507,10 @@ public class RMContainerImpl implements RMContainer {
   @Override
   public Set<String> getAllocationTags() {
     return allocationTags;
+  }
+
+  public void setAllocationTags(Set<String> tags) {
+    this.allocationTags = tags;
   }
 
   private static class BaseTransition implements
