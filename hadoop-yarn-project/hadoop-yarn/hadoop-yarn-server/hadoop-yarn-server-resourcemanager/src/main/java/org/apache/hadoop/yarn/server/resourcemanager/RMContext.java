@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.QueueLimitCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
@@ -171,4 +172,9 @@ public interface RMContext extends ApplicationMasterServiceContext {
   AllocationTagsManager getAllocationTagsManager();
 
   void setAllocationTagsManager(AllocationTagsManager allocationTagsManager);
+
+  PlacementConstraintManager getPlacementConstraintManager();
+
+  void setPlacementConstraintManager(
+      PlacementConstraintManager placementConstraintManager);
 }

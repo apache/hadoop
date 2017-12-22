@@ -97,6 +97,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
@@ -498,6 +500,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected AllocationTagsManager createAllocationTagsManager() {
     return new AllocationTagsManager(this.rmContext);
   }
+
+  protected PlacementConstraintManagerService
+      createPlacementConstraintManager() {
+    // Use the in memory Placement Constraint Manager.
+    return new MemoryPlacementConstraintManager();
+  }
   
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
     return new DelegationTokenRenewer();
@@ -627,6 +635,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
       AllocationTagsManager allocationTagsManager =
           createAllocationTagsManager();
       rmContext.setAllocationTagsManager(allocationTagsManager);
+
+      PlacementConstraintManagerService placementConstraintManager =
+          createPlacementConstraintManager();
+      addService(placementConstraintManager);
+      rmContext.setPlacementConstraintManager(placementConstraintManager);
 
       RMDelegatedNodeLabelsUpdater delegatedNodeLabelsUpdater =
           createRMDelegatedNodeLabelsUpdater();
