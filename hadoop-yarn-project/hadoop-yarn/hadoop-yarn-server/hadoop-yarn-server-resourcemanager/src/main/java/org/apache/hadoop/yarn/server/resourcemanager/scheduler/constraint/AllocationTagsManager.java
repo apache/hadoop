@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.log4j.Logger;
 
 import java.util.HashMap;
@@ -38,9 +39,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.LongBinaryOperator;
 
 /**
- * Support storing maps between container-tags/applications and
- * nodes. This will be required by affinity/anti-affinity implementation and
- * cardinality.
+ * In-memory mapping between applications/container-tags and nodes/racks.
+ * Required by constrained affinity/anti-affinity and cardinality placement.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -51,48 +51,54 @@ public class AllocationTagsManager {
 
   private ReentrantReadWriteLock.ReadLock readLock;
   private ReentrantReadWriteLock.WriteLock writeLock;
+  private final RMContext rmContext;
 
-  // Application's tags to node
-  private Map<ApplicationId, NodeToCountedTags> perAppMappings =
+  // Application's tags to Node
+  private Map<ApplicationId, NodeToCountedTags> perAppNodeMappings =
+      new HashMap<>();
+  // Application's tags to Rack
+  private Map<ApplicationId, NodeToCountedTags> perAppRackMappings =
       new HashMap<>();
 
   // Global tags to node mapping (used to fast return aggregated tags
   // cardinality across apps)
-  private NodeToCountedTags globalMapping = new NodeToCountedTags();
+  private NodeToCountedTags<NodeId> globalNodeMapping = new NodeToCountedTags();
+  // Global tags to Rack mapping
+  private NodeToCountedTags<String> globalRackMapping = new NodeToCountedTags();
 
   /**
-   * Store node to counted tags.
+   * Generic store mapping type <T> to counted tags.
+   * Currently used both for NodeId to Tag, Count and Rack to Tag, Count
    */
   @VisibleForTesting
-  static class NodeToCountedTags {
-    // Map<NodeId, Map<Tag, Count>>
-    private Map<NodeId, Map<String, Long>> nodeToTagsWithCount =
-        new HashMap<>();
+  static class NodeToCountedTags<T> {
+    // Map<Type, Map<Tag, Count>>
+    private Map<T, Map<String, Long>> typeToTagsWithCount = new HashMap<>();
 
     // protected by external locks
-    private void addTagsToNode(NodeId nodeId, Set<String> tags) {
-      Map<String, Long> innerMap = nodeToTagsWithCount.computeIfAbsent(nodeId,
-          k -> new HashMap<>());
+    private void addTags(T type, Set<String> tags) {
+      Map<String, Long> innerMap =
+          typeToTagsWithCount.computeIfAbsent(type, k -> new HashMap<>());
 
       for (String tag : tags) {
         Long count = innerMap.get(tag);
         if (count == null) {
           innerMap.put(tag, 1L);
-        } else{
+        } else {
           innerMap.put(tag, count + 1);
         }
       }
     }
 
     // protected by external locks
-    private void addTagToNode(NodeId nodeId, String tag) {
-      Map<String, Long> innerMap = nodeToTagsWithCount.computeIfAbsent(nodeId,
-          k -> new HashMap<>());
+    private void addTag(T type, String tag) {
+      Map<String, Long> innerMap =
+          typeToTagsWithCount.computeIfAbsent(type, k -> new HashMap<>());
 
       Long count = innerMap.get(tag);
       if (count == null) {
         innerMap.put(tag, 1L);
-      } else{
+      } else {
         innerMap.put(tag, count + 1);
       }
     }
@@ -104,17 +110,17 @@ public class AllocationTagsManager {
       } else {
         if (count <= 0) {
           LOG.warn(
-              "Trying to remove tags from node, however the count already"
+              "Trying to remove tags from node/rack, however the count already"
                   + " becomes 0 or less, it could be a potential bug.");
         }
         innerMap.remove(tag);
       }
     }
 
-    private void removeTagsFromNode(NodeId nodeId, Set<String> tags) {
-      Map<String, Long> innerMap = nodeToTagsWithCount.get(nodeId);
+    private void removeTags(T type, Set<String> tags) {
+      Map<String, Long> innerMap = typeToTagsWithCount.get(type);
       if (innerMap == null) {
-        LOG.warn("Failed to find node=" + nodeId
+        LOG.warn("Failed to find node/rack=" + type
             + " while trying to remove tags, please double check.");
         return;
       }
@@ -124,14 +130,14 @@ public class AllocationTagsManager {
       }
 
       if (innerMap.isEmpty()) {
-        nodeToTagsWithCount.remove(nodeId);
+        typeToTagsWithCount.remove(type);
       }
     }
 
-    private void removeTagFromNode(NodeId nodeId, String tag) {
-      Map<String, Long> innerMap = nodeToTagsWithCount.get(nodeId);
+    private void removeTag(T type, String tag) {
+      Map<String, Long> innerMap = typeToTagsWithCount.get(type);
       if (innerMap == null) {
-        LOG.warn("Failed to find node=" + nodeId
+        LOG.warn("Failed to find node/rack=" + type
             + " while trying to remove tags, please double check.");
         return;
       }
@@ -139,12 +145,12 @@ public class AllocationTagsManager {
       removeTagFromInnerMap(innerMap, tag);
 
       if (innerMap.isEmpty()) {
-        nodeToTagsWithCount.remove(nodeId);
+        typeToTagsWithCount.remove(type);
       }
     }
 
-    private long getCardinality(NodeId nodeId, String tag) {
-      Map<String, Long> innerMap = nodeToTagsWithCount.get(nodeId);
+    private long getCardinality(T type, String tag) {
+      Map<String, Long> innerMap = typeToTagsWithCount.get(type);
       if (innerMap == null) {
         return 0;
       }
@@ -152,9 +158,9 @@ public class AllocationTagsManager {
       return value == null ? 0 : value;
     }
 
-    private long getCardinality(NodeId nodeId, Set<String> tags,
+    private long getCardinality(T type, Set<String> tags,
         LongBinaryOperator op) {
-      Map<String, Long> innerMap = nodeToTagsWithCount.get(nodeId);
+      Map<String, Long> innerMap = typeToTagsWithCount.get(type);
       if (innerMap == null) {
         return 0;
       }
@@ -193,29 +199,40 @@ public class AllocationTagsManager {
     }
 
     private boolean isEmpty() {
-      return nodeToTagsWithCount.isEmpty();
+      return typeToTagsWithCount.isEmpty();
     }
 
     @VisibleForTesting
-    public Map<NodeId, Map<String, Long>> getNodeToTagsWithCount() {
-      return nodeToTagsWithCount;
+    public Map<T, Map<String, Long>> getTypeToTagsWithCount() {
+      return typeToTagsWithCount;
     }
   }
 
   @VisibleForTesting
-  Map<ApplicationId, NodeToCountedTags> getPerAppMappings() {
-    return perAppMappings;
+  Map<ApplicationId, NodeToCountedTags> getPerAppNodeMappings() {
+    return perAppNodeMappings;
   }
 
   @VisibleForTesting
-  NodeToCountedTags getGlobalMapping() {
-    return globalMapping;
+  Map<ApplicationId, NodeToCountedTags> getPerAppRackMappings() {
+    return perAppRackMappings;
   }
 
-  public AllocationTagsManager() {
+  @VisibleForTesting
+  NodeToCountedTags getGlobalNodeMapping() {
+    return globalNodeMapping;
+  }
+
+  @VisibleForTesting
+  NodeToCountedTags getGlobalRackMapping() {
+    return globalRackMapping;
+  }
+
+  public AllocationTagsManager(RMContext context) {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
+    rmContext = context;
   }
 
   /**
@@ -243,21 +260,30 @@ public class AllocationTagsManager {
 
     writeLock.lock();
     try {
-      NodeToCountedTags perAppTagsMapping = perAppMappings.computeIfAbsent(
-          applicationId, k -> new NodeToCountedTags());
-
+      NodeToCountedTags perAppTagsMapping = perAppNodeMappings
+          .computeIfAbsent(applicationId, k -> new NodeToCountedTags());
+      NodeToCountedTags perAppRackTagsMapping = perAppRackMappings
+          .computeIfAbsent(applicationId, k -> new NodeToCountedTags());
+      // Covering test-cases where context is mocked
+      String nodeRack = (rmContext.getRMNodes() != null
+          && rmContext.getRMNodes().get(nodeId) != null)
+              ? rmContext.getRMNodes().get(nodeId).getRackName()
+              : "default-rack";
       if (useSet) {
-        perAppTagsMapping.addTagsToNode(nodeId, allocationTags);
-        globalMapping.addTagsToNode(nodeId, allocationTags);
+        perAppTagsMapping.addTags(nodeId, allocationTags);
+        perAppRackTagsMapping.addTags(nodeRack, allocationTags);
+        globalNodeMapping.addTags(nodeId, allocationTags);
+        globalRackMapping.addTags(nodeRack, allocationTags);
       } else {
-        perAppTagsMapping.addTagToNode(nodeId, applicationIdTag);
-        globalMapping.addTagToNode(nodeId, applicationIdTag);
+        perAppTagsMapping.addTag(nodeId, applicationIdTag);
+        perAppRackTagsMapping.addTag(nodeRack, applicationIdTag);
+        globalNodeMapping.addTag(nodeId, applicationIdTag);
+        globalRackMapping.addTag(nodeRack, applicationIdTag);
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Added container=" + containerId + " with tags=[" + StringUtils
-                .join(allocationTags, ",") + "]");
+        LOG.debug("Added container=" + containerId + " with tags=["
+            + StringUtils.join(allocationTags, ",") + "]");
       }
     } finally {
       writeLock.unlock();
@@ -287,27 +313,40 @@ public class AllocationTagsManager {
 
     writeLock.lock();
     try {
-      NodeToCountedTags perAppTagsMapping = perAppMappings.get(applicationId);
+      NodeToCountedTags perAppTagsMapping =
+          perAppNodeMappings.get(applicationId);
+      NodeToCountedTags perAppRackTagsMapping =
+          perAppRackMappings.get(applicationId);
       if (perAppTagsMapping == null) {
         return;
       }
-
+      // Covering test-cases where context is mocked
+      String nodeRack = (rmContext.getRMNodes() != null
+          && rmContext.getRMNodes().get(nodeId) != null)
+              ? rmContext.getRMNodes().get(nodeId).getRackName()
+              : "default-rack";
       if (useSet) {
-        perAppTagsMapping.removeTagsFromNode(nodeId, allocationTags);
-        globalMapping.removeTagsFromNode(nodeId, allocationTags);
+        perAppTagsMapping.removeTags(nodeId, allocationTags);
+        perAppRackTagsMapping.removeTags(nodeRack, allocationTags);
+        globalNodeMapping.removeTags(nodeId, allocationTags);
+        globalRackMapping.removeTags(nodeRack, allocationTags);
       } else {
-        perAppTagsMapping.removeTagFromNode(nodeId, applicationIdTag);
-        globalMapping.removeTagFromNode(nodeId, applicationIdTag);
+        perAppTagsMapping.removeTag(nodeId, applicationIdTag);
+        perAppRackTagsMapping.removeTag(nodeRack, applicationIdTag);
+        globalNodeMapping.removeTag(nodeId, applicationIdTag);
+        globalRackMapping.removeTag(nodeRack, applicationIdTag);
       }
 
       if (perAppTagsMapping.isEmpty()) {
-        perAppMappings.remove(applicationId);
+        perAppNodeMappings.remove(applicationId);
+      }
+      if (perAppRackTagsMapping.isEmpty()) {
+        perAppRackMappings.remove(applicationId);
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Removed container=" + containerId + " with tags=[" + StringUtils
-                .join(allocationTags, ",") + "]");
+        LOG.debug("Removed container=" + containerId + " with tags=["
+            + StringUtils.join(allocationTags, ",") + "]");
       }
     } finally {
       writeLock.unlock();
@@ -315,18 +354,16 @@ public class AllocationTagsManager {
   }
 
   /**
-   * Get cardinality for following conditions. External can pass-in a binary op
-   * to implement customized logic.   *
+   * Get Node cardinality for a specific tag.
+   * When applicationId is null, method returns aggregated cardinality
+   *
    * @param nodeId        nodeId, required.
    * @param applicationId applicationId. When null is specified, return
    *                      aggregated cardinality among all nodes.
    * @param tag           allocation tag, see
    *                      {@link SchedulingRequest#getAllocationTags()},
-   *                      When multiple tags specified. Returns cardinality
-   *                      depends on op. If a specified tag doesn't exist,
-   *                      0 will be its cardinality.
-   *                      When null/empty tags specified, all tags
-   *                      (of the node/app) will be considered.
+   *                      If a specified tag doesn't exist,
+   *                      method returns 0.
    * @return cardinality of specified query on the node.
    * @throws InvalidAllocationTagsQueryException when illegal query
    *                                            parameter specified
@@ -338,14 +375,14 @@ public class AllocationTagsManager {
     try {
       if (nodeId == null) {
         throw new InvalidAllocationTagsQueryException(
-            "Must specify nodeId/tags/op to query cardinality");
+            "Must specify nodeId/tag to query cardinality");
       }
 
       NodeToCountedTags mapping;
       if (applicationId != null) {
-        mapping = perAppMappings.get(applicationId);
-      } else{
-        mapping = globalMapping;
+        mapping = perAppNodeMappings.get(applicationId);
+      } else {
+        mapping = globalNodeMapping;
       }
 
       if (mapping == null) {
@@ -359,11 +396,54 @@ public class AllocationTagsManager {
   }
 
   /**
+   * Get Rack cardinality for a specific tag.
+   *
+   * @param rack          rack, required.
+   * @param applicationId applicationId. When null is specified, return
+   *                      aggregated cardinality among all nodes.
+   * @param tag           allocation tag, see
+   *                      {@link SchedulingRequest#getAllocationTags()},
+   *                      If a specified tag doesn't exist,
+   *                      method returns 0.
+   * @return cardinality of specified query on the rack.
+   * @throws InvalidAllocationTagsQueryException when illegal query
+   *                                            parameter specified
+   */
+  public long getRackCardinality(String rack, ApplicationId applicationId,
+      String tag) throws InvalidAllocationTagsQueryException {
+    readLock.lock();
+
+    try {
+      if (rack == null) {
+        throw new InvalidAllocationTagsQueryException(
+            "Must specify rack/tag to query cardinality");
+      }
+
+      NodeToCountedTags mapping;
+      if (applicationId != null) {
+        mapping = perAppRackMappings.get(applicationId);
+      } else {
+        mapping = globalRackMapping;
+      }
+
+      if (mapping == null) {
+        return 0;
+      }
+
+      return mapping.getCardinality(rack, tag);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+
+
+  /**
    * Check if given tag exists on node.
    *
    * @param nodeId        nodeId, required.
    * @param applicationId applicationId. When null is specified, return
-   *                      aggregated cardinality among all nodes.
+   *                      aggregation among all applications.
    * @param tag           allocation tag, see
    *                      {@link SchedulingRequest#getAllocationTags()},
    *                      When multiple tags specified. Returns cardinality
@@ -387,7 +467,7 @@ public class AllocationTagsManager {
    *
    * @param nodeId        nodeId, required.
    * @param applicationId applicationId. When null is specified, return
-   *                      aggregated cardinality among all nodes.
+   *                      aggregated cardinality among all applications.
    * @param tags          allocation tags, see
    *                      {@link SchedulingRequest#getAllocationTags()},
    *                      When multiple tags specified. Returns cardinality
@@ -396,7 +476,7 @@ public class AllocationTagsManager {
    *                      specified, all tags (of the node/app) will be
    *                      considered.
    * @param op            operator. Such as Long::max, Long::sum, etc. Required.
-   *                      This sparameter only take effect when #values >= 2.
+   *                      This parameter only take effect when #values >= 2.
    * @return cardinality of specified query on the node.
    * @throws InvalidAllocationTagsQueryException when illegal query
    *                                            parameter specified
@@ -414,9 +494,9 @@ public class AllocationTagsManager {
 
       NodeToCountedTags mapping;
       if (applicationId != null) {
-        mapping = perAppMappings.get(applicationId);
-      } else{
-        mapping = globalMapping;
+        mapping = perAppNodeMappings.get(applicationId);
+      } else {
+        mapping = globalNodeMapping;
       }
 
       if (mapping == null) {
@@ -424,6 +504,54 @@ public class AllocationTagsManager {
       }
 
       return mapping.getCardinality(nodeId, tags, op);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
+   * Get cardinality for following conditions. External can pass-in a binary op
+   * to implement customized logic.
+   *
+   * @param rack          rack, required.
+   * @param applicationId applicationId. When null is specified, return
+   *                      aggregated cardinality among all applications.
+   * @param tags          allocation tags, see
+   *                      {@link SchedulingRequest#getAllocationTags()},
+   *                      When multiple tags specified. Returns cardinality
+   *                      depends on op. If a specified tag doesn't exist, 0
+   *                      will be its cardinality. When null/empty tags
+   *                      specified, all tags (of the rack/app) will be
+   *                      considered.
+   * @param op            operator. Such as Long::max, Long::sum, etc. Required.
+   *                      This parameter only take effect when #values >= 2.
+   * @return cardinality of specified query on the rack.
+   * @throws InvalidAllocationTagsQueryException when illegal query
+   *                                            parameter specified
+   */
+  public long getRackCardinalityByOp(String rack, ApplicationId applicationId,
+      Set<String> tags, LongBinaryOperator op)
+      throws InvalidAllocationTagsQueryException {
+    readLock.lock();
+
+    try {
+      if (rack == null || op == null) {
+        throw new InvalidAllocationTagsQueryException(
+            "Must specify rack/tags/op to query cardinality");
+      }
+
+      NodeToCountedTags mapping;
+      if (applicationId != null) {
+        mapping = perAppRackMappings.get(applicationId);
+      } else {
+        mapping = globalRackMapping;
+      }
+
+      if (mapping == null) {
+        return 0;
+      }
+
+      return mapping.getCardinality(rack, tags, op);
     } finally {
       readLock.unlock();
     }

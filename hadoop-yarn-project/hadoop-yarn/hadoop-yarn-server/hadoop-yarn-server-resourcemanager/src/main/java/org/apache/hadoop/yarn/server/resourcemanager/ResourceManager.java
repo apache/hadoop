@@ -496,7 +496,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected AllocationTagsManager createAllocationTagsManager() {
-    return new AllocationTagsManager();
+    return new AllocationTagsManager(this.rmContext);
   }
   
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
