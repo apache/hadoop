@@ -91,7 +91,7 @@ public abstract class Shell {
 
   // "1.8"->8, "9"->9, "10"->10
   private static final int JAVA_SPEC_VER = Math.max(8, Integer.parseInt(
-    System.getProperty("java.specification.version").split("\\.")[0]));
+      System.getProperty("java.specification.version").split("\\.")[0]));
 
   public static boolean isJavaSpecAtLeast(int version) {
     return JAVA_SPEC_VER >= version;
