@@ -480,8 +480,16 @@ public class ContainerMapping implements Mapping {
           OzoneProtos.SCMContainerInfo oldInfoProto =
               OzoneProtos.SCMContainerInfo.PARSER.parseFrom(containerBytes);
           ContainerInfo oldInfo = ContainerInfo.fromProtobuf(oldInfoProto);
-          oldInfo.setAllocatedBytes(info.getAllocatedBytes());
-          containerStore.put(dbKey, oldInfo.getProtobuf().toByteArray());
+          ContainerInfo newInfo = new ContainerInfo.Builder()
+              .setAllocatedBytes(info.getAllocatedBytes())
+              .setContainerName(oldInfo.getContainerName())
+              .setNumberOfKeys(oldInfo.getNumberOfKeys())
+              .setOwner(oldInfo.getOwner())
+              .setPipeline(oldInfo.getPipeline())
+              .setState(oldInfo.getState())
+              .setUsedBytes(oldInfo.getUsedBytes())
+              .build();
+          containerStore.put(dbKey, newInfo.getProtobuf().toByteArray());
         } else {
           LOG.debug("Container state manager has container {} but not found " +
               "in container store, a deleted container?",
