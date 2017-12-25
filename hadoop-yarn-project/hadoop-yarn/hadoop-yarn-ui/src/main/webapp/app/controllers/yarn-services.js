@@ -26,6 +26,7 @@ export default AppTableController.extend({
     sortColumnId: 'stTime',
     sortOrder: 'desc',
     rowCount: 25,
+    minValuesToDisplay: 1,
     enableFaceting: true
   }),
   searchText: Ember.computed.alias('tableDefinition.searchText'),

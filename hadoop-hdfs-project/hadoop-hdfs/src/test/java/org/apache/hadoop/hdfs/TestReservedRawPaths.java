@@ -247,7 +247,7 @@ public class TestReservedRawPaths {
   }
 
   @Test(timeout = 120000)
-  public void testAdminAccessOnly() throws Exception {
+  public void testUserReadAccessOnly() throws Exception {
     final Path zone = new Path("zone");
     final Path slashZone = new Path("/", zone);
     fs.mkdirs(slashZone);
@@ -275,34 +275,26 @@ public class TestReservedRawPaths {
       }
     });
 
-    /* Test failure of getFileStatus in reserved/raw as non admin */
+    /* Test success of getFileStatus in reserved/raw as non admin since
+     * read is allowed. */
     final Path ezRawEncFile = new Path(new Path(reservedRaw, zone), base);
     DFSTestUtil.createFile(fs, ezRawEncFile, len, (short) 1, 0xFEED);
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
         final DistributedFileSystem fs = cluster.getFileSystem();
-        try {
-          fs.getFileStatus(ezRawEncFile);
-          fail("access to /.reserved/raw is superuser-only operation");
-        } catch (AccessControlException e) {
-          assertExceptionContains("Superuser privilege is required", e);
-        }
+        fs.getFileStatus(ezRawEncFile);
         return null;
       }
     });
 
-    /* Test failure of listStatus in reserved/raw as non admin */
+    /* Test success of listStatus in reserved/raw as non admin since read is
+     * allowed. */
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
         final DistributedFileSystem fs = cluster.getFileSystem();
-        try {
-          fs.listStatus(ezRawEncFile);
-          fail("access to /.reserved/raw is superuser-only operation");
-        } catch (AccessControlException e) {
-          assertExceptionContains("Superuser privilege is required", e);
-        }
+        fs.listStatus(ezRawEncFile);
         return null;
       }
     });

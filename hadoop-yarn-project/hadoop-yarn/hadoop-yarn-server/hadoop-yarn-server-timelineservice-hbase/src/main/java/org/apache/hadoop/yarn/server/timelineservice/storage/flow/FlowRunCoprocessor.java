@@ -98,7 +98,9 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
     if ((attributes != null) && (attributes.size() > 0)) {
       for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
         Tag t = HBaseTimelineStorageUtils.getTagFromAttribute(attribute);
-        tags.add(t);
+        if (t != null) {
+          tags.add(t);
+        }
       }
       byte[] tagByteArray = Tag.fromList(tags);
       NavigableMap<byte[], List<Cell>> newFamilyMap = new TreeMap<>(

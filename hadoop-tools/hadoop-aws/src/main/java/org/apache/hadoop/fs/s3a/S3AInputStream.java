@@ -83,7 +83,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private final S3AInstrumentation.InputStreamStatistics streamStatistics;
   private S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private String serverSideEncryptionKey;
-  private final S3AInputPolicy inputPolicy;
+  private S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
   private final Invoker invoker;
 
@@ -139,9 +139,19 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     this.serverSideEncryptionAlgorithm =
         s3Attributes.getServerSideEncryptionAlgorithm();
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
-    this.inputPolicy = inputPolicy;
+    setInputPolicy(inputPolicy);
     setReadahead(readahead);
     this.invoker = invoker;
+  }
+
+  /**
+   * Set/update the input policy of the stream.
+   * This updates the stream statistics.
+   * @param inputPolicy new input policy.
+   */
+  private void setInputPolicy(S3AInputPolicy inputPolicy) {
+    this.inputPolicy = inputPolicy;
+    streamStatistics.inputPolicySet(inputPolicy.ordinal());
   }
 
   /**
@@ -162,8 +172,9 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     contentRangeFinish = calculateRequestLimit(inputPolicy, targetPos,
         length, contentLength, readahead);
     LOG.debug("reopen({}) for {} range[{}-{}], length={}," +
-        " streamPosition={}, nextReadPosition={}",
-        uri, reason, targetPos, contentRangeFinish, length,  pos, nextReadPos);
+        " streamPosition={}, nextReadPosition={}, policy={}",
+        uri, reason, targetPos, contentRangeFinish, length,  pos, nextReadPos,
+        inputPolicy);
 
     long opencount = streamStatistics.streamOpened();
     GetObjectRequest request = new GetObjectRequest(bucket, key)
@@ -274,6 +285,12 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     } else if (diff < 0) {
       // backwards seek
       streamStatistics.seekBackwards(diff);
+      // if the stream is in "Normal" mode, switch to random IO at this
+      // point, as it is indicative of columnar format IO
+      if (inputPolicy.equals(S3AInputPolicy.Normal)) {
+        LOG.info("Switching to Random IO seek policy");
+        setInputPolicy(S3AInputPolicy.Random);
+      }
     } else {
       // targetPos == pos
       if (remainingInCurrentRequest() > 0) {
@@ -443,6 +460,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       try {
         // close or abort the stream
         closeStream("close() operation", this.contentRangeFinish, false);
+        LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
         // this is actually a no-op
         super.close();
       } finally {
@@ -713,6 +731,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       break;
 
     case Normal:
+      // normal is considered sequential until a backwards seek switches
+      // it to 'Random'
     default:
       rangeLimit = contentLength;
 

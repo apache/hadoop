@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -213,7 +214,9 @@ class FSDirSnapshotOp {
           snapname += Path.SEPARATOR;
         }
         snapname += file.substring(file.indexOf(dirName) + dirName.length());
-        if (fsd.getFSNamesystem().getFileInfo(snapname, true) != null) {
+        HdfsFileStatus stat =
+            fsd.getFSNamesystem().getFileInfo(snapname, true, false, false);
+        if (stat != null) {
           snaps.add(snapname);
         }
       }

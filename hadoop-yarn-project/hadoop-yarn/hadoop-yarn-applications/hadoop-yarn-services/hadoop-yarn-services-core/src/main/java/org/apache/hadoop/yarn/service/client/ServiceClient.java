@@ -268,7 +268,8 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       long ret = orig - Long.parseLong(newNumber.substring(1));
       if (ret < 0) {
         LOG.warn(MessageFormat.format(
-            "[COMPONENT {}]: component count goes to negative ({}{} = {}), reset it to 0.",
+            "[COMPONENT {0}]: component count goes to negative ({1}{2} = {3}),"
+                + " ignore and reset it to 0.",
             component.getName(), orig, newNumber, ret));
         ret = 0;
       }
@@ -878,18 +879,23 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return newTimeout;
   }
 
-  public ServiceState convertState(FinalApplicationStatus status) {
-    switch (status) {
-    case UNDEFINED:
+  public ServiceState convertState(YarnApplicationState state) {
+    switch (state) {
+    case NEW:
+    case NEW_SAVING:
+    case SUBMITTED:
+    case ACCEPTED:
       return ServiceState.ACCEPTED;
-    case FAILED:
+    case RUNNING:
+      return ServiceState.STARTED;
+    case FINISHED:
     case KILLED:
-      return ServiceState.FAILED;
-    case ENDED:
-    case SUCCEEDED:
       return ServiceState.STOPPED;
+    case FAILED:
+      return ServiceState.FAILED;
+    default:
+      return ServiceState.ACCEPTED;
     }
-    return ServiceState.ACCEPTED;
   }
 
   public String getStatusString(String appId)
@@ -917,7 +923,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     ApplicationReport appReport = yarnClient.getApplicationReport(currentAppId);
     Service appSpec = new Service();
     appSpec.setName(serviceName);
-    appSpec.setState(convertState(appReport.getFinalApplicationStatus()));
+    appSpec.setState(convertState(appReport.getYarnApplicationState()));
     ApplicationTimeout lifetime =
         appReport.getApplicationTimeouts().get(ApplicationTimeoutType.LIFETIME);
     if (lifetime != null) {

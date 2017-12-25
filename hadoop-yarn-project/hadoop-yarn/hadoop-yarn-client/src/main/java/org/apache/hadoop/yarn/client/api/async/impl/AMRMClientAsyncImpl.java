@@ -358,6 +358,14 @@ extends AMRMClientAsync<T> {
           if (!allocated.isEmpty()) {
             handler.onContainersAllocated(allocated);
           }
+
+          if (!response.getContainersFromPreviousAttempts().isEmpty()) {
+            if (handler instanceof AMRMClientAsync.AbstractCallbackHandler) {
+              ((AMRMClientAsync.AbstractCallbackHandler) handler)
+                  .onContainersReceivedFromPreviousAttempts(
+                      response.getContainersFromPreviousAttempts());
+            }
+          }
           progress = handler.getProgress();
         } catch (Throwable ex) {
           handler.onError(ex);

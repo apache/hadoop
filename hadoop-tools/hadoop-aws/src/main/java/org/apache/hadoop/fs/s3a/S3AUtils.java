@@ -51,6 +51,7 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -87,6 +88,9 @@ public final class S3AUtils {
   static final String ABSTRACT_PROVIDER =
       "is abstract and therefore cannot be created";
   static final String ENDPOINT_KEY = "Endpoint";
+
+  /** Filesystem is closed; kept here to keep the errors close. */
+  static final String E_FS_CLOSED = "FileSystem is closed!";
 
   /**
    * Core property for provider path. Duplicated here for consistent
@@ -149,7 +153,7 @@ public final class S3AUtils {
    * @return an IOE which wraps the caught exception.
    */
   @SuppressWarnings("ThrowableInstanceNeverThrown")
-  public static IOException translateException(String operation,
+  public static IOException translateException(@Nullable String operation,
       String path,
       SdkBaseException exception) {
     String message = String.format("%s%s: %s",

@@ -190,6 +190,14 @@ It also supports mount points that disallow writes:
 
 If a mount point is not set, the Router will map it to the default namespace `dfs.federation.router.default.nameserviceId`.
 
+Mount table have UNIX-like *permissions*, which restrict which users and groups have access to the mount point. Write permissions allow users to add
+, update or remove mount point. Read permissions allow users to list mount point. Execute permissions are unused.
+
+Mount table permission can be set by following command:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -add /tmp ns1 /tmp -owner root -group supergroup -mode 0755
+
+The option mode is UNIX-style permissions for the mount table. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
 
 Client configuration
 --------------------
@@ -313,3 +321,9 @@ Monitor the namenodes in the subclusters for forwarding the client requests.
 | dfs.federation.router.heartbeat.interval | 5000 | How often the Router should heartbeat into the State Store in milliseconds. |
 | dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
 | dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
+
+Metrics
+-------
+
+The Router and State Store statistics are exposed in metrics/JMX. These info will be very useful for monitoring.
+More metrics info can see [Router RPC Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RouterRPCMetrics) and [State Store Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#StateStoreMetrics).

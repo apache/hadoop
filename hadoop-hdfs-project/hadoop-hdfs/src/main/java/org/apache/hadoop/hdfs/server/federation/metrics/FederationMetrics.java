@@ -272,6 +272,11 @@ public class FederationMetrics implements FederationMBean {
   }
 
   @Override
+  public long getProvidedSpace() {
+    return getNameserviceAggregatedLong(MembershipStats::getProvidedSpace);
+  }
+
+  @Override
   public long getUsedCapacity() {
     return getTotalCapacity() - getRemainingCapacity();
   }

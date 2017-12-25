@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,12 +49,14 @@ public class NodeResourceMonitorImpl extends AbstractService implements
   /** Current <em>resource utilization</em> of the node. */
   private ResourceUtilization nodeUtilization;
 
+  private Context nmContext;
+
   /**
    * Initialize the node resource monitor.
    */
-  public NodeResourceMonitorImpl() {
+  public NodeResourceMonitorImpl(Context context) {
     super(NodeResourceMonitorImpl.class.getName());
-
+    this.nmContext = context;
     this.monitoringThread = new MonitoringThread();
   }
 
@@ -148,6 +151,15 @@ public class NodeResourceMonitorImpl extends AbstractService implements
                 (int) (pmem >> 20), // B -> MB
                 (int) (vmem >> 20), // B -> MB
                 vcores); // Used Virtual Cores
+
+        // Publish the node utilization metrics to node manager
+        // metrics system.
+        NodeManagerMetrics nmMetrics = nmContext.getNodeManagerMetrics();
+        if (nmMetrics != null) {
+          nmMetrics.setNodeUsedMemGB(nodeUtilization.getPhysicalMemory());
+          nmMetrics.setNodeUsedVMemGB(nodeUtilization.getVirtualMemory());
+          nmMetrics.setNodeCpuUtilization(nodeUtilization.getCPU());
+        }
 
         try {
           Thread.sleep(monitoringInterval);

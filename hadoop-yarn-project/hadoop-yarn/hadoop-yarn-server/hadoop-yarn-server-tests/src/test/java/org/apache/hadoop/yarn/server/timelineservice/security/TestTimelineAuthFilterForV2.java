@@ -162,7 +162,8 @@ public class TestTimelineAuthFilterForV2 {
       conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
           FileSystemTimelineWriterImpl.class, TimelineWriter.class);
-      conf.set(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST, "localhost");
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_READER_BIND_HOST,
+          "localhost");
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
           TEST_ROOT_DIR.getAbsolutePath());
       conf.set("hadoop.proxyuser.HTTP.hosts", "*");

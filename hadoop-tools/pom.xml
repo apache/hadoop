@@ -48,6 +48,7 @@
     <module>hadoop-kafka</module>
     <module>hadoop-azure-datalake</module>
     <module>hadoop-aliyun</module>
+    <module>hadoop-fs2img</module>
   </modules>
 
   <build>

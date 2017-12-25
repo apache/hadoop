@@ -100,6 +100,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
   public static final String C = CapacitySchedulerConfiguration.ROOT + ".c";
   public static final String D = CapacitySchedulerConfiguration.ROOT + ".d";
+  public static final String E = CapacitySchedulerConfiguration.ROOT + ".e";
   public static final String A1 = A + ".a1";
   public static final String A2 = A + ".a2";
   public static final String B1 = B + ".b1";
@@ -129,8 +130,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String USER = "user_";
   public static final String USER0 = USER + 0;
   public static final String USER1 = USER + 1;
-  public static final String USER3 = USER + 3;
   public static final String USER2 = USER + 2;
+  public static final String USER3 = USER + 3;
   public static final String PARENT_QUEUE = "c";
 
   public static final Set<String> accessibleNodeLabelsOnC = new HashSet<>();
@@ -183,7 +184,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
-    setupQueueMappings(conf);
+    setupQueueMappings(conf, PARENT_QUEUE, true, new int[] { 0, 1, 2, 3 });
 
     dispatcher = new SpyDispatcher();
     rmAppEventEventHandler = new SpyDispatcher.SpyRMAppEventHandler();
@@ -225,27 +226,33 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   }
 
   public static CapacitySchedulerConfiguration setupQueueMappings(
-      CapacitySchedulerConfiguration conf) {
+      CapacitySchedulerConfiguration conf, String parentQueue, boolean
+      overrideWithQueueMappings, int[] userIds) {
 
     List<String> queuePlacementRules = new ArrayList<>();
     queuePlacementRules.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
     conf.setQueuePlacementRules(queuePlacementRules);
 
+    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings =
+        conf.getQueueMappings();
+
     //set queue mapping
     List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
         new ArrayList<>();
-    for (int i = 0; i <= 3; i++) {
+    for (int i = 0; i < userIds.length; i++) {
       //Set C as parent queue name for auto queue creation
       UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
           new UserGroupMappingPlacementRule.QueueMapping(
               UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-              USER + i, getQueueMapping(PARENT_QUEUE, USER + i));
+              USER + userIds[i],
+              getQueueMapping(parentQueue, USER + userIds[i]));
       queueMappings.add(userQueueMapping);
     }
 
-    conf.setQueueMappings(queueMappings);
+    existingMappings.addAll(queueMappings);
+    conf.setQueueMappings(existingMappings);
     //override with queue mappings
-    conf.setOverrideWithQueueMappings(true);
+    conf.setOverrideWithQueueMappings(overrideWithQueueMappings);
     return conf;
   }
 
@@ -327,6 +334,29 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     return conf;
   }
 
+  public static CapacitySchedulerConfiguration
+      setupQueueConfigurationForSingleAutoCreatedLeafQueue(
+      CapacitySchedulerConfiguration conf) {
+
+    //setup new queues with one of them auto enabled
+    // Define top-level queues
+    // Set childQueue for root
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"c"});
+    conf.setCapacity(C, 100f);
+
+    conf.setUserLimitFactor(C, 1.0f);
+    conf.setAutoCreateChildQueueEnabled(C, true);
+
+    //Setup leaf queue template configs
+    conf.setAutoCreatedLeafQueueConfigCapacity(C, 100f);
+    conf.setAutoCreatedLeafQueueConfigMaxCapacity(C, 100.0f);
+    conf.setAutoCreatedLeafQueueConfigUserLimit(C, 100);
+    conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
+
+    return conf;
+  }
+
   @After
   public void tearDown() throws Exception {
     if (mockRM != null) {
@@ -395,7 +425,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
-    setupQueueMappings(conf);
+    setupQueueMappings(conf, PARENT_QUEUE, true, new int[] {0, 1, 2, 3});
 
     RMNodeLabelsManager mgr = setupNodeLabelManager(conf);
     MockRM newMockRM = new MockRM(conf) {
@@ -407,34 +437,6 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     ((CapacityScheduler) newMockRM.getResourceScheduler()).start();
     setupNodes(newMockRM);
     return newMockRM;
-  }
-
-  protected void checkQueueCapacities(CapacityScheduler newCS, float capacityC,
-      float capacityD) {
-    CSQueue rootQueue = newCS.getRootQueue();
-    CSQueue queueC = tcs.findQueue(rootQueue, C);
-    CSQueue queueD = tcs.findQueue(rootQueue, D);
-    CSQueue queueC1 = tcs.findQueue(queueC, C1);
-    CSQueue queueC2 = tcs.findQueue(queueC, C2);
-    CSQueue queueC3 = tcs.findQueue(queueC, C3);
-
-    float capC = capacityC / 100.0f;
-    float capD = capacityD / 100.0f;
-
-    tcs.checkQueueCapacity(queueC, capC, capC, 1.0f, 1.0f);
-    tcs.checkQueueCapacity(queueD, capD, capD, 1.0f, 1.0f);
-    tcs.checkQueueCapacity(queueC1, C1_CAPACITY / 100.0f,
-        (C1_CAPACITY / 100.0f) * capC, 1.0f, 1.0f);
-    tcs.checkQueueCapacity(queueC2, C2_CAPACITY / 100.0f,
-        (C2_CAPACITY / 100.0f) * capC, 1.0f, 1.0f);
-
-    if (queueC3 != null) {
-      ManagedParentQueue parentQueue = (ManagedParentQueue) queueC;
-      QueueCapacities cap =
-          parentQueue.getLeafQueueTemplate().getQueueCapacities();
-      tcs.checkQueueCapacity(queueC3, cap.getCapacity(),
-          (cap.getCapacity()) * capC, 1.0f, 1.0f);
-    }
   }
 
   static String getQueueMapping(String parentQueue, String leafQueue) {

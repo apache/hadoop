@@ -60,10 +60,13 @@ public class JsonSerDeser<T> {
    * Create an instance bound to a specific type
    * @param classType class type
    */
+  @SuppressWarnings("deprecation")
   public JsonSerDeser(Class<T> classType) {
     this.classType = classType;
     this.mapper = new ObjectMapper();
     mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    mapper.configure(SerializationConfig.Feature.WRITE_NULL_MAP_VALUES, false);
+    mapper.configure(SerializationConfig.Feature.WRITE_NULL_PROPERTIES, false);
   }
 
   public JsonSerDeser(Class<T> classType, PropertyNamingStrategy namingStrategy) {

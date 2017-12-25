@@ -38,9 +38,10 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
+
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
@@ -110,7 +111,8 @@ public class TestEditLogsDuringFailover {
       // the current log segment, and on the next roll, it would have to
       // either replay starting in the middle of the segment (not allowed)
       // or double-replay the edits (incorrect).
-      assertNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1), "/test", true));
+      assertNull(getFileInfo(cluster.getNameNode(1), "/test",
+          true, false, false));
       
       cluster.getNameNode(0).getRpcServer().mkdirs("/test2",
           FsPermission.createImmutable((short)0755), true);
@@ -122,8 +124,10 @@ public class TestEditLogsDuringFailover {
 
       // NN1 should have both the edits that came before its restart, and the edits that
       // came after its restart.
-      assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1), "/test", true));
-      assertNotNull(NameNodeAdapter.getFileInfo(cluster.getNameNode(1), "/test2", true));
+      assertNotNull(getFileInfo(cluster.getNameNode(1), "/test",
+          true, false, false));
+      assertNotNull(getFileInfo(cluster.getNameNode(1), "/test2",
+          true, false, false));
     } finally {
       cluster.shutdown();
     }
@@ -165,7 +169,8 @@ public class TestEditLogsDuringFailover {
       // In the transition to active, it should have read the log -- and
       // hence see one of the dirs we made in the fake log.
       String testPath = "/dir" + NUM_DIRS_IN_LOG;
-      assertNotNull(cluster.getNameNode(0).getRpcServer().getFileInfo(testPath));
+      assertNotNull(cluster.getNameNode(0).getRpcServer()
+          .getFileInfo(testPath));
       
       // It also should have finalized that log in the shared directory and started
       // writing to a new one at the next txid.

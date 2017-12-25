@@ -376,7 +376,7 @@ public abstract class AllocateResponse {
    * Get the list of running containers as viewed by
    * <code>ResourceManager</code> from previous application attempts which
    * have not been reported to the Application Master yet.
-   * <br/>
+   * <br>
    * These containers were recovered by the RM after the application master
    * had already registered. This may happen after RM restart when some NMs get
    * delayed in connecting to the RM and reporting the active containers.
@@ -394,7 +394,7 @@ public abstract class AllocateResponse {
    * Set the list of running containers as viewed by
    * <code>ResourceManager</code> from previous application attempts which have
    * not been reported to the Application Master yet.
-   * <br/>
+   * <br>
    * These containers were recovered by the RM after the application master
    * had already registered. This may happen after RM restart when some NMs get
    * delayed in connecting to the RM and reporting the active containers.

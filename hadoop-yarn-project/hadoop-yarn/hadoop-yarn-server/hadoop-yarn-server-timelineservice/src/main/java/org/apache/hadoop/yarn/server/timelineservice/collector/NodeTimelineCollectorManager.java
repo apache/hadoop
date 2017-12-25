@@ -145,10 +145,9 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
 
   private void doSecureLogin() throws IOException {
     Configuration conf = getConfig();
-    InetSocketAddress addr = NetUtils.createSocketAddr(conf.getTrimmed(
-        YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST), 0,
-                YarnConfiguration.TIMELINE_SERVICE_BIND_HOST);
+    String webAppURLWithoutScheme =
+        WebAppUtils.getTimelineCollectorWebAppURLWithoutScheme(conf);
+    InetSocketAddress addr = NetUtils.createSocketAddr(webAppURLWithoutScheme);
     SecurityUtil.login(conf, YarnConfiguration.TIMELINE_SERVICE_KEYTAB,
         YarnConfiguration.TIMELINE_SERVICE_PRINCIPAL, addr.getHostName());
   }
@@ -277,8 +276,20 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
         initializers, defaultInitializers, tokenMgrService);
     TimelineServerUtils.setTimelineFilters(
         conf, initializers, defaultInitializers);
-    String bindAddress = conf.get(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST) + ":0";
+
+    String bindAddress = null;
+    String host =
+        conf.getTrimmed(YarnConfiguration.TIMELINE_SERVICE_COLLECTOR_BIND_HOST);
+    if (host == null || host.isEmpty()) {
+      // if collector bind-host is not set, fall back to
+      // timeline-service.bind-host to maintain compatibility
+      bindAddress =
+          conf.get(YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST,
+              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST) + ":0";
+    } else {
+      bindAddress = host + ":0";
+    }
+
     try {
       HttpServer2.Builder builder = new HttpServer2.Builder()
           .setName("timeline")
