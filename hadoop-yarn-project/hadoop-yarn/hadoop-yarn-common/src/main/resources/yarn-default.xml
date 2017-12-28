@@ -145,7 +145,13 @@
   <property>
     <description>Constraint Placement Algorithm to be used.</description>
     <name>yarn.resourcemanager.placement-constraints.algorithm.class</name>
-    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.SamplePlacementAlgorithm</value>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm.DefaultPlacementAlgorithm</value>
+  </property>
+
+  <property>
+    <description>Placement Algorithm Requests Iterator to be used.</description>
+    <name>yarn.resourcemanager.placement-constraints.algorithm.iterator</name>
+    <value>SERIAL</value>
   </property>
 
   <property>

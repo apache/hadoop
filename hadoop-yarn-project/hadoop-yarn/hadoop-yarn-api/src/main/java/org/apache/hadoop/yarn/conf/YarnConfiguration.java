@@ -536,6 +536,10 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_PLACEMENT_CONSTRAINTS_ALGORITHM_CLASS =
       RM_PREFIX + "placement-constraints.algorithm.class";
 
+  /** Used for BasicPlacementAlgorithm - default SERIAL. **/
+  public static final String RM_PLACEMENT_CONSTRAINTS_ALGORITHM_ITERATOR =
+      RM_PREFIX + "placement-constraints.algorithm.iterator";
+
   public static final String RM_PLACEMENT_CONSTRAINTS_ENABLED =
       RM_PREFIX + "placement-constraints.enabled";
 

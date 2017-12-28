@@ -579,9 +579,8 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Notify placementManager
       container.rmContext.getAllocationTagsManager().addContainer(
-          container.getNodeId(),
-          container.getApplicationAttemptId().getApplicationId(),
-          container.getContainerId(), container.getAllocationTags());
+          container.getNodeId(), container.getContainerId(),
+          container.getAllocationTags());
 
       container.eventHandler.handle(new RMAppAttemptEvent(
           container.appAttemptId, RMAppAttemptEventType.CONTAINER_ALLOCATED));
@@ -696,9 +695,8 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // Notify placementManager
       container.rmContext.getAllocationTagsManager().removeContainer(
-          container.getNodeId(),
-          container.getApplicationAttemptId().getApplicationId(),
-          container.getContainerId(), container.getAllocationTags());
+          container.getNodeId(), container.getContainerId(),
+          container.getAllocationTags());
 
       RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
 
