@@ -85,8 +85,8 @@ public class ClusterMetricsInfo {
     this.containersPending = metrics.getPendingContainers();
     this.containersReserved = metrics.getReservedContainers();
 
-    this.totalMB = availableMB + allocatedMB;
-    this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
+    this.totalMB = rs.getClusterResource().getMemory();
+    this.totalVirtualCores = rs.getClusterResource().getVirtualCores();
     this.activeNodes = clusterMetrics.getNumActiveNMs();
     this.lostNodes = clusterMetrics.getNumLostNMs();
     this.unhealthyNodes = clusterMetrics.getUnhealthyNMs();
