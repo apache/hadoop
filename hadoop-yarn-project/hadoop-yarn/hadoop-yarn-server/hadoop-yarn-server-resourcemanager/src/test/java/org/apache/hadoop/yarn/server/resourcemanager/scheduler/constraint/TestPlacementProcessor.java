@@ -373,13 +373,13 @@ public class TestPlacementProcessor {
         rej.getReason());
   }
 
-  private static SchedulingRequest schedulingRequest(
+  protected static SchedulingRequest schedulingRequest(
       int priority, long allocReqId, int cores, int mem, String... tags) {
     return schedulingRequest(priority, allocReqId, cores, mem,
         ExecutionType.GUARANTEED, tags);
   }
 
-  private static SchedulingRequest schedulingRequest(
+  protected static SchedulingRequest schedulingRequest(
       int priority, long allocReqId, int cores, int mem,
       ExecutionType execType, String... tags) {
     return SchedulingRequest.newBuilder()

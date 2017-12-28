@@ -21,12 +21,15 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm.iterators.PopularTagsIterator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm.iterators.SerialIterator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithmInput;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,7 +38,8 @@ import java.util.Set;
  * to place as a batch. The placement algorithm tends to give more optimal
  * placements if more requests are batched together.
  */
-class BatchedRequests implements ConstraintPlacementAlgorithmInput {
+public class BatchedRequests
+    implements ConstraintPlacementAlgorithmInput, Iterable<SchedulingRequest> {
 
   // PlacementAlgorithmOutput attempt - the number of times the requests in this
   // batch has been placed but was rejected by the scheduler.
@@ -44,19 +48,46 @@ class BatchedRequests implements ConstraintPlacementAlgorithmInput {
   private final ApplicationId applicationId;
   private final Collection<SchedulingRequest> requests;
   private final Map<String, Set<NodeId>> blacklist = new HashMap<>();
+  private IteratorType iteratorType;
 
-  BatchedRequests(ApplicationId applicationId,
+  /**
+   * Iterator Type.
+   */
+  public enum IteratorType {
+    SERIAL,
+    POPULAR_TAGS
+  }
+
+  public BatchedRequests(IteratorType type, ApplicationId applicationId,
       Collection<SchedulingRequest> requests, int attempt) {
+    this.iteratorType = type;
     this.applicationId = applicationId;
     this.requests = requests;
     this.placementAttempt = attempt;
   }
 
   /**
+   * Exposes SchedulingRequest Iterator interface which can be used
+   * to traverse requests using different heuristics i.e. Tag Popularity
+   * @return SchedulingRequest Iterator.
+   */
+  @Override
+  public Iterator<SchedulingRequest> iterator() {
+    switch (this.iteratorType) {
+    case SERIAL:
+      return new SerialIterator(requests);
+    case POPULAR_TAGS:
+      return new PopularTagsIterator(requests);
+    default:
+      return null;
+    }
+  }
+
+  /**
    * Get Application Id.
    * @return Application Id.
    */
-  ApplicationId getApplicationId() {
+  public ApplicationId getApplicationId() {
     return applicationId;
   }
 
@@ -73,11 +104,11 @@ class BatchedRequests implements ConstraintPlacementAlgorithmInput {
    * Add a Scheduling request to the batch.
    * @param req Scheduling Request.
    */
-  void addToBatch(SchedulingRequest req) {
+  public void addToBatch(SchedulingRequest req) {
     requests.add(req);
   }
 
-  void addToBlacklist(Set<String> tags, SchedulerNode node) {
+  public void addToBlacklist(Set<String> tags, SchedulerNode node) {
     if (tags != null && !tags.isEmpty()) {
       // We are currently assuming a single allocation tag
       // per scheduler request currently.
@@ -90,7 +121,7 @@ class BatchedRequests implements ConstraintPlacementAlgorithmInput {
    * Get placement attempt.
    * @return PlacementAlgorithmOutput placement Attempt.
    */
-  int getPlacementAttempt() {
+  public int getPlacementAttempt() {
     return placementAttempt;
   }
 
@@ -99,7 +130,7 @@ class BatchedRequests implements ConstraintPlacementAlgorithmInput {
    * @param tag Tag.
    * @return Set of blacklisted Nodes.
    */
-  Set<NodeId> getBlacklist(String tag) {
+  public Set<NodeId> getBlacklist(String tag) {
     return blacklist.getOrDefault(tag, Collections.EMPTY_SET);
   }
 }

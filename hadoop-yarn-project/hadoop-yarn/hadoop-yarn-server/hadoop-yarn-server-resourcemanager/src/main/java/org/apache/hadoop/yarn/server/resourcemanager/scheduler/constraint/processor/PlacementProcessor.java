@@ -35,8 +35,10 @@ import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm.DefaultPlacementAlgorithm;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithm;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.PlacedSchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.SchedulingResponse;
@@ -98,6 +100,7 @@ public class PlacementProcessor implements ApplicationMasterServiceProcessor {
   private Map<ApplicationId, List<SchedulingRequest>> requestsToReject =
       new ConcurrentHashMap<>();
 
+  private BatchedRequests.IteratorType iteratorType;
   private PlacementDispatcher placementDispatcher;
 
 
@@ -122,9 +125,20 @@ public class PlacementProcessor implements ApplicationMasterServiceProcessor {
     if (instances != null && !instances.isEmpty()) {
       algorithm = instances.get(0);
     } else {
-      algorithm = new SamplePlacementAlgorithm();
+      algorithm = new DefaultPlacementAlgorithm();
     }
-    LOG.info("Planning Algorithm [{}]", algorithm.getClass().getName());
+    LOG.info("Placement Algorithm [{}]", algorithm.getClass().getName());
+
+    String iteratorName = ((RMContextImpl) amsContext).getYarnConfiguration()
+        .get(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_ALGORITHM_ITERATOR,
+            BatchedRequests.IteratorType.SERIAL.name());
+    LOG.info("Placement Algorithm Iterator[{}]", iteratorName);
+    try {
+      iteratorType = BatchedRequests.IteratorType.valueOf(iteratorName);
+    } catch (IllegalArgumentException e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate Placement Algorithm Iterator: ", e);
+    }
 
     int algoPSize = ((RMContextImpl) amsContext).getYarnConfiguration().getInt(
         YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_ALGORITHM_POOL_SIZE,
@@ -188,9 +202,8 @@ public class PlacementProcessor implements ApplicationMasterServiceProcessor {
   private void dispatchRequestsForPlacement(ApplicationAttemptId appAttemptId,
       List<SchedulingRequest> schedulingRequests) {
     if (schedulingRequests != null && !schedulingRequests.isEmpty()) {
-      this.placementDispatcher.dispatch(
-          new BatchedRequests(appAttemptId.getApplicationId(),
-              schedulingRequests, 1));
+      this.placementDispatcher.dispatch(new BatchedRequests(iteratorType,
+          appAttemptId.getApplicationId(), schedulingRequests, 1));
     }
   }
 
@@ -329,11 +342,10 @@ public class PlacementProcessor implements ApplicationMasterServiceProcessor {
       }
     }
     if (!isAdded) {
-      BatchedRequests br =
-          new BatchedRequests(schedulerResponse.getApplicationId(),
-              Collections.singleton(
-                  schedulerResponse.getSchedulingRequest()),
-              placementAttempt + 1);
+      BatchedRequests br = new BatchedRequests(iteratorType,
+          schedulerResponse.getApplicationId(),
+          Collections.singleton(schedulerResponse.getSchedulingRequest()),
+          placementAttempt + 1);
       reqsToRetry.add(br);
       br.addToBlacklist(
           schedulerResponse.getSchedulingRequest().getAllocationTags(),

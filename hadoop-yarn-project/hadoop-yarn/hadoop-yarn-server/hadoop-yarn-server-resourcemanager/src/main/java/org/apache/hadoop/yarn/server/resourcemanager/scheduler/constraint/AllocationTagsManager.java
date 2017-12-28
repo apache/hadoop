@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -54,24 +55,27 @@ public class AllocationTagsManager {
   private final RMContext rmContext;
 
   // Application's tags to Node
-  private Map<ApplicationId, NodeToCountedTags> perAppNodeMappings =
+  private Map<ApplicationId, TypeToCountedTags> perAppNodeMappings =
       new HashMap<>();
   // Application's tags to Rack
-  private Map<ApplicationId, NodeToCountedTags> perAppRackMappings =
+  private Map<ApplicationId, TypeToCountedTags> perAppRackMappings =
       new HashMap<>();
+  // Application's Temporary containers mapping
+  private Map<ApplicationId, Map<NodeId, Map<ContainerId, Set<String>>>>
+      appTempMappings = new HashMap<>();
 
   // Global tags to node mapping (used to fast return aggregated tags
   // cardinality across apps)
-  private NodeToCountedTags<NodeId> globalNodeMapping = new NodeToCountedTags();
+  private TypeToCountedTags<NodeId> globalNodeMapping = new TypeToCountedTags();
   // Global tags to Rack mapping
-  private NodeToCountedTags<String> globalRackMapping = new NodeToCountedTags();
+  private TypeToCountedTags<String> globalRackMapping = new TypeToCountedTags();
 
   /**
    * Generic store mapping type <T> to counted tags.
    * Currently used both for NodeId to Tag, Count and Rack to Tag, Count
    */
   @VisibleForTesting
-  static class NodeToCountedTags<T> {
+  static class TypeToCountedTags<T> {
     // Map<Type, Map<Tag, Count>>
     private Map<T, Map<String, Long>> typeToTagsWithCount = new HashMap<>();
 
@@ -209,23 +213,29 @@ public class AllocationTagsManager {
   }
 
   @VisibleForTesting
-  Map<ApplicationId, NodeToCountedTags> getPerAppNodeMappings() {
+  Map<ApplicationId, TypeToCountedTags> getPerAppNodeMappings() {
     return perAppNodeMappings;
   }
 
   @VisibleForTesting
-  Map<ApplicationId, NodeToCountedTags> getPerAppRackMappings() {
+  Map<ApplicationId, TypeToCountedTags> getPerAppRackMappings() {
     return perAppRackMappings;
   }
 
   @VisibleForTesting
-  NodeToCountedTags getGlobalNodeMapping() {
+  TypeToCountedTags getGlobalNodeMapping() {
     return globalNodeMapping;
   }
 
   @VisibleForTesting
-  NodeToCountedTags getGlobalRackMapping() {
+  TypeToCountedTags getGlobalRackMapping() {
     return globalRackMapping;
+  }
+
+  @VisibleForTesting
+  public Map<NodeId, Map<ContainerId, Set<String>>> getAppTempMappings(
+      ApplicationId applicationId) {
+    return appTempMappings.get(applicationId);
   }
 
   public AllocationTagsManager(RMContext context) {
@@ -235,18 +245,52 @@ public class AllocationTagsManager {
     rmContext = context;
   }
 
+  //
+
+  /**
+   * Method adds a temporary fake-container tag to Node mapping.
+   * Used by the constrained placement algorithm to keep track of containers
+   * that are currently placed on nodes but are not yet allocated.
+   * @param nodeId
+   * @param applicationId
+   * @param allocationTags
+   */
+  public void addTempContainer(NodeId nodeId, ApplicationId applicationId,
+      Set<String> allocationTags) {
+    ContainerId tmpContainer = ContainerId.newContainerId(
+        ApplicationAttemptId.newInstance(applicationId, 1), System.nanoTime());
+
+    writeLock.lock();
+    try {
+      Map<NodeId, Map<ContainerId, Set<String>>> appTempMapping =
+          appTempMappings.computeIfAbsent(applicationId, k -> new HashMap<>());
+      Map<ContainerId, Set<String>> containerTempMapping =
+          appTempMapping.computeIfAbsent(nodeId, k -> new HashMap<>());
+      containerTempMapping.put(tmpContainer, allocationTags);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Added TEMP container=" + tmpContainer + " with tags=["
+            + StringUtils.join(allocationTags, ",") + "]");
+      }
+    } finally {
+      writeLock.unlock();
+    }
+
+    addContainer(nodeId, tmpContainer, allocationTags);
+  }
+
   /**
    * Notify container allocated on a node.
    *
    * @param nodeId         allocated node.
-   * @param applicationId  applicationId
    * @param containerId    container id.
    * @param allocationTags allocation tags, see
    *                       {@link SchedulingRequest#getAllocationTags()}
    *                       application_id will be added to allocationTags.
    */
-  public void addContainer(NodeId nodeId, ApplicationId applicationId,
-      ContainerId containerId, Set<String> allocationTags) {
+  public void addContainer(NodeId nodeId, ContainerId containerId,
+      Set<String> allocationTags) {
+    ApplicationId applicationId =
+        containerId.getApplicationAttemptId().getApplicationId();
     String applicationIdTag =
         AllocationTagsNamespaces.APP_ID + applicationId.toString();
 
@@ -260,10 +304,10 @@ public class AllocationTagsManager {
 
     writeLock.lock();
     try {
-      NodeToCountedTags perAppTagsMapping = perAppNodeMappings
-          .computeIfAbsent(applicationId, k -> new NodeToCountedTags());
-      NodeToCountedTags perAppRackTagsMapping = perAppRackMappings
-          .computeIfAbsent(applicationId, k -> new NodeToCountedTags());
+      TypeToCountedTags perAppTagsMapping = perAppNodeMappings
+          .computeIfAbsent(applicationId, k -> new TypeToCountedTags());
+      TypeToCountedTags perAppRackTagsMapping = perAppRackMappings
+          .computeIfAbsent(applicationId, k -> new TypeToCountedTags());
       // Covering test-cases where context is mocked
       String nodeRack = (rmContext.getRMNodes() != null
           && rmContext.getRMNodes().get(nodeId) != null)
@@ -294,12 +338,13 @@ public class AllocationTagsManager {
    * Notify container removed.
    *
    * @param nodeId         nodeId
-   * @param applicationId  applicationId
    * @param containerId    containerId.
    * @param allocationTags allocation tags for given container
    */
-  public void removeContainer(NodeId nodeId, ApplicationId applicationId,
+  public void removeContainer(NodeId nodeId,
       ContainerId containerId, Set<String> allocationTags) {
+    ApplicationId applicationId =
+        containerId.getApplicationAttemptId().getApplicationId();
     String applicationIdTag =
         AllocationTagsNamespaces.APP_ID + applicationId.toString();
     boolean useSet = false;
@@ -313,9 +358,9 @@ public class AllocationTagsManager {
 
     writeLock.lock();
     try {
-      NodeToCountedTags perAppTagsMapping =
+      TypeToCountedTags perAppTagsMapping =
           perAppNodeMappings.get(applicationId);
-      NodeToCountedTags perAppRackTagsMapping =
+      TypeToCountedTags perAppRackTagsMapping =
           perAppRackMappings.get(applicationId);
       if (perAppTagsMapping == null) {
         return;
@@ -354,6 +399,34 @@ public class AllocationTagsManager {
   }
 
   /**
+   * Method removes temporary containers associated with an application
+   * Used by the placement algorithm to clean temporary tags at the end of
+   * a placement cycle.
+   * @param applicationId Application Id.
+   */
+  public void cleanTempContainers(ApplicationId applicationId) {
+
+    if (!appTempMappings.get(applicationId).isEmpty()) {
+      appTempMappings.get(applicationId).entrySet().stream().forEach(nodeE -> {
+        nodeE.getValue().entrySet().stream().forEach(containerE -> {
+          removeContainer(nodeE.getKey(), containerE.getKey(),
+              containerE.getValue());
+        });
+      });
+      writeLock.lock();
+      try {
+        appTempMappings.remove(applicationId);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Removed TEMP containers of app=" + applicationId);
+        }
+      } finally {
+        writeLock.unlock();
+      }
+    }
+  }
+
+
+  /**
    * Get Node cardinality for a specific tag.
    * When applicationId is null, method returns aggregated cardinality
    *
@@ -378,7 +451,7 @@ public class AllocationTagsManager {
             "Must specify nodeId/tag to query cardinality");
       }
 
-      NodeToCountedTags mapping;
+      TypeToCountedTags mapping;
       if (applicationId != null) {
         mapping = perAppNodeMappings.get(applicationId);
       } else {
@@ -419,7 +492,7 @@ public class AllocationTagsManager {
             "Must specify rack/tag to query cardinality");
       }
 
-      NodeToCountedTags mapping;
+      TypeToCountedTags mapping;
       if (applicationId != null) {
         mapping = perAppRackMappings.get(applicationId);
       } else {
@@ -492,7 +565,7 @@ public class AllocationTagsManager {
             "Must specify nodeId/tags/op to query cardinality");
       }
 
-      NodeToCountedTags mapping;
+      TypeToCountedTags mapping;
       if (applicationId != null) {
         mapping = perAppNodeMappings.get(applicationId);
       } else {
@@ -540,7 +613,7 @@ public class AllocationTagsManager {
             "Must specify rack/tags/op to query cardinality");
       }
 
-      NodeToCountedTags mapping;
+      TypeToCountedTags mapping;
       if (applicationId != null) {
         mapping = perAppRackMappings.get(applicationId);
       } else {
