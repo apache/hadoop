@@ -650,26 +650,34 @@ public class ContainersMonitorImpl extends AbstractService implements
       if (isVmemCheckEnabled()
               && isProcessTreeOverLimit(containerId.toString(),
               currentVmemUsage, curMemUsageOfAgedProcesses, vmemLimit)) {
+        // The current usage (age=0) is always higher than the aged usage. We
+        // do not show the aged size in the message, base the delta on the
+        // current usage
+        long delta = currentVmemUsage - vmemLimit;
         // Container (the root process) is still alive and overflowing
         // memory.
         // Dump the process-tree and then clean it up.
         msg = formatErrorMessage("virtual",
                 formatUsageString(currentVmemUsage, vmemLimit,
                   currentPmemUsage, pmemLimit),
-                pId, containerId, pTree);
+                pId, containerId, pTree, delta);
         isMemoryOverLimit = true;
         containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_VMEM;
       } else if (isPmemCheckEnabled()
               && isProcessTreeOverLimit(containerId.toString(),
               currentPmemUsage, curRssMemUsageOfAgedProcesses,
               pmemLimit)) {
+        // The current usage (age=0) is always higher than the aged usage. We
+        // do not show the aged size in the message, base the delta on the
+        // current usage
+        long delta = currentPmemUsage - pmemLimit;
         // Container (the root process) is still alive and overflowing
         // memory.
         // Dump the process-tree and then clean it up.
         msg = formatErrorMessage("physical",
                 formatUsageString(currentVmemUsage, vmemLimit,
                   currentPmemUsage, pmemLimit),
-                pId, containerId, pTree);
+                pId, containerId, pTree, delta);
         isMemoryOverLimit = true;
         containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
       }
@@ -726,11 +734,11 @@ public class ContainersMonitorImpl extends AbstractService implements
      */
     private String formatErrorMessage(String memTypeExceeded,
         String usageString, String pId, ContainerId containerId,
-        ResourceCalculatorProcessTree pTree) {
+        ResourceCalculatorProcessTree pTree, long delta) {
       return
         String.format("Container [pid=%s,containerID=%s] is " +
-            "running beyond %s memory limits. ",
-            pId, containerId, memTypeExceeded) +
+            "running %dB beyond the '%S' memory limit. ",
+            pId, containerId, delta, memTypeExceeded) +
         "Current usage: " + usageString +
         ". Killing container.\n" +
         "Dump of the process-tree for " + containerId + " :\n" +
