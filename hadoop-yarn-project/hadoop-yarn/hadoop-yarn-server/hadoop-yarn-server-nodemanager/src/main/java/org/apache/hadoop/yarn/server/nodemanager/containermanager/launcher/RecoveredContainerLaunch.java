@@ -72,7 +72,7 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
     String containerIdStr = containerId.toString();
 
     dispatcher.getEventHandler().handle(new ContainerEvent(containerId,
-        ContainerEventType.RECOVER_PAUSED_CONTAINER));
+        ContainerEventType.CONTAINER_LAUNCHED));
 
     boolean notInterrupted = true;
     try {
