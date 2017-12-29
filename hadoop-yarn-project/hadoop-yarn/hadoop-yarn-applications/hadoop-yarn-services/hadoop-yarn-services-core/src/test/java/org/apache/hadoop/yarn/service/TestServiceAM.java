@@ -18,17 +18,25 @@
 
 package org.apache.hadoop.yarn.service;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.client.api.AMRMClient;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.component.ComponentState;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,10 +46,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.registry.client.api.RegistryConstants
-    .KEY_REGISTRY_ZK_QUORUM;
+import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_REGISTRY_ZK_QUORUM;
 
 public class TestServiceAM extends ServiceTestUtils{
 
@@ -183,12 +193,12 @@ public class TestServiceAM extends ServiceTestUtils{
     am.init(conf);
     am.start();
     Thread.sleep(100);
-    GenericTestUtils.waitFor(() -> am.getComponent(comp1Name).getState().equals(
-        ComponentState.FLEXING), 100, 2000);
+    GenericTestUtils.waitFor(() -> am.getComponent(comp1Name).getState()
+        .equals(ComponentState.FLEXING), 100, 2000);
 
     // 1 pending instance
-    Assert.assertEquals(1,
-        am.getComponent(comp1Name).getPendingInstances().size());
+    Assert.assertEquals(1, am.getComponent(comp1Name).getPendingInstances()
+        .size());
 
     am.feedContainerToComp(exampleApp, 2, comp1Name);
 
@@ -198,6 +208,47 @@ public class TestServiceAM extends ServiceTestUtils{
         org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
         am.getCompInstance(comp1Name, comp1InstName).getContainerStatus()
             .getState());
+  }
+
+  @Test
+  public void testScheduleWithMultipleResourceTypes()
+      throws TimeoutException, InterruptedException, IOException {
+    ApplicationId applicationId = ApplicationId.newInstance(123456, 1);
+    Service exampleApp = new Service();
+    exampleApp.setId(applicationId.toString());
+    exampleApp.setName("testScheduleWithMultipleResourceTypes");
+
+    List<ResourceTypeInfo> resourceTypeInfos = new ArrayList<>(
+        ResourceUtils.getResourcesTypeInfo());
+    // Add 3rd resource type.
+    resourceTypeInfos.add(ResourceTypeInfo
+        .newInstance("resource-1", "", ResourceTypes.COUNTABLE));
+    // Reinitialize resource types
+    ResourceUtils.reinitializeResources(resourceTypeInfos);
+
+    Component serviceCompoent = createComponent("compa", 1, "pwd");
+    serviceCompoent.getResource().setResourceInformations(ImmutableMap
+        .of("resource-1", new ResourceInformation().value(3333L).unit("Gi")));
+    exampleApp.addComponent(serviceCompoent);
+
+    MockServiceAM am = new MockServiceAM(exampleApp);
+    am.init(conf);
+    am.start();
+
+    ServiceScheduler serviceScheduler = am.context.scheduler;
+    AMRMClientAsync<AMRMClient.ContainerRequest> amrmClientAsync =
+        serviceScheduler.getAmRMClient();
+
+    Collection<AMRMClient.ContainerRequest> rr =
+        amrmClientAsync.getMatchingRequests(0);
+    Assert.assertEquals(1, rr.size());
+
+    org.apache.hadoop.yarn.api.records.Resource capability =
+        rr.iterator().next().getCapability();
+    Assert.assertEquals(3333L, capability.getResourceValue("resource-1"));
+    Assert.assertEquals("Gi",
+        capability.getResourceInformation("resource-1").getUnits());
+
     am.stop();
   }
 }

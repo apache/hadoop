@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
 import org.apache.hadoop.yarn.service.ContainerFailureTracker;
@@ -392,9 +393,37 @@ public class Component implements EventHandler<ComponentEvent> {
 
   @SuppressWarnings({ "unchecked" })
   public void requestContainers(long count) {
-    Resource resource = Resource
-        .newInstance(componentSpec.getResource().calcMemoryMB(),
-            componentSpec.getResource().getCpus());
+    org.apache.hadoop.yarn.service.api.records.Resource componentResource =
+        componentSpec.getResource();
+
+    Resource resource = Resource.newInstance(componentResource.calcMemoryMB(),
+        componentResource.getCpus());
+
+    if (componentResource.getAdditional() != null) {
+      for (Map.Entry<String, ResourceInformation> entry : componentResource
+          .getAdditional().entrySet()) {
+
+        String resourceName = entry.getKey();
+
+        // Avoid setting memory/cpu under "additional"
+        if (resourceName.equals(
+            org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI)
+            || resourceName.equals(
+            org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI)) {
+          LOG.warn("Please set memory/vcore in the main section of resource, "
+              + "ignoring this entry=" + resourceName);
+          continue;
+        }
+
+        ResourceInformation specInfo = entry.getValue();
+        org.apache.hadoop.yarn.api.records.ResourceInformation ri =
+            org.apache.hadoop.yarn.api.records.ResourceInformation.newInstance(
+                entry.getKey(),
+                specInfo.getUnit(),
+                specInfo.getValue());
+        resource.setResourceInformation(resourceName, ri);
+      }
+    }
 
     for (int i = 0; i < count; i++) {
       //TODO Once YARN-5468 is done, use that for anti-affinity
