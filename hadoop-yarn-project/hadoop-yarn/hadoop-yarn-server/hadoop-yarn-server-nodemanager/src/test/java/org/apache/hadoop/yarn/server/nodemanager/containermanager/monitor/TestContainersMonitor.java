@@ -332,8 +332,8 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     Assert.assertEquals(ContainerExitStatus.KILLED_EXCEEDED_VMEM,
         containerStatus.getExitStatus());
     String expectedMsgPattern =
-        "Container \\[pid=" + pid + ",containerID=" + cId
-            + "\\] is running beyond virtual memory limits. Current usage: "
+        "Container \\[pid=" + pid + ",containerID=" + cId + "\\] is running "
+            + "[0-9]+B beyond the 'VIRTUAL' memory limit. Current usage: "
             + "[0-9.]+ ?[KMGTPE]?B of [0-9.]+ ?[KMGTPE]?B physical memory used; "
             + "[0-9.]+ ?[KMGTPE]?B of [0-9.]+ ?[KMGTPE]?B virtual memory used. "
             + "Killing container.\nDump of the process-tree for "
