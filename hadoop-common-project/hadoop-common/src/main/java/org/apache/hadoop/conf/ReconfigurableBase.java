@@ -262,7 +262,7 @@ public abstract class ReconfigurableBase
    * all internal data structures derived from the configuration property
    * that is being changed. If this object owns other Reconfigurable objects
    * reconfigureProperty should be called recursively to make sure that
-   * to make sure that the configuration of these objects is updated.
+   * the configuration of these objects are updated.
    *
    * @param property Name of the property that is being reconfigured.
    * @param newVal Proposed new value of the property.
