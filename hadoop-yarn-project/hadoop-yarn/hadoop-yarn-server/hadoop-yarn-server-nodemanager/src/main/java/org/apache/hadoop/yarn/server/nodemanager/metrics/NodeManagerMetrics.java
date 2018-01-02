@@ -99,7 +99,7 @@ public class NodeManagerMetrics {
   private long availableMB;
   private long allocatedOpportunisticMB;
 
-  public NodeManagerMetrics(JvmMetrics jvmMetrics) {
+  private NodeManagerMetrics(JvmMetrics jvmMetrics) {
     this.jvmMetrics = jvmMetrics;
   }
 
@@ -107,8 +107,8 @@ public class NodeManagerMetrics {
     return create(DefaultMetricsSystem.instance());
   }
 
-  static NodeManagerMetrics create(MetricsSystem ms) {
-    JvmMetrics jm = JvmMetrics.create("NodeManager", null, ms);
+  private static NodeManagerMetrics create(MetricsSystem ms) {
+    JvmMetrics jm = JvmMetrics.initSingleton("NodeManager", null);
     return ms.register(new NodeManagerMetrics(jm));
   }
 
