@@ -29,8 +29,16 @@ import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-
-import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.NMClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
@@ -47,11 +55,16 @@ import org.apache.hadoop.yarn.service.exceptions.BadClusterStateException;
 import org.apache.hadoop.yarn.service.registry.YarnRegistryViewForProviders;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
@@ -87,7 +100,6 @@ public class MockServiceAM extends ServiceMaster {
     super(service.getName());
     this.service = service;
   }
-
 
   @Override
   protected ContainerId getAMContainerId()
@@ -185,7 +197,11 @@ public class MockServiceAM extends ServiceMaster {
           @Override
           public RegisterApplicationMasterResponse registerApplicationMaster(
               String appHostName, int appHostPort, String appTrackingUrl) {
-            return mock(RegisterApplicationMasterResponse.class);
+            RegisterApplicationMasterResponse response = mock(
+                RegisterApplicationMasterResponse.class);
+            when(response.getResourceTypes()).thenReturn(
+                ResourceUtils.getResourcesTypeInfo());
+            return response;
           }
 
           @Override public void unregisterApplicationMaster(
@@ -195,8 +211,11 @@ public class MockServiceAM extends ServiceMaster {
           }
         };
 
-        return AMRMClientAsync.createAMRMClientAsync(client1, 1000,
+        AMRMClientAsync<AMRMClient.ContainerRequest> amrmClientAsync =
+            AMRMClientAsync.createAMRMClientAsync(client1, 1000,
                 this.new AMRMClientCallback());
+
+        return amrmClientAsync;
       }
 
       @SuppressWarnings("SuspiciousMethodCalls")

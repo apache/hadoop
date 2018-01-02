@@ -177,7 +177,7 @@ public class MockAM {
       List<ContainerId> releases, String labelExpression) throws Exception {
     List<ResourceRequest> reqs =
         createReq(new String[] { host }, memory, priority, numContainers,
-            labelExpression, 0L);
+            labelExpression, -1);
     return allocate(reqs, releases);
   }
   

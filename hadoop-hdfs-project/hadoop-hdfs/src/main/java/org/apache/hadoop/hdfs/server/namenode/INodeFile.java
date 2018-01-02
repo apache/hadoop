@@ -33,10 +33,11 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
@@ -53,11 +53,11 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
+import org.apache.hadoop.util.StringUtils;
+import static org.apache.hadoop.io.erasurecode.ErasureCodeConstants.REPLICATION_POLICY_ID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
-import org.apache.hadoop.util.StringUtils;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -186,28 +186,49 @@ public class INodeFile extends INodeWithAdditionalFields
      * Construct block layout redundancy based on the given BlockType,
      * replication factor and EC PolicyID.
      */
-    static long getBlockLayoutRedundancy(final BlockType blockType,
-        final Short replication, final Byte erasureCodingPolicyID) {
-      long layoutRedundancy = 0;
-      if (blockType == STRIPED) {
-        Preconditions.checkArgument(replication == null &&
-            erasureCodingPolicyID != null);
-        Preconditions.checkArgument(ErasureCodingPolicyManager.getInstance()
-                .getByID(erasureCodingPolicyID) != null,
-            "Could not find EC policy with ID 0x" + StringUtils
-                .byteToHexString(erasureCodingPolicyID));
+    static long getBlockLayoutRedundancy(BlockType blockType,
+        Short replication, Byte erasureCodingPolicyID) {
+      if (null == erasureCodingPolicyID) {
+        erasureCodingPolicyID = REPLICATION_POLICY_ID;
+      }
+      long layoutRedundancy = 0xFF & erasureCodingPolicyID;
+      switch (blockType) {
+      case STRIPED:
+        if (replication != null) {
+          throw new IllegalArgumentException(
+              "Illegal replication for STRIPED block type");
+        }
+        if (erasureCodingPolicyID == REPLICATION_POLICY_ID) {
+          throw new IllegalArgumentException(
+              "Illegal REPLICATION policy for STRIPED block type");
+        }
+        if (null == ErasureCodingPolicyManager.getInstance()
+            .getByID(erasureCodingPolicyID)) {
+          throw new IllegalArgumentException(String.format(
+                "Could not find EC policy with ID 0x%02x",
+                erasureCodingPolicyID));
+        }
+
+        // valid parameters for STRIPED
         layoutRedundancy |= BLOCK_TYPE_MASK_STRIPED;
-        // Following bitwise OR with signed byte erasureCodingPolicyID is safe
-        // as the PolicyID can never be in negative.
-        layoutRedundancy |= erasureCodingPolicyID;
-      } else {
-        Preconditions.checkArgument(erasureCodingPolicyID == null ||
-                erasureCodingPolicyID ==
-                    ErasureCodeConstants.REPLICATION_POLICY_ID);
-        Preconditions.checkArgument(replication != null && replication >= 0 &&
-            replication <= MAX_REDUNDANCY,
-            "Invalid replication value " + replication);
+        break;
+      case CONTIGUOUS:
+        if (erasureCodingPolicyID != REPLICATION_POLICY_ID) {
+          throw new IllegalArgumentException(String.format(
+              "Illegal EC policy 0x%02x for CONTIGUOUS block type",
+              erasureCodingPolicyID));
+        }
+        if (null == replication ||
+            replication < 0 || replication > MAX_REDUNDANCY) {
+          throw new IllegalArgumentException("Invalid replication value "
+              + replication);
+        }
+
+        // valid parameters for CONTIGUOUS
         layoutRedundancy |= replication;
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown blockType: " + blockType);
       }
       return layoutRedundancy;
     }
@@ -599,7 +620,7 @@ public class INodeFile extends INodeWithAdditionalFields
     if (isStriped()) {
       return HeaderFormat.getECPolicyID(header);
     }
-    return ErasureCodeConstants.REPLICATION_POLICY_ID;
+    return REPLICATION_POLICY_ID;
   }
 
   /**

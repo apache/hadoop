@@ -2389,6 +2389,9 @@ public class YarnConfiguration extends Configuration {
   /**
    * Settings for timeline service v2.0.
    */
+  public static final String TIMELINE_SERVICE_READER_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "reader.";
+
   public static final String TIMELINE_SERVICE_WRITER_CLASS =
       TIMELINE_SERVICE_PREFIX + "writer.class";
 
@@ -2397,7 +2400,7 @@ public class YarnConfiguration extends Configuration {
           + ".storage.HBaseTimelineWriterImpl";
 
   public static final String TIMELINE_SERVICE_READER_CLASS =
-      TIMELINE_SERVICE_PREFIX + "reader.class";
+      TIMELINE_SERVICE_READER_PREFIX + "class";
 
   public static final String DEFAULT_TIMELINE_SERVICE_READER_CLASS =
       "org.apache.hadoop.yarn.server.timelineservice.storage" +
@@ -3421,6 +3424,46 @@ public class YarnConfiguration extends Configuration {
       "xframe-options";
   public static final String TIMELINE_XFS_OPTIONS =
       TIMELINE_XFS_PREFIX + "xframe-options";
+
+  /**
+   * Settings for timeline reader.
+   */
+  public static final String TIMELINE_SERVICE_READER_BIND_HOST =
+      TIMELINE_SERVICE_READER_PREFIX + "bind-host";
+
+  public static final String TIMELINE_SERVICE_READER_WEBAPP_ADDRESS =
+      TIMELINE_SERVICE_READER_PREFIX + "webapp.address";
+  public static final String DEFAULT_TIMELINE_SERVICE_READER_WEBAPP_ADDRESS =
+      DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS;
+
+  public static final String TIMELINE_SERVICE_READER_WEBAPP_HTTPS_ADDRESS =
+      TIMELINE_SERVICE_READER_PREFIX + "webapp.https.address";
+  public static final String
+      DEFAULT_TIMELINE_SERVICE_READER_WEBAPP_HTTPS_ADDRESS =
+      DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS;
+
+  /**
+   * Marked collector properties as Private since it run as auxillary service.
+   */
+  public static final String TIMELINE_SERVICE_COLLECTOR_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "collector.";
+
+  @Private
+  public static final String TIMELINE_SERVICE_COLLECTOR_BIND_HOST =
+      TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-host";
+
+  @Private
+  public static final String TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =
+      TIMELINE_SERVICE_COLLECTOR_PREFIX + "webapp.address";
+  public static final String DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =
+      DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS;
+
+  @Private
+  public static final String TIMELINE_SERVICE_COLLECTOR_WEBAPP_HTTPS_ADDRESS =
+      TIMELINE_SERVICE_COLLECTOR_PREFIX + "webapp.https.address";
+  public static final String
+      DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_HTTPS_ADDRESS =
+      DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS;
 
   public YarnConfiguration() {
     super();

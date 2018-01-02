@@ -89,6 +89,9 @@ public final class S3AUtils {
       "is abstract and therefore cannot be created";
   static final String ENDPOINT_KEY = "Endpoint";
 
+  /** Filesystem is closed; kept here to keep the errors close. */
+  static final String E_FS_CLOSED = "FileSystem is closed!";
+
   /**
    * Core property for provider path. Duplicated here for consistent
    * code across Hadoop version: {@value}.

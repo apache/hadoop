@@ -17,7 +17,7 @@
 }}
 
 {{queue-navigator model=model.queues selected=model.selected
-  used="usedCapacity" max="absMaxCapacity"}}
+  used="usedCapacity" max="absMaxCapacity" setFilter=(action setFilter)}}
 
 <div class="yarn-compose-box yarn-queues-container">
   <div>
@@ -31,36 +31,8 @@
         {{em-table-simple-status-cell content=model.selectedQueue.state}}
       </div>
     {{/if}}
-    <div class="top-1">
-      {{#each model.selectedQueue.capacitiesBarChartData as |item|}}
-        <span class="yarn-label {{item.style}}">
-          <span class="label-key"> {{lower item.label}}</span>
-          <span class="label-value">{{item.value}}%</span>
-        </span>
-      {{/each}}
-    </div>
-    <div class="top-1">
-      <span class="yarn-label secondary">
-        <span class="label-key">configured capacity</span>
-        <span class="label-value">{{model.selectedQueue.capacity}}%</span>
-      </span>
-      <span class="yarn-label secondary">
-        <span class="label-key">configured max capacity</span>
-        <span class="label-value">{{model.selectedQueue.maxCapacity}}%</span>
-      </span>
-    </div>
-    {{#if model.selectedQueue.isLeafQueue}}
-      <div class="top-1">
-        <span class="yarn-label secondary">
-          <span class="label-key">user limit</span>
-          <span class="label-value">{{model.selectedQueue.userLimit}}%</span>
-        </span>
-        <span class="yarn-label secondary">
-          <span class="label-key">user limit factor</span>
-          <span class="label-value">{{model.selectedQueue.userLimitFactor}}</span>
-        </span>
-      </div>
-    {{/if}}
+
+    {{yarn-queue-partition-capacity-labels partitionMap=model.selectedQueue.partitionMap queue=model.selectedQueue filteredPartition=filteredPartition}}
   </div>
 
   <h5> Running Apps </h5>

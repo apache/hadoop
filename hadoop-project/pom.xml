@@ -1614,6 +1614,8 @@
             <ignore>sun.misc.*</ignore>
             <ignore>sun.net.*</ignore>
             <ignore>sun.nio.ch.*</ignore>
+            <ignore>com.sun.javadoc.*</ignore>
+            <ignore>com.sun.tools.*</ignore>
           </ignores>
         </configuration>
       </plugin>
