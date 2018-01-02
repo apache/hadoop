@@ -1047,10 +1047,14 @@ public class UserGroupInformation {
         Object cred = iter.next();
         if (cred instanceof KerberosTicket) {
           KerberosTicket ticket = (KerberosTicket) cred;
-          if (!ticket.getServer().getName().startsWith("krbtgt")) {
-            LOG.warn("The first kerberos ticket is not TGT(the server" +
-                " principal is " + ticket.getServer() + "), remove" +
-                " and destroy it.");
+          if (ticket.isDestroyed() || ticket.getServer() == null) {
+            LOG.warn("Ticket is already destroyed, remove it.");
+            iter.remove();
+          } else if (!ticket.getServer().getName().startsWith("krbtgt")) {
+            LOG.warn(
+                "The first kerberos ticket is not TGT"
+                    + "(the server principal is " + ticket.getServer() +
+                    ")), remove and destroy it.");
             iter.remove();
             try {
               ticket.destroy();
