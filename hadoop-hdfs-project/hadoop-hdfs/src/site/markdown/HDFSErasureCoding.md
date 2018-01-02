@@ -99,6 +99,10 @@ Deployment
 
   Encoding and decoding work consumes additional CPU on both HDFS clients and DataNodes.
 
+  Erasure coding requires a minimum of as many DataNodes in the cluster as
+  the configured EC stripe width. For EC policy RS (6,3), this means
+  a minimum of 9 DataNodes.
+
   Erasure coded files are also spread across racks for rack fault-tolerance.
   This means that when reading and writing striped files, most operations are off-rack.
   Network bisection bandwidth is thus very important.
