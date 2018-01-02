@@ -206,7 +206,7 @@ public class TestLeaseManager {
         HdfsConstants.GRANDFATHER_INODE_ID, DFSUtil.string2Bytes(""),
         perm, 0L);
     when(fsDirectory.getRoot()).thenReturn(rootInodeDirectory);
-    verifyINodeLeaseCounts(lm, rootInodeDirectory, 0, 0, 0);
+    verifyINodeLeaseCounts(fsNamesystem, lm, rootInodeDirectory, 0, 0, 0);
 
     for (Long iNodeId : iNodeIds) {
       INodeFile iNodeFile = stubInodeFile(iNodeId);
@@ -215,13 +215,13 @@ public class TestLeaseManager {
       when(fsDirectory.getInode(iNodeId)).thenReturn(iNodeFile);
       lm.addLease("holder_" + iNodeId, iNodeId);
     }
-    verifyINodeLeaseCounts(lm, rootInodeDirectory, iNodeIds.size(),
-        iNodeIds.size(), iNodeIds.size());
+    verifyINodeLeaseCounts(fsNamesystem, lm, rootInodeDirectory,
+        iNodeIds.size(), iNodeIds.size(), iNodeIds.size());
 
     for (Long iNodeId : iNodeIds) {
       lm.removeLease(iNodeId);
     }
-    verifyINodeLeaseCounts(lm, rootInodeDirectory, 0, 0, 0);
+    verifyINodeLeaseCounts(fsNamesystem, lm, rootInodeDirectory, 0, 0, 0);
   }
 
   /**
@@ -246,41 +246,44 @@ public class TestLeaseManager {
 
     // Case 1: No open files
     int scale = 0;
-    testInodeWithLeasesAtScaleImpl(lm, fsDirectory, rootInodeDirectory, scale);
+    testInodeWithLeasesAtScaleImpl(fsNamesystem, lm, fsDirectory,
+        rootInodeDirectory, scale);
 
     for (int workerCount = 1;
          workerCount <= LeaseManager.INODE_FILTER_WORKER_COUNT_MAX / 2;
          workerCount++) {
       // Case 2: Open files count is half of worker task size
       scale = workerCount * LeaseManager.INODE_FILTER_WORKER_TASK_MIN / 2;
-      testInodeWithLeasesAtScaleImpl(lm, fsDirectory,
+      testInodeWithLeasesAtScaleImpl(fsNamesystem, lm, fsDirectory,
           rootInodeDirectory, scale);
 
       // Case 3: Open files count is 1 less of worker task size
       scale = workerCount * LeaseManager.INODE_FILTER_WORKER_TASK_MIN - 1;
-      testInodeWithLeasesAtScaleImpl(lm, fsDirectory,
+      testInodeWithLeasesAtScaleImpl(fsNamesystem, lm, fsDirectory,
           rootInodeDirectory, scale);
 
       // Case 4: Open files count is equal to worker task size
       scale = workerCount * LeaseManager.INODE_FILTER_WORKER_TASK_MIN;
-      testInodeWithLeasesAtScaleImpl(lm, fsDirectory,
+      testInodeWithLeasesAtScaleImpl(fsNamesystem, lm, fsDirectory,
           rootInodeDirectory, scale);
 
       // Case 5: Open files count is 1 more than worker task size
       scale = workerCount * LeaseManager.INODE_FILTER_WORKER_TASK_MIN + 1;
-      testInodeWithLeasesAtScaleImpl(lm, fsDirectory,
+      testInodeWithLeasesAtScaleImpl(fsNamesystem, lm, fsDirectory,
           rootInodeDirectory, scale);
     }
 
     // Case 6: Open files count is way more than worker count
     scale = 1279;
-    testInodeWithLeasesAtScaleImpl(lm, fsDirectory, rootInodeDirectory, scale);
+    testInodeWithLeasesAtScaleImpl(fsNamesystem, lm, fsDirectory,
+        rootInodeDirectory, scale);
   }
 
-  private void testInodeWithLeasesAtScaleImpl(final LeaseManager leaseManager,
-      final FSDirectory fsDirectory, INodeDirectory ancestorDirectory,
-      int scale) throws IOException {
-    verifyINodeLeaseCounts(leaseManager, ancestorDirectory, 0, 0, 0);
+  private void testInodeWithLeasesAtScaleImpl(FSNamesystem fsNamesystem,
+      final LeaseManager leaseManager, final FSDirectory fsDirectory,
+      INodeDirectory ancestorDirectory, int scale) throws IOException {
+    verifyINodeLeaseCounts(
+        fsNamesystem, leaseManager, ancestorDirectory, 0, 0, 0);
 
     Set<Long> iNodeIds = new HashSet<>();
     for (int i = 0; i < scale; i++) {
@@ -293,11 +296,12 @@ public class TestLeaseManager {
       when(fsDirectory.getInode(iNodeId)).thenReturn(iNodeFile);
       leaseManager.addLease("holder_" + iNodeId, iNodeId);
     }
-    verifyINodeLeaseCounts(leaseManager, ancestorDirectory, iNodeIds.size(),
-        iNodeIds.size(), iNodeIds.size());
+    verifyINodeLeaseCounts(fsNamesystem, leaseManager,
+        ancestorDirectory, iNodeIds.size(), iNodeIds.size(), iNodeIds.size());
 
     leaseManager.removeAllLeases();
-    verifyINodeLeaseCounts(leaseManager, ancestorDirectory, 0, 0, 0);
+    verifyINodeLeaseCounts(fsNamesystem, leaseManager,
+        ancestorDirectory, 0, 0, 0);
   }
 
   /**
@@ -389,10 +393,10 @@ public class TestLeaseManager {
 
   }
 
-  private void verifyINodeLeaseCounts(final LeaseManager leaseManager,
-      INodeDirectory ancestorDirectory, int iNodeIdWithLeaseCount,
-      int iNodeWithLeaseCount, int iNodeUnderAncestorLeaseCount)
-      throws IOException {
+  private void verifyINodeLeaseCounts(FSNamesystem fsNamesystem,
+      LeaseManager leaseManager, INodeDirectory ancestorDirectory,
+      int iNodeIdWithLeaseCount, int iNodeWithLeaseCount,
+      int iNodeUnderAncestorLeaseCount) throws IOException {
     assertEquals(iNodeIdWithLeaseCount,
         leaseManager.getINodeIdWithLeases().size());
     assertEquals(iNodeWithLeaseCount,
@@ -401,6 +405,8 @@ public class TestLeaseManager {
         leaseManager.getINodeWithLeases(ancestorDirectory).size());
     assertEquals(iNodeIdWithLeaseCount,
         leaseManager.getUnderConstructionFiles(0).size());
+    assertEquals(0, (fsNamesystem.getFilesBlockingDecom(0) == null ?
+        0 : fsNamesystem.getFilesBlockingDecom(0).size()));
   }
 
   private Map<String, INode> createINodeTree(INodeDirectory parentDir,

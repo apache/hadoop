@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -1807,13 +1808,17 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ListOpenFilesResponseProto listOpenFiles(RpcController controller,
       ListOpenFilesRequestProto req) throws ServiceException {
     try {
-      BatchedEntries<OpenFileEntry> entries = server.listOpenFiles(req.getId());
+      EnumSet<OpenFilesType> openFilesTypes =
+          PBHelperClient.convertOpenFileTypes(req.getTypesList());
+      BatchedEntries<OpenFileEntry> entries = server.listOpenFiles(req.getId(),
+          openFilesTypes);
       ListOpenFilesResponseProto.Builder builder =
           ListOpenFilesResponseProto.newBuilder();
       builder.setHasMore(entries.hasMore());
       for (int i = 0; i < entries.size(); i++) {
         builder.addEntries(PBHelperClient.convert(entries.get(i)));
       }
+      builder.addAllTypes(req.getTypesList());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
