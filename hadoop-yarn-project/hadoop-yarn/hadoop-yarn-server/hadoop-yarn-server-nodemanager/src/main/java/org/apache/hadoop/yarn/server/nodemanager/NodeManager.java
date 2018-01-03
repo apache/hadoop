@@ -456,6 +456,7 @@ public class NodeManager extends CompositeService
     // so that we make sure everything is up before registering with RM. 
     addService(nodeStatusUpdater);
     ((NMContext) context).setNodeStatusUpdater(nodeStatusUpdater);
+    nmStore.setNodeStatusUpdater(nodeStatusUpdater);
 
     // Do secure login before calling init for added services.
     try {
