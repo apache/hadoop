@@ -183,7 +183,7 @@ public class TestContainerMapping {
         containerName,
         OzoneProtos.Owner.OZONE);
     mapping.updateContainerState(containerInfo.getContainerName(),
-        OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+        OzoneProtos.LifeCycleEvent.CREATE);
     Thread.sleep(TIMEOUT + 1000);
 
     List<ContainerInfo> deleteContainers = mapping.getStateManager()
@@ -199,7 +199,7 @@ public class TestContainerMapping {
     thrown.expect(IOException.class);
     thrown.expectMessage("Lease Exception");
     mapping.updateContainerState(containerInfo.getContainerName(),
-        OzoneProtos.LifeCycleEvent.COMPLETE_CREATE);
+        OzoneProtos.LifeCycleEvent.CREATED);
   }
 
   @Test
@@ -234,8 +234,7 @@ public class TestContainerMapping {
   }
 
   @Test
-  public void testContainerCloseWithContainerReport() throws IOException,
-      InterruptedException {
+  public void testContainerCloseWithContainerReport() throws IOException {
     String containerName = UUID.randomUUID().toString();
     createContainer(containerName);
     DatanodeID datanodeID = SCMTestUtils.getDatanodeID();
@@ -269,7 +268,7 @@ public class TestContainerMapping {
             OzoneProtos.Owner.OZONE,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
-            OzoneProtos.LifeCycleState.PENDING_CLOSE);
+            OzoneProtos.LifeCycleState.CLOSING);
     Assert.assertTrue(pendingCloseContainers.stream().map(
         container -> container.getContainerName()).collect(
         Collectors.toList()).contains(containerName));
@@ -280,13 +279,13 @@ public class TestContainerMapping {
     String containerName = UUID.randomUUID().toString();
     createContainer(containerName);
     mapping.updateContainerState(containerName,
-        OzoneProtos.LifeCycleEvent.FULL_CONTAINER);
+        OzoneProtos.LifeCycleEvent.FINALIZE);
     List<ContainerInfo> pendingCloseContainers = mapping.getStateManager()
         .getMatchingContainers(
             OzoneProtos.Owner.OZONE,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
-            OzoneProtos.LifeCycleState.PENDING_CLOSE);
+            OzoneProtos.LifeCycleState.CLOSING);
     Assert.assertTrue(pendingCloseContainers.stream().map(
         container -> container.getContainerName()).collect(
         Collectors.toList()).contains(containerName));
@@ -317,9 +316,9 @@ public class TestContainerMapping {
         containerName,
         OzoneProtos.Owner.OZONE);
     mapping.updateContainerState(containerInfo.getContainerName(),
-        OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+        OzoneProtos.LifeCycleEvent.CREATE);
     mapping.updateContainerState(containerInfo.getContainerName(),
-        OzoneProtos.LifeCycleEvent.COMPLETE_CREATE);
+        OzoneProtos.LifeCycleEvent.CREATED);
   }
 
 }

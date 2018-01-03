@@ -298,7 +298,7 @@ public class ContainerMapping implements Mapping {
 
       Preconditions.checkNotNull(containerInfo);
       switch (event) {
-      case BEGIN_CREATE:
+      case CREATE:
         // Acquire lease on container
         Lease<ContainerInfo> containerLease =
             containerLeaseManager.acquire(containerInfo);
@@ -309,21 +309,21 @@ public class ContainerMapping implements Mapping {
           return null;
         });
         break;
-      case COMPLETE_CREATE:
+      case CREATED:
         // Release the lease on container
         containerLeaseManager.release(containerInfo);
         break;
-      case TIMEOUT:
-        break;
-      case CLEANUP:
-        break;
-      case FULL_CONTAINER:
+      case FINALIZE:
         break;
       case CLOSE:
         break;
       case UPDATE:
         break;
       case DELETE:
+        break;
+      case TIMEOUT:
+        break;
+      case CLEANUP:
         break;
       default:
         throw new SCMException("Unsupported container LifeCycleEvent.",
@@ -406,8 +406,8 @@ public class ContainerMapping implements Mapping {
             // have to add the containers to that list.
             OzoneProtos.LifeCycleState state = updateContainerState(
                 ContainerInfo.fromProtobuf(newContainerInfo).getContainerName(),
-                OzoneProtos.LifeCycleEvent.FULL_CONTAINER);
-            if (state != OzoneProtos.LifeCycleState.PENDING_CLOSE) {
+                OzoneProtos.LifeCycleEvent.FINALIZE);
+            if (state != OzoneProtos.LifeCycleState.CLOSING) {
               LOG.error("Failed to close container {}, reason : Not able to " +
                       "update container state, current container state: {}." +
                       "in state {}", containerInfo.getContainerName(), state);
