@@ -19,12 +19,18 @@
 package org.apache.hadoop.ozone.ksm.helpers;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos
     .ServicePort;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.NodeType;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,35 +42,45 @@ import java.util.stream.Collectors;
  */
 public final class ServiceInfo {
 
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(ServiceInfo.class);
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writerWithDefaultPrettyPrinter();
+
   /**
    * Type of node/service.
    */
-  private final NodeType nodeType;
+  private NodeType nodeType;
   /**
    * Hostname of the node in which the service is running.
    */
-  private final String hostname;
+  private String hostname;
 
   /**
    * List of ports the service listens to.
    */
-  private final Map<ServicePort.Type, ServicePort> portsMap;
+  private Map<ServicePort.Type, Integer> ports;
+
+  /**
+   * Default constructor for JSON deserialization.
+   */
+  public ServiceInfo() {}
 
   /**
    * Constructs the ServiceInfo for the {@code nodeType}.
    * @param nodeType type of node/service
    * @param hostname hostname of the service
-   * @param ports list of ports the service listens to
+   * @param portList list of ports the service listens to
    */
   private ServiceInfo(
-      NodeType nodeType, String hostname, List<ServicePort> ports) {
+      NodeType nodeType, String hostname, List<ServicePort> portList) {
     Preconditions.checkNotNull(nodeType);
     Preconditions.checkNotNull(hostname);
     this.nodeType = nodeType;
     this.hostname = hostname;
-    this.portsMap = new HashMap<>();
-    for (ServicePort port : ports) {
-      portsMap.put(port.getType(), port);
+    this.ports = new HashMap<>();
+    for (ServicePort port : portList) {
+      ports.put(port.getType(), port.getValue());
     }
   }
 
@@ -85,11 +101,11 @@ public final class ServiceInfo {
   }
 
   /**
-   * Returns the list of port which the service listens to.
-   * @return List<ServicePort>
+   * Returns ServicePort.Type to port mappings.
+   * @return ports
    */
-  public List<ServicePort> getPorts() {
-    return portsMap.values().parallelStream().collect(Collectors.toList());
+  public Map<ServicePort.Type, Integer> getPorts() {
+    return ports;
   }
 
   /**
@@ -99,8 +115,9 @@ public final class ServiceInfo {
    * @param type the type of port.
    *             ex: RPC, HTTP, HTTPS, etc..
    */
+  @JsonIgnore
   public int getPort(ServicePort.Type type) {
-    return portsMap.get(type).getValue();
+    return ports.get(type);
   }
 
   /**
@@ -108,12 +125,20 @@ public final class ServiceInfo {
    *
    * @return KeySpaceManagerProtocolProtos.ServiceInfo
    */
+  @JsonIgnore
   public KeySpaceManagerProtocolProtos.ServiceInfo getProtobuf() {
     KeySpaceManagerProtocolProtos.ServiceInfo.Builder builder =
         KeySpaceManagerProtocolProtos.ServiceInfo.newBuilder();
     builder.setNodeType(nodeType)
         .setHostname(hostname)
-        .addAllServicePorts(portsMap.values());
+        .addAllServicePorts(
+            ports.entrySet().stream()
+                .map(
+                    entry ->
+                        ServicePort.newBuilder()
+                            .setType(entry.getKey())
+                            .setValue(entry.getValue()).build())
+                .collect(Collectors.toList()));
     return builder.build();
   }
 
@@ -122,6 +147,7 @@ public final class ServiceInfo {
    *
    * @return {@link ServiceInfo}
    */
+  @JsonIgnore
   public static ServiceInfo getFromProtobuf(
       KeySpaceManagerProtocolProtos.ServiceInfo serviceInfo) {
     return new ServiceInfo(serviceInfo.getNodeType(),
@@ -129,6 +155,26 @@ public final class ServiceInfo {
         serviceInfo.getServicePortsList());
   }
 
+  /**
+   * Returns a JSON string of this object.
+   *
+   * @return String - json string
+   * @throws IOException
+   */
+  public String toJsonString() throws IOException {
+    return WRITER.writeValueAsString(this);
+  }
+
+  /**
+   * Parse a JSON string into ServiceInfo Object.
+   *
+   * @param jsonString Json String
+   * @return BucketInfo
+   * @throws IOException
+   */
+  public static BucketInfo parse(String jsonString) throws IOException {
+    return READER.readValue(jsonString);
+  }
 
   /**
    * Creates a new builder to build {@link ServiceInfo}.
@@ -145,7 +191,7 @@ public final class ServiceInfo {
 
     private NodeType node;
     private String host;
-    private List<ServicePort> ports = new ArrayList<>();
+    private List<ServicePort> portList = new ArrayList<>();
 
 
     /**
@@ -174,7 +220,7 @@ public final class ServiceInfo {
      * @return the builder
      */
     public Builder addServicePort(ServicePort servicePort) {
-      ports.add(servicePort);
+      portList.add(servicePort);
       return this;
     }
 
@@ -184,7 +230,7 @@ public final class ServiceInfo {
      * @return {@link ServiceInfo}
      */
     public ServiceInfo build() {
-      return new ServiceInfo(node, host, ports);
+      return new ServiceInfo(node, host, portList);
     }
   }
 

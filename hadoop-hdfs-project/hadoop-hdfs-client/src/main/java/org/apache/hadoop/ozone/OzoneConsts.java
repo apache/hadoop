@@ -149,6 +149,11 @@ public final class OzoneConsts {
 
   public static final int INVALID_PORT = -1;
 
+
+  // The ServiceListJSONServlet context attribute where KeySpaceManager
+  // instance gets stored.
+  public static final String KSM_CONTEXT_ATTRIBUTE = "ozone.ksm";
+
   private OzoneConsts() {
     // Never Constructed
   }

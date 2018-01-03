@@ -99,7 +99,7 @@ public class TestKeySpaceManagerHttpServer {
     InetSocketAddress addr = InetSocketAddress.createUnresolved("localhost", 0);
     KeySpaceManagerHttpServer server = null;
     try {
-      server = new KeySpaceManagerHttpServer(conf);
+      server = new KeySpaceManagerHttpServer(conf, null);
       server.start();
 
       Assert.assertTrue(implies(policy.isHttpEnabled(),

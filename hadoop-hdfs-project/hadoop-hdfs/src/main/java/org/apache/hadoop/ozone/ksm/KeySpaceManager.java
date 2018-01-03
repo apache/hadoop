@@ -173,7 +173,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
     metrics = KSMMetrics.create();
     keyManager = new KeyManagerImpl(scmBlockClient, metadataManager,
         configuration);
-    httpServer = new KeySpaceManagerHttpServer(configuration);
+    httpServer = new KeySpaceManagerHttpServer(configuration, this);
   }
 
   /**
@@ -783,6 +783,11 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   @Override
   public String getRpcPort() {
     return "" + ksmRpcAddress.getPort();
+  }
+
+  @VisibleForTesting
+  public KeySpaceManagerHttpServer getHttpServer() {
+    return httpServer;
   }
 
   @Override
