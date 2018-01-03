@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -303,8 +304,7 @@ final class FileChecksumHelper {
      * Return true when sounds good to continue or retry, false when severe
      * condition or totally failed.
      */
-    private boolean checksumBlock(
-        LocatedBlock locatedBlock) throws IOException {
+    private boolean checksumBlock(LocatedBlock locatedBlock) {
       ExtendedBlock block = locatedBlock.getBlock();
       if (getRemaining() < block.getNumBytes()) {
         block.setNumBytes(getRemaining());
@@ -333,6 +333,17 @@ final class FileChecksumHelper {
             done = true; // actually it's not done; but we'll retry
             blockIdx--; // repeat at blockIdx-th block
             setRefetchBlocks(true);
+          }
+        } catch (InvalidEncryptionKeyException iee) {
+          if (blockIdx > getLastRetriedIndex()) {
+            LOG.debug("Got invalid encryption key error in response to "
+                    + "OP_BLOCK_CHECKSUM for file {} for block {} from "
+                    + "datanode {}. Will retry " + "the block once.",
+                  getSrc(), block, datanodes[j]);
+            setLastRetriedIndex(blockIdx);
+            done = true; // actually it's not done; but we'll retry
+            blockIdx--; // repeat at i-th block
+            getClient().clearDataEncryptionKey();
           }
         } catch (IOException ie) {
           LOG.warn("src={}" + ", datanodes[{}]={}",
