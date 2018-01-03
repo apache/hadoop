@@ -19,19 +19,16 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algor
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
-import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
-import org.apache.hadoop.yarn.api.resource.PlacementConstraintTransformations;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintsUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithm;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithmInput;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.api.ConstraintPlacementAlgorithmOutput;
@@ -65,58 +62,14 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
             .getNodes(filter);
   }
 
-  /**
-   * TODO: Method will be moved to PlacementConstraintsUtil class (YARN-7682)
-   * @param applicationId
-   * @param allocationTags
-   * @param nodeId
-   * @param tagsManager
-   * @return boolean
-   * @throws InvalidAllocationTagsQueryException
-   */
-  public boolean canAssign(ApplicationId applicationId,
-      Set<String> allocationTags, NodeId nodeId,
-      AllocationTagsManager tagsManager)
-      throws InvalidAllocationTagsQueryException {
-    PlacementConstraint constraint =
-        constraintManager.getConstraint(applicationId, allocationTags);
-    if (constraint == null) {
-      return true;
-    }
-    // TODO: proper transformations
-    // Currently works only for simple anti-affinity
-    // NODE scope target expressions
-    PlacementConstraintTransformations.SpecializedConstraintTransformer transformer =
-        new PlacementConstraintTransformations.SpecializedConstraintTransformer(
-            constraint);
-    PlacementConstraint transform = transformer.transform();
-    PlacementConstraint.TargetConstraint targetConstraint =
-        (PlacementConstraint.TargetConstraint) transform.getConstraintExpr();
-    // Assume a single target expression tag;
-    // The Sample Algorithm assumes a constraint will always be a simple
-    // Target Constraint with a single entry in the target set.
-    // As mentioned in the class javadoc - This algorithm should be
-    // used mostly for testing and validating end-2-end workflow.
-    String targetTag = targetConstraint.getTargetExpressions().iterator().next()
-        .getTargetValues().iterator().next();
-    // TODO: Assuming anti-affinity constraint
-    long nodeCardinality =
-        tagsManager.getNodeCardinality(nodeId, applicationId, targetTag);
-    if (nodeCardinality != 0) {
-      return false;
-    }
-    // return true if it is a valid placement
-    return true;
-  }
-
   public boolean attemptPlacementOnNode(ApplicationId appId,
       SchedulingRequest schedulingRequest, SchedulerNode schedulerNode)
       throws InvalidAllocationTagsQueryException {
     int numAllocs = schedulingRequest.getResourceSizing().getNumAllocations();
     if (numAllocs > 0) {
-      if (canAssign(appId,
-          schedulingRequest.getAllocationTags(), schedulerNode.getNodeID(),
-          tagsManager)) {
+      if (PlacementConstraintsUtil.canSatisfyConstraints(appId,
+          schedulingRequest.getAllocationTags(), schedulerNode,
+          constraintManager, tagsManager)) {
         return true;
       }
     }
