@@ -379,10 +379,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Verify and get the update application priority and set back to
     // submissionContext
     UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
-    Priority appPriority = scheduler.checkAndGetApplicationPriority(
-        submissionContext.getPriority(), userUgi, submissionContext.getQueue(),
-        applicationId);
-    submissionContext.setPriority(appPriority);
+
+    // Application priority needed to be validated only while submitting. During
+    // recovery, validated priority could be recovered from submission context.
+    if (!isRecovery) {
+      Priority appPriority = scheduler.checkAndGetApplicationPriority(
+          submissionContext.getPriority(), userUgi,
+          submissionContext.getQueue(),
+          applicationId);
+      submissionContext.setPriority(appPriority);
+    }
 
     // Since FairScheduler queue mapping is done inside scheduler,
     // if FairScheduler is used and the queue doesn't exist, we should not
