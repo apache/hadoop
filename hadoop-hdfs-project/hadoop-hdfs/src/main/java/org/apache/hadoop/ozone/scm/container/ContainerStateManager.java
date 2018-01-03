@@ -234,60 +234,75 @@ public class ContainerStateManager implements Closeable {
     return list;
   }
 
-  // 1. Client -> SCM: Begin_create
-  // 2. Client -> Datanode: create
-  // 3. Client -> SCM: complete    {SCM:Creating ->OK}
-
-  // 3. Client -> SCM: complete    {SCM:DELETING -> INVALID}
-
-  // 4. Client->Datanode: write data.
-
-  // Client-driven Create State Machine
-  // States: <ALLOCATED>------------->CREATING----------------->[OPEN]
-  // Events:            (BEGIN_CREATE)    |    (COMPLETE_CREATE)
-  //                                      |
-  //                                      |(TIMEOUT)
-  //                                      V
-  //                                  DELETING----------------->[DELETED]
-  //                                           (CLEANUP)
-  // SCM Open/Close State Machine
-  // States: OPEN------------------>PENDING_CLOSE---------->[CLOSED]
-  // Events:        (FULL_CONTAINER)               (CLOSE)
-  // Delete State Machine
-  // States: OPEN------------------>DELETING------------------>[DELETED]
-  // Events:         (DELETE)                  (CLEANUP)
-
-  // Should we allow DELETING of OPEN containers? we can always have
-  // OPEN--------->PENDING_CLOSE----->CLOSE---->DELETING---->[DELETED]
+  /*
+   *
+   * Event and State Transition Mapping:
+   *
+   * State: ALLOCATED ---------------> CREATING
+   * Event:                CREATE
+   *
+   * State: CREATING  ---------------> OPEN
+   * Event:               CREATED
+   *
+   * State: OPEN      ---------------> CLOSING
+   * Event:               FINALIZE
+   *
+   * State: CLOSING   ---------------> CLOSED
+   * Event:                CLOSE
+   *
+   * State: CLOSED   ----------------> DELETING
+   * Event:                DELETE
+   *
+   * State: DELETING ----------------> DELETED
+   * Event:               CLEANUP
+   *
+   * State: CREATING  ---------------> DELETING
+   * Event:               TIMEOUT
+   *
+   *
+   * Container State Flow:
+   *
+   * [ALLOCATED]------->[CREATING]--------->[OPEN]---------->[CLOSING]------->[CLOSED]
+   *            (CREATE)     |    (CREATED)       (FINALIZE)          (CLOSE)    |
+   *                         |                                                   |
+   *                         |                                                   |
+   *                         |(TIMEOUT)                                  (DELETE)|
+   *                         |                                                   |
+   *                         +------------------> [DELETING] <-------------------+
+   *                                                   |
+   *                                                   |
+   *                                          (CLEANUP)|
+   *                                                   |
+   *                                               [DELETED]
+   */
   private void initializeStateMachine() {
     stateMachine.addTransition(LifeCycleState.ALLOCATED,
         LifeCycleState.CREATING,
-        LifeCycleEvent.BEGIN_CREATE);
+        LifeCycleEvent.CREATE);
 
     stateMachine.addTransition(LifeCycleState.CREATING,
         LifeCycleState.OPEN,
-        LifeCycleEvent.COMPLETE_CREATE);
+        LifeCycleEvent.CREATED);
 
     stateMachine.addTransition(LifeCycleState.OPEN,
-        LifeCycleState.PENDING_CLOSE,
-        LifeCycleEvent.FULL_CONTAINER);
+        LifeCycleState.CLOSING,
+        LifeCycleEvent.FINALIZE);
 
-    stateMachine.addTransition(LifeCycleState.PENDING_CLOSE,
+    stateMachine.addTransition(LifeCycleState.CLOSING,
         LifeCycleState.CLOSED,
         LifeCycleEvent.CLOSE);
 
-    stateMachine.addTransition(LifeCycleState.OPEN,
+    stateMachine.addTransition(LifeCycleState.CLOSED,
         LifeCycleState.DELETING,
         LifeCycleEvent.DELETE);
+
+    stateMachine.addTransition(LifeCycleState.CREATING,
+        LifeCycleState.DELETING,
+        LifeCycleEvent.TIMEOUT);
 
     stateMachine.addTransition(LifeCycleState.DELETING,
         LifeCycleState.DELETED,
         LifeCycleEvent.CLEANUP);
-
-    // Creating timeout -> Deleting
-    stateMachine.addTransition(LifeCycleState.CREATING,
-        LifeCycleState.DELETING,
-        LifeCycleEvent.TIMEOUT);
   }
 
   /**

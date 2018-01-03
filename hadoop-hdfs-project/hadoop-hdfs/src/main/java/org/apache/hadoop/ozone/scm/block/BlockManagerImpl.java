@@ -270,7 +270,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
                       .ALLOCATED);
       if (containerInfo != null) {
         containerManager.updateContainerState(containerInfo.getContainerName(),
-            OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+            OzoneProtos.LifeCycleEvent.CREATE);
         return newBlock(containerInfo, OzoneProtos.LifeCycleState.ALLOCATED);
       }
 
@@ -300,7 +300,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
                       .ALLOCATED);
       if (containerInfo != null) {
         containerManager.updateContainerState(containerInfo.getContainerName(),
-            OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+            OzoneProtos.LifeCycleEvent.CREATE);
         return newBlock(containerInfo, OzoneProtos.LifeCycleState.ALLOCATED);
       }
 

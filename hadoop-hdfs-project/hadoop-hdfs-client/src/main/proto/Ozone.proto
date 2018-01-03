@@ -104,16 +104,16 @@ enum LifeCycleState {
     ALLOCATED = 1;
     CREATING = 2; // Used for container allocated/created by different client.
     OPEN =3; // Mostly an update to SCM via HB or client call.
-    PENDING_CLOSE = 4;
+    CLOSING = 4;
     CLOSED = 5; // !!State after this has not been used yet.
     DELETING = 6;
     DELETED = 7; // object is deleted.
 }
 
 enum LifeCycleEvent {
-    BEGIN_CREATE = 1; // A request to client to create this object
-    COMPLETE_CREATE = 2;
-    FULL_CONTAINER = 3;
+    CREATE = 1; // A request to client to create this object
+    CREATED = 2;
+    FINALIZE = 3;
     CLOSE = 4; // !!Event after this has not been used yet.
     UPDATE = 5;
     TIMEOUT = 6; // creation has timed out from SCM's View.

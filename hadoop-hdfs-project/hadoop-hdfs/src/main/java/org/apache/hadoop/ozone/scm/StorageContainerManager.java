@@ -688,10 +688,10 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
           info.getState(), stage);
       if (stage == NotifyObjectCreationStageRequestProto.Stage.begin) {
         scmContainerManager.updateContainerState(name,
-            OzoneProtos.LifeCycleEvent.BEGIN_CREATE);
+            OzoneProtos.LifeCycleEvent.CREATE);
       } else {
         scmContainerManager.updateContainerState(name,
-            OzoneProtos.LifeCycleEvent.COMPLETE_CREATE);
+            OzoneProtos.LifeCycleEvent.CREATED);
       }
     } else if (type == NotifyObjectCreationStageRequestProto.Type.pipeline) {
       // TODO: pipeline state update will be addressed in future patch.
