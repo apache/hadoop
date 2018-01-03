@@ -39,6 +39,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
+import com.google.common.annotations.VisibleForTesting;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -58,7 +60,7 @@ public abstract class SchedulerNode {
   private RMContainer reservedContainer;
   private volatile int numContainers;
 
-
+  private Resource allocatedOpportunistic = Resources.clone(Resources.none());
   /* set of containers that are allocated containers */
   private final Map<ContainerId, RMContainer> launchedContainers =
       new HashMap<ContainerId, RMContainer>();
@@ -175,6 +177,11 @@ public abstract class SchedulerNode {
     return this.usedResource;
   }
 
+  public synchronized ValueRanges getAvailablePorts() {
+    return this.rmNode.getAvailablePorts();
+  }
+
+
   /**
    * Get total resources on the node.
    * 
@@ -219,6 +226,67 @@ public abstract class SchedulerNode {
         + getUsedResource() + " used and " + getAvailableResource()
         + " available" + ", release resources=" + true);
   }
+
+  /**
+   * Update allocation based stats.
+   * @param resource - Resource allocated/released
+   * @param increase - whether resources are allocated or released
+   */
+  private synchronized void updateResourceAllocation(
+      Resource resource, boolean increase, boolean opportunistic) {
+    if (resource == null) {
+      LOG.error("Invalid update on resource allocation "
+          + rmNode.getNodeAddress());
+      return;
+    }
+    if (increase) {
+      if (opportunistic) {
+        Resources.addTo(allocatedOpportunistic, resource);
+      } else {
+        Resources.addTo(usedResource, resource);
+        if (resource.getPorts() != null) {
+          updateAllocatedPorts();
+        }
+      }
+    } else {
+      if (opportunistic) {
+        Resources.subtractFrom(allocatedOpportunistic, resource);
+      } else {
+        Resources.subtractFrom(usedResource, resource);
+        if (resource.getPorts() != null) {
+          updateAllocatedPorts();
+        }
+      }
+    }
+  }
+
+  private void updateAllocatedPorts() {
+    rmNode.setContainerAllocatedPorts(usedResource.getPorts());
+
+    if (rmNode.getTotalCapability().getPorts() != null
+        && rmNode.getTotalCapability().getPorts().getBitSetStore() != null) {
+      ValueRanges containerAllocatedPorts =
+          ValueRanges.convertToBitSet(rmNode.getContainerAllocatedPorts());
+      rmNode.setContainerAllocatedPorts(containerAllocatedPorts);
+    }
+    rmNode.setAvailablePorts(calculateAvailablePorts());
+  }
+
+
+  private ValueRanges calculateAvailablePorts() {
+    if (rmNode.getTotalCapability().getPorts() == null) {
+      return null;
+    }
+    return rmNode.getTotalCapability().getPorts()
+        .minusSelf(rmNode.getContainerAllocatedPorts())
+        .minusSelf(rmNode.getLocalUsedPortsSnapshot());
+  }
+
+
+  /**
+   *
+   * @param resource
+   */
 
   private synchronized void addAvailableResource(Resource resource) {
     if (resource == null) {

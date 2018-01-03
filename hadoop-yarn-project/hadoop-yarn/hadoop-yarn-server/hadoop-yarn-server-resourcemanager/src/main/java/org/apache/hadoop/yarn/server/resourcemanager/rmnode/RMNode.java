@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 
 /**
  * Node managers information on available resources 
@@ -147,4 +148,47 @@ public interface RMNode {
    * @return labels in this node
    */
   public Set<String> getNodeLabels();
+
+
+  /**
+   * Get local used ports snapshot.
+   *
+   * @return ports range.
+   */
+  public ValueRanges getLocalUsedPortsSnapshot();
+
+  /**
+   * update {@link ValueRanges} local used ports snapshot.
+   *
+   * @param ports {@link ValueRanges} to update
+   */
+  public void setLocalUsedPortsSnapshot(ValueRanges ports);
+
+  /**
+   * Get available ports.
+   *
+   * @return ports range.
+   */
+  public ValueRanges getAvailablePorts();
+
+  /**
+   * update {@link ValueRanges} available ports.
+   *
+   * @param ports {@link ValueRanges} to update
+   */
+  public void setAvailablePorts(ValueRanges ports);
+
+  /**
+   * Get container allocated ports.
+   *
+   * @return ports range.
+   */
+  public ValueRanges getContainerAllocatedPorts();
+
+  /**
+   * update {@link ValueRanges} container allocated ports.
+   *
+   * @param ports {@link ValueRanges} to update
+   */
+  public void setContainerAllocatedPorts(ValueRanges ports);
 }

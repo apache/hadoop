@@ -22,8 +22,10 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.ValueRangesProto;
 
 @Private
 @Unstable
@@ -31,6 +33,7 @@ public class ResourcePBImpl extends Resource {
   ResourceProto proto = ResourceProto.getDefaultInstance();
   ResourceProto.Builder builder = null;
   boolean viaProto = false;
+  ValueRanges ports = null;
   
   public ResourcePBImpl() {
     builder = ResourceProto.newBuilder();
@@ -46,6 +49,22 @@ public class ResourcePBImpl extends Resource {
     viaProto = true;
     return proto;
   }
+
+  private synchronized void mergeLocalToBuilder() {
+    if (this.ports != null) {
+      builder.setPorts(convertToProtoFormat(this.ports));
+    }
+  }
+
+  private synchronized void mergeLocalToProto() {
+    if (viaProto){
+      maybeInitBuilder();
+    }
+    mergeLocalToBuilder();
+    proto = builder.build();
+    viaProto = true;
+  }
+
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
@@ -104,6 +123,28 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
+  public void setPorts(ValueRanges ports) {
+    maybeInitBuilder();
+    if (ports == null) {
+      builder.clearPorts();
+    }
+    this.ports = ports;
+  }
+
+  @Override
+  public ValueRanges getPorts() {
+    ResourceProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.ports != null) {
+      return this.ports;
+    }
+    if (!p.hasPorts()) {
+      return null;
+    }
+    this.ports = convertFromProtoFormat(p.getPorts());
+    return this.ports;
+  }
+
+  @Override
   public int compareTo(Resource other) {
     int diff = this.getMemory() - other.getMemory();
     if (diff == 0) {
@@ -114,6 +155,14 @@ public class ResourcePBImpl extends Resource {
     }
     return diff;
   }
-  
-  
+
+  private static ValueRanges convertFromProtoFormat( ValueRangesProto proto) {
+    return new ValueRangesPBImpl(proto);
+  }
+
+  private ValueRangesProto convertToProtoFormat(ValueRanges m) {
+    return ((ValueRangesPBImpl)m).getProto();
+  }
+
+
 }  

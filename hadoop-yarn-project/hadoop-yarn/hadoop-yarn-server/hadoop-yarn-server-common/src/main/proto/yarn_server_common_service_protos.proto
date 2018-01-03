@@ -32,6 +32,7 @@ message RegisterNodeManagerRequestProto {
   optional string nm_version = 5;
   repeated NMContainerStatusProto container_statuses = 6;
   repeated ApplicationIdProto runningApplications = 7;
+  optional ValueRangesProto local_used_ports_snapshot = 240;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -41,6 +42,7 @@ message RegisterNodeManagerResponseProto {
   optional int64 rm_identifier = 4;
   optional string diagnostics_message = 5;
   optional string rm_version = 6;
+  optional ValueRangesProto local_used_ports_snapshot = 240;
 }
 
 message NodeHeartbeatRequestProto {

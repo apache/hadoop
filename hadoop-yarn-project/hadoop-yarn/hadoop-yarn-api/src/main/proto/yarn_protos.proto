@@ -53,11 +53,24 @@ message ContainerIdProto {
   optional int64 id = 3;
 }
 
+message ValueRangeProto{
+  required int32 begin = 1;
+  required int32 end = 2;
+}
+
+message ValueRangesProto {
+   repeated ValueRangeProto ranges = 1;
+   optional bytes ranges_byte_store = 2;
+   optional bool byte_store_enable = 3 [default = false];
+   optional int32 byte_store_encode = 4 [default = 0];
+}
+
 message ResourceProto {
   optional int32 memory = 1;
   optional int32 virtual_cores = 2;
   optional int32 GPUs = 3;
   optional int64 GPUAttribute = 4;
+  optional ValueRangesProto ports = 5;
 }
 
 message ResourceOptionProto {

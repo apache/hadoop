@@ -67,11 +67,18 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute) {
+    return newInstance(memory, vCores, GPUs, GPUAttribute, null);
+  }
+
+  @Public
+  @Stable
+  public static Resource newInstance(int memory, int vCores, int GPUs, long GPUAttribute, ValueRanges ports) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
     resource.setGPUs(GPUs);
     resource.setGPUAttribute(GPUAttribute);
+    resource.setPorts(ports);
     return resource;
   }
 
@@ -175,6 +182,23 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public abstract void setGPUAttribute(long GPUAttribute);
 
+
+  /**
+   * Get <em>ports</em> of the resource.
+   * @return <em>ports</em> of the resource
+   */
+  @Public
+  @Stable
+  public abstract ValueRanges getPorts();
+
+  /**
+   * Set <em>ports</em> of the resource.
+   * @param ports <em>ports</em> of the resource
+   */
+  @Public
+  @Stable
+  public abstract void setPorts(ValueRanges ports);
+
   @Override
   public int hashCode() {
     final int prime = 263167;
@@ -208,6 +232,21 @@ public abstract class Resource implements Comparable<Resource> {
     } else {
       Resource other = (Resource) obj;
       return this.getGPUAttribute() == other.getGPUAttribute();
+    }
+  }
+
+  public boolean equalsWithPorts(Object obj) {
+    if (!this.equals(obj)) {
+      return false;
+    } else {
+      Resource other = (Resource) obj;
+      ValueRanges lPorts = this.getPorts();
+      ValueRanges rPorts = other.getPorts();
+      if (lPorts == null) {
+        return rPorts == null;
+      } else {
+        return lPorts.equals(rPorts);
+      }
     }
   }
 

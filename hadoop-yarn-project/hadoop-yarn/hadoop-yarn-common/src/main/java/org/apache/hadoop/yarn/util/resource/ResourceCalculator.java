@@ -30,7 +30,7 @@ public abstract class ResourceCalculator {
 
   public abstract int 
   compare(Resource clusterResource, Resource lhs, Resource rhs);
-  
+
   public static int divideAndCeil(int a, int b) {
     if (b == 0) {    
       return 0;    

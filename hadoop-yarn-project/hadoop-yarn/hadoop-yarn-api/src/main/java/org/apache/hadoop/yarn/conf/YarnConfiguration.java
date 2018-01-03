@@ -1224,6 +1224,33 @@ public class YarnConfiguration extends Configuration {
 
   public static final long DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT = 300000;
 
+  /** Range of ports which can be allocated for containers. */
+  public static final String NM_PORTS = NM_PREFIX + "resource.ports";
+  public static final String DEFAULT_NM_PORTS = "[1-19999]";
+
+  /**
+   * Rounds of updating ports. This parameter is circle controller for updating
+   * local allocated ports info, since the ports info is big. We can control the
+   * update frequency to have balance with cluster scale and ports info's
+   * accuracy
+   */
+  public static final String NM_PORTS_UPDATE_ROUNDS = NM_PREFIX
+      + "resource.ports-update-rounds";
+  public static final int DEFAULT_NM_PORTS_UPDATE_ROUNDS = 10;
+
+  /** Whether to enable ports collection */
+  public static final String PORTS_AS_RESOURCE_ENABLE = YARN_PREFIX
+      + "ports_as_resource.enable";
+  public static final boolean DEFAULT_PORTS_AS_RESOURCE_ENABLE = false;
+
+  /**
+   * Whether to enable ports bitset store. If ports bitset store is enabled,
+   * memory usage for storing the status of ports usage will be reduced
+   */
+  public static final String PORTS_BITSET_STORE_ENABLE = YARN_PREFIX
+      + "ports_bitset_store.enable";
+  public static final boolean DEFAULT_PORTS_BITSET_STORE_ENABLE = false;
+
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
    * entries

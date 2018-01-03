@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicy
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -78,8 +79,8 @@ public class ResourceTrackerService extends AbstractService implements
 
   private static final Log LOG = LogFactory.getLog(ResourceTrackerService.class);
 
-  private static final RecordFactory recordFactory = 
-    RecordFactoryProvider.getRecordFactory(null);
+  private static final RecordFactory recordFactory =
+      RecordFactoryProvider.getRecordFactory(null);
 
   private final RMContext rmContext;
   private final NodesListManager nodesListManager;
@@ -95,11 +96,14 @@ public class ResourceTrackerService extends AbstractService implements
   private static final NodeHeartbeatResponse resync = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
   private static final NodeHeartbeatResponse shutDown = recordFactory
-  .newRecordInstance(NodeHeartbeatResponse.class);
-  
+      .newRecordInstance(NodeHeartbeatResponse.class);
+
   private int minAllocMb;
   private int minAllocVcores;
   private int minAllocGPUs;
+
+  private boolean enablePortsAsResource;
+  private boolean enablePortsBitSetStore;
 
   static {
     resync.setNodeAction(NodeAction.RESYNC);
@@ -108,10 +112,10 @@ public class ResourceTrackerService extends AbstractService implements
   }
 
   public ResourceTrackerService(RMContext rmContext,
-      NodesListManager nodesListManager,
-      NMLivelinessMonitor nmLivelinessMonitor,
-      RMContainerTokenSecretManager containerTokenSecretManager,
-      NMTokenSecretManagerInRM nmTokenSecretManager) {
+                                NodesListManager nodesListManager,
+                                NMLivelinessMonitor nmLivelinessMonitor,
+                                RMContainerTokenSecretManager containerTokenSecretManager,
+                                NMTokenSecretManagerInRM nmTokenSecretManager) {
     super(ResourceTrackerService.class.getName());
     this.rmContext = rmContext;
     this.nodesListManager = nodesListManager;
@@ -140,11 +144,11 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     minAllocMb = conf.getInt(
-    	YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-    	YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
     minAllocVcores = conf.getInt(
-    	YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-    	YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
     minAllocGPUs = conf.getInt(
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
@@ -152,6 +156,14 @@ public class ResourceTrackerService extends AbstractService implements
     minimumNodeManagerVersion = conf.get(
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
+
+    enablePortsAsResource =
+        conf.getBoolean(YarnConfiguration.PORTS_AS_RESOURCE_ENABLE,
+            YarnConfiguration.DEFAULT_PORTS_AS_RESOURCE_ENABLE);
+    enablePortsBitSetStore =
+        conf.getBoolean(YarnConfiguration.PORTS_BITSET_STORE_ENABLE,
+            YarnConfiguration.DEFAULT_PORTS_BITSET_STORE_ENABLE);
+
 
     super.serviceInit(conf);
   }
@@ -164,14 +176,14 @@ public class ResourceTrackerService extends AbstractService implements
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =
-      rpc.getServer(ResourceTracker.class, this, resourceTrackerAddress,
-          conf, null,
-          conf.getInt(YarnConfiguration.RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT, 
-              YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT));
-    
+        rpc.getServer(ResourceTracker.class, this, resourceTrackerAddress,
+            conf, null,
+            conf.getInt(YarnConfiguration.RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT,
+                YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT));
+
     // Enable service authorization?
     if (conf.getBoolean(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
         false)) {
       InputStream inputStream =
           this.rmContext.getConfigurationProvider()
@@ -182,12 +194,12 @@ public class ResourceTrackerService extends AbstractService implements
       }
       refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
- 
+
     this.server.start();
     conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
-			   YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-			   YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
-                           server.getListenerAddress());
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        server.getListenerAddress());
   }
 
   @Override
@@ -232,8 +244,8 @@ public class ResourceTrackerService extends AbstractService implements
         && containerStatus.getContainerState() == ContainerState.COMPLETE) {
       ContainerStatus status =
           ContainerStatus.newInstance(containerStatus.getContainerId(),
-            containerStatus.getContainerState(), containerStatus.getDiagnostics(),
-            containerStatus.getContainerExitStatus());
+              containerStatus.getContainerState(), containerStatus.getDiagnostics(),
+              containerStatus.getContainerExitStatus());
       // sending master container finished event.
       RMAppAttemptContainerFinishedEvent evt =
           new RMAppAttemptContainerFinishedEvent(appAttemptId, status,
@@ -263,7 +275,7 @@ public class ResourceTrackerService extends AbstractService implements
       }
 
       if ((nodeManagerVersion == null) ||
-          (VersionUtil.compareVersions(nodeManagerVersion,minimumNodeManagerVersion)) < 0) {
+          (VersionUtil.compareVersions(nodeManagerVersion, minimumNodeManagerVersion)) < 0) {
         String message =
             "Disallowed NodeManager Version " + nodeManagerVersion
                 + ", is less than the minimum version "
@@ -301,19 +313,68 @@ public class ResourceTrackerService extends AbstractService implements
       return response;
     }
 
+    // reset illegal resource report
+    if (!this.enablePortsAsResource) {
+      capability.setPorts(null);
+    }
+
     response.setContainerTokenMasterKey(containerTokenSecretManager
         .getCurrentKey());
     response.setNMTokenMasterKey(nmTokenSecretManager
-        .getCurrentKey());    
+        .getCurrentKey());
 
+
+    ValueRanges localUsedPorts = null;
+    if (this.enablePortsAsResource) {
+      localUsedPorts = request.getLocalUsedPortsSnapshot();
+      if (this.enablePortsBitSetStore
+          && request.getLocalUsedPortsSnapshot() != null) {
+        localUsedPorts =
+            ValueRanges.convertToBitSet(request.getLocalUsedPortsSnapshot());
+      }
+    }
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
-        resolve(host), capability, nodeManagerVersion);
+        resolve(host), capability, nodeManagerVersion, localUsedPorts);
+    if (this.enablePortsAsResource && this.enablePortsBitSetStore) {
+      if (rmNode.getTotalCapability().getPorts() != null) {
+        ValueRanges totalPorts =
+            ValueRanges.convertToBitSet(rmNode.getTotalCapability().getPorts());
+        rmNode.getTotalCapability().setPorts(totalPorts);
+      }
+      if (rmNode.getContainerAllocatedPorts() == null) {
+        rmNode.setContainerAllocatedPorts(ValueRanges.newInstance());
+        rmNode.getContainerAllocatedPorts().setByteStoreEnable(true);
+      }
+      ValueRanges containerAllocatedPorts =
+          ValueRanges.convertToBitSet(rmNode.getContainerAllocatedPorts());
+      rmNode.setContainerAllocatedPorts(containerAllocatedPorts);
+
+      if (rmNode.getLocalUsedPortsSnapshot() != null) {
+        ValueRanges localUsedPortsSnapshot =
+            ValueRanges.convertToBitSet(rmNode.getLocalUsedPortsSnapshot());
+        rmNode.setLocalUsedPortsSnapshot(localUsedPortsSnapshot);
+      }
+    }
+
+    if (this.enablePortsAsResource) {
+      rmNode.setAvailablePorts(
+          getAvailablePorts(
+              rmNode.getTotalCapability().getPorts(),
+              rmNode.getContainerAllocatedPorts(),
+              rmNode.getLocalUsedPortsSnapshot()));
+      if (this.enablePortsBitSetStore && rmNode.getAvailablePorts() != null) {
+        rmNode.getAvailablePorts().setByteStoreEnable(true);
+        ValueRanges availablePorts =
+            ValueRanges.convertToBitSet(rmNode.getAvailablePorts());
+        rmNode.setAvailablePorts(availablePorts);
+      }
+    }
 
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
       this.rmContext.getDispatcher().getEventHandler().handle(
-              new RMNodeStartedEvent(nodeId, request.getNMContainerStatuses(),
-                  request.getRunningApplications()));
+          new RMNodeStartedEvent(nodeId, request.getNMContainerStatuses(),
+              request.getRunningApplications()));
     } else {
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
@@ -330,7 +391,7 @@ public class ResourceTrackerService extends AbstractService implements
     // present for any running application.
     this.nmTokenSecretManager.removeNodeKey(nodeId);
     this.nmLivelinessMonitor.register(nodeId);
-    
+
     // Handle received container status, this should be processed after new
     // RMNode inserted
     if (!rmContext.isWorkPreservingRecoveryEnabled()) {
@@ -398,7 +459,7 @@ public class ResourceTrackerService extends AbstractService implements
     if (remoteNodeStatus.getResponseId() + 1 == lastNodeHeartbeatResponse
         .getResponseId()) {
       LOG.info("Received duplicate heartbeat from node "
-          + rmNode.getNodeAddress()+ " responseId=" + remoteNodeStatus.getResponseId());
+          + rmNode.getNodeAddress() + " responseId=" + remoteNodeStatus.getResponseId());
       return lastNodeHeartbeatResponse;
     } else if (remoteNodeStatus.getResponseId() + 1 < lastNodeHeartbeatResponse
         .getResponseId()) {
@@ -417,7 +478,7 @@ public class ResourceTrackerService extends AbstractService implements
     // Heartbeat response
     NodeHeartbeatResponse nodeHeartBeatResponse = YarnServerBuilderUtils
         .newNodeHeartbeatResponse(lastNodeHeartbeatResponse.
-            getResponseId() + 1, NodeAction.NORMAL, null, null, null, null,
+                getResponseId() + 1, NodeAction.NORMAL, null, null, null, null,
             nextHeartBeatInterval);
     rmNode.updateNodeHeartbeatResponseForCleanup(nodeHeartBeatResponse);
 
@@ -432,13 +493,41 @@ public class ResourceTrackerService extends AbstractService implements
     // 4. Send status to RMNode, saving the latest response.
     this.rmContext.getDispatcher().getEventHandler().handle(
         new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
-            remoteNodeStatus.getContainersStatuses(), 
+            remoteNodeStatus.getContainersStatuses(),
             remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse));
 
+    // 5. Update the local used ports snapshot
+    if (this.enablePortsAsResource) {
+      ValueRanges ports = remoteNodeStatus.getLocalUsedPortsSnapshot();
+      if (ports != null) {
+        rmNode.setLocalUsedPortsSnapshot(ports);
+        if (this.enablePortsBitSetStore) {
+          ValueRanges LocalUsedPorts =
+              ValueRanges.convertToBitSet(rmNode.getLocalUsedPortsSnapshot());
+          rmNode.setLocalUsedPortsSnapshot(LocalUsedPorts);
+        }
+        ValueRanges availablePorts = null;
+        if (rmNode.getTotalCapability().getPorts() != null) {
+          availablePorts =
+              getAvailablePorts(rmNode.getTotalCapability().getPorts(),
+                  rmNode.getContainerAllocatedPorts(),
+                  rmNode.getLocalUsedPortsSnapshot());
+        }
+        rmNode.setAvailablePorts(availablePorts);
+      }
+    }
     return nodeHeartBeatResponse;
   }
 
-  private void populateKeys(NodeHeartbeatRequest request,
+  private static ValueRanges getAvailablePorts(ValueRanges total,
+        ValueRanges allocated, ValueRanges localUsed) {
+      if (total == null) {
+        return null;
+      }
+      return total.minusSelf(allocated).minusSelf(localUsed);
+    }
+
+    private void populateKeys(NodeHeartbeatRequest request,
       NodeHeartbeatResponse nodeHeartBeatResponse) {
 
     // Check if node's masterKey needs to be updated and if the currentKey has

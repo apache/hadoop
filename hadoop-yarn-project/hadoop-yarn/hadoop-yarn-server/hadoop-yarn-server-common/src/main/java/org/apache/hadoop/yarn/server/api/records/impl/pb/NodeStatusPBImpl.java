@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
@@ -37,6 +38,9 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.api.records.impl.pb.ValueRangesPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ValueRangesProto;
+
     
 
 public class NodeStatusPBImpl extends NodeStatus {
@@ -48,6 +52,7 @@ public class NodeStatusPBImpl extends NodeStatus {
   private List<ContainerStatus> containers = null;
   private NodeHealthStatus nodeHealthStatus = null;
   private List<ApplicationId> keepAliveApplications = null;
+  private ValueRanges localUsedPortsSnapshot = null;
   
   public NodeStatusPBImpl() {
     builder = NodeStatusProto.newBuilder();
@@ -77,6 +82,10 @@ public class NodeStatusPBImpl extends NodeStatus {
     }
     if (this.keepAliveApplications != null) {
       addKeepAliveApplicationsToProto();
+    }
+    if (this.localUsedPortsSnapshot != null) {
+      builder
+          .setLocalUsedPortsSnapshot(convertToProtoFormat(this.localUsedPortsSnapshot));
     }
   }
 
@@ -266,7 +275,6 @@ public class NodeStatusPBImpl extends NodeStatus {
     for (ApplicationIdProto c : list) {
       this.keepAliveApplications.add(convertFromProtoFormat(c));
     }
-    
   }
   
   @Override
@@ -322,5 +330,34 @@ public class NodeStatusPBImpl extends NodeStatus {
   
   private ApplicationIdProto convertToProtoFormat(ApplicationId c) {
     return ((ApplicationIdPBImpl)c).getProto();
+  }
+
+  @Override
+  public ValueRanges getLocalUsedPortsSnapshot() {
+    NodeStatusProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.localUsedPortsSnapshot != null) {
+      return this.localUsedPortsSnapshot;
+    }
+    if (!p.hasLocalUsedPortsSnapshot()) {
+      return null;
+    }
+    this.localUsedPortsSnapshot =
+        convertFromProtoFormat(p.getLocalUsedPortsSnapshot());
+    return this.localUsedPortsSnapshot;
+  }
+
+  @Override
+  public void setLocalUsedPortsSnapshot(ValueRanges ports) {
+    maybeInitBuilder();
+    builder.clearLocalUsedPortsSnapshot();
+    localUsedPortsSnapshot = ports;
+  }
+
+  private static ValueRanges convertFromProtoFormat(ValueRangesProto proto) {
+    return new ValueRangesPBImpl(proto);
+  }
+
+  private ValueRangesProto convertToProtoFormat(ValueRanges m) {
+    return ((ValueRangesPBImpl) m).getProto();
   }
 }

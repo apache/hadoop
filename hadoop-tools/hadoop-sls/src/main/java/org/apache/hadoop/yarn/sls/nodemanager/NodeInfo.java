@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
         .UpdatedContainerInfo;
 
@@ -167,6 +168,34 @@ public class NodeInfo {
     @Override
     public Set<String> getNodeLabels() {
       return RMNodeLabelsManager.EMPTY_STRING_SET;
+    }
+
+
+    @Override
+    public void setLocalUsedPortsSnapshot(ValueRanges ports) {
+    }
+
+    @Override
+    public ValueRanges getAvailablePorts() {
+      return null;
+    }
+
+    @Override
+    public void setAvailablePorts(ValueRanges ports) {
+    }
+
+    @Override
+    public ValueRanges getContainerAllocatedPorts() {
+      return null;
+    }
+
+    @Override
+    public void setContainerAllocatedPorts(ValueRanges ports) {
+    }
+
+    @Override
+    public ValueRanges getLocalUsedPortsSnapshot() {
+      return null;
     }
   }
 

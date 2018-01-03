@@ -23,7 +23,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.Records;
-
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 
 public abstract class NodeStatus {
   
@@ -55,4 +55,8 @@ public abstract class NodeStatus {
 
   public abstract void setNodeId(NodeId nodeId);
   public abstract void setResponseId(int responseId);
+
+  public abstract ValueRanges getLocalUsedPortsSnapshot();
+
+  public abstract void setLocalUsedPortsSnapshot(ValueRanges ports);
 }

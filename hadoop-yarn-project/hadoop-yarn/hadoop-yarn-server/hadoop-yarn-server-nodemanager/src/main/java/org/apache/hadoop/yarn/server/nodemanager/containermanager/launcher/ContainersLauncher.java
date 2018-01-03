@@ -42,9 +42,12 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.yarn.util.PortsInfo;
 
 /**
  * The launcher for the containers. This service should be started only after
@@ -83,6 +86,24 @@ public class ContainersLauncher extends AbstractService
     this.dirsHandler = dirsHandler;
     this.containerManager = containerManager;
   }
+
+  private boolean validatePortsRequest(Resource resource) {
+    if (resource == null || resource.getPorts() == null
+        || resource.getPorts().getRangesCount() == 0) {
+      return true; // no ports request
+    }
+    ValueRanges allocatedPorts = new PortsInfo().GetAllocatedPorts(false);
+    ValueRanges requestPorts = resource.getPorts();
+    if (requestPorts.equals(requestPorts.minusSelf(allocatedPorts))) {
+      return true;
+    } else {
+      LOG.info("no available ports, allocated ports:"
+          + allocatedPorts.toString() + ", required:" + requestPorts.toString());
+      return false;
+    }
+  }
+
+
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {

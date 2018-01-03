@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.util.resource;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 
 /**
  * A {@link ResourceCalculator} which uses the concept of  
@@ -84,9 +85,21 @@ public class DominantResourceCalculator extends ResourceCalculator {
         return 1;
       }
     }
+
+    int diff = 0;
+    ValueRanges lPorts = lhs.getPorts();
+    ValueRanges rPorts = rhs.getPorts();
+    if (lPorts == null) {
+      diff = rPorts == null ? 0 : 1;
+    } else if (rPorts == null) {
+      diff = -1;
+    } else {
+      diff = lPorts.compareTo(rPorts);
+    }
     
-    return 0;
+    return diff;
   }
+
 
   /**
    * Use 'dominant' for now since we only have 2 resources - gives us a slight
@@ -113,17 +126,24 @@ public class DominantResourceCalculator extends ResourceCalculator {
       }
       return (dominant) ? maxV:minV;
   }
-  
+
   @Override
   public int computeAvailableContainers(Resource available, Resource required) {
-        int num =  Math.min(
-            available.getMemory() / required.getMemory(), 
-            available.getVirtualCores() / required.getVirtualCores());
-    
-        if(required.getGPUs() != 0) {
-            num = Math.min(num, available.getGPUs()/required.getGPUs());
-        }
-        return num;
+
+    int num = Integer.MAX_VALUE;
+    if (required.getPorts() != null && required.getPorts().getRangesCount() > 0) {
+      // required ports resource, so we can not allocate more than one container
+      num = 1;
+    }
+    num = Math.min(
+        Math.min(
+            available.getMemory() / required.getMemory(),
+            available.getVirtualCores() / required.getVirtualCores()), num);
+
+    if (required.getGPUs() != 0) {
+      num = Math.min(num, available.getGPUs() / required.getGPUs());
+    }
+    return num;
   }
 
   @Override

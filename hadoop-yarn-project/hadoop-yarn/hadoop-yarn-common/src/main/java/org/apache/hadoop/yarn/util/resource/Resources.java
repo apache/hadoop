@@ -22,6 +22,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
+import org.apache.hadoop.yarn.util.Records;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 @Unstable
@@ -67,6 +69,15 @@ public class Resources {
 
     @Override
     public void setGPUAttribute(long GPUAttribute) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    public ValueRanges getPorts() {
+      return null;
+    }
+
+    @Override
+    public void setPorts(ValueRanges port) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -127,6 +138,16 @@ public class Resources {
     }
 
     @Override
+    public ValueRanges getPorts() {
+      return null;
+    }
+
+    @Override
+    public void setPorts(ValueRanges port) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
     public int compareTo(Resource o) {
       int diff = 0 - o.getMemory();
       if (diff == 0) {
@@ -153,11 +174,16 @@ public class Resources {
   }
 
   public static Resource createResource(int memory, int cores, int GPUs, long GPUAttribute) {
+    return createResource(memory, cores, GPUs, GPUAttribute, null);
+  }
+
+  public static Resource createResource(int memory, int cores, int GPUs, long GPUAttribute, ValueRanges ports) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
     resource.setGPUs(GPUs);
     resource.setGPUAttribute(GPUAttribute);
+    resource.setPorts(ports);
     return resource;
   }
 
@@ -170,7 +196,7 @@ public class Resources {
   }  
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute());
+    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute(), res.getPorts());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
@@ -181,7 +207,14 @@ public class Resources {
     assert (lhs.getGPUAttribute() & rhs.getGPUAttribute()) == 0 : "lhs GPU attribute is " +
             lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
 
-    lhs.setGPUAttribute(lhs.getGPUAttribute() | rhs.getGPUAttribute());    
+    lhs.setGPUAttribute(lhs.getGPUAttribute() | rhs.getGPUAttribute());
+
+    if (lhs.getPorts() != null) {
+      lhs.setPorts(lhs.getPorts().addSelf(rhs.getPorts()));
+    } else {
+      lhs.setPorts(rhs.getPorts());
+    }
+
     return lhs;
   }
 
@@ -198,6 +231,10 @@ public class Resources {
             lhs.getGPUAttribute() + "; rhs GPU attribute is " + rhs.getGPUAttribute();
 
     lhs.setGPUAttribute(lhs.getGPUAttribute() & ~rhs.getGPUAttribute());
+
+    if (lhs.getPorts() != null) {
+      lhs.setPorts(lhs.getPorts().minusSelf(rhs.getPorts()));
+    }
     
     return lhs;
   }
@@ -321,7 +358,7 @@ public class Resources {
       Resource lhs, Resource rhs) {
     return resourceCalculator.compare(clusterResource, lhs, rhs) >= 0 ? lhs : rhs;
   }
-  
+
   public static boolean fitsIn(Resource smaller, Resource bigger) {
       boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
                        smaller.getVirtualCores() <= bigger.getVirtualCores() &&
@@ -329,6 +366,11 @@ public class Resources {
       if (fitsIn == true) {         
           if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute()) {
               fitsIn = false;
+          }
+          if (fitsIn == true) {
+            if (smaller.getPorts() != null && !(smaller.getPorts().isLessOrEqual(bigger.getPorts()))) {
+              fitsIn = false;
+            }
           }
       }
       return fitsIn;

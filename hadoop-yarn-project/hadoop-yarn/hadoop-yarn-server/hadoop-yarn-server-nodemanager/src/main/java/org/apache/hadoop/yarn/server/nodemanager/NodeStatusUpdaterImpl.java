@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
@@ -72,6 +73,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
+import org.apache.hadoop.yarn.util.PortsInfo;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -122,7 +124,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private Thread  statusUpdater;
   private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
   Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
-  
+  private boolean enablePortsAsResource;
+  private boolean enablePortsBitSetStore;
+  /**
+   * this parameter is circle controller for updating local allocated ports
+   * info, since the ports info is big. we can control the update frequency to
+   * have balance with cluster scale and ports info's accuracy
+   */
+  private int numOfRoundsToUpdatePorts;
+
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(NodeStatusUpdaterImpl.class.getName());
@@ -161,7 +171,26 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     int GPUs = resourceCalculatorPlugin.getNumGPUs();    
     long GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute);
+    numOfRoundsToUpdatePorts =
+        conf.getInt(YarnConfiguration.NM_PORTS_UPDATE_ROUNDS,
+            YarnConfiguration.DEFAULT_NM_PORTS_UPDATE_ROUNDS);
+
+    enablePortsAsResource =
+        conf.getBoolean(YarnConfiguration.PORTS_AS_RESOURCE_ENABLE,
+            YarnConfiguration.DEFAULT_PORTS_AS_RESOURCE_ENABLE);
+
+    enablePortsBitSetStore =
+        conf.getBoolean(YarnConfiguration.PORTS_BITSET_STORE_ENABLE,
+            YarnConfiguration.DEFAULT_PORTS_BITSET_STORE_ENABLE);
+
+    ValueRanges ports = null;
+    if (enablePortsAsResource) {
+      ports = ValueRanges.iniFromExpression(conf.get(YarnConfiguration.NM_PORTS,
+          YarnConfiguration.DEFAULT_NM_PORTS), enablePortsBitSetStore);
+    }
+
+    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports);
+
     metrics.addResource(totalResource);
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
     this.tokenRemovalDelayMs =
@@ -266,9 +295,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   protected void registerWithRM()
       throws YarnException, IOException {
     List<NMContainerStatus> containerReports = getNMContainerStatuses();
+
+    ValueRanges ports = null;
+    if (enablePortsAsResource) {
+      ports = new PortsInfo().GetAllocatedPorts(enablePortsBitSetStore);
+    }
+
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
-          nodeManagerVersionId, containerReports, getRunningApplications());
+          nodeManagerVersionId, containerReports, getRunningApplications(), ports);
     if (containerReports != null) {
       LOG.info("Registering with RM using containers :" + containerReports);
     }
@@ -711,6 +746,4 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         new Thread(statusUpdaterRunnable, "Node Status Updater");
     statusUpdater.start();
   }
-  
-  
 }

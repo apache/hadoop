@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -226,6 +227,36 @@ public class MockNodes {
       }
       return CommonNodeLabelsManager.EMPTY_STRING_SET;
     }
+
+
+    @Override
+    public ValueRanges getAvailablePorts() {
+      return null;
+    }
+
+    @Override
+    public void setAvailablePorts(ValueRanges ports) {
+    }
+
+    @Override
+    public ValueRanges getContainerAllocatedPorts() {
+      return null;
+    }
+
+    @Override
+    public void setContainerAllocatedPorts(ValueRanges ports) {
+    }
+
+    @Override
+    public ValueRanges getLocalUsedPortsSnapshot() {
+      return null;
+    }
+
+    @Override
+    public void setLocalUsedPortsSnapshot(ValueRanges port) {
+    }
+
+
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode,

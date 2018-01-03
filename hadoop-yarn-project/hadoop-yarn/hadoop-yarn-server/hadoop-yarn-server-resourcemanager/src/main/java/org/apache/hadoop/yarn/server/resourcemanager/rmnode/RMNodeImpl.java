@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -105,6 +105,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private long lastHealthReportTime;
   private String nodeManagerVersion;
 
+  /** Port ranges used in the host. */
+  private ValueRanges localUsedPortsSnapshot = null;
+  private ValueRanges containerAllocatedPorts = null;
+  private ValueRanges availabelPorts = null;
   /* set of containers that have just launched */
   private final Set<ContainerId> launchedContainers =
     new HashSet<ContainerId>();
@@ -221,7 +225,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion) {
+                    int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion) {
+  this(nodeId, context, hostName, cmPort, httpPort, node, capability, nodeManagerVersion, null);
+  }
+  public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
+      int cmPort, int httpPort, Node node, Resource capability, String nodeManagerVersion, ValueRanges ports) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -243,7 +251,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     this.stateMachine = stateMachineFactory.make(this);
     
-    this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();  
+    this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();
+
+    this.localUsedPortsSnapshot = ports;
   }
 
   @Override
@@ -911,6 +921,36 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       nodeUpdateQueue.add(new UpdatedContainerInfo(newlyLaunchedContainers,
           completedContainers));
     }
+  }
+
+  @Override
+  public ValueRanges getAvailablePorts() {
+    return availabelPorts;
+  }
+
+  @Override
+  public void setAvailablePorts(ValueRanges ports) {
+    this.availabelPorts = ports;
+  }
+
+  @Override
+  public ValueRanges getContainerAllocatedPorts() {
+    return containerAllocatedPorts;
+  }
+
+  @Override
+  public void setContainerAllocatedPorts(ValueRanges ports) {
+    this.containerAllocatedPorts = ports;
+  }
+
+  @Override
+  public ValueRanges getLocalUsedPortsSnapshot() {
+    return this.localUsedPortsSnapshot;
+  }
+
+  @Override
+  public void setLocalUsedPortsSnapshot(ValueRanges ports) {
+    this.localUsedPortsSnapshot = ports;
   }
 
  }
