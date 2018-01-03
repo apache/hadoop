@@ -17,17 +17,12 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.junit.Assert.*;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
@@ -38,6 +33,23 @@ import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 public class TestAllocationFileLoaderService {
   
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -45,16 +57,60 @@ public class TestAllocationFileLoaderService {
 
   final static String ALLOC_FILE = new File(TEST_DIR,
       "test-queues").getAbsolutePath();
-  
+  private static final String TEST_FAIRSCHED_XML = "test-fair-scheduler.xml";
+
+  @Test
+  public void testGetAllocationFileFromFileSystem()
+      throws IOException, URISyntaxException {
+    Configuration conf = new YarnConfiguration();
+    File baseDir =
+        new File(TEST_DIR + Path.SEPARATOR + "getAllocHDFS").getAbsoluteFile();
+    FileUtil.fullyDelete(baseDir);
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, baseDir.getAbsolutePath());
+    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
+    MiniDFSCluster hdfsCluster = builder.build();
+    String fsAllocPath = "hdfs://localhost:" + hdfsCluster.getNameNodePort()
+        + Path.SEPARATOR + TEST_FAIRSCHED_XML;
+
+    URL fschedURL = Thread.currentThread().getContextClassLoader()
+        .getResource(TEST_FAIRSCHED_XML);
+    FileSystem fs = FileSystem.get(conf);
+    fs.copyFromLocalFile(new Path(fschedURL.toURI()), new Path(fsAllocPath));
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, fsAllocPath);
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    Path allocationFile = allocLoader.getAllocationFile(conf);
+    assertEquals(fsAllocPath, allocationFile.toString());
+    assertTrue(fs.exists(allocationFile));
+
+    hdfsCluster.shutdown(true);
+  }
+
+  @Test (expected = UnsupportedFileSystemException.class)
+  public void testDenyGetAllocationFileFromUnsupportedFileSystem()
+      throws UnsupportedFileSystemException {
+    Configuration conf = new YarnConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, "badfs:///badfile");
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+
+    allocLoader.getAllocationFile(conf);
+  }
+
   @Test
   public void testGetAllocationFileFromClasspath() {
-    Configuration conf = new Configuration();
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        "test-fair-scheduler.xml");
-    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
-    File allocationFile = allocLoader.getAllocationFile(conf);
-    assertEquals("test-fair-scheduler.xml", allocationFile.getName());
-    assertTrue(allocationFile.exists());
+    try {
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+          TEST_FAIRSCHED_XML);
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService();
+      Path allocationFile = allocLoader.getAllocationFile(conf);
+      assertEquals(TEST_FAIRSCHED_XML, allocationFile.getName());
+      assertTrue(fs.exists(allocationFile));
+    } catch (IOException e) {
+      fail("Unable to access allocation file from classpath: " + e);
+    }
   }
   
   @Test (timeout = 10000)
