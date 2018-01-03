@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn;
 
 import java.io.File;
 import java.io.Flushable;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -30,49 +30,43 @@ import org.apache.log4j.spi.LoggingEvent;
 
 /**
  * A simple log4j-appender for container's logs.
- * 
  */
 @Public
 @Unstable
 public class ContainerLogAppender extends FileAppender
-  implements Flushable
-{
+    implements Flushable {
+
   private String containerLogDir;
   private String containerLogFile;
-  //so that log4j can configure it from the configuration(log4j.properties). 
   private int maxEvents;
-  private Queue<LoggingEvent> tail = null;
-  private boolean closing = false;
+  private Deque<LoggingEvent> eventBuffer;
+  private boolean closed = false;
 
   @Override
-  public void activateOptions() {
-    synchronized (this) {
-      if (maxEvents > 0) {
-        tail = new LinkedList<LoggingEvent>();
-      }
-      setFile(new File(this.containerLogDir, containerLogFile).toString());
-      setAppend(true);
-      super.activateOptions();
+  public synchronized void activateOptions() {
+    if (maxEvents > 0) {
+      this.eventBuffer = new ArrayDeque<>();
     }
+    setFile(new File(this.containerLogDir, containerLogFile).toString());
+    setAppend(true);
+    super.activateOptions();
   }
-  
+
   @Override
-  public void append(LoggingEvent event) {
-    synchronized (this) {
-      if (closing) { // When closing drop any new/transitive CLA appending
-        return;
+  public synchronized void append(LoggingEvent event) {
+    if (closed) {
+      return;
+    }
+    if (eventBuffer != null) {
+      if (eventBuffer.size() == maxEvents) {
+        eventBuffer.removeFirst();
       }
-      if (tail == null) {
-        super.append(event);
-      } else {
-        if (tail.size() >= maxEvents) {
-          tail.remove();
-        }
-        tail.add(event);
-      }
+      eventBuffer.addLast(event);
+    } else {
+      super.append(event);
     }
   }
-  
+
   @Override
   public void flush() {
     if (qw != null) {
@@ -82,13 +76,17 @@ public class ContainerLogAppender extends FileAppender
 
   @Override
   public synchronized void close() {
-    closing = true;
-    if (tail != null) {
-      for (LoggingEvent event : tail) {
-        super.append(event);
+    if (!closed) {
+      closed = true;
+      if (eventBuffer != null) {
+        for (LoggingEvent event : eventBuffer) {
+          super.append(event);
+        }
+        // let garbage collection do its work
+        eventBuffer = null;
       }
+      super.close();
     }
-    super.close();
   }
 
   /**
@@ -111,13 +109,17 @@ public class ContainerLogAppender extends FileAppender
     this.containerLogFile = containerLogFile;
   }
 
-  private static final int EVENT_SIZE = 100;
+  private static final long EVENT_SIZE = 100;
   
   public long getTotalLogFileSize() {
     return maxEvents * EVENT_SIZE;
   }
 
+  /**
+   *  Setter so that log4j can configure it from the
+   *  configuration(log4j.properties).
+   */
   public void setTotalLogFileSize(long logSize) {
-    maxEvents = (int) logSize / EVENT_SIZE;
+    maxEvents = (int)(logSize / EVENT_SIZE);
   }
 }
