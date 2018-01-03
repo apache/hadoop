@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.ksm;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.web.OzoneHttpServer;
 
 import java.io.IOException;
@@ -28,8 +29,11 @@ import java.io.IOException;
  */
 public class KeySpaceManagerHttpServer extends OzoneHttpServer {
 
-  public KeySpaceManagerHttpServer(Configuration conf) throws IOException {
+  public KeySpaceManagerHttpServer(Configuration conf, KeySpaceManager ksm)
+      throws IOException {
     super(conf, "ksm");
+    addServlet("serviceList", "/serviceList", ServiceListJSONServlet.class);
+    getWebAppContext().setAttribute(OzoneConsts.KSM_CONTEXT_ATTRIBUTE, ksm);
   }
 
   @Override protected String getHttpAddressKey() {

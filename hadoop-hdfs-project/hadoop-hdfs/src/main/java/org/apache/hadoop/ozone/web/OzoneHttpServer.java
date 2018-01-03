@@ -25,9 +25,11 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
+import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpServlet;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -78,6 +80,25 @@ public abstract class OzoneHttpServer {
 
     }
 
+  }
+
+  /**
+   * Add a servlet to OzoneHttpServer.
+   * @param servletName The name of the servlet
+   * @param pathSpec The path spec for the servlet
+   * @param clazz The servlet class
+   */
+  protected void addServlet(String servletName, String pathSpec,
+                            Class<? extends HttpServlet> clazz) {
+    httpServer.addServlet(servletName, pathSpec, clazz);
+  }
+
+  /**
+   * Returns the WebAppContext associated with this HttpServer.
+   * @return WebAppContext
+   */
+  protected WebAppContext getWebAppContext() {
+    return httpServer.getWebAppContext();
   }
 
   protected InetSocketAddress getBindAddress(String bindHostKey,
