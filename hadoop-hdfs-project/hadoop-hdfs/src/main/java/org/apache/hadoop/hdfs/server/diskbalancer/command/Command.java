@@ -501,7 +501,8 @@ public abstract class Command extends Configured implements Closeable {
    * Parse top number of nodes to be processed.
    * @return top number of nodes to be processed.
    */
-  protected int parseTopNodes(final CommandLine cmd, final StrBuilder result) {
+  protected int parseTopNodes(final CommandLine cmd, final StrBuilder result)
+      throws IllegalArgumentException {
     String outputLine = "";
     int nodes = 0;
     final String topVal = cmd.getOptionValue(DiskBalancerCLI.TOP);
@@ -522,6 +523,10 @@ public abstract class Command extends Configured implements Closeable {
         LOG.info(outputLine);
         result.appendln(outputLine);
         nodes = getDefaultTop();
+      }
+      if (nodes <= 0) {
+        throw new IllegalArgumentException(
+            "Top limit input should be a positive numeric value");
       }
     }
 
