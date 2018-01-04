@@ -40,7 +40,7 @@
         transclude: true,
         controller: function ($http) {
             var ctrl = this;
-            $http.get("/jmx?qry=Hadoop:service=*,name=*,component=ServerRuntime")
+            $http.get("jmx?qry=Hadoop:service=*,name=*,component=ServerRuntime")
                 .then(function (result) {
                     ctrl.jmx = result.data.beans[0]
                 })
@@ -50,7 +50,7 @@
         templateUrl: 'static/templates/jvm.html',
         controller: function ($http) {
             var ctrl = this;
-            $http.get("/jmx?qry=java.lang:type=Runtime")
+            $http.get("jmx?qry=java.lang:type=Runtime")
                 .then(function (result) {
                     ctrl.jmx = result.data.beans[0];
 
@@ -73,7 +73,7 @@
         '</tabs>',
         controller: function ($http) {
             var ctrl = this;
-            $http.get("/jmx?qry=Hadoop:service=*,name=RpcActivityForPort*")
+            $http.get("jmx?qry=Hadoop:service=*,name=RpcActivityForPort*")
                 .then(function (result) {
                     ctrl.metrics = result.data.beans;
                 })
@@ -246,11 +246,11 @@
         bindings: {
             metrics: '<'
         },
-        templateUrl: '/static/templates/menu.html',
+        templateUrl: 'static/templates/menu.html',
         controller: function ($http) {
             var ctrl = this;
             ctrl.docs = false;
-            $http.head("/docs/index.html")
+            $http.head("docs/index.html")
                 .then(function (result) {
                     ctrl.docs = true;
                 },function(){
@@ -260,12 +260,12 @@
     });
 
     angular.module('ozone').component('config', {
-        templateUrl: '/static/templates/config.html',
+        templateUrl: 'static/templates/config.html',
         controller: function ($scope, $http) {
             var ctrl = this;
             ctrl.selectedTags = [];
 
-            $http.get("/conf?cmd=getOzoneTags&group=ozone")
+            $http.get("conf?cmd=getOzoneTags&group=ozone")
                 .then(function (response) {
                     ctrl.tags = response.data;
 
@@ -284,7 +284,7 @@
 
             ctrl.loadAll = function () {
                 console.log("Displaying all configs");
-                $http.get("/conf?cmd=getPropertyByTag&tags=" + ctrl.tags + "&group=ozone").then(function (response) {
+                $http.get("conf?cmd=getPropertyByTag&tags=" + ctrl.tags + "&group=ozone").then(function (response) {
                     ctrl.configs = response.data;
                     console.log(ctrl.configs)
                     for (var idx in ctrl.configs) {
