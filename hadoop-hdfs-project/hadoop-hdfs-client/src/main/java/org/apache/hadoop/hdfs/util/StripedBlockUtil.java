@@ -396,7 +396,9 @@ public class StripedBlockUtil {
       long rangeStartInBlockGroup, long rangeEndInBlockGroup) {
     Preconditions.checkArgument(
         rangeStartInBlockGroup <= rangeEndInBlockGroup &&
-            rangeEndInBlockGroup < blockGroup.getBlockSize());
+            rangeEndInBlockGroup < blockGroup.getBlockSize(),
+        "start=%s end=%s blockSize=%s", rangeStartInBlockGroup,
+        rangeEndInBlockGroup, blockGroup.getBlockSize());
     long len = rangeEndInBlockGroup - rangeStartInBlockGroup + 1;
     int firstCellIdxInBG = (int) (rangeStartInBlockGroup / cellSize);
     int lastCellIdxInBG = (int) (rangeEndInBlockGroup / cellSize);
@@ -578,27 +580,38 @@ public class StripedBlockUtil {
   static class StripingCell {
     final ErasureCodingPolicy ecPolicy;
     /** Logical order in a block group, used when doing I/O to a block group. */
-    final int idxInBlkGroup;
-    final int idxInInternalBlk;
-    final int idxInStripe;
+    private final long idxInBlkGroup;
+    private final long idxInInternalBlk;
+    private final int idxInStripe;
     /**
      * When a logical byte range is mapped to a set of cells, it might
      * partially overlap with the first and last cells. This field and the
      * {@link #size} variable represent the start offset and size of the
      * overlap.
      */
-    final int offset;
-    final int size;
+    private final long offset;
+    private final int size;
 
-    StripingCell(ErasureCodingPolicy ecPolicy, int cellSize, int idxInBlkGroup,
-        int offset) {
+    StripingCell(ErasureCodingPolicy ecPolicy, int cellSize, long idxInBlkGroup,
+        long offset) {
       this.ecPolicy = ecPolicy;
       this.idxInBlkGroup = idxInBlkGroup;
       this.idxInInternalBlk = idxInBlkGroup / ecPolicy.getNumDataUnits();
-      this.idxInStripe = idxInBlkGroup -
-          this.idxInInternalBlk * ecPolicy.getNumDataUnits();
+      this.idxInStripe = (int)(idxInBlkGroup -
+          this.idxInInternalBlk * ecPolicy.getNumDataUnits());
       this.offset = offset;
       this.size = cellSize;
+    }
+
+    int getIdxInStripe() {
+      return idxInStripe;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("StripingCell(idxInBlkGroup=%d, " +
+          "idxInInternalBlk=%d, idxInStrip=%d, offset=%d, size=%d)",
+          idxInBlkGroup, idxInInternalBlk, idxInStripe, offset, size);
     }
   }
 
@@ -646,7 +659,9 @@ public class StripedBlockUtil {
     public int missingChunksNum = 0;
 
     public AlignedStripe(long offsetInBlock, long length, int width) {
-      Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0);
+      Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0,
+          "OffsetInBlock(%s) and length(%s) must be non-negative",
+          offsetInBlock, length);
       this.range = new VerticalRange(offsetInBlock, length);
       this.chunks = new StripingChunk[width];
     }
@@ -665,9 +680,9 @@ public class StripedBlockUtil {
 
     @Override
     public String toString() {
-      return "Offset=" + range.offsetInBlock + ", length=" + range.spanInBlock +
-          ", fetchedChunksNum=" + fetchedChunksNum +
-          ", missingChunksNum=" + missingChunksNum;
+      return "AlignedStripe(Offset=" + range.offsetInBlock + ", length=" +
+          range.spanInBlock + ", fetchedChunksNum=" + fetchedChunksNum +
+          ", missingChunksNum=" + missingChunksNum + ")";
     }
   }
 
@@ -698,7 +713,9 @@ public class StripedBlockUtil {
     public long spanInBlock;
 
     public VerticalRange(long offsetInBlock, long length) {
-      Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0);
+      Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0,
+          "OffsetInBlock(%s) and length(%s) must be non-negative",
+          offsetInBlock, length);
       this.offsetInBlock = offsetInBlock;
       this.spanInBlock = length;
     }
@@ -706,6 +723,12 @@ public class StripedBlockUtil {
     /** whether a position is in the range. */
     public boolean include(long pos) {
       return pos >= offsetInBlock && pos < offsetInBlock + spanInBlock;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("VerticalRange(offsetInBlock=%d, spanInBlock=%d)",
+          this.offsetInBlock, this.spanInBlock);
     }
   }
 
@@ -880,7 +903,9 @@ public class StripedBlockUtil {
     final long length;
 
     public StripeRange(long offsetInBlock, long length) {
-      Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0);
+      Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0,
+          "Offset(%s) and length(%s) must be non-negative", offsetInBlock,
+          length);
       this.offsetInBlock = offsetInBlock;
       this.length = length;
     }
@@ -891,6 +916,12 @@ public class StripedBlockUtil {
 
     public long getLength() {
       return length;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("StripeRange(offsetInBlock=%d, length=%d)",
+          offsetInBlock, length);
     }
   }
 
