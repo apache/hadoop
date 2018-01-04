@@ -52,8 +52,10 @@ import java.util.Arrays;
 public class ContainersMonitorImpl extends AbstractService implements
     ContainersMonitor {
 
-  final static Logger LOG =
-       LoggerFactory.getLogger(ContainersMonitorImpl.class);
+  private final static Logger LOG =
+      LoggerFactory.getLogger(ContainersMonitorImpl.class);
+  private final static Logger AUDITLOG =
+      LoggerFactory.getLogger(ContainersMonitorImpl.class.getName()+".audit");
 
   private long monitoringInterval;
   private MonitoringThread monitoringThread;
@@ -498,8 +500,8 @@ public class ContainersMonitorImpl extends AbstractService implements
             long curRssMemUsageOfAgedProcesses = pTree.getRssMemorySize(1);
             long vmemLimit = ptInfo.getVmemLimit();
             long pmemLimit = ptInfo.getPmemLimit();
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(String.format(
+            if (AUDITLOG.isDebugEnabled()) {
+              AUDITLOG.debug(String.format(
                   "Memory usage of ProcessTree %s for container-id %s: ",
                   pId, containerId.toString()) +
                   formatUsageString(
