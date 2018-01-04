@@ -61,7 +61,7 @@
             };
 
 
-            $http.get("/jmx?qry=Hadoop:service=KeySpaceManager,name=KSMMetrics")
+            $http.get("jmx?qry=Hadoop:service=KeySpaceManager,name=KSMMetrics")
                 .then(function (result) {
 
                     var groupedMetrics = {others: [], nums: {}};
