@@ -147,7 +147,7 @@
 
 <p>
   {#fs}
-  {FilesTotal|fmt_number} files and directories, {BlocksTotal|fmt_number} blocks = {ObjectsTotal|fmt_number} total filesystem object(s).
+  {FilesTotal|fmt_number} files and directories, {BlocksTotal|fmt_number} blocks ({#replicastat}{TotalReplicatedBlocks|fmt_number}{/replicastat} replicated blocks, {#ecstat}{TotalECBlockGroups|fmt_number}{/ecstat} erasure coded block groups) = {ObjectsTotal|fmt_number} total filesystem object(s).
   {#helper_fs_max_objects/}
   {/fs}
 </p>

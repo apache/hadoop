@@ -244,6 +244,15 @@ public class TestDiskBalancerCommand {
 
   }
 
+  /* test basic report with negative top limit */
+  @Test(timeout = 60000)
+  public void testReportWithNegativeTopLimit()
+      throws Exception {
+    final String cmdLine = "hdfs diskbalancer -report -top -32";
+    thrown.expect(java.lang.IllegalArgumentException.class);
+    thrown.expectMessage("Top limit input should be a positive numeric value");
+    runCommand(cmdLine);
+  }
   /* test less than 64 DataNode(s) as total, e.g., -report -top 32 */
   @Test(timeout = 60000)
   public void testReportLessThanTotal() throws Exception {
