@@ -267,7 +267,9 @@ public class MountTableResolver
           // Node exists, check for updates
           MountTable existingEntry = this.tree.get(srcPath);
           if (existingEntry != null && !existingEntry.equals(entry)) {
-            // Entry has changed
+            LOG.info("Entry has changed from \"{}\" to \"{}\"",
+                existingEntry, entry);
+            this.tree.put(srcPath, entry);
             invalidateLocationCache(srcPath);
             LOG.info("Updated mount point {} in resolver");
           }
