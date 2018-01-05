@@ -625,6 +625,7 @@ public class LeafQueue extends AbstractCSQueue {
       effectiveUserLimit = Math.max(userLimit / 100.0f,
          1.0f / Math.max(getActiveUsersManager().getNumActiveUsers(), 1));
     }
+    float preWeightedUserLimit = effectiveUserLimit;
     effectiveUserLimit = Math.min(effectiveUserLimit * userWeight, 1.0f);
 
     Resource queuePartitionResource = Resources.multiplyAndNormalizeUp(
@@ -636,10 +637,28 @@ public class LeafQueue extends AbstractCSQueue {
         queuePartitionResource,
         queueCapacities.getMaxAMResourcePercentage(nodePartition)
             * effectiveUserLimit * userLimitFactor, minimumAllocation);
-    return Resources.lessThanOrEqual(resourceCalculator, lastClusterResource,
-        userAMLimit, getAMResourceLimitPerPartition(nodePartition))
-        ? userAMLimit
-        : getAMResourceLimitPerPartition(nodePartition);
+    userAMLimit =
+        Resources.min(resourceCalculator, lastClusterResource,
+            userAMLimit,
+            Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
+
+    Resource preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+        resourceCalculator, queuePartitionResource,
+        queueCapacities.getMaxAMResourcePercentage(nodePartition)
+            * preWeightedUserLimit * userLimitFactor,
+        minimumAllocation);
+    preWeighteduserAMLimit =
+        Resources.min(resourceCalculator, lastClusterResource,
+            preWeighteduserAMLimit,
+            Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
+    queueUsage.setUserAMLimit(nodePartition, preWeighteduserAMLimit);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Effective user AM limit for \"" + userName + "\":" +
+          preWeighteduserAMLimit + ". " + "Effective weighted user AM limit: "
+          + userAMLimit + ". User weight: " + userWeight);
+    }
+    return userAMLimit;
   }
 
   public synchronized Resource calculateAndGetAMResourceLimitPerPartition(

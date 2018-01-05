@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ResourceInfo {
+  Resource res;
   long memory;
   int vCores;
   
@@ -34,6 +35,7 @@ public class ResourceInfo {
   }
 
   public ResourceInfo(Resource res) {
+    this.res = res;
     memory = res.getMemorySize();
     vCores = res.getVirtualCores();
   }
@@ -57,5 +59,9 @@ public class ResourceInfo {
 
   public void setvCores(int vCores) {
     this.vCores = vCores;
+  }
+
+  public Resource getResource() {
+    return res;
   }
 }
