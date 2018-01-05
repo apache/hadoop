@@ -197,6 +197,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   protected ReentrantReadWriteLock.ReadLock readLock;
   protected ReentrantReadWriteLock.WriteLock writeLock;
 
+  private Map<String, String> applicationSchedulingEnvs = new HashMap<>();
+
   // Not confirmed allocation resource, will be used to avoid too many proposal
   // rejected because of duplicated allocation
   private AtomicLong unconfirmedAllocatedMem = new AtomicLong();
@@ -207,9 +209,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       RMContext rmContext) {
     Preconditions.checkNotNull(rmContext, "RMContext should not be null");
     this.rmContext = rmContext;
-    this.appSchedulingInfo = 
-        new AppSchedulingInfo(applicationAttemptId, user, queue,  
-            abstractUsersManager, rmContext.getEpoch(), attemptResourceUsage);
     this.queue = queue;
     this.pendingRelease = Collections.newSetFromMap(
         new ConcurrentHashMap<ContainerId, Boolean>());
@@ -227,8 +226,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         this.logAggregationContext =
             appSubmissionContext.getLogAggregationContext();
       }
+      applicationSchedulingEnvs = rmApp.getApplicationSchedulingEnvs();
     }
 
+    this.appSchedulingInfo = new AppSchedulingInfo(applicationAttemptId, user,
+        queue, abstractUsersManager, rmContext.getEpoch(), attemptResourceUsage,
+        applicationSchedulingEnvs);
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -1433,5 +1436,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     public String getDiagnosticMessage() {
       return diagnosticMessage;
     }
+  }
+
+  public Map<String, String> getApplicationSchedulingEnvs() {
+    return this.applicationSchedulingEnvs;
   }
 }

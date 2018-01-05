@@ -66,6 +66,12 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
     this.appSchedulingInfo = info;
   }
 
+  public LocalityAppPlacementAllocator() {
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    readLock = lock.readLock();
+    writeLock = lock.writeLock();
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public Iterator<N> getPreferredNodeIterator(
@@ -418,5 +424,10 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
     } finally {
       writeLock.unlock();
     }
+  }
+
+  @Override
+  public void setAppSchedulingInfo(AppSchedulingInfo appSchedulingInfo) {
+    this.appSchedulingInfo = appSchedulingInfo;
   }
 }
