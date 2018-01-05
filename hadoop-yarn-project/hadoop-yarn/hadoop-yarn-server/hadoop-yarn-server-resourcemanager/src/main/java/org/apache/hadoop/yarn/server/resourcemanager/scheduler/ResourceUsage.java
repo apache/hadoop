@@ -268,6 +268,22 @@ public class ResourceUsage extends AbstractResourceUsage {
     _set(label, ResourceType.AMLIMIT, res);
   }
 
+  public Resource getUserAMLimit() {
+    return getAMLimit(NL);
+  }
+
+  public Resource getUserAMLimit(String label) {
+    return _get(label, ResourceType.USERAMLIMIT);
+  }
+
+  public void setUserAMLimit(Resource res) {
+    setAMLimit(NL, res);
+  }
+
+  public void setUserAMLimit(String label, Resource res) {
+    _set(label, ResourceType.USERAMLIMIT, res);
+  }
+
   public Resource getCachedDemand(String label) {
     try {
       readLock.lock();
