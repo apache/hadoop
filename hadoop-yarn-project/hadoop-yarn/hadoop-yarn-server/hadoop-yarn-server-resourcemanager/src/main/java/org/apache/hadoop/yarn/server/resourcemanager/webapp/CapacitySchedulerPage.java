@@ -144,13 +144,13 @@ class CapacitySchedulerPage extends RmView {
       // Get UserInfo from first user to calculate AM Resource Limit per user.
       ResourceInfo userAMResourceLimit = null;
       ArrayList<UserInfo> usersList = lqinfo.getUsers().getUsersList();
-      if (usersList.isEmpty()) {
-        // If no users are present, consider AM Limit for that queue.
+      if (!usersList.isEmpty()) {
+        userAMResourceLimit = resourceUsages.getUserAmLimit();
+      }
+      // If no users are present or if AM limit per user doesn't exist, retrieve
+      // AM Limit for that queue.
+      if (userAMResourceLimit == null) {
         userAMResourceLimit = resourceUsages.getAMLimit();
-      } else {
-        userAMResourceLimit = usersList.get(0)
-            .getResourceUsageInfo().getPartitionResourceUsageInfo(label)
-            .getAMLimit();
       }
       ResourceInfo amUsed = (resourceUsages.getAmUsed() == null)
           ? new ResourceInfo(Resources.none())
@@ -235,11 +235,25 @@ class CapacitySchedulerPage extends RmView {
               .$class("ui-state-default").__("Non-Schedulable Apps").__().__().__()
               .tbody();
 
+      PartitionResourcesInfo queueUsageResources =
+          lqinfo.getResources().getPartitionResourceUsageInfo(
+              nodeLabel == null ? "" : nodeLabel);
+
       ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
       for (UserInfo userInfo : users) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
-        PartitionResourcesInfo resourceUsages = userInfo.getResourceUsageInfo()
-            .getPartitionResourceUsageInfo((nodeLabel == null) ? "" : nodeLabel);
+        ResourceInfo userAMLimitPerPartition =
+            queueUsageResources.getUserAmLimit();
+        // If AM limit per user is null, use the AM limit for the queue level.
+        if (userAMLimitPerPartition == null) {
+          userAMLimitPerPartition = queueUsageResources.getAMLimit();
+        }
+        if (userInfo.getUserWeight() != 1.0) {
+          userAMLimitPerPartition =
+              new ResourceInfo(
+                  Resources.multiply(userAMLimitPerPartition.getResource(),
+                      userInfo.getUserWeight()));
+        }
         if (nodeLabel != null) {
           resourcesUsed = userInfo.getResourceUsageInfo()
               .getPartitionResourceUsageInfo(nodeLabel).getUsed();
@@ -254,7 +268,7 @@ class CapacitySchedulerPage extends RmView {
             .td(userInfo.getUserResourceLimit().toString())
             .td(String.valueOf(userInfo.getUserWeight()))
             .td(resourcesUsed.toString())
-            .td(resourceUsages.getAMLimit().toString())
+            .td(userAMLimitPerPartition.toString())
             .td(amUsed.toString())
             .td(Integer.toString(userInfo.getNumActiveApplications()))
             .td(Integer.toString(userInfo.getNumPendingApplications())).__();
