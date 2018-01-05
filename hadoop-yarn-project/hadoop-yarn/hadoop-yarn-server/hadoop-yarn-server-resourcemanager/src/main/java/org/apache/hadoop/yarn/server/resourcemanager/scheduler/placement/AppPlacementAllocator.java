@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
@@ -157,4 +158,12 @@ public interface AppPlacementAllocator<N extends SchedulerNode> {
    * Print human-readable requests to LOG debug.
    */
   void showRequests();
+
+  /**
+   * Set app scheduling info.
+   *
+   * @param appSchedulingInfo
+   *          app info object.
+   */
+  void setAppSchedulingInfo(AppSchedulingInfo appSchedulingInfo);
 }

@@ -459,6 +459,7 @@ message ApplicationSubmissionContextProto {
   optional string node_label_expression = 16;
   repeated ResourceRequestProto am_container_resource_request = 17;
   repeated ApplicationTimeoutMapProto application_timeouts = 18;
+  repeated StringStringMapProto application_scheduling_properties = 19;
 }
 
 enum ApplicationTimeoutTypeProto {
