@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -95,9 +97,13 @@ public class TestListOpenFiles {
     verifyOpenFiles(openFiles);
 
     BatchedEntries<OpenFileEntry> openFileEntryBatchedEntries =
-        nnRpc.listOpenFiles(0);
+        nnRpc.listOpenFiles(0, EnumSet.of(OpenFilesType.ALL_OPEN_FILES));
     assertTrue("Open files list should be empty!",
         openFileEntryBatchedEntries.size() == 0);
+    BatchedEntries<OpenFileEntry> openFilesBlockingDecomEntries =
+        nnRpc.listOpenFiles(0, EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION));
+    assertTrue("Open files list blocking decommission should be empty!",
+        openFilesBlockingDecomEntries.size() == 0);
 
     openFiles.putAll(
         DFSTestUtil.createOpenFiles(fs, "open-1", 1));
@@ -121,16 +127,16 @@ public class TestListOpenFiles {
     }
   }
 
-  private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles)
-      throws IOException {
+  private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles,
+      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
     HashSet<Path> remainingFiles = new HashSet<>(openFiles.keySet());
     OpenFileEntry lastEntry = null;
     BatchedEntries<OpenFileEntry> batchedEntries;
     do {
       if (lastEntry == null) {
-        batchedEntries = nnRpc.listOpenFiles(0);
+        batchedEntries = nnRpc.listOpenFiles(0, openFilesTypes);
       } else {
-        batchedEntries = nnRpc.listOpenFiles(lastEntry.getId());
+        batchedEntries = nnRpc.listOpenFiles(lastEntry.getId(), openFilesTypes);
       }
       assertTrue("Incorrect open files list size!",
           batchedEntries.size() <= BATCH_SIZE);
@@ -144,6 +150,13 @@ public class TestListOpenFiles {
     } while (batchedEntries.hasMore());
     assertTrue(remainingFiles.size() + " open files not listed!",
         remainingFiles.size() == 0);
+  }
+
+  private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles)
+      throws IOException {
+    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES));
+    verifyOpenFiles(new HashMap<>(),
+        EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION));
   }
 
   private Set<Path> createFiles(FileSystem fileSystem, String fileNamePrefix,
@@ -197,6 +210,8 @@ public class TestListOpenFiles {
             try {
               assertEquals(0, ToolRunner.run(dfsAdmin,
                   new String[] {"-listOpenFiles"}));
+              assertEquals(0, ToolRunner.run(dfsAdmin,
+                  new String[] {"-listOpenFiles", "-blockingDecommission"}));
               // Sleep for some time to avoid
               // flooding logs with listing.
               Thread.sleep(listingIntervalMsec);
@@ -222,6 +237,8 @@ public class TestListOpenFiles {
 
       assertEquals(0, ToolRunner.run(dfsAdmin,
           new String[] {"-listOpenFiles"}));
+      assertEquals(0, ToolRunner.run(dfsAdmin,
+          new String[] {"-listOpenFiles", "-blockingDecommission"}));
       assertFalse("Client Error!", listOpenFilesError.get());
 
       clientThread.join();

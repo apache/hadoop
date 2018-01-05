@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,20 +36,51 @@ import org.apache.htrace.core.Tracer;
 @InterfaceStability.Evolving
 public class OpenFilesIterator extends
     BatchedRemoteIterator<Long, OpenFileEntry> {
+
+  /**
+   * Open file types to filter the results.
+   */
+  public enum OpenFilesType {
+
+    ALL_OPEN_FILES((short) 0x01),
+    BLOCKING_DECOMMISSION((short) 0x02);
+
+    private final short mode;
+    OpenFilesType(short mode) {
+      this.mode = mode;
+    }
+
+    public short getMode() {
+      return mode;
+    }
+
+    public static OpenFilesType valueOf(short num) {
+      for (OpenFilesType type : OpenFilesType.values()) {
+        if (type.getMode() == num) {
+          return type;
+        }
+      }
+      return null;
+    }
+  }
+
   private final ClientProtocol namenode;
   private final Tracer tracer;
+  private final EnumSet<OpenFilesType> types;
 
-  public OpenFilesIterator(ClientProtocol namenode, Tracer tracer) {
+  public OpenFilesIterator(ClientProtocol namenode, Tracer tracer,
+      EnumSet<OpenFilesType> types) {
     super(HdfsConstants.GRANDFATHER_INODE_ID);
     this.namenode = namenode;
     this.tracer = tracer;
+    this.types = types;
   }
 
   @Override
   public BatchedEntries<OpenFileEntry> makeRequest(Long prevId)
       throws IOException {
     try (TraceScope ignored = tracer.newScope("listOpenFiles")) {
-      return namenode.listOpenFiles(prevId);
+      return namenode.listOpenFiles(prevId, types);
     }
   }
 

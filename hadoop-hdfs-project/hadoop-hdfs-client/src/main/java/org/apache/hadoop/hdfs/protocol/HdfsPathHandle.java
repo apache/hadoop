@@ -66,6 +66,9 @@ public final class HdfsPathHandle implements PathHandle {
 
   public void verify(HdfsLocatedFileStatus stat)
       throws InvalidPathHandleException {
+    if (null == stat) {
+      throw new InvalidPathHandleException("Could not resolve handle");
+    }
     if (mtime != null && mtime != stat.getModificationTime()) {
       throw new InvalidPathHandleException("Content changed");
     }

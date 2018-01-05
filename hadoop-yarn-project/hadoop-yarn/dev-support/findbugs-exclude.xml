@@ -650,5 +650,4 @@
     <Method name="equals" />
     <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC" />
   </Match>
-
 </FindBugsFilter>
