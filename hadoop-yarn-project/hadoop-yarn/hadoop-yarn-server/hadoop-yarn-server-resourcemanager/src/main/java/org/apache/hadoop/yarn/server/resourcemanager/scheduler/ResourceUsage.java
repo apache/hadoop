@@ -62,7 +62,7 @@ public class ResourceUsage {
     //CACHED_USED and CACHED_PENDING may be read by anyone, but must only
     //be written by ordering policies
     USED(0), PENDING(1), AMUSED(2), RESERVED(3), CACHED_USED(4),
-      CACHED_PENDING(5), AMLIMIT(6);
+      CACHED_PENDING(5), AMLIMIT(6), USERAMLIMIT(7);
 
     private int idx;
 
@@ -433,5 +433,21 @@ public class ResourceUsage {
     } finally {
       readLock.unlock();
     }
+  }
+
+  public Resource getUserAMLimit() {
+    return getAMLimit(NL);
+  }
+
+  public Resource getUserAMLimit(String label) {
+    return _get(label, ResourceType.USERAMLIMIT);
+  }
+
+  public void setUserAMLimit(Resource res) {
+    setAMLimit(NL, res);
+  }
+
+  public void setUserAMLimit(String label, Resource res) {
+    _set(label, ResourceType.USERAMLIMIT, res);
   }
 }
