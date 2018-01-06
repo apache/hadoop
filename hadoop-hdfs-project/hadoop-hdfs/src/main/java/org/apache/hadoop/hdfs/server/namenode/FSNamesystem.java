@@ -1748,11 +1748,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * TODO: HDFS-12969 - to report open files by type.
    *
    * @param prevId the cursor INode id.
-   * @param openFilesTypes
+   * @param openFilesTypes types to filter the open files.
+   * @param path path to filter the open files.
    * @throws IOException
    */
   BatchedListEntries<OpenFileEntry> listOpenFiles(long prevId,
-      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     final String operationName = "listOpenFiles";
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
@@ -1761,10 +1762,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.READ);
       if(openFilesTypes.contains(OpenFilesType.ALL_OPEN_FILES)) {
-        batchedListEntries = leaseManager.getUnderConstructionFiles(prevId);
+        batchedListEntries = leaseManager.getUnderConstructionFiles(prevId,
+            path);
       } else {
         if(openFilesTypes.contains(OpenFilesType.BLOCKING_DECOMMISSION)) {
-          batchedListEntries = getFilesBlockingDecom(prevId);
+          batchedListEntries = getFilesBlockingDecom(prevId, path);
         } else {
           throw new IllegalArgumentException("Unknown OpenFileType: "
               + openFilesTypes);
@@ -1780,7 +1782,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return batchedListEntries;
   }
 
-  public BatchedListEntries<OpenFileEntry> getFilesBlockingDecom(long prevId) {
+  public BatchedListEntries<OpenFileEntry> getFilesBlockingDecom(long prevId,
+      String path) {
     assert hasReadLock();
     final List<OpenFileEntry> openFileEntries = Lists.newArrayList();
     LightWeightHashSet<Long> openFileIds = new LightWeightHashSet<>();
@@ -1798,10 +1801,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         Preconditions.checkState(ucFile instanceof INodeFile);
         openFileIds.add(ucFileId);
         INodeFile inodeFile = ucFile.asFile();
-        openFileEntries.add(new OpenFileEntry(
-            inodeFile.getId(), inodeFile.getFullPathName(),
-            inodeFile.getFileUnderConstructionFeature().getClientName(),
-            inodeFile.getFileUnderConstructionFeature().getClientMachine()));
+
+        String fullPathName = inodeFile.getFullPathName();
+        if (org.apache.commons.lang.StringUtils.isEmpty(path)
+            || fullPathName.startsWith(path)) {
+          openFileEntries.add(new OpenFileEntry(inodeFile.getId(),
+              inodeFile.getFullPathName(),
+              inodeFile.getFileUnderConstructionFeature().getClientName(),
+              inodeFile.getFileUnderConstructionFeature().getClientMachine()));
+        }
+
         if (openFileIds.size() >= this.maxListOpenFilesResponses) {
           return new BatchedListEntries<>(openFileEntries, true);
         }
