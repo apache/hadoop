@@ -1680,10 +1680,11 @@ public interface ClientProtocol {
    * the the list across batches are not atomic.
    *
    * @param prevId the cursor INode id.
-   * @param openFilesTypes types to filter the open files
+   * @param openFilesTypes types to filter the open files.
+   * @param path path to filter the open files.
    * @throws IOException
    */
   @Idempotent
   BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
-      EnumSet<OpenFilesType> openFilesTypes) throws IOException;
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException;
 }
