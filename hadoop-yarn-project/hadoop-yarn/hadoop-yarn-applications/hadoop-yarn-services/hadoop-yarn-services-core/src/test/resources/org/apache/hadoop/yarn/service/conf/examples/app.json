@@ -37,7 +37,16 @@
       "launch_command": "sleep 3600",
       "resource": {
         "cpus": 1,
-        "memory": "1024"
+        "memory": "1024",
+        "additional": {
+          "resource-1": {
+            "value": 3333,
+            "unit": "Gi"
+          },
+          "yarn.io/gpu": {
+            "value": 5
+          }
+        }
       },
       "configuration": {
         "properties": {

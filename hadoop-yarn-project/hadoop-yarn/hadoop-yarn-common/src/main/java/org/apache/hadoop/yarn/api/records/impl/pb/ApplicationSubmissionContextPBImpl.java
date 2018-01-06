@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 
 import com.google.protobuf.TextFormat;
 
@@ -71,6 +72,7 @@ extends ApplicationSubmissionContext {
   private LogAggregationContext logAggregationContext = null;
   private ReservationId reservationId = null;
   private Map<ApplicationTimeoutType, Long> applicationTimeouts = null;
+  private Map<String, String> schedulingProperties = null;
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
@@ -140,6 +142,9 @@ extends ApplicationSubmissionContext {
     }
     if (this.applicationTimeouts != null) {
       addApplicationTimeouts();
+    }
+    if (this.schedulingProperties != null) {
+      addApplicationSchedulingProperties();
     }
   }
 
@@ -662,4 +667,71 @@ extends ApplicationSubmissionContext {
         };
     this.builder.addAllApplicationTimeouts(values);
   }
-}  
+
+  private void addApplicationSchedulingProperties() {
+    maybeInitBuilder();
+    builder.clearApplicationSchedulingProperties();
+    if (this.schedulingProperties == null) {
+      return;
+    }
+    Iterable<? extends StringStringMapProto> values =
+        new Iterable<StringStringMapProto>() {
+
+      @Override
+      public Iterator<StringStringMapProto> iterator() {
+        return new Iterator<StringStringMapProto>() {
+          private Iterator<String> iterator = schedulingProperties.keySet()
+              .iterator();
+
+          @Override
+          public boolean hasNext() {
+            return iterator.hasNext();
+          }
+
+          @Override
+          public StringStringMapProto next() {
+            String key = iterator.next();
+            return StringStringMapProto.newBuilder()
+                .setValue(schedulingProperties.get(key)).setKey(key).build();
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    this.builder.addAllApplicationSchedulingProperties(values);
+  }
+
+  private void initApplicationSchedulingProperties() {
+    if (this.schedulingProperties != null) {
+      return;
+    }
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    List<StringStringMapProto> properties = p
+        .getApplicationSchedulingPropertiesList();
+    this.schedulingProperties = new HashMap<String, String>(properties.size());
+    for (StringStringMapProto envProto : properties) {
+      this.schedulingProperties.put(envProto.getKey(), envProto.getValue());
+    }
+  }
+
+  @Override
+  public Map<String, String> getApplicationSchedulingPropertiesMap() {
+    initApplicationSchedulingProperties();
+    return this.schedulingProperties;
+  }
+
+  @Override
+  public void setApplicationSchedulingPropertiesMap(
+      Map<String, String> schedulingPropertyMap) {
+    if (schedulingPropertyMap == null) {
+      return;
+    }
+    initApplicationSchedulingProperties();
+    this.schedulingProperties.clear();
+    this.schedulingProperties.putAll(schedulingPropertyMap);
+  }
+}

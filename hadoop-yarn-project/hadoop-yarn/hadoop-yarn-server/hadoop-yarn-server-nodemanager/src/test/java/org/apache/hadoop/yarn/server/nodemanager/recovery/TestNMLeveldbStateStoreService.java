@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -89,10 +90,12 @@ import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.iq80.leveldb.DB;
+import org.iq80.leveldb.DBException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestNMLeveldbStateStoreService {
   private static final File TMP_DIR = new File(
@@ -1163,6 +1166,38 @@ public class TestNMLeveldbStateStoreService {
     Assert.assertTrue(res.equals(numaRes));
     Assert.assertTrue(
         resourceMappings.getAssignedResources("numa").equals(numaRes));
+  }
+
+  @Test
+  public void testStateStoreNodeHealth() throws IOException {
+    // keep the working DB clean, break a temp DB
+    DB keepDB = stateStore.getDB();
+    DB myMocked = mock(DB.class);
+    stateStore.setDB(myMocked);
+
+    ApplicationId appId = ApplicationId.newInstance(1234, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    DBException toThrow = new DBException();
+    Mockito.doThrow(toThrow).when(myMocked).
+        put(any(byte[].class), any(byte[].class));
+    // write some data
+    try {
+      // chosen a simple method could be any of the "void" methods
+      ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
+      stateStore.storeContainerKilled(containerId);
+    } catch (IOException ioErr) {
+      // Cause should be wrapped DBException
+      assertTrue(ioErr.getCause() instanceof DBException);
+      // check the store is marked unhealthy
+      assertFalse("Statestore should have been unhealthy",
+          stateStore.isHealthy());
+      return;
+    } finally {
+      // restore the working DB
+      stateStore.setDB(keepDB);
+    }
+    Assert.fail("Expected exception not thrown");
   }
 
   private StartContainerRequest storeMockContainer(ContainerId containerId)

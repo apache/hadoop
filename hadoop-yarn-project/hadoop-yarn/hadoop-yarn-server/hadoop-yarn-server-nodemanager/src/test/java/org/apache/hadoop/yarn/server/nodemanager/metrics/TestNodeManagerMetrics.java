@@ -19,19 +19,40 @@ package org.apache.hadoop.yarn.server.nodemanager.metrics;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
 
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestNodeManagerMetrics {
   static final int GiB = 1024; // MiB
 
-  @Test public void testNames() {
+  private NodeManagerMetrics metrics;
+
+  @Before
+  public void setup() {
     DefaultMetricsSystem.initialize("NodeManager");
-    NodeManagerMetrics metrics = NodeManagerMetrics.create();
+    metrics = NodeManagerMetrics.create();
+  }
+
+  @After
+  public void tearDown() {
+    DefaultMetricsSystem.shutdown();
+  }
+
+  @Test
+  public void testReferenceOfSingletonJvmMetrics()  {
+    JvmMetrics jvmMetrics = JvmMetrics.initSingleton("NodeManagerModule", null);
+    Assert.assertEquals("NodeManagerMetrics should reference the singleton" +
+        " JvmMetrics instance", jvmMetrics, metrics.getJvmMetrics());
+  }
+
+  @Test public void testNames() {
     Resource total = Records.newRecord(Resource.class);
     total.setMemorySize(8*GiB);
     total.setVirtualCores(16);

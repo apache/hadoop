@@ -24,6 +24,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -408,5 +410,35 @@ public class TestMountTableResolver {
 
     assertEquals(numRootTrees, mountTable.getMountPoints("/").size());
     assertEquals(100000, mountTable.getMounts("/").size());
+  }
+
+  @Test
+  public void testUpdate() throws IOException {
+
+    // Add entry to update later
+    Map<String, String> map = getMountTableEntry("1", "/");
+    mountTable.addEntry(MountTable.newInstance("/testupdate", map));
+
+    MountTable entry = mountTable.getMountPoint("/testupdate");
+    List<RemoteLocation> dests = entry.getDestinations();
+    assertEquals(1, dests.size());
+    RemoteLocation dest = dests.get(0);
+    assertEquals("1", dest.getNameserviceId());
+
+    // Update entry
+    Collection<MountTable> entries = Collections.singletonList(
+        MountTable.newInstance("/testupdate", getMountTableEntry("2", "/")));
+    mountTable.refreshEntries(entries);
+
+    MountTable entry1 = mountTable.getMountPoint("/testupdate");
+    List<RemoteLocation> dests1 = entry1.getDestinations();
+    assertEquals(1, dests1.size());
+    RemoteLocation dest1 = dests1.get(0);
+    assertEquals("2", dest1.getNameserviceId());
+
+    // Remove the entry to test updates and check
+    mountTable.removeEntry("/testupdate");
+    MountTable entry2 = mountTable.getMountPoint("/testupdate");
+    assertNull(entry2);
   }
 }

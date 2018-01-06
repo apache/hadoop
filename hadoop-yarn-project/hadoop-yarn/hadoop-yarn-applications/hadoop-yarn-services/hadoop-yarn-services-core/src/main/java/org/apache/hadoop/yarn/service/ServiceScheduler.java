@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.util.BoundedAppender;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -278,6 +279,12 @@ public class ServiceScheduler extends CompositeService {
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(bindAddress.getHostName(),
             bindAddress.getPort(), "N/A");
+
+    // Update internal resource types according to response.
+    if (response.getResourceTypes() != null) {
+      ResourceUtils.reinitializeResources(response.getResourceTypes());
+    }
+
     if (response.getClientToAMTokenMasterKey() != null
         && response.getClientToAMTokenMasterKey().remaining() != 0) {
       context.secretManager

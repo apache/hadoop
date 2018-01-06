@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +16,20 @@
  * limitations under the License.
  */
 
-/**
- * Package org.apache.hadoop.yarn.service.webapp contains classes to be used
- * for YARN Services API.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-package org.apache.hadoop.yarn.service.webapp;
-
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.LocalityAppPlacementAllocator;
+/**
+ * This class will keep all Scheduling env's names which will help in
+ * placement calculations.
+ */
+public class ApplicationSchedulingConfig {
+  @InterfaceAudience.Private
+  public static final String ENV_APPLICATION_PLACEMENT_TYPE_CLASS =
+      "APPLICATION_PLACEMENT_TYPE_CLASS";
+
+  @InterfaceAudience.Private
+  public static final Class<? extends AppPlacementAllocator>
+      DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS = LocalityAppPlacementAllocator.class;
+}

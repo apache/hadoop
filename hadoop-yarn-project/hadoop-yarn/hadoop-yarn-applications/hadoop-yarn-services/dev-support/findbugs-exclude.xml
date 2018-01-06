@@ -48,4 +48,12 @@
         <Class name="org.apache.hadoop.yarn.service.ClientAMPolicyProvider"/>
         <Bug pattern="EI_EXPOSE_REP"/>
     </Match>
+    <!-- SE_BAD_FIELD -->
+    <Match>
+      <Class name="org.apache.hadoop.yarn.service.api.records.Resource" />
+      <Or>
+        <Field name="additional"/>
+      </Or>
+      <Bug pattern="SE_BAD_FIELD" />
+  </Match>
 </FindBugsFilter>

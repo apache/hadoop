@@ -17,6 +17,10 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import static org.apache.hadoop.yarn.util.resource.ResourceUtils.RESOURCE_REQUEST_VALUE_PATTERN;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,8 +31,10 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -38,12 +44,18 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public static final Log LOG = LogFactory.getLog(
       FairSchedulerConfiguration.class.getName());
-  
-  /** Increment request grant-able by the RM scheduler. 
-   * These properties are looked up in the yarn-site.xml  */
+
+  /** Increment request grant-able by the RM scheduler.
+   * These properties are looked up in the yarn-site.xml.
+   * Kept for backward-compatibility - the new preferred way to configure the
+   * increment is the yarn.resource-types.{RESOURCE_NAME}.increment-allocation
+   * property, specifically: yarn.resource-types.memory-mb.increment-allocation
+   * for memory and yarn.resource-types.vcores.increment-allocation for CPU */
+  @Deprecated
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_MB =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-mb";
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB = 1024;
+  @Deprecated
   public static final String RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES =
     YarnConfiguration.YARN_PREFIX + "scheduler.increment-allocation-vcores";
   public static final int DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES = 1;
@@ -111,6 +123,12 @@ public class FairSchedulerConfiguration extends Configuration {
 
   protected static final String WAIT_TIME_BEFORE_KILL = CONF_PREFIX + "waitTimeBeforeKill";
   protected static final int DEFAULT_WAIT_TIME_BEFORE_KILL = 15000;
+
+  /**
+   * Postfix for resource allocation increments in the
+   * yarn.resource-types.{RESOURCE_NAME}.increment-allocation property.
+   */
+  static final String INCREMENT_ALLOCATION = ".increment-allocation";
 
   /**
    * Configurable delay (ms) before an app's starvation is considered after
@@ -185,13 +203,69 @@ public class FairSchedulerConfiguration extends Configuration {
   }
 
   public Resource getIncrementAllocation() {
-    int incrementMemory = getInt(
-      RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
-      DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB);
-    int incrementCores = getInt(
-      RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES,
-      DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
-    return Resources.createResource(incrementMemory, incrementCores);
+    Long memory = null;
+    Integer vCores = null;
+    Map<String, Long> others = new HashMap<>();
+    ResourceInformation[] resourceTypes = ResourceUtils.getResourceTypesArray();
+    for (int i=0; i < resourceTypes.length; ++i) {
+      String name = resourceTypes[i].getName();
+      String propertyKey = getAllocationIncrementPropKey(name);
+      String propValue = get(propertyKey);
+      if (propValue != null) {
+        Matcher matcher = RESOURCE_REQUEST_VALUE_PATTERN.matcher(propValue);
+        if (matcher.matches()) {
+          long value = Long.parseLong(matcher.group(1));
+          String unit = matcher.group(2);
+          long valueInDefaultUnits = getValueInDefaultUnits(value, unit, name);
+          others.put(name, valueInDefaultUnits);
+        } else {
+          throw new IllegalArgumentException("Property " + propertyKey +
+              " is not in \"value [unit]\" format: " + propValue);
+        }
+      }
+    }
+    if (others.containsKey(ResourceInformation.MEMORY_MB.getName())) {
+      memory = others.get(ResourceInformation.MEMORY_MB.getName());
+      if (get(RM_SCHEDULER_INCREMENT_ALLOCATION_MB) != null) {
+        String overridingKey = getAllocationIncrementPropKey(
+                ResourceInformation.MEMORY_MB.getName());
+        LOG.warn("Configuration " + overridingKey + "=" + get(overridingKey) +
+            " is overriding the " + RM_SCHEDULER_INCREMENT_ALLOCATION_MB +
+            "=" + get(RM_SCHEDULER_INCREMENT_ALLOCATION_MB) + " property");
+      }
+      others.remove(ResourceInformation.MEMORY_MB.getName());
+    } else {
+      memory = getLong(
+          RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
+          DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB);
+    }
+    if (others.containsKey(ResourceInformation.VCORES.getName())) {
+      vCores = others.get(ResourceInformation.VCORES.getName()).intValue();
+      if (get(RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES) != null) {
+        String overridingKey = getAllocationIncrementPropKey(
+            ResourceInformation.VCORES.getName());
+        LOG.warn("Configuration " + overridingKey + "=" + get(overridingKey) +
+            " is overriding the " + RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES +
+            "=" + get(RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES) + " property");
+      }
+      others.remove(ResourceInformation.VCORES.getName());
+    } else {
+      vCores = getInt(
+          RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES,
+          DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES);
+    }
+    return Resource.newInstance(memory, vCores, others);
+  }
+
+  private long getValueInDefaultUnits(long value, String unit,
+      String resourceName) {
+    return unit.isEmpty() ? value : UnitsConversionUtil.convert(unit,
+        ResourceUtils.getDefaultUnit(resourceName), value);
+  }
+
+  private String getAllocationIncrementPropKey(String resourceName) {
+    return YarnConfiguration.RESOURCE_TYPES + "." + resourceName +
+        INCREMENT_ALLOCATION;
   }
 
   public float getReservationThresholdIncrementMultiple() {

@@ -508,13 +508,13 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         partitionInfo = partitionsCapsArray.getJSONObject(0);
         partitionName = partitionInfo.getString("partitionName");
         verifyPartitionCapacityInfoJson(partitionInfo, 30, 0, 50, 30, 0, 50);
-        assertEquals("incorrect number of elements", 6,
+        assertEquals("incorrect number of elements", 7,
             partitionsResourcesArray.getJSONObject(0).length());
         break;
       case QUEUE_B:
         assertEquals("Invalid default Label expression", LABEL_LX,
             queueJson.getString("defaultNodeLabelExpression"));
-        assertEquals("incorrect number of elements", 6,
+        assertEquals("incorrect number of elements", 7,
             partitionsResourcesArray.getJSONObject(0).length());
         verifyAccesibleNodeLabels(queueJson, ImmutableSet.of(LABEL_LX));
         assertEquals("incorrect number of partitions", 2,

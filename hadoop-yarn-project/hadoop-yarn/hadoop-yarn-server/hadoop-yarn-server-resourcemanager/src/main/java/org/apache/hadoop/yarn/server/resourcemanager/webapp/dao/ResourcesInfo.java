@@ -51,7 +51,9 @@ public class ResourcesInfo {
           considerAMUsage ? new ResourceInfo(resourceUsage
               .getAMUsed(partitionName)) : null,
           considerAMUsage ? new ResourceInfo(resourceUsage
-              .getAMLimit(partitionName)) : null));
+              .getAMLimit(partitionName)) : null,
+          considerAMUsage ? new ResourceInfo(resourceUsage
+              .getUserAMLimit(partitionName)) : null));
     }
   }
 

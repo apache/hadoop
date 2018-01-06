@@ -37,10 +37,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.google.common.collect.Lists;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.util.Daemon;
@@ -258,6 +261,12 @@ public class LeaseManager {
     return iipSet;
   }
 
+  public BatchedListEntries<OpenFileEntry> getUnderConstructionFiles(
+      final long prevId) throws IOException {
+    return getUnderConstructionFiles(prevId,
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
+  }
+
   /**
    * Get a batch of under construction files from the currently active leases.
    * File INodeID is the cursor used to fetch new batch of results and the
@@ -270,7 +279,7 @@ public class LeaseManager {
    * @throws IOException
    */
   public BatchedListEntries<OpenFileEntry> getUnderConstructionFiles(
-      final long prevId) throws IOException {
+      final long prevId, final String path) throws IOException {
     assert fsnamesystem.hasReadLock();
     SortedMap<Long, Lease> remainingLeases;
     synchronized (this) {
@@ -283,6 +292,7 @@ public class LeaseManager {
         Lists.newArrayListWithExpectedSize(numResponses);
 
     int count = 0;
+    String fullPathName = null;
     for (Long inodeId: inodeIds) {
       final INodeFile inodeFile =
           fsnamesystem.getFSDirectory().getInode(inodeId).asFile();
@@ -291,11 +301,15 @@ public class LeaseManager {
             inodeFile.getFullPathName());
         continue;
       }
-      openFileEntries.add(new OpenFileEntry(
-          inodeFile.getId(), inodeFile.getFullPathName(),
-          inodeFile.getFileUnderConstructionFeature().getClientName(),
-          inodeFile.getFileUnderConstructionFeature().getClientMachine()));
-      count++;
+
+      fullPathName = inodeFile.getFullPathName();
+      if (StringUtils.isEmpty(path) || fullPathName.startsWith(path)) {
+        openFileEntries.add(new OpenFileEntry(inodeFile.getId(), fullPathName,
+            inodeFile.getFileUnderConstructionFeature().getClientName(),
+            inodeFile.getFileUnderConstructionFeature().getClientMachine()));
+        count++;
+      }
+
       if (count >= numResponses) {
         break;
       }
