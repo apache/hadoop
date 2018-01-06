@@ -28,6 +28,7 @@ import javax.xml.bind.annotation.XmlElement;
 import java.util.Map;
 import java.util.Objects;
 
+
 /**
  * Resource determines the amount of resources (vcores, memory, network, etc.)
  * usable by a container. This field determines the resource to be applied for
