@@ -725,6 +725,67 @@ public class TestDFSAdmin {
             new String[]{"-listOpenFiles"}));
         verifyOpenFilesListing(closedFileSet, openFilesMap);
       }
+
+      // test -listOpenFiles command with option <path>
+      openFilesMap.clear();
+      Path file;
+      HashMap<Path, FSDataOutputStream> openFiles1 = new HashMap<>();
+      HashMap<Path, FSDataOutputStream> openFiles2 = new HashMap<>();
+      for (int i = 0; i < numOpenFiles; i++) {
+        if (i % 2 == 0) {
+          file = new Path(new Path("/tmp/files/a"), "open-file-" + i);
+        } else {
+          file = new Path(new Path("/tmp/files/b"), "open-file-" + i);
+        }
+
+        DFSTestUtil.createFile(fs, file, fileLength, replFactor, 12345L);
+        FSDataOutputStream outputStream = fs.append(file);
+
+        if (i % 2 == 0) {
+          openFiles1.put(file, outputStream);
+        } else {
+          openFiles2.put(file, outputStream);
+        }
+        openFilesMap.put(file, outputStream);
+      }
+
+      resetStream();
+      // list all open files
+      assertEquals(0,
+          ToolRunner.run(dfsAdmin, new String[] {"-listOpenFiles"}));
+      verifyOpenFilesListing(null, openFilesMap);
+
+      resetStream();
+      // list open files under directory path /tmp/files/a
+      assertEquals(0, ToolRunner.run(dfsAdmin,
+          new String[] {"-listOpenFiles", "-path", "/tmp/files/a"}));
+      verifyOpenFilesListing(null, openFiles1);
+
+      resetStream();
+      // list open files without input path
+      assertEquals(-1, ToolRunner.run(dfsAdmin,
+          new String[] {"-listOpenFiles", "-path"}));
+      // verify the error
+      String outStr = scanIntoString(err);
+      assertTrue(outStr.contains("listOpenFiles: option"
+          + " -path requires 1 argument"));
+
+      resetStream();
+      // list open files with empty path
+      assertEquals(0, ToolRunner.run(dfsAdmin,
+          new String[] {"-listOpenFiles", "-path", ""}));
+      // all the open files will be listed
+      verifyOpenFilesListing(null, openFilesMap);
+
+      resetStream();
+      // list invalid path file
+      assertEquals(0, ToolRunner.run(dfsAdmin,
+          new String[] {"-listOpenFiles", "-path", "/invalid_path"}));
+      outStr = scanIntoString(out);
+      for (Path openFilePath : openFilesMap.keySet()) {
+        assertThat(outStr, not(containsString(openFilePath.toString())));
+      }
+      DFSTestUtil.closeOpenFiles(openFilesMap, openFilesMap.size());
     }
   }
 
@@ -732,9 +793,13 @@ public class TestDFSAdmin {
       HashMap<Path, FSDataOutputStream> openFilesMap) {
     final String outStr = scanIntoString(out);
     LOG.info("dfsadmin -listOpenFiles output: \n" + out);
-    for (Path closedFilePath : closedFileSet) {
-      assertThat(outStr, not(containsString(closedFilePath.toString() + "\n")));
+    if (closedFileSet != null) {
+      for (Path closedFilePath : closedFileSet) {
+        assertThat(outStr,
+            not(containsString(closedFilePath.toString() + "\n")));
+      }
     }
+
     for (Path openFilePath : openFilesMap.keySet()) {
       assertThat(outStr, is(containsString(openFilePath.toString() + "\n")));
     }
