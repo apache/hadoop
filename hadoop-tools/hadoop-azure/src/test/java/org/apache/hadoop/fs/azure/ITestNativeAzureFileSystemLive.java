@@ -18,8 +18,17 @@
 
 package org.apache.hadoop.fs.azure;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +47,106 @@ public class ITestNativeAzureFileSystemLive extends
   @Override
   protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
     return AzureBlobStorageTestAccount.create();
+  }
+
+  /**
+   * Implements the thread start routine for the test
+   * testMultipleRenameFileOperationsToSameDestination.
+   */
+  private static class RenameThread implements Runnable {
+
+    private final FileSystem fs;
+    private final CountDownLatch latch;
+    private final int threadNumber;
+    private final Path src;
+    private final Path dst;
+    private final AtomicInteger successfulRenameCount;
+    private final AtomicReference<IOException> unexpectedError;
+
+    RenameThread(FileSystem fs,
+                 CountDownLatch latch,
+                 int threadNumber,
+                 Path src,
+                 Path dst,
+                 AtomicInteger successfulRenameCount,
+                 AtomicReference<IOException> unexpectedError) {
+      this.fs = fs;
+      this.latch = latch;
+      this.threadNumber = threadNumber;
+      this.src = src;
+      this.dst = dst;
+      this.successfulRenameCount = successfulRenameCount;
+      this.unexpectedError = unexpectedError;
+    }
+
+    @Override
+    public void run() {
+      try {
+        latch.await(Long.MAX_VALUE, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+      }
+      try {
+        try (OutputStream output = fs.create(src)) {
+          output.write(("Source file number " + threadNumber).getBytes());
+        }
+
+        if (fs.rename(src, dst)) {
+          LOG.info("rename succeeded for thread " + threadNumber);
+          successfulRenameCount.incrementAndGet();
+        }
+      } catch (IOException e) {
+        unexpectedError.compareAndSet(null, e);
+        ContractTestUtils.fail("Exception unexpected", e);
+      }
+    }
+  }
+
+   /**
+   * Tests the rename file operation to ensure that when there are multiple
+   * attempts to rename a file to the same destination, only one rename
+   * operation is successful (HADOOP-15086).
+   */
+  @Test
+  public void testMultipleRenameFileOperationsToSameDestination()
+      throws IOException, InterruptedException {
+    final CountDownLatch latch = new CountDownLatch(1);
+    final AtomicInteger successfulRenameCount = new AtomicInteger(0);
+    final AtomicReference<IOException> unexpectedError = new AtomicReference<IOException>();
+    final Path dest = path("dest");
+
+    // Run 10 threads to rename multiple files to the same target path
+    List<Thread> threads = new ArrayList<>();
+
+    for (int i = 0; i < 10; i++) {
+      final int threadNumber = i;
+      Path src = path("test" + threadNumber);
+      threads.add(new Thread(new RenameThread(fs, latch, threadNumber, src, dest, successfulRenameCount, unexpectedError)));
+    }
+
+    // Start each thread
+    for (int i = 0; i < threads.size(); i++) {
+      threads.get(i).start();
+    }
+
+    // Wait for threads to start and wait on latch
+    Thread.sleep(2000);
+
+    // Now start to rename
+    latch.countDown();
+
+    // Wait for all threads to complete
+    for (int i = 0; i < threads.size(); i++) {
+      try {
+        threads.get(i).join();
+      } catch (InterruptedException e) {
+      }
+    }
+
+    if (unexpectedError.get() != null) {
+      throw unexpectedError.get();
+    }
+    assertEquals(1, successfulRenameCount.get());
+    LOG.info("Success, only one rename operation succeeded!");
   }
 
   @Test
