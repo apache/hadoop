@@ -993,14 +993,17 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
               getAppAMNodePartitionName(), cluster);
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();
+      float queueUsagePerc = 0.0f;
       if (!calc.isInvalidDivisor(totalPartitionRes)) {
         float queueAbsMaxCapPerPartition =
             ((AbstractCSQueue) getQueue()).getQueueCapacities()
                 .getAbsoluteCapacity(getAppAMNodePartitionName());
-        float queueUsagePerc = calc.divide(totalPartitionRes,
-            report.getUsedResources(),
-            Resources.multiply(totalPartitionRes, queueAbsMaxCapPerPartition))
-            * 100;
+        if (queueAbsMaxCapPerPartition != 0) {
+          queueUsagePerc = calc.divide(totalPartitionRes,
+              report.getUsedResources(),
+              Resources.multiply(totalPartitionRes, queueAbsMaxCapPerPartition))
+              * 100;
+        }
         report.setQueueUsagePercentage(queueUsagePerc);
       }
       return report;
