@@ -90,6 +90,7 @@ class FSDirStatAndListingOp {
    * @param srcArg The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException
    *        if src refers to a symlink
+   * @param needLocation if blockLocations need to be returned
    *
    * @param needLocation Include {@link LocatedBlocks} in result.
    * @param needBlockToken Include block tokens in {@link LocatedBlocks}.

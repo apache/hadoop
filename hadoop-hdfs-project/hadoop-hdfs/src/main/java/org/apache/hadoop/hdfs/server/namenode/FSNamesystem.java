@@ -3133,6 +3133,29 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param src The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException
    *        if src refers to a symlink
+   * @param needLocation if blockLocations need to be returned
+   *
+   * @throws AccessControlException
+   *           if access is denied
+   * @throws UnresolvedLinkException
+   *           if a symlink is encountered.
+   *
+   * @return object containing information regarding the file or null if file
+   *         not found
+   * @throws StandbyException
+   */
+  @Override
+  public HdfsFileStatus getFileInfo(final String src, boolean resolveLink,
+      boolean needLocation) throws IOException {
+    return getFileInfo(src, resolveLink, needLocation, false);
+  }
+
+  /**
+   * Get the file info for a specific file.
+   *
+   * @param src The string representation of the path to the file
+   * @param resolveLink whether to throw UnresolvedLinkException
+   *        if src refers to a symlink
    *
    * @param needLocation Include {@link LocatedBlocks} in result.
    * @param needBlockToken Include block tokens in {@link LocatedBlocks}
@@ -3165,6 +3188,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     logAuditEvent(true, operationName, src);
     return stat;
+  }
+
+  @Override
+  public String getFilePath(Long inodeId) {
+    readLock();
+    try {
+      INode inode = getFSDirectory().getInode(inodeId);
+      return inode == null ? null : inode.getFullPathName();
+    } finally {
+      readUnlock();
+    }
   }
 
   /**
@@ -4461,15 +4495,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.UNCHECKED);
       final DatanodeManager dm = getBlockManager().getDatanodeManager();      
-      final List<DatanodeDescriptor> datanodes = dm.getDatanodeListForReport(type);
-
-      reports = new DatanodeStorageReport[datanodes.size()];
-      for (int i = 0; i < reports.length; i++) {
-        final DatanodeDescriptor d = datanodes.get(i);
-        reports[i] = new DatanodeStorageReport(
-            new DatanodeInfoBuilder().setFrom(d).build(),
-            d.getStorageReports());
-      }
+      reports = dm.getDatanodeStorageReport(type);
     } finally {
       readUnlock("getDatanodeStorageReport");
     }

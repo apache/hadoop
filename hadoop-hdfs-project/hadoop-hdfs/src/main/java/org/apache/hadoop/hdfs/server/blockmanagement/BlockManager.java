@@ -89,11 +89,12 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.IntraNNSPSContext;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.sps.Context;
+import org.apache.hadoop.hdfs.server.namenode.sps.IntraSPSNameNodeContext;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
@@ -433,6 +434,7 @@ public class BlockManager implements BlockStatsMXBean {
   private final StoragePolicySatisfier sps;
   private final boolean storagePolicyEnabled;
   private boolean spsEnabled;
+  private Context spsctxt = null;
   /** Minimum live replicas needed for the datanode to be transitioned
    * from ENTERING_MAINTENANCE to IN_MAINTENANCE.
    */
@@ -479,8 +481,8 @@ public class BlockManager implements BlockStatsMXBean {
         conf.getBoolean(
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_KEY,
             DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_ENABLED_DEFAULT);
-    StoragePolicySatisfier.Context spsctxt = new IntraNNSPSContext(namesystem);
-    sps = new StoragePolicySatisfier(namesystem, this, conf, spsctxt);
+    spsctxt = new IntraSPSNameNodeContext(namesystem, this, conf);
+    sps = new StoragePolicySatisfier(spsctxt);
     blockTokenSecretManager = createBlockTokenSecretManager(conf);
 
     providedStorageMap = new ProvidedStorageMap(namesystem, this, conf);
@@ -5039,8 +5041,8 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.info("Storage policy satisfier is already running.");
       return;
     }
-
-    sps.start(false);
+    // TODO: FSDirectory will get removed via HDFS-12911 modularization work
+    sps.start(false, namesystem.getFSDirectory());
   }
 
   /**
@@ -5076,8 +5078,8 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.info("Storage policy satisfier is already running.");
       return;
     }
-
-    sps.start(true);
+    // TODO: FSDirectory will get removed via HDFS-12911 modularization work
+    sps.start(true, namesystem.getFSDirectory());
   }
 
   /**

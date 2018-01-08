@@ -25,8 +25,9 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.AttemptedItemInfo;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.ItemInfo;
 import org.junit.After;
@@ -46,11 +47,15 @@ public class TestBlockStorageMovementAttemptedItems {
 
   @Before
   public void setup() throws Exception {
-    unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded(
-        Mockito.mock(Namesystem.class),
-        Mockito.mock(StoragePolicySatisfier.class), 100);
-    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(100,
-        selfRetryTimeout, unsatisfiedStorageMovementFiles);
+    Configuration config = new HdfsConfiguration();
+    Context ctxt = Mockito.mock(Context.class);
+    Mockito.when(ctxt.getConf()).thenReturn(config);
+    Mockito.when(ctxt.isRunning()).thenReturn(true);
+    Mockito.when(ctxt.isInSafeMode()).thenReturn(false);
+    Mockito.when(ctxt.isFileExist(Mockito.anyLong())).thenReturn(true);
+    unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded(ctxt);
+    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(ctxt,
+        unsatisfiedStorageMovementFiles);
   }
 
   @After

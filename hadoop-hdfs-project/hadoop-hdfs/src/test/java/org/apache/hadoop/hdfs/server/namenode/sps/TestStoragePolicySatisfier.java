@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -105,7 +107,8 @@ public class TestStoragePolicySatisfier {
   private DistributedFileSystem dfs = null;
   private static final int DEFAULT_BLOCK_SIZE = 1024;
 
-  private void shutdownCluster() {
+  @After
+  public void shutdownCluster() {
     if (hdfsCluster != null) {
       hdfsCluster.shutdown();
     }
@@ -1298,11 +1301,17 @@ public class TestStoragePolicySatisfier {
     //entry in queue. After 10 files, traverse control will be on U.
     StoragePolicySatisfier sps = Mockito.mock(StoragePolicySatisfier.class);
     Mockito.when(sps.isRunning()).thenReturn(true);
+    Context ctxt = Mockito.mock(Context.class);
+    config.setInt(DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY, 10);
+    Mockito.when(ctxt.getConf()).thenReturn(config);
+    Mockito.when(ctxt.isRunning()).thenReturn(true);
+    Mockito.when(ctxt.isInSafeMode()).thenReturn(false);
+    Mockito.when(ctxt.isFileExist(Mockito.anyLong())).thenReturn(true);
     BlockStorageMovementNeeded movmentNeededQueue =
-        new BlockStorageMovementNeeded(hdfsCluster.getNamesystem(), sps, 10);
+        new BlockStorageMovementNeeded(ctxt);
     INode rootINode = fsDir.getINode("/root");
     movmentNeededQueue.addToPendingDirQueue(rootINode.getId());
-    movmentNeededQueue.init();
+    movmentNeededQueue.init(fsDir);
 
     //Wait for thread to reach U.
     Thread.sleep(1000);
@@ -1361,9 +1370,15 @@ public class TestStoragePolicySatisfier {
     Mockito.when(sps.isRunning()).thenReturn(true);
     // Queue limit can control the traverse logic to wait for some free
     // entry in queue. After 10 files, traverse control will be on U.
+    Context ctxt = Mockito.mock(Context.class);
+    config.setInt(DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY, 10);
+    Mockito.when(ctxt.getConf()).thenReturn(config);
+    Mockito.when(ctxt.isRunning()).thenReturn(true);
+    Mockito.when(ctxt.isInSafeMode()).thenReturn(false);
+    Mockito.when(ctxt.isFileExist(Mockito.anyLong())).thenReturn(true);
     BlockStorageMovementNeeded movmentNeededQueue =
-        new BlockStorageMovementNeeded(hdfsCluster.getNamesystem(), sps, 10);
-    movmentNeededQueue.init();
+        new BlockStorageMovementNeeded(ctxt);
+    movmentNeededQueue.init(fsDir);
     INode rootINode = fsDir.getINode("/root");
     movmentNeededQueue.addToPendingDirQueue(rootINode.getId());
     // Wait for thread to reach U.

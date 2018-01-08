@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.util.RwLock;
@@ -62,4 +63,27 @@ public interface Namesystem extends RwLock, SafeMode {
    * @throws IOException
    */
   void removeXattr(long id, String xattrName) throws IOException;
+
+  /**
+   * Gets the fileInfo of the given file path.
+   *
+   * @param filePath string representation of the path to the file
+   * @param resolveLink whether to throw UnresolvedLinkException
+   *        if src refers to a symlink
+   * @param needLocation if blockLocations need to be returned
+   *
+   * @return hdfs file status details
+   * @throws IOException
+   */
+  HdfsFileStatus getFileInfo(String filePath, boolean resolveLink,
+      boolean needLocation) throws IOException;
+
+  /**
+   * Gets the file path corresponds to the given file id.
+   *
+   * @param inodeId
+   *          file id
+   * @return string file path
+   */
+  String getFilePath(Long inodeId);
 }

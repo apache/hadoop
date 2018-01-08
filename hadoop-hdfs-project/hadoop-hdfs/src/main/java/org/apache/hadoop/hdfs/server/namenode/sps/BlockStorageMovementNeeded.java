@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.sps;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,10 +36,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathSta
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser;
-import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.Namesystem;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser.TraverseInfo;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -73,12 +73,10 @@ public class BlockStorageMovementNeeded {
   private final Map<Long, StoragePolicySatisfyPathStatusInfo> spsStatus =
       new ConcurrentHashMap<>();
 
-  private final Namesystem namesystem;
+  private final Context ctxt;
 
   // List of pending dir to satisfy the policy
   private final Queue<Long> spsDirsToBeTraveresed = new LinkedList<Long>();
-
-  private final StoragePolicySatisfier sps;
 
   private Daemon inodeIdCollector;
 
@@ -88,11 +86,11 @@ public class BlockStorageMovementNeeded {
   // NOT_AVAILABLE.
   private static long statusClearanceElapsedTimeMs = 300000;
 
-  public BlockStorageMovementNeeded(Namesystem namesystem,
-      StoragePolicySatisfier sps, int queueLimit) {
-    this.namesystem = namesystem;
-    this.sps = sps;
-    this.maxQueuedItem = queueLimit;
+  public BlockStorageMovementNeeded(Context context) {
+    this.ctxt = context;
+    this.maxQueuedItem = ctxt.getConf().getInt(
+                  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
+                  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_DEFAULT);
   }
 
   /**
@@ -188,8 +186,7 @@ public class BlockStorageMovementNeeded {
       // If track is part of some start inode then reduce the pending
       // directory work count.
       long startId = trackInfo.getStartId();
-      INode inode = namesystem.getFSDirectory().getInode(startId);
-      if (inode == null) {
+      if (!ctxt.isFileExist(startId)) {
         // directory deleted just remove it.
         this.pendingWorkForDirectory.remove(startId);
         updateStatus(startId, isSuccess);
@@ -198,7 +195,7 @@ public class BlockStorageMovementNeeded {
         if (pendingWork != null) {
           pendingWork.decrementPendingWorkCount();
           if (pendingWork.isDirWorkDone()) {
-            namesystem.removeXattr(startId, XATTR_SATISFY_STORAGE_POLICY);
+            ctxt.removeSPSHint(startId);
             pendingWorkForDirectory.remove(startId);
             pendingWork.setFailure(!isSuccess);
             updateStatus(startId, pendingWork.isPolicySatisfied());
@@ -209,8 +206,7 @@ public class BlockStorageMovementNeeded {
     } else {
       // Remove xAttr if trackID doesn't exist in
       // storageMovementAttemptedItems or file policy satisfied.
-      namesystem.removeXattr(trackInfo.getTrackId(),
-          XATTR_SATISFY_STORAGE_POLICY);
+      ctxt.removeSPSHint(trackInfo.getTrackId());
       updateStatus(trackInfo.getStartId(), isSuccess);
     }
   }
@@ -256,7 +252,7 @@ public class BlockStorageMovementNeeded {
     while ((trackId = spsDirsToBeTraveresed.poll()) != null) {
       try {
         // Remove xAttr for file
-        namesystem.removeXattr(trackId, XATTR_SATISFY_STORAGE_POLICY);
+        ctxt.removeSPSHint(trackId);
       } catch (IOException ie) {
         LOG.warn("Failed to remove SPS xattr for track id " + trackId, ie);
       }
@@ -269,8 +265,7 @@ public class BlockStorageMovementNeeded {
       try {
         // Remove xAttr for file
         if (!itemInfo.isDir()) {
-          namesystem.removeXattr(itemInfo.getTrackId(),
-              XATTR_SATISFY_STORAGE_POLICY);
+          ctxt.removeSPSHint(itemInfo.getTrackId());
         }
       } catch (IOException ie) {
         LOG.warn(
@@ -300,10 +295,9 @@ public class BlockStorageMovementNeeded {
     public void run() {
       LOG.info("Starting FileInodeIdCollector!.");
       long lastStatusCleanTime = 0;
-      while (namesystem.isRunning() && sps.isRunning()) {
+      while (ctxt.isRunning()) {
         try {
-          if (!namesystem.isInSafeMode()) {
-            FSDirectory fsd = namesystem.getFSDirectory();
+          if (!ctxt.isInSafeMode()) {
             Long startINodeId = spsDirsToBeTraveresed.poll();
             if (startINodeId == null) {
               // Waiting for SPS path
@@ -311,7 +305,7 @@ public class BlockStorageMovementNeeded {
                 spsDirsToBeTraveresed.wait(5000);
               }
             } else {
-              INode startInode = fsd.getInode(startINodeId);
+              INode startInode = getFSDirectory().getInode(startINodeId);
               if (startInode != null) {
                 try {
                   remainingCapacity = remainingCapacity();
@@ -333,8 +327,7 @@ public class BlockStorageMovementNeeded {
                 DirPendingWorkInfo dirPendingWorkInfo =
                     pendingWorkForDirectory.get(startInode.getId());
                 if (dirPendingWorkInfo.isDirWorkDone()) {
-                  namesystem.removeXattr(startInode.getId(),
-                      XATTR_SATISFY_STORAGE_POLICY);
+                  ctxt.removeSPSHint(startInode.getId());
                   pendingWorkForDirectory.remove(startInode.getId());
                   updateStatus(startInode.getId(), true);
                 }
@@ -483,9 +476,10 @@ public class BlockStorageMovementNeeded {
     }
   }
 
-  public void init() {
+  // TODO: FSDirectory will get removed via HDFS-12911 modularization work
+  public void init(FSDirectory fsd) {
     inodeIdCollector = new Daemon(new StorageMovementPendingInodeIdCollector(
-        namesystem.getFSDirectory()));
+        fsd));
     inodeIdCollector.setName("FileInodeIdCollector");
     inodeIdCollector.start();
   }

@@ -802,7 +802,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /** Increment the number of blocks scheduled. */
-  void incrementBlocksScheduled(StorageType t) {
+  public void incrementBlocksScheduled(StorageType t) {
     currApproxBlocksScheduled.add(t, 1);
   }
   
