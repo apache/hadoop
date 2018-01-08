@@ -127,17 +127,17 @@ Refer to [API doc](YarnServiceAPI.md)  for the detailed API specificatiosn.
 
 POST the aforementioned example service definition to the ResourceManager api-server endpoint:
 ```
-POST  http://localhost:8088/ws/v1/services
+POST  http://localhost:8088/app/v1/services
 ```
 
 ### Get a service status
 ```
-GET  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
+GET  http://localhost:8088/app/v1/services/${SERVICE_NAME}
 ```
 
 ### Flex a component of a service
 ```
-PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}/components/${COMPONENT_NAME}
+PUT  http://localhost:8088/app/v1/services/${SERVICE_NAME}/components/${COMPONENT_NAME}
 ```
 `PUT` Request body:
 ```
@@ -158,7 +158,7 @@ For example:
 Stopping a service will stop all containers of the service and the ApplicationMaster, but does not delete the state of a service, such as the service root folder on hdfs.
 
 ```
-PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
+PUT  http://localhost:8088/app/v1/services/${SERVICE_NAME}
 ```
 
 `PUT` Request body:
@@ -173,7 +173,7 @@ PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
 Restarting a stopped service is easy.
 
 ```
-PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
+PUT  http://localhost:8088/app/v1/services/${SERVICE_NAME}
 ```
 
 `PUT` Request body:
@@ -186,7 +186,7 @@ PUT  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
 ### Destroy a service
 In addition to stopping a service, it also deletes the service root folder on hdfs and the records in YARN Service Registry.
 ```
-DELETE  http://localhost:8088/ws/v1/services/${SERVICE_NAME}
+DELETE  http://localhost:8088/app/v1/services/${SERVICE_NAME}
 ```
 
 ## Services UI with YARN UI2 and Timeline Service v2
