@@ -693,27 +693,36 @@ public class FairScheduler extends
       ApplicationId appId =
           container.getId().getApplicationAttemptId().getApplicationId();
       if (application == null) {
-        LOG.info(
-            "Container " + container + " of" + " finished application " + appId
-                + " completed with event " + event);
+        LOG.info("Container " + container + " of finished application " +
+            appId + " completed with event " + event);
         return;
       }
 
       // Get the node on which the container was allocated
-      FSSchedulerNode node = getFSSchedulerNode(container.getNodeId());
-
+      NodeId nodeID = container.getNodeId();
+      FSSchedulerNode node = getFSSchedulerNode(nodeID);
+      // node could be null if the thread was waiting for the lock and the node
+      // was removed in another thread
       if (rmContainer.getState() == RMContainerState.RESERVED) {
-        application.unreserve(rmContainer.getReservedSchedulerKey(), node);
-      } else{
+        if (node != null) {
+          application.unreserve(rmContainer.getReservedSchedulerKey(), node);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping unreserve on removed node: " + nodeID);
+        }
+      } else {
         application.containerCompleted(rmContainer, containerStatus, event);
-        node.releaseContainer(rmContainer.getContainerId(), false);
+        if (node != null) {
+          node.releaseContainer(rmContainer.getContainerId(), false);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping container release on removed node: " + nodeID);
+        }
         updateRootQueueMetrics();
       }
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Application attempt " + application.getApplicationAttemptId()
-            + " released container " + container.getId() + " on node: " + node
-            + " with event: " + event);
+            + " released container " + container.getId() + " on node: " +
+            (node == null ? nodeID : node) + " with event: " + event);
       }
     } finally {
       writeLock.unlock();
