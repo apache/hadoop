@@ -853,8 +853,8 @@ none of the apps match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
-1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
-1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `metricstimestart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricstimeend` - If specified, then metrics for the entity before this timestamp are returned.
 1. `fromid` -  If specified, retrieve the next set of application entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
    fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
@@ -986,8 +986,8 @@ match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
-1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
-1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `metricstimestart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricstimeend` - If specified, then metrics for the entity before this timestamp are returned.
 1. `fromid` -  If specified, retrieve the next set of application entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
    fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
@@ -1067,8 +1067,8 @@ and app id.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
-1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
-1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `metricstimestart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricstimeend` - If specified, then metrics for the entity before this timestamp are returned.
 
 #### Example JSON Response:
 
@@ -1193,8 +1193,8 @@ If none of the entities match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
-1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
-1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `metricstimestart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricstimeend` - If specified, then metrics for the entity before this timestamp are returned.
 1. `fromid` -  If specified, retrieve the next set of generic entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
    fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
@@ -1329,8 +1329,8 @@ If none of the entities match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
-1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
-1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `metricstimestart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricstimeend` - If specified, then metrics for the entity before this timestamp are returned.
 1. `fromid` -  If specified, retrieve the next set of generic entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
    fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
@@ -1427,8 +1427,8 @@ container ID. Similarly, application attempt can be queried by specifying entity
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
-1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
-1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `metricstimestart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricstimeend` - If specified, then metrics for the entity before this timestamp are returned.
 1. `entityidprefix` Defines the id prefix for the entity to be fetched. If specified, then entity retrieval will be faster.
 
 #### Example JSON Response:
@@ -1501,8 +1501,8 @@ If none of the entities match the predicates, an empty list will be returned.
   or metricstoretrieve is specified. Ignored otherwise. The maximum possible value for metricslimit can be maximum value of
   Integer. If it is not specified or has a value less than 1, and metrics have to be retrieved, then metricslimit will be
   considered as 1 i.e. latest single value of metric(s) will be returned.
-1. `metricsTimeStart` - If specified, then metrics for the entity after this timestamp are returned.
-1. `metricsTimeEnd` - If specified, then metrics for the entity before this timestamp are returned.
+1. `metricstimestart` - If specified, then metrics for the entity after this timestamp are returned.
+1. `metricstimeend` - If specified, then metrics for the entity before this timestamp are returned.
 1. `fromid` -  If specified, retrieve the next set of generic entities from the given fromid. The set of entities retrieved is inclusive of specified fromid.
    fromid should be taken from the value associated with FROM_ID info key in flow entity response which was sent earlier.
 
