@@ -631,6 +631,51 @@ public class TestOpenFilesWithSnapshot {
   }
 
   /**
+   * Verify if the NameNode can restart properly after an OpenForWrite
+   * file and the only snapshot it was present in were deleted.
+   *
+   * @throws Exception
+   */
+  @Test (timeout = 600000)
+  public void testOpenFileDeletionAndNNRestart() throws Exception {
+    // Construct the directory tree
+    final Path snapRootDir = new Path("/level_0_A/test");
+    final String hbaseFileName = "hbase.log";
+    final String snap1Name = "snap_1";
+
+    // Create a file with few blocks. Get its output stream
+    // for append.
+    final Path hbaseFile = new Path(snapRootDir, hbaseFileName);
+    createFile(hbaseFile);
+    FSDataOutputStream hbaseOutputStream = fs.append(hbaseFile);
+
+    int newWriteLength = (int) (BLOCKSIZE * 1.5);
+    byte[] buf = new byte[newWriteLength];
+    Random random = new Random();
+    random.nextBytes(buf);
+
+    // Write more data to the file
+    writeToStream(hbaseOutputStream, buf);
+
+    // Take a snapshot while the file is open for write
+    final Path snap1Dir = SnapshotTestHelper.createSnapshot(
+        fs, snapRootDir, snap1Name);
+    LOG.info("Open file status in snap: " +
+        fs.getFileStatus(new Path(snap1Dir, hbaseFileName)));
+
+    // Delete the open file and the snapshot while
+    // its output stream is still open.
+    fs.delete(hbaseFile, true);
+    fs.deleteSnapshot(snapRootDir, snap1Name);
+    Assert.assertFalse(fs.exists(hbaseFile));
+
+    // Verify file existence after the NameNode restart
+    cluster.restartNameNode();
+    cluster.waitActive();
+    Assert.assertFalse(fs.exists(hbaseFile));
+  }
+
+  /**
    * Test client writing to open files are not interrupted when snapshots
    * that captured open files get deleted.
    */
