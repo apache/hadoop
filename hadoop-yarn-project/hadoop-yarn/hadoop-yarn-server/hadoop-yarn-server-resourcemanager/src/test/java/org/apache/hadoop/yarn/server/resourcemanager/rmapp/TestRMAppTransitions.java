@@ -1151,6 +1151,41 @@ public class TestRMAppTransitions {
     verifyRMAppFieldsForFinalTransitions(application);
   }
   
+  @Test (timeout = 30000)
+  public void testAppStartAfterKilled() throws IOException {
+    LOG.info("--- START: testAppStartAfterKilled ---");
+
+    ApplicationId applicationId = MockApps.newAppID(appId++);
+    RMApp application = new RMAppImpl(applicationId, rmContext, conf, null,
+            null, null, new ApplicationSubmissionContextPBImpl(), null, null,
+              System.currentTimeMillis(), "YARN", null, null) {
+          @Override
+          protected void onInvalidStateTransition(RMAppEventType rmAppEventType,
+                  RMAppState state) {
+            Assert.assertTrue("RMAppImpl: can't handle " + rmAppEventType
+                                 + " at state " + state, false);
+          }
+      };
+
+    // NEW => KILLED event RMAppEventType.KILL
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+            "testAppStartAfterKilled", new String[] {"foo_group"});
+    RMAppEvent event = new RMAppKillByClientEvent(
+             applicationId, "Application killed by user.",
+             fooUser, Server.getRemoteIp());
+    application.handle(event);
+    rmDispatcher.await();
+    assertKilled(application);
+
+    // KILLED => KILLED event RMAppEventType.START
+    event = new RMAppFailedAttemptEvent(application.getApplicationId(),
+                            RMAppEventType.START, "", false);
+    application.handle(event);
+    rmDispatcher.await();
+    assertTimesAtFinish(application);
+    assertAppState(RMAppState.KILLED, application);
+  }
+
   @Test(timeout = 30000)
   public void testAppsRecoveringStates() throws Exception {
     RMState state = new RMState();
