@@ -325,11 +325,18 @@ message ChunkInfo {
   repeated KeyValue metadata = 5;
 }
 
+enum Stage {
+    WRITE_DATA = 1;
+    COMMIT_DATA = 2;
+    COMBINED = 3;
+}
+
 message  WriteChunkRequestProto  {
   required Pipeline pipeline = 1;
   required string keyName = 2;
   required ChunkInfo chunkData = 3;
-  required bytes data = 4;
+  optional bytes data = 4;
+  optional Stage stage = 5 [default = COMBINED];
 }
 
 message  WriteChunkResponseProto {

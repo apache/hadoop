@@ -456,10 +456,17 @@ public class Dispatcher implements ContainerDispatcher {
     ChunkInfo chunkInfo = ChunkInfo.getFromProtoBuf(msg.getWriteChunk()
         .getChunkData());
     Preconditions.checkNotNull(chunkInfo);
-    byte[] data = msg.getWriteChunk().getData().toByteArray();
-    metrics.incContainerBytesStats(Type.WriteChunk, data.length);
-    this.containerManager.getChunkManager().writeChunk(pipeline, keyName,
-        chunkInfo, data);
+    byte[] data = null;
+    if (msg.getWriteChunk().getStage() == ContainerProtos.Stage.WRITE_DATA
+        || msg.getWriteChunk().getStage() == ContainerProtos.Stage.COMBINED) {
+       data = msg.getWriteChunk().getData().toByteArray();
+      metrics.incContainerBytesStats(Type.WriteChunk, data.length);
+
+    }
+    this.containerManager.getChunkManager()
+        .writeChunk(pipeline, keyName, chunkInfo,
+            data, msg.getWriteChunk().getStage());
+
     return ChunkUtils.getChunkResponse(msg);
   }
 
@@ -637,7 +644,7 @@ public class Dispatcher implements ContainerDispatcher {
 
       metrics.incContainerBytesStats(Type.PutSmallFile, data.length);
       this.containerManager.getChunkManager().writeChunk(pipeline, keyData
-          .getKeyName(), chunkInfo, data);
+          .getKeyName(), chunkInfo, data, ContainerProtos.Stage.COMBINED);
       List<ContainerProtos.ChunkInfo> chunks = new LinkedList<>();
       chunks.add(chunkInfo.getProtoBufMessage());
       keyData.setChunks(chunks);

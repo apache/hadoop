@@ -19,6 +19,8 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
@@ -30,7 +32,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
 
@@ -67,7 +72,7 @@ public class ChunkManagerImpl implements ChunkManager {
    */
   @Override
   public void writeChunk(Pipeline pipeline, String keyName, ChunkInfo info,
-      byte[] data)
+      byte[] data, ContainerProtos.Stage stage)
       throws StorageContainerException {
     // we don't want container manager to go away while we are writing chunks.
     containerManager.readLock();
@@ -81,13 +86,23 @@ public class ChunkManagerImpl implements ChunkManager {
       ContainerData container =
           containerManager.readContainer(containerName);
       File chunkFile = ChunkUtils.validateChunk(pipeline, container, info);
-      long oldSize = chunkFile.length();
-      ChunkUtils.writeData(chunkFile, info, data);
-      containerManager.incrWriteBytes(containerName, info.getLen());
-      containerManager.incrWriteCount(containerName);
-      long newSize = chunkFile.length();
-      containerManager.incrBytesUsed(containerName, newSize - oldSize);
-    } catch (ExecutionException | NoSuchAlgorithmException e) {
+      File tmpChunkFile = getTmpChunkFile(chunkFile, info);
+
+      LOG.debug("writing chunk:{} chunk stage:{} chunk file:{} tmp chunk file",
+          info.getChunkName(), stage, chunkFile, tmpChunkFile);
+      switch (stage) {
+      case WRITE_DATA:
+        ChunkUtils.writeData(tmpChunkFile, info, data);
+        break;
+      case COMMIT_DATA:
+        commitChunk(tmpChunkFile, chunkFile, containerName, info.getLen());
+        break;
+      case COMBINED:
+        ChunkUtils.writeData(tmpChunkFile, info, data);
+        commitChunk(tmpChunkFile, chunkFile, containerName, info.getLen());
+        break;
+      }
+    } catch (ExecutionException | NoSuchAlgorithmException | IOException e) {
       LOG.error("write data failed. error: {}", e);
       throw new StorageContainerException("Internal error: ", e,
           CONTAINER_INTERNAL_ERROR);
@@ -99,6 +114,29 @@ public class ChunkManagerImpl implements ChunkManager {
     } finally {
       containerManager.readUnlock();
     }
+  }
+
+  // Create a temporary file in the same container directory
+  // in the format "<chunkname>.tmp"
+  private static File getTmpChunkFile(File chunkFile, ChunkInfo info)
+      throws StorageContainerException {
+    return new File(chunkFile.getParent(),
+        chunkFile.getName() +
+            OzoneConsts.CONTAINER_CHUNK_NAME_DELIMITER +
+            OzoneConsts.CONTAINER_TEMPORARY_CHUNK_PREFIX);
+  }
+
+  // Commit the chunk by renaming the temporary chunk file to chunk file
+  private void commitChunk(File tmpChunkFile, File chunkFile,
+      String containerName, long chunkLen) throws IOException {
+    long sizeDiff = tmpChunkFile.length() - chunkFile.length();
+    // It is safe to replace here as the earlier chunk if existing should be
+    // caught as part of validateChunk
+    Files.move(tmpChunkFile.toPath(), chunkFile.toPath(),
+        StandardCopyOption.REPLACE_EXISTING);
+    containerManager.incrBytesUsed(containerName, sizeDiff);
+    containerManager.incrWriteCount(containerName);
+    containerManager.incrWriteBytes(containerName, chunkLen);
   }
 
   /**

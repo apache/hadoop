@@ -59,18 +59,31 @@ public final class XceiverServerRatis implements XceiverServerSpi {
   private final RaftServer server;
 
   private XceiverServerRatis(DatanodeID id, int port, String storageDir,
-      ContainerDispatcher dispatcher, RpcType rpcType, int maxChunkSize,
-      int raftSegmentSize) throws IOException {
+      ContainerDispatcher dispatcher, Configuration conf) throws IOException {
+
+    final String rpcType = conf.get(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
+    final RpcType rpc = SupportedRpcType.valueOfIgnoreCase(rpcType);
+    final int raftSegmentSize = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT);
+    final int maxChunkSize = OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE;
+    final int numWriteChunkThreads = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_DEFAULT);
+
     Objects.requireNonNull(id, "id == null");
     this.port = port;
-    RaftProperties serverProperties = newRaftProperties(rpcType, port,
+    RaftProperties serverProperties = newRaftProperties(rpc, port,
         storageDir, maxChunkSize, raftSegmentSize);
 
     this.server = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(id))
         .setGroup(RatisHelper.emptyRaftGroup())
         .setProperties(serverProperties)
-        .setStateMachine(new ContainerStateMachine(dispatcher))
+        .setStateMachine(new ContainerStateMachine(dispatcher,
+            numWriteChunkThreads))
         .build();
   }
 
@@ -126,14 +139,6 @@ public final class XceiverServerRatis implements XceiverServerSpi {
               "storage under {}. It is a good idea to map this to an SSD disk.",
           storageDir);
     }
-    final String rpcType = ozoneConf.get(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
-    final RpcType rpc = SupportedRpcType.valueOfIgnoreCase(rpcType);
-    final int raftSegmentSize =
-        ozoneConf.getInt(ScmConfigKeys.OZONE_SCM_RATIS_SEGMENT_SIZE_KEY,
-            ScmConfigKeys.OZONE_SCM_RATIS_SEGMENT_SIZE_DEFAULT);
-    final int maxChunkSize = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
 
     // Get an available port on current node and
     // use that as the container port
@@ -159,7 +164,7 @@ public final class XceiverServerRatis implements XceiverServerSpi {
     }
     datanodeID.setRatisPort(localPort);
     return new XceiverServerRatis(datanodeID, localPort, storageDir,
-        dispatcher, rpc, maxChunkSize, raftSegmentSize);
+        dispatcher, ozoneConf);
   }
 
   @Override

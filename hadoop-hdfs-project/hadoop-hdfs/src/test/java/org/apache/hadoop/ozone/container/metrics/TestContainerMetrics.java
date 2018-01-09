@@ -71,7 +71,8 @@ public class TestContainerMetrics {
       ChunkManager chunkManager = mock(ChunkManager.class);
       Mockito.doNothing().when(chunkManager).writeChunk(
           Mockito.any(Pipeline.class), Mockito.anyString(),
-          Mockito.any(ChunkInfo.class), Mockito.any(byte[].class));
+          Mockito.any(ChunkInfo.class), Mockito.any(byte[].class),
+          Mockito.any(ContainerProtos.Stage.class));
 
       Mockito.doReturn(chunkManager).when(containerManager).getChunkManager();
       Mockito.doReturn(true).when(containerManager).isOpen(containerName);
