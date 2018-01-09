@@ -384,7 +384,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         EnumSet.of(RMAppEventType.APP_ACCEPTED,
             RMAppEventType.APP_REJECTED, RMAppEventType.KILL,
             RMAppEventType.ATTEMPT_FINISHED, RMAppEventType.ATTEMPT_FAILED,
-            RMAppEventType.NODE_UPDATE, RMAppEventType.MOVE))
+            RMAppEventType.NODE_UPDATE, RMAppEventType.MOVE,
+            RMAppEventType.START))
 
      .installTopology();
 
@@ -807,7 +808,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       } catch (InvalidStateTransitionException e) {
         LOG.error("App: " + appID
             + " can't handle this event at current state", e);
-        /* TODO fail the application on the failed transition */
+        onInvalidStateTransition(event.getType(), oldState);
       }
 
       if (oldState != getState()) {
@@ -1814,5 +1815,15 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void sendATSCreateEvent() {
     rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
     rmContext.getSystemMetricsPublisher().appCreated(this, this.startTime);
+  }
+
+  /**
+     * catch the InvalidStateTransition.
+     * @param state
+     * @param rmAppEventType
+     */
+  protected void onInvalidStateTransition(RMAppEventType rmAppEventType,
+              RMAppState state){
+      /* TODO fail the application on the failed transition */
   }
 }
