@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,7 +48,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestCachingStrategy {
-  private static final Log LOG = LogFactory.getLog(TestCachingStrategy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCachingStrategy.class);
   private static final int MAX_TEST_FILE_LEN = 1024 * 1024;
   private static final int WRITE_PACKET_SIZE = HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 
@@ -80,8 +81,7 @@ public class TestCachingStrategy {
     }
     
     synchronized void fadvise(int offset, int len, int flags) {
-      LOG.debug("got fadvise(offset=" + offset + ", len=" + len +
-          ",flags=" + flags + ")");
+      LOG.debug("got fadvise(offset={}, len={}, flags={})", offset, len, flags);
       if (flags == POSIX_FADV_DONTNEED) {
         for (int i = 0; i < len; i++) {
           dropped[(offset + i)] = true;
