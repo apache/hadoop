@@ -437,9 +437,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Try to re-reserve a container, but node "
                     + schedulerContainer.getSchedulerNode()
-                    + " is already reserved by another container"
+                    + " is already reserved by another container="
                     + schedulerContainer.getSchedulerNode()
-                    .getReservedContainer().getContainerId());
+                    .getReservedContainer());
               }
               return false;
             }
