@@ -74,6 +74,8 @@ import static org.apache.hadoop.ozone.container.ContainerTestHelper.getChunk;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper.getData;
 import static org.apache.hadoop.ozone.container.ContainerTestHelper
     .setDataChecksum;
+import static org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos
+    .Stage.COMBINED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -380,7 +382,7 @@ public class TestContainerPersistence {
     ChunkInfo info = getChunk(keyName, 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data);
+    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
     return info;
 
   }
@@ -427,7 +429,7 @@ public class TestContainerPersistence {
       ChunkInfo info = getChunk(keyName, x, 0, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(pipeline, keyName, info, data);
+      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
       String fileName = String.format("%s.data.%d", keyName, x);
       fileHashMap.put(fileName, info);
     }
@@ -490,7 +492,7 @@ public class TestContainerPersistence {
     ChunkInfo info = getChunk(keyName, 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data);
+    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
 
     byte[] readData = chunkManager.readChunk(pipeline, keyName, info);
     assertTrue(Arrays.equals(data, readData));
@@ -525,9 +527,9 @@ public class TestContainerPersistence {
     ChunkInfo info = getChunk(keyName, 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data);
+    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
     try {
-      chunkManager.writeChunk(pipeline, keyName, info, data);
+      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
     } catch (IOException ex) {
       Assert.assertTrue(ex.getMessage().contains(
           "Rejecting write chunk request. OverWrite flag required."));
@@ -535,7 +537,7 @@ public class TestContainerPersistence {
 
     // With the overwrite flag it should work now.
     info.addMetadata(OzoneConsts.CHUNK_OVERWRITE, "true");
-    chunkManager.writeChunk(pipeline, keyName, info, data);
+    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
     long bytesUsed = containerManager.getBytesUsed(containerName);
     Assert.assertEquals(datalen, bytesUsed);
 
@@ -573,7 +575,7 @@ public class TestContainerPersistence {
       byte[] data = getData(datalen);
       oldSha.update(data);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(pipeline, keyName, info, data);
+      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
     }
 
     // Request to read the whole data in a single go.
@@ -607,7 +609,7 @@ public class TestContainerPersistence {
     ChunkInfo info = getChunk(keyName, 0, 0, datalen);
     byte[] data = getData(datalen);
     setDataChecksum(info, data);
-    chunkManager.writeChunk(pipeline, keyName, info, data);
+    chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
     chunkManager.deleteChunk(pipeline, keyName, info);
     exception.expect(StorageContainerException.class);
     exception.expectMessage("Unable to find the chunk file.");
@@ -661,7 +663,7 @@ public class TestContainerPersistence {
       info = getChunk(keyName, x, x * datalen, datalen);
       byte[] data = getData(datalen);
       setDataChecksum(info, data);
-      chunkManager.writeChunk(pipeline, keyName, info, data);
+      chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
       totalSize += datalen * (x + 1);
       chunkList.add(info);
     }

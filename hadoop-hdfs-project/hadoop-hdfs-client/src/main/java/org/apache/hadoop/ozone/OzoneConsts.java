@@ -62,6 +62,8 @@ public final class OzoneConsts {
   public static final String CONTAINER_PREFIX  = "containers";
   public static final String CONTAINER_META_PATH = "metadata";
   public static final String CONTAINER_DATA_PATH = "data";
+  public static final String CONTAINER_TEMPORARY_CHUNK_PREFIX = "tmp";
+  public static final String CONTAINER_CHUNK_NAME_DELIMITER = ".";
   public static final String CONTAINER_ROOT_PREFIX = "repository";
 
   public static final String FILE_HASH = "SHA-256";

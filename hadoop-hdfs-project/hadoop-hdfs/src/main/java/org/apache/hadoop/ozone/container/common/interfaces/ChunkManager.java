@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -33,10 +34,12 @@ public interface ChunkManager {
    * @param pipeline - Name and the set of machines that make this container.
    * @param keyName - Name of the Key.
    * @param info - ChunkInfo.
+   * @param stage - Chunk Stage write.
    * @throws StorageContainerException
    */
   void writeChunk(Pipeline pipeline, String keyName,
-                  ChunkInfo info, byte[] data) throws StorageContainerException;
+                  ChunkInfo info, byte[] data, ContainerProtos.Stage stage)
+      throws StorageContainerException;
 
   /**
    * reads the data defined by a chunk.
