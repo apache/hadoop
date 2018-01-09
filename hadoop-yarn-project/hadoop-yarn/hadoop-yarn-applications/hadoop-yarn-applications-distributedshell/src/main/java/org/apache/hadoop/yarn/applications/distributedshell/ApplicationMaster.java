@@ -1608,17 +1608,15 @@ public class ApplicationMaster {
 
     Resource resourceCapability =
         Resource.newInstance(containerMemory, containerVirtualCores);
-    if (resourceProfiles == null) {
-      containerMemory = containerMemory == -1 ? DEFAULT_CONTAINER_MEMORY :
-          containerMemory;
-      containerVirtualCores =
-          containerVirtualCores == -1 ? DEFAULT_CONTAINER_VCORES :
-              containerVirtualCores;
-      resourceCapability.setMemorySize(containerMemory);
-      resourceCapability.setVirtualCores(containerVirtualCores);
-      for (Map.Entry<String, Long> entry : containerResources.entrySet()) {
-        resourceCapability.setResourceValue(entry.getKey(), entry.getValue());
-      }
+    containerMemory =
+        containerMemory == -1 ? DEFAULT_CONTAINER_MEMORY : containerMemory;
+    containerVirtualCores = containerVirtualCores == -1 ?
+        DEFAULT_CONTAINER_VCORES :
+        containerVirtualCores;
+    resourceCapability.setMemorySize(containerMemory);
+    resourceCapability.setVirtualCores(containerVirtualCores);
+    for (Map.Entry<String, Long> entry : containerResources.entrySet()) {
+      resourceCapability.setResourceValue(entry.getKey(), entry.getValue());
     }
 
     String profileName = containerResourceProfile;
