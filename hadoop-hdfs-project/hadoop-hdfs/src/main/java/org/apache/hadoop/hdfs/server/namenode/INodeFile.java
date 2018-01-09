@@ -727,6 +727,13 @@ public class INodeFile extends INodeWithAdditionalFields
     this.blocks = BlockInfo.EMPTY_ARRAY;
   }
 
+  private void updateRemovedUnderConstructionFiles(
+      ReclaimContext reclaimContext) {
+    if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
+      reclaimContext.removedUCFiles.add(getId());
+    }
+  }
+
   @Override
   public void cleanSubtree(ReclaimContext reclaimContext,
       final int snapshot, int priorSnapshotId) {
@@ -735,6 +742,7 @@ public class INodeFile extends INodeWithAdditionalFields
       // TODO: avoid calling getStoragePolicyID
       sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId,
           getStoragePolicyID());
+      updateRemovedUnderConstructionFiles(reclaimContext);
     } else {
       if (snapshot == CURRENT_STATE_ID) {
         if (priorSnapshotId == NO_SNAPSHOT_ID) {
@@ -747,9 +755,7 @@ public class INodeFile extends INodeWithAdditionalFields
           // clean the 0-sized block if the file is UC
           if (uc != null) {
             uc.cleanZeroSizeBlock(this, reclaimContext.collectedBlocks);
-            if (reclaimContext.removedUCFiles != null) {
-              reclaimContext.removedUCFiles.add(getId());
-            }
+            updateRemovedUnderConstructionFiles(reclaimContext);
           }
         }
       }
@@ -768,9 +774,7 @@ public class INodeFile extends INodeWithAdditionalFields
           reclaimContext.collectedBlocks);
       sf.clearDiffs();
     }
-    if (isUnderConstruction() && reclaimContext.removedUCFiles != null) {
-      reclaimContext.removedUCFiles.add(getId());
-    }
+    updateRemovedUnderConstructionFiles(reclaimContext);
   }
 
   public void clearFile(ReclaimContext reclaimContext) {
