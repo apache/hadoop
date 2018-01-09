@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Test s3a performance metrics register and output.
@@ -34,7 +35,7 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
   public void testMetricsRegister()
       throws IOException, InterruptedException {
     S3AFileSystem fs = getFileSystem();
-    Path dest = new Path("newfile1");
+    Path dest = path("testMetricsRegister");
     ContractTestUtils.touch(fs, dest);
 
     String targetMetricSource = "S3AMetrics1" + "-" + fs.getBucket();
@@ -48,4 +49,25 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
     assertEquals("Metrics system should report single file created event",
         1, fileCreated.value());
   }
+
+  @Test
+  public void testStreamStatistics() throws IOException {
+    S3AFileSystem fs = getFileSystem();
+    Path file = path("testStreamStatistics");
+    byte[] data = "abcdefghijklmnopqrstuvwxyz".getBytes();
+    ContractTestUtils.createFile(fs, file, false, data);
+
+    try (InputStream inputStream = fs.open(file)) {
+      while (inputStream.read(data) != -1) {
+        LOG.debug("Read batch of data from input stream...");
+      }
+    }
+
+    MutableCounterLong read = (MutableCounterLong)
+        fs.getInstrumentation().getRegistry()
+        .get(Statistic.STREAM_SEEK_BYTES_READ.getSymbol());
+    assertEquals("Stream statistics were not merged", 26, read.value());
+  }
+
+
 }
