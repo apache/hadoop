@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -1366,7 +1365,6 @@ public class FairScheduler extends
     super.serviceInit(conf);
 
     // Initialize SchedulingMonitorManager
-    schedulingMonitorManager = new SchedulingMonitorManager();
     schedulingMonitorManager.initialize(rmContext, conf);
   }
 
