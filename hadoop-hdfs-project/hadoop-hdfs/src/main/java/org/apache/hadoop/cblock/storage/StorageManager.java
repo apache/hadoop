@@ -58,6 +58,7 @@ public class StorageManager {
   private static final int MAX_THREADS =
       Runtime.getRuntime().availableProcessors() * 2;
   private static final int MAX_QUEUE_CAPACITY = 1024;
+  private final String cblockId;
 
   /**
    * We will NOT have the situation where same kv pair getting
@@ -77,13 +78,14 @@ public class StorageManager {
   private long containerSizeB;
 
   public StorageManager(ScmClient storageClient,
-      OzoneConfiguration ozoneConfig) throws IOException {
+      OzoneConfiguration ozoneConfig, String cblockId) throws IOException {
     this.storageClient = storageClient;
     this.user2VolumeMap = new ConcurrentHashMap<>();
     this.containerSizeB = storageClient.getContainerSize(null);
     this.numThreads =
         ozoneConfig.getInt(CBlockConfigKeys.DFS_CBLOCK_MANAGER_POOL_SIZE,
             CBlockConfigKeys.DFS_CBLOCK_MANAGER_POOL_SIZE_DEFAULT);
+    this.cblockId = cblockId;
   }
 
   /**
@@ -188,7 +190,7 @@ public class StorageManager {
             OzoneProtos.ReplicationType.STAND_ALONE,
             OzoneProtos.ReplicationFactor.ONE,
             KeyUtil.getContainerName(volume.getUserName(),
-                volume.getVolumeName(), containerIdx));
+                volume.getVolumeName(), containerIdx), cblockId);
 
         container = new ContainerDescriptor(pipeline.getContainerName());
 

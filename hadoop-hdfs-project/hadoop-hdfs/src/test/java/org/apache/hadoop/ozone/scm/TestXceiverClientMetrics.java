@@ -60,6 +60,7 @@ public class TestXceiverClientMetrics {
   private static MiniOzoneCluster cluster;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
+  private static String containerOwner = "OZONE";
 
   @BeforeClass
   public static void init() throws IOException {
@@ -82,8 +83,9 @@ public class TestXceiverClientMetrics {
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
     String containerName = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline = storageContainerLocationClient.allocateContainer(
-        clientManager.getType(), clientManager.getFactor(), containerName);
+    Pipeline pipeline = storageContainerLocationClient
+        .allocateContainer(clientManager.getType(), clientManager.getFactor(),
+            containerName, containerOwner);
     XceiverClientSpi client = clientManager.acquireClient(pipeline);
 
     ContainerCommandRequestProto request = ContainerTestHelper

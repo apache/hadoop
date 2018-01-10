@@ -95,9 +95,11 @@ public class KeyManagerImpl implements KeyManager {
 
   private final long preallocateMax;
   private final Random random;
+  private final String ksmId;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
-      KSMMetadataManager metadataManager, OzoneConfiguration conf) {
+      KSMMetadataManager metadataManager, OzoneConfiguration conf,
+      String ksmId) {
     this.scmBlockClient = scmBlockClient;
     this.metadataManager = metadataManager;
     this.scmBlockSize = conf.getLong(OZONE_SCM_BLOCK_SIZE_IN_MB,
@@ -123,6 +125,7 @@ public class KeyManagerImpl implements KeyManager {
     openKeyCleanupService = new OpenKeyCleanupService(
         scmBlockClient, this, openkeyCheckInterval, serviceTimeout);
     random = new Random();
+    this.ksmId = ksmId;
   }
 
   @Override
@@ -190,7 +193,7 @@ public class KeyManagerImpl implements KeyManager {
             KSMException.ResultCodes.FAILED_KEY_NOT_FOUND);
       }
       AllocatedBlock allocatedBlock =
-          scmBlockClient.allocateBlock(scmBlockSize, type, factor);
+          scmBlockClient.allocateBlock(scmBlockSize, type, factor, ksmId);
       KsmKeyInfo keyInfo =
           KsmKeyInfo.getFromProtobuf(KeyInfo.parseFrom(keyData));
       KsmKeyLocationInfo info = new KsmKeyLocationInfo.Builder()
@@ -245,7 +248,7 @@ public class KeyManagerImpl implements KeyManager {
       while (requestedSize > 0) {
         long allocateSize = Math.min(scmBlockSize, requestedSize);
         AllocatedBlock allocatedBlock =
-            scmBlockClient.allocateBlock(allocateSize, type, factor);
+            scmBlockClient.allocateBlock(allocateSize, type, factor, ksmId);
         KsmKeyLocationInfo subKeyInfo = new KsmKeyLocationInfo.Builder()
             .setContainerName(allocatedBlock.getPipeline().getContainerName())
             .setBlockID(allocatedBlock.getKey())

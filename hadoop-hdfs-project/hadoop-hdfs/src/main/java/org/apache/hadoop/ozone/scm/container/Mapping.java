@@ -73,7 +73,7 @@ public interface Mapping extends Closeable {
    */
   ContainerInfo allocateContainer(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor replicationFactor,
-      String containerName, OzoneProtos.Owner owner) throws IOException;
+      String containerName, String owner) throws IOException;
 
   /**
    * Deletes a container from SCM.

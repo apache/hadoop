@@ -38,7 +38,7 @@ public class ContainerInfo
   private long lastUsed;
   // The wall-clock ms since the epoch at which the current state enters.
   private long stateEnterTime;
-  private OzoneProtos.Owner owner;
+  private String owner;
   private String containerName;
 
   ContainerInfo(
@@ -49,7 +49,7 @@ public class ContainerInfo
       long usedBytes,
       long numberOfKeys,
       long stateEnterTime,
-      OzoneProtos.Owner owner) {
+      String owner) {
     this.containerName = containerName;
     this.pipeline = pipeline;
     this.allocatedBytes = allocatedBytes;
@@ -143,11 +143,11 @@ public class ContainerInfo
     return builder.build();
   }
 
-  public OzoneProtos.Owner getOwner() {
+  public String getOwner() {
     return owner;
   }
 
-  public void setOwner(OzoneProtos.Owner owner) {
+  public void setOwner(String owner) {
     this.owner = owner;
   }
 
@@ -241,7 +241,7 @@ public class ContainerInfo
     private long used;
     private long keys;
     private long stateEnterTime;
-    private OzoneProtos.Owner owner;
+    private String owner;
     private String containerName;
 
     public Builder setState(OzoneProtos.LifeCycleState lifeCycleState) {
@@ -274,7 +274,7 @@ public class ContainerInfo
       return this;
     }
 
-    public Builder setOwner(OzoneProtos.Owner containerOwner) {
+    public Builder setOwner(String containerOwner) {
       this.owner = containerOwner;
       return this;
     }

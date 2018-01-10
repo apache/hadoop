@@ -22,7 +22,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.Owner;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
 import org.apache.hadoop.ozone.scm.container.Mapping;
@@ -76,7 +75,6 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   // TODO : FIX ME : Hard coding the owner.
   // Currently only user of the block service is Ozone, CBlock manages blocks
   // by itself and does not rely on the Block service offered by SCM.
-  private final Owner owner = Owner.OZONE;
 
   private final NodeManager nodeManager;
   private final Mapping containerManager;
@@ -178,7 +176,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    * @throws IOException
    */
   private void preAllocateContainers(int count, ReplicationType type,
-      ReplicationFactor factor)
+      ReplicationFactor factor, String owner)
       throws IOException {
     lock.lock();
     try {
@@ -214,8 +212,8 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    * @throws IOException on failure.
    */
   @Override
-  public AllocatedBlock allocateBlock(
-      final long size, ReplicationType type, ReplicationFactor factor)
+  public AllocatedBlock allocateBlock(final long size,
+      ReplicationType type, ReplicationFactor factor, String owner)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
 
@@ -289,7 +287,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       // that most of our containers are full or we have not allocated
       // containers of the type and replication factor. So let us go and
       // allocate some.
-      preAllocateContainers(containerProvisionBatchSize, type, factor);
+      preAllocateContainers(containerProvisionBatchSize, type, factor, owner);
 
       // Since we just allocated a set of containers this should work
       containerInfo =

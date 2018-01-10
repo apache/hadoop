@@ -45,6 +45,7 @@ public class TestAllocateContainer {
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private static XceiverClientManager xceiverClientManager;
+  private static String containerOwner = "OZONE";
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
@@ -74,7 +75,7 @@ public class TestAllocateContainer {
     Pipeline pipeline = storageContainerLocationClient.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
-        "container0");
+        "container0", containerOwner);
     Assert.assertNotNull(pipeline);
     Assert.assertNotNull(pipeline.getLeader());
 
@@ -85,7 +86,7 @@ public class TestAllocateContainer {
     thrown.expect(NullPointerException.class);
     storageContainerLocationClient.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), null);
+        xceiverClientManager.getFactor(), null, containerOwner);
   }
 
   @Test
@@ -95,9 +96,9 @@ public class TestAllocateContainer {
     thrown.expectMessage("Specified container already exists");
     storageContainerLocationClient.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
+        xceiverClientManager.getFactor(), containerName, containerOwner);
     storageContainerLocationClient.allocateContainer(
         xceiverClientManager.getType(),
-        xceiverClientManager.getFactor(), containerName);
+        xceiverClientManager.getFactor(), containerName, containerOwner);
   }
 }

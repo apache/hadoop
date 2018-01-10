@@ -71,6 +71,7 @@ public class TestSCMCli {
   private static ByteArrayOutputStream errContent;
   private static PrintStream errStream;
   private static XceiverClientManager xceiverClientManager;
+  private static String containerOwner = "OZONE";
 
   @Rule
   public Timeout globalTimeout = new Timeout(30000);
@@ -158,7 +159,7 @@ public class TestSCMCli {
     containerName = "non-empty-container";
     pipeline = containerOperationClient
         .createContainer(xceiverClientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, containerName);
+            OzoneProtos.ReplicationFactor.ONE, containerName, containerOwner);
 
     ContainerData cdata = ContainerData
         .getFromProtBuf(containerOperationClient.readContainer(pipeline), conf);
@@ -200,7 +201,7 @@ public class TestSCMCli {
     containerName = "empty-container";
     pipeline = containerOperationClient
         .createContainer(xceiverClientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, containerName);
+            OzoneProtos.ReplicationFactor.ONE, containerName, containerOwner);
     containerOperationClient.closeContainer(pipeline);
     Assert.assertTrue(containerExist(containerName));
 
@@ -213,7 +214,7 @@ public class TestSCMCli {
     // After the container is deleted,
     // a same name container can now be recreated.
     containerOperationClient.createContainer(xceiverClientManager.getType(),
-        OzoneProtos.ReplicationFactor.ONE, containerName);
+        OzoneProtos.ReplicationFactor.ONE, containerName, containerOwner);
     Assert.assertTrue(containerExist(containerName));
 
     // ****************************************
@@ -262,7 +263,7 @@ public class TestSCMCli {
     cname = "ContainerTestInfo1";
     Pipeline pipeline = containerOperationClient
         .createContainer(xceiverClientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, cname);
+            OzoneProtos.ReplicationFactor.ONE, cname, containerOwner);
     ContainerData data = ContainerData
         .getFromProtBuf(containerOperationClient.readContainer(pipeline), conf);
 
@@ -284,7 +285,7 @@ public class TestSCMCli {
     cname = "ContainerTestInfo2";
     pipeline = containerOperationClient
         .createContainer(xceiverClientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, cname);
+            OzoneProtos.ReplicationFactor.ONE, cname, containerOwner);
     data = ContainerData
         .getFromProtBuf(containerOperationClient.readContainer(pipeline), conf);
     KeyUtils.getDB(data, conf).put(cname.getBytes(), "someKey".getBytes());
@@ -343,7 +344,7 @@ public class TestSCMCli {
     for (int index = 0; index < 20; index++) {
       String containerName = String.format("%s%02d", prefix, index);
       containerOperationClient.createContainer(xceiverClientManager.getType(),
-          OzoneProtos.ReplicationFactor.ONE, containerName);
+          OzoneProtos.ReplicationFactor.ONE, containerName, containerOwner);
     }
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();

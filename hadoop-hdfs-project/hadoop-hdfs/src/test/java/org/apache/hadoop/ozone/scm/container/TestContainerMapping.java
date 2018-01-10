@@ -57,6 +57,7 @@ public class TestContainerMapping {
   private static MockNodeManager nodeManager;
   private static File testDir;
   private static XceiverClientManager xceiverClientManager;
+  private static String containerOwner = "OZONE";
 
   private static final long TIMEOUT = 10000;
 
@@ -101,7 +102,7 @@ public class TestContainerMapping {
     ContainerInfo containerInfo = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
-        UUID.randomUUID().toString(), OzoneProtos.Owner.OZONE);
+        UUID.randomUUID().toString(), containerOwner);
     Assert.assertNotNull(containerInfo);
   }
 
@@ -118,7 +119,7 @@ public class TestContainerMapping {
       ContainerInfo containerInfo = mapping.allocateContainer(
           xceiverClientManager.getType(),
           xceiverClientManager.getFactor(),
-          UUID.randomUUID().toString(), OzoneProtos.Owner.OZONE);
+          UUID.randomUUID().toString(), containerOwner);
 
       Assert.assertNotNull(containerInfo);
       Assert.assertNotNull(containerInfo.getPipeline());
@@ -134,7 +135,7 @@ public class TestContainerMapping {
     Pipeline pipeline = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), containerName,
-        OzoneProtos.Owner.OZONE).getPipeline();
+        containerOwner).getPipeline();
     Assert.assertNotNull(pipeline);
     Pipeline newPipeline = mapping.getContainer(containerName).getPipeline();
     Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
@@ -147,12 +148,12 @@ public class TestContainerMapping {
     Pipeline pipeline = mapping.allocateContainer(
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), containerName,
-        OzoneProtos.Owner.OZONE).getPipeline();
+        containerOwner).getPipeline();
     Assert.assertNotNull(pipeline);
     thrown.expectMessage("Specified container already exists.");
     mapping.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), containerName,
-        OzoneProtos.Owner.OZONE);
+        containerOwner);
   }
 
   @Test
@@ -169,7 +170,7 @@ public class TestContainerMapping {
     thrown.expectMessage("Unable to create container while in chill mode");
     mapping.allocateContainer(xceiverClientManager.getType(),
         xceiverClientManager.getFactor(), containerName,
-        OzoneProtos.Owner.OZONE);
+        containerOwner);
   }
 
   @Test
@@ -181,7 +182,7 @@ public class TestContainerMapping {
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerName,
-        OzoneProtos.Owner.OZONE);
+        containerOwner);
     mapping.updateContainerState(containerInfo.getContainerName(),
         OzoneProtos.LifeCycleEvent.CREATE);
     Thread.sleep(TIMEOUT + 1000);
@@ -265,7 +266,7 @@ public class TestContainerMapping {
     Assert.assertEquals(5368705120L, updatedContainer.getUsedBytes());
     List<ContainerInfo> pendingCloseContainers = mapping.getStateManager()
         .getMatchingContainers(
-            OzoneProtos.Owner.OZONE,
+            containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.CLOSING);
@@ -282,7 +283,7 @@ public class TestContainerMapping {
         OzoneProtos.LifeCycleEvent.FINALIZE);
     List<ContainerInfo> pendingCloseContainers = mapping.getStateManager()
         .getMatchingContainers(
-            OzoneProtos.Owner.OZONE,
+            containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.CLOSING);
@@ -293,7 +294,7 @@ public class TestContainerMapping {
         OzoneProtos.LifeCycleEvent.CLOSE);
     List<ContainerInfo> closeContainers = mapping.getStateManager()
         .getMatchingContainers(
-            OzoneProtos.Owner.OZONE,
+            containerOwner,
             xceiverClientManager.getType(),
             xceiverClientManager.getFactor(),
             OzoneProtos.LifeCycleState.CLOSED);
@@ -314,7 +315,7 @@ public class TestContainerMapping {
         xceiverClientManager.getType(),
         xceiverClientManager.getFactor(),
         containerName,
-        OzoneProtos.Owner.OZONE);
+        containerOwner);
     mapping.updateContainerState(containerInfo.getContainerName(),
         OzoneProtos.LifeCycleEvent.CREATE);
     mapping.updateContainerState(containerInfo.getContainerName(),

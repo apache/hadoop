@@ -62,6 +62,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.apache.hadoop.cblock.CBlockConfigKeys
     .DFS_CBLOCK_CONTAINER_SIZE_GB_DEFAULT;
@@ -122,7 +123,11 @@ public class CBlockManager implements CBlockServiceProtocol,
 
   public CBlockManager(OzoneConfiguration conf,
       ScmClient storageClient) throws IOException {
-    storageManager = new StorageManager(storageClient, conf);
+    // Fix the cBlockManagerId generattion code here. Should support
+    // cBlockManager --init command which will generate a cBlockManagerId and
+    // persist it locally.
+    storageManager =
+        new StorageManager(storageClient, conf, "CBLOCK");
 
     dbPath = conf.getTrimmed(DFS_CBLOCK_SERVICE_LEVELDB_PATH_KEY,
         DFS_CBLOCK_SERVICE_LEVELDB_PATH_DEFAULT);

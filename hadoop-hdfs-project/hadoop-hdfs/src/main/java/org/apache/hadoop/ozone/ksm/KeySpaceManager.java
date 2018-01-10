@@ -182,8 +182,9 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
     volumeManager = new VolumeManagerImpl(metadataManager, configuration);
     bucketManager = new BucketManagerImpl(metadataManager);
     metrics = KSMMetrics.create();
-    keyManager = new KeyManagerImpl(scmBlockClient, metadataManager,
-        configuration);
+    keyManager =
+        new KeyManagerImpl(scmBlockClient, metadataManager, configuration,
+            ksmStorage.getKsmId());
     httpServer = new KeySpaceManagerHttpServer(configuration, this);
   }
 
@@ -704,7 +705,7 @@ public class KeySpaceManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public KsmKeyLocationInfo allocateBlock(KsmKeyArgs args, int clientID)
+  public KsmKeyLocationInfo  allocateBlock(KsmKeyArgs args, int clientID)
       throws IOException {
     try {
       metrics.incNumBlockAllocateCalls();

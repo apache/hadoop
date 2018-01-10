@@ -55,6 +55,7 @@ public class TestContainerSmallFile {
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
   private static XceiverClientManager xceiverClientManager;
+  private static String containerOwner = "OZONE";
 
   @BeforeClass
   public static void init() throws Exception {
@@ -86,7 +87,7 @@ public class TestContainerSmallFile {
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, containerName);
+            OzoneProtos.ReplicationFactor.ONE, containerName, containerOwner);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
@@ -107,7 +108,7 @@ public class TestContainerSmallFile {
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, containerName);
+            OzoneProtos.ReplicationFactor.ONE, containerName, containerOwner);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
 
@@ -129,7 +130,7 @@ public class TestContainerSmallFile {
     Pipeline pipeline =
         storageContainerLocationClient.allocateContainer(
             xceiverClientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, containerName);
+            OzoneProtos.ReplicationFactor.ONE, containerName, containerOwner);
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     ContainerProtocolCalls.createContainer(client, traceID);
     ContainerProtocolCalls.writeSmallFile(client, containerName,

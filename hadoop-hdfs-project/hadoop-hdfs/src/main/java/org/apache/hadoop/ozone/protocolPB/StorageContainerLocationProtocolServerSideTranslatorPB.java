@@ -76,7 +76,8 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
       ContainerRequestProto request) throws ServiceException {
     try {
       Pipeline pipeline = impl.allocateContainer(request.getReplicationType(),
-          request.getReplicationFactor(), request.getContainerName());
+          request.getReplicationFactor(), request.getContainerName(),
+          request.getOwner());
       return ContainerResponseProto.newBuilder()
           .setPipeline(pipeline.getProtobufMessage())
           .setErrorCode(ContainerResponseProto.Error.success)

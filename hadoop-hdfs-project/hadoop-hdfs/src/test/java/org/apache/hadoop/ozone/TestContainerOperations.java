@@ -82,7 +82,7 @@ public class TestContainerOperations {
   public void testCreate() throws Exception {
     Pipeline pipeline0 = storageClient.createContainer(OzoneProtos
         .ReplicationType.STAND_ALONE, OzoneProtos.ReplicationFactor
-        .ONE, "container0");
+        .ONE, "container0", "OZONE");
     assertEquals("container0", pipeline0.getContainerName());
 
   }
