@@ -363,11 +363,11 @@ public class Resources {
       boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
                        smaller.getVirtualCores() <= bigger.getVirtualCores() &&
                        smaller.getGPUs() <= bigger.getGPUs();
-      if (fitsIn == true) {         
+      if (fitsIn) {
           if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute()) {
               fitsIn = false;
           }
-          if (fitsIn == true) {
+          if (fitsIn) {
             if (smaller.getPorts() != null && !(smaller.getPorts().isLessOrEqual(bigger.getPorts()))) {
               fitsIn = false;
             }
