@@ -27,10 +27,12 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto.DestOrder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProtoOrBuilder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoteLocationProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.RouterAdminServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.FederationProtocolPBTranslator;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 
@@ -247,6 +249,36 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
       builder.clearMode();
     } else {
       builder.setMode(mode.toShort());
+    }
+  }
+
+  @Override
+  public RouterQuotaUsage getQuota() {
+    MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
+    if (!proto.hasQuota()) {
+      return null;
+    }
+
+    QuotaUsageProto quotaProto = proto.getQuota();
+    RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
+        .fileAndDirectoryCount(quotaProto.getFileAndDirectoryCount())
+        .quota(quotaProto.getQuota())
+        .spaceConsumed(quotaProto.getSpaceConsumed())
+        .spaceQuota(quotaProto.getSpaceQuota());
+    return builder.build();
+  }
+
+  @Override
+  public void setQuota(RouterQuotaUsage quota) {
+    Builder builder = this.translator.getBuilder();
+    if (quota == null) {
+      builder.clearQuota();
+    } else {
+      QuotaUsageProto quotaUsage = QuotaUsageProto.newBuilder()
+          .setFileAndDirectoryCount(quota.getFileAndDirectoryCount())
+          .setQuota(quota.getQuota()).setSpaceConsumed(quota.getSpaceConsumed())
+          .setSpaceQuota(quota.getSpaceQuota()).build();
+      builder.setQuota(quotaUsage);
     }
   }
 

@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -307,10 +306,12 @@ public class FairScheduler extends
   private void dumpSchedulerState() {
     FSQueue rootQueue = queueMgr.getRootQueue();
     Resource clusterResource = getClusterResource();
-    LOG.debug("FairScheduler state: Cluster Capacity: " + clusterResource +
+    STATE_DUMP_LOG.debug(
+        "FairScheduler state: Cluster Capacity: " + clusterResource +
         "  Allocations: " + rootMetrics.getAllocatedResources() +
         "  Availability: " + Resource.newInstance(
-        rootMetrics.getAvailableMB(), rootMetrics.getAvailableVirtualCores()) +
+            rootMetrics.getAvailableMB(),
+            rootMetrics.getAvailableVirtualCores()) +
         "  Demand: " + rootQueue.getDemand());
 
     STATE_DUMP_LOG.debug(rootQueue.dumpState());
@@ -351,7 +352,7 @@ public class FairScheduler extends
       }
 
       // Log debug information
-      if (LOG.isDebugEnabled()) {
+      if (STATE_DUMP_LOG.isDebugEnabled()) {
         if (--updatesToSkipForDebug < 0) {
           updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
           dumpSchedulerState();
@@ -1364,7 +1365,6 @@ public class FairScheduler extends
     super.serviceInit(conf);
 
     // Initialize SchedulingMonitorManager
-    schedulingMonitorManager = new SchedulingMonitorManager();
     schedulingMonitorManager.initialize(rmContext, conf);
   }
 
