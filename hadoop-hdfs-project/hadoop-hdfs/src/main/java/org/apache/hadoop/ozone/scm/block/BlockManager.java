@@ -40,7 +40,7 @@ public interface BlockManager extends Closeable {
    * @throws IOException
    */
   AllocatedBlock allocateBlock(long size, OzoneProtos.ReplicationType type,
-      OzoneProtos.ReplicationFactor factor) throws IOException;
+      OzoneProtos.ReplicationFactor factor, String owner) throws IOException;
 
   /**
    *  Give the key to the block, get the pipeline info.

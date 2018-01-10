@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * regarding copyright containerOwnership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -99,6 +99,7 @@ public class TestContainerSQLCli {
   private final static long DEFAULT_BLOCK_SIZE = 4 * KB;
   private static OzoneProtos.ReplicationFactor factor;
   private static OzoneProtos.ReplicationType type;
+  private static final String containerOwner = "OZONE";
 
 
   @Before
@@ -145,7 +146,7 @@ public class TestContainerSQLCli {
     }
     assertEquals(2, nodeManager.getAllNodes().size());
     AllocatedBlock ab1 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE, type,
-        factor);
+        factor, containerOwner);
     pipeline1 = ab1.getPipeline();
     blockContainerMap.put(ab1.getKey(), pipeline1.getContainerName());
 
@@ -157,7 +158,8 @@ public class TestContainerSQLCli {
     // although each retry will create a block and assign to a container. So
     // the size of blockContainerMap will vary each time the test is run.
     while (true) {
-      ab2 = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE, type, factor);
+      ab2 = blockManager
+          .allocateBlock(DEFAULT_BLOCK_SIZE, type, factor, containerOwner);
       pipeline2 = ab2.getPipeline();
       blockContainerMap.put(ab2.getKey(), pipeline2.getContainerName());
       if (!pipeline1.getContainerName().equals(pipeline2.getContainerName())) {

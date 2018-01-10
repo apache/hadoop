@@ -116,16 +116,14 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
    * @throws IOException
    */
   @Override
-  public AllocatedBlock allocateBlock(long size, OzoneProtos.ReplicationType
-      type, OzoneProtos.ReplicationFactor factor) throws IOException {
-    Preconditions.checkArgument(size > 0,
-        "block size must be greater than 0");
+  public AllocatedBlock allocateBlock(long size,
+      OzoneProtos.ReplicationType type, OzoneProtos.ReplicationFactor factor,
+      String owner) throws IOException {
+    Preconditions.checkArgument(size > 0, "block size must be greater than 0");
 
-    AllocateScmBlockRequestProto request = AllocateScmBlockRequestProto
-        .newBuilder()
-        .setSize(size).setType(type)
-        .setFactor(factor)
-        .build();
+    AllocateScmBlockRequestProto request =
+        AllocateScmBlockRequestProto.newBuilder().setSize(size).setType(type)
+            .setFactor(factor).setOwner(owner).build();
     final AllocateScmBlockResponseProto response;
     try {
       response = rpcProxy.allocateScmBlock(NULL_RPC_CONTROLLER, request);

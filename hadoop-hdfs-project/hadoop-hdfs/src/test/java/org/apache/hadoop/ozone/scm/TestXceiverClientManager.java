@@ -51,6 +51,7 @@ public class TestXceiverClientManager {
   private static MiniOzoneCluster cluster;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
+  private static String containerOwner = "OZONE";
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -76,18 +77,18 @@ public class TestXceiverClientManager {
     XceiverClientManager clientManager = new XceiverClientManager(conf);
 
     String containerName1 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline1 =
-        storageContainerLocationClient.allocateContainer(
-            clientManager.getType(), clientManager.getFactor(), containerName1);
+    Pipeline pipeline1 = storageContainerLocationClient
+        .allocateContainer(clientManager.getType(), clientManager.getFactor(),
+            containerName1, containerOwner);
     XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
     Assert.assertEquals(1, client1.getRefcount());
     Assert.assertEquals(containerName1,
         client1.getPipeline().getContainerName());
 
     String containerName2 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline2 =
-        storageContainerLocationClient.allocateContainer(
-            clientManager.getType(), clientManager.getFactor(), containerName2);
+    Pipeline pipeline2 = storageContainerLocationClient
+        .allocateContainer(clientManager.getType(), clientManager.getFactor(),
+            containerName2, containerOwner);
     XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
     Assert.assertEquals(1, client2.getRefcount());
     Assert.assertEquals(containerName2,
@@ -116,7 +117,7 @@ public class TestXceiverClientManager {
     Pipeline pipeline1 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(), OzoneProtos.ReplicationFactor.ONE,
-            containerName1);
+            containerName1, containerOwner);
     XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
     Assert.assertEquals(1, client1.getRefcount());
     Assert.assertEquals(containerName1,
@@ -126,7 +127,7 @@ public class TestXceiverClientManager {
     Pipeline pipeline2 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(),
-            OzoneProtos.ReplicationFactor.ONE, containerName2);
+            OzoneProtos.ReplicationFactor.ONE, containerName2, containerOwner);
     XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
     Assert.assertEquals(1, client2.getRefcount());
     Assert.assertEquals(containerName2,
@@ -161,7 +162,7 @@ public class TestXceiverClientManager {
     Pipeline pipeline1 =
         storageContainerLocationClient.allocateContainer(
             clientManager.getType(),
-            clientManager.getFactor(), containerName1);
+            clientManager.getFactor(), containerName1, containerOwner);
     XceiverClientSpi client1 = clientManager.acquireClient(pipeline1);
     Assert.assertEquals(1, client1.getRefcount());
     Assert.assertEquals(containerName1,
@@ -171,9 +172,9 @@ public class TestXceiverClientManager {
     Assert.assertEquals(0, client1.getRefcount());
 
     String containerName2 = "container" + RandomStringUtils.randomNumeric(10);
-    Pipeline pipeline2 =
-        storageContainerLocationClient.allocateContainer(
-            clientManager.getType(), clientManager.getFactor(), containerName2);
+    Pipeline pipeline2 = storageContainerLocationClient
+        .allocateContainer(clientManager.getType(), clientManager.getFactor(),
+            containerName2, containerOwner);
     XceiverClientSpi client2 = clientManager.acquireClient(pipeline2);
     Assert.assertEquals(1, client2.getRefcount());
     Assert.assertEquals(containerName2,

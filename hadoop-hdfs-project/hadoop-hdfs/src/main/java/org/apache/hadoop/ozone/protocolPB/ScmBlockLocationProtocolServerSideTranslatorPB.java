@@ -107,7 +107,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     try {
       AllocatedBlock allocatedBlock =
           impl.allocateBlock(request.getSize(), request.getType(),
-              request.getFactor());
+              request.getFactor(), request.getOwner());
       if (allocatedBlock != null) {
         return
             AllocateScmBlockResponseProto.newBuilder()

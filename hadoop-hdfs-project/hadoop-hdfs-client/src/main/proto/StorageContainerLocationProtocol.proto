@@ -39,7 +39,7 @@ message ContainerRequestProto {
   // Ozone only support replciation of either 1 or 3.
   required hadoop.hdfs.ozone.ReplicationFactor replicationFactor = 2;
   required hadoop.hdfs.ozone.ReplicationType  replicationType = 3;
-  optional hadoop.hdfs.ozone.Owner owner = 4 [default = OZONE];
+  required string owner = 4;
 
 }
 

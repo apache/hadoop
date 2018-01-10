@@ -132,7 +132,7 @@ message SCMContainerInfo {
     required uint64 usedBytes = 5;
     required uint64 numberOfKeys = 6;
     optional int64 stateEnterTime = 7;
-    optional Owner owner = 8 [default = OZONE];
+    required string owner = 8;
 }
 
 message GetScmInfoRequestProto {
@@ -153,11 +153,4 @@ enum ReplicationType {
 enum ReplicationFactor {
     ONE = 1;
     THREE = 3;
-}
-
-enum Owner {
-    OZONE = 1;
-    CBLOCK = 2;
-    // In future --
-    //HDFS = 3;
 }

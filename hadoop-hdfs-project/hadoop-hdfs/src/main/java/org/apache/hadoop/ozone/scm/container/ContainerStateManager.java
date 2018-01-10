@@ -54,7 +54,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleState;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.Owner;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.LifeCycleEvent;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
 
@@ -167,7 +166,6 @@ public class ContainerStateManager implements Closeable {
 
     lock = new ReentrantReadWriteLock();
     containers = new HashMap<>();
-    initializeContainerMaps();
     loadExistingContainers(containerMapping);
     containerCloseQueue = new ConcurrentLinkedQueue<>();
   }
@@ -185,17 +183,15 @@ public class ContainerStateManager implements Closeable {
    * of these {ALLOCATED, CREATING, OPEN, CLOSED, DELETING, DELETED}  container
    * states
    */
-  private void initializeContainerMaps() {
+  private void initializeContainerMaps(String owner) {
     // Called only from Ctor path, hence no lock is held.
     Preconditions.checkNotNull(containers);
-    for (OzoneProtos.Owner owner : OzoneProtos.Owner.values()) {
-      for (ReplicationType type : ReplicationType.values()) {
-        for (ReplicationFactor factor : ReplicationFactor.values()) {
-          for (LifeCycleState state : LifeCycleState.values()) {
-            ContainerKey key = new ContainerKey(owner, type, factor, state);
-            PriorityQueue<ContainerInfo> queue = new PriorityQueue<>();
-            containers.put(key, queue);
-          }
+    for (ReplicationType type : ReplicationType.values()) {
+      for (ReplicationFactor factor : ReplicationFactor.values()) {
+        for (LifeCycleState state : LifeCycleState.values()) {
+          ContainerKey key = new ContainerKey(owner, type, factor, state);
+          PriorityQueue<ContainerInfo> queue = new PriorityQueue<>();
+          containers.put(key, queue);
         }
       }
     }
@@ -208,12 +204,18 @@ public class ContainerStateManager implements Closeable {
    */
   private void loadExistingContainers(Mapping containerMapping) {
     try {
+      List<String> ownerList = new ArrayList<>();
       List<ContainerInfo> containerList =
           containerMapping.listContainer(null, null, Integer.MAX_VALUE);
       for (ContainerInfo container : containerList) {
-        ContainerKey key = new ContainerKey(container.getOwner(),
-            container.getPipeline().getType(),
-            container.getPipeline().getFactor(), container.getState());
+        String owner = container.getOwner();
+        if (ownerList.isEmpty() || !ownerList.contains(owner)) {
+          ownerList.add(owner);
+          initializeContainerMaps(owner);
+        }
+        ContainerKey key =
+            new ContainerKey(owner, container.getPipeline().getType(),
+                container.getPipeline().getFactor(), container.getState());
         containers.get(key).add(container);
       }
     } catch (IOException e) {
@@ -317,7 +319,7 @@ public class ContainerStateManager implements Closeable {
    */
   public ContainerInfo allocateContainer(PipelineSelector selector, OzoneProtos
       .ReplicationType type, OzoneProtos.ReplicationFactor replicationFactor,
-      final String containerName, OzoneProtos.Owner owner) throws
+      final String containerName, String owner) throws
       IOException {
 
     Pipeline pipeline = selector.getReplicationPipeline(type,
@@ -340,7 +342,10 @@ public class ContainerStateManager implements Closeable {
       ContainerKey key = new ContainerKey(owner, type, replicationFactor,
           containerInfo.getState());
       PriorityQueue<ContainerInfo> queue = containers.get(key);
-      Preconditions.checkNotNull(queue);
+      if (queue == null) {
+        initializeContainerMaps(owner);
+        queue = containers.get(key);
+      }
       queue.add(containerInfo);
       LOG.trace("New container allocated: {}", containerInfo);
     } finally {
@@ -431,12 +436,16 @@ public class ContainerStateManager implements Closeable {
    * @return ContainerInfo
    */
   public ContainerInfo getMatchingContainer(final long size,
-      Owner owner, ReplicationType type, ReplicationFactor factor,
+      String owner, ReplicationType type, ReplicationFactor factor,
       LifeCycleState state) {
     ContainerKey key = new ContainerKey(owner, type, factor, state);
     lock.writeLock().lock();
     try {
       PriorityQueue<ContainerInfo> queue = containers.get(key);
+      if (queue == null) {
+        initializeContainerMaps(owner);
+        queue = containers.get(key);
+      }
       if (queue.size() == 0) {
         // We don't have any Containers of this type.
         return null;
@@ -466,13 +475,17 @@ public class ContainerStateManager implements Closeable {
   }
 
   @VisibleForTesting
-  public List<ContainerInfo> getMatchingContainers(Owner owner,
+  public List<ContainerInfo> getMatchingContainers(String owner,
       ReplicationType type, ReplicationFactor factor, LifeCycleState state) {
     ContainerKey key = new ContainerKey(owner, type, factor, state);
     lock.readLock().lock();
     try {
-      return Arrays.asList((ContainerInfo[]) containers.get(key)
-          .toArray(new ContainerInfo[0]));
+      if (containers.get(key) == null) {
+        return null;
+      } else {
+        return Arrays.asList((ContainerInfo[]) containers.get(key)
+            .toArray(new ContainerInfo[0]));
+      }
     } catch (Exception e) {
       LOG.error("Could not get matching containers", e);
     } finally {
@@ -492,7 +505,7 @@ public class ContainerStateManager implements Closeable {
   private static class ContainerKey {
     private final LifeCycleState state;
     private final ReplicationType type;
-    private final OzoneProtos.Owner owner;
+    private final String owner;
     private final ReplicationFactor replicationFactor;
 
     /**
@@ -503,7 +516,7 @@ public class ContainerStateManager implements Closeable {
      * @param factor - Replication Factors
      * @param state - LifeCycle State
      */
-    ContainerKey(Owner owner, ReplicationType type,
+    ContainerKey(String owner, ReplicationType type,
         ReplicationFactor factor, LifeCycleState state) {
       this.state = state;
       this.type = type;

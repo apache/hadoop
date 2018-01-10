@@ -36,6 +36,7 @@ public class CreateContainerHandler extends OzoneCommandHandler {
 
   public static final String CONTAINER_CREATE = "create";
   public static final String OPT_CONTAINER_NAME = "c";
+  public static final String containerOwner = "OZONE";
   // TODO Support an optional -p <pipelineID> option to create
   // container on given datanodes.
 
@@ -59,7 +60,7 @@ public class CreateContainerHandler extends OzoneCommandHandler {
     String containerName = cmd.getOptionValue(OPT_CONTAINER_NAME);
 
     logOut("Creating container : %s.", containerName);
-    getScmClient().createContainer(containerName);
+    getScmClient().createContainer(containerName, containerOwner);
     logOut("Container created.");
   }
 

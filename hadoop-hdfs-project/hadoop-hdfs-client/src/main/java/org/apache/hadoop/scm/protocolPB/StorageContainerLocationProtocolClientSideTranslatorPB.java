@@ -88,7 +88,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   @Override
   public Pipeline allocateContainer(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor factor, String
-      containerName) throws IOException {
+      containerName, String owner) throws IOException {
 
     Preconditions.checkNotNull(containerName, "Container Name cannot be Null");
     Preconditions.checkState(!containerName.isEmpty(), "Container name cannot" +
@@ -97,6 +97,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         .setContainerName(containerName)
         .setReplicationFactor(factor)
         .setReplicationType(type)
+        .setOwner(owner)
         .build();
 
     final ContainerResponseProto response;

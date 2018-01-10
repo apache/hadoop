@@ -57,6 +57,7 @@ public class TestBlockManager {
   private final static long DEFAULT_BLOCK_SIZE = 128 * MB;
   private static OzoneProtos.ReplicationFactor factor;
   private static OzoneProtos.ReplicationType type;
+  private static String containerOwner = "OZONE";
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -101,14 +102,14 @@ public class TestBlockManager {
   @Test
   public void testAllocateBlock() throws Exception {
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor);
+        type, factor, containerOwner);
     Assert.assertNotNull(block);
   }
 
   @Test
   public void testGetAllocatedBlock() throws IOException {
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor);
+        type, factor, containerOwner);
     Assert.assertNotNull(block);
     Pipeline pipeline = blockManager.getBlock(block.getKey());
     Assert.assertEquals(pipeline.getLeader().getDatanodeUuid(),
@@ -118,7 +119,7 @@ public class TestBlockManager {
   @Test
   public void testDeleteBlock() throws Exception {
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor);
+        type, factor, containerOwner);
     Assert.assertNotNull(block);
     blockManager.deleteBlocks(Collections.singletonList(block.getKey()));
 
@@ -139,7 +140,7 @@ public class TestBlockManager {
     long size = 6 * GB;
     thrown.expectMessage("Unsupported block size");
     AllocatedBlock block = blockManager.allocateBlock(size,
-        type, factor);
+        type, factor, containerOwner);
   }
 
   @Test
@@ -154,6 +155,6 @@ public class TestBlockManager {
     nodeManager.setChillmode(true);
     thrown.expectMessage("Unable to create block while in chill mode");
     blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
-        type, factor);
+        type, factor, containerOwner);
   }
 }

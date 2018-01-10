@@ -26,7 +26,6 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
-import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ReportState;
 import org.apache.hadoop.ozone.protocol.proto
@@ -161,7 +160,7 @@ public class TestContainerPlacement {
       String container1 = UUID.randomUUID().toString();
       Pipeline pipeline1 = containerManager.allocateContainer(
           xceiverClientManager.getType(),
-          xceiverClientManager.getFactor(), container1, OzoneProtos.Owner.OZONE)
+          xceiverClientManager.getFactor(), container1, "OZONE")
           .getPipeline();
       assertEquals(xceiverClientManager.getFactor().getNumber(),
           pipeline1.getMachines().size());
@@ -190,7 +189,7 @@ public class TestContainerPlacement {
       String container2 = UUID.randomUUID().toString();
       containerManager.allocateContainer(xceiverClientManager.getType(),
           xceiverClientManager.getFactor(), container2,
-          OzoneProtos.Owner.OZONE);
+          "OZONE");
     } finally {
       IOUtils.closeQuietly(containerManager);
       IOUtils.closeQuietly(nodeManager);

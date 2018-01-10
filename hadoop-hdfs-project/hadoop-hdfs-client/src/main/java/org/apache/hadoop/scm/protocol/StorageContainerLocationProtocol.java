@@ -38,7 +38,7 @@ public interface StorageContainerLocationProtocol {
    *
    */
   Pipeline allocateContainer(OzoneProtos.ReplicationType replicationType,
-      OzoneProtos.ReplicationFactor factor, String containerName)
+      OzoneProtos.ReplicationFactor factor, String containerName, String owner)
       throws IOException;
 
   /**

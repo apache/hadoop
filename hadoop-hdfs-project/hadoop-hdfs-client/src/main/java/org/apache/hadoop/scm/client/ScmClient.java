@@ -45,7 +45,7 @@ public interface ScmClient {
    * @return Pipeline
    * @throws IOException
    */
-  Pipeline createContainer(String containerId) throws IOException;
+  Pipeline createContainer(String containerId, String owner) throws IOException;
 
   /**
    * Gets a container by Name -- Throws if the container does not exist.
@@ -112,8 +112,8 @@ public interface ScmClient {
    * @throws IOException - in case of error.
    */
   Pipeline createContainer(OzoneProtos.ReplicationType type,
-      OzoneProtos.ReplicationFactor replicationFactor, String containerId)
-      throws IOException;
+      OzoneProtos.ReplicationFactor replicationFactor, String containerId,
+      String owner) throws IOException;
 
   /**
    * Returns a set of Nodes that meet a query criteria.

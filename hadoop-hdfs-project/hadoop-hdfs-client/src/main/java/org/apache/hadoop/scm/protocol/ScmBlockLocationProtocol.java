@@ -53,7 +53,7 @@ public interface ScmBlockLocationProtocol {
    * @throws IOException
    */
   AllocatedBlock allocateBlock(long size, ReplicationType type,
-      ReplicationFactor factor) throws IOException;
+      ReplicationFactor factor, String owner) throws IOException;
 
   /**
    * Delete blocks for a set of object keys.

@@ -50,7 +50,7 @@ public class MockStorageClient implements ScmClient {
    * @throws Exception
    */
   @Override
-  public Pipeline createContainer(String containerId)
+  public Pipeline createContainer(String containerId, String owner)
       throws IOException {
     int contId = currentContainerId.getAndIncrement();
     ContainerLookUpService.addContainer(Long.toString(contId));
@@ -135,8 +135,8 @@ public class MockStorageClient implements ScmClient {
 
   @Override
   public Pipeline createContainer(OzoneProtos.ReplicationType type,
-      OzoneProtos.ReplicationFactor replicationFactor, String containerId)
-      throws IOException {
+      OzoneProtos.ReplicationFactor replicationFactor, String containerId,
+      String owner) throws IOException {
     int contId = currentContainerId.getAndIncrement();
     ContainerLookUpService.addContainer(Long.toString(contId));
     return ContainerLookUpService.lookUp(Long.toString(contId))

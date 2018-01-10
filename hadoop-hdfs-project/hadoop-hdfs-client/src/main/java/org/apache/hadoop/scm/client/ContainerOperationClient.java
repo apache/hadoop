@@ -82,14 +82,14 @@ public class ContainerOperationClient implements ScmClient {
    * @inheritDoc
    */
   @Override
-  public Pipeline createContainer(String containerId)
+  public Pipeline createContainer(String containerId, String owner)
       throws IOException {
     XceiverClientSpi client = null;
     try {
       Pipeline pipeline =
           storageContainerLocationClient.allocateContainer(
               xceiverClientManager.getType(),
-              xceiverClientManager.getFactor(), containerId);
+              xceiverClientManager.getFactor(), containerId, owner);
       client = xceiverClientManager.acquireClient(pipeline);
 
       // Allocated State means that SCM has allocated this pipeline in its
@@ -187,13 +187,13 @@ public class ContainerOperationClient implements ScmClient {
   @Override
   public Pipeline createContainer(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor factor,
-      String containerId) throws IOException {
+      String containerId, String owner) throws IOException {
     XceiverClientSpi client = null;
     try {
       // allocate container on SCM.
       Pipeline pipeline =
           storageContainerLocationClient.allocateContainer(type, factor,
-              containerId);
+              containerId, owner);
       client = xceiverClientManager.acquireClient(pipeline);
 
       // Allocated State means that SCM has allocated this pipeline in its
