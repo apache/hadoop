@@ -1179,6 +1179,12 @@ public interface MRJobConfig {
   public static final int DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PERCENT = 0;
 
   /**
+   * Opt out of YARN oversubscription so that the job always waits for
+   * GUARANTEED resources available in the cluster.
+   */
+  String MR_OVERSUBSCRIPTION_OPT_OUT = "mapreduce.job.oversubscription-opt-out";
+  boolean DEFAULT_MR_OVERSUBSCRIPTION_OPT_OUT = false;
+  /**
    * A comma-separated list of properties whose value will be redacted.
    */
   String MR_JOB_REDACTED_PROPERTIES = "mapreduce.job.redacted-properties";

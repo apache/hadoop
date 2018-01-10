@@ -2151,4 +2151,12 @@
   </description>
 </property>
 
+<property>
+  <description>
+    Opts out of YARN oversubscription so that the job always waits for GUARANTEED
+    resources available.
+  </description>
+  <name>mapreduce.job.oversubscription-opt-out</name>
+  <value>false</value>
+</property>
 </configuration>

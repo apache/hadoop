@@ -111,6 +111,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
   private final Set<String> blacklistRemovals = Collections
       .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+  private boolean optOutOfOversubscription;
 
   public RMContainerRequestor(ClientService clientService, AppContext context) {
     super(clientService, context);
@@ -136,20 +137,15 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     public ContainerRequest(ContainerRequestEvent event, Priority priority,
         String nodeLabelExpression) {
       this(event.getAttemptID(), event.getCapability(), event.getHosts(),
-          event.getRacks(), priority, nodeLabelExpression);
+          event.getRacks(), priority, System.currentTimeMillis(),
+          nodeLabelExpression);
     }
 
+    @VisibleForTesting
     public ContainerRequest(ContainerRequestEvent event, Priority priority,
                             long requestTimeMs) {
       this(event.getAttemptID(), event.getCapability(), event.getHosts(),
           event.getRacks(), priority, requestTimeMs,null);
-    }
-
-    public ContainerRequest(TaskAttemptId attemptID,
-                            Resource capability, String[] hosts, String[] racks,
-                            Priority priority, String nodeLabelExpression) {
-      this(attemptID, capability, hosts, racks, priority,
-          System.currentTimeMillis(), nodeLabelExpression);
     }
 
     public ContainerRequest(TaskAttemptId attemptID,
@@ -186,6 +182,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
             MRJobConfig.MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERECENT,
             MRJobConfig.DEFAULT_MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERCENT);
     LOG.info("maxTaskFailuresPerNode is " + maxTaskFailuresPerNode);
+    optOutOfOversubscription = conf.getBoolean(
+        MRJobConfig.MR_OVERSUBSCRIPTION_OPT_OUT,
+        MRJobConfig.DEFAULT_MR_OVERSUBSCRIPTION_OPT_OUT);
+    LOG.info("optOutOfOversubscription is " + optOutOfOversubscription);
     if (blacklistDisablePercent < -1 || blacklistDisablePercent > 100) {
       throw new YarnRuntimeException("Invalid blacklistDisablePercent: "
           + blacklistDisablePercent
@@ -398,20 +398,20 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     for (String host : req.hosts) {
       // Data-local
       if (!isNodeBlacklisted(host)) {
-        addResourceRequest(req.priority, host, req.capability,
+        addGuaranteedResourceRequest(req.priority, host, req.capability,
             null);
       }
     }
 
     // Nothing Rack-local for now
     for (String rack : req.racks) {
-      addResourceRequest(req.priority, rack, req.capability,
+      addGuaranteedResourceRequest(req.priority, rack, req.capability,
           null);
     }
 
     // Off-switch
-    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
-        req.nodeLabelExpression);
+    addGuaranteedResourceRequest(req.priority, ResourceRequest.ANY,
+        req.capability, req.nodeLabelExpression);
   }
 
   protected void decContainerReq(ContainerRequest req) {
@@ -430,18 +430,18 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   protected void addOpportunisticResourceRequest(Priority priority,
       Resource capability) {
     addResourceRequest(priority, ResourceRequest.ANY, capability, null,
-        ExecutionType.OPPORTUNISTIC);
+        ExecutionType.OPPORTUNISTIC, true);
   }
 
-  private void addResourceRequest(Priority priority, String resourceName,
-      Resource capability, String nodeLabelExpression) {
+  private void addGuaranteedResourceRequest(Priority priority,
+      String resourceName, Resource capability, String nodeLabelExpression) {
     addResourceRequest(priority, resourceName, capability, nodeLabelExpression,
-        ExecutionType.GUARANTEED);
+        ExecutionType.GUARANTEED, optOutOfOversubscription);
   }
 
   private void addResourceRequest(Priority priority, String resourceName,
       Resource capability, String nodeLabelExpression,
-      ExecutionType executionType) {
+      ExecutionType executionType, boolean enforceExecutionType) {
     Map<String, Map<Resource, ResourceRequest>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     if (remoteRequests == null) {
@@ -464,8 +464,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       remoteRequest.setCapability(capability);
       remoteRequest.setNumContainers(0);
       remoteRequest.setNodeLabelExpression(nodeLabelExpression);
-      remoteRequest.setExecutionTypeRequest(
-          ExecutionTypeRequest.newInstance(executionType, true));
+      remoteRequest.setExecutionTypeRequest(ExecutionTypeRequest.
+          newInstance(executionType, enforceExecutionType));
       reqMap.put(capability, remoteRequest);
     }
     remoteRequest.setNumContainers(remoteRequest.getNumContainers() + 1);
@@ -473,9 +473,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     // Note this down for next interaction with ResourceManager
     addResourceRequestToAsk(remoteRequest);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("addResourceRequest:" + " applicationId="
+      LOG.debug("addGuaranteedResourceRequest:" + " applicationId="
           + applicationId.getId() + " priority=" + priority.getPriority()
-          + " resourceName=" + resourceName + " numContainers="
+          + " resourceName=" + resourceName + " ExecutionType=" + executionType
+          + " enforceExecutionType=" + enforceExecutionType + " numContainers="
           + remoteRequest.getNumContainers() + " #asks=" + ask.size());
     }
   }
@@ -559,8 +560,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       }
     }
     String[] hosts = newHosts.toArray(new String[newHosts.size()]);
-    ContainerRequest newReq = new ContainerRequest(orig.attemptID, orig.capability,
-        hosts, orig.racks, orig.priority, orig.nodeLabelExpression);
+    ContainerRequest newReq = new ContainerRequest(orig.attemptID,
+        orig.capability, hosts, orig.racks, orig.priority,
+        System.currentTimeMillis(), orig.nodeLabelExpression);
     return newReq;
   }
   
