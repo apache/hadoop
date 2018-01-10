@@ -124,6 +124,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.InvalidAllocationTagsQueryException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintsUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -2574,6 +2576,27 @@ public class CapacityScheduler extends
         ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>
             resourceCommitRequest = createResourceCommitRequest(
             appAttempt, schedulingRequest, schedulerNode);
+
+        // Validate placement constraint is satisfied before
+        // committing the request.
+        try {
+          if (!PlacementConstraintsUtil.canSatisfyConstraints(
+              appAttempt.getApplicationId(),
+              schedulingRequest.getAllocationTags(),
+              schedulerNode,
+              rmContext.getPlacementConstraintManager(),
+              rmContext.getAllocationTagsManager())) {
+            LOG.debug("Failed to allocate container for application "
+                + appAttempt.getApplicationId() + " on node "
+                + schedulerNode.getNodeName()
+                + " because this allocation violates the"
+                + " placement constraint.");
+            return false;
+          }
+        } catch (InvalidAllocationTagsQueryException e) {
+          LOG.warn("Unable to allocate container", e);
+          return false;
+        }
         return tryCommit(getClusterResource(), resourceCommitRequest, false);
       }
     }
