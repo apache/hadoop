@@ -236,7 +236,7 @@ public abstract class Resource implements Comparable<Resource> {
   }
 
   public boolean equalsWithPorts(Object obj) {
-    if (!this.equals(obj)) {
+    if (!this.equalsWithGPUAttribute(obj)) {
       return false;
     } else {
       Resource other = (Resource) obj;
@@ -252,6 +252,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPUAttribute:" + getGPUAttribute() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ", GPUs:" + getGPUs() + ", GPUAttribute:" + getGPUAttribute() + ", ports: " + getPorts() + ">";
   }
 }

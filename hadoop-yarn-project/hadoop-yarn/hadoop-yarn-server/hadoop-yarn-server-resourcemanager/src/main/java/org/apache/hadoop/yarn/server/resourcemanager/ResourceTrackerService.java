@@ -165,6 +165,9 @@ public class ResourceTrackerService extends AbstractService implements
             YarnConfiguration.DEFAULT_PORTS_BITSET_STORE_ENABLE);
 
 
+    LOG.info("serviceInit with config: {minAllocMb" + minAllocMb + " minAllocVcores:" + minAllocVcores + " minAllocGPUs:" + minAllocGPUs
+      + " minimumNodeManagerVersion:" + minimumNodeManagerVersion + " enablePortsAsResource:" + enablePortsAsResource + " enablePortsBitSetStore" + enablePortsBitSetStore);
+
     super.serviceInit(conf);
   }
 
@@ -268,6 +271,8 @@ public class ResourceTrackerService extends AbstractService implements
 
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
+
+    LOG.info("registerNodeManager: nodeId=" + host + " witch totalCapacity=" + capability);
 
     if (!minimumNodeManagerVersion.equals("NONE")) {
       if (minimumNodeManagerVersion.equals("EqualToRM")) {

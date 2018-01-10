@@ -170,6 +170,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     resourceCalculatorPlugin = ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
     int GPUs = resourceCalculatorPlugin.getNumGPUs();    
     long GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
+    String usedPorts = resourceCalculatorPlugin.getPortsUsage();
 
     numOfRoundsToUpdatePorts =
         conf.getInt(YarnConfiguration.NM_PORTS_UPDATE_ROUNDS,
@@ -221,7 +222,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     super.serviceInit(conf);
     LOG.info("Initialized nodemanager for " + nodeId + ":" +
         " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
-        " virtual-cores=" + virtualCores + " gpus=" + GPUs + " gpu-attribute=" + GPUAttribute);
+        " virtual-cores=" + virtualCores + " gpus=" + GPUs + " gpu-attribute=" + GPUAttribute + " ports=" + ports);
   }
 
   @Override
@@ -298,9 +299,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     ValueRanges ports = null;
     if (enablePortsAsResource) {
-      ports = new PortsInfo().GetAllocatedPorts(enablePortsBitSetStore);
+       ports = ValueRanges.iniFromExpression(resourceCalculatorPlugin.getPortsUsage(), enablePortsBitSetStore);
     }
-
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
           nodeManagerVersionId, containerReports, getRunningApplications(), ports);

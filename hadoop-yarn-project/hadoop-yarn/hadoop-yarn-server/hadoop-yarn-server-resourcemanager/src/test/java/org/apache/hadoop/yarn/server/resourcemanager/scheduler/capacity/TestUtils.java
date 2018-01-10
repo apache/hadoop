@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.ValueRanges;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublis
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
@@ -57,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.net.Node;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -146,7 +149,24 @@ public class TestUtils {
     p.setPriority(priority);
     return p;
   }
-  
+
+  public static ResourceRequest createResourceRequest(
+    String resourceName,
+    int memory, ValueRanges ports, int numContainers, boolean relaxLocality,
+    Priority priority, RecordFactory recordFactory) {
+    ResourceRequest request =
+      recordFactory.newRecordInstance(ResourceRequest.class);
+    Resource capability = Resources.createResource(memory, 1, 0, 0,  ports);
+
+    request.setNumContainers(numContainers);
+    request.setResourceName(resourceName);
+    request.setCapability(capability);
+    request.setRelaxLocality(relaxLocality);
+    request.setPriority(priority);
+    request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
+    return request;
+  }
+
   public static ResourceRequest createResourceRequest(
       String resourceName, int memory, int numContainers, boolean relaxLocality,
       Priority priority, RecordFactory recordFactory) {
@@ -195,6 +215,33 @@ public class TestUtils {
     LOG.info("node = " + host + " avail=" + node.getAvailableResource());
     return node;
   }
+
+  public static FiCaSchedulerNode getMockNodeForPortsCaculate(
+    String host,
+    String rack, int port, int mem, int vCores, ValueRanges ports,
+    Configuration conf) {
+    NodeId nodeId = mock(NodeId.class);
+    when(nodeId.getHost()).thenReturn(host);
+    when(nodeId.getPort()).thenReturn(port);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    Node mockNode = mock(Node.class);
+    when(mockNode.getNetworkLocation()).thenReturn(rack);
+    RMNode rmNode =
+      new RMNodeImpl(
+        nodeId,
+        rmContext,
+        host,
+        0,
+        0,
+        mockNode,
+        Resources.createResource(mem, vCores, 0, 0, ports), "");
+    FiCaSchedulerNode node = spy(new FiCaSchedulerNode(rmNode, false));
+    LOG.info("node = " + host);
+    return node;
+  }
+
+
 
   @SuppressWarnings("deprecation")
   public static ContainerId getMockContainerId(FiCaSchedulerApp application) {

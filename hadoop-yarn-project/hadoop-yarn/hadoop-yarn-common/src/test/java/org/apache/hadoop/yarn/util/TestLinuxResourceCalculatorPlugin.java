@@ -43,9 +43,10 @@ public class TestLinuxResourceCalculatorPlugin {
 	  public FakeLinuxResourceCalculatorPlugin(String procfsMemFile,
 			                                       String procfsCpuFile,
 			                                       String procfsStatFile,
-                                                   String procfsGpuFile,
+                                             String procfsGpuFile,
+			                                       String procfsPortsFile,
 			                                       long jiffyLengthInMillis) {
-	    super(procfsMemFile, procfsCpuFile, procfsStatFile, procfsGpuFile, jiffyLengthInMillis);
+	    super(procfsMemFile, procfsCpuFile, procfsStatFile, procfsGpuFile, procfsPortsFile, jiffyLengthInMillis);
 	  }
 	  @Override
 	  long getCurrentTime() {
@@ -62,6 +63,8 @@ public class TestLinuxResourceCalculatorPlugin {
   private static final String FAKE_CPUFILE;
   private static final String FAKE_STATFILE;
   private static final String FAKE_GPUFILE;
+  private static final String FAKE_PORTSFILE;
+
   private static final long FAKE_JIFFY_LENGTH = 10L;
   static {
     int randomNum = (new Random()).nextInt(1000000000);
@@ -69,8 +72,10 @@ public class TestLinuxResourceCalculatorPlugin {
     FAKE_CPUFILE = TEST_ROOT_DIR + File.separator + "CPUINFO_" + randomNum;
     FAKE_GPUFILE = TEST_ROOT_DIR + File.separator + "GPUINFO_" + randomNum;
     FAKE_STATFILE = TEST_ROOT_DIR + File.separator + "STATINFO_" + randomNum;
+    FAKE_PORTSFILE = TEST_ROOT_DIR + File.separator + "PORTSINFO_" + randomNum;
+
     plugin = new FakeLinuxResourceCalculatorPlugin(FAKE_MEMFILE, FAKE_CPUFILE,
-                                                   FAKE_STATFILE, FAKE_GPUFILE,
+                                                   FAKE_STATFILE, FAKE_GPUFILE, FAKE_PORTSFILE,
                                                    FAKE_JIFFY_LENGTH);
   }
   static final String MEMINFO_FORMAT = 
@@ -154,7 +159,15 @@ public class TestLinuxResourceCalculatorPlugin {
           "5, 1998 MiB, %d MiB\n" +
           "6, 1998 MiB, %d MiB\n" +
           "7, 1998 MiB, %d MiB\n";
-  
+
+  static final String PORTSINFO_FORMAT =
+    "Proto Recv-Q Send-Q Local Address           Foreign Address         State\n" +
+      "tcp        0      0 0.0.0.0:%d           0.0.0.0:*               LISTEN\n" +
+      "tcp        0      0 10.0.3.4:%d          168.63.129.16:80        TIME_WAIT\n" +
+      "tcp        0      0 10.0.3.4:%d          52.226.8.57:443         TIME_WAIT\n" +
+      "tcp        0      0 10.0.3.4:%d          168.63.129.16:80        TIME_WAIT\n" +
+      "tcp        0      0 10.0.3.4:%d          52.226.8.57:443         TIME_WAIT\n";
+
   /**
    * Test parsing /proc/stat and /proc/cpuinfo
    * @throws IOException
@@ -272,8 +285,32 @@ public class TestLinuxResourceCalculatorPlugin {
       InitialGPUTestFile(0, 0, 0, 0, 1, 1, 1, 1);
       assertEquals(8, plugin.getNumGPUs());
       assertEquals(plugin.getGpuAttribute(),0xFF);
-      Thread.sleep(LinuxResourceCalculatorPlugin.REFRESH_GPU_INTERVAL_MS +1);
+      Thread.sleep(LinuxResourceCalculatorPlugin.REFRESH_INTERVAL_MS +1);
       assertEquals(8, plugin.getNumGPUs());
       assertEquals(plugin.getGpuAttribute(),0x0F);      
   }
+
+
+  private void InitialPortsTestFile(int port1, int port2, int port3,int port4, int port5)  throws IOException {
+    File tempFile = new File(FAKE_PORTSFILE);
+    tempFile.deleteOnExit();
+    FileWriter fWriter = new FileWriter(FAKE_PORTSFILE);
+    fWriter.write(String.format(PORTSINFO_FORMAT,
+                  port1, port2, port3, port4, port5));
+    fWriter.close();
+  }
+
+  @Test
+  public void parsingPortsFile() throws Exception {
+
+    InitialPortsTestFile(0, 0, 0, 0, 0);
+    assertEquals("0,0,0,0,0",plugin.getPortsUsage());
+
+    InitialPortsTestFile(25, 27, 28, 100, 1000);
+    assertEquals("25,27,28,100,1000",plugin.getPortsUsage());
+
+    Thread.sleep(LinuxResourceCalculatorPlugin.REFRESH_INTERVAL_MS +1);
+    assertEquals("25,27,28,100,1000",plugin.getPortsUsage());
+  }
+
 }
