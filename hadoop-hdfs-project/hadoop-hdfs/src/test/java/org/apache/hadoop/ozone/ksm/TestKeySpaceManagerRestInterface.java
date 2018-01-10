@@ -21,13 +21,15 @@ package org.apache.hadoop.ozone.ksm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.conf.OzoneConfiguration;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.MiniOzoneClassicCluster;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneClientUtils;
 import org.apache.hadoop.ozone.ksm.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.protocol.proto.KeySpaceManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto
+    .KeySpaceManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -97,9 +99,9 @@ public class TestKeySpaceManagerRestInterface {
 
     Assert.assertEquals(ksmAddress.getHostName(), ksmInfo.getHostname());
     Assert.assertEquals(ksmAddress.getPort(),
-        ksmInfo.getPort(KeySpaceManagerProtocolProtos.ServicePort.Type.RPC));
+        ksmInfo.getPort(ServicePort.Type.RPC));
     Assert.assertEquals(server.getHttpAddress().getPort(),
-        ksmInfo.getPort(KeySpaceManagerProtocolProtos.ServicePort.Type.HTTP));
+        ksmInfo.getPort(ServicePort.Type.HTTP));
 
     InetSocketAddress scmAddress =
         OzoneClientUtils.getScmAddressForClients(conf);
@@ -107,7 +109,33 @@ public class TestKeySpaceManagerRestInterface {
 
     Assert.assertEquals(scmAddress.getHostName(), scmInfo.getHostname());
     Assert.assertEquals(scmAddress.getPort(),
-        scmInfo.getPort(KeySpaceManagerProtocolProtos.ServicePort.Type.RPC));
+        scmInfo.getPort(ServicePort.Type.RPC));
+
+    ServiceInfo datanodeInfo = serviceMap.get(OzoneProtos.NodeType.DATANODE);
+    DataNode datanode = ((MiniOzoneClassicCluster) cluster)
+        .getDataNodes().get(0);
+    Assert.assertEquals(datanode.getDatanodeHostname(),
+        datanodeInfo.getHostname());
+
+    Map<ServicePort.Type, Integer> ports = datanodeInfo.getPorts();
+    for(ServicePort.Type type : ports.keySet()) {
+      switch (type) {
+      case HTTP:
+        Assert.assertEquals(datanode.getInfoPort(),
+            (int) ports.get(type));
+        break;
+      case HTTPS:
+        Assert.assertEquals(datanode.getInfoSecurePort(),
+            (int) ports.get(type));
+        break;
+      default:
+        // KSM only sends Datanode's info port details
+        // i.e. HTTP or HTTPS
+        // Other ports are not expected as of now.
+        Assert.fail();
+        break;
+      }
+    }
   }
 
 }
