@@ -4988,6 +4988,15 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.mount-table.max-cache-size</name>
+    <value>10000</value>
+    <description>
+      Maximum number of mount table cache entries to have.
+      By default, remove cache entries if we have more than 10k.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.reformat.disabled</name>
     <value>false</value>
     <description>
