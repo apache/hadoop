@@ -1322,6 +1322,15 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_ROUTER_HTTPS_ADDRESS_DEFAULT =
       "0.0.0.0:" + DFS_ROUTER_HTTPS_PORT_DEFAULT;
 
+  // HDFS Router-based federation quota
+  public static final String DFS_ROUTER_QUOTA_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "quota.enable";
+  public static final boolean DFS_ROUTER_QUOTA_ENABLED_DEFAULT = false;
+  public static final String DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL =
+      FEDERATION_ROUTER_PREFIX + "quota-cache.update.interval";
+  public static final long DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL_DEFAULT =
+      60000;
+
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY

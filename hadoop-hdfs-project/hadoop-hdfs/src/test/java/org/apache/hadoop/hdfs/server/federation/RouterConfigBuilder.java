@@ -34,6 +34,7 @@ public class RouterConfigBuilder {
   private boolean enableLocalHeartbeat = false;
   private boolean enableStateStore = false;
   private boolean enableMetrics = false;
+  private boolean enableQuota = false;
 
   public RouterConfigBuilder(Configuration configuration) {
     this.conf = configuration;
@@ -89,6 +90,11 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder quota(boolean enable) {
+    this.enableQuota = enable;
+    return this;
+  }
+
   public RouterConfigBuilder rpc() {
     return this.rpc(true);
   }
@@ -113,6 +119,10 @@ public class RouterConfigBuilder {
     return this.metrics(true);
   }
 
+  public RouterConfigBuilder quota() {
+    return this.quota(true);
+  }
+
   public Configuration build() {
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_STORE_ENABLE,
         this.enableStateStore);
@@ -127,6 +137,8 @@ public class RouterConfigBuilder {
         this.enableLocalHeartbeat);
     conf.setBoolean(DFSConfigKeys.DFS_ROUTER_METRICS_ENABLE,
         this.enableMetrics);
+    conf.setBoolean(DFSConfigKeys.DFS_ROUTER_QUOTA_ENABLE,
+        this.enableQuota);
     return conf;
   }
 }
