@@ -50,8 +50,8 @@ public class DataChecksum implements Checksum {
   public static final int CHECKSUM_DEFAULT = 3; 
   public static final int CHECKSUM_MIXED   = 4;
 
-  public static final Logger LOG = LoggerFactory.getLogger(DataChecksum.class);
-  private static volatile boolean useJava9Crc32C = Shell.isJavaSpecAtLeast(9);
+  private static final Logger LOG = LoggerFactory.getLogger(DataChecksum.class);
+  private static volatile boolean useJava9Crc32C = Shell.isJavaVersionAtLeast(9);
  
   /** The checksum types */
   public enum Type {
@@ -87,7 +87,12 @@ public class DataChecksum implements Checksum {
     return new CRC32();
   }
 
-  public static Checksum newCrc32C() {
+
+  /**
+   * The flag is volatile to avoid synchronization here.
+   * Re-entrancy is unlikely except in failure mode (and inexpensive).
+   */
+  static Checksum newCrc32C() {
     try {
       return useJava9Crc32C ? Java9Crc32CFactory.createChecksum()
           : new PureJavaCrc32C();
