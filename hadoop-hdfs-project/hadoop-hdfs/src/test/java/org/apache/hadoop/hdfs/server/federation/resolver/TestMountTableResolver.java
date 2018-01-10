@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -48,6 +49,8 @@ public class TestMountTableResolver {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMountTableResolver.class);
 
+  private static final int TEST_MAX_CACHE_SIZE = 10;
+
   private MountTableResolver mountTable;
 
   private Map<String, String> getMountTableEntry(
@@ -77,6 +80,8 @@ public class TestMountTableResolver {
    */
   private void setupMountTable() throws IOException {
     Configuration conf = new Configuration();
+    conf.setInt(
+        FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE, TEST_MAX_CACHE_SIZE);
     mountTable = new MountTableResolver(conf);
 
     // Root mount point
@@ -440,5 +445,15 @@ public class TestMountTableResolver {
     mountTable.removeEntry("/testupdate");
     MountTable entry2 = mountTable.getMountPoint("/testupdate");
     assertNull(entry2);
+  }
+
+  @Test
+  public void testCacheCleaning() throws Exception {
+    for (int i = 0; i < 1000; i++) {
+      String filename = String.format("/user/a/file-%04d.txt", i);
+      mountTable.getDestinationForPath(filename);
+    }
+    long cacheSize = mountTable.getCacheSize();
+    assertTrue(cacheSize <= TEST_MAX_CACHE_SIZE);
   }
 }
