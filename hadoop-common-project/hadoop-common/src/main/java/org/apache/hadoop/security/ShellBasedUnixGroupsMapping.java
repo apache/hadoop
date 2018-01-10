@@ -158,6 +158,32 @@ public class ShellBasedUnixGroupsMapping extends Configured
   }
 
   /**
+   * Check if the executor had a timeout and logs the event.
+   * @param executor to check
+   * @param user user to log
+   * @return true if timeout has occurred
+   */
+  private boolean handleExecutorTimeout(
+      ShellCommandExecutor executor,
+      String user) {
+    // If its a shell executor timeout, indicate so in the message
+    // but treat the result as empty instead of throwing it up,
+    // similar to how partial resolution failures are handled above
+    if (executor.isTimedOut()) {
+      LOG.warn(
+          "Unable to return groups for user '{}' as shell group lookup " +
+              "command '{}' ran longer than the configured timeout limit of " +
+              "{} seconds.",
+          user,
+          Joiner.on(' ').join(executor.getExecString()),
+          timeout
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Get the current user's group list from Unix by running the command 'groups'
    * NOTE. For non-existing user it will return EMPTY list.
    *
@@ -174,26 +200,19 @@ public class ShellBasedUnixGroupsMapping extends Configured
       executor.execute();
       groups = resolveFullGroupNames(executor.getOutput());
     } catch (ExitCodeException e) {
-      try {
-        groups = resolvePartialGroupNames(user, e.getMessage(),
-            executor.getOutput());
-      } catch (PartialGroupNameException pge) {
-        LOG.warn("unable to return groups for user {}", user, pge);
+      if (handleExecutorTimeout(executor, user)) {
         return EMPTY_GROUPS;
+      } else {
+        try {
+          groups = resolvePartialGroupNames(user, e.getMessage(),
+              executor.getOutput());
+        } catch (PartialGroupNameException pge) {
+          LOG.warn("unable to return groups for user {}", user, pge);
+          return EMPTY_GROUPS;
+        }
       }
     } catch (IOException ioe) {
-      // If its a shell executor timeout, indicate so in the message
-      // but treat the result as empty instead of throwing it up,
-      // similar to how partial resolution failures are handled above
-      if (executor.isTimedOut()) {
-        LOG.warn(
-            "Unable to return groups for user '{}' as shell group lookup " +
-            "command '{}' ran longer than the configured timeout limit of " +
-            "{} seconds.",
-            user,
-            Joiner.on(' ').join(executor.getExecString()),
-            timeout
-        );
+      if (handleExecutorTimeout(executor, user)) {
         return EMPTY_GROUPS;
       } else {
         // If its not an executor timeout, we should let the caller handle it
