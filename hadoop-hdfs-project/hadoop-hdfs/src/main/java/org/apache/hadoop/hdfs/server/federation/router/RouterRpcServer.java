@@ -170,6 +170,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   /** Category of the operation that a thread is executing. */
   private final ThreadLocal<OperationCategory> opCategory = new ThreadLocal<>();
 
+  /** Router Quota calls. */
+  private final Quota quotaCall;
 
   /**
    * Construct a router RPC server.
@@ -266,6 +268,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
     // Create the client
     this.rpcClient = new RouterRpcClient(this.conf, this.router.getRouterId(),
         this.namenodeResolver, this.rpcMonitor);
+
+    // Initialize modules
+    this.quotaCall = new Quota(this.router, this);
   }
 
   @Override
@@ -373,7 +378,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * @throws StandbyException If the Router is in safe mode and cannot serve
    *                          client requests.
    */
-  private void checkOperation(OperationCategory op) throws StandbyException {
+  protected void checkOperation(OperationCategory op) throws StandbyException {
     // Log the function we are currently calling.
     if (rpcMonitor != null) {
       rpcMonitor.startOp();
@@ -1753,21 +1758,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
       StorageType type) throws IOException {
-    checkOperation(OperationCategory.WRITE);
-
-    // TODO assign global replicas instead of applying them to each folder
-    final List<RemoteLocation> locations = getLocationsForPath(path, true);
-    RemoteMethod method = new RemoteMethod("setQuota",
-        new Class<?>[] {String.class, Long.class, Long.class,
-            StorageType.class},
-        new RemoteParam(), namespaceQuota, storagespaceQuota, type);
-    rpcClient.invokeConcurrent(locations, method, false, false);
+    this.quotaCall.setQuota(path, namespaceQuota, storagespaceQuota, type);
   }
 
   @Override // ClientProtocol
   public QuotaUsage getQuotaUsage(String path) throws IOException {
-    checkOperation(OperationCategory.READ, false);
-    return null;
+    checkOperation(OperationCategory.READ);
+    return this.quotaCall.getQuotaUsage(path);
   }
 
   @Override
@@ -1862,7 +1859,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
    * @return Prioritized list of locations in the federated cluster.
    * @throws IOException If the location for this path cannot be determined.
    */
-  private List<RemoteLocation> getLocationsForPath(
+  protected List<RemoteLocation> getLocationsForPath(
       String path, boolean failIfLocked) throws IOException {
     try {
       // Check the location for this path
@@ -1881,6 +1878,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
             this.rpcMonitor.routerFailureReadOnly();
           }
           throw new IOException(path + " is in a read only mount point");
+        }
+
+        // Check quota
+        if (this.router.isQuotaEnabled()) {
+          RouterQuotaUsage quotaUsage = this.router.getQuotaManager()
+              .getQuotaUsage(path);
+          if (quotaUsage != null) {
+            quotaUsage.verifyNamespaceQuota();
+            quotaUsage.verifyStoragespaceQuota();
+          }
         }
       }
 
@@ -1975,5 +1982,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol {
   static UserGroupInformation getRemoteUser() throws IOException {
     UserGroupInformation ugi = Server.getRemoteUser();
     return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+  }
+
+  /**
+   * Get quota module implement.
+   */
+  public Quota getQuotaModule() {
+    return this.quotaCall;
   }
 }
