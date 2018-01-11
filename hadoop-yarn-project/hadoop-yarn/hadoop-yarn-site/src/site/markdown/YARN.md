@@ -35,5 +35,5 @@ MapReduce in hadoop-2.x maintains **API compatibility** with previous stable rel
 
 YARN supports the notion of **resource reservation** via the [ReservationSystem](./ReservationSystem.html), a component that allows users to specify a profile of resources over-time and temporal constraints (e.g., deadlines), and reserve resources to ensure the predictable execution of important jobs.The *ReservationSystem* tracks resources over-time, performs admission control for reservations, and dynamically instruct the underlying scheduler to ensure that the reservation is fullfilled.
 
-In order to scale YARN beyond few thousands nodes, YARN supports the notion of **Federation** via the [YARN Federation](.Federation.html) feature. Federation allows to transparently wire together multiple yarn (sub-)clusters, and
+In order to scale YARN beyond few thousands nodes, YARN supports the notion of **Federation** via the [YARN Federation](./Federation.html) feature. Federation allows to transparently wire together multiple yarn (sub-)clusters, and
  make them appear as a single massive cluster. This can be used to achieve larger scale, and/or to allow multiple independent clusters to be used together for very large jobs, or for tenants who have capacity across all of them.
