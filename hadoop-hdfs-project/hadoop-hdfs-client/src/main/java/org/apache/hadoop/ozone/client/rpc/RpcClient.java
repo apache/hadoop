@@ -74,6 +74,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OUTPUT_STREAM_BUFFER_SIZE_IN_MB;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT;
+
 /**
  * Ozone RPC Client Implementation, it connects to KSM, SCM and DataNode
  * to execute client calls. This uses RPC protocol for communication
@@ -94,6 +99,7 @@ public class RpcClient implements ClientProtocol {
   private final UserGroupInformation ugi;
   private final OzoneAcl.OzoneACLRights userRights;
   private final OzoneAcl.OzoneACLRights groupRights;
+  private final long streamBufferSize;
 
    /**
     * Creates RpcClient instance with the given configuration.
@@ -148,6 +154,9 @@ public class RpcClient implements ClientProtocol {
     } else {
       chunkSize = configuredChunkSize;
     }
+    // streamBufferSize by default is set equal to default scm block size.
+    streamBufferSize = conf.getLong(OZONE_OUTPUT_STREAM_BUFFER_SIZE_IN_MB,
+        OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT) * OzoneConsts.MB;
   }
 
   @Override
@@ -463,6 +472,7 @@ public class RpcClient implements ClientProtocol {
             .setRequestID(requestId)
             .setType(OzoneProtos.ReplicationType.valueOf(type.toString()))
             .setFactor(OzoneProtos.ReplicationFactor.valueOf(factor.getValue()))
+            .setStreamBufferSize(streamBufferSize)
             .build();
     groupOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),

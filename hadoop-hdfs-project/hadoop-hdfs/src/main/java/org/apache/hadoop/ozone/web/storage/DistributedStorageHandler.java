@@ -67,6 +67,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OUTPUT_STREAM_BUFFER_SIZE_IN_MB;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT;
+
 /**
  * A {@link StorageHandler} implementation that distributes object storage
  * across the nodes of an HDFS cluster.
@@ -86,6 +91,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final boolean useRatis;
   private final OzoneProtos.ReplicationType type;
   private final OzoneProtos.ReplicationFactor factor;
+  private final long streamBufferSize;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -127,6 +133,9 @@ public final class DistributedStorageHandler implements StorageHandler {
           chunkSize, ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE);
       chunkSize = ScmConfigKeys.OZONE_SCM_CHUNK_MAX_SIZE;
     }
+    // streamBufferSize by default is set to default scm block size.
+    streamBufferSize = conf.getLong(OZONE_OUTPUT_STREAM_BUFFER_SIZE_IN_MB,
+        OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT) * OzoneConsts.MB;
   }
 
   @Override
@@ -418,6 +427,7 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setRequestID(args.getRequestID())
             .setType(xceiverClientManager.getType())
             .setFactor(xceiverClientManager.getFactor())
+            .setStreamBufferSize(streamBufferSize)
             .build();
     groupOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),

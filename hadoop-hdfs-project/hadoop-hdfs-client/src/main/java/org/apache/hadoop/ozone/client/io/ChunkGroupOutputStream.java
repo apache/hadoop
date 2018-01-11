@@ -19,7 +19,10 @@ package org.apache.hadoop.ozone.client.io;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Result;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.ReplicationFactor;
@@ -45,6 +48,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT;
 
 /**
  * Maintaining a list of ChunkInputStream. Write based on offset.
@@ -72,6 +78,7 @@ public class ChunkGroupOutputStream extends OutputStream {
   private final XceiverClientManager xceiverClientManager;
   private final int chunkSize;
   private final String requestID;
+  private final long streamBufferSize;
 
   /**
    * A constructor for testing purpose only.
@@ -86,6 +93,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     xceiverClientManager = null;
     chunkSize = 0;
     requestID = null;
+    streamBufferSize = OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT * OzoneConsts.MB;
   }
 
   /**
@@ -105,12 +113,26 @@ public class ChunkGroupOutputStream extends OutputStream {
     return streamEntries;
   }
 
-  public ChunkGroupOutputStream(
+  /**
+   * Chunkoutput stream, making this package visible since this can be
+   * created only via builder.
+   * @param handler  - Open Key state.
+   * @param xceiverClientManager - Communication Manager.
+   * @param scmClient - SCM protocol Client.
+   * @param ksmClient - KSM Protocol client
+   * @param chunkSize - Chunk Size - I/O
+   * @param requestId - Seed for trace ID generation.
+   * @param factor - Replication factor
+   * @param type - Replication Type - RATIS/Standalone etc.
+   * @param maxBufferSize - Maximum stream buffer Size.
+   * @throws IOException - Throws this exception if there is an error.
+   */
+  ChunkGroupOutputStream(
       OpenKeySession handler, XceiverClientManager xceiverClientManager,
       StorageContainerLocationProtocolClientSideTranslatorPB scmClient,
       KeySpaceManagerProtocolClientSideTranslatorPB ksmClient,
       int chunkSize, String requestId, ReplicationFactor factor,
-      ReplicationType type) throws IOException {
+      ReplicationType type, long maxBufferSize) throws IOException {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.byteOffset = 0;
@@ -130,6 +152,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     this.requestID = requestId;
     LOG.debug("Expecting open key with one block, but got" +
         info.getKeyLocationVersions().size());
+    this.streamBufferSize = maxBufferSize;
   }
 
   /**
@@ -184,7 +207,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     }
     streamEntries.add(new ChunkOutputStreamEntry(containerKey,
         keyArgs.getKeyName(), xceiverClientManager, xceiverClient, requestID,
-        chunkSize, subKeyInfo.getLength()));
+        chunkSize, subKeyInfo.getLength(), this.streamBufferSize));
   }
 
 
@@ -324,6 +347,7 @@ public class ChunkGroupOutputStream extends OutputStream {
     private String requestID;
     private ReplicationType type;
     private ReplicationFactor factor;
+    private long streamBufferSize;
 
     public Builder setHandler(OpenKeySession handler) {
       this.openHandler = handler;
@@ -367,9 +391,23 @@ public class ChunkGroupOutputStream extends OutputStream {
       return this;
     }
 
+    public Builder setStreamBufferSize(long blockSize) {
+      this.streamBufferSize = blockSize;
+      return this;
+    }
+
     public ChunkGroupOutputStream build() throws IOException {
+      Preconditions.checkNotNull(openHandler);
+      Preconditions.checkNotNull(xceiverManager);
+      Preconditions.checkNotNull(scmClient);
+      Preconditions.checkNotNull(ksmClient);
+      Preconditions.checkState(chunkSize > 0);
+      Preconditions.checkState(StringUtils.isNotEmpty(requestID));
+      Preconditions
+          .checkState(streamBufferSize > 0 && streamBufferSize > chunkSize);
+
       return new ChunkGroupOutputStream(openHandler, xceiverManager, scmClient,
-          ksmClient, chunkSize, requestID, factor, type);
+          ksmClient, chunkSize, requestID, factor, type, streamBufferSize);
     }
   }
 
@@ -385,11 +423,12 @@ public class ChunkGroupOutputStream extends OutputStream {
     private final long length;
     // the current position of this stream 0 <= currentPosition < length
     private long currentPosition;
+    private long streamBufferSize; // Max block size.
 
     ChunkOutputStreamEntry(String containerKey, String key,
         XceiverClientManager xceiverClientManager,
         XceiverClientSpi xceiverClient, String requestId, int chunkSize,
-        long length) {
+        long length, long streamBufferSize) {
       this.outputStream = null;
       this.containerKey = containerKey;
       this.key = key;
@@ -400,6 +439,7 @@ public class ChunkGroupOutputStream extends OutputStream {
 
       this.length = length;
       this.currentPosition = 0;
+      this.streamBufferSize = streamBufferSize;
     }
 
     /**
@@ -418,6 +458,8 @@ public class ChunkGroupOutputStream extends OutputStream {
 
       this.length = length;
       this.currentPosition = 0;
+      this.streamBufferSize =
+          OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT * OzoneConsts.MB;
     }
 
     long getLength() {
@@ -432,7 +474,7 @@ public class ChunkGroupOutputStream extends OutputStream {
       if (this.outputStream == null) {
         this.outputStream = new ChunkOutputStream(containerKey,
             key, xceiverClientManager, xceiverClient,
-            requestId, chunkSize);
+            requestId, chunkSize, Ints.checkedCast(streamBufferSize));
       }
     }
 

@@ -107,6 +107,9 @@ public final class OzoneConfigKeys {
       "ozone.scm.block.size.in.mb";
   public static final long OZONE_SCM_BLOCK_SIZE_DEFAULT = 256;
 
+  public static final String OZONE_OUTPUT_STREAM_BUFFER_SIZE_IN_MB =
+      "ozone.output.stream.buffer.size.in.mb";
+  public static final long OZONE_OUTPUT_STREAM_BUFFER_SIZE_DEFAULT = 256;
   /**
    * Ozone administrator users delimited by comma.
    * If not set, only the user who launches an ozone service will be the
