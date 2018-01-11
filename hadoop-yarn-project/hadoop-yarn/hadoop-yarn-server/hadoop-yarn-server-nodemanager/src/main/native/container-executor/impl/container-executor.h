@@ -178,6 +178,11 @@ char *get_user_directory(const char *nm_root, const char *user);
 char *get_app_directory(const char * nm_root, const char *user,
                         const char *app_id);
 
+/**
+ * Check node manager local dir permission.
+ */
+int check_nm_local_dir(uid_t caller_uid, const char *nm_root);
+
 char *get_container_work_directory(const char *nm_root, const char *user,
 				 const char *app_id, const char *container_id);
 

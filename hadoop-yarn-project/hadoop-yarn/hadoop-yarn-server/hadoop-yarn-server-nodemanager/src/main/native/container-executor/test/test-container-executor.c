@@ -37,6 +37,7 @@ static char* username = NULL;
 static char* yarn_username = NULL;
 static char** local_dirs = NULL;
 static char** log_dirs = NULL;
+static uid_t nm_uid = -1;
 
 /**
  * Run the command using the effective user id.
@@ -152,8 +153,8 @@ void check_pid_file(const char* pid_file, pid_t mypid) {
 }
 
 void test_get_user_directory() {
-  char *user_dir = get_user_directory(TMPDIR, "user");
-  char *expected = TMPDIR "/usercache/user";
+  char *user_dir = get_user_directory(TEST_ROOT, "user");
+  char *expected = TEST_ROOT "/usercache/user";
   if (strcmp(user_dir, expected) != 0) {
     printf("test_get_user_directory expected %s got %s\n", expected, user_dir);
     exit(1);
@@ -161,9 +162,32 @@ void test_get_user_directory() {
   free(user_dir);
 }
 
+void test_check_nm_local_dir() {
+  // check filesystem is same as running user.
+  int expected = 0;
+  char *local_path = TEST_ROOT "target";
+  char *root_path = "/";
+  if (mkdirs(local_path, 0700) != 0) {
+    printf("FAIL: unble to create node manager local directory: %s\n", local_path);
+    exit(1);
+  }
+  int actual = check_nm_local_dir(nm_uid, local_path);
+  if (expected != actual) {
+    printf("test_nm_local_dir expected %d got %d\n", expected, actual);
+    exit(1);
+  }
+  // check filesystem is different from running user.
+  expected = 1;
+  actual = check_nm_local_dir(nm_uid, root_path);
+  if (expected != actual && nm_uid != 0) {
+    printf("test_nm_local_dir expected %d got %d\n", expected, actual);
+    exit(1);
+  }
+}
+
 void test_get_app_directory() {
-  char *expected = TMPDIR "/usercache/user/appcache/app_200906101234_0001";
-  char *app_dir = (char *) get_app_directory(TMPDIR, "user",
+  char *expected = TEST_ROOT "/usercache/user/appcache/app_200906101234_0001";
+  char *app_dir = (char *) get_app_directory(TEST_ROOT, "user",
       "app_200906101234_0001");
   if (strcmp(app_dir, expected) != 0) {
     printf("test_get_app_directory expected %s got %s\n", expected, app_dir);
@@ -173,9 +197,9 @@ void test_get_app_directory() {
 }
 
 void test_get_container_directory() {
-  char *container_dir = get_container_work_directory(TMPDIR, "owen", "app_1",
+  char *container_dir = get_container_work_directory(TEST_ROOT, "owen", "app_1",
 						 "container_1");
-  char *expected = TMPDIR"/usercache/owen/appcache/app_1/container_1";
+  char *expected = TEST_ROOT "/usercache/owen/appcache/app_1/container_1";
   if (strcmp(container_dir, expected) != 0) {
     printf("Fail get_container_work_directory got %s expected %s\n",
 	   container_dir, expected);
@@ -185,9 +209,9 @@ void test_get_container_directory() {
 }
 
 void test_get_container_launcher_file() {
-  char *expected_file = (TMPDIR"/usercache/user/appcache/app_200906101234_0001"
+  char *expected_file = (TEST_ROOT "/usercache/user/appcache/app_200906101234_0001"
 			 "/launch_container.sh");
-  char *app_dir = get_app_directory(TMPDIR, "user",
+  char *app_dir = get_app_directory(TEST_ROOT, "user",
                                     "app_200906101234_0001");
   char *container_file =  get_container_launcher_file(app_dir);
   if (strcmp(container_file, expected_file) != 0) {
@@ -1182,6 +1206,8 @@ int main(int argc, char **argv) {
   LOGFILE = stdout;
   ERRORFILE = stderr;
 
+  nm_uid = getuid();
+
   printf("Attempting to clean up from any previous runs\n");
   // clean up any junk from previous run
   if (system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT)) {
@@ -1231,6 +1257,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting get_user_directory()\n");
   test_get_user_directory();
+
+  printf("\nTesting check_nm_local_dir()\n");
+  test_check_nm_local_dir();
 
   printf("\nTesting get_app_directory()\n");
   test_get_app_directory();
