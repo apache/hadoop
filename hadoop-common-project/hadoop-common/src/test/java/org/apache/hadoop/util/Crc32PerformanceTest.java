@@ -129,6 +129,18 @@ public class Crc32PerformanceTest {
       }
     }
 
+    final class ZipC extends AbstractCrc32<Checksum> {
+      @Override
+      public Checksum newAlgorithm() {
+        return DataChecksum.newCrc32C();
+      }
+
+      @Override
+      public DataChecksum.Type crcType() {
+        return DataChecksum.Type.CRC32C;
+      }
+    }
+
     final class PureJava extends AbstractCrc32<PureJavaCrc32> {
       @Override
       public PureJavaCrc32 newAlgorithm() {
@@ -169,6 +181,9 @@ public class Crc32PerformanceTest {
     this.direct = direct;
 
     crcs.add(Crc32.Zip.class);
+    if (Shell.isJavaVersionAtLeast(9)) {
+      crcs.add(Crc32.ZipC.class);
+    }
     crcs.add(Crc32.PureJava.class);
     crcs.add(Crc32.PureJavaC.class);
 
