@@ -1180,6 +1180,7 @@ public class TestKeySpaceManager {
     Path metaDirPath = Paths.get(path, "ksm-meta");
     config.set(OzoneConfigKeys.OZONE_METADATA_DIRS, metaDirPath.toString());
     config.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
+    config.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
     config.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY,
         conf.get(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY));
     exception.expect(KSMException.class);
