@@ -523,4 +523,9 @@ public class TestShell extends Assert {
     shexc1.getProcess().waitFor();
     shexc2.getProcess().waitFor();
   }
+
+  @Test
+  public void testIsJavaVersionAtLeast() {
+    assertTrue(Shell.isJavaVersionAtLeast(8));
+  }
 }
