@@ -99,6 +99,7 @@ void free_executor_configurations();
 
 // initialize the application directory
 int initialize_app(const char *user, const char *app_id,
+                   const char *container_id,
                    const char *credentials, char* const* local_dirs,
                    char* const* log_dirs, char* const* args);
 
@@ -203,6 +204,8 @@ char *get_container_credentials_file(const char* work_dir);
  */
 char* get_app_log_directory(const char* log_root, const char* appid);
 
+char* get_container_log_directory(const char *log_root, const char* app_id,
+                                  const char *container_id);
 /**
  * Ensure that the given path and all of the parent directories are created
  * with the desired permissions.
