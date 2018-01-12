@@ -253,6 +253,8 @@ int get_docker_command(const char *command_file, const struct configuration *con
   char *command = get_configuration_value("docker-command", DOCKER_COMMAND_FILE_SECTION, &command_config);
   if (strcmp(DOCKER_INSPECT_COMMAND, command) == 0) {
     return get_docker_inspect_command(command_file, conf, out, outlen);
+  } else if (strcmp(DOCKER_KILL_COMMAND, command) == 0) {
+    return get_docker_kill_command(command_file, conf, out, outlen);
   } else if (strcmp(DOCKER_LOAD_COMMAND, command) == 0) {
     return get_docker_load_command(command_file, conf, out, outlen);
   } else if (strcmp(DOCKER_PULL_COMMAND, command) == 0) {
@@ -639,6 +641,66 @@ int get_docker_stop_command(const char *command_file, const struct configuration
         }
       }
       ret = add_to_buffer(out, outlen, " --time=");
+      if (ret == 0) {
+        ret = add_to_buffer(out, outlen, value);
+      }
+      if (ret != 0) {
+        free(container_name);
+        return BUFFER_TOO_SMALL;
+      }
+    }
+    ret = add_to_buffer(out, outlen, " ");
+    if (ret == 0) {
+      ret = add_to_buffer(out, outlen, container_name);
+    }
+    free(container_name);
+    if (ret != 0) {
+      return BUFFER_TOO_SMALL;
+    }
+    return 0;
+  }
+  free(container_name);
+  return BUFFER_TOO_SMALL;
+}
+
+int get_docker_kill_command(const char *command_file, const struct configuration *conf,
+                            char *out, const size_t outlen) {
+  int ret = 0;
+  size_t len = 0, i = 0;
+  char *value = NULL;
+  char *container_name = NULL;
+  struct configuration command_config = {0, NULL};
+  ret = read_and_verify_command_file(command_file, DOCKER_KILL_COMMAND, &command_config);
+  if (ret != 0) {
+    return ret;
+  }
+
+  container_name = get_configuration_value("name", DOCKER_COMMAND_FILE_SECTION, &command_config);
+  if (container_name == NULL || validate_container_name(container_name) != 0) {
+    return INVALID_DOCKER_CONTAINER_NAME;
+  }
+
+  memset(out, 0, outlen);
+
+  ret = add_docker_config_param(&command_config, out, outlen);
+  if (ret != 0) {
+    return BUFFER_TOO_SMALL;
+  }
+
+  ret = add_to_buffer(out, outlen, DOCKER_KILL_COMMAND);
+  if (ret == 0) {
+    value = get_configuration_value("signal", DOCKER_COMMAND_FILE_SECTION, &command_config);
+    if (value != NULL) {
+      len = strlen(value);
+      for (i = 0; i < len; ++i) {
+        if (isupper(value[i]) == 0) {
+          fprintf(ERRORFILE, "Value for signal contains non-uppercase characters '%s'\n", value);
+          free(container_name);
+          memset(out, 0, outlen);
+          return INVALID_DOCKER_KILL_COMMAND;
+        }
+      }
+      ret = add_to_buffer(out, outlen, " --signal=");
       if (ret == 0) {
         ret = add_to_buffer(out, outlen, value);
       }

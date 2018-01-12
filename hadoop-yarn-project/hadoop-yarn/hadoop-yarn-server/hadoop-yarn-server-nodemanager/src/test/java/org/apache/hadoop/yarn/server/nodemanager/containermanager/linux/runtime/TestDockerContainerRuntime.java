@@ -38,7 +38,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerKillCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStopCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerVolumeCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.DockerCommandPlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
@@ -89,12 +93,12 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.SIGNAL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.USER_LOCAL_DIRS;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -242,7 +246,7 @@ public class TestDockerContainerRuntime {
     // warning annotation on the entire method
     verify(mockExecutor, times(1))
         .executePrivilegedOperation(anyList(), opCaptor.capture(), any(
-            File.class), eq(null), eq(false), eq(false));
+            File.class), anyMap(), anyBoolean(), anyBoolean());
 
     //verification completed. we need to isolate specific invications.
     // hence, reset mock here
@@ -1168,11 +1172,12 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testDockerStopOnTermSignal()
+  public void testDockerStopOnTermSignalWhenRunning()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
     List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.TERM);
+        ContainerExecutor.Signal.TERM,
+        DockerCommandExecutor.DockerContainerStatus.RUNNING);
     Assert.assertEquals(3, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
@@ -1180,11 +1185,12 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testDockerStopOnKillSignal()
+  public void testDockerStopOnKillSignalWhenRunning()
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
     List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.KILL);
+        ContainerExecutor.Signal.KILL,
+        DockerCommandExecutor.DockerContainerStatus.RUNNING);
     Assert.assertEquals(3, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
     Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
@@ -1192,24 +1198,57 @@ public class TestDockerContainerRuntime {
   }
 
   @Test
-  public void testDockerStopOnQuitSignal()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException {
+  public void testDockerKillOnQuitSignalWhenRunning() throws Exception {
     List<String> dockerCommands = getDockerCommandsForSignal(
-        ContainerExecutor.Signal.QUIT);
-    Assert.assertEquals(3, dockerCommands.size());
+        ContainerExecutor.Signal.QUIT,
+        DockerCommandExecutor.DockerContainerStatus.RUNNING);
+    Assert.assertEquals(4, dockerCommands.size());
     Assert.assertEquals("[docker-command-execution]", dockerCommands.get(0));
-    Assert.assertEquals("  docker-command=stop", dockerCommands.get(1));
+    Assert.assertEquals("  docker-command=kill", dockerCommands.get(1));
     Assert.assertEquals("  name=container_id", dockerCommands.get(2));
+    Assert.assertEquals("  signal=QUIT", dockerCommands.get(3));
+  }
+
+  @Test
+  public void testDockerRmOnWhenExited() throws Exception {
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
+        "false");
+    conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
+    MockRuntime runtime = new MockRuntime(mockExecutor,
+        DockerCommandExecutor.DockerContainerStatus.EXITED, true);
+    builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
+        .setExecutionAttribute(USER, user);
+    runtime.initialize(enableMockContainerExecutor(conf), null);
+    runtime.reapContainer(builder.build());
+    verify(mockExecutor, times(1))
+        .executePrivilegedOperation(anyList(), any(), any(
+            File.class), anyMap(), anyBoolean(), anyBoolean());
+  }
+
+  @Test
+  public void testNoDockerRmWhenDelayedDeletionEnabled()
+      throws Exception {
+    env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_DELAYED_REMOVAL,
+        "true");
+    conf.set(YarnConfiguration.NM_DOCKER_ALLOW_DELAYED_REMOVAL, "true");
+    MockRuntime runtime = new MockRuntime(mockExecutor,
+        DockerCommandExecutor.DockerContainerStatus.EXITED, true);
+    builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
+        .setExecutionAttribute(USER, user);
+    runtime.initialize(enableMockContainerExecutor(conf), null);
+    runtime.reapContainer(builder.build());
+    verify(mockExecutor, never())
+        .executePrivilegedOperation(anyList(), any(), any(
+            File.class), anyMap(), anyBoolean(), anyBoolean());
   }
 
   private List<String> getDockerCommandsForSignal(
-      ContainerExecutor.Signal signal)
+      ContainerExecutor.Signal signal,
+      DockerCommandExecutor.DockerContainerStatus status)
       throws ContainerExecutionException, PrivilegedOperationException,
       IOException {
 
-    DockerLinuxContainerRuntime runtime = new DockerLinuxContainerRuntime(
-        mockExecutor, mockCGroupsHandler);
+    MockRuntime runtime = new MockRuntime(mockExecutor, status, false);
     builder.setExecutionAttribute(RUN_AS_USER, runAsUser)
         .setExecutionAttribute(USER, user)
         .setExecutionAttribute(PID, signalPid)
@@ -1575,5 +1614,71 @@ public class TestDockerContainerRuntime {
     Iterator<String> it = runtime.getCapabilities().iterator();
     Assert.assertEquals("CHOWN", it.next());
     Assert.assertEquals("DAC_OVERRIDE", it.next());
+  }
+
+  class MockRuntime extends DockerLinuxContainerRuntime {
+
+    private PrivilegedOperationExecutor privilegedOperationExecutor;
+    private DockerCommandExecutor.DockerContainerStatus containerStatus;
+    private boolean delayedRemovalAllowed;
+
+    MockRuntime(PrivilegedOperationExecutor privilegedOperationExecutor,
+        DockerCommandExecutor.DockerContainerStatus containerStatus,
+        boolean delayedRemovalAllowed) {
+      super(privilegedOperationExecutor);
+      this.privilegedOperationExecutor = privilegedOperationExecutor;
+      this.containerStatus = containerStatus;
+      this.delayedRemovalAllowed = delayedRemovalAllowed;
+    }
+
+    @Override
+    public void signalContainer(ContainerRuntimeContext ctx)
+        throws ContainerExecutionException {
+      ContainerExecutor.Signal signal = ctx.getExecutionAttribute(SIGNAL);
+      String containerName = ctx.getContainer().getContainerId().toString();
+      Map<String, String> environment =
+          ctx.getContainer().getLaunchContext().getEnvironment();
+      try {
+        if (ContainerExecutor.Signal.KILL.equals(signal)
+            || ContainerExecutor.Signal.TERM.equals(signal)) {
+          if (DockerCommandExecutor.isStoppable(containerStatus)) {
+            DockerStopCommand dockerStopCommand =
+                new DockerStopCommand(containerName);
+            DockerCommandExecutor.executeDockerCommand(dockerStopCommand,
+                containerName, environment, conf, mockExecutor, false);
+          }
+        } else {
+          if (DockerCommandExecutor.isKillable(containerStatus)) {
+            DockerKillCommand dockerKillCommand =
+                new DockerKillCommand(containerName);
+            dockerKillCommand.setSignal(signal.name());
+            DockerCommandExecutor.executeDockerCommand(dockerKillCommand,
+                containerName, environment, conf, mockExecutor, false);
+          }
+        }
+      } catch (ContainerExecutionException e) {
+        LOG.warn("Signal docker container failed. Exception: ", e);
+        throw new ContainerExecutionException("Signal docker container failed",
+            e.getExitCode(), e.getOutput(), e.getErrorOutput());
+      }
+    }
+
+    @Override
+    public void reapContainer(ContainerRuntimeContext ctx)
+        throws ContainerExecutionException {
+      String delayedRemoval = env.get(ENV_DOCKER_CONTAINER_DELAYED_REMOVAL);
+      if (delayedRemovalAllowed && delayedRemoval != null
+          && delayedRemoval.equalsIgnoreCase("true")) {
+        LOG.info("Delayed removal requested and allowed, skipping removal - "
+            + containerId);
+      } else {
+        if (DockerCommandExecutor.isRemovable(containerStatus)) {
+          DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
+          DockerCommandExecutor
+              .executeDockerCommand(dockerRmCommand, containerId, env, conf,
+                  privilegedOperationExecutor, false);
+        }
+      }
+    }
   }
 }

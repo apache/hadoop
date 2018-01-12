@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContex
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
@@ -187,6 +188,16 @@ public abstract class ContainerExecutor implements Configurable {
    * @throws IOException if signaling the container fails
    */
   public abstract boolean signalContainer(ContainerSignalContext ctx)
+      throws IOException;
+
+  /**
+   * Perform the steps necessary to reap the container.
+   *
+   * @param ctx Encapsulates information necessary for reaping containers.
+   * @return returns true if the operation succeeded.
+   * @throws IOException if reaping the container fails.
+   */
+  public abstract boolean reapContainer(ContainerReapContext ctx)
       throws IOException;
 
   /**
