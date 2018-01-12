@@ -63,7 +63,6 @@ import org.apache.hadoop.util.DiskValidatorFactory;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -447,7 +446,6 @@ public class ContainerLocalizer {
     // MKDIR $x/$user/appcache/$appid/filecache
     // LOAD $x/$user/appcache/$appid/appTokens
     try {
-      createLogDir();
       String user = argv[0];
       String appId = argv[1];
       String locId = argv[2];
@@ -480,31 +478,6 @@ public class ContainerLocalizer {
       nRet = -1;
     } finally {
       System.exit(nRet);
-    }
-  }
-
-  /**
-   * Create the log directory, if the directory exists, make sure its permission
-   * is 750.
-   */
-  private static void createLogDir() {
-    FileContext localFs;
-    try {
-      localFs = FileContext.getLocalFSFileContext(new Configuration());
-
-      String logDir = System.getProperty(
-          YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR);
-
-      if (logDir != null && !logDir.trim().isEmpty()) {
-        Path containerLogPath = new Path(logDir);
-        FsPermission containerLogDirPerm= new FsPermission((short)0750);
-        localFs.mkdir(containerLogPath, containerLogDirPerm, true);
-        // set permission again to make sure the permission is correct
-        // in case the directory is already there.
-        localFs.setPermission(containerLogPath, containerLogDirPerm);
-      }
-    } catch (IOException e) {
-      throw new YarnRuntimeException("Unable to create the log dir", e);
     }
   }
 

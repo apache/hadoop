@@ -798,7 +798,8 @@ void test_init_app() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_app(yarn_username, "app_4", TEST_ROOT "/creds.txt",
+    if (initialize_app(yarn_username, "app_4", "container_1",
+                       TEST_ROOT "/creds.txt",
                        local_dirs, log_dirs, final_pgm) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
@@ -839,6 +840,14 @@ void test_init_app() {
     exit(1);
   }
   free(app_dir);
+
+  char *container_dir = get_container_log_directory(TEST_ROOT "/logs/userlogs",
+                  "app_4", "container_1");
+  if (container_dir != NULL && access(container_dir, R_OK) != 0) {
+    printf("FAIL: failed to create container log directory %s\n", container_dir);
+    exit(1);
+  }
+  free(container_dir);
 }
 
 void test_run_container() {
