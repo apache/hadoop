@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.mapred.uploader;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -32,6 +35,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -318,6 +323,54 @@ public class TestFrameworkUploader {
     FrameworkUploader uploader = new FrameworkUploader();
     String output = uploader.expandEnvironmentVariables(input, map);
     Assert.assertEquals("Environment not expanded", "C/X/B,Y,D", output);
+
+  }
+
+  /**
+   * Test native IO.
+   */
+  @Test
+  public void testNativeIO() throws IOException {
+    FrameworkUploader uploader = new FrameworkUploader();
+    File parent = new File(testDir);
+    try {
+      // Create a parent directory
+      parent.deleteOnExit();
+      Assert.assertTrue(parent.mkdirs());
+
+      // Create a target file
+      File targetFile = new File(parent, "a.txt");
+      try(FileOutputStream os = new FileOutputStream(targetFile)) {
+        IOUtils.writeLines(Lists.newArrayList("a", "b"), null, os);
+      }
+      Assert.assertFalse(uploader.checkSymlink(targetFile));
+
+      // Create a symlink to the target
+      File symlinkToTarget = new File(parent, "symlinkToTarget.txt");
+      try {
+        Files.createSymbolicLink(
+            Paths.get(symlinkToTarget.getAbsolutePath()),
+            Paths.get(targetFile.getAbsolutePath()));
+      } catch (UnsupportedOperationException e) {
+        // Symlinks are not supported, so ignore the test
+        Assume.assumeTrue(false);
+      }
+      Assert.assertTrue(uploader.checkSymlink(symlinkToTarget));
+
+      // Create a symlink outside the current directory
+      File symlinkOutside = new File(parent, "symlinkToParent.txt");
+      try {
+        Files.createSymbolicLink(
+            Paths.get(symlinkOutside.getAbsolutePath()),
+            Paths.get(parent.getAbsolutePath()));
+      } catch (UnsupportedOperationException e) {
+        // Symlinks are not supported, so ignore the test
+        Assume.assumeTrue(false);
+      }
+      Assert.assertFalse(uploader.checkSymlink(symlinkOutside));
+    } finally {
+      FileUtils.deleteDirectory(parent);
+    }
 
   }
 
