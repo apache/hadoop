@@ -21,12 +21,7 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProtoOrBuilder;
@@ -205,14 +200,6 @@ public class ContainerPBImpl extends Container {
     this.resource = resource;
   }
 
-  @Override
-  public void setGPULocation(long GPULocation) {
-    maybeInitBuilder();
-    if (resource == null)
-      builder.clearResource();
-    this.resource.setGPUAttribute(GPULocation);
-  }
-  
   @Override
   public Priority getPriority() {
     ContainerProtoOrBuilder p = viaProto ? proto : builder;

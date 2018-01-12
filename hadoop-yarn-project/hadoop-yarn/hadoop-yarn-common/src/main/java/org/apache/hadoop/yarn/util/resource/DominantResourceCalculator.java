@@ -204,7 +204,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       maximumResource.getGPUs());
 
     return Resources.createResource(normalizedMemory,
-      normalizedCores, normalizedGPUs, r.getGPUAttribute());
+      normalizedCores, normalizedGPUs, r.getGPUAttribute(), r.getPorts());
   }
 
   @Override
@@ -213,7 +213,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundUp(r.getMemory(), stepFactor.getMemory()), 
         roundUp(r.getVirtualCores(), stepFactor.getVirtualCores()),
         roundUp(r.getGPUs(), stepFactor.getGPUs()),
-        r.getGPUAttribute()
+        r.getGPUAttribute(), r.getPorts()
         );
   }
 
@@ -223,7 +223,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundDown(r.getMemory(), stepFactor.getMemory()),
         roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()),
         roundDown(r.getGPUs(), stepFactor.getGPUs()),
-        r.getGPUAttribute()
+        r.getGPUAttribute(),r.getPorts()
         );
   }
 
@@ -239,7 +239,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundUp(
             (int)Math.ceil(r.getGPUs() * by),
             stepFactor.getGPUs()),
-        r.getGPUAttribute()
+        r.getGPUAttribute(),
+        r.getPorts()
         );
   }
 
@@ -259,7 +260,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
             (int)(r.getGPUs() * by),
             stepFactor.getGPUs()
             ),
-        r.getGPUAttribute()
+        r.getGPUAttribute(),
+        r.getPorts()
         );
   }
 

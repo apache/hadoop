@@ -122,4 +122,11 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     // not support;
     return 0;
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public String getPortsUsage() {
+    // not support;
+    return null;
+  }
 }

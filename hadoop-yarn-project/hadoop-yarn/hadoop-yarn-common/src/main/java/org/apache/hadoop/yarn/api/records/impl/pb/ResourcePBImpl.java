@@ -45,6 +45,7 @@ public class ResourcePBImpl extends Resource {
   }
   
   public ResourceProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -142,6 +143,18 @@ public class ResourcePBImpl extends Resource {
     }
     this.ports = convertFromProtoFormat(p.getPorts());
     return this.ports;
+  }
+
+  @Override
+  public int getPortsCount() {
+    ResourceProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getPortsCount());
+  }
+
+  @Override
+  public void setPortsCount(int portsCount) {
+    maybeInitBuilder();
+    builder.setPortsCount((portsCount));
   }
 
   @Override

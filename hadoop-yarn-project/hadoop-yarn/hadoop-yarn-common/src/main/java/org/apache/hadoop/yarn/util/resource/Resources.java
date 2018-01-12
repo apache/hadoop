@@ -21,9 +21,14 @@ package org.apache.hadoop.yarn.util.resource;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ValueRange;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.api.records.ValueRanges;
 import org.apache.hadoop.yarn.util.Records;
+import sun.awt.SunHints;
+
+import java.util.List;
+import java.util.ArrayList;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 @Unstable
@@ -78,6 +83,16 @@ public class Resources {
 
     @Override
     public void setPorts(ValueRanges port) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
+    public int getPortsCount() {
+      return 0;
+    }
+
+    @Override
+    public void setPortsCount(int portsCount) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -148,6 +163,17 @@ public class Resources {
     }
 
     @Override
+    public int getPortsCount() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void setPortsCount(int portsCount) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+
+    @Override
     public int compareTo(Resource o) {
       int diff = 0 - o.getMemory();
       if (diff == 0) {
@@ -178,14 +204,20 @@ public class Resources {
   }
 
   public static Resource createResource(int memory, int cores, int GPUs, long GPUAttribute, ValueRanges ports) {
+    return createResource(memory, cores, GPUs, GPUAttribute, ports, 0);
+  }
+
+  public static Resource createResource(int memory, int cores, int GPUs, long GPUAttribute, ValueRanges ports, int portsCount) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
     resource.setGPUs(GPUs);
     resource.setGPUAttribute(GPUAttribute);
     resource.setPorts(ports);
+    resource.setPortsCount(portsCount);
     return resource;
   }
+
 
   public static Resource none() {
     return NONE;
@@ -196,7 +228,7 @@ public class Resources {
   }  
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute(), res.getPorts());
+    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs(), res.getGPUAttribute(), res.getPorts(), res.getPortsCount());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
@@ -214,7 +246,7 @@ public class Resources {
     } else {
       lhs.setPorts(rhs.getPorts());
     }
-
+    lhs.setPortsCount(lhs.getPortsCount() + rhs.getPortsCount());
     return lhs;
   }
 
@@ -234,8 +266,9 @@ public class Resources {
 
     if (lhs.getPorts() != null) {
       lhs.setPorts(lhs.getPorts().minusSelf(rhs.getPorts()));
+      lhs.setPortsCount(lhs.getPortsCount() - rhs.getPortsCount());
     }
-    
+
     return lhs;
   }
 
@@ -362,7 +395,8 @@ public class Resources {
   public static boolean fitsIn(Resource smaller, Resource bigger) {
       boolean fitsIn = smaller.getMemory() <= bigger.getMemory() &&
                        smaller.getVirtualCores() <= bigger.getVirtualCores() &&
-                       smaller.getGPUs() <= bigger.getGPUs();
+                       smaller.getGPUs() <= bigger.getGPUs() &&
+                       smaller.getPortsCount() <= bigger.getPortsCount();
       if (fitsIn) {
           if((smaller.getGPUAttribute() & bigger.getGPUAttribute()) != smaller.getGPUAttribute()) {
               fitsIn = false;
@@ -411,11 +445,50 @@ public class Resources {
   //Sequencing allocate the free GPUs.
   private static long allocateGPUsByCount(int requestCount, long available)
   {
-    long result = available;
     int availableCount = Long.bitCount(available);
-    while(availableCount-- > requestCount) {
-        result &= (result -1);
+    if(availableCount >= requestCount) {
+      long result = available;
+      while (availableCount-- > requestCount) {
+        result &= (result - 1);
+      }
+      return result;
+    } else {
+      return 0;
     }
-    return result;
+  }
+
+  // Calculate the candidate GPUs from bigger resource.
+  // If the request contains the GPU information, allocate according the request gpu attribute.
+  // If the request does't contains the GPU information, sequencing allocate the free GPUs.
+
+  public static ValueRanges allocatePorts(Resource smaller, Resource bigger) {
+    if (smaller.getPorts() != null && smaller.getPorts().getRangesList() != null && smaller.getPorts().getRangesList().size() > 0) {
+      if ((smaller.getPorts().isLessOrEqual(bigger.getPorts()))) {
+        return smaller.getPorts();
+      } else {
+        return null;
+      }
+    }
+    return allocatePortsByCount(smaller.getPortsCount(), bigger.getPorts());
+  }
+
+  //Sequencing allocate the free GPUs.
+  private static ValueRanges allocatePortsByCount(int requestCount, ValueRanges ports) {
+    List<ValueRange> rangeList = ports.getRangesList();
+    int needAllocateCount = requestCount;
+
+    for (ValueRange range : rangeList) {
+      if (range.getEnd() - range.getBegin() >= needAllocateCount - 1) {
+        ValueRange vr = ValueRange.newInstance(range.getBegin(), range.getBegin() + needAllocateCount - 1);
+        rangeList.add(vr);
+        break;
+      } else {
+        ValueRange vr = ValueRange.newInstance(range.getBegin(), range.getEnd());
+        rangeList.add(vr);
+        needAllocateCount -= (range.getEnd() - range.getBegin() + 1);
+      }
+    }
+    ValueRanges valueRanges = ValueRanges.newInstance(rangeList);
+    return valueRanges;
   }
 }

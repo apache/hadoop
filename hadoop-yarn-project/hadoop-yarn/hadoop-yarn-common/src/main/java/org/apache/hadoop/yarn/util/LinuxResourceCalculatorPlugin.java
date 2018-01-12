@@ -29,6 +29,8 @@ import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,17 +62,19 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final String INACTIVE_STRING = "Inactive";
   
   public static final long REFRESH_INTERVAL_MS = 60 * 1000;
-  
-  private static final String REFRESH_GPU_CMD = "nvidia-smi --query-gpu=index,memory.total,memory.used --format=csv";
-  private static final String REFRESH_PORTS_CMD = "netstat -anlut";
-  /**
-     The out put format of this command is:
-     index, memory.total [MiB], memory.used [MiB]
-     0, 1998 MiB, 0 MiB
-    */
-  private static final Pattern GPU_FORMAT =
-          Pattern.compile("^\\s*([0-9]{1,2})\\s*,\\s*([0-9]*)\\s*MiB,\\s*([0-9]+)\\s*MiB");
 
+  private static final String REFRESH_GPUINFO_CMD = "nvidia-smi --query-gpu=index,gpu_uuid --format=csv";
+
+  private static final String REFRESH_GPU_USING_CMD = "nvidia-smi --query-compute-apps=gpu_uuid,process_name --format=csv";
+  private static final String REFRESH_PORTS_CMD = "netstat -anlut";
+
+  /**
+   The out put format of this command is:
+   index, memory.total [MiB], memory.used [MiB]
+   0,
+   */
+  private static final Pattern GPUINFO_FORMAT =
+    Pattern.compile("^\\s*([0-9]{1,2})\\s*,(.)+");
   /**
    * the output format of the Ports information:
    Proto Recv-Q Send-Q Local Address           Foreign Address         State
@@ -105,6 +109,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private String procfsCpuFile;
   private String procfsStatFile;
   private String procfsGpuFile;
+  private String procfsGpuUsingFile;
   private String procfsPortsFile;
   long jiffyLengthInMillis;
 
@@ -119,7 +124,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private int gpuAttribute = 0; // bit map of GPU utilization, 1 means free, 0 means occupied
   private long lastRefreshGpuTime = 0L;
   private long lastRefreshPortsTime = 0L;
-  private String usedPorts;
+  private String usedPorts = "";
   
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;
@@ -133,7 +138,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
   public LinuxResourceCalculatorPlugin() {
-    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, null, null,
+    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, null, null, null,
         ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS);
   }
 
@@ -150,12 +155,14 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
                                        String procfsCpuFile,
                                        String procfsStatFile,
                                        String procfsGpuFile,
+                                       String procfsGpuUsingFile,
                                        String procfsPortsFile,
                                        long jiffyLengthInMillis) {
     this.procfsMemFile = procfsMemFile;
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
     this.procfsGpuFile = procfsGpuFile;
+    this.procfsGpuUsingFile = procfsGpuUsingFile;
     this.procfsPortsFile = procfsPortsFile;
     this.jiffyLengthInMillis = jiffyLengthInMillis;
     this.cpuTimeTracker = new CpuTimeTracker(jiffyLengthInMillis);
@@ -412,59 +419,87 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     return usedPorts;
   }
 
-  
-  private InputStreamReader getInputGpuStreamReader(String cmdLine) throws Exception
+
+  private InputStreamReader getInputGpuInfoStreamReader() throws Exception
   {
-      if(procfsGpuFile == null){
-          LOG.info("exec:" + cmdLine);
-          Process pos = Runtime.getRuntime().exec(cmdLine);
-          pos.waitFor();
-          return new InputStreamReader(pos.getInputStream());
-          
-      } else {
-          LOG.info("read GPU info from file:" + procfsGpuFile);
-          return new InputStreamReader(
-                  new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
-      }
+    if(procfsGpuFile == null){
+      LOG.info("exec:" + REFRESH_GPUINFO_CMD);
+      Process pos = Runtime.getRuntime().exec(REFRESH_GPUINFO_CMD);
+      pos.waitFor();
+      return new InputStreamReader(pos.getInputStream());
+
+    } else {
+      LOG.info("read GPU info from file:" + procfsGpuFile);
+      return new InputStreamReader(
+        new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
+    }
   }
 
+  private InputStreamReader getInputGpuUsingStreamReader() throws Exception
+  {
+    if(procfsGpuUsingFile == null){
+      LOG.info("exec:" + REFRESH_GPU_USING_CMD);
+      Process pos = Runtime.getRuntime().exec(REFRESH_GPU_USING_CMD);
+      pos.waitFor();
+      return new InputStreamReader(pos.getInputStream());
+
+    } else {
+      LOG.info("read GPU info from file:" + procfsGpuFile);
+      return new InputStreamReader(
+        new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
+    }
+  }
+
+
+
   private void refreshGpuIfNeeded() {
-      
+
     long now = System.currentTimeMillis();
     if (now - lastRefreshGpuTime > REFRESH_INTERVAL_MS) {
-        LOG.info("lastRefreshGpuTime:" + lastRefreshGpuTime + " now:" + now);
-        lastRefreshGpuTime = now;
+      LOG.info("lastUpdateTime:" + lastRefreshGpuTime + " now:" + now);
+      lastRefreshGpuTime = now;
       try {
-          InputStreamReader ir = getInputGpuStreamReader(REFRESH_GPU_CMD);
-           BufferedReader  input = new BufferedReader (ir);
-           String ln="";           
-           int gpuInfo = 0;
-           int gpuMask = 0;
-           Matcher mat = null;      
-           
-           while ((ln =input.readLine()) != null) {  
-               LOG.info(ln);
-               mat = GPU_FORMAT.matcher(ln);
-               if (mat.find()) {
-                 long index = Long.parseLong(mat.group(1));
-                 long totalMemory = Long.parseLong(mat.group(2));
-                 long usedMemory = Long.parseLong(mat.group(3));
-                 gpuMask |= (1<<index);
-                 if(usedMemory == 0){
-                     gpuInfo |= (1<<index);
-                 }
-              }               
-           }
-           input.close();
-           ir.close();
-           
-           numGPUs = Integer.bitCount(gpuMask);
-           gpuAttribute = gpuInfo;
-         } catch (java.io.IOException e) {
-             LOG.warn("error get GPU status info:" + e.toString());
-         }catch (Exception e) {
-             LOG.warn("error get GPU status info:" + e.toString());
-         }
+
+        String ln = "";
+        int gpuInfo = 0;
+        int gpuMask = 0;
+        Map<String, String> usingMap = new HashMap<String, String>();
+
+        InputStreamReader ir = getInputGpuUsingStreamReader();
+        BufferedReader input = new BufferedReader(ir);
+
+        while ((ln = input.readLine()) != null) {
+          String[] usingProcessInfo = ln.split(",");
+          usingMap.put(usingProcessInfo[0].trim().toLowerCase(), usingProcessInfo[1]);
+        }
+        input.close();
+        ir.close();
+
+        Matcher mat = null;
+        ir = getInputGpuInfoStreamReader();
+        input = new BufferedReader(ir);
+
+        while ((ln = input.readLine()) != null) {
+          LOG.info(ln);
+          mat = GPUINFO_FORMAT.matcher(ln);
+          if (mat.find()) {
+            long index = Long.parseLong(mat.group(1));
+            String gpuUUID = mat.group(2);
+            gpuMask |= (1 << index);
+            if (!usingMap.containsKey(gpuUUID.trim().toLowerCase())) {
+              gpuInfo |= (1 << index);
+            }
+          }
+        }
+        input.close();
+        ir.close();
+
+
+        numGPUs = Integer.bitCount(gpuMask);
+        gpuAttribute = gpuInfo;
+      } catch (Exception e) {
+        LOG.warn("error get GPU status info:" + e.toString());
+      }
     }
   }
 
@@ -490,17 +525,17 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       LOG.info("lastRefreshPortsTime:" + lastRefreshPortsTime + " now:" + now);
       lastRefreshPortsTime = now;
       try {
+
         InputStreamReader ir = getInputPortsStreamReader(REFRESH_PORTS_CMD);
         BufferedReader  input = new BufferedReader (ir);
         String ln = "";
         Matcher mat = null;
         usedPorts = "";
-
         while ((ln =input.readLine()) != null) {
           LOG.info(ln);
           mat = PORTS_FORMAT.matcher(ln);
           if (mat.find()) {
-            String port = mat.group();
+            String port = mat.group().substring(1);
             if(usedPorts.isEmpty()) {
               usedPorts = port;
             } else {
@@ -514,6 +549,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       }catch (Exception e) {
         LOG.warn("error get Ports usage info:" + e.toString());
       }
+    } else {
+      LOG.info("getlastTime result usedPorts=" + usedPorts);
     }
   }
   

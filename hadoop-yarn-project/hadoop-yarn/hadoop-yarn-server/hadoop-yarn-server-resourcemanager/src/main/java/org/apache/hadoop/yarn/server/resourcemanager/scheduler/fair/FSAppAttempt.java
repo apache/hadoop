@@ -31,14 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -507,11 +500,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     Resource available = node.getAvailableResource();
 
     Container container = null;
-    if (reserved) {
-      container = node.getReservedContainer().getContainer();
-    } else {
-      container = createContainer(node, capability, request.getPriority());
-    }
 
     // MJTHIS: this function is basically called for all the runnableApps in the queue. We check fit-in
     // satisfied with GPU locality. If not fitting in, we mostly create a container.
@@ -519,6 +507,24 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // Can we allocate a container on this node?
     if (Resources.fitsIn(capability, available)) {
       // Inform the application of the new container for this request
+
+      if(capability.getGPUs() > 0) {
+        LOG.info("GPU/Ports allocation request: " + capability.toString() + " from availability: " + available.toString());
+        long allocated = Resources.allocateGPUs(capability, available);
+        capability.setGPUAttribute(allocated);
+      }
+
+      if(capability.getPortsCount() > 0) {
+        ValueRanges allocatedPorts = Resources.allocatePorts(capability, available);
+        capability.setPorts(allocatedPorts);
+      }
+
+      if (reserved) {
+        container = node.getReservedContainer().getContainer();
+      } else {
+        container = createContainer(node, capability, request.getPriority());
+      }
+
       RMContainer allocatedContainer =
           allocate(type, node, request.getPriority(), request, container);
       if (allocatedContainer == null) {
@@ -534,10 +540,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         unreserve(request.getPriority(), node);
       }
 
-      LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
-      long allocated = Resources.allocateGPUs(capability, available);
-      LOG.info("Allocated GPUs in bitvector format: " + allocated);
-      container.setGPULocation(allocated);
 
       // Inform the node
       node.allocateContainer(allocatedContainer);

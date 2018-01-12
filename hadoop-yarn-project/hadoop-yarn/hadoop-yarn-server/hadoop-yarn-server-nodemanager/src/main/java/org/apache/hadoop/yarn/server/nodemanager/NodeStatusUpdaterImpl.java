@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.PortsInfo;
+import org.apache.hadoop.yarn.api.records.ValueRange;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -170,7 +171,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     resourceCalculatorPlugin = ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
     int GPUs = resourceCalculatorPlugin.getNumGPUs();    
     long GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
-    String usedPorts = resourceCalculatorPlugin.getPortsUsage();
 
     numOfRoundsToUpdatePorts =
         conf.getInt(YarnConfiguration.NM_PORTS_UPDATE_ROUNDS,
@@ -185,12 +185,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             YarnConfiguration.DEFAULT_PORTS_BITSET_STORE_ENABLE);
 
     ValueRanges ports = null;
+    ValueRanges usedPorts = null;
+    int portsCount = 0;
     if (enablePortsAsResource) {
-      ports = ValueRanges.iniFromExpression(conf.get(YarnConfiguration.NM_PORTS,
-          YarnConfiguration.DEFAULT_NM_PORTS), enablePortsBitSetStore);
+      ports = ValueRanges.iniFromExpression(conf.get(YarnConfiguration.NM_PORTS, YarnConfiguration.DEFAULT_NM_PORTS), enablePortsBitSetStore);
+      usedPorts = ValueRanges.iniFromExpression(resourceCalculatorPlugin.getPortsUsage(), enablePortsBitSetStore);
+      ports = ports.minusSelf(usedPorts);
+      for (ValueRange rv : ports.getRangesList()) {
+        portsCount += (rv.getEnd() - rv.getBegin()) + 1;
+      }
     }
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports);
+    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports, portsCount);
 
     metrics.addResource(totalResource);
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
@@ -355,7 +361,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
 
     LOG.info("Registered with ResourceManager as " + this.nodeId
-        + " with total resource of " + this.totalResource);
+        + " with total resource of " + this.totalResource + "  and local used ports:" + ports);
     LOG.info("Notifying ContainerManager to unblock new container-requests");
     ((ContainerManagerImpl) this.context.getContainerManager())
       .setBlockNewContainerRequests(false);

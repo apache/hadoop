@@ -686,19 +686,19 @@ public class FifoScheduler extends
         ContainerId containerId = BuilderUtils.newContainerId(application
             .getApplicationAttemptId(), application.getNewContainerId());
 
+        if(capability.getGPUs() > 0) {
+          // Allocate!
+          LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
+          long allocatedGPU = Resources.allocateGPUs(capability, available);
+          capability.setGPUAttribute(allocatedGPU);
+          available.setGPUAttribute(available.getGPUAttribute() | allocatedGPU);
+        }
+
         // Create the container
         Container container =
             BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
               .getHttpAddress(), capability, priority, null);
-        
-        if(capability.getGPUs() > 0) {
-            // Allocate!
-            LOG.info("GPU allocation request: " + capability.toString() + " from availability: " + available.toString());
-            long allocatedGPU = Resources.allocateGPUs(capability, available);
-            LOG.info("Allocated GPUs in bitvector format: " + allocatedGPU);
-            container.setGPULocation(allocatedGPU);
-            available.setGPUAttribute(available.getGPUAttribute() | allocatedGPU);
-         }
+
         // Inform the application
         RMContainer rmContainer =
             application.allocate(type, node, priority, request, container);
