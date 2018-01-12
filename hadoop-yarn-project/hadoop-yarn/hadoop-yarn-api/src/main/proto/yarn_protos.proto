@@ -152,6 +152,7 @@ message ContainerProto {
   optional ExecutionTypeProto execution_type = 7 [default = GUARANTEED];
   optional int64 allocation_request_id = 8 [default = -1];
   optional int32 version = 9 [default = 0];
+  repeated string allocation_tags = 10;
 }
 
 message ContainerReportProto {

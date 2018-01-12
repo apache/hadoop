@@ -530,12 +530,18 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEvent event) {
       NMContainerStatus report =
           ((RMContainerRecoverEvent) event).getContainerReport();
+      // Set the allocation tags from the
+      container.setAllocationTags(report.getAllocationTags());
+      // Notify AllocationTagsManager
+      container.rmContext.getAllocationTagsManager().addContainer(
+          container.getNodeId(), container.getContainerId(),
+          container.getAllocationTags());
+
       if (report.getContainerState().equals(ContainerState.COMPLETE)) {
         ContainerStatus status =
             ContainerStatus.newInstance(report.getContainerId(),
               report.getContainerState(), report.getDiagnostics(),
               report.getContainerExitStatus());
-
         new FinishedTransition().transition(container,
           new RMContainerFinishedEvent(container.getContainerId(), status,
             RMContainerEventType.FINISHED));
@@ -577,7 +583,7 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // Notify placementManager
+      // Notify AllocationTagsManager
       container.rmContext.getAllocationTagsManager().addContainer(
           container.getNodeId(), container.getContainerId(),
           container.getAllocationTags());
