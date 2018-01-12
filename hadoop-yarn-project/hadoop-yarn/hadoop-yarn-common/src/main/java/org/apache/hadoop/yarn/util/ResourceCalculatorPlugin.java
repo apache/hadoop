@@ -106,6 +106,13 @@ public abstract class ResourceCalculatorPlugin extends Configured {
   public abstract long getGpuAttribute();
 
   /**
+   * Obtain the PORTs utilization information.
+   *
+   * @return a string with ports like: "25,110,23,42"
+   */
+  public abstract String getPortsUsage();
+
+  /**
    * Create the ResourceCalculatorPlugin from the class name and configure it. If
    * class name is null, this method will try and return a memory calculator
    * plugin available for this system.
