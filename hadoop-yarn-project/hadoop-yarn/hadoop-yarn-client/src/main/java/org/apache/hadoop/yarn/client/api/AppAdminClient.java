@@ -207,16 +207,16 @@ public abstract class AppAdminClient extends CompositeService {
 
   /**
    * <p>
-   * Get detailed status string for a YARN application.
+   * Get detailed app specific status string for a YARN application.
    * </p>
    *
-   * @param applicationId application id
+   * @param appIdOrName appId or appName
    * @return status string
    * @throws IOException IOException
    * @throws YarnException exception in client or server
    */
   @Public
   @Unstable
-  public abstract String getStatusString(String applicationId) throws
+  public abstract String getStatusString(String appIdOrName) throws
       IOException, YarnException;
 }
