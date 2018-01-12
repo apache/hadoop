@@ -24,6 +24,7 @@ import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -127,6 +128,7 @@ class BlockReceiver implements Closeable {
 
   private boolean syncOnClose;
   private volatile boolean dirSyncOnFinalize;
+  private boolean dirSyncOnHSyncDone = false;
   private long restartBudget;
   /** the reference of the volume where the block receiver writes to */
   private ReplicaHandler replicaHandler;
@@ -420,6 +422,13 @@ class BlockReceiver implements Closeable {
         datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
       }
       flushTotalNanos += flushEndNanos - flushStartNanos;
+    }
+    if (isSync && !dirSyncOnHSyncDone && replicaInfo instanceof ReplicaInfo) {
+      ReplicaInfo rInfo = (ReplicaInfo) replicaInfo;
+      File baseDir = rInfo.getBlockFile().getParentFile();
+      FileIoProvider fileIoProvider = datanode.getFileIoProvider();
+      DatanodeUtil.fsyncDirectory(fileIoProvider, rInfo.getVolume(), baseDir);
+      dirSyncOnHSyncDone = true;
     }
     if (checksumOut != null || streams.getDataOut() != null) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
