@@ -81,7 +81,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
    tcp        0      0 10.0.3.4:56828          52.226.8.57:443         TIME_WAIT
    */
   private static final Pattern PORTS_FORMAT =
-    Pattern.compile("^:([0-9]+)\\s+");
+    Pattern.compile(":([0-9]+)");
 
   /**
    * Patterns for parsing /proc/cpuinfo
@@ -105,6 +105,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private String procfsCpuFile;
   private String procfsStatFile;
   private String procfsGpuFile;
+  private String procfsPortsFile;
   long jiffyLengthInMillis;
 
   private long ramSize = 0;
@@ -149,11 +150,13 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
                                        String procfsCpuFile,
                                        String procfsStatFile,
                                        String procfsGpuFile,
+                                       String procfsPortsFile,
                                        long jiffyLengthInMillis) {
     this.procfsMemFile = procfsMemFile;
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
     this.procfsGpuFile = procfsGpuFile;
+    this.procfsPortsFile = procfsPortsFile;
     this.jiffyLengthInMillis = jiffyLengthInMillis;
     this.cpuTimeTracker = new CpuTimeTracker(jiffyLengthInMillis);
   }
@@ -424,6 +427,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
                   new FileInputStream(procfsGpuFile), Charset.forName("UTF-8"));
       }
   }
+
   private void refreshGpuIfNeeded() {
       
     long now = System.currentTimeMillis();
@@ -464,6 +468,21 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     }
   }
 
+  private InputStreamReader getInputPortsStreamReader(String cmdLine) throws Exception
+  {
+    if(procfsPortsFile == null){
+      LOG.info("exec:" + cmdLine);
+      Process pos = Runtime.getRuntime().exec(cmdLine);
+      pos.waitFor();
+      return new InputStreamReader(pos.getInputStream());
+
+    } else {
+      LOG.info("read Ports info from file:" + procfsPortsFile);
+      return new InputStreamReader(
+        new FileInputStream(procfsPortsFile), Charset.forName("UTF-8"));
+    }
+  }
+
   private void refreshPortsIfNeeded() {
 
     long now = System.currentTimeMillis();
@@ -471,7 +490,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       LOG.info("lastRefreshPortsTime:" + lastRefreshPortsTime + " now:" + now);
       lastRefreshPortsTime = now;
       try {
-        InputStreamReader ir = getInputGpuStreamReader(REFRESH_PORTS_CMD);
+        InputStreamReader ir = getInputPortsStreamReader(REFRESH_PORTS_CMD);
         BufferedReader  input = new BufferedReader (ir);
         String ln = "";
         Matcher mat = null;
