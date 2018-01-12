@@ -156,7 +156,7 @@ public class TestUtils {
     Priority priority, RecordFactory recordFactory) {
     ResourceRequest request =
       recordFactory.newRecordInstance(ResourceRequest.class);
-    Resource capability = Resources.createResource(memory, 1, ports);
+    Resource capability = Resources.createResource(memory, 1, 0, 0,  ports);
 
     request.setNumContainers(numContainers);
     request.setResourceName(resourceName);
@@ -235,9 +235,9 @@ public class TestUtils {
         0,
         0,
         mockNode,
-        Resources.createResource(mem, vCores, ports), "");
+        Resources.createResource(mem, vCores, 0, 0, ports), "");
     FiCaSchedulerNode node = spy(new FiCaSchedulerNode(rmNode, false));
-    LOG.info("node = " + host + " avail=" + node.getUnallocatedResource());
+    LOG.info("node = " + host);
     return node;
   }
 
