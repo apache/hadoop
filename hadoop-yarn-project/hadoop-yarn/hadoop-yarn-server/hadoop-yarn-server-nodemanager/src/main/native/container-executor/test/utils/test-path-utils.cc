@@ -64,4 +64,16 @@
    ASSERT_TRUE(flag) << "Should succeeded\n";
 }
 
+TEST_F(TestPathUtils, test_dir_exists) {
+   const char* input = "/non/existent/dir";
+   int flag = dir_exists(input);
+   std::cout << "Testing input=" << input << "\n";
+   ASSERT_NE(flag, 0) << "Should failed\n";
+
+   input = "/";
+   flag = dir_exists(input);
+   std::cout << "Testing input=" << input << "\n";
+   ASSERT_EQ(flag, 0) << "Should succeeded\n";
+}
+
 } // namespace ContainerExecutor

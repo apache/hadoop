@@ -1811,6 +1811,20 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
 
+  /**
+   * Whether or not users are allowed to request that Docker containers honor
+   * the debug deletion delay. This is useful for troubleshooting Docker
+   * container related launch failures.
+   */
+  public static final String NM_DOCKER_ALLOW_DELAYED_REMOVAL =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "delayed-removal.allowed";
+
+  /**
+   * The default value on whether or not a user can request that Docker
+   * containers honor the debug deletion delay.
+   */
+  public static final boolean DEFAULT_NM_DOCKER_ALLOW_DELAYED_REMOVAL = false;
+
   /** The mode in which the Java Container Sandbox should run detailed by
    *  the JavaSandboxLinuxContainerRuntime. */
   public static final String YARN_CONTAINER_SANDBOX =

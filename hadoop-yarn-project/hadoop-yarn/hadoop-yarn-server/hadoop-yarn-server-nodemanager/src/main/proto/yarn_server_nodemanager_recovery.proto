@@ -42,6 +42,7 @@ message DeletionServiceDeleteTaskProto {
   repeated string basedirs = 5;
   repeated int32 successorIds = 6;
   optional string taskType = 7;
+  optional string dockerContainerId = 8;
 }
 
 message LocalizedResourceProto {

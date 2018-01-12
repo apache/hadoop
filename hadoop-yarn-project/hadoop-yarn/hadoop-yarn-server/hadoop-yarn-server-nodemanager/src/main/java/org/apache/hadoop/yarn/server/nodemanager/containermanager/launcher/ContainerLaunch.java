@@ -77,9 +77,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
@@ -704,32 +706,9 @@ public class ContainerLaunch implements Callable<Integer> {
       }
 
       // kill process
+      String user = container.getUser();
       if (processId != null) {
-        String user = container.getUser();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Sending signal to pid " + processId + " as user " + user
-              + " for container " + containerIdStr);
-        }
-        final Signal signal = sleepDelayBeforeSigKill > 0
-          ? Signal.TERM
-          : Signal.KILL;
-
-        boolean result = exec.signalContainer(
-            new ContainerSignalContext.Builder()
-                .setContainer(container)
-                .setUser(user)
-                .setPid(processId)
-                .setSignal(signal)
-                .build());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Sent signal " + signal + " to pid " + processId
-              + " as user " + user + " for container " + containerIdStr
-              + ", result=" + (result ? "success" : "failed"));
-        }
-        if (sleepDelayBeforeSigKill > 0) {
-          new DelayedProcessKiller(container, user,
-              processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
-        }
+        signalProcess(processId, user, containerIdStr);
       } else {
         // Normally this means that the process was notified about
         // deactivateContainer above and did not start.
@@ -750,6 +729,11 @@ public class ContainerLaunch implements Callable<Integer> {
           // Increasing YarnConfiguration.NM_PROCESS_KILL_WAIT_MS
           // reduces the likelihood of this race condition and process leak.
         }
+        // The Docker container may not have fully started, reap the container.
+        if (DockerLinuxContainerRuntime.isDockerContainerRequested(
+            container.getLaunchContext().getEnvironment())) {
+          reapDockerContainerNoPid(user);
+        }
       }
     } catch (Exception e) {
       String message =
@@ -765,6 +749,36 @@ public class ContainerLaunch implements Callable<Integer> {
         lfs.delete(pidFilePath, false);
         lfs.delete(pidFilePath.suffix(EXIT_CODE_FILE_SUFFIX), false);
       }
+    }
+
+    final int sleepMsec = 100;
+    int msecLeft = 2000;
+    if (pidFilePath != null) {
+      File file = new File(getExitCodeFile(pidFilePath.toString()));
+      while (!file.exists() && msecLeft >= 0) {
+        try {
+          Thread.sleep(sleepMsec);
+        } catch (InterruptedException e) {
+        }
+        msecLeft -= sleepMsec;
+      }
+      if (msecLeft < 0) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Timeout while waiting for the exit code file:  "
+              + file.getAbsolutePath());
+        }
+      }
+    }
+
+    // Reap the container
+    boolean result = exec.reapContainer(
+        new ContainerReapContext.Builder()
+            .setContainer(container)
+            .setUser(container.getUser())
+            .build());
+    if (!result) {
+      throw new IOException("Reap container failed for container "
+          + containerIdStr);
     }
   }
 
@@ -841,6 +855,50 @@ public class ContainerLaunch implements Callable<Integer> {
           "Exception when sending signal to container " + containerIdStr
               + ": " + StringUtils.stringifyException(e);
       LOG.warn(message);
+    }
+  }
+
+  private boolean sendSignal(String user, String processId, Signal signal)
+      throws IOException {
+    return exec.signalContainer(
+        new ContainerSignalContext.Builder().setContainer(container)
+            .setUser(user).setPid(processId).setSignal(signal).build());
+  }
+
+  private void signalProcess(String processId, String user,
+      String containerIdStr) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending signal to pid " + processId + " as user " + user
+          + " for container " + containerIdStr);
+    }
+    final Signal signal =
+        sleepDelayBeforeSigKill > 0 ? Signal.TERM : Signal.KILL;
+
+    boolean result = sendSignal(user, processId, signal);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sent signal " + signal + " to pid " + processId + " as user "
+          + user + " for container " + containerIdStr + ", result="
+          + (result ? "success" : "failed"));
+    }
+    if (sleepDelayBeforeSigKill > 0) {
+      new DelayedProcessKiller(container, user, processId,
+          sleepDelayBeforeSigKill, Signal.KILL, exec).start();
+    }
+  }
+
+  private void reapDockerContainerNoPid(String user) throws IOException {
+    String containerIdStr =
+        container.getContainerTokenIdentifier().getContainerID().toString();
+    LOG.info("Unable to obtain pid, but docker container request detected. "
+            + "Attempting to reap container " + containerIdStr);
+    boolean result = exec.reapContainer(
+        new ContainerReapContext.Builder()
+            .setContainer(container)
+            .setUser(container.getUser())
+            .build());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sent signal to docker container " + containerIdStr
+          + " as user " + user + ", result=" + (result ? "success" : "failed"));
     }
   }
 

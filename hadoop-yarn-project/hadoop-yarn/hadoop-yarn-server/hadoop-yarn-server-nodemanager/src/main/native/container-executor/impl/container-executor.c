@@ -19,6 +19,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 #include "utils/docker-util.h"
+#include "utils/path-utils.h"
 #include "util.h"
 #include "config.h"
 
@@ -70,6 +71,8 @@ static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0}
 
 static const int DEFAULT_DOCKER_SUPPORT_ENABLED = 0;
 static const int DEFAULT_TC_SUPPORT_ENABLED = 0;
+
+static const char* PROC_PATH = "/proc";
 
 //location of traffic control binary
 static const char* TC_BIN = "/sbin/tc";
@@ -1359,6 +1362,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   char *docker_logs_command = NULL;
   char *docker_inspect_command = NULL;
   char *docker_rm_command = NULL;
+  char *docker_inspect_exitcode_command = NULL;
   int container_file_source =-1;
   int cred_file_source = -1;
   int BUFFER_SIZE = 4096;
@@ -1371,6 +1375,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   docker_logs_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_inspect_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
   docker_rm_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
+  docker_inspect_exitcode_command = (char *) alloc_and_clear_memory(command_size, sizeof(char));
 
   gid_t user_gid = getegid();
   uid_t prev_uid = geteuid();
@@ -1421,6 +1426,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   snprintf(docker_command_with_binary, command_size, "%s %s", docker_binary, docker_command);
 
   fprintf(LOGFILE, "Launching docker container...\n");
+  fprintf(LOGFILE, "Docker run command: %s\n", docker_command_with_binary);
   FILE* start_docker = popen(docker_command_with_binary, "r");
   if (pclose (start_docker) != 0)
   {
@@ -1436,9 +1442,11 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     docker_binary, container_id);
 
   fprintf(LOGFILE, "Inspecting docker container...\n");
+  fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_command);
   FILE* inspect_docker = popen(docker_inspect_command, "r");
   int pid = 0;
   int res = fscanf (inspect_docker, "%d", &pid);
+  fprintf(LOGFILE, "pid from docker inspect: %d\n", pid);
   if (pclose (inspect_docker) != 0 || res <= 0)
   {
     fprintf (ERRORFILE,
@@ -1476,17 +1484,45 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
       goto cleanup;
     }
 
-    snprintf(docker_wait_command, command_size,
-      "%s wait %s", docker_binary, container_id);
-
-    fprintf(LOGFILE, "Waiting for docker container to finish...\n");
-    FILE* wait_docker = popen(docker_wait_command, "r");
-    res = fscanf (wait_docker, "%d", &exit_code);
-    if (pclose (wait_docker) != 0 || res <= 0) {
-      fprintf (ERRORFILE,
-       "Could not attach to docker; is container dead? %s.\n", docker_wait_command);
+    fprintf(LOGFILE, "Waiting for docker container to finish.\n");
+#ifdef __linux
+    size_t command_size = MIN(sysconf(_SC_ARG_MAX), 128*1024);
+    char* proc_pid_path = alloc_and_clear_memory(command_size, sizeof(char));
+    snprintf(proc_pid_path, command_size, "%s/%d", PROC_PATH, pid);
+    while (dir_exists(proc_pid_path) == 0) {
+      sleep(1);
+    }
+    if (dir_exists(proc_pid_path) == -1) {
+      fprintf(ERRORFILE, "Error occurred checking %s\n", proc_pid_path);
       fflush(ERRORFILE);
     }
+#else
+    while (kill(pid,0) == 0) {
+      sleep(1);
+    }
+#endif
+
+    sprintf(docker_inspect_exitcode_command,
+      "%s inspect --format {{.State.ExitCode}} %s",
+    docker_binary, container_id);
+    fprintf(LOGFILE, "Obtaining the exit code...\n");
+    fprintf(LOGFILE, "Docker inspect command: %s\n", docker_inspect_exitcode_command);
+    FILE* inspect_exitcode_docker = popen(docker_inspect_exitcode_command, "r");
+    if(inspect_exitcode_docker == NULL) {
+      fprintf(ERRORFILE, "Done with inspect_exitcode, inspect_exitcode_docker is null\n");
+      fflush(ERRORFILE);
+      exit_code = -1;
+      goto cleanup;
+    }
+    res = fscanf (inspect_exitcode_docker, "%d", &exit_code);
+    if (pclose (inspect_exitcode_docker) != 0 || res <= 0) {
+    fprintf (ERRORFILE,
+     "Could not inspect docker to get exitcode:  %s.\n", docker_inspect_exitcode_command);
+      fflush(ERRORFILE);
+      exit_code = -1;
+      goto cleanup;
+    }
+    fprintf(LOGFILE, "Exit code from docker inspect: %d\n", exit_code);
     if(exit_code != 0) {
       fprintf(ERRORFILE, "Docker container exit code was not zero: %d\n",
       exit_code);
@@ -1519,19 +1555,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     }
   }
 
-  fprintf(LOGFILE, "Removing docker container post-exit...\n");
-  snprintf(docker_rm_command, command_size,
-    "%s rm %s", docker_binary, container_id);
-  FILE* rm_docker = popen(docker_rm_command, "w");
-  if (pclose (rm_docker) != 0)
-  {
-    fprintf (ERRORFILE,
-     "Could not remove container %s.\n", docker_rm_command);
-    fflush(ERRORFILE);
-    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
-    goto cleanup;
-  }
-
 cleanup:
 
   if (exit_code_file != NULL && write_exit_code_file_as_nm(exit_code_file, exit_code) < 0) {
@@ -1539,6 +1562,7 @@ cleanup:
       "Could not write exit code to file %s.\n", exit_code_file);
     fflush(ERRORFILE);
   }
+  fprintf(LOGFILE, "Wrote the exit code %d to %s\n", exit_code, exit_code_file);
 
   // Drop root privileges
   if (change_effective_user(prev_uid, user_gid) != 0) {

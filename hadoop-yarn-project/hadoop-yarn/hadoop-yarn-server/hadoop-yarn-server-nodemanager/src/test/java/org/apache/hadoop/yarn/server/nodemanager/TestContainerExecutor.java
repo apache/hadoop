@@ -25,7 +25,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Assert;
@@ -33,6 +34,7 @@ import org.junit.Test;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
 
 @SuppressWarnings("deprecation")
 public class TestContainerExecutor {
@@ -157,5 +159,13 @@ public class TestContainerExecutor {
     cpuRate = Math.min(10000, 100 * containerPerc);
     expected[6] = String.valueOf(cpuRate);
     Assert.assertEquals(Arrays.toString(expected), Arrays.toString(command));
+  }
+
+  @Test
+  public void testReapContainer() throws Exception {
+    Container container = mock(Container.class);
+    ContainerReapContext.Builder builder =  new ContainerReapContext.Builder();
+    builder.setContainer(container).setUser("foo");
+    assertTrue(containerExecutor.reapContainer(builder.build()));
   }
 }

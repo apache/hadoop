@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
@@ -562,6 +563,17 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       }
       throw e;
     }
+    return true;
+  }
+
+  /**
+   * No-op for reaping containers within the DefaultContainerExecutor.
+   *
+   * @param ctx Encapsulates information necessary for reaping containers.
+   * @return true given no operations are needed.
+   */
+  @Override
+  public boolean reapContainer(ContainerReapContext ctx) {
     return true;
   }
 

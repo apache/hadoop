@@ -14,11 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
 /**
- * Available types of {@link DeletionTask}s.
+ * Encapsulates the docker kill command and its command line arguments.
  */
-public enum DeletionTaskType {
-  FILE, DOCKER_CONTAINER
+public class DockerKillCommand extends DockerCommand {
+  private static final String KILL_COMMAND = "kill";
+
+  public DockerKillCommand(String containerName) {
+    super(KILL_COMMAND);
+    super.addCommandArguments("name", containerName);
+  }
+
+  /**
+   * Set the signal for the {@link DockerKillCommand}.
+   *
+   * @param signal  the signal to send to the container.
+   * @return the {@link DockerKillCommand} with the signal set.
+   */
+  public DockerKillCommand setSignal(String signal) {
+    super.addCommandArguments("signal", signal);
+    return this;
+  }
 }
