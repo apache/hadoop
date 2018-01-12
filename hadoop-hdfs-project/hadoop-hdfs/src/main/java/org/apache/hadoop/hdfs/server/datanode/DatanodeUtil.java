@@ -142,4 +142,22 @@ public class DatanodeUtil {
     }
     return (FileInputStream)lin.getWrappedStream();
   }
+
+  /**
+   * Call fsync on specified directories to sync metadata changes.
+   * @param fileIoProvider
+   * @param volume
+   * @param dirs
+   * @throws IOException
+   */
+  public static void fsyncDirectory(FileIoProvider fileIoProvider,
+      FsVolumeSpi volume, File... dirs) throws IOException {
+    for (File dir : dirs) {
+      try {
+        fileIoProvider.dirSync(volume, dir);
+      } catch (IOException e) {
+        throw new IOException("Failed to sync " + dir, e);
+      }
+    }
+  }
 }

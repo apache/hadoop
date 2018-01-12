@@ -929,18 +929,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return dstfile;
   }
 
-  private void fsyncDirectory(FsVolumeSpi volume, File... dirs)
-      throws IOException {
-    FileIoProvider fileIoProvider = datanode.getFileIoProvider();
-    for (File dir : dirs) {
-      try {
-        fileIoProvider.dirSync(volume, dir);
-      } catch (IOException e) {
-        throw new IOException("Failed to sync " + dir, e);
-      }
-    }
-  }
-
   /**
    * Copy the block and meta files for the given block to the given destination.
    * @return the new meta and block files.
@@ -1803,7 +1791,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       FsVolumeSpi v = replicaInfo.getVolume();
       File f = replicaInfo.getBlockFile();
       File dest = finalizedReplicaInfo.getBlockFile();
-      fsyncDirectory(v, dest.getParentFile(), f.getParentFile());
+      DatanodeUtil.fsyncDirectory(datanode.getFileIoProvider(), v,
+          dest.getParentFile(), f.getParentFile());
     }
   }
 
