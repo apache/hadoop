@@ -181,4 +181,11 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       //Not support
       return 0;
   }
+
+  @Override
+  public String getPortsUsage() {
+    // Not support;
+    return null;
+  }
+
 }

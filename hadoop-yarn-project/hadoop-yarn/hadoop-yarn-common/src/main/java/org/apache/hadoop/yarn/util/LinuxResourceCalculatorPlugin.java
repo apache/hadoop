@@ -403,8 +403,9 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       return gpuAttribute;
   }
 
+  @Override
   public String getPortsUsage() {
-    refreshGpuIfNeeded();
+    refreshPortsIfNeeded();
     return usedPorts;
   }
 
