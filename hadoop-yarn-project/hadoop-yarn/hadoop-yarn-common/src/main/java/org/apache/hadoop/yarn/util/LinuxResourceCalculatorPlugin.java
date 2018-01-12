@@ -133,7 +133,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
   public LinuxResourceCalculatorPlugin() {
-    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, null,
+    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT, null, null,
         ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS);
   }
 
