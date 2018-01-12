@@ -473,7 +473,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       try {
         InputStreamReader ir = getInputGpuStreamReader(REFRESH_PORTS_CMD);
         BufferedReader  input = new BufferedReader (ir);
-        String ports="";
         String ln = "";
         Matcher mat = null;
         usedPorts = "";
@@ -483,15 +482,16 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           mat = PORTS_FORMAT.matcher(ln);
           if (mat.find()) {
             String port = mat.group();
-            if(ports.isEmpty()) {
+            if(usedPorts.isEmpty()) {
               usedPorts = port;
             } else {
-              usedPorts = ports + "," + port;
+              usedPorts = usedPorts + "," + port;
             }
           }
         }
         input.close();
         ir.close();
+        LOG.info("used Ports:" + usedPorts);
       }catch (Exception e) {
         LOG.warn("error get Ports usage info:" + e.toString());
       }
