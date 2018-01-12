@@ -362,6 +362,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             PrivilegedOperation.RunAsUserCommand.INITIALIZE_CONTAINER
                 .getValue()),
         appId,
+        locId,
         nmPrivateContainerTokensPath.toUri().getPath().toString(),
         StringUtils.join(PrivilegedOperation.LINUX_FILE_PATH_SEPARATOR,
             localDirs),

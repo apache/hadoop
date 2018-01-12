@@ -1091,11 +1091,62 @@ int create_log_dirs(const char *app_id, char * const * log_dirs) {
   return 0;
 }
 
+char* get_container_log_directory(const char *log_root, const char* app_id,
+                                  const char *container_id) {
+  return concatenate("%s/%s/%s", "container log dir", 3, log_root, app_id,
+                     container_id);
+}
+
+int create_container_log_dirs(const char *container_id, const char *app_id,
+                              char * const * log_dirs) {
+  char* const* log_root;
+  int created_any_dir = 0;
+  for(log_root=log_dirs; *log_root != NULL; ++log_root) {
+    char *container_log_dir = get_container_log_directory(*log_root, app_id,
+                        container_id);
+
+    if (container_log_dir == NULL) {
+      fprintf(LOGFILE,
+              "Failed to get container log directory name! Log root directory: %s, App id: %s, Container id: %s\n",
+              *log_root, app_id, container_id);
+      continue;
+    }
+
+    int result = check_nm_local_dir(nm_uid, *log_root);
+    if (result != 0 && container_log_dir != NULL) {
+      fprintf(LOGFILE, "Unsupported container log directory path (%s) detected.\n",
+              container_log_dir);
+      free(container_log_dir);
+      container_log_dir = NULL;
+      continue;
+    }
+
+    if (create_directory_for_user(container_log_dir) != 0) {
+      fprintf(LOGFILE, "Failed to create container log directory (%s)!\n",
+              container_log_dir);
+      free(container_log_dir);
+      return -1;
+    }
+
+    if (!created_any_dir) {
+      created_any_dir = 1;
+    }
+
+    free(container_log_dir);
+  }
+
+  if (!created_any_dir) {
+    fprintf(LOGFILE, "Did not create any container log directory.\n");
+    return -1;
+  }
+  return 0;
+}
 
 /**
  * Function to prepare the application directories for the container.
  */
 int initialize_app(const char *user, const char *app_id,
+                   const char *container_id,
                    const char* nmPrivate_credentials_file,
                    char* const* local_dirs, char* const* log_roots,
                    char* const* args) {
@@ -1114,6 +1165,13 @@ int initialize_app(const char *user, const char *app_id,
   int log_create_result = create_log_dirs(app_id, log_roots);
   if (log_create_result != 0) {
     return log_create_result;
+  }
+
+  // create the log directories for the container on all disks
+  int container_log_create_result = create_container_log_dirs(container_id,
+                                    app_id, log_roots);
+  if (container_log_create_result != 0) {
+    return container_log_create_result;
   }
 
   // open up the credentials file

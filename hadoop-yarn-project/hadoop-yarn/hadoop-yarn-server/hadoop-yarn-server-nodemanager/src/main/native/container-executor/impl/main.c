@@ -354,13 +354,14 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
   char * resources_value = NULL;
   switch (command) {
   case INITIALIZE_CONTAINER:
-    if (argc < 9) {
-      fprintf(ERRORFILE, "Too few arguments (%d vs 9) for initialize container\n",
+    if (argc < 10) {
+      fprintf(ERRORFILE, "Too few arguments (%d vs 10) for initialize container\n",
        argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
     cmd_input.app_id = argv[optind++];
+    cmd_input.container_id = argv[optind++];
     cmd_input.cred_file = argv[optind++];
     cmd_input.local_dirs = argv[optind++];// good local dirs as a comma separated list
     cmd_input.log_dirs = argv[optind++];// good log dirs as a comma separated list
@@ -557,6 +558,7 @@ int main(int argc, char **argv) {
 
     exit_code = initialize_app(cmd_input.yarn_user_name,
                             cmd_input.app_id,
+                            cmd_input.container_id,
                             cmd_input.cred_file,
                             split(cmd_input.local_dirs),
                             split(cmd_input.log_dirs),
