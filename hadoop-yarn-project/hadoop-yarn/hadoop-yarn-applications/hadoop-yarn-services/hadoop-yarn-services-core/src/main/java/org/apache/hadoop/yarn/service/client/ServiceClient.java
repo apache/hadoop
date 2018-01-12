@@ -898,7 +898,21 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     }
   }
 
-  public String getStatusString(String appId)
+  @Override
+  public String getStatusString(String appIdOrName)
+      throws IOException, YarnException {
+    try {
+      // try parsing appIdOrName, if it succeeds, it means it's appId
+      ApplicationId.fromString(appIdOrName);
+      return getStatusByAppId(appIdOrName);
+    } catch (IllegalArgumentException e) {
+      // not appId format, it could be appName.
+      Service status = getStatus(appIdOrName);
+      return status.toString();
+    }
+  }
+
+  private String getStatusByAppId(String appId)
       throws IOException, YarnException {
     ApplicationReport appReport =
         yarnClient.getApplicationReport(ApplicationId.fromString(appId));
@@ -909,8 +923,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if (StringUtils.isEmpty(appReport.getHost())) {
       return "";
     }
-    ClientAMProtocol amProxy =
-        createAMProxy(appReport.getName(), appReport);
+    ClientAMProtocol amProxy = createAMProxy(appReport.getName(), appReport);
     GetStatusResponseProto response =
         amProxy.getStatus(GetStatusRequestProto.newBuilder().build());
     return response.getStatus();
