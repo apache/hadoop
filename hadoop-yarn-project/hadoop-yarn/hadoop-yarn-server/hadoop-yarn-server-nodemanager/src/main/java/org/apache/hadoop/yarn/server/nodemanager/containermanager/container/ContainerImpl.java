@@ -849,14 +849,17 @@ public class ContainerImpl implements Container {
   public NMContainerStatus getNMContainerStatus() {
     this.readLock.lock();
     try {
-      return NMContainerStatus.newInstance(this.containerId,
-          this.version, getCurrentState(), getResource(),
-          diagnostics.toString(), exitCode,
-          containerTokenIdentifier.getPriority(),
-          containerTokenIdentifier.getCreationTime(),
-          containerTokenIdentifier.getNodeLabelExpression(),
-          containerTokenIdentifier.getExecutionType(),
-          containerTokenIdentifier.getAllocationRequestId());
+      NMContainerStatus status =
+          NMContainerStatus.newInstance(this.containerId,
+              this.version, getCurrentState(), getResource(),
+              diagnostics.toString(), exitCode,
+              containerTokenIdentifier.getPriority(),
+              containerTokenIdentifier.getCreationTime(),
+              containerTokenIdentifier.getNodeLabelExpression(),
+              containerTokenIdentifier.getExecutionType(),
+              containerTokenIdentifier.getAllocationRequestId());
+      status.setAllocationTags(containerTokenIdentifier.getAllcationTags());
+      return status;
     } finally {
       this.readLock.unlock();
     }
