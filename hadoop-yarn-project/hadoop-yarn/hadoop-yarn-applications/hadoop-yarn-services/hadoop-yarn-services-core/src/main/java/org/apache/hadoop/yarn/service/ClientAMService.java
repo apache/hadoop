@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -117,7 +118,10 @@ public class ClientAMService extends AbstractService
   @Override
   public StopResponseProto stop(StopRequestProto requestProto)
       throws IOException, YarnException {
-    LOG.info("Stop the service.");
+    LOG.info("Stop the service by {}", UserGroupInformation.getCurrentUser());
+    context.scheduler.getDiagnostics()
+        .append("Stopped by user " + UserGroupInformation.getCurrentUser());
+
     // Stop the service in 2 seconds delay to make sure this rpc call is completed.
     // shutdown hook will be executed which will stop AM gracefully.
     Thread thread = new Thread() {
