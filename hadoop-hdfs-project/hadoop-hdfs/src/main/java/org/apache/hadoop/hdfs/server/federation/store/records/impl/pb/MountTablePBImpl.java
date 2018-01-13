@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProt
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProto.DestOrder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.MountTableRecordProtoOrBuilder;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RemoteLocationProto;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
@@ -255,16 +256,22 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
   @Override
   public RouterQuotaUsage getQuota() {
     MountTableRecordProtoOrBuilder proto = this.translator.getProtoOrBuilder();
-    if (!proto.hasQuota()) {
-      return null;
+
+    long nsQuota = HdfsConstants.QUOTA_DONT_SET;
+    long nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+    long ssQuota = HdfsConstants.QUOTA_DONT_SET;
+    long ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+    if (proto.hasQuota()) {
+      QuotaUsageProto quotaProto = proto.getQuota();
+      nsQuota = quotaProto.getQuota();
+      nsCount = quotaProto.getFileAndDirectoryCount();
+      ssQuota = quotaProto.getSpaceQuota();
+      ssCount = quotaProto.getSpaceConsumed();
     }
 
-    QuotaUsageProto quotaProto = proto.getQuota();
     RouterQuotaUsage.Builder builder = new RouterQuotaUsage.Builder()
-        .fileAndDirectoryCount(quotaProto.getFileAndDirectoryCount())
-        .quota(quotaProto.getQuota())
-        .spaceConsumed(quotaProto.getSpaceConsumed())
-        .spaceQuota(quotaProto.getSpaceQuota());
+        .quota(nsQuota).fileAndDirectoryCount(nsCount).spaceQuota(ssQuota)
+        .spaceConsumed(ssCount);
     return builder.build();
   }
 

@@ -144,8 +144,10 @@ public abstract class MountTable extends BaseRecord {
 
     // Set quota for mount table
     RouterQuotaUsage quota = new RouterQuotaUsage.Builder()
-        .fileAndDirectoryCount(0).quota(HdfsConstants.QUOTA_DONT_SET)
-        .spaceConsumed(0).spaceQuota(HdfsConstants.QUOTA_DONT_SET).build();
+        .fileAndDirectoryCount(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT)
+        .quota(HdfsConstants.QUOTA_DONT_SET)
+        .spaceConsumed(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT)
+        .spaceQuota(HdfsConstants.QUOTA_DONT_SET).build();
     record.setQuota(quota);
 
     // Validate
@@ -323,6 +325,10 @@ public abstract class MountTable extends BaseRecord {
 
     if (this.getMode() != null) {
       sb.append("[mode:").append(this.getMode()).append("]");
+    }
+
+    if (this.getQuota() != null) {
+      sb.append("[quota:").append(this.getQuota()).append("]");
     }
 
     return sb.toString();
