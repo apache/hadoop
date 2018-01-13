@@ -1538,6 +1538,24 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_FPGA_VENDOR_PLUGIN =
       "org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin";
 
+  public static final String NM_NETWORK_TAG_PREFIX = NM_PREFIX
+      + "network-tagging";
+
+  public static final String NM_NETWORK_TAG_HANDLER_ENABLED =
+      NM_NETWORK_TAG_PREFIX + "-handler.enabled";
+
+  public static final boolean DEFAULT_NM_NETWORK_TAG_HANDLER_ENABLED =
+      false;
+
+  public static final String NM_NETWORK_TAG_MAPPING_MANAGER =
+      NM_NETWORK_TAG_PREFIX + ".mapping-mamager.class";
+
+  public static final String NM_NETWORK_TAG_MAPPING_FILE_PATH =
+      NM_NETWORK_TAG_PREFIX + ".mapping-file.path";
+
+  public static final String DEFAULT_NM_NETWORK_RESOURCE_TAG_MAPPING_FILE_PATH =
+      "";
+
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
   public static final int DEFAULT_NM_WEBAPP_PORT = 8042;
