@@ -327,7 +327,9 @@ class BlockSender implements java.io.Closeable {
                 metaIn.getLength() >= BlockMetadataHeader.getHeaderSize()) {
               checksumIn = new DataInputStream(new BufferedInputStream(
                   metaIn, IO_FILE_BUFFER_SIZE));
-  
+              // HDFS-11160/HDFS-11056
+              DataNodeFaultInjector.get()
+                  .waitForBlockSenderMetaInputStreamBeforeAppend();
               csum = BlockMetadataHeader.readDataChecksum(checksumIn, block);
               keepMetaInOpen = true;
             }
