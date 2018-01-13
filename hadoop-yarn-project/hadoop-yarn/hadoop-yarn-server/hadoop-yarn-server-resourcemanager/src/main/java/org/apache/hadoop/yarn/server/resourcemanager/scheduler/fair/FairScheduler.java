@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -307,10 +306,12 @@ public class FairScheduler extends
   private void dumpSchedulerState() {
     FSQueue rootQueue = queueMgr.getRootQueue();
     Resource clusterResource = getClusterResource();
-    LOG.debug("FairScheduler state: Cluster Capacity: " + clusterResource +
+    STATE_DUMP_LOG.debug(
+        "FairScheduler state: Cluster Capacity: " + clusterResource +
         "  Allocations: " + rootMetrics.getAllocatedResources() +
         "  Availability: " + Resource.newInstance(
-        rootMetrics.getAvailableMB(), rootMetrics.getAvailableVirtualCores()) +
+            rootMetrics.getAvailableMB(),
+            rootMetrics.getAvailableVirtualCores()) +
         "  Demand: " + rootQueue.getDemand());
 
     STATE_DUMP_LOG.debug(rootQueue.dumpState());
@@ -351,7 +352,7 @@ public class FairScheduler extends
       }
 
       // Log debug information
-      if (LOG.isDebugEnabled()) {
+      if (STATE_DUMP_LOG.isDebugEnabled()) {
         if (--updatesToSkipForDebug < 0) {
           updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
           dumpSchedulerState();
@@ -669,27 +670,36 @@ public class FairScheduler extends
       ApplicationId appId =
           container.getId().getApplicationAttemptId().getApplicationId();
       if (application == null) {
-        LOG.info(
-            "Container " + container + " of" + " finished application " + appId
-                + " completed with event " + event);
+        LOG.info("Container " + container + " of finished application " +
+            appId + " completed with event " + event);
         return;
       }
 
       // Get the node on which the container was allocated
-      FSSchedulerNode node = getFSSchedulerNode(container.getNodeId());
-
+      NodeId nodeID = container.getNodeId();
+      FSSchedulerNode node = getFSSchedulerNode(nodeID);
+      // node could be null if the thread was waiting for the lock and the node
+      // was removed in another thread
       if (rmContainer.getState() == RMContainerState.RESERVED) {
-        application.unreserve(rmContainer.getReservedSchedulerKey(), node);
-      } else{
+        if (node != null) {
+          application.unreserve(rmContainer.getReservedSchedulerKey(), node);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping unreserve on removed node: " + nodeID);
+        }
+      } else {
         application.containerCompleted(rmContainer, containerStatus, event);
-        node.releaseContainer(rmContainer.getContainerId(), false);
+        if (node != null) {
+          node.releaseContainer(rmContainer.getContainerId(), false);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping container release on removed node: " + nodeID);
+        }
         updateRootQueueMetrics();
       }
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Application attempt " + application.getApplicationAttemptId()
-            + " released container " + container.getId() + " on node: " + node
-            + " with event: " + event);
+            + " released container " + container.getId() + " on node: " +
+            (node == null ? nodeID : node) + " with event: " + event);
       }
     } finally {
       writeLock.unlock();
@@ -1355,7 +1365,6 @@ public class FairScheduler extends
     super.serviceInit(conf);
 
     // Initialize SchedulingMonitorManager
-    schedulingMonitorManager = new SchedulingMonitorManager();
     schedulingMonitorManager.initialize(rmContext, conf);
   }
 

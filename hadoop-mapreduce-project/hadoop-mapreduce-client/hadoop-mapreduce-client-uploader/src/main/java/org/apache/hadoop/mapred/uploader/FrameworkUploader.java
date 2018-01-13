@@ -40,6 +40,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.NotLinkException;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -71,6 +74,7 @@ public class FrameworkUploader implements Runnable {
   String target = null;
   @VisibleForTesting
   short replication = 10;
+  private boolean ignoreSymlink = false;
 
   @VisibleForTesting
   Set<String> filteredInputFiles = new HashSet<>();
@@ -79,8 +83,7 @@ public class FrameworkUploader implements Runnable {
   @VisibleForTesting
   List<Pattern> blacklistedFiles = new LinkedList<>();
 
-  @VisibleForTesting
-  OutputStream targetStream = null;
+  private OutputStream targetStream = null;
   private String alias = null;
 
   private void printHelp(Options options) {
@@ -284,6 +287,9 @@ public class FrameworkUploader implements Runnable {
         break;
       }
     }
+    if (ignoreSymlink && !excluded) {
+      excluded = checkSymlink(jar);
+    }
     if (found && !excluded) {
       LOG.info("Whitelisted " + jar.getAbsolutePath());
       if (!filteredInputFiles.add(jar.getAbsolutePath())) {
@@ -297,6 +303,40 @@ public class FrameworkUploader implements Runnable {
       LOG.info("Ignored " + jar.getAbsolutePath() + " because it is on " +
           "the the blacklist");
     }
+  }
+
+  /**
+   * Check if the file is a symlink to the same directory.
+   * @param jar The file to check
+   * @return true, to ignore the directory
+   */
+  @VisibleForTesting
+  boolean checkSymlink(File jar) {
+    if (Files.isSymbolicLink(jar.toPath())) {
+      try {
+        java.nio.file.Path link = Files.readSymbolicLink(jar.toPath());
+        java.nio.file.Path jarPath = Paths.get(jar.getAbsolutePath());
+        String linkString = link.toString();
+        java.nio.file.Path jarParent = jarPath.getParent();
+        java.nio.file.Path linkPath =
+            jarParent == null ? null : jarParent.resolve(linkString);
+        java.nio.file.Path linkPathParent =
+            linkPath == null ? null : linkPath.getParent();
+        java.nio.file.Path normalizedLinkPath =
+            linkPathParent == null ? null : linkPathParent.normalize();
+        if (normalizedLinkPath != null && jarParent.equals(
+            normalizedLinkPath)) {
+          LOG.info(String.format("Ignoring same directory link %s to %s",
+              jarPath.toString(), link.toString()));
+          return true;
+        }
+      } catch (NotLinkException ex) {
+        LOG.debug("Not a link", jar);
+      } catch (IOException ex) {
+        LOG.warn("Cannot read symbolic link on", jar);
+      }
+    }
+    return false;
   }
 
   private void validateTargetPath() throws UploaderException {
@@ -340,6 +380,9 @@ public class FrameworkUploader implements Runnable {
         .withDescription(
             "Desired replication count")
         .hasArg().create("replication"));
+    opts.addOption(OptionBuilder
+        .withDescription("Ignore symlinks into the same directory")
+        .create("nosymlink"));
     GenericOptionsParser parser = new GenericOptionsParser(opts, args);
     if (parser.getCommandLine().hasOption("help") ||
         parser.getCommandLine().hasOption("h")) {
@@ -354,6 +397,9 @@ public class FrameworkUploader implements Runnable {
         "blacklist", DefaultJars.DEFAULT_EXCLUDED_MR_JARS);
     replication = Short.parseShort(parser.getCommandLine().getOptionValue(
         "replication", "10"));
+    if (parser.getCommandLine().hasOption("nosymlink")) {
+      ignoreSymlink = true;
+    }
     String fs = parser.getCommandLine()
         .getOptionValue("fs", null);
     if (fs == null) {

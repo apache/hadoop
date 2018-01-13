@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -24,6 +25,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +48,8 @@ public class TestMountTableResolver {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMountTableResolver.class);
+
+  private static final int TEST_MAX_CACHE_SIZE = 10;
 
   private MountTableResolver mountTable;
 
@@ -75,6 +80,8 @@ public class TestMountTableResolver {
    */
   private void setupMountTable() throws IOException {
     Configuration conf = new Configuration();
+    conf.setInt(
+        FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE, TEST_MAX_CACHE_SIZE);
     mountTable = new MountTableResolver(conf);
 
     // Root mount point
@@ -408,5 +415,45 @@ public class TestMountTableResolver {
 
     assertEquals(numRootTrees, mountTable.getMountPoints("/").size());
     assertEquals(100000, mountTable.getMounts("/").size());
+  }
+
+  @Test
+  public void testUpdate() throws IOException {
+
+    // Add entry to update later
+    Map<String, String> map = getMountTableEntry("1", "/");
+    mountTable.addEntry(MountTable.newInstance("/testupdate", map));
+
+    MountTable entry = mountTable.getMountPoint("/testupdate");
+    List<RemoteLocation> dests = entry.getDestinations();
+    assertEquals(1, dests.size());
+    RemoteLocation dest = dests.get(0);
+    assertEquals("1", dest.getNameserviceId());
+
+    // Update entry
+    Collection<MountTable> entries = Collections.singletonList(
+        MountTable.newInstance("/testupdate", getMountTableEntry("2", "/")));
+    mountTable.refreshEntries(entries);
+
+    MountTable entry1 = mountTable.getMountPoint("/testupdate");
+    List<RemoteLocation> dests1 = entry1.getDestinations();
+    assertEquals(1, dests1.size());
+    RemoteLocation dest1 = dests1.get(0);
+    assertEquals("2", dest1.getNameserviceId());
+
+    // Remove the entry to test updates and check
+    mountTable.removeEntry("/testupdate");
+    MountTable entry2 = mountTable.getMountPoint("/testupdate");
+    assertNull(entry2);
+  }
+
+  @Test
+  public void testCacheCleaning() throws Exception {
+    for (int i = 0; i < 1000; i++) {
+      String filename = String.format("/user/a/file-%04d.txt", i);
+      mountTable.getDestinationForPath(filename);
+    }
+    long cacheSize = mountTable.getCacheSize();
+    assertTrue(cacheSize <= TEST_MAX_CACHE_SIZE);
   }
 }

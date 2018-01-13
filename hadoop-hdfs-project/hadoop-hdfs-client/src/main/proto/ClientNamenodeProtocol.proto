@@ -796,8 +796,15 @@ message GetEditsFromTxidResponseProto {
   required EventsListProto eventsList = 1;
 }
 
+enum OpenFilesTypeProto {
+  ALL_OPEN_FILES = 1;
+  BLOCKING_DECOMMISSION = 2;
+}
+
 message ListOpenFilesRequestProto {
   required int64 id = 1;
+  repeated OpenFilesTypeProto types = 2;
+  optional string path = 3;
 }
 
 message OpenFilesBatchResponseProto {
@@ -810,6 +817,7 @@ message OpenFilesBatchResponseProto {
 message ListOpenFilesResponseProto {
   repeated OpenFilesBatchResponseProto entries = 1;
   required bool hasMore = 2;
+  repeated OpenFilesTypeProto types = 3;
 }
 
 service ClientNamenodeProtocol {

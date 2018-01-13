@@ -133,6 +133,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.ReencryptionStatusIterator;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -3084,8 +3085,51 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    * @throws IOException
    */
+  @Deprecated
   public RemoteIterator<OpenFileEntry> listOpenFiles() throws IOException {
     checkOpen();
-    return new OpenFilesIterator(namenode, tracer);
+    return listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
+  }
+
+  /**
+   * Get a remote iterator to the open files list by path,
+   * managed by NameNode.
+   *
+   * @param path
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles(String path)
+      throws IOException {
+    checkOpen();
+    return listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES), path);
+  }
+
+  /**
+   * Get a remote iterator to the open files list by type,
+   * managed by NameNode.
+   *
+   * @param openFilesTypes
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
+    checkOpen();
+    return listOpenFiles(openFilesTypes,
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
+  }
+
+  /**
+   * Get a remote iterator to the open files list by type and path,
+   * managed by NameNode.
+   *
+   * @param openFilesTypes
+   * @param path
+   * @throws IOException
+   */
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
+    checkOpen();
+    return new OpenFilesIterator(namenode, tracer, openFilesTypes, path);
   }
 }

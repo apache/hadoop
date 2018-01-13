@@ -138,7 +138,12 @@ public class ApplicationCLI extends YarnCLI {
         .equalsIgnoreCase(APP))) {
       title = APPLICATION;
       opts.addOption(STATUS_CMD, true,
-          "Prints the status of the application.");
+          "Prints the status of the application. If app ID is"
+              + " provided, it prints the generic YARN application status."
+              + " If name is provided, it prints the application specific"
+              + " status based on app's own implementation, and -appTypes"
+              + " option must be specified unless it is the default"
+              + " yarn-service type.");
       opts.addOption(LIST_CMD, false, "List applications. "
           + "Supports optional use of -appTypes to filter applications "
           + "based on application type, -appStates to filter applications "
@@ -190,7 +195,7 @@ public class ApplicationCLI extends YarnCLI {
       opts.addOption(killOpt);
       opts.getOption(MOVE_TO_QUEUE_CMD).setArgName("Application ID");
       opts.getOption(QUEUE_CMD).setArgName("Queue Name");
-      opts.getOption(STATUS_CMD).setArgName("Application ID");
+      opts.getOption(STATUS_CMD).setArgName("Application Name or ID");
       opts.getOption(APP_ID).setArgName("Application ID");
       opts.getOption(UPDATE_PRIORITY).setArgName("Priority");
       opts.getOption(UPDATE_LIFETIME).setArgName("Timeout");
@@ -289,27 +294,31 @@ public class ApplicationCLI extends YarnCLI {
     }
 
     if (cliParser.hasOption(STATUS_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, STATUS_CMD)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, STATUS_CMD, APP_TYPE_CMD)) {
         printUsage(title, opts);
         return exitCode;
       }
       if (title.equalsIgnoreCase(APPLICATION) ||
           title.equalsIgnoreCase(APP)) {
-        ApplicationReport report = printApplicationReport(cliParser
-            .getOptionValue(STATUS_CMD));
-        if (report == null) {
-          exitCode = -1;
-        } else {
-          exitCode = 0;
-          String appType = report.getApplicationType();
+        String appIdOrName = cliParser.getOptionValue(STATUS_CMD);
+        try {
+          // try parsing appIdOrName, if it succeeds, it means it's appId
+          ApplicationId.fromString(appIdOrName);
+          exitCode = printApplicationReport(appIdOrName);
+        } catch (IllegalArgumentException e) {
+          // not appId format, it could be appName.
+          // Print app specific report, if app-type is not provided,
+          // assume it is yarn-service type.
+          AppAdminClient client = AppAdminClient
+              .createAppAdminClient(getSingleAppTypeFromCLI(cliParser),
+                  getConf());
           try {
-            AppAdminClient client = AppAdminClient.createAppAdminClient(appType,
-                getConf());
-            sysout.println("Detailed Application Status :");
-            sysout.println(client.getStatusString(cliParser.getOptionValue(
-                STATUS_CMD)));
-          } catch (IllegalArgumentException e) {
-            // app type does not have app admin client implementation
+            sysout.println(client.getStatusString(appIdOrName));
+            exitCode = 0;
+          } catch (ApplicationNotFoundException exception) {
+            System.err.println("Application with name '" + appIdOrName
+                + "' doesn't exist in RM or Timeline Server.");
+            return -1;
           }
         }
       } else if (title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
@@ -891,7 +900,7 @@ public class ApplicationCLI extends YarnCLI {
    * @return ApplicationReport
    * @throws YarnException
    */
-  private ApplicationReport printApplicationReport(String applicationId)
+  private int printApplicationReport(String applicationId)
       throws YarnException, IOException {
     ApplicationReport appReport = null;
     try {
@@ -900,7 +909,7 @@ public class ApplicationCLI extends YarnCLI {
     } catch (ApplicationNotFoundException e) {
       sysout.println("Application with id '" + applicationId
           + "' doesn't exist in RM or Timeline Server.");
-      return null;
+      return -1;
     }
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -964,11 +973,11 @@ public class ApplicationCLI extends YarnCLI {
           + "' doesn't exist in RM.");
       appReportStr.close();
       sysout.println(baos.toString("UTF-8"));
-      return null;
+      return -1;
     }
     appReportStr.close();
     sysout.println(baos.toString("UTF-8"));
-    return appReport;
+    return 0;
   }
 
   private void printResourceUsage(PrintWriter appReportStr,

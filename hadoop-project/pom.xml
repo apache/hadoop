@@ -1571,6 +1571,7 @@
             <ignore>sun.nio.ch.*</ignore>
             <ignore>com.sun.javadoc.*</ignore>
             <ignore>com.sun.tools.*</ignore>
+            <ignore>java.lang.invoke.*</ignore>
           </ignores>
         </configuration>
       </plugin>

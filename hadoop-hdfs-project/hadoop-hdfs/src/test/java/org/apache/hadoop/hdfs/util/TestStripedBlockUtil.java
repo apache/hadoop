@@ -40,6 +40,7 @@ import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Need to cover the following combinations:
@@ -127,7 +128,7 @@ public class TestStripedBlockUtil {
     return (byte) (((i + 13) * 29) & BYTE_MASK);
   }
 
-  private LocatedStripedBlock createDummyLocatedBlock(int bgSize) {
+  private LocatedStripedBlock createDummyLocatedBlock(long bgSize) {
     final long blockGroupID = -1048576;
     DatanodeInfo[] locs = new DatanodeInfo[groupSize];
     String[] storageIDs = new String[groupSize];
@@ -160,7 +161,7 @@ public class TestStripedBlockUtil {
       Preconditions.checkState(done % cellSize == 0);
       StripingCell cell =
           new StripingCell(ecPolicy, cellSize, done / cellSize, 0);
-      int idxInStripe = cell.idxInStripe;
+      int idxInStripe = cell.getIdxInStripe();
       int size = Math.min(cellSize, bgSize - done);
       for (int i = 0; i < size; i++) {
         bufs[idxInStripe][pos[idxInStripe] + i] = hashIntToByte(done + i);
@@ -282,5 +283,41 @@ public class TestStripedBlockUtil {
         }
       }
     }
+  }
+
+  /**
+   * Test dividing a byte range that located above the 2GB range, which is
+   * {@link Integer#MAX_VALUE}.
+   *
+   * HDFS-12860 occurs when {@link VerticalRange#offsetInBlock} is larger than
+   * {@link Integer#MAX_VALUE}
+   *
+   * Take RS-6-3-1024k EC policy as example:
+   *  <li>cellSize = 1MB</li>
+   *  <li>The first {@link VerticalRange#offsetInBlock} that is larger than
+   *  {@link Integer#MAX_VALUE} is Math.ceilInteger.MAX_VALUE / cellSize = 2048
+   *  </li>
+   *  <li>The first offset in block group that causes HDFS-12860 is:
+   *  2048 * cellSize * dataBlocks (6)</li>
+   */
+  @Test
+  public void testDivideOneStripeLargeBlockSize() {
+    ByteBuffer buffer = ByteBuffer.allocate(stripeSize);
+
+    // This offset will cause overflow before HDFS-12860.
+    long offsetInInternalBlk = Integer.MAX_VALUE / cellSize + 10;
+    long rangeStartInBlockGroup = offsetInInternalBlk * dataBlocks * cellSize;
+    long rangeEndInBlockGroup = rangeStartInBlockGroup +
+        dataBlocks / 2 * cellSize - 1;
+    // each block is 4GB, each block group has 4GB * (6 + 3) = 36GB.
+    long blockGroupSize = 4096L * cellSize * groupSize;
+    LocatedStripedBlock blockGroup = createDummyLocatedBlock(blockGroupSize);
+    AlignedStripe[] stripes = StripedBlockUtil.divideOneStripe(ecPolicy,
+        cellSize, blockGroup, rangeStartInBlockGroup, rangeEndInBlockGroup,
+        buffer);
+    long offset = offsetInInternalBlk * cellSize;
+    assertTrue(offset > Integer.MAX_VALUE);
+    assertEquals(offset, stripes[0].range.offsetInBlock);
+    assertEquals(1, stripes.length);
   }
 }

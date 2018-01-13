@@ -855,9 +855,9 @@ public class MockRM extends ResourceManager {
     return nm;
   }
 
-  public MockNM registerNode(String nodeIdStr, Resource nodeCapatibility)
+  public MockNM registerNode(String nodeIdStr, Resource nodeCapability)
       throws Exception {
-    MockNM nm = new MockNM(nodeIdStr, nodeCapatibility,
+    MockNM nm = new MockNM(nodeIdStr, nodeCapability,
         getResourceTrackerService());
     nm.registerNode();
     drainEventsImplicitly();
@@ -1199,6 +1199,7 @@ public class MockRM extends ResourceManager {
     nm.nodeHeartbeat(true);
     ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
+    nm.nodeHeartbeat(true);
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
     return am;
@@ -1215,6 +1216,7 @@ public class MockRM extends ResourceManager {
     nm.nodeHeartbeat(true);
     ((AbstractYarnScheduler)rm.getResourceScheduler()).update();
     rm.drainEventsImplicitly();
+    nm.nodeHeartbeat(true);
     MockAM am = new MockAM(rm.getRMContext(), rm.masterService,
         attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);

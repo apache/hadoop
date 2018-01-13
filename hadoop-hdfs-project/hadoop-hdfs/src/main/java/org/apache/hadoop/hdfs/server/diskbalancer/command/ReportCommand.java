@@ -100,7 +100,7 @@ public class ReportCommand extends Command {
   }
 
   private void handleTopReport(final CommandLine cmd, final StrBuilder result,
-      final String nodeFormat) {
+      final String nodeFormat) throws IllegalArgumentException {
     Collections.sort(getCluster().getNodes(), Collections.reverseOrder());
 
     /* extract value that identifies top X DataNode(s) */

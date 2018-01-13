@@ -36,10 +36,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
+import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -649,8 +653,10 @@ public class DatanodeAdminManager {
         boolean pruneReliableBlocks) {
       boolean firstReplicationLog = true;
       // Low redundancy in UC Blocks only
-      int lowRedundancyInOpenFiles = 0;
-      // All low redundancy blocks. Includes lowRedundancyInOpenFiles.
+      int lowRedundancyBlocksInOpenFiles = 0;
+      LightWeightHashSet<Long> lowRedundancyOpenFiles =
+          new LightWeightLinkedSet<>();
+      // All low redundancy blocks. Includes lowRedundancyOpenFiles.
       int lowRedundancyBlocks = 0;
       // All maintenance and decommission replicas.
       int outOfServiceOnlyReplicas = 0;
@@ -737,15 +743,24 @@ public class DatanodeAdminManager {
         // Update various counts
         lowRedundancyBlocks++;
         if (bc.isUnderConstruction()) {
-          lowRedundancyInOpenFiles++;
+          INode ucFile = namesystem.getFSDirectory().getInode(bc.getId());
+          if(!(ucFile instanceof  INodeFile) ||
+              !ucFile.asFile().isUnderConstruction()) {
+            LOG.warn("File " + ucFile.getLocalName() + " is not under " +
+                "construction. Skipping add to low redundancy open files!");
+          } else {
+            lowRedundancyBlocksInOpenFiles++;
+            lowRedundancyOpenFiles.add(ucFile.getId());
+          }
         }
         if ((liveReplicas == 0) && (num.outOfServiceReplicas() > 0)) {
           outOfServiceOnlyReplicas++;
         }
       }
 
-      datanode.getLeavingServiceStatus().set(lowRedundancyInOpenFiles,
-          lowRedundancyBlocks, outOfServiceOnlyReplicas);
+      datanode.getLeavingServiceStatus().set(lowRedundancyBlocksInOpenFiles,
+          lowRedundancyOpenFiles, lowRedundancyBlocks,
+          outOfServiceOnlyReplicas);
     }
   }
 

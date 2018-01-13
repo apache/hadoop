@@ -18,6 +18,8 @@
 
 #include "util.h"
 
+#include <dirent.h>
+#include <errno.h>
 #include <strings.h>
 #include <string.h>
 #include <stdio.h>
@@ -49,4 +51,16 @@ int verify_path_safety(const char* path) {
   free(dup);
 
   return succeeded;
+}
+
+int dir_exists(const char* path) {
+  DIR* dir = opendir(path);
+  if (dir) {
+    closedir(dir);
+    return 0;
+  } else if (ENOENT == errno) {
+    return 1;
+  } else {
+    return -1;
+  }
 }

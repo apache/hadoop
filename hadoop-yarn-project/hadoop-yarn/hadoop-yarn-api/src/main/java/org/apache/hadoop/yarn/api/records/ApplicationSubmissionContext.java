@@ -598,4 +598,25 @@ public abstract class ApplicationSubmissionContext {
   @Unstable
   public abstract void setApplicationTimeouts(
       Map<ApplicationTimeoutType, Long> applicationTimeouts);
+
+  /**
+   * Get application scheduling environment variables stored as a key value
+   * pair map for application.
+   *
+   * @return placement envs for application.
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, String> getApplicationSchedulingPropertiesMap();
+
+  /**
+   * Set the scheduling envs for the application.
+   *
+   * @param schedulingEnvMap
+   *          A map of env's for the application scheduling preferences.
+   */
+  @Public
+  @Unstable
+  public abstract void setApplicationSchedulingPropertiesMap(
+      Map<String, String> schedulingEnvMap);
 }

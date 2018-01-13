@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Localize
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 
@@ -51,8 +52,18 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Reso
 @Unstable
 public abstract class NMStateStoreService extends AbstractService {
 
+  private NodeStatusUpdater nodeStatusUpdater = null;
+
   public NMStateStoreService(String name) {
     super(name);
+  }
+
+  protected NodeStatusUpdater getNodeStatusUpdater() {
+    return nodeStatusUpdater;
+  }
+
+  public void setNodeStatusUpdater(NodeStatusUpdater nodeStatusUpdater) {
+    this.nodeStatusUpdater = nodeStatusUpdater;
   }
 
   public static class RecoveredApplicationsState {

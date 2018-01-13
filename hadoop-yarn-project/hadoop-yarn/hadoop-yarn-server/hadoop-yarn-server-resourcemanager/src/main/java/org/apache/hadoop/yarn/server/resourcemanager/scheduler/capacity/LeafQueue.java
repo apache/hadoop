@@ -703,6 +703,7 @@ public class LeafQueue extends AbstractCSQueue {
        */
       float effectiveUserLimit = Math.max(usersManager.getUserLimit() / 100.0f,
           1.0f / Math.max(getAbstractUsersManager().getNumActiveUsers(), 1));
+      float preWeightedUserLimit = effectiveUserLimit;
       effectiveUserLimit = Math.min(effectiveUserLimit * userWeight, 1.0f);
 
       Resource queuePartitionResource = getEffectiveCapacity(nodePartition);
@@ -712,10 +713,28 @@ public class LeafQueue extends AbstractCSQueue {
           queueCapacities.getMaxAMResourcePercentage(nodePartition)
               * effectiveUserLimit * usersManager.getUserLimitFactor(),
           minimumAllocation);
-      return Resources.lessThanOrEqual(resourceCalculator, lastClusterResource,
-          userAMLimit, getAMResourceLimitPerPartition(nodePartition)) ?
-          userAMLimit :
-          getAMResourceLimitPerPartition(nodePartition);
+      userAMLimit =
+          Resources.min(resourceCalculator, lastClusterResource,
+              userAMLimit,
+              Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
+
+      Resource preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+          resourceCalculator, queuePartitionResource,
+          queueCapacities.getMaxAMResourcePercentage(nodePartition)
+              * preWeightedUserLimit * usersManager.getUserLimitFactor(),
+          minimumAllocation);
+      preWeighteduserAMLimit =
+          Resources.min(resourceCalculator, lastClusterResource,
+              preWeighteduserAMLimit,
+              Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
+      queueUsage.setUserAMLimit(nodePartition, preWeighteduserAMLimit);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Effective user AM limit for \"" + userName + "\":" +
+            preWeighteduserAMLimit + ". " + "Effective weighted user AM limit: "
+            + userAMLimit + ". User weight: " + userWeight);
+      }
+      return userAMLimit;
     } finally {
       readLock.unlock();
     }

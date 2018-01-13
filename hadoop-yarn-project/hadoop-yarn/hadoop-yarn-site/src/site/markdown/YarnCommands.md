@@ -61,7 +61,7 @@ Usage: `yarn app [options] `
 | -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
 | -save \<Application Name\> \<File Name\> | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
 | -start \<Application Name\> | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. |
-| -status \<ApplicationId\> | Prints the status of the application. |
+| -status \<ApplicationId or ApplicationName\> | Prints the status of the application. If app ID is provided, it prints the generic YARN application status. If name is provided, it prints the application specific status based on app's own implementation, and -appTypes option must be specified unless it is the default `yarn-service` type.|
 | -stop \<Application Name or ID\> | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
 | -updateLifetime \<Timeout\> | Update timeout of an application from NOW. ApplicationId can be passed using 'appId' option. Timeout value is in seconds. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |

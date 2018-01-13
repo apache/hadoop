@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.service.timelineservice.ServiceTimelinePublisher;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.ServiceRegistryUtils;
 import org.apache.hadoop.yarn.util.BoundedAppender;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -261,13 +262,10 @@ public class ServiceScheduler extends CompositeService {
       serviceTimelinePublisher
           .serviceAttemptUnregistered(context, diagnostics.toString());
     }
-    String msg = diagnostics.toString()
-        + "Navigate to the failed component for more details.";
-    amRMClient
-        .unregisterApplicationMaster(FinalApplicationStatus.ENDED, msg, "");
-    LOG.info("Service " + app.getName()
-        + " unregistered with RM, with attemptId = " + context.attemptId
-        + ", diagnostics = " + diagnostics);
+    amRMClient.unregisterApplicationMaster(FinalApplicationStatus.ENDED,
+        diagnostics.toString(), "");
+    LOG.info("Service {} unregistered with RM, with attemptId = {} " +
+        ", diagnostics = {} ", app.getName(), context.attemptId, diagnostics);
     super.serviceStop();
   }
 
@@ -278,6 +276,12 @@ public class ServiceScheduler extends CompositeService {
     RegisterApplicationMasterResponse response = amRMClient
         .registerApplicationMaster(bindAddress.getHostName(),
             bindAddress.getPort(), "N/A");
+
+    // Update internal resource types according to response.
+    if (response.getResourceTypes() != null) {
+      ResourceUtils.reinitializeResources(response.getResourceTypes());
+    }
+
     if (response.getClientToAMTokenMasterKey() != null
         && response.getClientToAMTokenMasterKey().remaining() != 0) {
       context.secretManager

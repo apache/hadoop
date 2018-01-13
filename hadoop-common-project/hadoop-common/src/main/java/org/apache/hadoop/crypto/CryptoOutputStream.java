@@ -26,6 +26,7 @@ import java.security.GeneralSecurityException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetDropBehind;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
 import com.google.common.base.Preconditions;
@@ -47,7 +48,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CryptoOutputStream extends FilterOutputStream implements 
-    Syncable, CanSetDropBehind {
+    Syncable, CanSetDropBehind, StreamCapabilities {
   private final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Encryptor encryptor;
@@ -303,5 +304,13 @@ public class CryptoOutputStream extends FilterOutputStream implements
   private void freeBuffers() {
     CryptoStreamUtils.freeDB(inBuffer);
     CryptoStreamUtils.freeDB(outBuffer);
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    if (out instanceof StreamCapabilities) {
+      return ((StreamCapabilities) out).hasCapability(capability);
+    }
+    return false;
   }
 }

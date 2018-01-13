@@ -32,4 +32,11 @@
  */
 int verify_path_safety(const char* path);
 
+/*
+ * Verify that a given directory exists.
+ * return 0 if the directory exists, 1 if the directory does not exist, and -1
+ * for all other errors.
+ */
+int dir_exists(const char* path);
+
 #endif
