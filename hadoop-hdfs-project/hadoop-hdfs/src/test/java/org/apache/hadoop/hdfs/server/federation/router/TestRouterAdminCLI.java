@@ -313,9 +313,11 @@ public class TestRouterAdminCLI {
     RouterQuotaUsage quotaUsage = mountTable.getQuota();
 
     // verify the default quota set
-    assertEquals(0, quotaUsage.getFileAndDirectoryCount());
+    assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+        quotaUsage.getFileAndDirectoryCount());
     assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getQuota());
-    assertEquals(0, quotaUsage.getSpaceConsumed());
+    assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+        quotaUsage.getSpaceConsumed());
     assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getSpaceQuota());
 
     long nsQuota = 50;
@@ -333,6 +335,19 @@ public class TestRouterAdminCLI {
     // verify if the quota is set
     assertEquals(nsQuota, quotaUsage.getQuota());
     assertEquals(ssQuota, quotaUsage.getSpaceQuota());
+
+    // use quota string for setting ss quota
+    String newSsQuota = "2m";
+    argv = new String[] {"-setQuota", src, "-ssQuota", newSsQuota};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    quotaUsage = mountTable.getQuota();
+    // verify if ss quota is correctly set
+    assertEquals(2 * 1024 * 1024, quotaUsage.getSpaceQuota());
 
     // test clrQuota command
     argv = new String[] {"-clrQuota", src};

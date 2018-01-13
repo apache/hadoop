@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -395,8 +396,8 @@ public class RouterAdmin extends Configured implements Tool {
   private static void printMounts(List<MountTable> entries) {
     System.out.println("Mount Table Entries:");
     System.out.println(String.format(
-        "%-25s %-25s %-25s %-25s %-25s",
-        "Source", "Destinations", "Owner", "Group", "Mode"));
+        "%-25s %-25s %-25s %-25s %-25s %-25s",
+        "Source", "Destinations", "Owner", "Group", "Mode", "Quota/Usage"));
     for (MountTable entry : entries) {
       StringBuilder destBuilder = new StringBuilder();
       for (RemoteLocation location : entry.getDestinations()) {
@@ -409,8 +410,10 @@ public class RouterAdmin extends Configured implements Tool {
       System.out.print(String.format("%-25s %-25s", entry.getSourcePath(),
           destBuilder.toString()));
 
-      System.out.println(String.format(" %-25s %-25s %-25s",
+      System.out.print(String.format(" %-25s %-25s %-25s",
           entry.getOwnerName(), entry.getGroupName(), entry.getMode()));
+
+      System.out.println(String.format(" %-25s", entry.getQuota()));
     }
   }
 
@@ -436,7 +439,8 @@ public class RouterAdmin extends Configured implements Tool {
       } else if (parameters[i].equals("-ssQuota")) {
         i++;
         try {
-          ssQuota = Long.parseLong(parameters[i]);
+          ssQuota = StringUtils.TraditionalBinaryPrefix
+              .string2long(parameters[i]);
         } catch (Exception e) {
           System.err.println("Cannot parse ssQuota: " + parameters[i]);
         }
@@ -499,11 +503,11 @@ public class RouterAdmin extends Configured implements Tool {
       // If nsQuota or ssQuota was unset, reset corresponding usage
       // value to zero.
       if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
-        nsCount = 0;
+        nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
       }
 
       if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
-        ssCount = 0;
+        ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
       }
 
       RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()

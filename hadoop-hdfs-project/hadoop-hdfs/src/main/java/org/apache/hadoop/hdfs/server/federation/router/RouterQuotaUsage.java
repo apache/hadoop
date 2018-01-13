@@ -19,14 +19,20 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.DirectoryWithQuotaFeature;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * The subclass of {@link QuotaUsage} used in Router-based federation.
  */
 public final class RouterQuotaUsage extends QuotaUsage {
+
+  /** Default quota usage count. */
+  public static final long QUOTA_USAGE_COUNT_DEFAULT = 0;
+
   private RouterQuotaUsage(Builder builder) {
     super(builder);
   }
@@ -84,5 +90,30 @@ public final class RouterQuotaUsage extends QuotaUsage {
     if (Quota.isViolated(getSpaceQuota(), getSpaceConsumed())) {
       throw new DSQuotaExceededException(getSpaceQuota(), getSpaceConsumed());
     }
+  }
+
+  @Override
+  public String toString() {
+    String nsQuota = String.valueOf(getQuota());
+    String nsCount = String.valueOf(getFileAndDirectoryCount());
+    if (getQuota() == HdfsConstants.QUOTA_DONT_SET) {
+      nsQuota = "-";
+      nsCount = "-";
+    }
+
+    String ssQuota = StringUtils.byteDesc(getSpaceQuota());
+    String ssCount = StringUtils.byteDesc(getSpaceConsumed());
+    if (getSpaceQuota() == HdfsConstants.QUOTA_DONT_SET) {
+      ssQuota = "-";
+      ssCount = "-";
+    }
+
+    StringBuilder str = new StringBuilder();
+    str.append("[NsQuota: ").append(nsQuota).append("/")
+        .append(nsCount);
+    str.append(", SsQuota: ").append(ssQuota)
+        .append("/").append(ssCount)
+        .append("]");
+    return str.toString();
   }
 }
