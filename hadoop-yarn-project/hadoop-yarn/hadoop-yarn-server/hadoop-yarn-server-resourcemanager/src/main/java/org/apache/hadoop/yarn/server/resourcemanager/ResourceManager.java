@@ -1110,6 +1110,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       serviceConfig.put("PathSpec", "/app/*");
     }
     webApp = builder.start(new RMWebApp(this), uiWebAppContext, serviceConfig);
+    InetSocketAddress webAddr = webApp.httpServer().getConnectorAddress(0);
+    LOG.info("RMWebApp at " + webAddr.getHostName() + ":" + webAddr.getPort());
   }
 
   private String getWebAppsPath(String appName) {

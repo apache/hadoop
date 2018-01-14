@@ -932,6 +932,13 @@ public final class HttpServer2 implements FilterContainer {
     defineFilter(ctx, filterHolder, fmap);
   }
 
+  public static void defineFilter(ServletContextHandler ctx, String name,
+      Filter filter, Map<String,String> parameters, String[] urls) {
+    FilterHolder filterHolder = getFilterHolder(name, filter, parameters);
+    FilterMapping fmap = getFilterMapping(name, urls);
+    defineFilter(ctx, filterHolder, fmap);
+  }
+
   /**
    * Define a filter for a context and set up default url mappings.
    */
@@ -949,11 +956,15 @@ public final class HttpServer2 implements FilterContainer {
     return fmap;
   }
 
-  private static FilterHolder getFilterHolder(String name, String classname,
+  private static FilterHolder getFilterHolder(String name, Object filter,
       Map<String, String> parameters) {
     FilterHolder holder = new FilterHolder();
     holder.setName(name);
-    holder.setClassName(classname);
+    if (filter instanceof String) {
+      holder.setClassName((String)filter);
+    } else {
+      holder.setFilter((Filter)filter);
+    }
     if (parameters != null) {
       holder.setInitParameters(parameters);
     }
