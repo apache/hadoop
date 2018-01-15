@@ -45,6 +45,7 @@ public class ResourcePBImpl extends Resource {
   }
   
   public ResourceProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
