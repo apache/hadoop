@@ -412,7 +412,7 @@ public class ResourceTrackerService extends AbstractService implements
     String message =
         "NodeManager from node " + host + "(cmPort: " + cmPort + " httpPort: "
             + httpPort + ") " + "registered with capability: " + capability
-            + ", assigned nodeId " + nodeId;
+            + ", assigned nodeId " + nodeId + ", localUsedPorts: " + localUsedPorts;
     LOG.info(message);
     response.setNodeAction(NodeAction.NORMAL);
     response.setRMIdentifier(ResourceManager.getClusterTimeStamp());
