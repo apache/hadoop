@@ -108,6 +108,7 @@ public class Listing {
    * @return the iterator
    * @throws IOException IO Problems
    */
+  @Retries.RetryRaw
   FileStatusListingIterator createFileStatusListingIterator(
       Path listPath,
       S3ListRequest request,
@@ -330,6 +331,7 @@ public class Listing {
      *                       items that are not listed from source.
      * @throws IOException IO Problems
      */
+    @Retries.RetryTranslated
     FileStatusListingIterator(ObjectListingIterator source,
         PathFilter filter,
         FileStatusAcceptor acceptor,
@@ -361,10 +363,12 @@ public class Listing {
      * @throws IOException
      */
     @Override
+    @Retries.RetryTranslated
     public boolean hasNext() throws IOException {
       return sourceHasNext() || providedStatusIterator.hasNext();
     }
 
+    @Retries.RetryTranslated
     private boolean sourceHasNext() throws IOException {
       if (statusBatchIterator.hasNext() || requestNextBatch()) {
         return true;
@@ -379,6 +383,7 @@ public class Listing {
     }
 
     @Override
+    @Retries.RetryTranslated
     public FileStatus next() throws IOException {
       final FileStatus status;
       if (sourceHasNext()) {
@@ -408,6 +413,7 @@ public class Listing {
      * @return true if a new batch was created.
      * @throws IOException IO problems
      */
+    @Retries.RetryTranslated
     private boolean requestNextBatch() throws IOException {
       // look for more object listing batches being available
       while (source.hasNext()) {
@@ -543,6 +549,7 @@ public class Listing {
      * @param request initial request to make
      * @throws IOException if listObjects raises one.
      */
+    @Retries.RetryRaw
     ObjectListingIterator(
         Path listPath,
         S3ListRequest request) throws IOException {

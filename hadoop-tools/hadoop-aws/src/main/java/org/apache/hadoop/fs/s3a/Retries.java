@@ -89,4 +89,25 @@ public class Retries {
     String value() default "";
   }
 
+
+  /**
+   * Retried, Exceptions are swallowed.
+   */
+  @Documented
+  @Retention(RetentionPolicy.SOURCE)
+  public @interface RetryExceptionsSwallowed {
+
+    String value() default "";
+  }
+
+  /**
+   * One attempt, Exceptions are swallowed.
+   */
+  @Documented
+  @Retention(RetentionPolicy.SOURCE)
+  public @interface OnceExceptionsSwallowed {
+
+    String value() default "";
+  }
+
 }
