@@ -119,7 +119,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private int gpuAttribute = 0; // bit map of GPU utilization, 1 means free, 0 means occupied
   private long lastRefreshGpuTime = 0L;
   private long lastRefreshPortsTime = 0L;
-  private String usedPorts;
+  private String usedPorts = "";
   
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;
@@ -490,6 +490,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       LOG.info("lastRefreshPortsTime:" + lastRefreshPortsTime + " now:" + now);
       lastRefreshPortsTime = now;
       try {
+        LOG.info(ln);
         InputStreamReader ir = getInputPortsStreamReader(REFRESH_PORTS_CMD);
         BufferedReader  input = new BufferedReader (ir);
         String ln = "";
@@ -514,6 +515,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       }catch (Exception e) {
         LOG.warn("error get Ports usage info:" + e.toString());
       }
+    } else {
+      LOG.info("last update in %d s, getlastTime result (usedPorts=%s)", (now - lastRefreshPortsTime)/1000, usedPorts);
     }
   }
   
