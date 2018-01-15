@@ -127,6 +127,6 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public String getPortsUsage() {
     // not support;
-    return 0;
+    return null;
   }
 }
