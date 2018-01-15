@@ -500,7 +500,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           LOG.info(ln);
           mat = PORTS_FORMAT.matcher(ln);
           if (mat.find()) {
-            String port = mat.group();
+            String port = mat.group().substring(1);
             if(usedPorts.isEmpty()) {
               usedPorts = port;
             } else {
