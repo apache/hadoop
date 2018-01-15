@@ -355,7 +355,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
 
     LOG.info("Registered with ResourceManager as " + this.nodeId
-        + " with total resource of " + this.totalResource);
+        + " with total resource of " + this.totalResource + "  and local used ports:" + ports);
     LOG.info("Notifying ContainerManager to unblock new container-requests");
     ((ContainerManagerImpl) this.context.getContainerManager())
       .setBlockNewContainerRequests(false);
