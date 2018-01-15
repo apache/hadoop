@@ -515,7 +515,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
         LOG.warn("error get Ports usage info:" + e.toString());
       }
     } else {
-      LOG.info("last update in %d s, getlastTime result (usedPorts=%s)", (now - lastRefreshPortsTime)/1000, usedPorts);
+      LOG.info("getlastTime result usedPorts=" + usedPorts);
     }
   }
   
