@@ -490,13 +490,12 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       LOG.info("lastRefreshPortsTime:" + lastRefreshPortsTime + " now:" + now);
       lastRefreshPortsTime = now;
       try {
-        LOG.info(ln);
+
         InputStreamReader ir = getInputPortsStreamReader(REFRESH_PORTS_CMD);
         BufferedReader  input = new BufferedReader (ir);
         String ln = "";
         Matcher mat = null;
         usedPorts = "";
-
         while ((ln =input.readLine()) != null) {
           LOG.info(ln);
           mat = PORTS_FORMAT.matcher(ln);
