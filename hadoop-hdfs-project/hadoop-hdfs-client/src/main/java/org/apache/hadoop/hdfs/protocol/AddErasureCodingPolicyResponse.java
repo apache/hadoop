@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 
 /**
@@ -64,5 +66,27 @@ public class AddErasureCodingPolicyResponse {
       return "Add ErasureCodingPolicy " + getPolicy().getName() + " failed and "
           + "error message is " + getErrorMsg();
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o instanceof AddErasureCodingPolicyResponse) {
+      AddErasureCodingPolicyResponse other = (AddErasureCodingPolicyResponse) o;
+      return new EqualsBuilder()
+          .append(policy, other.policy)
+          .append(succeed, other.succeed)
+          .append(errorMsg, other.errorMsg)
+          .isEquals();
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder(303855623, 582626729)
+        .append(policy)
+        .append(succeed)
+        .append(errorMsg)
+        .toHashCode();
   }
 }
