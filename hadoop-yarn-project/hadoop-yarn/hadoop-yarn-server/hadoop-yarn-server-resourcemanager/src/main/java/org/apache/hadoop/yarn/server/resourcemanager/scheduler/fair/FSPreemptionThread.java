@@ -48,6 +48,7 @@ class FSPreemptionThread extends Thread {
   private final Timer preemptionTimer;
   private final Lock schedulerReadLock;
 
+  @SuppressWarnings("deprecation")
   FSPreemptionThread(FairScheduler scheduler) {
     setDaemon(true);
     setName("FSPreemptionThread");
