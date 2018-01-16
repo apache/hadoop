@@ -99,14 +99,12 @@ public class TimelineClientImpl extends TimelineClient {
     timelineServiceVersion =
         conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
-    LOG.info("Timeline service address: " + getTimelineServiceAddress());
-    if (!YarnConfiguration.timelineServiceEnabled(conf)
-        || !((Float.compare(this.timelineServiceVersion, 1.0f) == 0)
-            || (Float.compare(this.timelineServiceVersion, 1.5f) == 0))) {
+    if (!YarnConfiguration.timelineServiceV1Enabled(conf)) {
       throw new IOException("Timeline V1 client is not properly configured. "
           + "Either timeline service is not enabled or version is not set to"
           + " 1.x");
     }
+    LOG.info("Timeline service address: " + getTimelineServiceAddress());
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation realUgi = ugi.getRealUser();
     if (realUgi != null) {
