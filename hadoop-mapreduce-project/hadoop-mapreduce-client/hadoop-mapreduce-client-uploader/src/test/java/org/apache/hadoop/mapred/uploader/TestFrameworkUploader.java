@@ -104,7 +104,10 @@ public class TestFrameworkUploader {
             "-blacklist", "C",
             "-fs", "hdfs://C:8020",
             "-target", "D",
-            "-replication", "100"};
+            "-initialReplication", "100",
+            "-acceptableReplication", "120",
+            "-finalReplication", "140",
+            "-timeout", "10"};
     FrameworkUploader uploader = new FrameworkUploader();
     boolean success = uploader.parseArguments(args);
     Assert.assertTrue("Expected to print help", success);
@@ -116,8 +119,14 @@ public class TestFrameworkUploader {
         uploader.blacklist);
     Assert.assertEquals("Target mismatch", "hdfs://C:8020/D",
         uploader.target);
-    Assert.assertEquals("Replication mismatch", 100,
-        uploader.replication);
+    Assert.assertEquals("Initial replication mismatch", 100,
+        uploader.initialReplication);
+    Assert.assertEquals("Acceptable replication mismatch", 120,
+        uploader.acceptableReplication);
+    Assert.assertEquals("Final replication mismatch", 140,
+        uploader.finalReplication);
+    Assert.assertEquals("Timeout mismatch", 10,
+        uploader.timeout);
   }
 
   /**
@@ -176,7 +185,8 @@ public class TestFrameworkUploader {
    * Test building a tarball from source jars.
    */
   @Test
-  public void testBuildTarBall() throws IOException, UploaderException {
+  public void testBuildTarBall()
+      throws IOException, UploaderException, InterruptedException {
     String[] testFiles = {"upload.tar", "upload.tar.gz"};
     for (String testFile: testFiles) {
       File parent = new File(testDir);
@@ -232,7 +242,8 @@ public class TestFrameworkUploader {
    * Test upload to HDFS.
    */
   @Test
-  public void testUpload() throws IOException, UploaderException {
+  public void testUpload()
+      throws IOException, UploaderException, InterruptedException {
     final String fileName = "/upload.tar.gz";
     File parent = new File(testDir);
     try {
