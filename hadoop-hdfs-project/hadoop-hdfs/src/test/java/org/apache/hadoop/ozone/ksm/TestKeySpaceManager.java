@@ -1114,7 +1114,7 @@ public class TestKeySpaceManager {
           .getMetadataManager().getExpiredOpenKeys();
       Assert.assertEquals(0, openKeys.size());
 
-      //Thread.sleep(2000);
+      Thread.sleep(2000);
 
       openKeys = cluster.getKeySpaceManager().getMetadataManager()
           .getExpiredOpenKeys();
