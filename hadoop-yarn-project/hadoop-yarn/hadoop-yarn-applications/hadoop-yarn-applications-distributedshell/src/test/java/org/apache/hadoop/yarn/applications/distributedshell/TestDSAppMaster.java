@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -33,6 +35,8 @@ import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -167,14 +171,82 @@ public class TestDSAppMaster {
   }
 
   @Test
-  public void testTimelineClientInDSAppMaster() throws Exception {
+  public void testTimelineClientInDSAppMasterV1() throws Exception {
+    runTimelineClientInDSAppMaster(true, false);
+  }
+
+  @Test
+  public void testTimelineClientInDSAppMasterV2() throws Exception {
+    runTimelineClientInDSAppMaster(false, true);
+  }
+
+  @Test
+  public void testTimelineClientInDSAppMasterV1V2() throws Exception {
+    runTimelineClientInDSAppMaster(true, true);
+  }
+
+  @Test
+  public void testTimelineClientInDSAppMasterDisabled() throws Exception {
+    runTimelineClientInDSAppMaster(false, false);
+  }
+
+  private void runTimelineClientInDSAppMaster(boolean v1Enabled,
+      boolean v2Enabled) throws Exception {
+    ApplicationMaster appMaster = createAppMasterWithStartedTimelineService(
+        v1Enabled, v2Enabled);
+    validateAppMasterTimelineService(v1Enabled, v2Enabled, appMaster);
+  }
+
+  private void validateAppMasterTimelineService(boolean v1Enabled,
+      boolean v2Enabled, ApplicationMaster appMaster) {
+    if (v1Enabled) {
+      Assert.assertEquals(appMaster.appSubmitterUgi,
+          ((TimelineClientImpl)appMaster.timelineClient).getUgi());
+    } else {
+      Assert.assertNull(appMaster.timelineClient);
+    }
+    if (v2Enabled) {
+      Assert.assertNotNull(appMaster.timelineV2Client);
+    } else {
+      Assert.assertNull(appMaster.timelineV2Client);
+    }
+  }
+
+  private ApplicationMaster createAppMasterWithStartedTimelineService(
+      boolean v1Enabled, boolean v2Enabled) throws Exception {
     ApplicationMaster appMaster = new ApplicationMaster();
-    appMaster.appSubmitterUgi =
-        UserGroupInformation.createUserForTesting("foo", new String[]{"bar"});
-    Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    appMaster.appSubmitterUgi = UserGroupInformation
+        .createUserForTesting("foo", new String[] {"bar"});
+    Configuration conf = this.getTimelineServiceConf(v1Enabled, v2Enabled);
+    ApplicationId appId = ApplicationId.newInstance(1L, 1);
+    appMaster.appAttemptID = ApplicationAttemptId.newInstance(appId, 1);
     appMaster.startTimelineClient(conf);
-    Assert.assertEquals(appMaster.appSubmitterUgi,
-        ((TimelineClientImpl)appMaster.timelineClient).getUgi());
+    return appMaster;
+  }
+
+  private Configuration getTimelineServiceConf(boolean v1Enabled,
+      boolean v2Enabled) {
+    Configuration conf = new YarnConfiguration(new Configuration(false));
+    Assert.assertFalse(YarnConfiguration.timelineServiceEnabled(conf));
+
+    if (v1Enabled || v2Enabled) {
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    }
+
+    if (v1Enabled) {
+      conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
+    }
+
+    if (v2Enabled) {
+      conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+      conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
+          FileSystemTimelineWriterImpl.class, TimelineWriter.class);
+    }
+
+    if (v1Enabled && v2Enabled) {
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "1.0");
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "1.0,2.0f");
+    }
+    return conf;
   }
 }

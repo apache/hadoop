@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.NoOpSystemMetricPub
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV1Publisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.CombinedSystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
@@ -497,26 +498,33 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    SystemMetricsPublisher publisher;
-    if (YarnConfiguration.timelineServiceEnabled(conf) &&
-        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
-        // we're dealing with the v.2.x publisher
-        LOG.info("system metrics publisher with the timeline service V2 is " +
-            "configured");
-        publisher = new TimelineServiceV2Publisher(
-            rmContext.getRMTimelineCollectorManager());
-      } else {
-        // we're dealing with the v.1.x publisher
-        LOG.info("system metrics publisher with the timeline service V1 is " +
-            "configured");
-        publisher = new TimelineServiceV1Publisher();
-      }
-    } else {
-      LOG.info("TimelineServicePublisher is not configured");
-      publisher = new NoOpSystemMetricPublisher();
+    List<SystemMetricsPublisher> publishers =
+        new ArrayList<SystemMetricsPublisher>();
+    if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
+      SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
+      publishers.add(publisherV1);
     }
-    return publisher;
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      // we're dealing with the v.2.x publisher
+      LOG.info("system metrics publisher with the timeline service V2 is "
+          + "configured");
+      SystemMetricsPublisher publisherV2 = new TimelineServiceV2Publisher(
+          rmContext.getRMTimelineCollectorManager());
+      publishers.add(publisherV2);
+    }
+    if (publishers.isEmpty()) {
+      LOG.info("TimelineServicePublisher is not configured");
+      SystemMetricsPublisher noopPublisher = new NoOpSystemMetricPublisher();
+      publishers.add(noopPublisher);
+    }
+
+    for (SystemMetricsPublisher publisher : publishers) {
+      addIfService(publisher);
+    }
+
+    SystemMetricsPublisher combinedPublisher =
+        new CombinedSystemMetricsPublisher(publishers);
+    return combinedPublisher;
   }
 
   // sanity check for configurations
