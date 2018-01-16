@@ -691,15 +691,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.output.stream.buffer.size.in.mb</name>
-    <value>256</value>
-    <tag>OZONE</tag>
-    <description>
-      The maximum size of the buffer allocated for the ozone output stream for
-      write. Default size is equals to scm block size.
-    </description>
-  </property>
-  <property>
     <name>ozone.scm.chunk.size</name>
     <value>16777216</value>
     <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>

@@ -53,9 +53,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos.KeyValue;
 import org.apache.hadoop.scm.container.common.helpers.StorageContainerException;
 
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
 import org.apache.hadoop.scm.XceiverClientSpi;
 
 /**
@@ -165,10 +162,9 @@ public final class ContainerProtocolCalls  {
    * @param traceID container protocol call args
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static CompletableFuture<ContainerCommandResponseProto> writeChunk(
-      XceiverClientSpi xceiverClient, ChunkInfo chunk, String key,
-      ByteString data, String traceID)
-      throws IOException, ExecutionException, InterruptedException {
+  public static void writeChunk(XceiverClientSpi xceiverClient, ChunkInfo chunk,
+      String key, ByteString data, String traceID)
+      throws IOException {
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
         .newBuilder()
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
@@ -183,7 +179,8 @@ public final class ContainerProtocolCalls  {
         .setDatanodeID(id)
         .setWriteChunk(writeChunkRequest)
         .build();
-    return xceiverClient.sendCommandAsync(request);
+    ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
+    validateContainerResponse(response);
   }
 
   /**
