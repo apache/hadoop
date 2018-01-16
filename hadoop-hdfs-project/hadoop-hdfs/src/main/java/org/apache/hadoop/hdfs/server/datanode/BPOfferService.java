@@ -148,11 +148,25 @@ class BPOfferService {
     }
     Set<InetSocketAddress> newAddrs = Sets.newHashSet(addrs);
     
-    if (!Sets.symmetricDifference(oldAddrs, newAddrs).isEmpty()) {
-      // Keep things simple for now -- we can implement this at a later date.
-      throw new IOException(
-          "HA does not currently support adding a new standby to a running DN. " +
-          "Please do a rolling restart of DNs to reconfigure the list of NNs.");
+    // Process added NNs
+    Set<InetSocketAddress> addedNNs = Sets.difference(newAddrs, oldAddrs);
+    for (InetSocketAddress addedNN : addedNNs) {
+      BPServiceActor actor = new BPServiceActor(addedNN,
+          lifelineAddrs.get(addrs.indexOf(addedNN)), this);
+      actor.start();
+      bpServices.add(actor);
+    }
+
+    // Process removed NNs
+    Set<InetSocketAddress> removedNNs = Sets.difference(oldAddrs, newAddrs);
+    for (InetSocketAddress removedNN : removedNNs) {
+      for (BPServiceActor actor : bpServices) {
+        if (actor.getNNSocketAddress().equals(removedNN)) {
+          actor.stop();
+          shutdownActor(actor);
+          break;
+        }
+      }
     }
   }
 
