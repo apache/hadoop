@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -341,14 +340,7 @@ public abstract class ZKFailoverController {
     }
     
     // Parse authentication from configuration.
-    String zkAuthConf = conf.get(ZK_AUTH_KEY);
-    zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
-    List<ZKAuthInfo> zkAuths;
-    if (zkAuthConf != null) {
-      zkAuths = ZKUtil.parseAuth(zkAuthConf);
-    } else {
-      zkAuths = Collections.emptyList();
-    }
+    List<ZKAuthInfo> zkAuths = SecurityUtil.getZKAuthInfos(conf, ZK_AUTH_KEY);
 
     // Sanity check configuration.
     Preconditions.checkArgument(zkQuorum != null,
