@@ -23,6 +23,7 @@
 #include "get_executable.h"
 #include "modules/gpu/gpu-module.h"
 #include "modules/cgroups/cgroups-operations.h"
+#include "utils/string-utils.h"
 
 #include <errno.h>
 #include <grp.h>
@@ -362,6 +363,10 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     }
     cmd_input.app_id = argv[optind++];
     cmd_input.container_id = argv[optind++];
+    if (!validate_container_id(cmd_input.container_id)) {
+      fprintf(ERRORFILE, "Invalid container id %s\n", cmd_input.container_id);
+      return INVALID_CONTAINER_ID;
+    }
     cmd_input.cred_file = argv[optind++];
     cmd_input.local_dirs = argv[optind++];// good local dirs as a comma separated list
     cmd_input.log_dirs = argv[optind++];// good log dirs as a comma separated list
