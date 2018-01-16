@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -2271,6 +2273,9 @@ public class YarnConfiguration extends Configuration {
       + "version";
   public static final float DEFAULT_TIMELINE_SERVICE_VERSION = 1.0f;
 
+  public static final String TIMELINE_SERVICE_VERSIONS =
+      TIMELINE_SERVICE_PREFIX + "versions";
+
   /**
    * Comma separated list of names for UIs hosted in the timeline server
    * (For pluggable UIs).
@@ -3636,8 +3641,60 @@ public class YarnConfiguration extends Configuration {
    * version greater than equal to 2 but smaller than 3.
    */
   public static boolean timelineServiceV2Enabled(Configuration conf) {
-    return timelineServiceEnabled(conf) &&
-        (int)getTimelineServiceVersion(conf) == 2;
+    boolean enabled = false;
+    if (timelineServiceEnabled(conf)) {
+      Collection<Float> versions = getTimelineServiceVersions(conf);
+      for (Float version : versions) {
+        if (version.intValue() == 2) {
+          enabled = true;
+          break;
+        }
+      }
+    }
+    return enabled;
+  }
+
+  /**
+   * Returns whether the timeline service v.1 is enabled via configuration.
+   *
+   * @param conf the configuration
+   * @return whether the timeline service v.1 is enabled. V.1 refers to a
+   * version greater than equal to 1 but smaller than 2.
+   */
+  public static boolean timelineServiceV1Enabled(Configuration conf) {
+    boolean enabled = false;
+    if (timelineServiceEnabled(conf)) {
+      Collection<Float> versions = getTimelineServiceVersions(conf);
+      for (Float version : versions) {
+        if (version.intValue() == 1) {
+          enabled = true;
+          break;
+        }
+      }
+    }
+    return enabled;
+  }
+
+  /**
+   * Returns all the active timeline service versions. It does not check
+   * whether the timeline service itself is enabled.
+   *
+   * @param conf the configuration
+   * @return the timeline service versions as a collection of floats.
+   */
+  private static Collection<Float> getTimelineServiceVersions(
+      Configuration conf) {
+    String versions = conf.get(TIMELINE_SERVICE_VERSIONS);
+    if (versions == null) {
+      versions = Float.toString(getTimelineServiceVersion(conf));
+    }
+    List<String> stringList = Arrays.asList(versions.split(","));
+    List<Float> floatList = new ArrayList<Float>();
+    for (String s : stringList) {
+      Float f = Float.parseFloat(s);
+      floatList.add(f);
+    }
+    return floatList;
   }
 
   /**
