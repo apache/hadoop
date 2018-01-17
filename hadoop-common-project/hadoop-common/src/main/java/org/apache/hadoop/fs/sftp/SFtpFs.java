@@ -46,12 +46,12 @@ public class SFtpFs extends DelegateToFileSystem {
       URISyntaxException {
     super(theUri, new SFTPFileSystem(), conf, FsConstants.SFTP_SCHEME, true);
   }
-  
+
   @Override
   public int getUriDefaultPort() {
     return 22;
   }
-  
+
   @Override
   @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
