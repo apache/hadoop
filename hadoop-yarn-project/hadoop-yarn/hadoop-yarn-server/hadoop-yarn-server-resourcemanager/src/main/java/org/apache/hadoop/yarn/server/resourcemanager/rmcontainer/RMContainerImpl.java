@@ -262,6 +262,9 @@ public class RMContainerImpl implements RMContainer {
       rmContext.getSystemMetricsPublisher().containerCreated(
           this, this.creationTime);
     }
+    if (this.container != null) {
+      this.allocationTags = this.container.getAllocationTags();
+    }
   }
 
   @Override
