@@ -146,6 +146,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.http.internal-proxy.port</name>
+  <value>0</value>
+  <description>
+    The datanode's internal web proxy port.
+    By default it selects a random port available in runtime.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.handler.count</name>
   <value>10</value>
   <description>The number of server threads for the datanode.</description>
