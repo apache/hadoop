@@ -1033,3 +1033,45 @@ There is an in-memory Metadata Store for testing.
 ```
 
 This is not for use in production.
+
+##<a name="assumed_roles"></a> Testing Assumed Roles
+
+Tests for the AWS Assumed Role credential provider require an assumed
+role to request.
+
+If this role is not set, the tests which require it will be skipped.
+
+To run the tests in `ITestAssumeRole`, you need:
+
+1. A role in your AWS account with the relevant access rights to
+the S3 buckets used in the tests, and ideally DynamoDB, for S3Guard.
+If your bucket is set up by default to use S3Guard, the role must have access
+to that service.
+
+1.  Your IAM User  to have the permissions to adopt that role.
+
+1. The role ARN must be set in `fs.s3a.assumed.role.arn`.
+
+```xml
+<property>
+  <name>fs.s3a.assumed.role.arn</name>
+  <value>arn:aws:kms:eu-west-1:00000000000:key/0000000-16c9-4832-a1a9-c8bbef25ec8b</value>
+</property>
+```
+
+The tests don't do much other than verify that basic file IO works with the role,
+and trigger various failures.
+
+You can also run the entire test suite in an assumed role, a more
+thorough test, by switching to the credentials provider.
+
+```xml
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>org.apache.hadoop.fs.s3a.AssumedRoleCredentialProvider</value>
+</property>
+```
+
+The usual credentials needed to log in to the bucket will be used, but now
+the credentials used to interact with S3 and DynamoDB will be temporary
+role credentials, rather than the full credentials.

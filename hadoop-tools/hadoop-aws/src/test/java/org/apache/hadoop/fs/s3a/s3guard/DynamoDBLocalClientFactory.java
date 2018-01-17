@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.net.ServerSocketUtil;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBClientFactory.DefaultDynamoDBClientFactory.getRegion;
 
@@ -80,6 +81,8 @@ public class DynamoDBLocalClientFactory extends Configured
     startSingletonServer();
 
     final Configuration conf = getConf();
+    // use the default credential provider chain
+    conf.unset(AWS_CREDENTIALS_PROVIDER);
     final AWSCredentialsProvider credentials =
         createAWSCredentialProviderSet(null, conf);
     final ClientConfiguration awsConf =

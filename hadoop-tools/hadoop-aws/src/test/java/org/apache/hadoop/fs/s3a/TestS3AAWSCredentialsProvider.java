@@ -106,6 +106,8 @@ public class TestS3AAWSCredentialsProvider {
   public void testDefaultChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     Configuration conf = new Configuration();
+    // use the default credential provider chain
+    conf.unset(AWS_CREDENTIALS_PROVIDER);
     AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
         uri1, conf);
     AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(

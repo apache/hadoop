@@ -64,6 +64,43 @@ public final class Constants {
   // session token for when using TemporaryAWSCredentialsProvider
   public static final String SESSION_TOKEN = "fs.s3a.session.token";
 
+  /**
+   * AWS Role to request.
+   */
+  public static final String ASSUMED_ROLE_ARN =
+      "fs.s3a.assumed.role.arn";
+
+  /**
+   * Session name for the assumed role, must be valid characters according
+   * to the AWS APIs.
+   * If not set, one is generated from the current Hadoop/Kerberos username.
+   */
+  public static final String ASSUMED_ROLE_SESSION_NAME =
+      "fs.s3a.assumed.role.session.name";
+
+  /**
+   * Duration of assumed roles before a refresh is attempted.
+   */
+  public static final String ASSUMED_ROLE_SESSION_DURATION =
+      "fs.s3a.assumed.role.session.duration";
+
+  /** Simple Token Service Endpoint. If unset, uses the default endpoint. */
+  public static final String ASSUMED_ROLE_STS_ENDPOINT =
+      "fs.s3a.assumed.role.sts.endpoint";
+
+  public static final String ASSUMED_ROLE_SESSION_DURATION_DEFAULT = "30m";
+
+  /** list of providers to authenticate for the assumed role. */
+  public static final String ASSUMED_ROLE_CREDENTIALS_PROVIDER =
+      "fs.s3a.assumed.role.credentials.provider";
+
+  /** JSON policy containing more restrictions to apply to the role. */
+  public static final String ASSUMED_ROLE_POLICY =
+      "fs.s3a.assumed.role.policy";
+
+  public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
+      SimpleAWSCredentialsProvider.NAME;
+
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;

@@ -2226,10 +2226,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {
-        throw translateException("getFileStatus", key, e);
+        throw translateException("getFileStatus", path, e);
       }
     } catch (AmazonClientException e) {
-      throw translateException("getFileStatus", key, e);
+      throw translateException("getFileStatus", path, e);
     }
 
     LOG.debug("Not Found: {}", path);
@@ -2835,7 +2835,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     sb.append(", metastore=").append(metadataStore);
     sb.append(", authoritative=").append(allowAuthoritative);
     sb.append(", useListV1=").append(useListV1);
-    sb.append(", magicCommitter=").append(isMagicCommitEnabled());
+    if (committerIntegration != null) {
+      sb.append(", magicCommitter=").append(isMagicCommitEnabled());
+    }
     sb.append(", boundedExecutor=").append(boundedThreadPool);
     sb.append(", unboundedExecutor=").append(unboundedThreadPool);
     sb.append(", statistics {")
