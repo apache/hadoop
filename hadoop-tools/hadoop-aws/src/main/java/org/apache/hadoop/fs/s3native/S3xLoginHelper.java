@@ -88,7 +88,7 @@ public final class S3xLoginHelper {
   /**
    * Extract the login details from a URI, logging a warning if
    * the URI contains these.
-   * @param name URI of the filesystem
+   * @param name URI of the filesystem, can be null
    * @return a login tuple, possibly empty.
    */
   public static Login extractLoginDetailsWithWarnings(URI name) {
@@ -101,7 +101,7 @@ public final class S3xLoginHelper {
 
   /**
    * Extract the login details from a URI.
-   * @param name URI of the filesystem
+   * @param name URI of the filesystem, may be null
    * @return a login tuple, possibly empty.
    */
   public static Login extractLoginDetails(URI name) {

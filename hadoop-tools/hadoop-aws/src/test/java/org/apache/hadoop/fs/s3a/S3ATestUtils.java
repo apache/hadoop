@@ -828,9 +828,24 @@ public final class S3ATestUtils {
    * Skip a test if the FS isn't marked as supporting magic commits.
    * @param fs filesystem
    */
-  public void assumeMagicCommitEnabled(S3AFileSystem fs) {
+  public static void assumeMagicCommitEnabled(S3AFileSystem fs) {
     assume("Magic commit option disabled on " + fs,
         fs.hasCapability(CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
+  }
+
+  /**
+   * Probe for the configuration containing a specific credential provider.
+   * If the list is empty, there will be no match, even if the named provider
+   * is on the default list.
+   *
+   * @param conf configuration
+   * @param providerClassname provider class
+   * @return true if the configuration contains that classname.
+   */
+  public static boolean authenticationContains(Configuration conf,
+      String providerClassname) {
+    return conf.getTrimmedStringCollection(AWS_CREDENTIALS_PROVIDER)
+        .contains(providerClassname);
   }
 
 }
