@@ -40,6 +40,18 @@ final public class AliyunOSSUtils {
   private AliyunOSSUtils() {
   }
 
+  public static int intPositiveOption(
+      Configuration conf, String key, int defVal) {
+    int v = conf.getInt(key, defVal);
+    if (v <= 0) {
+      LOG.warn(key + " is configured to " + v
+          + ", will use default value: " + defVal);
+      v = defVal;
+    }
+
+    return v;
+  }
+
   /**
    * Used to get password from configuration.
    *
