@@ -449,6 +449,8 @@ void test_is_feature_enabled() {
   fprintf(file, "feature.name4.enabled=asdkjfasdkljfklsdjf0\n");
   fprintf(file, "feature.name5.enabled=-1\n");
   fprintf(file, "feature.name6.enabled=2\n");
+  fprintf(file, "feature.name7.enabled=true\n");
+  fprintf(file, "feature.name8.enabled=True\n");
   fclose(file);
   read_config(filename, &exec_cfg);
   cfg = *(get_configuration_section("", &exec_cfg));
@@ -464,6 +466,10 @@ void test_is_feature_enabled() {
   validate_feature_enabled_value(enabled, "feature.name5.enabled",
           enabled, &cfg);
   validate_feature_enabled_value(disabled, "feature.name6.enabled",
+          disabled, &cfg);
+  validate_feature_enabled_value(enabled, "feature.name7.enabled",
+          disabled, &cfg);
+  validate_feature_enabled_value(enabled, "feature.name8.enabled",
           disabled, &cfg);
 
 

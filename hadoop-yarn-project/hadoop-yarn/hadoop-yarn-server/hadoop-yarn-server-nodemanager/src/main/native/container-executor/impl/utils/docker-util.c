@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <ctype.h>
@@ -1045,9 +1046,10 @@ static int set_privileged(const struct configuration *command_config, const stru
       = get_configuration_value("docker.privileged-containers.enabled", CONTAINER_EXECUTOR_CFG_DOCKER_SECTION, conf);
   int ret = 0;
 
-  if (value != NULL && strcmp(value, "true") == 0) {
+  if (value != NULL && strcasecmp(value, "true") == 0 ) {
     if (privileged_container_enabled != NULL) {
-      if (strcmp(privileged_container_enabled, "1") == 0) {
+      if (strcmp(privileged_container_enabled, "1") == 0 ||
+          strcasecmp(privileged_container_enabled, "True") == 0) {
         ret = add_to_buffer(out, outlen, "--privileged ");
         if (ret != 0) {
           ret = BUFFER_TOO_SMALL;
