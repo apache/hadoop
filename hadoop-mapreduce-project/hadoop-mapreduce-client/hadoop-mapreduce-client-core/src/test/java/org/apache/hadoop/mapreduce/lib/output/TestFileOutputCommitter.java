@@ -249,13 +249,18 @@ public class TestFileOutputCommitter extends TestCase {
     assert(dataFileFound && indexFileFound);
   }
 
-  private void testCommitterInternal(int version) throws Exception {
+  private void testCommitterInternal(int version, boolean taskCleanup)
+      throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
-    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+    conf.setInt(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
+    conf.setBoolean(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED,
+        taskCleanup);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
@@ -269,9 +274,30 @@ public class TestFileOutputCommitter extends TestCase {
     RecordWriter theRecordWriter = theOutputFormat.getRecordWriter(tContext);
     writeOutput(theRecordWriter, tContext);
 
+    // check task and job temp directories exist
+    File jobOutputDir = new File(
+        new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME).toString());
+    File taskOutputDir = new File(Path.getPathWithoutSchemeAndAuthority(
+        committer.getWorkPath()).toString());
+    assertTrue("job temp dir does not exist", jobOutputDir.exists());
+    assertTrue("task temp dir does not exist", taskOutputDir.exists());
+
     // do commit
     committer.commitTask(tContext);
+    assertTrue("job temp dir does not exist", jobOutputDir.exists());
+    if (version == 1 || taskCleanup) {
+      // Task temp dir gets renamed in v1 and deleted if taskCleanup is
+      // enabled in v2
+      assertFalse("task temp dir still exists", taskOutputDir.exists());
+    } else {
+      // By default, in v2 the task temp dir is only deleted during commitJob
+      assertTrue("task temp dir does not exist", taskOutputDir.exists());
+    }
+
+    // Entire job temp directory gets deleted, including task temp dir
     committer.commitJob(jContext);
+    assertFalse("job temp dir still exists", jobOutputDir.exists());
+    assertFalse("task temp dir still exists", taskOutputDir.exists());
 
     // validate output
     validateContent(outDir);
@@ -279,13 +305,17 @@ public class TestFileOutputCommitter extends TestCase {
   }
 
   public void testCommitterV1() throws Exception {
-    testCommitterInternal(1);
+    testCommitterInternal(1, false);
   }
 
   public void testCommitterV2() throws Exception {
-    testCommitterInternal(2);
+    testCommitterInternal(2, false);
   }
-  
+
+  public void testCommitterV2TaskCleanupEnabled() throws Exception {
+    testCommitterInternal(2, true);
+  }
+
   public void testCommitterWithDuplicatedCommitV1() throws Exception {
     testCommitterWithDuplicatedCommitInternal(1);
   }
