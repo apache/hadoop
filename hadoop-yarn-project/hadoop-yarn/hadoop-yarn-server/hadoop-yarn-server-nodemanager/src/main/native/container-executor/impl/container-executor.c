@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
@@ -441,19 +442,25 @@ int is_feature_enabled(const char* feature_key, int default_value,
     int enabled = default_value;
 
     if (enabled_str != NULL) {
-        char *end_ptr = NULL;
-        enabled = strtol(enabled_str, &end_ptr, 10);
+        if (strcasecmp(enabled_str, "true") == 0) {
+            enabled = 1;
+        } else if (strcasecmp(enabled_str, "false") == 0) {
+            enabled = 0;
+        } else {
+            char *end_ptr = NULL;
+            enabled = strtol(enabled_str, &end_ptr, 10);
 
-        if ((enabled_str == end_ptr || *end_ptr != '\0') ||
-            (enabled < 0 || enabled > 1)) {
-              fprintf(LOGFILE, "Illegal value '%s' for '%s' in configuration. "
-              "Using default value: %d.\n", enabled_str, feature_key,
-              default_value);
-              fflush(LOGFILE);
-              free(enabled_str);
-              return default_value;
+            if ((enabled_str == end_ptr || *end_ptr != '\0') ||
+                (enabled < 0 || enabled > 1)) {
+                  fprintf(LOGFILE, "Illegal value '%s' for '%s' in configuration. "
+                  "Using default value: %d.\n", enabled_str, feature_key,
+                  default_value);
+                  fflush(LOGFILE);
+                  free(enabled_str);
+                  return default_value;
+            }
+
         }
-
         free(enabled_str);
         return enabled;
     } else {

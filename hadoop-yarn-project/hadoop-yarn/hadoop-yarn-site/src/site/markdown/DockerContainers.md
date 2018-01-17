@@ -196,7 +196,7 @@ are allowed. It contains the following properties:
 | `docker.allowed.networks` | Comma separated networks that containers are allowed to use. If no network is specified when launching the container, the default Docker network will be used. |
 | `docker.allowed.ro-mounts` | Comma separated directories that containers are allowed to mount in read-only mode. By default, no directories are allowed to mounted. |
 | `docker.allowed.rw-mounts` | Comma separated directories that containers are allowed to mount in read-write mode. By default, no directories are allowed to mounted. |
-| `docker.privileged-containers.enabled` | Set to 1 or 0 to enable or disable launching privileged containers. Default value is 0. |
+| `docker.privileged-containers.enabled` | Set to "true" or "false" to enable or disable launching privileged containers. Default value is "false". |
 
 Please note that if you wish to run Docker containers that require access to the YARN local directories, you must add them to the docker.allowed.rw-mounts list.
 
@@ -209,7 +209,7 @@ The following properties are optional:
 | `min.user.id` | The minimum UID that is allowed to launch applications. The default is no minimum |
 | `banned.users` | A comma-separated list of usernames who should not be allowed to launch applications. The default setting is: yarn, mapred, hdfs, and bin. |
 | `allowed.system.users` | A comma-separated list of usernames who should be allowed to launch applications even if their UIDs are below the configured minimum. If a user appears in allowed.system.users and banned.users, the user will be considered banned. |
-| `feature.tc.enabled` | Must be 0 or 1. 0 means traffic control commands are disabled. 1 means traffic control commands are allowed. |
+| `feature.tc.enabled` | Must be "true" or "false". "false" means traffic control commands are disabled. "true" means traffic control commands are allowed. |
 
 Part of a container-executor.cfg which allows Docker containers to be launched is below:
 
