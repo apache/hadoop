@@ -44,6 +44,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.apache.hadoop.scm.protocolPB.
     StorageContainerLocationProtocolClientSideTranslatorPB;
@@ -89,7 +90,8 @@ public class TestOzoneRpcClient {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY,
         OzoneConsts.OZONE_HANDLER_DISTRIBUTED);
-    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(5)
+    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 1);
+    cluster = new MiniOzoneClassicCluster.Builder(conf).numDataNodes(10)
         .setHandlerType(OzoneConsts.OZONE_HANDLER_DISTRIBUTED).build();
     conf.set("ozone.client.protocol",
         "org.apache.hadoop.ozone.client.rpc.RpcClient");
