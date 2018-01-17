@@ -54,7 +54,7 @@ Schemes: HTTP
 ## Paths
 ### Create a service
 ```
-POST /ws/v1/services
+POST /app/v1/services
 ```
 
 #### Description
@@ -78,7 +78,7 @@ Create a service. The request JSON is a service object with details required for
 
 ### (TBD) List of services running in the cluster.
 ```
-GET /ws/v1/services
+GET /app/v1/services
 ```
 
 #### Description
@@ -94,7 +94,7 @@ Get a list of all currently running services (response includes a minimal projec
 
 ### Get current version of the API server.
 ```
-GET /ws/v1/services/version
+GET /app/v1/services/version
 ```
 
 #### Description
@@ -109,7 +109,7 @@ Get current version of the API server.
 
 ### Update a service or upgrade the binary version of the components of a running service
 ```
-PUT /ws/v1/services/{service_name}
+PUT /app/v1/services/{service_name}
 ```
 
 #### Description
@@ -133,7 +133,7 @@ Update the runtime properties of a service. Currently the following operations a
 
 ### Destroy a service
 ```
-DELETE /ws/v1/services/{service_name}
+DELETE /app/v1/services/{service_name}
 ```
 
 #### Description
@@ -156,7 +156,7 @@ Destroy a service and release all resources. This API might have to return JSON 
 
 ### Get details of a service.
 ```
-GET /ws/v1/services/{service_name}
+GET /app/v1/services/{service_name}
 ```
 
 #### Description
@@ -179,7 +179,7 @@ Return the details (including containers) of a running service
 
 ### Flex a component's number of instances.
 ```
-PUT /ws/v1/services/{service_name}/components/{component_name}
+PUT /app/v1/services/{service_name}/components/{component_name}
 ```
 
 #### Description
@@ -378,7 +378,7 @@ The current status of a submitted service, returned as a response to the GET API
 ## Examples
 
 ### Create a simple single-component service with most attribute values as defaults
-POST URL - http://localhost:8088/ws/v1/services
+POST URL - http://localhost:8088/app/v1/services
 
 ##### POST Request JSON
 ```json
@@ -410,7 +410,7 @@ POST URL - http://localhost:8088/ws/v1/services
 ```
 
 ##### GET Response JSON
-GET URL - http://localhost:8088/ws/v1/services/hello-world
+GET URL - http://localhost:8088/app/v1/services/hello-world
 
 Note, lifetime value of -1 means unlimited lifetime.
 
@@ -468,7 +468,7 @@ Note, lifetime value of -1 means unlimited lifetime.
 
 ```
 ### Update to modify the lifetime of a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 
@@ -480,7 +480,7 @@ Note, irrespective of what the current lifetime value is, this update request wi
 }
 ```
 ### Stop a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
@@ -490,7 +490,7 @@ PUT URL - http://localhost:8088/ws/v1/services/hello-world
 ```
 
 ### Start a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world
+PUT URL - http://localhost:8088/app/v1/services/hello-world
 
 ##### PUT Request JSON
 ```json
@@ -500,7 +500,7 @@ PUT URL - http://localhost:8088/ws/v1/services/hello-world
 ```
 
 ### Update to flex up/down the no of containers (instances) of a component of a service
-PUT URL - http://localhost:8088/ws/v1/services/hello-world/components/hello
+PUT URL - http://localhost:8088/app/v1/services/hello-world/components/hello
 
 ##### PUT Request JSON
 ```json
@@ -511,12 +511,12 @@ PUT URL - http://localhost:8088/ws/v1/services/hello-world/components/hello
 ```
 
 ### Destroy a service
-DELETE URL - http://localhost:8088/ws/v1/services/hello-world
+DELETE URL - http://localhost:8088/app/v1/services/hello-world
 
 ***
 
 ### Create a complicated service  - HBase
-POST URL - http://localhost:8088:/ws/v1/services/hbase-app-1
+POST URL - http://localhost:8088:/app/v1/services/hbase-app-1
 
 ##### POST Request JSON
 

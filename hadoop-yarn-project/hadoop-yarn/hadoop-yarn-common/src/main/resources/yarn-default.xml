@@ -1697,6 +1697,14 @@
   </property>
 
   <property>
+    <description>Whether or not users are allowed to request that Docker
+      containers honor the debug deletion delay. This is useful for
+      troubleshooting Docker container related launch failures.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The mode in which the Java Container Sandbox should run detailed by
       the JavaSandboxLinuxContainerRuntime.</description>
     <name>yarn.nodemanager.runtime.linux.sandbox-mode</name>

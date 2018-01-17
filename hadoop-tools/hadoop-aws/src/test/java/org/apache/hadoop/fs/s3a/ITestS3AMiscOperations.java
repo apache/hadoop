@@ -186,4 +186,11 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
         fs.getFileChecksum(f, HELLO.length * 2));
   }
 
+  @Test
+  public void testS3AToStringUnitialized() throws Throwable {
+    try(S3AFileSystem fs = new S3AFileSystem()) {
+      fs.toString();
+    }
+  }
+
 }

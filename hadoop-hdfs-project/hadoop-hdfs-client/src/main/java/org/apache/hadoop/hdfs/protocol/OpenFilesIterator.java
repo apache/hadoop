@@ -37,6 +37,9 @@ import org.apache.htrace.core.Tracer;
 public class OpenFilesIterator extends
     BatchedRemoteIterator<Long, OpenFileEntry> {
 
+  /** No path to be filtered by default. */
+  public static final String FILTER_PATH_DEFAULT = "/";
+
   /**
    * Open file types to filter the results.
    */
@@ -67,20 +70,23 @@ public class OpenFilesIterator extends
   private final ClientProtocol namenode;
   private final Tracer tracer;
   private final EnumSet<OpenFilesType> types;
+  /** List files filtered by given path. */
+  private String path;
 
   public OpenFilesIterator(ClientProtocol namenode, Tracer tracer,
-      EnumSet<OpenFilesType> types) {
+      EnumSet<OpenFilesType> types, String path) {
     super(HdfsConstants.GRANDFATHER_INODE_ID);
     this.namenode = namenode;
     this.tracer = tracer;
     this.types = types;
+    this.path = path;
   }
 
   @Override
   public BatchedEntries<OpenFileEntry> makeRequest(Long prevId)
       throws IOException {
     try (TraceScope ignored = tracer.newScope("listOpenFiles")) {
-      return namenode.listOpenFiles(prevId, types);
+      return namenode.listOpenFiles(prevId, types, path);
     }
   }
 

@@ -395,6 +395,30 @@ public class TestRegistryDNS extends Assert {
     return recs;
   }
 
+  Record[] assertDNSQueryNotNull(String lookup, int type)
+      throws IOException {
+    Name name = Name.fromString(lookup);
+    Record question = Record.newRecord(name, type, DClass.IN);
+    Message query = Message.newQuery(question);
+    OPTRecord optRecord = new OPTRecord(4096, 0, 0, Flags.DO, null);
+    query.addRecord(optRecord, Section.ADDITIONAL);
+    byte[] responseBytes = getRegistryDNS().generateReply(query, null);
+    Message response = new Message(responseBytes);
+    assertEquals("not successful", Rcode.NOERROR, response.getRcode());
+    assertNotNull("Null response", response);
+    assertEquals("Questions do not match", query.getQuestion(),
+        response.getQuestion());
+    Record[] recs = response.getSectionArray(Section.ANSWER);
+    boolean found = false;
+    for (Record r : recs) {
+      if (r.getType()==Type.A) {
+        found = true;
+      }
+    }
+    assertTrue("No A records in answer", found);
+    return recs;
+  }
+
   @Test
   public void testDNSKEYRecord() throws Exception {
     String publicK =
@@ -607,6 +631,24 @@ public class TestRegistryDNS extends Assert {
     Record[] records = getRegistryDNS().getRecords(name, Type.SOA);
     assertNotNull("example.com exists:", records);
   }
+
+  @Test
+  public void testExternalCNAMERecord() throws Exception {
+    setRegistryDNS(new RegistryDNS("TestRegistry"));
+    Configuration conf = new Configuration();
+    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "hwx.test");
+    conf.set(RegistryConstants.KEY_DNS_ZONE_SUBNET, "172.17.0");
+    conf.setTimeDuration(RegistryConstants.KEY_DNS_TTL, 30L, TimeUnit.SECONDS);
+    conf.set(RegistryConstants.KEY_DNS_ZONES_DIR,
+        getClass().getResource("/").getFile());
+    getRegistryDNS().setDomainName(conf);
+    getRegistryDNS().initializeZones(conf);
+
+    // start assessing whether correct records are available
+    Record[] recs =
+        assertDNSQueryNotNull("mail.yahoo.com.", Type.CNAME);
+  }
+
   public RegistryDNS getRegistryDNS() {
     return registryDNS;
   }

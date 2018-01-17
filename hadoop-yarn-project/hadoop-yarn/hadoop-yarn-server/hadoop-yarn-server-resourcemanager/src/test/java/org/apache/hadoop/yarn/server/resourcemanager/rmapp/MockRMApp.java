@@ -338,4 +338,9 @@ public class MockRMApp implements RMApp {
   public CollectorInfo getCollectorInfo() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
+
+  @Override
+  public Map<String, String> getApplicationSchedulingEnvs() {
+    return null;
+  }
 }

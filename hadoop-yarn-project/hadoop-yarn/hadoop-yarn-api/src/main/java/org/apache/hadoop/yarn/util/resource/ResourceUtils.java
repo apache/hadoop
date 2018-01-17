@@ -59,7 +59,7 @@ public class ResourceUtils {
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
-  private static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
+  public static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
       Pattern.compile("^([0-9]+) ?([a-zA-Z]*)$");
 
   private static final Pattern RESOURCE_NAME_PATTERN = Pattern.compile(

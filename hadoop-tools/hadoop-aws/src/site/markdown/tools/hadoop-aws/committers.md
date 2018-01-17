@@ -402,11 +402,11 @@ directories listed in `fs.s3a.buffer.dir`.
 
 
 The staging commmitter needs a path in the cluster filesystem
-(e.g. HDFS). This must be declared in `fs.s3a.committer.tmp.path`.
+(e.g. HDFS). This must be declared in `fs.s3a.committer.staging.tmp.path`.
 
 Temporary files are saved in HDFS (or other cluster filesystem) under the path
-`${fs.s3a.committer.tmp.path}/${user}` where `user` is the name of the user running the job.
-The default value of `fs.s3a.committer.tmp.path` is `tmp/staging`,
+`${fs.s3a.committer.staging.tmp.path}/${user}` where `user` is the name of the user running the job.
+The default value of `fs.s3a.committer.staging.tmp.path` is `tmp/staging`,
 Which will be converted at run time to a path under the current user's home directory,
 essentially `~/tmp/staging`
  so the temporary directory

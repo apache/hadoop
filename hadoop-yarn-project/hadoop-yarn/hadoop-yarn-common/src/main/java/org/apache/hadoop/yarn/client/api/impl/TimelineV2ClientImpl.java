@@ -94,8 +94,7 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
-    if (!YarnConfiguration.timelineServiceEnabled(conf)
-        || (int) YarnConfiguration.getTimelineServiceVersion(conf) != 2) {
+    if (!YarnConfiguration.timelineServiceV2Enabled(conf)) {
       throw new IOException("Timeline V2 client is not properly configured. "
           + "Either timeline service is not enabled or version is not set to"
           + " 2");

@@ -24,7 +24,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -41,12 +43,14 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Progressable;
 
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.ObjectMetadata;
 
+import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +69,9 @@ public class AliyunOSSFileSystem extends FileSystem {
   private Path workingDir;
   private AliyunOSSFileSystemStore store;
   private int maxKeys;
+  private int maxReadAheadPartNumber;
+  private ListeningExecutorService boundedThreadPool;
+
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path file) {
@@ -82,6 +89,7 @@ public class AliyunOSSFileSystem extends FileSystem {
   public void close() throws IOException {
     try {
       store.close();
+      boundedThreadPool.shutdown();
     } finally {
       super.close();
     }
@@ -309,10 +317,24 @@ public class AliyunOSSFileSystem extends FileSystem {
     store = new AliyunOSSFileSystemStore();
     store.initialize(name, conf, statistics);
     maxKeys = conf.getInt(MAX_PAGING_KEYS_KEY, MAX_PAGING_KEYS_DEFAULT);
+
+    int threadNum = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MULTIPART_DOWNLOAD_THREAD_NUMBER_KEY,
+        Constants.MULTIPART_DOWNLOAD_THREAD_NUMBER_DEFAULT);
+
+    int totalTasks = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MAX_TOTAL_TASKS_KEY, Constants.MAX_TOTAL_TASKS_DEFAULT);
+
+    maxReadAheadPartNumber = AliyunOSSUtils.intPositiveOption(conf,
+        Constants.MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_KEY,
+        Constants.MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_DEFAULT);
+
+    this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
+        threadNum, totalTasks, 60L, TimeUnit.SECONDS, "oss-read-shared");
     setConf(conf);
   }
 
-  /**
+/**
    * Turn a path (relative or otherwise) into an OSS key.
    *
    * @param path the path of the file.
@@ -523,8 +545,11 @@ public class AliyunOSSFileSystem extends FileSystem {
           " because it is a directory");
     }
 
-    return new FSDataInputStream(new AliyunOSSInputStream(getConf(), store,
-        pathToKey(path), fileStatus.getLen(), statistics));
+    return new FSDataInputStream(new AliyunOSSInputStream(getConf(),
+        new SemaphoredDelegatingExecutor(
+            boundedThreadPool, maxReadAheadPartNumber, true),
+        maxReadAheadPartNumber, store, pathToKey(path), fileStatus.getLen(),
+        statistics));
   }
 
   @Override

@@ -312,6 +312,32 @@ namespace ContainerExecutor {
     run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_stop_command);
   }
 
+  TEST_F(TestDockerUtil, test_docker_kill) {
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001",
+        "kill container_e1_12312_11111_02_000001"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001\nsignal=SIGQUIT",
+        "kill --signal=SIGQUIT container_e1_12312_11111_02_000001"));
+
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001",
+        static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "docker-command=kill\n  name=ctr-id", static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=", static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=kill", static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001\n  signal=foo | bar",
+        static_cast<int>(INVALID_DOCKER_KILL_COMMAND)));
+
+    run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_kill_command);
+  }
+
   TEST_F(TestDockerUtil, test_detach_container) {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(

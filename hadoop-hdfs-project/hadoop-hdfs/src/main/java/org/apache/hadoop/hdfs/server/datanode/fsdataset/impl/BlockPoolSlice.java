@@ -84,6 +84,7 @@ class BlockPoolSlice {
   private final int ioFileBufferSize;
   @VisibleForTesting
   public static final String DU_CACHE_FILE = "dfsUsed";
+  private final Runnable shutdownHook;
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
   private final boolean deleteDuplicateReplicas;
@@ -162,15 +163,16 @@ class BlockPoolSlice {
                                                      .build();
 
     // Make the dfs usage to be saved during shutdown.
-    ShutdownHookManager.get().addShutdownHook(
-      new Runnable() {
-        @Override
-        public void run() {
-          if (!dfsUsedSaved) {
-            saveDfsUsed();
-          }
+    shutdownHook = new Runnable() {
+      @Override
+      public void run() {
+        if (!dfsUsedSaved) {
+          saveDfsUsed();
         }
-      }, SHUTDOWN_HOOK_PRIORITY);
+      }
+    };
+    ShutdownHookManager.get().addShutdownHook(shutdownHook,
+        SHUTDOWN_HOOK_PRIORITY);
   }
 
   File getDirectory() {
@@ -755,6 +757,11 @@ class BlockPoolSlice {
     saveReplicas(blocksListToPersist);
     saveDfsUsed();
     dfsUsedSaved = true;
+
+    // Remove the shutdown hook to avoid any memory leak
+    if (shutdownHook != null) {
+      ShutdownHookManager.get().removeShutdownHook(shutdownHook);
+    }
 
     if (dfsUsage instanceof CachingGetSpaceUsed) {
       IOUtils.cleanup(LOG, ((CachingGetSpaceUsed) dfsUsage));

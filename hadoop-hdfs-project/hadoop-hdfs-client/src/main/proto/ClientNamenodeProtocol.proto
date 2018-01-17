@@ -804,6 +804,7 @@ enum OpenFilesTypeProto {
 message ListOpenFilesRequestProto {
   required int64 id = 1;
   repeated OpenFilesTypeProto types = 2;
+  optional string path = 3;
 }
 
 message OpenFilesBatchResponseProto {

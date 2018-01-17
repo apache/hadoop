@@ -45,6 +45,8 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Router that provides a unified view of multiple federated HDFS clusters. It
  * has two main roles: (1) federated interface and (2) NameNode heartbeat.
@@ -105,7 +107,10 @@ public class Router extends CompositeService {
   /** JVM pauses (GC and others). */
   private JvmPauseMonitor pauseMonitor;
 
-
+  /** Quota usage update service. */
+  private RouterQuotaUpdateService quotaUpdateService;
+  /** Quota cache manager. */
+  private RouterQuotaManager quotaManager;
 
   /////////////////////////////////////////////////////////
   // Constructor
@@ -198,6 +203,14 @@ public class Router extends CompositeService {
       // JVM pause monitor
       this.pauseMonitor = new JvmPauseMonitor();
       this.pauseMonitor.init(conf);
+    }
+
+    // Initial quota relevant service
+    if (conf.getBoolean(DFSConfigKeys.DFS_ROUTER_QUOTA_ENABLE,
+        DFSConfigKeys.DFS_ROUTER_QUOTA_ENABLED_DEFAULT)) {
+      this.quotaManager = new RouterQuotaManager();
+      this.quotaUpdateService = new RouterQuotaUpdateService(this);
+      addService(this.quotaUpdateService);
     }
 
     super.serviceInit(conf);
@@ -523,5 +536,28 @@ public class Router extends CompositeService {
     if (this.namenodeResolver != null) {
       this.namenodeResolver.setRouterId(this.routerId);
     }
+  }
+
+  /**
+   * If the quota system is enabled in Router.
+   */
+  public boolean isQuotaEnabled() {
+    return this.quotaManager != null;
+  }
+
+  /**
+   * Get route quota manager.
+   * @return RouterQuotaManager Quota manager.
+   */
+  public RouterQuotaManager getQuotaManager() {
+    return this.quotaManager;
+  }
+
+  /**
+   * Get quota cache update service.
+   */
+  @VisibleForTesting
+  RouterQuotaUpdateService getQuotaCacheUpdateService() {
+    return this.quotaUpdateService;
   }
 }

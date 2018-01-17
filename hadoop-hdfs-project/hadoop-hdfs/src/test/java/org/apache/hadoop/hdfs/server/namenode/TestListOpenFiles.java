@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -97,11 +98,13 @@ public class TestListOpenFiles {
     verifyOpenFiles(openFiles);
 
     BatchedEntries<OpenFileEntry> openFileEntryBatchedEntries =
-        nnRpc.listOpenFiles(0, EnumSet.of(OpenFilesType.ALL_OPEN_FILES));
+        nnRpc.listOpenFiles(0, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+            OpenFilesIterator.FILTER_PATH_DEFAULT);
     assertTrue("Open files list should be empty!",
         openFileEntryBatchedEntries.size() == 0);
     BatchedEntries<OpenFileEntry> openFilesBlockingDecomEntries =
-        nnRpc.listOpenFiles(0, EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION));
+        nnRpc.listOpenFiles(0, EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION),
+            OpenFilesIterator.FILTER_PATH_DEFAULT);
     assertTrue("Open files list blocking decommission should be empty!",
         openFilesBlockingDecomEntries.size() == 0);
 
@@ -128,15 +131,16 @@ public class TestListOpenFiles {
   }
 
   private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles,
-      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
+      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     HashSet<Path> remainingFiles = new HashSet<>(openFiles.keySet());
     OpenFileEntry lastEntry = null;
     BatchedEntries<OpenFileEntry> batchedEntries;
     do {
       if (lastEntry == null) {
-        batchedEntries = nnRpc.listOpenFiles(0, openFilesTypes);
+        batchedEntries = nnRpc.listOpenFiles(0, openFilesTypes, path);
       } else {
-        batchedEntries = nnRpc.listOpenFiles(lastEntry.getId(), openFilesTypes);
+        batchedEntries = nnRpc.listOpenFiles(lastEntry.getId(),
+            openFilesTypes, path);
       }
       assertTrue("Incorrect open files list size!",
           batchedEntries.size() <= BATCH_SIZE);
@@ -154,9 +158,11 @@ public class TestListOpenFiles {
 
   private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles)
       throws IOException {
-    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES));
+    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
     verifyOpenFiles(new HashMap<>(),
-        EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION));
+        EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION),
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
   }
 
   private Set<Path> createFiles(FileSystem fileSystem, String fileNamePrefix,

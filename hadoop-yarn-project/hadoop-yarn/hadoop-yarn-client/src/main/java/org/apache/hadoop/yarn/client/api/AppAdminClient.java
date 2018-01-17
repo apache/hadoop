@@ -39,9 +39,6 @@ public abstract class AppAdminClient extends CompositeService {
       ".application.admin.client.class.";
   public static final String DEFAULT_TYPE = "yarn-service";
   public static final String DEFAULT_CLASS_NAME = "org.apache.hadoop.yarn" +
-      ".service.client.ApiServiceClient";
-  public static final String UNIT_TEST_TYPE = "unit-test";
-  public static final String UNIT_TEST_CLASS_NAME = "org.apache.hadoop.yarn" +
       ".service.client.ServiceClient";
 
   @Private
@@ -66,9 +63,6 @@ public abstract class AppAdminClient extends CompositeService {
         conf.getPropsWithPrefix(YARN_APP_ADMIN_CLIENT_PREFIX);
     if (!clientClassMap.containsKey(DEFAULT_TYPE)) {
       clientClassMap.put(DEFAULT_TYPE, DEFAULT_CLASS_NAME);
-    }
-    if (!clientClassMap.containsKey(UNIT_TEST_TYPE)) {
-      clientClassMap.put(UNIT_TEST_TYPE, UNIT_TEST_CLASS_NAME);
     }
     if (!clientClassMap.containsKey(appType)) {
       throw new IllegalArgumentException("App admin client class name not " +
@@ -213,16 +207,16 @@ public abstract class AppAdminClient extends CompositeService {
 
   /**
    * <p>
-   * Get detailed status string for a YARN application.
+   * Get detailed app specific status string for a YARN application.
    * </p>
    *
-   * @param applicationId application id
+   * @param appIdOrName appId or appName
    * @return status string
    * @throws IOException IOException
    * @throws YarnException exception in client or server
    */
   @Public
   @Unstable
-  public abstract String getStatusString(String applicationId) throws
+  public abstract String getStatusString(String appIdOrName) throws
       IOException, YarnException;
 }
