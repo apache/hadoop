@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -105,6 +106,54 @@ public class TestAliyunOSSInputStream {
       LOG.info("completed seeking at pos: " + instream.getPos());
     }
     IOUtils.closeStream(instream);
+  }
+
+  @Test
+  public void testSequentialAndRandomRead() throws Exception {
+    Path smallSeekFile = setPath("/test/smallSeekFile.txt");
+    long size = 5 * 1024 * 1024;
+
+    ContractTestUtils.generateTestFile(this.fs, smallSeekFile, size, 256, 255);
+    LOG.info("5MB file created: smallSeekFile.txt");
+
+    FSDataInputStream fsDataInputStream = this.fs.open(smallSeekFile);
+    AliyunOSSInputStream in =
+        (AliyunOSSInputStream)fsDataInputStream.getWrappedStream();
+    assertTrue("expected position at:" + 0 + ", but got:"
+        + fsDataInputStream.getPos(), fsDataInputStream.getPos() == 0);
+
+    assertTrue("expected position at:"
+            + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
+            + in.getExpectNextPos(),
+        in.getExpectNextPos() == Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
+    fsDataInputStream.seek(4 * 1024 * 1024);
+    assertTrue("expected position at:" + 4 * 1024 * 1024
+            + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
+            + in.getExpectNextPos(),
+        in.getExpectNextPos() == 4 * 1024 * 1024
+            + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
+    IOUtils.closeStream(fsDataInputStream);
+  }
+
+  @Test
+  public void testOSSFileReaderTask() throws Exception {
+    Path smallSeekFile = setPath("/test/smallSeekFileOSSFileReader.txt");
+    long size = 5 * 1024 * 1024;
+
+    ContractTestUtils.generateTestFile(this.fs, smallSeekFile, size, 256, 255);
+    LOG.info("5MB file created: smallSeekFileOSSFileReader.txt");
+    ReadBuffer readBuffer = new ReadBuffer(12, 24);
+    AliyunOSSFileReaderTask task = new AliyunOSSFileReaderTask("1",
+        ((AliyunOSSFileSystem)this.fs).getStore(), readBuffer);
+    //NullPointerException, fail
+    task.run();
+    assertEquals(readBuffer.getStatus(), ReadBuffer.STATUS.ERROR);
+    //OK
+    task = new AliyunOSSFileReaderTask(
+        "test/test/smallSeekFileOSSFileReader.txt",
+        ((AliyunOSSFileSystem)this.fs).getStore(), readBuffer);
+    task.run();
+    assertEquals(readBuffer.getStatus(), ReadBuffer.STATUS.SUCCESS);
   }
 
   @Test
