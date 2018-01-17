@@ -1071,7 +1071,8 @@ int create_log_dirs(const char *app_id, char * const * log_dirs) {
   for(log_root=log_dirs; *log_root != NULL; ++log_root) {
     char *app_log_dir = get_app_log_directory(*log_root, app_id);
     int result = check_nm_local_dir(nm_uid, *log_root);
-    if (result != 0) {
+    if (result != 0 && app_log_dir != NULL) {
+      free(app_log_dir);
       app_log_dir = NULL;
     }
     if (app_log_dir == NULL) {

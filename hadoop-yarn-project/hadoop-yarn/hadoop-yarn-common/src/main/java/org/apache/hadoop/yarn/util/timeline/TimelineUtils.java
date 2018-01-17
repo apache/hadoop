@@ -118,7 +118,8 @@ public class TimelineUtils {
   }
 
   /**
-   * Returns whether the timeline service v.1.5 is enabled via configuration.
+   * Returns whether the timeline service v.1.5 is enabled by default via
+   * configuration.
    *
    * @param conf the configuration
    * @return whether the timeline service v.1.5 is enabled. V.1.5 refers to a
