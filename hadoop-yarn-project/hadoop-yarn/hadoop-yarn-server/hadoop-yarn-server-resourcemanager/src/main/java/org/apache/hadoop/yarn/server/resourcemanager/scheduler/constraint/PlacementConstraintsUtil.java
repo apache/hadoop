@@ -64,12 +64,12 @@ public final class PlacementConstraintsUtil {
       throws InvalidAllocationTagsQueryException {
     long minScopeCardinality = 0;
     long maxScopeCardinality = 0;
-    if (sc.getScope() == PlacementConstraints.NODE) {
+    if (sc.getScope().equals(PlacementConstraints.NODE)) {
       minScopeCardinality = tm.getNodeCardinalityByOp(node.getNodeID(), appId,
           te.getTargetValues(), Long::max);
       maxScopeCardinality = tm.getNodeCardinalityByOp(node.getNodeID(), appId,
           te.getTargetValues(), Long::min);
-    } else if (sc.getScope() == PlacementConstraints.RACK) {
+    } else if (sc.getScope().equals(PlacementConstraints.RACK)) {
       minScopeCardinality = tm.getRackCardinalityByOp(node.getRackName(), appId,
           te.getTargetValues(), Long::max);
       maxScopeCardinality = tm.getRackCardinalityByOp(node.getRackName(), appId,

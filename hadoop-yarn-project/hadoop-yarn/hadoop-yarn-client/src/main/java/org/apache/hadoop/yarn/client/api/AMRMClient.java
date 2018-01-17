@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.List;
 
@@ -39,7 +41,9 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -554,6 +558,18 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
   }
 
   /**
+   * Add a Collection of SchedulingRequests. The AMRMClient will ensure that
+   * all requests in the same batch are sent in the same allocate call.
+   * @param schedulingRequests Collection of Scheduling Requests.
+   */
+  @Public
+  @InterfaceStability.Unstable
+  public void addSchedulingRequests(
+      Collection<SchedulingRequest> schedulingRequests) {
+
+  }
+
+  /**
    * Register the application master. This must be called before any 
    * other interaction
    * @param appHostName Name of the host on which master is running
@@ -568,7 +584,27 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
                                          int appHostPort,
                                          String appTrackingUrl) 
                throws YarnException, IOException;
-  
+
+  /**
+   * Register the application master. This must be called before any
+   * other interaction
+   * @param appHostName Name of the host on which master is running
+   * @param appHostPort Port master is listening on
+   * @param appTrackingUrl URL at which the master info can be seen
+   * @param placementConstraints Placement Constraints mappings.
+   * @return <code>RegisterApplicationMasterResponse</code>
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @InterfaceStability.Unstable
+  public RegisterApplicationMasterResponse registerApplicationMaster(
+      String appHostName, int appHostPort, String appTrackingUrl,
+      Map<Set<String>, PlacementConstraint> placementConstraints)
+      throws YarnException, IOException {
+    throw new YarnException("Not supported");
+  }
+
   /**
    * Request additional containers and receive new container allocations.
    * Requests made via <code>addContainerRequest</code> are sent to the

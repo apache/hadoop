@@ -589,6 +589,7 @@ public abstract class AbstractYarnScheduler
     container.setVersion(status.getVersion());
     container.setExecutionType(status.getExecutionType());
     container.setAllocationRequestId(status.getAllocationRequestId());
+    container.setAllocationTags(status.getAllocationTags());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
     RMContainer rmContainer = new RMContainerImpl(container,

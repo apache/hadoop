@@ -672,6 +672,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
               containerType, container.getExecutionType(),
               container.getAllocationRequestId(),
               rmContainer.getAllocationTags()));
+      container.setAllocationTags(rmContainer.getAllocationTags());
       updateNMToken(container);
     } catch (IllegalArgumentException e) {
       // DNS might be down, skip returning this container.
