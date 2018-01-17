@@ -97,18 +97,7 @@ public final class Constants {
   public static final String MULTIPART_DOWNLOAD_SIZE_KEY =
       "fs.oss.multipart.download.size";
 
-  public static final long MULTIPART_DOWNLOAD_SIZE_DEFAULT = 512 * 1024;
-
-  public static final String MULTIPART_DOWNLOAD_THREAD_NUMBER_KEY =
-      "fs.oss.multipart.download.threads";
-  public static final int MULTIPART_DOWNLOAD_THREAD_NUMBER_DEFAULT = 10;
-
-  public static final String MAX_TOTAL_TASKS_KEY = "fs.oss.max.total.tasks";
-  public static final int MAX_TOTAL_TASKS_DEFAULT = 128;
-
-  public static final String MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_KEY =
-      "fs.oss.multipart.download.ahead.part.max.number";
-  public static final int MULTIPART_DOWNLOAD_AHEAD_PART_MAX_NUM_DEFAULT = 4;
+  public static final long MULTIPART_DOWNLOAD_SIZE_DEFAULT = 100 * 1024;
 
   // Comma separated list of directories
   public static final String BUFFER_DIR_KEY = "fs.oss.buffer.dir";
