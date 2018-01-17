@@ -822,6 +822,18 @@
 </property>
 
 <property>
+  <name>fs.AbstractFileSystem.sftp.impl</name>
+  <value>org.apache.hadoop.fs.sftp.SFtpFs</value>
+  <description>The FileSystem for SFtp: uris.</description>
+</property>
+
+<property>
+  <name>fs.sftp.impl</name>
+  <value>org.apache.hadoop.fs.sftp.SFTPFileSystem</value>
+  <description>The implementation class of the SFTP FileSystem</description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.webhdfs.impl</name>
   <value>org.apache.hadoop.fs.WebHdfs</value>
   <description>The FileSystem for webhdfs: uris.</description>
@@ -862,6 +874,28 @@
   <description>
     Set FTP's transfer mode based on configuration. Valid values are
     STREAM_TRANSFER_MODE, BLOCK_TRANSFER_MODE and COMPRESSED_TRANSFER_MODE.
+  </description>
+</property>
+
+<property>
+  <name>fs.sftp.host</name>
+  <value>0.0.0.0</value>
+  <description>SFTP filesystem connects to this server</description>
+</property>
+
+<property>
+  <name>fs.sftp.host.port</name>
+  <value>22</value>
+  <description>
+    SFTP filesystem connects to fs.sftp.host on this port
+  </description>
+</property>
+
+<property>
+  <name>fs.sftp.connection.max</name>
+  <value>5</value>
+  <description>
+    Maximum number of allowed live connections in a SFTP filesystem
   </description>
 </property>
 
