@@ -19,6 +19,9 @@ Release 2.6.6 - UNRELEASED
     HADOOP-14474. Use OpenJDK 7 instead of Oracle JDK 7 to avoid
     oracle-java7-installer failures. (Akira Ajisaka via xiao)
 
+    YARN-7590. Improve container-executor validation check.
+    Contributed by Eric Yang.
+
 Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES

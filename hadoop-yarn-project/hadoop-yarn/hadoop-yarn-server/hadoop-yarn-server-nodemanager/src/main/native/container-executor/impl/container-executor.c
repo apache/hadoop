@@ -406,7 +406,29 @@ char *get_app_directory(const char * nm_root, const char *user,
  * Get the user directory of a particular user
  */
 char *get_user_directory(const char *nm_root, const char *user) {
+  int result = check_nm_local_dir(nm_uid, nm_root);
+  if (result != 0) {
+    return NULL;
+  }
   return concatenate(USER_DIR_PATTERN, "user_dir_path", 2, nm_root, user);
+}
+
+/**
+ * Check node manager local dir permission.
+ */
+int check_nm_local_dir(uid_t caller_uid, const char *nm_root) {
+  struct stat info;
+  errno = 0;
+  int err = stat(nm_root, &info);
+  if (err < 0) {
+    fprintf(LOGFILE, "Error checking file stats for %s %d %s.\n", nm_root, err, strerror(errno));
+    return 1;
+  }
+  if (caller_uid != info.st_uid) {
+    fprintf(LOGFILE, "Permission mismatch for %s for caller uid: %d, owner uid: %d.\n", nm_root, caller_uid, info.st_uid);
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -552,6 +574,11 @@ static int create_container_directories(const char* user, const char *app_id,
   for(local_dir_ptr = local_dir; *local_dir_ptr != NULL; ++local_dir_ptr) {
     char *container_dir = get_container_work_directory(*local_dir_ptr, user, app_id, 
                                                 container_id);
+    int check = check_nm_local_dir(nm_uid, *local_dir_ptr);
+    if (check != 0) {
+      free(container_dir);
+      continue;
+    }
     if (container_dir == NULL) {
       return -1;
     }
@@ -578,6 +605,14 @@ static int create_container_directories(const char* user, const char *app_id,
     char* const* log_dir_ptr;
     for(log_dir_ptr = log_dir; *log_dir_ptr != NULL; ++log_dir_ptr) {
       char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
+      int check = check_nm_local_dir(nm_uid, *log_dir_ptr);
+      if (check != 0) {
+        container_log_dir = NULL;
+      }
+      if (strstr(container_log_dir, "..") != 0) {
+        fprintf(LOGFILE, "Unsupported container log directory path detected.\n");
+        container_log_dir = NULL;
+      }
       if (container_log_dir == NULL) {
         free(combined_name);
         return -1;
@@ -891,6 +926,10 @@ int create_log_dirs(const char *app_id, char * const * log_dirs) {
   char *any_one_app_log_dir = NULL;
   for(log_root=log_dirs; *log_root != NULL; ++log_root) {
     char *app_log_dir = get_app_log_directory(*log_root, app_id);
+    int result = check_nm_local_dir(nm_uid, *log_root);
+    if (result != 0) {
+      app_log_dir = NULL;
+    }
     if (app_log_dir == NULL) {
       // try the next one
     } else if (create_directory_for_user(app_log_dir) != 0) {
