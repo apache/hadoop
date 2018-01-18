@@ -1909,6 +1909,41 @@
   <description>Replication factor</description>
 </property>
 
+<!-- SFTP file system -->
+<property>
+  <name>sftp.stream-buffer-size</name>
+  <value>4096</value>
+  <description>The size of buffer to stream files.
+    The size of this buffer should probably be a multiple of hardware
+    page size (4096 on Intel x86), and it determines how much data is
+    buffered during read and write operations.</description>
+</property>
+
+<property>
+  <name>sftp.bytes-per-checksum</name>
+  <value>512</value>
+  <description>The number of bytes per checksum.  Must not be larger than
+    sftp.stream-buffer-size</description>
+</property>
+
+<property>
+  <name>sftp.client-write-packet-size</name>
+  <value>65536</value>
+  <description>Packet size for clients to write</description>
+</property>
+
+<property>
+  <name>sftp.blocksize</name>
+  <value>67108864</value>
+  <description>Block size</description>
+</property>
+
+<property>
+  <name>sftp.replication</name>
+  <value>3</value>
+  <description>Replication factor</description>
+</property>
+
 <!-- Tfile -->
 
 <property>

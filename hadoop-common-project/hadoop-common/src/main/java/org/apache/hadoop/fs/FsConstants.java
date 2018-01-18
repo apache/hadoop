@@ -35,7 +35,7 @@ public interface FsConstants {
   public static final String FTP_SCHEME = "ftp";
 
   // URI scheme for SFTP
-  public static final String SFTP_SCHEME = "sftp";
+  static final String SFTP_SCHEME = "sftp";
 
   // Maximum number of symlinks to recursively resolve in a path
   static final int MAX_PATH_LINKS = 32;

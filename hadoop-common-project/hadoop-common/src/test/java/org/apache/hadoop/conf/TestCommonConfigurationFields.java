@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ftp.FtpConfigKeys;
 import org.apache.hadoop.fs.local.LocalConfigKeys;
+import org.apache.hadoop.fs.sftp.SFtpConfigKeys;
 import org.apache.hadoop.ha.SshFenceByTcpPort;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.http.HttpServer2;
@@ -44,6 +45,7 @@ import org.apache.hadoop.security.ssl.SSLFactory;
  * {@link org.apache.hadoop.fs.CommonConfigurationKeys}
  * {@link org.apache.hadoop.fs.CommonConfigurationKeysPublic}
  * {@link org.apache.hadoop.fs.ftp.FtpConfigKeys}
+ * {@link org.apache.hadoop.fs.sftp.SFtpConfigKeys}
  * {@link org.apache.hadoop.fs.local.LocalConfigKeys}
  * {@link org.apache.hadoop.ha.SshFenceByTcpPort}
  * {@link org.apache.hadoop.http.HttpServer2}
@@ -69,6 +71,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         CommonConfigurationKeysPublic.class,
         LocalConfigKeys.class,
         FtpConfigKeys.class,
+        SFtpConfigKeys.class,
         SshFenceByTcpPort.class,
         LdapGroupsMapping.class,
         ZKFailoverController.class,
@@ -91,6 +94,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
     xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
     xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
+    xmlPropsToSkipCompare.add("fs.sftp.data.connection.mode");
+    xmlPropsToSkipCompare.add("fs.sftp.transfer.mode");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
@@ -102,6 +107,12 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     //ftp properties are in a different subtree.
     // - org.apache.hadoop.fs.ftp.FTPFileSystem.
     xmlPrefixToSkipCompare.add("fs.ftp.impl");
+
+    // - org.apache.hadoop.fs.ftp.FTPFileSystem.
+    xmlPrefixToSkipCompare.add("fs.ftp.impl");
+
+    // - org.apache.hadoop.fs.sftp.SFTPFileSystem.
+    xmlPrefixToSkipCompare.add("fs.sftp.impl");
 
     // WASB properties are in a different subtree.
     // - org.apache.hadoop.fs.azure.NativeAzureFileSystem

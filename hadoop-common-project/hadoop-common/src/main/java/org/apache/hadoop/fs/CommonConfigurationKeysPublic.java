@@ -168,6 +168,24 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String  FS_SFTP_HOST_KEY = "fs.sftp.host";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  FS_SFTP_HOST_PORT_KEY = "fs.sftp.host.port";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  FS_SFTP_CONNECTION_MAX_KEY = "fs.sftp.connection.max";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String  FS_TRASH_INTERVAL_KEY = "fs.trash.interval";
   /** Default value for FS_TRASH_INTERVAL_KEY */
   public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
