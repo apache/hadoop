@@ -29,9 +29,11 @@ import java.util.TreeMap;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.RouterPermissionChecker;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaUsage;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -139,6 +141,14 @@ public abstract class MountTable extends BaseRecord {
     record.setGroupName(group);
     record.setMode(new FsPermission(
         RouterPermissionChecker.MOUNT_TABLE_PERMISSION_DEFAULT));
+
+    // Set quota for mount table
+    RouterQuotaUsage quota = new RouterQuotaUsage.Builder()
+        .fileAndDirectoryCount(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT)
+        .quota(HdfsConstants.QUOTA_DONT_SET)
+        .spaceConsumed(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT)
+        .spaceQuota(HdfsConstants.QUOTA_DONT_SET).build();
+    record.setQuota(quota);
 
     // Validate
     record.validate();
@@ -249,6 +259,20 @@ public abstract class MountTable extends BaseRecord {
   public abstract void setMode(FsPermission mode);
 
   /**
+   * Get quota of this mount table entry.
+   *
+   * @return RouterQuotaUsage quota usage
+   */
+  public abstract RouterQuotaUsage getQuota();
+
+  /**
+   * Set quota for this mount table entry.
+   *
+   * @param quota QuotaUsage for mount table entry
+   */
+  public abstract void setQuota(RouterQuotaUsage quota);
+
+  /**
    * Get the default location.
    * @return The default location.
    */
@@ -301,6 +325,10 @@ public abstract class MountTable extends BaseRecord {
 
     if (this.getMode() != null) {
       sb.append("[mode:").append(this.getMode()).append("]");
+    }
+
+    if (this.getQuota() != null) {
+      sb.append("[quota:").append(this.getQuota()).append("]");
     }
 
     return sb.toString();

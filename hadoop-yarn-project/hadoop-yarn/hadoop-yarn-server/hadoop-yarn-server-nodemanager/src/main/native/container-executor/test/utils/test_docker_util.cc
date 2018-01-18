@@ -312,6 +312,32 @@ namespace ContainerExecutor {
     run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_stop_command);
   }
 
+  TEST_F(TestDockerUtil, test_docker_kill) {
+    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001",
+        "kill container_e1_12312_11111_02_000001"));
+    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001\nsignal=SIGQUIT",
+        "kill --signal=SIGQUIT container_e1_12312_11111_02_000001"));
+
+    std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=run\n  name=container_e1_12312_11111_02_000001",
+        static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "docker-command=kill\n  name=ctr-id", static_cast<int>(INCORRECT_COMMAND)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=", static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=kill", static_cast<int>(INVALID_DOCKER_CONTAINER_NAME)));
+    bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
+        "[docker-command-execution]\n  docker-command=kill\n  name=container_e1_12312_11111_02_000001\n  signal=foo | bar",
+        static_cast<int>(INVALID_DOCKER_KILL_COMMAND)));
+
+    run_docker_command_test(file_cmd_vec, bad_file_cmd_vec, get_docker_kill_command);
+  }
+
   TEST_F(TestDockerUtil, test_detach_container) {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -469,36 +495,42 @@ namespace ContainerExecutor {
     char buff[buff_len];
     int ret = 0;
     std::string container_executor_cfg_contents[] = {"[docker]\n  docker.privileged-containers.enabled=1",
+                                                     "[docker]\n  docker.privileged-containers.enabled=true",
+                                                     "[docker]\n  docker.privileged-containers.enabled=True",
                                                      "[docker]\n  docker.privileged-containers.enabled=0",
+                                                     "[docker]\n  docker.privileged-containers.enabled=false",
                                                      "[docker]\n"};
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
+    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  privileged=true", "--privileged "));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  privileged=false", ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run", ""));
-    write_container_executor_cfg(container_executor_cfg_contents[0]);
-    ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
+    for (int i = 0; i < 3; i++ ) {
+      write_container_executor_cfg(container_executor_cfg_contents[i]);
+      ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
 
-    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
-    if (ret != 0) {
-      FAIL();
-    }
-    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
-      memset(buff, 0, buff_len);
-      write_command_file(itr->first);
-      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
       if (ret != 0) {
         FAIL();
       }
-      ret = set_privileged(&cmd_cfg, &container_cfg, buff, buff_len);
-      ASSERT_EQ(0, ret);
-      ASSERT_STREQ(itr->second.c_str(), buff);
+      for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
+        memset(buff, 0, buff_len);
+        write_command_file(itr->first);
+        ret = read_config(docker_command_file.c_str(), &cmd_cfg);
+        if (ret != 0) {
+          FAIL();
+        }
+        ret = set_privileged(&cmd_cfg, &container_cfg, buff, buff_len);
+        ASSERT_EQ(0, ret);
+        ASSERT_STREQ(itr->second.c_str(), buff);
+      }
     }
 
+
     // check default case and when it's turned off
-    for (int i = 1; i < 3; ++i) {
+    for (int i = 3; i < 5; ++i) {
       write_container_executor_cfg(container_executor_cfg_contents[i]);
       ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
       if (ret != 0) {

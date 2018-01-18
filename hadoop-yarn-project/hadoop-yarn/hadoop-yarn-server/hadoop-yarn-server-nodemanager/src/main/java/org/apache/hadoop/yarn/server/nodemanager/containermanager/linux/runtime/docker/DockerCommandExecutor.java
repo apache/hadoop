@@ -183,9 +183,46 @@ public final class DockerCommandExecutor {
         new DockerInspectCommand(containerId).getContainerStatus();
     try {
       return DockerCommandExecutor.executeDockerCommand(dockerInspectCommand,
-          containerId, null, conf, privilegedOperationExecutor, false);
+          containerId, null, conf, privilegedOperationExecutor, true);
     } catch (ContainerExecutionException e) {
       throw new ContainerExecutionException(e);
     }
+  }
+
+  /**
+   * Is the container in a stoppable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a stoppable state.
+   */
+  public static boolean isStoppable(DockerContainerStatus containerStatus) {
+    if (containerStatus.equals(DockerContainerStatus.RUNNING)
+        || containerStatus.equals(DockerContainerStatus.RESTARTING)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Is the container in a killable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a killable state.
+   */
+  public static boolean isKillable(DockerContainerStatus containerStatus) {
+    return isStoppable(containerStatus);
+  }
+
+  /**
+   * Is the container in a removable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a removable state.
+   */
+  public static boolean isRemovable(DockerContainerStatus containerStatus) {
+    return !containerStatus.equals(DockerContainerStatus.NONEXISTENT)
+        && !containerStatus.equals(DockerContainerStatus.UNKNOWN)
+        && !containerStatus.equals(DockerContainerStatus.REMOVING)
+        && !containerStatus.equals(DockerContainerStatus.RUNNING);
   }
 }

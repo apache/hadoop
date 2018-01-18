@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.RouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -293,5 +294,73 @@ public class TestRouterAdminCLI {
     // execute remove command
     argv = new String[] {"-rm", mount};
     assertEquals(rmCommandCode, ToolRunner.run(admin, argv));
+  }
+
+  @Test
+  public void testSetAndClearQuota() throws Exception {
+    String nsId = "ns0";
+    String src = "/test-QuotaMounttable";
+    String dest = "/QuotaMounttable";
+    String[] argv = new String[] {"-add", src, nsId, dest};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    MountTable mountTable = getResponse.getEntries().get(0);
+    RouterQuotaUsage quotaUsage = mountTable.getQuota();
+
+    // verify the default quota set
+    assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+        quotaUsage.getFileAndDirectoryCount());
+    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getQuota());
+    assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+        quotaUsage.getSpaceConsumed());
+    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getSpaceQuota());
+
+    long nsQuota = 50;
+    long ssQuota = 100;
+    argv = new String[] {"-setQuota", src, "-nsQuota", String.valueOf(nsQuota),
+        "-ssQuota", String.valueOf(ssQuota)};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    quotaUsage = mountTable.getQuota();
+
+    // verify if the quota is set
+    assertEquals(nsQuota, quotaUsage.getQuota());
+    assertEquals(ssQuota, quotaUsage.getSpaceQuota());
+
+    // use quota string for setting ss quota
+    String newSsQuota = "2m";
+    argv = new String[] {"-setQuota", src, "-ssQuota", newSsQuota};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    quotaUsage = mountTable.getQuota();
+    // verify if ss quota is correctly set
+    assertEquals(2 * 1024 * 1024, quotaUsage.getSpaceQuota());
+
+    // test clrQuota command
+    argv = new String[] {"-clrQuota", src};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    quotaUsage = mountTable.getQuota();
+
+    // verify if quota unset successfully
+    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getQuota());
+    assertEquals(HdfsConstants.QUOTA_DONT_SET, quotaUsage.getSpaceQuota());
   }
 }

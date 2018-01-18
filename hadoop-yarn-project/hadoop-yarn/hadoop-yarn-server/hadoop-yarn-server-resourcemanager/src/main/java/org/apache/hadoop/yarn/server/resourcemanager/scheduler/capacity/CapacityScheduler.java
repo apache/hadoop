@@ -62,7 +62,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
@@ -398,7 +397,6 @@ public class CapacityScheduler extends
     super.serviceInit(conf);
     initScheduler(configuration);
     // Initialize SchedulingMonitorManager
-    schedulingMonitorManager = new SchedulingMonitorManager();
     schedulingMonitorManager.initialize(rmContext, conf);
   }
 

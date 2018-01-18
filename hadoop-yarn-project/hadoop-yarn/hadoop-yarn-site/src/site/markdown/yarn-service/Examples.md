@@ -111,7 +111,7 @@ The pages should alternately show "Hello from httpd-0!" or "Hello from httpd-1!"
 
 The individual httpd URLs can also be visited, `http://httpd-0.${SERVICE_NAME}.${USER}.${DOMAIN}:8080` and `http://httpd-1.${SERVICE_NAME}.${USER}.${DOMAIN}:8080`.
 
-If unsure of your hostnames, visit the RM REST endpoint `http://<RM host>:8088/ws/v1/services/httpd-service`.
+If unsure of your hostnames, visit the RM REST endpoint `http://<RM host>:8088/app/v1/services/httpd-service`.
 
 ## Apache web server - httpd (without registry DNS)
 
@@ -157,5 +157,5 @@ yarn app -launch <service-name> httpd-no-dns
 ```
 where `service-name` is optional. If omitted, it uses the name defined in the `Yarnfile`.
 
-Look up your IPs at the RM REST endpoint `http://<RM host>:8088/ws/v1/services/httpd-service`.
+Look up your IPs at the RM REST endpoint `http://<RM host>:8088/app/v1/services/httpd-service`.
 Then visit port 8080 for each IP to view the pages.

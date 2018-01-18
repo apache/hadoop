@@ -323,7 +323,8 @@ public class ApplicationMaster {
   TimelineClient timelineClient;
 
   // Timeline v2 Client
-  private TimelineV2Client timelineV2Client;
+  @VisibleForTesting
+  TimelineV2Client timelineV2Client;
 
   static final String CONTAINER_ENTITY_GROUP_ID = "CONTAINERS";
   static final String APPID_TIMELINE_FILTER_NAME = "appId";
@@ -632,11 +633,7 @@ public class ApplicationMaster {
     containrRetryInterval = Integer.parseInt(cliParser.getOptionValue(
         "container_retry_interval", "0"));
 
-    if (YarnConfiguration.timelineServiceEnabled(conf)) {
-      timelineServiceV2Enabled =
-          ((int) YarnConfiguration.getTimelineServiceVersion(conf) == 2);
-      timelineServiceV1Enabled = !timelineServiceV2Enabled;
-    } else {
+    if (!YarnConfiguration.timelineServiceEnabled(conf)) {
       timelineClient = null;
       timelineV2Client = null;
       LOG.warn("Timeline service is not enabled");
@@ -704,12 +701,11 @@ public class ApplicationMaster {
     if (timelineServiceV2Enabled) {
       // need to bind timelineClient
       amRMClient.registerTimelineV2Client(timelineV2Client);
-    }
-
-    if (timelineServiceV2Enabled) {
       publishApplicationAttemptEventOnTimelineServiceV2(
           DSEvent.DS_APP_ATTEMPT_START);
-    } else if (timelineServiceV1Enabled) {
+    }
+
+    if (timelineServiceV1Enabled) {
       publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
           DSEvent.DS_APP_ATTEMPT_START, domainId, appSubmitterUgi);
     }
@@ -784,18 +780,23 @@ public class ApplicationMaster {
         @Override
         public Void run() throws Exception {
           if (YarnConfiguration.timelineServiceEnabled(conf)) {
+            timelineServiceV1Enabled =
+                YarnConfiguration.timelineServiceV1Enabled(conf);
+            timelineServiceV2Enabled =
+                YarnConfiguration.timelineServiceV2Enabled(conf);
             // Creating the Timeline Client
+            if (timelineServiceV1Enabled) {
+              timelineClient = TimelineClient.createTimelineClient();
+              timelineClient.init(conf);
+              timelineClient.start();
+              LOG.info("Timeline service V1 client is enabled");
+            }
             if (timelineServiceV2Enabled) {
               timelineV2Client = TimelineV2Client.createTimelineClient(
                   appAttemptID.getApplicationId());
               timelineV2Client.init(conf);
               timelineV2Client.start();
               LOG.info("Timeline service V2 client is enabled");
-            } else {
-              timelineClient = TimelineClient.createTimelineClient();
-              timelineClient.init(conf);
-              timelineClient.start();
-              LOG.info("Timeline service V1 client is enabled");
             }
           } else {
             timelineClient = null;
@@ -825,12 +826,14 @@ public class ApplicationMaster {
       } catch (InterruptedException ex) {}
     }
 
+    if (timelineServiceV1Enabled) {
+      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
+          DSEvent.DS_APP_ATTEMPT_END, domainId, appSubmitterUgi);
+    }
+
     if (timelineServiceV2Enabled) {
       publishApplicationAttemptEventOnTimelineServiceV2(
           DSEvent.DS_APP_ATTEMPT_END);
-    } else if (timelineServiceV1Enabled) {
-      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
-          DSEvent.DS_APP_ATTEMPT_END, domainId, appSubmitterUgi);
     }
 
     // Join all launched threads
@@ -881,7 +884,8 @@ public class ApplicationMaster {
     // Stop Timeline Client
     if(timelineServiceV1Enabled) {
       timelineClient.stop();
-    } else if (timelineServiceV2Enabled) {
+    }
+    if (timelineServiceV2Enabled) {
       timelineV2Client.stop();
     }
 
@@ -947,7 +951,8 @@ public class ApplicationMaster {
           }
           publishContainerEndEventOnTimelineServiceV2(containerStatus,
               containerStartTime);
-        } else if (timelineServiceV1Enabled) {
+        }
+        if (timelineServiceV1Enabled) {
           publishContainerEndEvent(timelineClient, containerStatus, domainId,
               appSubmitterUgi);
         }
@@ -1113,7 +1118,8 @@ public class ApplicationMaster {
         applicationMaster.getContainerStartTimes().put(containerId, startTime);
         applicationMaster.publishContainerStartEventOnTimelineServiceV2(
             container, startTime);
-      } else if (applicationMaster.timelineServiceV1Enabled) {
+      }
+      if (applicationMaster.timelineServiceV1Enabled) {
         applicationMaster.publishContainerStartEvent(
             applicationMaster.timelineClient, container,
             applicationMaster.domainId, applicationMaster.appSubmitterUgi);
@@ -1602,17 +1608,15 @@ public class ApplicationMaster {
 
     Resource resourceCapability =
         Resource.newInstance(containerMemory, containerVirtualCores);
-    if (resourceProfiles == null) {
-      containerMemory = containerMemory == -1 ? DEFAULT_CONTAINER_MEMORY :
-          containerMemory;
-      containerVirtualCores =
-          containerVirtualCores == -1 ? DEFAULT_CONTAINER_VCORES :
-              containerVirtualCores;
-      resourceCapability.setMemorySize(containerMemory);
-      resourceCapability.setVirtualCores(containerVirtualCores);
-      for (Map.Entry<String, Long> entry : containerResources.entrySet()) {
-        resourceCapability.setResourceValue(entry.getKey(), entry.getValue());
-      }
+    containerMemory =
+        containerMemory == -1 ? DEFAULT_CONTAINER_MEMORY : containerMemory;
+    containerVirtualCores = containerVirtualCores == -1 ?
+        DEFAULT_CONTAINER_VCORES :
+        containerVirtualCores;
+    resourceCapability.setMemorySize(containerMemory);
+    resourceCapability.setVirtualCores(containerVirtualCores);
+    for (Map.Entry<String, Long> entry : containerResources.entrySet()) {
+      resourceCapability.setResourceValue(entry.getKey(), entry.getValue());
     }
 
     String profileName = containerResourceProfile;

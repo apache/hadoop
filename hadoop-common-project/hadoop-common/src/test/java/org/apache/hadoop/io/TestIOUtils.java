@@ -21,9 +21,11 @@ package org.apache.hadoop.io;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,12 +43,15 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test cases for IOUtils.java
  */
 public class TestIOUtils {
   private static final String TEST_FILE_NAME = "test_file";
+  private static final Logger LOG = LoggerFactory.getLogger(TestIOUtils.class);
   
   @Test
   public void testCopyBytesShouldCloseStreamsWhenCloseIsTrue() throws Exception {
@@ -288,5 +293,39 @@ public class TestIOUtils {
     } finally {
       FileUtils.deleteDirectory(dir);
     }
+  }
+
+  @Test
+  public void testCloseStreams() {
+    File tmpFile = new File("deleteMe.txt");
+    FileOutputStream fos = null;
+    BufferedOutputStream bos = null;
+    FileOutputStream nullStream = null;
+
+    try {
+      fos = new FileOutputStream(tmpFile) {
+        @Override
+        public void close() throws IOException {
+          throw new IOException();
+        }
+      };
+      bos = new BufferedOutputStream(
+          new FileOutputStream(tmpFile)) {
+        @Override
+        public void close() throws IOException {
+          throw new NullPointerException();
+        }
+      };
+    } catch (IOException ioe) {
+      LOG.warn("Exception in TestIOUtils.testCloseStreams: ", ioe);
+    }
+    try {
+      IOUtils.closeStreams(fos, bos, nullStream);
+      IOUtils.closeStreams();
+    } catch (Exception ex) {
+      LOG.error("Expect IOUtils.closeStreams to close streams quietly.", ex);
+      throw ex;
+    }
+
   }
 }

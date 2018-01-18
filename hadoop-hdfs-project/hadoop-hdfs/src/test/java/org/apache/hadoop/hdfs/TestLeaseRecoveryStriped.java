@@ -85,6 +85,7 @@ public class TestLeaseRecoveryStriped {
   private Configuration conf;
   private final Path dir = new Path("/" + this.getClass().getSimpleName());
   final Path p = new Path(dir, "testfile");
+  private final int testFileLength = (stripesPerBlock - 1) * stripeSize;
 
   @Before
   public void setup() throws IOException {
@@ -191,17 +192,20 @@ public class TestLeaseRecoveryStriped {
 
   private void runTest(int[] blockLengths, long safeLength) throws Exception {
     writePartialBlocks(blockLengths);
+
+    int checkDataLength = Math.min(testFileLength, (int)safeLength);
+
     recoverLease();
 
     List<Long> oldGS = new ArrayList<>();
     oldGS.add(1001L);
-    StripedFileTestUtil.checkData(dfs, p, (int)safeLength,
+    StripedFileTestUtil.checkData(dfs, p, checkDataLength,
         new ArrayList<DatanodeInfo>(), oldGS, blockGroupSize);
     // After recovery, storages are reported by primary DN. we should verify
     // storages reported by blockReport.
     cluster.restartNameNode(true);
     cluster.waitFirstBRCompleted(0, 10000);
-    StripedFileTestUtil.checkData(dfs, p, (int)safeLength,
+    StripedFileTestUtil.checkData(dfs, p, checkDataLength,
         new ArrayList<DatanodeInfo>(), oldGS, blockGroupSize);
   }
 
@@ -219,12 +223,11 @@ public class TestLeaseRecoveryStriped {
     final FSDataOutputStream out = dfs.create(p);
     final DFSStripedOutputStream stripedOut = (DFSStripedOutputStream) out
         .getWrappedStream();
-    int length = (stripesPerBlock - 1) * stripeSize;
     int[] posToKill = getPosToKill(blockLengths);
     int checkingPos = nextCheckingPos(posToKill, 0);
     Set<Integer> stoppedStreamerIndexes = new HashSet<>();
     try {
-      for (int pos = 0; pos < length; pos++) {
+      for (int pos = 0; pos < testFileLength; pos++) {
         out.write(StripedFileTestUtil.getByte(pos));
         if (pos == checkingPos) {
           for (int index : getIndexToStop(posToKill, pos)) {

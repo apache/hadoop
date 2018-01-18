@@ -262,13 +262,10 @@ public class ServiceScheduler extends CompositeService {
       serviceTimelinePublisher
           .serviceAttemptUnregistered(context, diagnostics.toString());
     }
-    String msg = diagnostics.toString()
-        + "Navigate to the failed component for more details.";
-    amRMClient
-        .unregisterApplicationMaster(FinalApplicationStatus.ENDED, msg, "");
-    LOG.info("Service " + app.getName()
-        + " unregistered with RM, with attemptId = " + context.attemptId
-        + ", diagnostics = " + diagnostics);
+    amRMClient.unregisterApplicationMaster(FinalApplicationStatus.ENDED,
+        diagnostics.toString(), "");
+    LOG.info("Service {} unregistered with RM, with attemptId = {} " +
+        ", diagnostics = {} ", app.getName(), context.attemptId, diagnostics);
     super.serviceStop();
   }
 

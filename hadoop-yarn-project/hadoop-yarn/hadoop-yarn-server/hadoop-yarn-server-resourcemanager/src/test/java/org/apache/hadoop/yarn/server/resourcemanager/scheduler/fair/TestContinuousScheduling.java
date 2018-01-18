@@ -61,10 +61,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Deprecated
 public class TestContinuousScheduling extends FairSchedulerTestBase {
   private ControlledClock mockClock;
   private static int delayThresholdTimeMs = 1000;
 
+  @SuppressWarnings("deprecation")
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -77,6 +79,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     return conf;
   }
 
+  @SuppressWarnings("deprecation")
   @Before
   public void setup() {
     mockClock = new ControlledClock();
@@ -187,6 +190,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     Assert.assertEquals(2, nodes.size());
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testWithNodeRemoved() throws Exception {
     // Disable continuous scheduling, will invoke continuous
@@ -240,6 +244,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testInterruptedException()
           throws Exception {
@@ -284,6 +289,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testSchedulerThreadLifeCycle() throws InterruptedException {
     scheduler.start();
@@ -300,6 +306,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     assertNotEquals("The Scheduling thread is still alive", 0, numRetries);
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void TestNodeAvailableResourceComparatorTransitivity() {
     ClusterNodeTracker<FSSchedulerNode> clusterNodeTracker =
@@ -384,6 +391,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     assertEquals(delayThresholdTimeMs, initSchedulerTime);
   }
 
+  @SuppressWarnings("deprecation")
   private void triggerSchedulingAttempt() throws InterruptedException {
     Thread.sleep(
         2 * scheduler.getConf().getContinuousSchedulingSleepMs());

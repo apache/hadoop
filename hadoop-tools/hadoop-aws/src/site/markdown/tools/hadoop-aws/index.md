@@ -29,6 +29,7 @@ See also:
 * [Troubleshooting](./troubleshooting_s3a.html)
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)
+* [Working with IAM Assumed Roles](./assumed_roles.html)
 * [Testing](./testing.html)
 
 ##<a name="overview"></a> Overview
@@ -490,16 +491,56 @@ This means that the default S3A authentication chain can be defined as
 </property>
 ```
 
-### <a name="auth_security"></a> Protecting the AWS Credentials
+## <a name="auth_security"></a> Protecting the AWS Credentials
 
-To protect the access/secret keys from prying eyes, it is recommended that you
-use either IAM role-based authentication (such as EC2 instance profile) or
-the credential provider framework securely storing them and accessing them
-through configuration. The following describes using the latter for AWS
-credentials in the S3A FileSystem.
+It is critical that you never share or leak your AWS credentials.
+Loss of credentials can leak/lose all your data, run up large bills,
+and significantly damage your organisation.
 
+1. Never share your secrets.
 
-## <a name="credential_providers"></a>Storing secrets with Hadoop Credential Providers
+1. Never commit your secrets into an SCM repository.
+The [git secrets](https://github.com/awslabs/git-secrets) can help here.
+
+1. Avoid using s3a URLs which have key and secret in the URL. This
+is dangerous as the secrets leak into the logs.
+
+1. Never include AWS credentials in bug reports, files attached to them,
+or similar.
+
+1. If you use the `AWS_` environment variables,  your list of environment variables
+is equally sensitive.
+
+1. Never use root credentials.
+Use IAM user accounts, with each user/application having its own set of credentials.
+
+1. Use IAM permissions to restrict the permissions individual users and applications
+have. This is best done through roles, rather than configuring individual users.
+
+1. Avoid passing in secrets to Hadoop applications/commands on the command line.
+The command line of any launched program is visible to all users on a Unix system
+(via `ps`), and preserved in command histories.
+
+1. Explore using [IAM Assumed Roles](assumed_roles.html) for role-based permissions
+management: a specific S3A connection can be made with a different assumed role
+and permissions from the primary user account.
+
+1. Consider a workflow in which usera and applications are issued with short-lived
+session credentials, configuring S3A to use these through
+the `TemporaryAWSCredentialsProvider`.
+
+1. Have a secure process in place for cancelling and re-issuing credentials for
+users and applications. Test it regularly by using it to refresh credentials.
+
+When running in EC2, the IAM EC2 instance credential provider will automatically
+obtain the credentials needed to access AWS services in the role the EC2 VM
+was deployed as.
+This credential provider is enabled in S3A by default.
+
+The safest way to keep the AWS login keys a secret within Hadoop is to use
+Hadoop Credentials.
+
+## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
 
 The Hadoop Credential Provider Framework allows secure "Credential Providers"
 to keep secrets outside Hadoop configuration files, storing them in encrypted

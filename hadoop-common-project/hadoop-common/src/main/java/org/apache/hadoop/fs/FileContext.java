@@ -2012,7 +2012,7 @@ public class FileContext {
      *  </dd>
      * </dl>
      *
-     * @param pathPattern a regular expression specifying a pth pattern
+     * @param pathPattern a glob specifying a path pattern
      *
      * @return an array of paths that match the path pattern
      *
@@ -2040,7 +2040,7 @@ public class FileContext {
      * Return null if pathPattern has no glob and the path does not exist.
      * Return an empty array if pathPattern has a glob and no path matches it. 
      * 
-     * @param pathPattern regular expression specifying the path pattern
+     * @param pathPattern glob specifying the path pattern
      * @param filter user-supplied path filter
      *
      * @return an array of FileStatus objects

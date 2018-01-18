@@ -146,6 +146,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.http.internal-proxy.port</name>
+  <value>0</value>
+  <description>
+    The datanode's internal web proxy port.
+    By default it selects a random port available in runtime.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.handler.count</name>
   <value>10</value>
   <description>The number of server threads for the datanode.</description>
@@ -5117,4 +5126,33 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.mount-table.max-cache-size</name>
+    <value>10000</value>
+    <description>
+      Maximum number of mount table cache entries to have.
+      By default, remove cache entries if we have more than 10k.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.quota.enable</name>
+    <value>false</value>
+    <description>
+      Set to true to enable quota system in Router.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.quota-cache.update.interval</name>
+    <value>60s</value>
+    <description>
+      Interval time for updating quota usage cache in Router.
+      This property is used only if the value of
+      dfs.federation.router.quota.enable is true.
+      This setting supports multiple time unit suffixes as described
+      in dfs.heartbeat.interval. If no suffix is specified then milliseconds
+      is assumed.
+    </description>
+  </property>
 </configuration>

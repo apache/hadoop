@@ -1103,7 +1103,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     LOG.debug("calling addAnswer");
     byte rcode = addAnswer(response, name, type, dclass, 0, flags);
     if (rcode != Rcode.NOERROR) {
-      rcode = remoteLookup(response, name);
+      rcode = remoteLookup(response, name, 0);
       response.getHeader().setRcode(rcode);
     }
     addAdditional(response, flags);
@@ -1121,7 +1121,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   /**
    * Lookup record from upstream DNS servers.
    */
-  private byte remoteLookup(Message response, Name name) {
+  private byte remoteLookup(Message response, Name name, int iterations) {
     // Forward lookup to primary DNS servers
     Record[] answers = getRecords(name, Type.ANY);
     try {
@@ -1130,6 +1130,12 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           response.addRecord(r, Section.AUTHORITY);
         } else {
           response.addRecord(r, Section.ANSWER);
+        }
+        if (r.getType() == Type.CNAME) {
+          Name cname = ((CNAMERecord) r).getAlias();
+          if (iterations < 6) {
+            remoteLookup(response, cname, iterations + 1);
+          }
         }
       }
     } catch (NullPointerException e) {

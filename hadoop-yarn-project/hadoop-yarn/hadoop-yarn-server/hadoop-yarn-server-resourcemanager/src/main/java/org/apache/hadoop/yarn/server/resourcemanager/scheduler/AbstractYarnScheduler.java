@@ -170,7 +170,8 @@ public abstract class AbstractYarnScheduler
   // the NM in the next heartbeat.
   private boolean autoUpdateContainers = false;
 
-  protected SchedulingMonitorManager schedulingMonitorManager;
+  protected SchedulingMonitorManager schedulingMonitorManager =
+      new SchedulingMonitorManager();
 
   /**
    * Construct the service.
@@ -230,9 +231,7 @@ public abstract class AbstractYarnScheduler
       updateThread.interrupt();
       updateThread.join(THREAD_JOIN_TIMEOUT_MS);
     }
-    if (schedulingMonitorManager != null) {
-      schedulingMonitorManager.stop();
-    }
+    schedulingMonitorManager.stop();
     super.serviceStop();
   }
 

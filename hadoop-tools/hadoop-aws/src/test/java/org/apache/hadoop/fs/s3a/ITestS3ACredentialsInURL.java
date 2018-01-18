@@ -19,9 +19,10 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -37,6 +38,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.file.AccessDeniedException;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeS3GuardState;
 
@@ -120,11 +122,12 @@ public class ITestS3ACredentialsInURL extends Assert {
 
   /**
    * Set up some invalid credentials, verify login is rejected.
-   * @throws Throwable
    */
   @Test
   public void testInvalidCredentialsFail() throws Throwable {
     Configuration conf = new Configuration();
+    // use the default credential provider chain
+    conf.unset(AWS_CREDENTIALS_PROVIDER);
     String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
     Assume.assumeNotNull(fsname);
     assumeS3GuardState(false, conf);
@@ -132,14 +135,11 @@ public class ITestS3ACredentialsInURL extends Assert {
     URI testURI = createUriWithEmbeddedSecrets(original, "user", "//");
 
     conf.set(TEST_FS_S3A_NAME, testURI.toString());
-    try {
-      fs = S3ATestUtils.createTestFileSystem(conf);
-      FileStatus status = fs.getFileStatus(new Path("/"));
-      fail("Expected an AccessDeniedException, got " + status);
-    } catch (AccessDeniedException e) {
-      // expected
-    }
-
+    LambdaTestUtils.intercept(AccessDeniedException.class,
+        () -> {
+          fs = S3ATestUtils.createTestFileSystem(conf);
+          return fs.getFileStatus(new Path("/"));
+        });
   }
 
   private URI createUriWithEmbeddedSecrets(URI original,

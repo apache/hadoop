@@ -264,6 +264,6 @@ When an application is moved to a queue, its existing allocations become counted
 
 ###Dumping Fair Scheduler state
 
-Fair Scheduler is able to dump its state periodically. It is disabled by default. The administrator can enable it by setting org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler logging level to DEBUG.
+Fair Scheduler is able to dump its state periodically. It is disabled by default. The administrator can enable it by setting `org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler.statedump` logging level to DEBUG.
 
-Fair Scheduler logs go to the Resource Manager log file by default. Fair Scheduler state dumps can potentially generate large amount of log data. Uncomment the "Fair scheduler state dump" section in log4j.properties to dump the state into a separate file.
+Fair Scheduler logs go to the Resource Manager log file by default. Fair Scheduler state dumps can potentially generate a large amount of log data. Uncomment the "Fair scheduler state dump" section in log4j.properties to dump the state into a separate file.

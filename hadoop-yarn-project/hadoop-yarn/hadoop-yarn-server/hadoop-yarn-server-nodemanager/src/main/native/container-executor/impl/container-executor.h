@@ -91,6 +91,7 @@ void free_executor_configurations();
 
 // initialize the application directory
 int initialize_app(const char *user, const char *app_id,
+                   const char *container_id,
                    const char *credentials, char* const* local_dirs,
                    char* const* log_dirs, char* const* args);
 
@@ -178,6 +179,11 @@ char *get_user_directory(const char *nm_root, const char *user);
 char *get_app_directory(const char * nm_root, const char *user,
                         const char *app_id);
 
+/**
+ * Check node manager local dir permission.
+ */
+int check_nm_local_dir(uid_t caller_uid, const char *nm_root);
+
 char *get_container_work_directory(const char *nm_root, const char *user,
 				 const char *app_id, const char *container_id);
 
@@ -190,6 +196,8 @@ char *get_container_credentials_file(const char* work_dir);
  */
 char* get_app_log_directory(const char* log_root, const char* appid);
 
+char* get_container_log_directory(const char *log_root, const char* app_id,
+                                  const char *container_id);
 /**
  * Ensure that the given path and all of the parent directories are created
  * with the desired permissions.

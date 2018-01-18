@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -154,6 +153,7 @@ public class FairScheduler extends
   private final int UPDATE_DEBUG_FREQUENCY = 25;
   private int updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
 
+  @Deprecated
   @VisibleForTesting
   Thread schedulingThread;
 
@@ -168,15 +168,19 @@ public class FairScheduler extends
 
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs
   // Continuous Scheduling enabled or not
+  @Deprecated
   protected boolean continuousSchedulingEnabled;
   // Sleep time for each pass in continuous scheduling
+  @Deprecated
   protected volatile int continuousSchedulingSleepMs;
   // Node available resource comparator
   private Comparator<FSSchedulerNode> nodeAvailableResourceComparator =
           new NodeAvailableResourceComparator();
   protected double nodeLocalityThreshold; // Cluster threshold for node locality
   protected double rackLocalityThreshold; // Cluster threshold for rack locality
+  @Deprecated
   protected long nodeLocalityDelayMs; // Delay for node locality
+  @Deprecated
   protected long rackLocalityDelayMs; // Delay for rack locality
   protected boolean assignMultiple; // Allocate multiple containers per
                                     // heartbeat
@@ -285,6 +289,7 @@ public class FairScheduler extends
    * Thread which attempts scheduling resources continuously,
    * asynchronous to the node heartbeats.
    */
+  @Deprecated
   private class ContinuousSchedulingThread extends Thread {
 
     @Override
@@ -307,10 +312,12 @@ public class FairScheduler extends
   private void dumpSchedulerState() {
     FSQueue rootQueue = queueMgr.getRootQueue();
     Resource clusterResource = getClusterResource();
-    LOG.debug("FairScheduler state: Cluster Capacity: " + clusterResource +
+    STATE_DUMP_LOG.debug(
+        "FairScheduler state: Cluster Capacity: " + clusterResource +
         "  Allocations: " + rootMetrics.getAllocatedResources() +
         "  Availability: " + Resource.newInstance(
-        rootMetrics.getAvailableMB(), rootMetrics.getAvailableVirtualCores()) +
+            rootMetrics.getAvailableMB(),
+            rootMetrics.getAvailableVirtualCores()) +
         "  Demand: " + rootQueue.getDemand());
 
     STATE_DUMP_LOG.debug(rootQueue.dumpState());
@@ -351,7 +358,7 @@ public class FairScheduler extends
       }
 
       // Log debug information
-      if (LOG.isDebugEnabled()) {
+      if (STATE_DUMP_LOG.isDebugEnabled()) {
         if (--updatesToSkipForDebug < 0) {
           updatesToSkipForDebug = UPDATE_DEBUG_FREQUENCY;
           dumpSchedulerState();
@@ -388,18 +395,44 @@ public class FairScheduler extends
     return rackLocalityThreshold;
   }
 
+  /**
+   * Delay in milliseconds for locality fallback node to rack.
+   * @deprecated linked to {@link #isContinuousSchedulingEnabled} deprecation
+   * @return delay in ms
+   */
+  @Deprecated
   public long getNodeLocalityDelayMs() {
     return nodeLocalityDelayMs;
   }
 
+  /**
+   * Delay in milliseconds for locality fallback rack to other.
+   * @deprecated linked to {@link #isContinuousSchedulingEnabled} deprecation
+   * @return delay in ms
+   */
+  @Deprecated
   public long getRackLocalityDelayMs() {
     return rackLocalityDelayMs;
   }
 
+  /**
+   * Whether continuous scheduling is turned on.
+   * @deprecated Continuous scheduling should not be turned ON. It is
+   * deprecated because it can cause scheduler slowness due to locking issues.
+   * Schedulers should use assignmultiple as a replacement.
+   * @return whether continuous scheduling is enabled
+   */
+  @Deprecated
   public boolean isContinuousSchedulingEnabled() {
     return continuousSchedulingEnabled;
   }
 
+  /**
+   * The sleep time of the continuous scheduler thread.
+   * @deprecated linked to {@link #isContinuousSchedulingEnabled} deprecation
+   * @return sleep time in ms
+   */
+  @Deprecated
   public int getContinuousSchedulingSleepMs() {
     return continuousSchedulingSleepMs;
   }
@@ -669,27 +702,36 @@ public class FairScheduler extends
       ApplicationId appId =
           container.getId().getApplicationAttemptId().getApplicationId();
       if (application == null) {
-        LOG.info(
-            "Container " + container + " of" + " finished application " + appId
-                + " completed with event " + event);
+        LOG.info("Container " + container + " of finished application " +
+            appId + " completed with event " + event);
         return;
       }
 
       // Get the node on which the container was allocated
-      FSSchedulerNode node = getFSSchedulerNode(container.getNodeId());
-
+      NodeId nodeID = container.getNodeId();
+      FSSchedulerNode node = getFSSchedulerNode(nodeID);
+      // node could be null if the thread was waiting for the lock and the node
+      // was removed in another thread
       if (rmContainer.getState() == RMContainerState.RESERVED) {
-        application.unreserve(rmContainer.getReservedSchedulerKey(), node);
-      } else{
+        if (node != null) {
+          application.unreserve(rmContainer.getReservedSchedulerKey(), node);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping unreserve on removed node: " + nodeID);
+        }
+      } else {
         application.containerCompleted(rmContainer, containerStatus, event);
-        node.releaseContainer(rmContainer.getContainerId(), false);
+        if (node != null) {
+          node.releaseContainer(rmContainer.getContainerId(), false);
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping container release on removed node: " + nodeID);
+        }
         updateRootQueueMetrics();
       }
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Application attempt " + application.getApplicationAttemptId()
-            + " released container " + container.getId() + " on node: " + node
-            + " with event: " + event);
+            + " released container " + container.getId() + " on node: " +
+            (node == null ? nodeID : node) + " with event: " + event);
       }
     } finally {
       writeLock.unlock();
@@ -884,6 +926,7 @@ public class FairScheduler extends
     }
   }
 
+  @Deprecated
   void continuousSchedulingAttempt() throws InterruptedException {
     long start = getClock().getTime();
     List<FSSchedulerNode> nodeIdList;
@@ -1243,6 +1286,7 @@ public class FairScheduler extends
     this.rmContext = rmContext;
   }
 
+  @SuppressWarnings("deprecation")
   private void initScheduler(Configuration conf) throws IOException {
     try {
       writeLock.lock();
@@ -1289,6 +1333,10 @@ public class FairScheduler extends
       }
 
       if (continuousSchedulingEnabled) {
+        // Contiuous scheduling is deprecated log it on startup
+        LOG.warn("Continuous scheduling is turned ON. It is deprecated " +
+            "because it can cause scheduler slowness due to locking issues. " +
+            "Schedulers should use assignmultiple as a replacement.");
         // start continuous scheduling thread
         schedulingThread = new ContinuousSchedulingThread();
         schedulingThread.setName("FairSchedulerContinuousScheduling");
@@ -1355,7 +1403,6 @@ public class FairScheduler extends
     super.serviceInit(conf);
 
     // Initialize SchedulingMonitorManager
-    schedulingMonitorManager = new SchedulingMonitorManager();
     schedulingMonitorManager.initialize(rmContext, conf);
   }
 
@@ -1365,6 +1412,7 @@ public class FairScheduler extends
     super.serviceStart();
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void serviceStop() throws Exception {
     try {
