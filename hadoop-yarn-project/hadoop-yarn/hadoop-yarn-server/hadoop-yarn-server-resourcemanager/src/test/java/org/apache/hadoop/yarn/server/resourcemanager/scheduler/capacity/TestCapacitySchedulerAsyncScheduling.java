@@ -106,7 +106,7 @@ public class TestCapacitySchedulerAsyncScheduling {
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
         numThreads);
     conf.setInt(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
-        + ".scheduling-interval-ms", 100);
+        + ".scheduling-interval-ms", 0);
 
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);

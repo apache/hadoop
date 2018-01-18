@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
@@ -39,8 +40,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptR
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
@@ -94,7 +93,8 @@ public class SLSFairScheduler extends FairScheduler
 
   @Override
   public Allocation allocate(ApplicationAttemptId attemptId,
-      List<ResourceRequest> resourceRequests, List<ContainerId> containerIds,
+      List<ResourceRequest> resourceRequests,
+      List<SchedulingRequest> schedulingRequests, List<ContainerId> containerIds,
       List<String> blacklistAdditions, List<String> blacklistRemovals,
       ContainerUpdates updateRequests) {
     if (metricsON) {
@@ -102,7 +102,8 @@ public class SLSFairScheduler extends FairScheduler
           .time();
       Allocation allocation = null;
       try {
-        allocation = super.allocate(attemptId, resourceRequests, containerIds,
+        allocation = super.allocate(attemptId, resourceRequests,
+            schedulingRequests, containerIds,
             blacklistAdditions, blacklistRemovals, updateRequests);
         return allocation;
       } finally {
@@ -116,7 +117,8 @@ public class SLSFairScheduler extends FairScheduler
         }
       }
     } else {
-      return super.allocate(attemptId, resourceRequests, containerIds,
+      return super.allocate(attemptId, resourceRequests, schedulingRequests,
+          containerIds,
           blacklistAdditions, blacklistRemovals, updateRequests);
     }
   }

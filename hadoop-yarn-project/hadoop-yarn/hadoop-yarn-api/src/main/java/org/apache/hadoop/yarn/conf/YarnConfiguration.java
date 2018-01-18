@@ -543,7 +543,7 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_PLACEMENT_CONSTRAINTS_ENABLED =
       RM_PREFIX + "placement-constraints.enabled";
 
-  public static final boolean DEFAULT_RM_PLACEMENT_CONSTRAINTS_ENABLED = true;
+  public static final boolean DEFAULT_RM_PLACEMENT_CONSTRAINTS_ENABLED = false;
 
   public static final String RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS =
       RM_PREFIX + "placement-constraints.retry-attempts";

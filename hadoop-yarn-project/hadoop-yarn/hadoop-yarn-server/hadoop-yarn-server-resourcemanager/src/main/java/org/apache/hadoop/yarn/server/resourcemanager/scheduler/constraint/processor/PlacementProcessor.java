@@ -188,11 +188,17 @@ public class PlacementProcessor implements ApplicationMasterServiceProcessor {
   @Override
   public void allocate(ApplicationAttemptId appAttemptId,
       AllocateRequest request, AllocateResponse response) throws YarnException {
+    // Copy the scheduling request since we will clear it later after sending
+    // to dispatcher
     List<SchedulingRequest> schedulingRequests =
-        request.getSchedulingRequests();
+        new ArrayList<>(request.getSchedulingRequests());
     dispatchRequestsForPlacement(appAttemptId, schedulingRequests);
     reDispatchRetryableRequests(appAttemptId);
     schedulePlacedRequests(appAttemptId);
+
+    // Remove SchedulingRequest from AllocateRequest to avoid SchedulingRequest
+    // added to scheduler.
+    request.setSchedulingRequests(Collections.emptyList());
 
     nextAMSProcessor.allocate(appAttemptId, request, response);
 

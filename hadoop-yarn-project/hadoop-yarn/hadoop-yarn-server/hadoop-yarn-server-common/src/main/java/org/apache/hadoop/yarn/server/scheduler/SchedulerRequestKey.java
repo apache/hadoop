@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 
 /**
@@ -41,6 +42,16 @@ public final class SchedulerRequestKey implements
    * @return SchedulerRequestKey
    */
   public static SchedulerRequestKey create(ResourceRequest req) {
+    return new SchedulerRequestKey(req.getPriority(),
+        req.getAllocationRequestId(), null);
+  }
+
+  /**
+   * Factory method to generate a SchedulerRequestKey from a SchedulingRequest.
+   * @param req SchedulingRequest
+   * @return SchedulerRequestKey
+   */
+  public static SchedulerRequestKey create(SchedulingRequest req) {
     return new SchedulerRequestKey(req.getPriority(),
         req.getAllocationRequestId(), null);
   }

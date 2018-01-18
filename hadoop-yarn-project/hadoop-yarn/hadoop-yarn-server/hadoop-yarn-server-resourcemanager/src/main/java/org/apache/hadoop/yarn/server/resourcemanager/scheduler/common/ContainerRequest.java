@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 
 import java.util.List;
 
@@ -43,12 +44,23 @@ import java.util.List;
  */
 public class ContainerRequest {
   private List<ResourceRequest> requests;
+  private SchedulingRequest schedulingRequest;
 
   public ContainerRequest(List<ResourceRequest> requests) {
     this.requests = requests;
+    schedulingRequest = null;
+  }
+
+  public ContainerRequest(SchedulingRequest schedulingRequest) {
+    this.schedulingRequest = schedulingRequest;
+    this.requests = null;
   }
 
   public List<ResourceRequest> getResourceRequests() {
     return requests;
+  }
+
+  public SchedulingRequest getSchedulingRequest() {
+    return schedulingRequest;
   }
 }
