@@ -86,7 +86,8 @@ public class TestPlacementConstraints {
   @Test
   public void testAndConstraint() {
     AbstractConstraint constraintExpr =
-        and(targetIn(RACK, allocationTag("spark")), maxCardinality(NODE, 3),
+        and(targetIn(RACK, allocationTag("spark")),
+            maxCardinality(NODE, 3, "spark"),
             targetCardinality(RACK, 2, 10, allocationTag("zk")));
 
     And andExpr = (And) constraintExpr;

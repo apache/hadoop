@@ -95,40 +95,45 @@ public final class PlacementConstraints {
    *          the scope
    * @param maxCardinality determines the maximum number of allocations within
    *          the scope
+   * @param allocationTags the constraint targets allocations with these tags
    * @return the resulting placement constraint
    */
   public static AbstractConstraint cardinality(String scope, int minCardinality,
-      int maxCardinality) {
+      int maxCardinality, String... allocationTags) {
     return new SingleConstraint(scope, minCardinality, maxCardinality,
-        PlacementTargets.self());
+        PlacementTargets.allocationTag(allocationTags));
   }
 
   /**
-   * Similar to {@link #cardinality(String, int, int)}, but determines only the
-   * minimum cardinality (the maximum cardinality is unbound).
+   * Similar to {@link #cardinality(String, int, int, String...)}, but
+   * determines only the minimum cardinality (the maximum cardinality is
+   * unbound).
    *
    * @param scope the scope of the constraint
    * @param minCardinality determines the minimum number of allocations within
    *          the scope
+   * @param allocationTags the constraint targets allocations with these tags
    * @return the resulting placement constraint
    */
   public static AbstractConstraint minCardinality(String scope,
-      int minCardinality) {
-    return cardinality(scope, minCardinality, Integer.MAX_VALUE);
+      int minCardinality, String... allocationTags) {
+    return cardinality(scope, minCardinality, Integer.MAX_VALUE,
+        allocationTags);
   }
 
   /**
-   * Similar to {@link #cardinality(String, int, int)}, but determines only the
-   * maximum cardinality (the minimum can be as low as 0).
+   * Similar to {@link #cardinality(String, int, int, String...)}, but
+   * determines only the maximum cardinality (the minimum can be as low as 0).
    *
    * @param scope the scope of the constraint
    * @param maxCardinality determines the maximum number of allocations within
    *          the scope
+   * @param allocationTags the constraint targets allocations with these tags
    * @return the resulting placement constraint
    */
   public static AbstractConstraint maxCardinality(String scope,
-      int maxCardinality) {
-    return cardinality(scope, 0, maxCardinality);
+      int maxCardinality, String... allocationTags) {
+    return cardinality(scope, 0, maxCardinality, allocationTags);
   }
 
   /**
@@ -192,16 +197,6 @@ public final class PlacementConstraints {
     public static TargetExpression allocationTag(String... allocationTags) {
       return new TargetExpression(TargetType.ALLOCATION_TAG, null,
           allocationTags);
-    }
-
-    /**
-     * The default target expression that uses as target the allocation that
-     * specifies the constraint.
-     *
-     * @return the self-target
-     */
-    public static TargetExpression self() {
-      return new TargetExpression(TargetType.SELF);
     }
   }
 

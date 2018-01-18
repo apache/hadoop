@@ -242,7 +242,7 @@ public class PlacementConstraint {
      * Enum specifying the type of the target expression.
      */
     public enum TargetType {
-      NODE_ATTRIBUTE, ALLOCATION_TAG, SELF
+      NODE_ATTRIBUTE, ALLOCATION_TAG
     }
 
     private TargetType targetType;
@@ -418,23 +418,25 @@ public class PlacementConstraint {
   }
 
   /**
-   * Class that represents a cardinality constraint. Such a constraint the
-   * number of allocations within a given scope to some minimum and maximum
-   * values.
+   * Class that represents a cardinality constraint. Such a constraint allows
+   * the number of allocations with a specific set of tags and within a given
+   * scope to be between some minimum and maximum values.
    *
    * It is a specialized version of the {@link SingleConstraint}, where the
-   * target is self (i.e., the allocation to which the constraint is attached).
+   * target is a set of allocation tags.
    */
   public static class CardinalityConstraint extends AbstractConstraint {
     private String scope;
     private int minCardinality;
     private int maxCardinality;
+    private Set<String> allocationTags;
 
     public CardinalityConstraint(String scope, int minCardinality,
-        int maxCardinality) {
+        int maxCardinality, Set<String> allocationTags) {
       this.scope = scope;
       this.minCardinality = minCardinality;
       this.maxCardinality = maxCardinality;
+      this.allocationTags = allocationTags;
     }
 
     /**
@@ -464,10 +466,20 @@ public class PlacementConstraint {
       return maxCardinality;
     }
 
+    /**
+     * Get the allocation tags of the constraint.
+     *
+     * @return the allocation tags of the constraint
+     */
+    public Set<String> getAllocationTags() {
+      return allocationTags;
+    }
+
     @Override
     public <T> T accept(Visitor<T> visitor) {
       return visitor.visit(this);
     }
+
 
     @Override
     public boolean equals(Object o) {
@@ -486,7 +498,11 @@ public class PlacementConstraint {
       if (maxCardinality != that.maxCardinality) {
         return false;
       }
-      return scope != null ? scope.equals(that.scope) : that.scope == null;
+      if (scope != null ? !scope.equals(that.scope) : that.scope != null) {
+        return false;
+      }
+      return allocationTags != null ? allocationTags.equals(that.allocationTags)
+          : that.allocationTags == null;
     }
 
     @Override
@@ -494,6 +510,8 @@ public class PlacementConstraint {
       int result = scope != null ? scope.hashCode() : 0;
       result = 31 * result + minCardinality;
       result = 31 * result + maxCardinality;
+      result = 31 * result
+          + (allocationTags != null ? allocationTags.hashCode() : 0);
       return result;
     }
   }

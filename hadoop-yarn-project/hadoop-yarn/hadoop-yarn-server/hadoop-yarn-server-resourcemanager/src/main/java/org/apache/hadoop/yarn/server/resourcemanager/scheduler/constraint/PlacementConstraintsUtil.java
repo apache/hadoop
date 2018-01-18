@@ -24,10 +24,10 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
-import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
-import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression.TargetType;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.SingleConstraint;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetExpression.TargetType;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraintTransformations.SingleConstraintTransformer;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -118,6 +118,12 @@ public final class PlacementConstraintsUtil {
       TargetExpression currentExp = expIt.next();
       // Supporting AllocationTag Expressions for now
       if (currentExp.getTargetType().equals(TargetType.ALLOCATION_TAG)) {
+        // If source and tag allocation tags are the same, we do not enforce
+        // constraints with minimum cardinality.
+        if (currentExp.getTargetValues().equals(allocationTags)
+            && single.getMinCardinality() > 0) {
+          return true;
+        }
         // Check if conditions are met
         if (!canSatisfySingleConstraintExpression(appId, single, currentExp,
             node, tagsManager)) {
