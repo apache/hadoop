@@ -45,7 +45,6 @@ import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
@@ -822,26 +821,8 @@ public final class S3ATestUtils {
   /**
    * Date format used for mapping upload initiation time to human string.
    */
-  private static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
+  public static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
       "yyyy-MM-dd HH:mm:ss");
-
-  /**
-   * Get a list of all pending uploads under a prefix, one which can be printed.
-   * @param prefix prefix to look under
-   * @return possibly empty list
-   * @throws IOException IO failure.
-   */
-  public static List<String> listMultipartUploads(S3AFileSystem fs,
-      String prefix) throws IOException {
-
-    return fs
-        .listMultipartUploads(prefix).stream()
-        .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
-            upload.getKey(),
-            upload.getUploadId(),
-            LISTING_FORMAT.format(upload.getInitiated())))
-        .collect(Collectors.toList());
-  }
 
   /**
    * Skip a test if the FS isn't marked as supporting magic commits.
