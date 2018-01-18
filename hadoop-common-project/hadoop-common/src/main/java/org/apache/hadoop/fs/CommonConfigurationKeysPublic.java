@@ -180,7 +180,8 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
-  public static final String  FS_SFTP_CONNECTION_MAX_KEY = "fs.sftp.connection.max";
+  public static final String  FS_SFTP_CONNECTION_MAX_KEY =
+    "fs.sftp.connection.max";
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
