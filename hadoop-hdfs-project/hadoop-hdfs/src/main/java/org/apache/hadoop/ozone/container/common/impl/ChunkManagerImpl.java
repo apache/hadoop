@@ -98,8 +98,13 @@ public class ChunkManagerImpl implements ChunkManager {
         commitChunk(tmpChunkFile, chunkFile, containerName, info.getLen());
         break;
       case COMBINED:
-        ChunkUtils.writeData(tmpChunkFile, info, data);
-        commitChunk(tmpChunkFile, chunkFile, containerName, info.getLen());
+        // directly write to the chunk file
+        long oldSize = chunkFile.length();
+        ChunkUtils.writeData(chunkFile, info, data);
+        long newSize = chunkFile.length();
+        containerManager.incrBytesUsed(containerName, newSize - oldSize);
+        containerManager.incrWriteCount(containerName);
+        containerManager.incrWriteBytes(containerName, info.getLen());
         break;
       }
     } catch (ExecutionException | NoSuchAlgorithmException | IOException e) {
