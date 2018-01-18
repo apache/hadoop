@@ -248,7 +248,7 @@ public class WebAppProxyServlet extends HttpServlet {
     }
     OutputStream out = resp.getOutputStream();
     try {
-      //too many request will throw Exception connection
+      //wait too long . then have too many request will throw IOException 
       client.setConnectionTimeout(100);
       client.setTimeout(100);
 
