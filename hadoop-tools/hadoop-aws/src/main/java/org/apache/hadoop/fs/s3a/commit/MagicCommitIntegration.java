@@ -101,7 +101,7 @@ public class MagicCommitIntegration {
             key,
             destKey,
             pendingsetPath,
-            owner.getWriteOperationHelper());
+            owner.createWriteOperationHelper());
         LOG.debug("Created {}", tracker);
       } else {
         LOG.warn("File being created has a \"magic\" path, but the filesystem"

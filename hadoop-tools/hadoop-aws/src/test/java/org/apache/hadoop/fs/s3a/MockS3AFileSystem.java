@@ -78,7 +78,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
   private final S3AInstrumentation instrumentation =
       new S3AInstrumentation(FS_URI);
   private Configuration conf;
-  private WriteOperationHelper writeHelper;
 
   public MockS3AFileSystem(S3AFileSystem mock,
       Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors> outcome) {
@@ -126,12 +125,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public void initialize(URI name, Configuration originalConf)
       throws IOException {
     conf = originalConf;
-    writeHelper = new WriteOperationHelper(this, conf);
-  }
-
-  @Override
-  public WriteOperationHelper getWriteOperationHelper() {
-    return writeHelper;
   }
 
   @Override

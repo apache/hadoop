@@ -43,7 +43,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -196,7 +195,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
-  private WriteOperationHelper writeHelper;
   private boolean useListV1;
   private MagicCommitIntegration committerIntegration;
 
@@ -250,7 +248,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
           .createS3Client(name);
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
-      writeHelper = new WriteOperationHelper(this, getConf());
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
@@ -766,13 +763,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             partSize,
             blockFactory,
             instrumentation.newOutputStreamStatistics(statistics),
-            getWriteOperationHelper(),
+            createWriteOperationHelper(),
             putTracker),
         null);
   }
 
   /**
-   * Get a {@code WriteOperationHelper} instance.
+   * Create a new {@code WriteOperationHelper} instance.
    *
    * This class permits other low-level operations against the store.
    * It is unstable and
@@ -781,8 +778,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
    * @return a new helper.
    */
   @InterfaceAudience.Private
-  public WriteOperationHelper getWriteOperationHelper() {
-    return writeHelper;
+  public WriteOperationHelper createWriteOperationHelper() {
+    return new WriteOperationHelper(this);
   }
 
   /**
@@ -3157,27 +3154,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   }
 
   /**
-   * List any pending multipart uploads whose keys begin with prefix, using
-   * an iterator that can handle an unlimited number of entries.
-   * See {@link #listMultipartUploads(String)} for a non-iterator version of
-   * this.
-   *
-   * @param prefix optional key prefix to search
-   * @return Iterator over multipart uploads.
-   * @throws IOException on failure
-   */
-  @InterfaceAudience.Private
-  @Retries.RetryTranslated
-  public MultipartUtils.UploadIterator listUploads(@Nullable String prefix)
-      throws IOException {
-    return MultipartUtils.listMultipartUploads(s3, invoker, bucket, maxKeys,
-        prefix);
-  }
-
-  /**
    * Listing all multipart uploads; limited to the first few hundred.
-   * See {@link #listUploads(String)} for an iterator-based version that does
-   * not limit the number of entries returned.
    * Retry policy: retry, translated.
    * @return a listing of multipart uploads.
    * @param prefix prefix to scan for, "" for none
@@ -3264,4 +3241,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       return false;
     }
   }
+
 }

@@ -47,7 +47,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 
@@ -248,7 +247,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs != null && path != null) {
       String key = fs.pathToKey(path);
-      WriteOperationHelper writeOps = fs.getWriteOperationHelper();
+      WriteOperationHelper writeOps = fs.createWriteOperationHelper();
       int count = writeOps.abortMultipartUploadsUnderPath(key);
       if (count > 0) {
         log().info("Multipart uploads deleted: {}", count);
