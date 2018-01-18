@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.Schedulabl
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
@@ -835,16 +836,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Resources.createResource(minimumMemory, minimumCores);
   }
 
-  public Resource getMaximumAllocation() {
-    int maximumMemory = getInt(
-        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-    int maximumCores = getInt(
-        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-    return Resources.createResource(maximumMemory, maximumCores);
-  }
-
   @Private
   public Priority getQueuePriority(String queue) {
     String queuePolicyPrefix = getQueuePrefix(queue);
@@ -868,6 +859,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return setting specified per queue else falls back to the cluster setting
    */
   public Resource getMaximumAllocationPerQueue(String queue) {
+    // Only support to specify memory and vcores maximum allocation per queue
+    // for now.
     String queuePrefix = getQueuePrefix(queue);
     long maxAllocationMbPerQueue = getInt(queuePrefix + MAXIMUM_ALLOCATION_MB,
         (int)UNDEFINED);
@@ -879,7 +872,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       LOG.debug("max alloc vcores per queue for " + queue + " is "
           + maxAllocationVcoresPerQueue);
     }
-    Resource clusterMax = getMaximumAllocation();
+    Resource clusterMax = ResourceUtils.fetchMaximumAllocationFromConfig(this);
     if (maxAllocationMbPerQueue == (int)UNDEFINED) {
       LOG.info("max alloc mb per queue for " + queue + " is undefined");
       maxAllocationMbPerQueue = clusterMax.getMemorySize();
@@ -888,8 +881,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
        LOG.info("max alloc vcore per queue for " + queue + " is undefined");
       maxAllocationVcoresPerQueue = clusterMax.getVirtualCores();
     }
-    Resource result = Resources.createResource(maxAllocationMbPerQueue,
-        maxAllocationVcoresPerQueue);
+    // Copy from clusterMax and overwrite per-queue's maximum memory/vcore
+    // allocation.
+    Resource result = Resources.clone(clusterMax);
+    result.setMemorySize(maxAllocationMbPerQueue);
+    result.setVirtualCores(maxAllocationVcoresPerQueue);
     if (maxAllocationMbPerQueue > clusterMax.getMemorySize()
         || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()) {
       throw new IllegalArgumentException(

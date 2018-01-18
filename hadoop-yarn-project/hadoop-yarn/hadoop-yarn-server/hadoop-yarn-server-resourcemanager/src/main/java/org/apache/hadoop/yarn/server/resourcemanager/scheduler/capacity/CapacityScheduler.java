@@ -143,6 +143,7 @@ import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -439,12 +440,15 @@ public class CapacityScheduler extends
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");
-        refreshMaximumAllocation(this.conf.getMaximumAllocation());
+        refreshMaximumAllocation(
+            ResourceUtils.fetchMaximumAllocationFromConfig(this.conf));
         reinitializeQueues(this.conf);
       } catch (Throwable t) {
         this.conf = oldConf;
-        refreshMaximumAllocation(this.conf.getMaximumAllocation());
-        throw new IOException("Failed to re-init queues : "+ t.getMessage(), t);
+        refreshMaximumAllocation(
+            ResourceUtils.fetchMaximumAllocationFromConfig(this.conf));
+        throw new IOException("Failed to re-init queues : " + t.getMessage(),
+            t);
       }
 
       // update lazy preemption
