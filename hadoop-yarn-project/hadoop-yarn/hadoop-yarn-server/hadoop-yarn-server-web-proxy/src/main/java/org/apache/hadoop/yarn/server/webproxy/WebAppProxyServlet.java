@@ -248,6 +248,10 @@ public class WebAppProxyServlet extends HttpServlet {
     }
     OutputStream out = resp.getOutputStream();
     try {
+      //too many request will throw Exception connection
+      client.setConnectionTimeout(100);
+      client.setTimeout(100);
+
       HttpResponse httpResp = client.execute(base);
       resp.setStatus(httpResp.getStatusLine().getStatusCode());
       for (Header header : httpResp.getAllHeaders()) {
