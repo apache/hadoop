@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -146,5 +147,143 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     Assert.assertEquals(
         TestUtils.createResource(2 * GB, 2, ImmutableMap.of(RESOURCE_1, 2)),
         containerTokenIdentifier.getResource());
+  }
+
+  @Test
+  public void testMaximumAllocationRefreshWithMultipleResourceTypes() throws Exception {
+
+    // Initialize resource map
+    Map<String, ResourceInformation> riMap = new HashMap<>();
+
+    // Initialize mandatory resources
+    ResourceInformation memory = ResourceInformation.newInstance(
+        ResourceInformation.MEMORY_MB.getName(),
+        ResourceInformation.MEMORY_MB.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    ResourceInformation vcores = ResourceInformation.newInstance(
+        ResourceInformation.VCORES.getName(),
+        ResourceInformation.VCORES.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    riMap.put(ResourceInformation.MEMORY_URI, memory);
+    riMap.put(ResourceInformation.VCORES_URI, vcores);
+    riMap.put(RESOURCE_1, ResourceInformation.newInstance(RESOURCE_1, "", 0,
+        ResourceTypes.COUNTABLE, 0, 3333L));
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root", 100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition("root", "", 100.0f);
+    csconf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+        100.0f);
+    csconf.setMaximumAMResourcePercentPerPartition("root.default", "", 100.0f);
+    csconf.setResourceComparator(DominantResourceCalculator.class);
+    csconf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_1);
+    csconf.setInt(YarnConfiguration.RESOURCE_TYPES + "." + RESOURCE_1
+        + ".maximum-allocation", 3333);
+
+    YarnConfiguration conf = new YarnConfiguration(csconf);
+    // Don't reset resource types since we have already configured resource
+    // types
+    conf.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES, false);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    Assert.assertEquals(3333L,
+        cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
+    Assert.assertEquals(3333L,
+        cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability()
+            .getResourceValue(ResourceInformation.MEMORY_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumAllocation()
+            .getResourceValue(ResourceInformation.MEMORY_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability()
+            .getResourceValue(ResourceInformation.VCORES_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumAllocation()
+            .getResourceValue(ResourceInformation.VCORES_URI));
+
+    // Set RES_1 to 3332 (less than 3333) and refresh CS, failures expected.
+    csconf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_1);
+    csconf.setInt(YarnConfiguration.RESOURCE_TYPES + "." + RESOURCE_1
+        + ".maximum-allocation", 3332);
+
+    boolean exception = false;
+    try {
+      cs.reinitialize(csconf, rm.getRMContext());
+    } catch (IOException e) {
+      exception = true;
+    }
+
+    Assert.assertTrue("Should have exception in CS", exception);
+
+    // Maximum allocation won't be updated
+    Assert.assertEquals(3333L,
+        cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
+    Assert.assertEquals(3333L,
+        cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability()
+            .getResourceValue(ResourceInformation.MEMORY_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumAllocation()
+            .getResourceValue(ResourceInformation.MEMORY_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability()
+            .getResourceValue(ResourceInformation.VCORES_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumAllocation()
+            .getResourceValue(ResourceInformation.VCORES_URI));
+
+    // Set RES_1 to 3334 and refresh CS, should success
+    csconf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_1);
+    csconf.setInt(YarnConfiguration.RESOURCE_TYPES + "." + RESOURCE_1
+        + ".maximum-allocation", 3334);
+    cs.reinitialize(csconf, rm.getRMContext());
+
+    // Maximum allocation will be updated
+    Assert.assertEquals(3334,
+        cs.getMaximumResourceCapability().getResourceValue(RESOURCE_1));
+
+    // Since we haven't updated the real configuration of ResourceUtils,
+    // cs.getMaximumAllocation won't be updated.
+    Assert.assertEquals(3333,
+        cs.getMaximumAllocation().getResourceValue(RESOURCE_1));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumResourceCapability()
+            .getResourceValue(ResourceInformation.MEMORY_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        cs.getMaximumAllocation()
+            .getResourceValue(ResourceInformation.MEMORY_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumResourceCapability()
+            .getResourceValue(ResourceInformation.VCORES_URI));
+    Assert.assertEquals(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        cs.getMaximumAllocation()
+            .getResourceValue(ResourceInformation.VCORES_URI));
+
+    rm.close();
   }
 }
