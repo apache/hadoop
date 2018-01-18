@@ -255,25 +255,6 @@ public class ContainerMapping implements Mapping {
     }
   }
 
-  @Override
-  public void closeContainer(String containerName) throws IOException {
-    lock.lock();
-    try {
-      OzoneProtos.LifeCycleState newState =
-          updateContainerState(containerName, OzoneProtos.LifeCycleEvent.CLOSE);
-      if (newState != OzoneProtos.LifeCycleState.CLOSED) {
-        throw new SCMException(
-            "Failed to close container "
-                + containerName
-                + ", reason : container in state "
-                + newState,
-            SCMException.ResultCodes.UNEXPECTED_CONTAINER_STATE);
-      }
-    } finally {
-      lock.unlock();
-    }
-  }
-
   /** {@inheritDoc} Used by client to update container state on SCM. */
   @Override
   public OzoneProtos.LifeCycleState updateContainerState(
@@ -313,6 +294,10 @@ public class ContainerMapping implements Mapping {
         containerLeaseManager.release(containerInfo);
         break;
       case FINALIZE:
+        // TODO: we don't need a lease manager here for closing as the
+        // container report will include the container state after HDFS-13008
+        // If a client failed to update the container close state, DN container
+        // report from 3 DNs will be used to close the container eventually.
         break;
       case CLOSE:
         break;

@@ -33,8 +33,6 @@ import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
 
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
@@ -43,8 +41,8 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.DeleteContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageResponseProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineRequestProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -166,27 +164,15 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public NotifyObjectCreationStageResponseProto notifyObjectCreationStage(
-      RpcController controller, NotifyObjectCreationStageRequestProto request)
+  public ObjectStageChangeResponseProto notifyObjectStageChange(
+      RpcController controller, ObjectStageChangeRequestProto request)
       throws ServiceException {
     try {
-      impl.notifyObjectCreationStage(request.getType(), request.getName(),
-          request.getStage());
-      return NotifyObjectCreationStageResponseProto.newBuilder().build();
+      impl.notifyObjectStageChange(request.getType(), request.getName(),
+          request.getOp(), request.getStage());
+      return ObjectStageChangeResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
-    }
-  }
-
-  @Override
-  public CloseContainerResponseProto closeContainer(
-      RpcController controller, CloseContainerRequestProto request)
-      throws ServiceException {
-    try {
-      impl.closeContainer(request.getContainerName());
-      return CloseContainerResponseProto.newBuilder().build();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
     }
   }
 

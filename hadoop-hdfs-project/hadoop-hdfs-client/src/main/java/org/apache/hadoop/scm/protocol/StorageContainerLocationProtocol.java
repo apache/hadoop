@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -94,11 +94,13 @@ public interface StorageContainerLocationProtocol {
    * Container will be in Operational state after that.
    * @param type object type
    * @param name object name
+   * @param op operation type (e.g., create, close, delete)
    * @param stage creation stage
    */
-  void notifyObjectCreationStage(
-      NotifyObjectCreationStageRequestProto.Type type, String name,
-      NotifyObjectCreationStageRequestProto.Stage stage) throws IOException;
+  void notifyObjectStageChange(
+      ObjectStageChangeRequestProto.Type type, String name,
+      ObjectStageChangeRequestProto.Op op,
+      ObjectStageChangeRequestProto.Stage stage) throws IOException;
 
   /**
    * Creates a replication pipeline of a specified type.
@@ -110,14 +112,6 @@ public interface StorageContainerLocationProtocol {
   Pipeline createReplicationPipeline(OzoneProtos.ReplicationType type,
       OzoneProtos.ReplicationFactor factor, OzoneProtos.NodePool nodePool)
       throws IOException;
-
-  /**
-   * Clsoe a container.
-   *
-   * @param containerName the name of the container to close.
-   * @throws IOException
-   */
-  void closeContainer(String containerName) throws IOException;
 
   /**
    * Returns information about SCM.
