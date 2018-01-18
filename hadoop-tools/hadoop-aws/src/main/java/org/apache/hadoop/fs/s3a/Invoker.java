@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Optional;
-import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.SdkBaseException;
@@ -223,7 +222,7 @@ public class Invoker {
    */
   @Retries.RetryTranslated
   public <T> T retry(String action,
-      @Nullable String path,
+      String path,
       boolean idempotent,
       Operation<T> operation)
       throws IOException {
@@ -248,7 +247,7 @@ public class Invoker {
   @Retries.RetryTranslated
   public <T> T retry(
       String action,
-      @Nullable String path,
+      String path,
       boolean idempotent,
       Retried retrying,
       Operation<T> operation)
@@ -414,7 +413,7 @@ public class Invoker {
    * @param path path (may be null or empty)
    * @return string for logs
    */
-  private static String toDescription(String action, @Nullable String path) {
+  private static String toDescription(String action, String path) {
     return action +
         (StringUtils.isNotEmpty(path) ? (" on " + path) : "");
   }

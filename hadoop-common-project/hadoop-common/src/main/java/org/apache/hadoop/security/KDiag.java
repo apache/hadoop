@@ -81,11 +81,6 @@ public class KDiag extends Configured implements Tool, Closeable {
    * variable. This is what kinit will use by default: {@value}
    */
   public static final String KRB5_CCNAME = "KRB5CCNAME";
-  /**
-   * Location of main kerberos configuration file as passed down via an
-   * environment variable.
-   */
-  public static final String KRB5_CONFIG = "KRB5_CONFIG";
   public static final String JAVA_SECURITY_KRB5_CONF
     = "java.security.krb5.conf";
   public static final String JAVA_SECURITY_KRB5_REALM
@@ -326,15 +321,14 @@ public class KDiag extends Configured implements Tool, Closeable {
 
     title("Environment Variables");
     for (String env : new String[]{
-        HADOOP_JAAS_DEBUG,
-        KRB5_CCNAME,
-        KRB5_CONFIG,
-        HADOOP_USER_NAME,
-        HADOOP_PROXY_USER,
-        HADOOP_TOKEN_FILE_LOCATION,
-        "HADOOP_SECURE_LOG",
-        "HADOOP_OPTS",
-        "HADOOP_CLIENT_OPTS",
+      HADOOP_JAAS_DEBUG,
+      KRB5_CCNAME,
+      HADOOP_USER_NAME,
+      HADOOP_PROXY_USER,
+      HADOOP_TOKEN_FILE_LOCATION,
+      "HADOOP_SECURE_LOG",
+      "HADOOP_OPTS",
+      "HADOOP_CLIENT_OPTS",
     }) {
       printEnv(env);
     }
@@ -568,14 +562,14 @@ public class KDiag extends Configured implements Tool, Closeable {
         krbPath = jvmKrbPath;
       }
 
-      String krb5name = System.getenv(KRB5_CONFIG);
+      String krb5name = System.getenv(KRB5_CCNAME);
       if (krb5name != null) {
         println("Setting kerberos path from environment variable %s: \"%s\"",
-            KRB5_CONFIG, krb5name);
+          KRB5_CCNAME, krb5name);
         krbPath = krb5name;
         if (jvmKrbPath != null) {
           println("Warning - both %s and %s were set - %s takes priority",
-              JAVA_SECURITY_KRB5_CONF, KRB5_CONFIG, KRB5_CONFIG);
+            JAVA_SECURITY_KRB5_CONF, KRB5_CCNAME, KRB5_CCNAME);
         }
       }
 
@@ -925,7 +919,7 @@ public class KDiag extends Configured implements Tool, Closeable {
   private void dump(File file) throws IOException {
     try (FileInputStream in = new FileInputStream(file)) {
       for (String line : IOUtils.readLines(in)) {
-        println("%s", line);
+        println(line);
       }
     }
   }
