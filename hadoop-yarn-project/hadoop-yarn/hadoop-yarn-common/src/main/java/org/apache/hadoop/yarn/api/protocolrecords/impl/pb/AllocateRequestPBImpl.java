@@ -194,6 +194,7 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   public void setSchedulingRequests(
       List<SchedulingRequest> schedulingRequests) {
     if (schedulingRequests == null) {
+      builder.clearSchedulingRequests();
       return;
     }
     initSchedulingRequests();

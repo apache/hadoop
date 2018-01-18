@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -132,18 +133,18 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * 
    * @param appAttemptId
    * @param ask
+   * @param schedulingRequests
    * @param release
-   * @param blacklistAdditions 
-   * @param blacklistRemovals 
-   * @param updateRequests
-   * @return the {@link Allocation} for the application
+   * @param blacklistAdditions
+   * @param blacklistRemovals
+   * @param updateRequests     @return the {@link Allocation} for the application
    */
   @Public
   @Stable
   Allocation allocate(ApplicationAttemptId appAttemptId,
-      List<ResourceRequest> ask, List<ContainerId> release,
-      List<String> blacklistAdditions, List<String> blacklistRemovals,
-      ContainerUpdates updateRequests);
+      List<ResourceRequest> ask, List<SchedulingRequest> schedulingRequests,
+      List<ContainerId> release, List<String> blacklistAdditions,
+      List<String> blacklistRemovals, ContainerUpdates updateRequests);
 
   /**
    * Get node resource usage report.

@@ -67,7 +67,7 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
       throws InvalidAllocationTagsQueryException {
     int numAllocs = schedulingRequest.getResourceSizing().getNumAllocations();
     if (numAllocs > 0) {
-      if (PlacementConstraintsUtil.canSatisfyConstraints(appId,
+      if (PlacementConstraintsUtil.canSatisfySingleConstraint(appId,
           schedulingRequest.getAllocationTags(), schedulerNode,
           constraintManager, tagsManager)) {
         return true;

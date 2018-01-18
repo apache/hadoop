@@ -117,9 +117,9 @@ public class TestPlacementConstraintsUtil {
       RMNode currentNode = nodeIterator.next();
       FiCaSchedulerNode schedulerNode = TestUtils.getMockNode(
           currentNode.getHostName(), currentNode.getRackName(), 123, 4 * GB);
-      Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+      Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
           sourceTag1, schedulerNode, pcm, tm));
-      Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+      Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
           sourceTag2, schedulerNode, pcm, tm));
     }
     /**
@@ -145,14 +145,14 @@ public class TestPlacementConstraintsUtil {
     tm.addContainer(n0_r1.getNodeID(), hbase_m, ImmutableSet.of("hbase-m"));
 
     // 'spark' placement on Node0 should now SUCCEED
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode0, pcm, tm));
     // FAIL on the rest of the nodes
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode1, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode3, pcm, tm));
   }
 
@@ -187,15 +187,15 @@ public class TestPlacementConstraintsUtil {
     FiCaSchedulerNode schedulerNode3 = TestUtils
         .getMockNode(n3_r2.getHostName(), n3_r2.getRackName(), 123, 4 * GB);
     // 'zk' placement on Rack1 should now SUCCEED
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode0, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode1, pcm, tm));
 
     // FAIL on the rest of the RACKs
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode2, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode3, pcm, tm));
   }
 
@@ -230,14 +230,14 @@ public class TestPlacementConstraintsUtil {
     tm.addContainer(n0_r1.getNodeID(), hbase_m, ImmutableSet.of("hbase-m"));
 
     // 'spark' placement on Node0 should now FAIL
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode0, pcm, tm));
     // SUCCEED on the rest of the nodes
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode1, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag1, schedulerNode3, pcm, tm));
   }
 
@@ -273,15 +273,15 @@ public class TestPlacementConstraintsUtil {
         .getMockNode(n3_r2.getHostName(), n3_r2.getRackName(), 123, 4 * GB);
 
     // 'zk' placement on Rack1 should FAIL
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode0, pcm, tm));
-    Assert.assertFalse(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertFalse(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode1, pcm, tm));
 
     // SUCCEED on the rest of the RACKs
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode2, pcm, tm));
-    Assert.assertTrue(PlacementConstraintsUtil.canSatisfyConstraints(appId1,
+    Assert.assertTrue(PlacementConstraintsUtil.canSatisfySingleConstraint(appId1,
         sourceTag2, schedulerNode3, pcm, tm));
   }
 }

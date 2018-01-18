@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -420,9 +421,10 @@ public class TestRMContainerImpl {
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
 
     /* First container: ALLOCATED -> KILLED */
-    RMContainer rmContainer = new RMContainerImpl(container,
+    RMContainerImpl rmContainer = new RMContainerImpl(container,
         SchedulerRequestKey.extractFrom(container), appAttemptId,
         nodeId, "user", rmContext);
+    rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
 
     Assert.assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId, appId, null, Long::max));
@@ -448,6 +450,7 @@ public class TestRMContainerImpl {
     Assert.assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId, appId, null, Long::max));
 
+    rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
 
@@ -468,6 +471,7 @@ public class TestRMContainerImpl {
     rmContainer = new RMContainerImpl(container,
         SchedulerRequestKey.extractFrom(container), appAttemptId,
         nodeId, "user", rmContext);
+    rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
 
     Assert.assertEquals(0,
         tagsManager.getNodeCardinalityByOp(nodeId, appId, null, Long::max));

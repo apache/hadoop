@@ -20,10 +20,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
-import java.util.List;
-
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -33,7 +33,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
+import java.util.List;
 
 /**
  * Test functionality of AllocationTagsManager.
@@ -53,7 +53,6 @@ public class TestAllocationTagsManager {
     }
     rmContext = rm.getRMContext();
   }
-
 
   @Test
   public void testAllocationTagsManagerSimpleCases()
@@ -141,30 +140,31 @@ public class TestAllocationTagsManager {
 
     // Get Node Cardinality of app1 on node2, with tag "<applicationId>", op=max
     // (Expect this returns #containers from app1 on node2)
-    Assert
-        .assertEquals(2,
-            atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-                TestUtils.getMockApplicationId(1),
-                ImmutableSet.of(AllocationTagsNamespaces.APP_ID
-                    + TestUtils.getMockApplicationId(1).toString()),
-                Long::max));
+    Assert.assertEquals(2,
+        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+            TestUtils.getMockApplicationId(1), null, Long::max));
 
     // Get Node Cardinality of app1 on node2, with empty tag set, op=max
+    Assert.assertEquals(2,
+        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+            TestUtils.getMockApplicationId(1), null, Long::max));
+
+    // Get Cardinality of app1 on node2, with empty tag set, op=max
     Assert.assertEquals(2,
         atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
             TestUtils.getMockApplicationId(1), ImmutableSet.of(), Long::max));
 
     // Get Node Cardinality of all apps on node2, with empty tag set, op=sum
-    Assert.assertEquals(7, atm.getNodeCardinalityByOp(
+    Assert.assertEquals(4, atm.getNodeCardinalityByOp(
         NodeId.fromString("host2:123"), null, ImmutableSet.of(), Long::sum));
 
     // Get Node Cardinality of app_1 on node2, with empty tag set, op=sum
-    Assert.assertEquals(5,
+    Assert.assertEquals(3,
         atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
             TestUtils.getMockApplicationId(1), ImmutableSet.of(), Long::sum));
 
     // Get Node Cardinality of app_1 on node2, with empty tag set, op=sum
-    Assert.assertEquals(2,
+    Assert.assertEquals(1,
         atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
             TestUtils.getMockApplicationId(2), ImmutableSet.of(), Long::sum));
 
@@ -296,7 +296,7 @@ public class TestAllocationTagsManager {
     Assert.assertEquals(3, atm.getRackCardinality("rack0", null, "reducer"));
 
     // Get Rack Cardinality of app_1 on rack0, with empty tag set, op=max
-    Assert.assertEquals(2, atm.getRackCardinalityByOp("rack0",
+    Assert.assertEquals(1, atm.getRackCardinalityByOp("rack0",
         TestUtils.getMockApplicationId(1), ImmutableSet.of(), Long::max));
 
     // Get Rack Cardinality of app_1 on rack0, with empty tag set, op=min

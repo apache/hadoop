@@ -20,8 +20,12 @@ package org.apache.hadoop.yarn.api.resource;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.DelayedOr;
@@ -47,6 +51,14 @@ public final class PlacementConstraints {
 
   public static final String NODE = PlacementConstraint.NODE_SCOPE;
   public static final String RACK = PlacementConstraint.RACK_SCOPE;
+  public static final String NODE_PARTITION = "yarn_node_partition/";
+
+  private static final String APPLICATION_LABEL_PREFIX =
+      "yarn_application_label/";
+
+  @InterfaceAudience.Private
+  public static final String APPLICATION_LABEL_INTRA_APPLICATION =
+      APPLICATION_LABEL_PREFIX + "%intra_app%";
 
   /**
    * Creates a constraint that requires allocations to be placed on nodes that
@@ -187,6 +199,20 @@ public final class PlacementConstraints {
     }
 
     /**
+     * Constructs a target expression on a node partition. It is satisfied if
+     * the specified node partition has one of the specified nodePartitions
+     *
+     * @param nodePartitions the set of values that the attribute should take
+     *          values from
+     * @return the resulting expression on the node attribute
+     */
+    public static TargetExpression nodePartition(
+        String... nodePartitions) {
+      return new TargetExpression(TargetType.NODE_ATTRIBUTE, NODE_PARTITION,
+          nodePartitions);
+    }
+
+    /**
      * Constructs a target expression on an allocation tag. It is satisfied if
      * the there are allocations with one of the given tags.
      *
@@ -197,6 +223,22 @@ public final class PlacementConstraints {
     public static TargetExpression allocationTag(String... allocationTags) {
       return new TargetExpression(TargetType.ALLOCATION_TAG, null,
           allocationTags);
+    }
+
+    /**
+     * Constructs a target expression on an allocation tag. It is satisfied if
+     * the there are allocations with one of the given tags. Comparing to
+     * {@link PlacementTargets#allocationTag(String...)}, this only check tags
+     * within the application.
+     *
+     * @param allocationTags the set of tags that the attribute should take
+     *          values from
+     * @return the resulting expression on the allocation tags
+     */
+    public static TargetExpression allocationTagToIntraApp(
+        String... allocationTags) {
+      return new TargetExpression(TargetType.ALLOCATION_TAG,
+          APPLICATION_LABEL_INTRA_APPLICATION, allocationTags);
     }
   }
 
@@ -277,5 +319,4 @@ public final class PlacementConstraints {
   public static PlacementConstraint build(AbstractConstraint constraintExpr) {
     return constraintExpr.build();
   }
-
 }

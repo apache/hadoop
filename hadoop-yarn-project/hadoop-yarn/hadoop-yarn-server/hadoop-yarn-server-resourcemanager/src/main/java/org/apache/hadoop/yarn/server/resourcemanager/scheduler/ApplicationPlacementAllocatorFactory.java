@@ -21,15 +21,17 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ApplicationSchedulingConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.AppPlacementAllocator;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 /**
  * Factory class to build various application placement policies.
  */
 @Public
 @Unstable
-public class ApplicationPlacementFactory {
+public class ApplicationPlacementAllocatorFactory {
 
   /**
    * Get AppPlacementAllocator related to the placement type requested.
@@ -39,7 +41,8 @@ public class ApplicationPlacementFactory {
    * @return Specific AppPlacementAllocator instance based on type
    */
   public static AppPlacementAllocator<SchedulerNode> getAppPlacementAllocator(
-      String appPlacementAllocatorName) {
+      String appPlacementAllocatorName, AppSchedulingInfo appSchedulingInfo,
+      SchedulerRequestKey schedulerRequestKey, RMContext rmContext) {
     Class<?> policyClass;
     try {
       if (appPlacementAllocatorName == null) {
@@ -58,6 +61,8 @@ public class ApplicationPlacementFactory {
     @SuppressWarnings("unchecked")
     AppPlacementAllocator<SchedulerNode> placementAllocatorInstance = (AppPlacementAllocator<SchedulerNode>) ReflectionUtils
         .newInstance(policyClass, null);
+    placementAllocatorInstance.initialize(appSchedulingInfo,
+        schedulerRequestKey, rmContext);
     return placementAllocatorInstance;
   }
 }

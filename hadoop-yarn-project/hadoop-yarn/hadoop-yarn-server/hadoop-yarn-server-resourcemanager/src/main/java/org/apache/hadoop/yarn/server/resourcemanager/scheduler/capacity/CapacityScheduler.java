@@ -60,8 +60,11 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -1058,17 +1061,46 @@ public class CapacityScheduler extends
     }
   }
 
+  /**
+   * Normalize a list of SchedulingRequest
+   *
+   * @param asks scheduling request
+   */
+  private void normalizeSchedulingRequests(List<SchedulingRequest> asks) {
+    if (asks == null) {
+      return;
+    }
+    for (SchedulingRequest ask: asks) {
+      ResourceSizing sizing = ask.getResourceSizing();
+      if (sizing != null && sizing.getResources() != null) {
+        sizing.setResources(getNormalizedResource(sizing.getResources()));
+      }
+    }
+  }
+
   @Override
   @Lock(Lock.NoLock.class)
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
-      List<ResourceRequest> ask, List<ContainerId> release,
-      List<String> blacklistAdditions, List<String> blacklistRemovals,
-      ContainerUpdates updateRequests) {
+      List<ResourceRequest> ask, List<SchedulingRequest> schedulingRequests,
+      List<ContainerId> release, List<String> blacklistAdditions,
+      List<String> blacklistRemovals, ContainerUpdates updateRequests) {
     FiCaSchedulerApp application = getApplicationAttempt(applicationAttemptId);
     if (application == null) {
       LOG.error("Calling allocate on removed or non existent application " +
           applicationAttemptId.getApplicationId());
       return EMPTY_ALLOCATION;
+    }
+
+    if ((!getConfiguration().getBoolean(
+        CapacitySchedulerConfiguration.SCHEDULING_REQUEST_ALLOWED,
+        CapacitySchedulerConfiguration.DEFAULT_SCHEDULING_REQUEST_ALLOWED))
+        && schedulingRequests != null && (!schedulingRequests.isEmpty())) {
+      throw new SchedulerInvalidResoureRequestException(
+          "Application attempt:" + applicationAttemptId
+              + " is using SchedulingRequest, which is disabled. Please update "
+              + CapacitySchedulerConfiguration.SCHEDULING_REQUEST_ALLOWED
+              + " to true in capacity-scheduler.xml in order to use this "
+              + "feature.");
     }
 
     // The allocate may be the leftover from previous attempt, and it will
@@ -1091,7 +1123,10 @@ public class CapacityScheduler extends
     LeafQueue updateDemandForQueue = null;
 
     // Sanity check for new allocation requests
-    normalizeRequests(ask);
+    normalizeResourceRequests(ask);
+
+    // Normalize scheduling requests
+    normalizeSchedulingRequests(schedulingRequests);
 
     Allocation allocation;
 
@@ -1104,7 +1139,8 @@ public class CapacityScheduler extends
       }
 
       // Process resource requests
-      if (!ask.isEmpty()) {
+      if (!ask.isEmpty() || (schedulingRequests != null && !schedulingRequests
+          .isEmpty())) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
               "allocate: pre-update " + applicationAttemptId + " ask size ="
@@ -1113,7 +1149,8 @@ public class CapacityScheduler extends
         }
 
         // Update application requests
-        if (application.updateResourceRequests(ask)) {
+        if (application.updateResourceRequests(ask) || application
+            .updateSchedulingRequests(schedulingRequests)) {
           updateDemandForQueue = (LeafQueue) application.getQueue();
         }
 
@@ -2580,10 +2617,9 @@ public class CapacityScheduler extends
         // Validate placement constraint is satisfied before
         // committing the request.
         try {
-          if (!PlacementConstraintsUtil.canSatisfyConstraints(
+          if (!PlacementConstraintsUtil.canSatisfySingleConstraint(
               appAttempt.getApplicationId(),
-              schedulingRequest.getAllocationTags(),
-              schedulerNode,
+              schedulingRequest.getAllocationTags(), schedulerNode,
               rmContext.getPlacementConstraintManager(),
               rmContext.getAllocationTagsManager())) {
             LOG.debug("Failed to allocate container for application "

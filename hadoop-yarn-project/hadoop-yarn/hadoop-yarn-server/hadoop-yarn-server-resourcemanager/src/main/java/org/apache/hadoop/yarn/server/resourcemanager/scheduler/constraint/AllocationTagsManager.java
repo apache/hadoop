@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.log4j.Logger;
 
@@ -287,21 +288,15 @@ public class AllocationTagsManager {
    *                       {@link SchedulingRequest#getAllocationTags()}
    *                       application_id will be added to allocationTags.
    */
+  @SuppressWarnings("unchecked")
   public void addContainer(NodeId nodeId, ContainerId containerId,
       Set<String> allocationTags) {
+    // Do nothing for empty allocation tags.
+    if (allocationTags == null || allocationTags.isEmpty()) {
+      return;
+    }
     ApplicationId applicationId =
         containerId.getApplicationAttemptId().getApplicationId();
-    String applicationIdTag =
-        AllocationTagsNamespaces.APP_ID + applicationId.toString();
-
-    boolean useSet = false;
-    if (allocationTags != null && !allocationTags.isEmpty()) {
-      // Copy before edit it.
-      allocationTags = new HashSet<>(allocationTags);
-      allocationTags.add(applicationIdTag);
-      useSet = true;
-    }
-
     writeLock.lock();
     try {
       TypeToCountedTags perAppTagsMapping = perAppNodeMappings
@@ -311,19 +306,12 @@ public class AllocationTagsManager {
       // Covering test-cases where context is mocked
       String nodeRack = (rmContext.getRMNodes() != null
           && rmContext.getRMNodes().get(nodeId) != null)
-              ? rmContext.getRMNodes().get(nodeId).getRackName()
-              : "default-rack";
-      if (useSet) {
-        perAppTagsMapping.addTags(nodeId, allocationTags);
-        perAppRackTagsMapping.addTags(nodeRack, allocationTags);
-        globalNodeMapping.addTags(nodeId, allocationTags);
-        globalRackMapping.addTags(nodeRack, allocationTags);
-      } else {
-        perAppTagsMapping.addTag(nodeId, applicationIdTag);
-        perAppRackTagsMapping.addTag(nodeRack, applicationIdTag);
-        globalNodeMapping.addTag(nodeId, applicationIdTag);
-        globalRackMapping.addTag(nodeRack, applicationIdTag);
-      }
+              ? rmContext.getRMNodes().get(nodeId).getRackName() :
+          "default-rack";
+      perAppTagsMapping.addTags(nodeId, allocationTags);
+      perAppRackTagsMapping.addTags(nodeRack, allocationTags);
+      globalNodeMapping.addTags(nodeId, allocationTags);
+      globalRackMapping.addTags(nodeRack, allocationTags);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Added container=" + containerId + " with tags=["
@@ -341,20 +329,15 @@ public class AllocationTagsManager {
    * @param containerId    containerId.
    * @param allocationTags allocation tags for given container
    */
+  @SuppressWarnings("unchecked")
   public void removeContainer(NodeId nodeId,
       ContainerId containerId, Set<String> allocationTags) {
+    // Do nothing for empty allocation tags.
+    if (allocationTags == null || allocationTags.isEmpty()) {
+      return;
+    }
     ApplicationId applicationId =
         containerId.getApplicationAttemptId().getApplicationId();
-    String applicationIdTag =
-        AllocationTagsNamespaces.APP_ID + applicationId.toString();
-    boolean useSet = false;
-
-    if (allocationTags != null && !allocationTags.isEmpty()) {
-      // Copy before edit it.
-      allocationTags = new HashSet<>(allocationTags);
-      allocationTags.add(applicationIdTag);
-      useSet = true;
-    }
 
     writeLock.lock();
     try {
@@ -368,19 +351,12 @@ public class AllocationTagsManager {
       // Covering test-cases where context is mocked
       String nodeRack = (rmContext.getRMNodes() != null
           && rmContext.getRMNodes().get(nodeId) != null)
-              ? rmContext.getRMNodes().get(nodeId).getRackName()
-              : "default-rack";
-      if (useSet) {
-        perAppTagsMapping.removeTags(nodeId, allocationTags);
-        perAppRackTagsMapping.removeTags(nodeRack, allocationTags);
-        globalNodeMapping.removeTags(nodeId, allocationTags);
-        globalRackMapping.removeTags(nodeRack, allocationTags);
-      } else {
-        perAppTagsMapping.removeTag(nodeId, applicationIdTag);
-        perAppRackTagsMapping.removeTag(nodeRack, applicationIdTag);
-        globalNodeMapping.removeTag(nodeId, applicationIdTag);
-        globalRackMapping.removeTag(nodeRack, applicationIdTag);
-      }
+              ? rmContext.getRMNodes().get(nodeId).getRackName() :
+          "default-rack";
+      perAppTagsMapping.removeTags(nodeId, allocationTags);
+      perAppRackTagsMapping.removeTags(nodeRack, allocationTags);
+      globalNodeMapping.removeTags(nodeId, allocationTags);
+      globalRackMapping.removeTags(nodeRack, allocationTags);
 
       if (perAppTagsMapping.isEmpty()) {
         perAppNodeMappings.remove(applicationId);
@@ -602,6 +578,7 @@ public class AllocationTagsManager {
    * @throws InvalidAllocationTagsQueryException when illegal query
    *                                            parameter specified
    */
+  @SuppressWarnings("unchecked")
   public long getRackCardinalityByOp(String rack, ApplicationId applicationId,
       Set<String> tags, LongBinaryOperator op)
       throws InvalidAllocationTagsQueryException {
