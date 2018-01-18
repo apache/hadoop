@@ -84,14 +84,6 @@ public interface Mapping extends Closeable {
   void deleteContainer(String containerName) throws IOException;
 
   /**
-   * Close a container.
-   *
-   * @param containerName - name of the container to close.
-   * @throws IOException
-   */
-  void closeContainer(String containerName) throws IOException;
-
-  /**
    * Update container state.
    * @param containerName - Container Name
    * @param event - container life cycle event

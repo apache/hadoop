@@ -68,7 +68,7 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 import org.apache.hadoop.ozone.protocolPB.ScmBlockLocationProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolPB;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerDatanodeProtocolServerSideTranslatorPB;
@@ -671,31 +671,42 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
   }
 
   /**
-   * Notify from client when begin/finish creating container/pipeline objects
-   * on datanodes.
+   * Notify from client when begin/finish operation for container/pipeline
+   * objects on datanodes.
    * @param type
    * @param name
+   * @param op
    * @param stage
    */
   @Override
-  public void notifyObjectCreationStage(
-      NotifyObjectCreationStageRequestProto.Type type, String name,
-      NotifyObjectCreationStageRequestProto.Stage stage) throws IOException {
+  public void notifyObjectStageChange(
+      ObjectStageChangeRequestProto.Type type, String name,
+      ObjectStageChangeRequestProto.Op op,
+      ObjectStageChangeRequestProto.Stage stage) throws IOException {
 
-    if (type == NotifyObjectCreationStageRequestProto.Type.container) {
-      ContainerInfo info = scmContainerManager.getContainer(name);
-      LOG.info("Container {} current state {} new stage {}", name,
-          info.getState(), stage);
-      if (stage == NotifyObjectCreationStageRequestProto.Stage.begin) {
-        scmContainerManager.updateContainerState(name,
-            OzoneProtos.LifeCycleEvent.CREATE);
-      } else {
-        scmContainerManager.updateContainerState(name,
-            OzoneProtos.LifeCycleEvent.CREATED);
+    LOG.info("Object type {} name {} op {} new stage {}",
+        type, name, op, stage);
+    if (type == ObjectStageChangeRequestProto.Type.container) {
+      if (op == ObjectStageChangeRequestProto.Op.create) {
+        if (stage == ObjectStageChangeRequestProto.Stage.begin) {
+          scmContainerManager.updateContainerState(name,
+              OzoneProtos.LifeCycleEvent.CREATE);
+        } else {
+          scmContainerManager.updateContainerState(name,
+              OzoneProtos.LifeCycleEvent.CREATED);
+        }
+      } else if (op == ObjectStageChangeRequestProto.Op.close) {
+        if (stage == ObjectStageChangeRequestProto.Stage.begin) {
+          scmContainerManager.updateContainerState(name,
+              OzoneProtos.LifeCycleEvent.FINALIZE);
+        } else {
+          scmContainerManager.updateContainerState(name,
+              OzoneProtos.LifeCycleEvent.CLOSE);
+        }
       }
-    } else if (type == NotifyObjectCreationStageRequestProto.Type.pipeline) {
-      // TODO: pipeline state update will be addressed in future patch.
-    }
+    } //else if (type == ObjectStageChangeRequestProto.Type.pipeline) {
+    // TODO: pipeline state update will be addressed in future patch.
+    //}
   }
 
   /**
@@ -709,12 +720,6 @@ public class StorageContainerManager extends ServiceRuntimeInfoImpl
       throws IOException {
      // TODO: will be addressed in future patch.
     return null;
-  }
-
-  @Override
-  public void closeContainer(String containerName) throws IOException {
-    checkAdminAccess();
-    scmContainerManager.closeContainer(containerName);
   }
 
   /**

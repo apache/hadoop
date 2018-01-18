@@ -28,7 +28,7 @@ import org.apache.hadoop.ozone.ksm.helpers.KsmKeyInfo;
 import org.apache.hadoop.ozone.ksm.helpers.KsmKeyLocationInfo;
 import org.apache.hadoop.ozone.ksm.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.ksm.protocolPB.KeySpaceManagerProtocolClientSideTranslatorPB;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.scm.XceiverClientSpi;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -168,10 +168,10 @@ public class ChunkGroupOutputStream extends OutputStream {
     if (subKeyInfo.getShouldCreateContainer()) {
       try {
         ContainerProtocolCalls.createContainer(xceiverClient, requestID);
-        scmClient.notifyObjectCreationStage(
-            NotifyObjectCreationStageRequestProto.Type.container,
-            containerName,
-            NotifyObjectCreationStageRequestProto.Stage.complete);
+        scmClient.notifyObjectStageChange(
+            ObjectStageChangeRequestProto.Type.container,
+            containerName, ObjectStageChangeRequestProto.Op.create,
+            ObjectStageChangeRequestProto.Stage.complete);
       } catch (StorageContainerException ex) {
         if (ex.getResult().equals(Result.CONTAINER_EXISTS)) {
           //container already exist, this should never happen

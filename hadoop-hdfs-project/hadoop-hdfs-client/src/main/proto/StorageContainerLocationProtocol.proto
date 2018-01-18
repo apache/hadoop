@@ -65,14 +65,6 @@ message GetContainerResponseProto {
   required hadoop.hdfs.ozone.Pipeline pipeline = 1;
 }
 
-message CloseContainerRequestProto {
-  required string containerName = 1;
-}
-
-message CloseContainerResponseProto {
-
-}
-
 message ListContainerRequestProto {
   required uint32 count = 1;
   optional string startName = 2;
@@ -91,10 +83,15 @@ message DeleteContainerResponseProto {
   // Empty response
 }
 
-message NotifyObjectCreationStageRequestProto {
+message ObjectStageChangeRequestProto {
   enum Type {
     container = 1;
     pipeline = 2;
+  }
+  // delete/copy operation may be added later
+  enum Op {
+    create = 1;
+    close = 2;
   }
   enum Stage {
     begin = 1;
@@ -102,10 +99,11 @@ message NotifyObjectCreationStageRequestProto {
   }
   required string name = 1;
   required Type type = 2;
-  required Stage stage = 3;
+  required Op op= 3;
+  required Stage stage = 4;
 }
 
-message NotifyObjectCreationStageResponseProto {
+message ObjectStageChangeResponseProto {
   // Empty response
 }
 
@@ -188,14 +186,10 @@ service StorageContainerLocationProtocolService {
   rpc queryNode(NodeQueryRequestProto)  returns (NodeQueryResponseProto);
 
   /**
-  * Notify from client when begin or finish creating container or pipeline on datanodes.
+  * Notify from client when begin or finish container or pipeline operations on datanodes.
   */
-  rpc notifyObjectCreationStage(NotifyObjectCreationStageRequestProto) returns (NotifyObjectCreationStageResponseProto);
+  rpc notifyObjectStageChange(ObjectStageChangeRequestProto) returns (ObjectStageChangeResponseProto);
 
-  /**
-  * Close a container.
-  */
-  rpc closeContainer(CloseContainerRequestProto) returns (CloseContainerResponseProto);
   /*
   *  Apis that Manage Pipelines.
   *

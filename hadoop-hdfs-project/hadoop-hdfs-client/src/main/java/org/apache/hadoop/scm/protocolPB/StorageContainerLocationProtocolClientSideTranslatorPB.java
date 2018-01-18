@@ -28,7 +28,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneProtos;
 import org.apache.hadoop.scm.ScmInfo;
 import org.apache.hadoop.scm.container.common.helpers.ContainerInfo;
 import org.apache.hadoop.scm.protocol.StorageContainerLocationProtocol;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.CloseContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerRequestProto;
@@ -38,7 +37,7 @@ import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolPr
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ListContainerResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NodeQueryResponseProto;
-import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.NotifyObjectCreationStageRequestProto;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineRequestProto;
 import org.apache.hadoop.ozone.protocol.proto.StorageContainerLocationProtocolProtos.PipelineResponseProto;
 import org.apache.hadoop.scm.container.common.helpers.Pipeline;
@@ -216,23 +215,25 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
    * Notify from client that creates object on datanodes.
    * @param type object type
    * @param name object name
+   * @param op operation type (e.g., create, close, delete)
    * @param stage object creation stage : begin/complete
    */
   @Override
-  public void notifyObjectCreationStage(
-      NotifyObjectCreationStageRequestProto.Type type,
-      String name,
-      NotifyObjectCreationStageRequestProto.Stage stage) throws IOException {
+  public void notifyObjectStageChange(
+      ObjectStageChangeRequestProto.Type type, String name,
+      ObjectStageChangeRequestProto.Op op,
+      ObjectStageChangeRequestProto.Stage stage) throws IOException {
     Preconditions.checkState(!Strings.isNullOrEmpty(name),
         "Object name cannot be null or empty");
-    NotifyObjectCreationStageRequestProto request =
-        NotifyObjectCreationStageRequestProto.newBuilder()
+    ObjectStageChangeRequestProto request =
+        ObjectStageChangeRequestProto.newBuilder()
             .setType(type)
             .setName(name)
+            .setOp(op)
             .setStage(stage)
             .build();
     try {
-      rpcProxy.notifyObjectCreationStage(NULL_RPC_CONTROLLER, request);
+      rpcProxy.notifyObjectStageChange(NULL_RPC_CONTROLLER, request);
     } catch(ServiceException e){
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -269,21 +270,6 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
             response.hasErrorMessage() ? response.getErrorMessage() : "");
         throw new IOException(errorMessage);
       }
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
-  }
-
-  @Override
-  public void closeContainer(String containerName) throws IOException {
-    Preconditions.checkState(!Strings.isNullOrEmpty(containerName),
-        "Container name cannot be null or empty");
-    CloseContainerRequestProto request = CloseContainerRequestProto
-        .newBuilder()
-        .setContainerName(containerName)
-        .build();
-    try {
-      rpcProxy.closeContainer(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
