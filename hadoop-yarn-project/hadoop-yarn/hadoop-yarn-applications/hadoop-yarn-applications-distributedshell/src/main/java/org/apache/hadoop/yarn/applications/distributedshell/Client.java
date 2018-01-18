@@ -188,6 +188,8 @@ public class Client {
   // Whether to auto promote opportunistic containers
   private boolean autoPromoteContainers = false;
 
+  // Placement specification
+  private String placementSpec = "";
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
   private String log4jPropFile = "";	
@@ -366,6 +368,10 @@ public class Client {
         "If container could retry, it specifies max retires");
     opts.addOption("container_retry_interval", true,
         "Interval between each retry, unit is milliseconds");
+    opts.addOption("placement_spec", true,
+        "Placement specification. Please note, if this option is specified,"
+            + " The \"num_containers\" option will be ignored. All requested"
+            + " containers will be of type GUARANTEED" );
   }
 
   /**
@@ -419,6 +425,11 @@ public class Client {
       keepContainers = true;
     }
 
+    if (cliParser.hasOption("placement_spec")) {
+      placementSpec = cliParser.getOptionValue("placement_spec");
+      // Check if it is parsable
+      PlacementSpec.parse(this.placementSpec);
+    }
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
@@ -834,6 +845,9 @@ public class Client {
       vargs.add("--container_resource_profile " + containerResourceProfile);
     }
     vargs.add("--num_containers " + String.valueOf(numContainers));
+    if (placementSpec != null && placementSpec.length() > 0) {
+      vargs.add("--placement_spec " + placementSpec);
+    }
     if (null != nodeLabelExpression) {
       appContext.setNodeLabelExpression(nodeLabelExpression);
     }
