@@ -12,6 +12,9 @@ Release 2.7.6 - UNRELEASED
     Random and 256 bit secrets (Conttributed by Robert Kanter via
     Daniel Templeton)
 
+    HADOOP-15177. Update the release year to 2018.
+    (Bharat Viswanadham via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
