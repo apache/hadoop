@@ -162,15 +162,16 @@ public class PlacementConstraintTransformations {
     public AbstractConstraint visit(CardinalityConstraint constraint) {
       return new SingleConstraint(constraint.getScope(),
           constraint.getMinCardinality(), constraint.getMaxCardinality(),
-          new TargetExpression(TargetExpression.TargetType.SELF));
+          new TargetExpression(TargetExpression.TargetType.ALLOCATION_TAG, null,
+              constraint.getAllocationTags()));
     }
   }
 
   /**
    * Visits a {@link PlacementConstraint} tree and, whenever possible,
-   * substitutes each {@link SingleConstraint} with a {@link TargetConstraint}
-   * or a {@link CardinalityConstraint}. When such a substitution is not
-   * possible, we keep the original {@link SingleConstraint}.
+   * substitutes each {@link SingleConstraint} with a {@link TargetConstraint}.
+   * When such a substitution is not possible, we keep the original
+   * {@link SingleConstraint}.
    */
   public static class SpecializedConstraintTransformer
       extends AbstractTransformer {
@@ -182,16 +183,6 @@ public class PlacementConstraintTransformations {
     @Override
     public AbstractConstraint visit(SingleConstraint constraint) {
       AbstractConstraint transformedConstraint = constraint;
-      // Check if it is a cardinality constraint.
-      if (constraint.getTargetExpressions().size() == 1) {
-        TargetExpression targetExpr =
-            constraint.getTargetExpressions().iterator().next();
-        if (targetExpr.getTargetType() == TargetExpression.TargetType.SELF) {
-          transformedConstraint = new CardinalityConstraint(
-              constraint.getScope(), constraint.getMinCardinality(),
-              constraint.getMaxCardinality());
-        }
-      }
       // Check if it is a target constraint.
       if (constraint.getMinCardinality() == 1
           && constraint.getMaxCardinality() == Integer.MAX_VALUE) {

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.api.resource;
 
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.RACK;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.cardinality;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.maxCardinality;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetCardinality;
@@ -89,42 +88,26 @@ public class TestPlacementConstraintTransformations {
 
   @Test
   public void testCardinalityConstraint() {
-    AbstractConstraint sConstraintExpr = cardinality(RACK, 3, 10);
-    Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
-    PlacementConstraint sConstraint =
-        PlacementConstraints.build(sConstraintExpr);
-
-    // Transform from SimpleConstraint to specialized CardinalityConstraint
-    SpecializedConstraintTransformer specTransformer =
-        new SpecializedConstraintTransformer(sConstraint);
-    PlacementConstraint cConstraint = specTransformer.transform();
-
-    AbstractConstraint cConstraintExpr = cConstraint.getConstraintExpr();
-    Assert.assertTrue(cConstraintExpr instanceof CardinalityConstraint);
-
-    SingleConstraint single = (SingleConstraint) sConstraintExpr;
-    CardinalityConstraint cardinality = (CardinalityConstraint) cConstraintExpr;
-    Assert.assertEquals(single.getScope(), cardinality.getScope());
-    Assert.assertEquals(single.getMinCardinality(),
-        cardinality.getMinCardinality());
-    Assert.assertEquals(single.getMaxCardinality(),
-        cardinality.getMaxCardinality());
+    CardinalityConstraint cardinality = new CardinalityConstraint(RACK, 3, 10,
+        new HashSet<>(Arrays.asList("hb")));
+    PlacementConstraint cConstraint = PlacementConstraints.build(cardinality);
 
     // Transform from specialized CardinalityConstraint to SimpleConstraint
     SingleConstraintTransformer singleTransformer =
         new SingleConstraintTransformer(cConstraint);
-    sConstraint = singleTransformer.transform();
+    PlacementConstraint sConstraint = singleTransformer.transform();
 
-    sConstraintExpr = sConstraint.getConstraintExpr();
+    AbstractConstraint sConstraintExpr = sConstraint.getConstraintExpr();
     Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
 
-    single = (SingleConstraint) sConstraintExpr;
+    SingleConstraint single = (SingleConstraint) sConstraintExpr;
     Assert.assertEquals(cardinality.getScope(), single.getScope());
     Assert.assertEquals(cardinality.getMinCardinality(),
         single.getMinCardinality());
     Assert.assertEquals(cardinality.getMaxCardinality(),
         single.getMaxCardinality());
-    Assert.assertEquals(new HashSet<>(Arrays.asList(PlacementTargets.self())),
+    Assert.assertEquals(
+        new HashSet<>(Arrays.asList(PlacementTargets.allocationTag("hb"))),
         single.getTargetExpressions());
   }
 
@@ -166,7 +149,7 @@ public class TestPlacementConstraintTransformations {
     List<AbstractConstraint> specChildren = specOrExpr.getChildren();
     Assert.assertEquals(3, specChildren.size());
     Assert.assertTrue(specChildren.get(0) instanceof TargetConstraint);
-    Assert.assertTrue(specChildren.get(1) instanceof CardinalityConstraint);
+    Assert.assertTrue(specChildren.get(1) instanceof SingleConstraint);
     Assert.assertTrue(specChildren.get(2) instanceof SingleConstraint);
 
     // Transform from specialized TargetConstraint to SimpleConstraint
