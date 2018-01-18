@@ -24,18 +24,7 @@ import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 
 public class ServiceRegistryUtils {
 
-  /**
-   * Base path for services
-   */
-  public static final String ZK_SERVICES = "services";
-
-  /**
-   * Base path for all Slider references
-   */
-  public static final String ZK_SLIDER = "slider";
-  public static final String ZK_USERS = "users";
-  public static final String SVC_SLIDER = "/" + ZK_SERVICES + "/" + ZK_SLIDER;
-  public static final String SVC_SLIDER_USERS = SVC_SLIDER + "/" + ZK_USERS;
+  public static final String SVC_USERS = "/services/yarn/users";
 
   /**
    * Get the registry path for an instance under the user's home node
@@ -49,23 +38,19 @@ public class ServiceRegistryUtils {
   }
 
   /**
- * Build the path to a cluster; exists once the cluster has come up.
- * Even before that, a ZK watcher could wait for it.
- * @param username user
- * @param clustername name of the cluster
- * @return a strin
+ * Build the path to a service folder
+ * @param username user name
+ * @param serviceName service name
+ * @return the home path to the service
  */
-  public static String mkClusterPath(String username, String clustername) {
-    return mkSliderUserPath(username) + "/" + clustername;
+  public static String mkServiceHomePath(String username, String serviceName) {
+    return mkUserHomePath(username) + "/" + serviceName;
   }
 
   /**
- * Build the path to a cluster; exists once the cluster has come up.
- * Even before that, a ZK watcher could wait for it.
- * @param username user
- * @return a string
- */
-  public static String mkSliderUserPath(String username) {
-    return SVC_SLIDER_USERS + "/" + username;
+   * Build the path to a user home folder;
+   */
+  public static String mkUserHomePath(String username) {
+    return SVC_USERS + "/" + username;
   }
 }

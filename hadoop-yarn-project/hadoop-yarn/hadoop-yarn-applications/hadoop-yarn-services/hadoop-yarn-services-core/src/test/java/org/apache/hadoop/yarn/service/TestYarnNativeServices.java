@@ -123,10 +123,13 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         report.getFinalApplicationStatus());
 
     LOG.info("Destroy the service");
-    //destroy the service and check the app dir is deleted from fs.
-    client.actionDestroy(exampleApp.getName());
+    // destroy the service and check the app dir is deleted from fs.
+    Assert.assertEquals(0, client.actionDestroy(exampleApp.getName()));
     // check the service dir on hdfs (in this case, local fs) are deleted.
     Assert.assertFalse(getFS().exists(appDir));
+
+    // check that destroying again does not succeed
+    Assert.assertEquals(-1, client.actionDestroy(exampleApp.getName()));
   }
 
   // Create compa with 2 containers
