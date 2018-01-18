@@ -531,8 +531,8 @@ public class TestContainerPersistence {
     try {
       chunkManager.writeChunk(pipeline, keyName, info, data, COMBINED);
     } catch (IOException ex) {
-      Assert.assertTrue(ex.getMessage().contains(
-          "Rejecting write chunk request. OverWrite flag required."));
+      Assert.assertTrue(ex.getCause().getMessage().contains(
+          "Rejecting write chunk request. OverWrite flag required"));
     }
 
     // With the overwrite flag it should work now.
