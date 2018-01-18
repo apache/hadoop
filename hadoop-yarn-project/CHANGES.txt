@@ -23,6 +23,9 @@ Release 2.7.6 - UNRELEASED
     (Bibin A Chundatt via rohithsharmaks)
     Backport YARN-6633 by Inigo Goiri.
 
+    YARN-7590. Improve container-executor validation check.
+    Contributed by Eric Yang.
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
