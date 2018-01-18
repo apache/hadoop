@@ -99,14 +99,11 @@ public final class PlacementConstraintsUtil {
             targetApplicationId, te.getTargetValues(), Long::min);
       }
     }
-    // Make sure Anti-affinity satisfies hard upper limit
-    maxScopeCardinality = desiredMaxCardinality == 0 ? maxScopeCardinality - 1
-        : maxScopeCardinality;
 
     return (desiredMinCardinality <= 0
         || minScopeCardinality >= desiredMinCardinality) && (
         desiredMaxCardinality == Integer.MAX_VALUE
-            || maxScopeCardinality < desiredMaxCardinality);
+            || maxScopeCardinality <= desiredMaxCardinality);
   }
 
   private static boolean canSatisfyNodePartitionConstraintExpresssion(

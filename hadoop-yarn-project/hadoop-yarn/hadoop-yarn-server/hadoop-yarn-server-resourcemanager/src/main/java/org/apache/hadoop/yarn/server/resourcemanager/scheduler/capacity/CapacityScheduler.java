@@ -2610,6 +2610,10 @@ public class CapacityScheduler extends
             " but only 1 will be attempted !!");
       }
       if (!appAttempt.isStopped()) {
+        Resource resource =
+            schedulingRequest.getResourceSizing().getResources();
+        schedulingRequest.getResourceSizing().setResources(
+            getNormalizedResource(resource));
         ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>
             resourceCommitRequest = createResourceCommitRequest(
             appAttempt, schedulingRequest, schedulerNode);

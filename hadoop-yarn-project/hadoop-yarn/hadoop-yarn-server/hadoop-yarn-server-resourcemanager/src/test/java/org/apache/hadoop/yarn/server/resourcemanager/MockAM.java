@@ -311,7 +311,7 @@ public class MockAM {
             .allocationRequestId(allocationId).priority(priority)
             .allocationTags(allocationTags).placementConstraintExpression(
                 PlacementConstraints
-                    .targetCardinality(PlacementConstraints.NODE, 0, 1,
+                    .targetNotIn(PlacementConstraints.NODE,
                         PlacementConstraints.PlacementTargets
                             .allocationTagToIntraApp(targetTags)).build())
             .resourceSizing(resourceSizing).build()), null);
@@ -325,7 +325,7 @@ public class MockAM {
             ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
             .allocationRequestId(allocationId).priority(priority)
             .placementConstraintExpression(PlacementConstraints
-                .targetCardinality(PlacementConstraints.NODE, 0, 1,
+                .targetNotIn(PlacementConstraints.NODE,
                     PlacementConstraints.PlacementTargets
                         .allocationTagToIntraApp(tags),
                     PlacementConstraints.PlacementTargets

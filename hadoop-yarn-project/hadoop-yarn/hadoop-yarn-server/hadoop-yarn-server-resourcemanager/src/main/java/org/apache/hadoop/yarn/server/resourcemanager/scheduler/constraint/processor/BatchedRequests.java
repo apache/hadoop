@@ -133,4 +133,12 @@ public class BatchedRequests
   public Set<NodeId> getBlacklist(String tag) {
     return blacklist.getOrDefault(tag, Collections.EMPTY_SET);
   }
+
+  /**
+   * Get Iterator type.
+   * @return Iterator type.
+   */
+  public IteratorType getIteratorType() {
+    return iteratorType;
+  }
 }

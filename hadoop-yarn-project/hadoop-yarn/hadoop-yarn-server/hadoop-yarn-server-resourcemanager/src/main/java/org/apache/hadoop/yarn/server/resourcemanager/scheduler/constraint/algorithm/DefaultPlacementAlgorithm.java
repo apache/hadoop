@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -48,6 +49,9 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DefaultPlacementAlgorithm.class);
+
+  // Number of times to re-attempt placing a single scheduling request.
+  private static final int RE_ATTEMPT_COUNT = 2;
 
   private AllocationTagsManager tagsManager;
   private PlacementConstraintManager constraintManager;
@@ -85,16 +89,50 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
         new ConstraintPlacementAlgorithmOutput(requests.getApplicationId());
     List<SchedulerNode> allNodes = nodeSelector.selectNodes(null);
 
+    List<SchedulingRequest> rejectedRequests = new ArrayList<>();
+    int rePlacementCount = RE_ATTEMPT_COUNT;
+    while (rePlacementCount > 0) {
+      doPlacement(requests, resp, allNodes, rejectedRequests);
+      if (rejectedRequests.size() == 0 || rePlacementCount == 1) {
+        break;
+      }
+      requests = new BatchedRequests(requests.getIteratorType(),
+          requests.getApplicationId(), rejectedRequests,
+          requests.getPlacementAttempt());
+      rejectedRequests = new ArrayList<>();
+      rePlacementCount--;
+    }
+
+    resp.getRejectedRequests().addAll(rejectedRequests);
+    collector.collect(resp);
+    // Clean current temp-container tags
+    this.tagsManager.cleanTempContainers(requests.getApplicationId());
+  }
+
+  private void doPlacement(BatchedRequests requests,
+      ConstraintPlacementAlgorithmOutput resp,
+      List<SchedulerNode> allNodes,
+      List<SchedulingRequest> rejectedRequests) {
     Iterator<SchedulingRequest> requestIterator = requests.iterator();
+    Iterator<SchedulerNode> nIter = allNodes.iterator();
+    SchedulerNode lastSatisfiedNode = null;
     while (requestIterator.hasNext()) {
+      if (allNodes.isEmpty()) {
+        LOG.warn("No nodes available for placement at the moment !!");
+        break;
+      }
       SchedulingRequest schedulingRequest = requestIterator.next();
-      Iterator<SchedulerNode> nodeIter = allNodes.iterator();
+      CircularIterator<SchedulerNode> nodeIter =
+          new CircularIterator(lastSatisfiedNode, nIter, allNodes);
       int numAllocs = schedulingRequest.getResourceSizing().getNumAllocations();
       while (nodeIter.hasNext() && numAllocs > 0) {
         SchedulerNode node = nodeIter.next();
         try {
-          if (attemptPlacementOnNode(requests.getApplicationId(),
-              schedulingRequest, node)) {
+          String tag = schedulingRequest.getAllocationTags() == null ? "" :
+              schedulingRequest.getAllocationTags().iterator().next();
+          if (!requests.getBlacklist(tag).contains(node.getNodeID()) &&
+              attemptPlacementOnNode(
+                  requests.getApplicationId(), schedulingRequest, node)) {
             schedulingRequest.getResourceSizing()
                 .setNumAllocations(--numAllocs);
             PlacedSchedulingRequest placedReq =
@@ -108,6 +146,7 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
             this.tagsManager.addTempContainer(node.getNodeID(),
                 requests.getApplicationId(),
                 schedulingRequest.getAllocationTags());
+            lastSatisfiedNode = node;
           }
         } catch (InvalidAllocationTagsQueryException e) {
           LOG.warn("Got exception from TagManager !", e);
@@ -117,9 +156,6 @@ public class DefaultPlacementAlgorithm implements ConstraintPlacementAlgorithm {
     // Add all requests whose numAllocations still > 0 to rejected list.
     requests.getSchedulingRequests().stream()
         .filter(sReq -> sReq.getResourceSizing().getNumAllocations() > 0)
-        .forEach(rejReq -> resp.getRejectedRequests().add(rejReq));
-    collector.collect(resp);
-    // Clean current temp-container tags
-    this.tagsManager.cleanTempContainers(requests.getApplicationId());
+        .forEach(rejReq -> rejectedRequests.add(rejReq));
   }
 }
