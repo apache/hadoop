@@ -433,6 +433,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     FileSystem fileSystem = fs.getFileSystem();
     // remove from the appId cache
     cachedAppInfo.remove(serviceName);
+    boolean destroySucceed = true;
     if (fileSystem.exists(appDir)) {
       if (fileSystem.delete(appDir, true)) {
         LOG.info("Successfully deleted service dir for " + serviceName + ": "
@@ -443,20 +444,37 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
         LOG.info(message);
         throw new YarnException(message);
       }
+    } else {
+      LOG.info("Service '" + serviceName + "' doesn't exist at hdfs path: "
+          + appDir);
+      destroySucceed = false;
     }
     try {
       deleteZKNode(serviceName);
     } catch (Exception e) {
       throw new IOException("Could not delete zk node for " + serviceName, e);
     }
-    String registryPath = ServiceRegistryUtils.registryPathForInstance(serviceName);
+    String registryPath =
+        ServiceRegistryUtils.registryPathForInstance(serviceName);
     try {
-      getRegistryClient().delete(registryPath, true);
+      if (getRegistryClient().exists(registryPath)) {
+        getRegistryClient().delete(registryPath, true);
+      } else {
+        LOG.info(
+            "Service '" + serviceName + "' doesn't exist at ZK registry path: "
+                + registryPath);
+        destroySucceed = false;
+      }
     } catch (IOException e) {
       LOG.warn("Error deleting registry entry {}", registryPath, e);
     }
-    LOG.info("Destroyed cluster {}", serviceName);
-    return EXIT_SUCCESS;
+    if (destroySucceed) {
+      LOG.info("Successfully destroyed service {}", serviceName);
+      return EXIT_SUCCESS;
+    } else {
+      LOG.error("Error on destroy '" + serviceName + "': not found.");
+      return -1;
+    }
   }
 
   private synchronized RegistryOperations getRegistryClient()
@@ -471,13 +489,18 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return registryClient;
   }
 
-  private void deleteZKNode(String clusterName) throws Exception {
+  private boolean deleteZKNode(String clusterName) throws Exception {
     CuratorFramework curatorFramework = getCuratorClient();
     String user = RegistryUtils.currentUser();
-    String zkPath = ServiceRegistryUtils.mkClusterPath(user, clusterName);
+    String zkPath = ServiceRegistryUtils.mkServiceHomePath(user, clusterName);
     if (curatorFramework.checkExists().forPath(zkPath) != null) {
       curatorFramework.delete().deletingChildrenIfNeeded().forPath(zkPath);
       LOG.info("Deleted zookeeper path: " + zkPath);
+      return true;
+    } else {
+      LOG.info(
+          "Service '" + clusterName + "' doesn't exist at ZK path: " + zkPath);
+      return false;
     }
   }
 
@@ -908,7 +931,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     } catch (IllegalArgumentException e) {
       // not appId format, it could be appName.
       Service status = getStatus(appIdOrName);
-      return status.toString();
+      return ServiceApiUtil.jsonSerDeser.toJson(status);
     }
   }
 
