@@ -153,13 +153,13 @@ public class TestPlacementProcessor {
   @Test(timeout = 300000)
   public void testCardinalityPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
-    MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm1 = new MockNM("h1:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm1.getNodeId(), nm1);
-    MockNM nm2 = new MockNM("h2:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm2 = new MockNM("h2:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm2.getNodeId(), nm2);
-    MockNM nm3 = new MockNM("h3:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm3 = new MockNM("h3:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm3.getNodeId(), nm3);
-    MockNM nm4 = new MockNM("h4:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm4 = new MockNM("h4:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm4.getNodeId(), nm4);
     nm1.registerNode();
     nm2.registerNode();
@@ -171,7 +171,7 @@ public class TestPlacementProcessor {
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
         Collections.singletonMap(Collections.singleton("foo"),
             PlacementConstraints.build(PlacementConstraints
-                .targetCardinality(NODE, 0, 4, allocationTag("foo")))));
+                .targetCardinality(NODE, 0, 3, allocationTag("foo")))));
     am1.addSchedulingRequest(
         Arrays.asList(schedulingRequest(1, 1, 1, 512, "foo"),
             schedulingRequest(1, 2, 1, 512, "foo"),
@@ -201,13 +201,13 @@ public class TestPlacementProcessor {
   @Test(timeout = 300000)
   public void testAffinityPlacement() throws Exception {
     HashMap<NodeId, MockNM> nodes = new HashMap<>();
-    MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm1 = new MockNM("h1:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm1.getNodeId(), nm1);
-    MockNM nm2 = new MockNM("h2:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm2 = new MockNM("h2:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm2.getNodeId(), nm2);
-    MockNM nm3 = new MockNM("h3:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm3 = new MockNM("h3:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm3.getNodeId(), nm3);
-    MockNM nm4 = new MockNM("h4:1234", 4096, rm.getResourceTrackerService());
+    MockNM nm4 = new MockNM("h4:1234", 8192, rm.getResourceTrackerService());
     nodes.put(nm4.getNodeId(), nm4);
     nm1.registerNode();
     nm2.registerNode();
@@ -267,7 +267,7 @@ public class TestPlacementProcessor {
         PlacementConstraints.build(targetIn(NODE, allocationTag("bar"))));
     // Containers with allocationTag 'foo' should not exceed 2 per NODE
     constraintMap.put(Collections.singleton("foo"), PlacementConstraints
-        .build(targetCardinality(NODE, 0, 2, allocationTag("foo"))));
+        .build(targetCardinality(NODE, 0, 1, allocationTag("foo"))));
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2, constraintMap);
     am1.addSchedulingRequest(
         Arrays.asList(schedulingRequest(1, 1, 1, 512, "bar"),
@@ -513,7 +513,8 @@ public class TestPlacementProcessor {
   private static void waitForContainerAllocation(Collection<MockNM> nodes,
       MockAM am, List<Container> allocatedContainers, int containerNum)
       throws Exception {
-    while (allocatedContainers.size() < containerNum) {
+    int attemptCount = 10;
+    while (allocatedContainers.size() < containerNum && attemptCount > 0) {
       for (MockNM node : nodes) {
         node.nodeHeartbeat(true);
       }
@@ -522,6 +523,7 @@ public class TestPlacementProcessor {
       sleep(1000);
       AllocateResponse allocResponse = am.schedule();
       allocatedContainers.addAll(allocResponse.getAllocatedContainers());
+      attemptCount--;
     }
   }
 

@@ -263,7 +263,7 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     }
 
     if (singleConstraint.getMinCardinality() != 0
-        || singleConstraint.getMaxCardinality() != 1) {
+        || singleConstraint.getMaxCardinality() != 0) {
       throwExceptionWithMetaInfo(
           "Only support anti-affinity, which is: minCardinality=0, "
               + "maxCardinality=1");
