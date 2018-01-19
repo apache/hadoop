@@ -1401,14 +1401,16 @@ public class FSDirectory implements Closeable {
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
         addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
-        addStoragePolicySatisfier((INodeWithAdditionalFields) inode, xaf);
+        if (namesystem.getBlockManager().isSPSEnabled()) {
+          addStoragePolicySatisfier((INodeWithAdditionalFields) inode, xaf);
+        }
       }
     }
   }
 
   private void addStoragePolicySatisfier(INodeWithAdditionalFields inode,
       XAttrFeature xaf) {
-    if (xaf == null || inode.isDirectory()) {
+    if (xaf == null) {
       return;
     }
     XAttr xattr = xaf.getXAttr(XATTR_SATISFY_STORAGE_POLICY);

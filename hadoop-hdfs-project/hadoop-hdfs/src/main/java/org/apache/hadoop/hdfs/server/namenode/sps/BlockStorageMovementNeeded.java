@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.sps;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY;
-
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -33,12 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfyPathStatus;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser;
-import org.apache.hadoop.hdfs.server.namenode.FSTreeTraverser.TraverseInfo;
-import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -75,22 +65,21 @@ public class BlockStorageMovementNeeded {
 
   private final Context ctxt;
 
-  // List of pending dir to satisfy the policy
-  private final Queue<Long> spsDirsToBeTraveresed = new LinkedList<Long>();
+  private Daemon pathIdCollector;
 
-  private Daemon inodeIdCollector;
+  private FileIdCollector fileIDCollector;
 
-  private final int maxQueuedItem;
+  private SPSPathIdProcessor pathIDProcessor;
 
   // Amount of time to cache the SUCCESS status of path before turning it to
   // NOT_AVAILABLE.
   private static long statusClearanceElapsedTimeMs = 300000;
 
-  public BlockStorageMovementNeeded(Context context) {
+  public BlockStorageMovementNeeded(Context context,
+      FileIdCollector fileIDCollector) {
     this.ctxt = context;
-    this.maxQueuedItem = ctxt.getConf().getInt(
-                  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_KEY,
-                  DFS_STORAGE_POLICY_SATISFIER_QUEUE_LIMIT_DEFAULT);
+    this.fileIDCollector = fileIDCollector;
+    pathIDProcessor = new SPSPathIdProcessor();
   }
 
   /**
@@ -140,29 +129,6 @@ public class BlockStorageMovementNeeded {
     return storageMovementNeeded.poll();
   }
 
-  public synchronized void addToPendingDirQueue(long id) {
-    spsStatus.put(id, new StoragePolicySatisfyPathStatusInfo(
-        StoragePolicySatisfyPathStatus.PENDING));
-    spsDirsToBeTraveresed.add(id);
-    // Notify waiting FileInodeIdCollector thread about the newly
-    // added SPS path.
-    synchronized (spsDirsToBeTraveresed) {
-      spsDirsToBeTraveresed.notify();
-    }
-  }
-
-  /**
-   * Returns queue remaining capacity.
-   */
-  public synchronized int remainingCapacity() {
-    int size = storageMovementNeeded.size();
-    if (size >= maxQueuedItem) {
-      return 0;
-    } else {
-      return (maxQueuedItem - size);
-    }
-  }
-
   /**
    * Returns queue size.
    */
@@ -171,7 +137,7 @@ public class BlockStorageMovementNeeded {
   }
 
   public synchronized void clearAll() {
-    spsDirsToBeTraveresed.clear();
+    ctxt.removeAllSPSPathIds();
     storageMovementNeeded.clear();
     pendingWorkForDirectory.clear();
   }
@@ -206,13 +172,13 @@ public class BlockStorageMovementNeeded {
     } else {
       // Remove xAttr if trackID doesn't exist in
       // storageMovementAttemptedItems or file policy satisfied.
-      ctxt.removeSPSHint(trackInfo.getTrackId());
+      ctxt.removeSPSHint(trackInfo.getFileId());
       updateStatus(trackInfo.getStartId(), isSuccess);
     }
   }
 
   public synchronized void clearQueue(long trackId) {
-    spsDirsToBeTraveresed.remove(trackId);
+    ctxt.removeSPSPathId(trackId);
     Iterator<ItemInfo> iterator = storageMovementNeeded.iterator();
     while (iterator.hasNext()) {
       ItemInfo next = iterator.next();
@@ -249,7 +215,7 @@ public class BlockStorageMovementNeeded {
   public synchronized void clearQueuesWithNotification() {
     // Remove xAttr from directories
     Long trackId;
-    while ((trackId = spsDirsToBeTraveresed.poll()) != null) {
+    while ((trackId = ctxt.getNextSPSPathId()) != null) {
       try {
         // Remove xAttr for file
         ctxt.removeSPSHint(trackId);
@@ -265,12 +231,12 @@ public class BlockStorageMovementNeeded {
       try {
         // Remove xAttr for file
         if (!itemInfo.isDir()) {
-          ctxt.removeSPSHint(itemInfo.getTrackId());
+          ctxt.removeSPSHint(itemInfo.getFileId());
         }
       } catch (IOException ie) {
         LOG.warn(
             "Failed to remove SPS xattr for track id "
-                + itemInfo.getTrackId(), ie);
+                + itemInfo.getFileId(), ie);
       }
     }
     this.clearAll();
@@ -280,57 +246,33 @@ public class BlockStorageMovementNeeded {
    * Take dir tack ID from the spsDirsToBeTraveresed queue and collect child
    * ID's to process for satisfy the policy.
    */
-  private class StorageMovementPendingInodeIdCollector extends FSTreeTraverser
-      implements Runnable {
-
-    private int remainingCapacity = 0;
-
-    private List<ItemInfo> currentBatch = new ArrayList<>(maxQueuedItem);
-
-    StorageMovementPendingInodeIdCollector(FSDirectory dir) {
-      super(dir);
-    }
+  private class SPSPathIdProcessor implements Runnable {
 
     @Override
     public void run() {
       LOG.info("Starting FileInodeIdCollector!.");
       long lastStatusCleanTime = 0;
       while (ctxt.isRunning()) {
+        LOG.info("Running FileInodeIdCollector!.");
         try {
           if (!ctxt.isInSafeMode()) {
-            Long startINodeId = spsDirsToBeTraveresed.poll();
+            Long startINodeId = ctxt.getNextSPSPathId();
             if (startINodeId == null) {
               // Waiting for SPS path
-              synchronized (spsDirsToBeTraveresed) {
-                spsDirsToBeTraveresed.wait(5000);
-              }
+              Thread.sleep(3000);
             } else {
-              INode startInode = getFSDirectory().getInode(startINodeId);
-              if (startInode != null) {
-                try {
-                  remainingCapacity = remainingCapacity();
-                  spsStatus.put(startINodeId,
-                      new StoragePolicySatisfyPathStatusInfo(
-                          StoragePolicySatisfyPathStatus.IN_PROGRESS));
-                  readLock();
-                  traverseDir(startInode.asDirectory(), startINodeId,
-                      HdfsFileStatus.EMPTY_NAME,
-                      new SPSTraverseInfo(startINodeId));
-                } finally {
-                  readUnlock();
-                }
-                // Mark startInode traverse is done
-                addAll(startInode.getId(), currentBatch, true);
-                currentBatch.clear();
-
-                // check if directory was empty and no child added to queue
-                DirPendingWorkInfo dirPendingWorkInfo =
-                    pendingWorkForDirectory.get(startInode.getId());
-                if (dirPendingWorkInfo.isDirWorkDone()) {
-                  ctxt.removeSPSHint(startInode.getId());
-                  pendingWorkForDirectory.remove(startInode.getId());
-                  updateStatus(startInode.getId(), true);
-                }
+              spsStatus.put(startINodeId,
+                  new StoragePolicySatisfyPathStatusInfo(
+                      StoragePolicySatisfyPathStatus.IN_PROGRESS));
+              fileIDCollector.scanAndCollectFileIds(startINodeId);
+              // check if directory was empty and no child added to queue
+              DirPendingWorkInfo dirPendingWorkInfo =
+                  pendingWorkForDirectory.get(startINodeId);
+              if (dirPendingWorkInfo != null
+                  && dirPendingWorkInfo.isDirWorkDone()) {
+                ctxt.removeSPSHint(startINodeId);
+                pendingWorkForDirectory.remove(startINodeId);
+                updateStatus(startINodeId, true);
               }
             }
             //Clear the SPS status if status is in SUCCESS more than 5 min.
@@ -354,71 +296,6 @@ public class BlockStorageMovementNeeded {
           it.remove();
         }
       }
-    }
-
-    @Override
-    protected void checkPauseForTesting() throws InterruptedException {
-      // TODO implement if needed
-    }
-
-    @Override
-    protected boolean processFileInode(INode inode, TraverseInfo traverseInfo)
-        throws IOException, InterruptedException {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Processing {} for statisy the policy",
-            inode.getFullPathName());
-      }
-      if (!inode.isFile()) {
-        return false;
-      }
-      if (inode.isFile() && inode.asFile().numBlocks() != 0) {
-        currentBatch.add(new ItemInfo(
-            ((SPSTraverseInfo) traverseInfo).getStartId(), inode.getId()));
-        remainingCapacity--;
-      }
-      return true;
-    }
-
-    @Override
-    protected boolean canSubmitCurrentBatch() {
-      return remainingCapacity <= 0;
-    }
-
-    @Override
-    protected void checkINodeReady(long startId) throws IOException {
-      // SPS work won't be scheduled if NN is in standby. So, skipping NN
-      // standby check.
-      return;
-    }
-
-    @Override
-    protected void submitCurrentBatch(long startId)
-        throws IOException, InterruptedException {
-      // Add current child's to queue
-      addAll(startId, currentBatch, false);
-      currentBatch.clear();
-    }
-
-    @Override
-    protected void throttle() throws InterruptedException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("StorageMovementNeeded queue remaining capacity is zero,"
-            + " waiting for some free slots.");
-      }
-      remainingCapacity = remainingCapacity();
-      // wait for queue to be free
-      while (remainingCapacity <= 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Waiting for storageMovementNeeded queue to be free!");
-        }
-        Thread.sleep(5000);
-        remainingCapacity = remainingCapacity();
-      }
-    }
-
-    @Override
-    protected boolean canTraverseDir(INode inode) throws IOException {
-      return true;
     }
   }
 
@@ -476,29 +353,15 @@ public class BlockStorageMovementNeeded {
     }
   }
 
-  // TODO: FSDirectory will get removed via HDFS-12911 modularization work
-  public void init(FSDirectory fsd) {
-    inodeIdCollector = new Daemon(new StorageMovementPendingInodeIdCollector(
-        fsd));
-    inodeIdCollector.setName("FileInodeIdCollector");
-    inodeIdCollector.start();
+  public void activate() {
+    pathIdCollector = new Daemon(pathIDProcessor);
+    pathIdCollector.setName("SPSPathIdProcessor");
+    pathIdCollector.start();
   }
 
   public void close() {
-    if (inodeIdCollector != null) {
-      inodeIdCollector.interrupt();
-    }
-  }
-
-  class SPSTraverseInfo extends TraverseInfo {
-    private long startId;
-
-    SPSTraverseInfo(long startId) {
-      this.startId = startId;
-    }
-
-    public long getStartId() {
-      return startId;
+    if (pathIdCollector != null) {
+      pathIdCollector.interrupt();
     }
   }
 

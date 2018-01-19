@@ -500,9 +500,11 @@ public class TestStoragePolicySatisfierWithStripedFile {
       public Boolean get() {
         LOG.info("expectedAttemptedItemsCount={} actualAttemptedItemsCount={}",
             expectedBlkMovAttemptedCount,
-            sps.getAttemptedItemsMonitor().getAttemptedItemsCount());
-        return sps.getAttemptedItemsMonitor()
-            .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
+            ((BlockStorageMovementAttemptedItems) sps
+                .getAttemptedItemsMonitor()).getAttemptedItemsCount());
+        return ((BlockStorageMovementAttemptedItems) sps
+            .getAttemptedItemsMonitor())
+                .getAttemptedItemsCount() == expectedBlkMovAttemptedCount;
       }
     }, 100, timeout);
   }
@@ -560,7 +562,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
   // Check whether the block movement attempt report has been arrived at the
   // Namenode(SPS).
   private void waitForBlocksMovementAttemptReport(MiniDFSCluster cluster,
-      long expectedMovementFinishedBlocksCount, int timeout)
+      long expectedMoveFinishedBlks, int timeout)
           throws TimeoutException, InterruptedException {
     BlockManager blockManager = cluster.getNamesystem().getBlockManager();
     final StoragePolicySatisfier sps = blockManager.getStoragePolicySatisfier();
@@ -570,10 +572,11 @@ public class TestStoragePolicySatisfierWithStripedFile {
       @Override
       public Boolean get() {
         LOG.info("MovementFinishedBlocks: expectedCount={} actualCount={}",
-            expectedMovementFinishedBlocksCount,
-            sps.getAttemptedItemsMonitor().getMovementFinishedBlocksCount());
-        return sps.getAttemptedItemsMonitor().getMovementFinishedBlocksCount()
-            >= expectedMovementFinishedBlocksCount;
+            expectedMoveFinishedBlks, ((BlockStorageMovementAttemptedItems) sps
+                .getAttemptedItemsMonitor()).getMovementFinishedBlocksCount());
+        return ((BlockStorageMovementAttemptedItems) sps
+            .getAttemptedItemsMonitor())
+                .getMovementFinishedBlocksCount() >= expectedMoveFinishedBlks;
       }
     }, 100, timeout);
   }

@@ -20,10 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.sps;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -38,7 +36,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
@@ -55,15 +52,14 @@ public class IntraSPSNameNodeContext implements Context {
 
   private final Namesystem namesystem;
   private final BlockManager blockManager;
-  private final Configuration conf;
-  private Supplier<Boolean> isSpsRunning;
+
+  private SPSService service;
 
   public IntraSPSNameNodeContext(Namesystem namesystem,
-      BlockManager blockManager, Configuration conf) {
+      BlockManager blockManager, SPSService service) {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-    this.conf = conf;
-    isSpsRunning = () -> false;
+    this.service = service;
   }
 
   @Override
@@ -111,11 +107,6 @@ public class IntraSPSNameNodeContext implements Context {
   }
 
   @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
   public boolean isFileExist(long inodeId) {
     return namesystem.getFSDirectory().getInode(inodeId) != null;
   }
@@ -127,16 +118,7 @@ public class IntraSPSNameNodeContext implements Context {
 
   @Override
   public boolean isRunning() {
-    // TODO : 'isSpsRunning' flag has been added to avoid the NN lock inside
-    // SPS. Context interface will be further refined as part of HDFS-12911
-    // modularization task. One idea is to introduce a cleaner interface similar
-    // to Namesystem for better abstraction.
-    return namesystem.isRunning() && isSpsRunning.get();
-  }
-
-  @Override
-  public void setSPSRunning(Supplier<Boolean> spsRunningFlag) {
-    this.isSpsRunning = spsRunningFlag;
+    return namesystem.isRunning() && service.isRunning();
   }
 
   @Override
@@ -183,25 +165,6 @@ public class IntraSPSNameNodeContext implements Context {
   }
 
   @Override
-  public void assignBlockMoveTaskToTargetNode(BlockMovingInfo blkMovingInfo)
-      throws IOException {
-    namesystem.readLock();
-    try {
-      DatanodeDescriptor dn = blockManager.getDatanodeManager()
-          .getDatanode(blkMovingInfo.getTarget().getDatanodeUuid());
-      if (dn == null) {
-        throw new IOException("Failed to schedule block movement task:"
-            + blkMovingInfo + " as target datanode: "
-            + blkMovingInfo.getTarget() + " doesn't exists");
-      }
-      dn.addBlocksToMoveStorage(blkMovingInfo);
-      dn.incrementBlocksScheduled(blkMovingInfo.getTargetStorageType());
-    } finally {
-      namesystem.readUnlock();
-    }
-  }
-
-  @Override
   public boolean verifyTargetDatanodeHasSpaceForScheduling(DatanodeInfo dn,
       StorageType type, long blockSize) {
     namesystem.readLock();
@@ -216,5 +179,20 @@ public class IntraSPSNameNodeContext implements Context {
     } finally {
       namesystem.readUnlock();
     }
+  }
+
+  @Override
+  public Long getNextSPSPathId() {
+    return blockManager.getNextSPSPathId();
+  }
+
+  @Override
+  public void removeSPSPathId(long trackId) {
+    blockManager.removeSPSPathId(trackId);
+  }
+
+  @Override
+  public void removeAllSPSPathIds() {
+    blockManager.removeAllSPSPathIds();
   }
 }

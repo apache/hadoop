@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.AttemptedItemInfo;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.ItemInfo;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,12 +48,14 @@ public class TestBlockStorageMovementAttemptedItems {
   public void setup() throws Exception {
     Configuration config = new HdfsConfiguration();
     Context ctxt = Mockito.mock(Context.class);
-    Mockito.when(ctxt.getConf()).thenReturn(config);
+    SPSService sps = Mockito.mock(StoragePolicySatisfier.class);
+    Mockito.when(sps.getConf()).thenReturn(config);
     Mockito.when(ctxt.isRunning()).thenReturn(true);
     Mockito.when(ctxt.isInSafeMode()).thenReturn(false);
     Mockito.when(ctxt.isFileExist(Mockito.anyLong())).thenReturn(true);
-    unsatisfiedStorageMovementFiles = new BlockStorageMovementNeeded(ctxt);
-    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(ctxt,
+    unsatisfiedStorageMovementFiles =
+        new BlockStorageMovementNeeded(ctxt, null);
+    bsmAttemptedItems = new BlockStorageMovementAttemptedItems(sps,
         unsatisfiedStorageMovementFiles);
   }
 
@@ -73,7 +74,7 @@ public class TestBlockStorageMovementAttemptedItems {
     while (monotonicNow() < (stopTime)) {
       ItemInfo ele = null;
       while ((ele = unsatisfiedStorageMovementFiles.get()) != null) {
-        if (item == ele.getTrackId()) {
+        if (item == ele.getFileId()) {
           isItemFound = true;
           break;
         }
@@ -99,7 +100,7 @@ public class TestBlockStorageMovementAttemptedItems {
     bsmAttemptedItems.add(new AttemptedItemInfo(0L, 0L, 0L, blocks, 0));
     Block[] blockArray = new Block[blocks.size()];
     blocks.toArray(blockArray);
-    bsmAttemptedItems.addReportedMovedBlocks(blockArray);
+    bsmAttemptedItems.notifyMovementTriedBlocks(blockArray);
     assertEquals("Failed to receive result!", 1,
         bsmAttemptedItems.getMovementFinishedBlocksCount());
   }
@@ -137,7 +138,7 @@ public class TestBlockStorageMovementAttemptedItems {
         .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks, 0));
     Block[] blksMovementReport = new Block[1];
     blksMovementReport[0] = new Block(item);
-    bsmAttemptedItems.addReportedMovedBlocks(blksMovementReport);
+    bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
 
     // start block movement report monitor thread
     bsmAttemptedItems.start();
@@ -162,7 +163,7 @@ public class TestBlockStorageMovementAttemptedItems {
         .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks, 0));
     Block[] blksMovementReport = new Block[1];
     blksMovementReport[0] = new Block(item);
-    bsmAttemptedItems.addReportedMovedBlocks(blksMovementReport);
+    bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
 
     Thread.sleep(selfRetryTimeout * 2); // Waiting to get timed out
 
@@ -190,7 +191,7 @@ public class TestBlockStorageMovementAttemptedItems {
         .add(new AttemptedItemInfo(trackID, trackID, 0L, blocks, 0));
     Block[] blksMovementReport = new Block[1];
     blksMovementReport[0] = new Block(item);
-    bsmAttemptedItems.addReportedMovedBlocks(blksMovementReport);
+    bsmAttemptedItems.notifyMovementTriedBlocks(blksMovementReport);
     assertFalse(
         "Should not add in queue again if it is not there in"
             + " storageMovementAttemptedItems",

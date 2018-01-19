@@ -19,11 +19,9 @@
 package org.apache.hadoop.hdfs.server.namenode.sps;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -31,7 +29,6 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -43,22 +40,9 @@ import org.apache.hadoop.security.AccessControlException;
 public interface Context {
 
   /**
-   * Returns configuration object.
-   */
-  Configuration getConf();
-
-  /**
    * Returns true if the SPS is running, false otherwise.
    */
   boolean isRunning();
-
-  /**
-   * Update the SPS running status.
-   *
-   * @param isSpsRunning
-   *          true represents running, false otherwise
-   */
-  void setSPSRunning(Supplier<Boolean> isSpsRunning);
 
   /**
    * Returns true if the Namenode in safe mode, false otherwise.
@@ -153,17 +137,6 @@ public interface Context {
   boolean hasLowRedundancyBlocks(long inodeID);
 
   /**
-   * Assign the given block movement task to the target node present in
-   * {@link BlockMovingInfo}.
-   *
-   * @param blkMovingInfo
-   *          block to storage info
-   * @throws IOException
-   */
-  void assignBlockMoveTaskToTargetNode(BlockMovingInfo blkMovingInfo)
-      throws IOException;
-
-  /**
    * Checks whether the given datanode has sufficient space to occupy the given
    * blockSize data.
    *
@@ -178,4 +151,20 @@ public interface Context {
    */
   boolean verifyTargetDatanodeHasSpaceForScheduling(DatanodeInfo dn,
       StorageType type, long blockSize);
+
+  /**
+   * @return next SPS path id to process.
+   */
+  Long getNextSPSPathId();
+
+  /**
+   * Removes the SPS path id.
+   */
+  void removeSPSPathId(long pathId);
+
+  /**
+   * Removes all SPS path ids.
+   */
+  void removeAllSPSPathIds();
+
 }

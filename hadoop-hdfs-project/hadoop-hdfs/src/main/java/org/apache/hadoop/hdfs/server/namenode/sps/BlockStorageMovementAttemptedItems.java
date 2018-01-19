@@ -32,7 +32,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.AttemptedItemInfo;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier.ItemInfo;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +46,8 @@ import com.google.common.annotations.VisibleForTesting;
  * finished for a longer time period, then such items will retries automatically
  * after timeout. The default timeout would be 5 minutes.
  */
-public class BlockStorageMovementAttemptedItems {
+public class BlockStorageMovementAttemptedItems
+    implements BlockMovementListener {
   private static final Logger LOG =
       LoggerFactory.getLogger(BlockStorageMovementAttemptedItems.class);
 
@@ -71,19 +71,19 @@ public class BlockStorageMovementAttemptedItems {
   //
   private long minCheckTimeout = 1 * 60 * 1000; // minimum value
   private BlockStorageMovementNeeded blockStorageMovementNeeded;
-  private final Context ctxt;
+  private final SPSService service;
 
-  public BlockStorageMovementAttemptedItems(Context context,
+  public BlockStorageMovementAttemptedItems(SPSService service,
       BlockStorageMovementNeeded unsatisfiedStorageMovementFiles) {
-    this.ctxt = context;
-    long recheckTimeout = ctxt.getConf().getLong(
+    this.service = service;
+    long recheckTimeout = this.service.getConf().getLong(
         DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,
         DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_DEFAULT);
     if (recheckTimeout > 0) {
       this.minCheckTimeout = Math.min(minCheckTimeout, recheckTimeout);
     }
 
-    this.selfRetryTimeout = ctxt.getConf().getLong(
+    this.selfRetryTimeout = this.service.getConf().getLong(
         DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_KEY,
         DFS_STORAGE_POLICY_SATISFIER_SELF_RETRY_TIMEOUT_MILLIS_DEFAULT);
     this.blockStorageMovementNeeded = unsatisfiedStorageMovementFiles;
@@ -111,7 +111,7 @@ public class BlockStorageMovementAttemptedItems {
    * @param moveAttemptFinishedBlks
    *          storage movement attempt finished blocks
    */
-  public void addReportedMovedBlocks(Block[] moveAttemptFinishedBlks) {
+  public void notifyMovementTriedBlocks(Block[] moveAttemptFinishedBlks) {
     if (moveAttemptFinishedBlks.length == 0) {
       return;
     }
@@ -191,7 +191,7 @@ public class BlockStorageMovementAttemptedItems {
         AttemptedItemInfo itemInfo = iter.next();
         if (now > itemInfo.getLastAttemptedOrReportedTime()
             + selfRetryTimeout) {
-          Long blockCollectionID = itemInfo.getTrackId();
+          Long blockCollectionID = itemInfo.getFileId();
           synchronized (movementFinishedBlocks) {
             ItemInfo candidate = new ItemInfo(itemInfo.getStartId(),
                 blockCollectionID, itemInfo.getRetryCount() + 1);
@@ -223,7 +223,7 @@ public class BlockStorageMovementAttemptedItems {
               // gets the chance first and can be cleaned from queue quickly as
               // all movements already done.
               blockStorageMovementNeeded.add(new ItemInfo(attemptedItemInfo
-                  .getStartId(), attemptedItemInfo.getTrackId(),
+                  .getStartId(), attemptedItemInfo.getFileId(),
                   attemptedItemInfo.getRetryCount() + 1));
               iterator.remove();
             }
@@ -246,7 +246,11 @@ public class BlockStorageMovementAttemptedItems {
   }
 
   public void clearQueues() {
-    movementFinishedBlocks.clear();
-    storageMovementAttemptedItems.clear();
+    synchronized (movementFinishedBlocks) {
+      movementFinishedBlocks.clear();
+    }
+    synchronized (storageMovementAttemptedItems) {
+      storageMovementAttemptedItems.clear();
+    }
   }
 }

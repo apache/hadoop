@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.collect.Lists;
 
@@ -87,21 +86,14 @@ final class FSDirSatisfyStoragePolicyOp {
   }
 
   static boolean unprotectedSatisfyStoragePolicy(INode inode, FSDirectory fsd) {
-    if (inode.isFile() && inode.asFile().numBlocks() != 0) {
-      // Adding directly in the storageMovementNeeded queue, So it can
-      // get more priority compare to directory.
-      fsd.getBlockManager().getStoragePolicySatisfier()
-          .satisfyStoragePolicy(inode.getId());
-      return true;
-    } else if (inode.isDirectory()
-        && inode.asDirectory().getChildrenNum(Snapshot.CURRENT_STATE_ID) > 0) {
+    if (inode.isFile() && inode.asFile().numBlocks() == 0) {
+      return false;
+    } else {
       // Adding directory in the pending queue, so FileInodeIdCollector process
       // directory child in batch and recursively
-      fsd.getBlockManager().getStoragePolicySatisfier()
-          .addInodeToPendingDirQueue(inode.getId());
+      fsd.getBlockManager().addSPSPathId(inode.getId());
       return true;
     }
-    return false;
   }
 
   private static boolean inodeHasSatisfyXAttr(INode inode) {
