@@ -299,13 +299,14 @@ public class TestIOUtils {
   }
 
   @Test
-  public void testCloseStreams() {
-    File tmpFile = new File("deleteMe.txt");
-    FileOutputStream fos = null;
-    BufferedOutputStream bos = null;
+  public void testCloseStreams() throws IOException {
+    File tmpFile = null;
+    FileOutputStream fos;
+    BufferedOutputStream bos;
     FileOutputStream nullStream = null;
 
     try {
+      tmpFile = new File(GenericTestUtils.getTestDir(), "testCloseStreams.txt");
       fos = new FileOutputStream(tmpFile) {
         @Override
         public void close() throws IOException {
@@ -315,19 +316,15 @@ public class TestIOUtils {
       bos = new BufferedOutputStream(
           new FileOutputStream(tmpFile)) {
         @Override
-        public void close() throws IOException {
+        public void close() {
           throw new NullPointerException();
         }
       };
-    } catch (IOException ioe) {
-      LOG.warn("Exception in TestIOUtils.testCloseStreams: ", ioe);
-    }
-    try {
+
       IOUtils.closeStreams(fos, bos, nullStream);
       IOUtils.closeStreams();
-    } catch (Exception ex) {
-      LOG.error("Expect IOUtils.closeStreams to close streams quietly.", ex);
-      throw ex;
+    } finally {
+      FileUtils.deleteQuietly(tmpFile);
     }
 
   }
