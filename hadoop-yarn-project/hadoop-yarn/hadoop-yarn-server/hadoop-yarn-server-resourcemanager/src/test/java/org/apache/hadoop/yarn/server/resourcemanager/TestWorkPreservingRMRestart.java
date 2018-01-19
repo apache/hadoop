@@ -1688,4 +1688,43 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());
   }
+
+  // Apps already completed before RM restart. Make sure we restore the queue
+  // correctly
+  @Test(timeout = 20000)
+  public void testFairSchedulerCompletedAppsQueue() throws Exception {
+    if (getSchedulerType() != SchedulerType.FAIR) {
+      return;
+    }
+
+    rm1 = new MockRM(conf);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8192, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    RMApp app = rm1.submitApp(200);
+    MockAM am1 = MockRM.launchAndRegisterAM(app, rm1, nm1);
+    MockRM.finishAMAndVerifyAppState(app, rm1, nm1, am1);
+
+    String fsQueueContext = app.getApplicationSubmissionContext().getQueue();
+    String fsQueueApp = app.getQueue();
+    assertEquals("Queue in app not equal to submission context", fsQueueApp,
+        fsQueueContext);
+    RMAppAttempt rmAttempt = app.getCurrentAppAttempt();
+    assertNotNull("No AppAttempt found", rmAttempt);
+
+    rm2 = new MockRM(conf, rm1.getRMStateStore());
+    rm2.start();
+
+    RMApp recoveredApp =
+        rm2.getRMContext().getRMApps().get(app.getApplicationId());
+    RMAppAttempt rmAttemptRecovered = recoveredApp.getCurrentAppAttempt();
+    assertNotNull("No AppAttempt found after recovery", rmAttemptRecovered);
+    String fsQueueContextRecovered =
+        recoveredApp.getApplicationSubmissionContext().getQueue();
+    String fsQueueAppRecovered = recoveredApp.getQueue();
+    assertEquals(RMAppState.FINISHED, recoveredApp.getState());
+    assertEquals("Recovered app queue is not the same as context queue",
+        fsQueueAppRecovered, fsQueueContextRecovered);
+  }
 }

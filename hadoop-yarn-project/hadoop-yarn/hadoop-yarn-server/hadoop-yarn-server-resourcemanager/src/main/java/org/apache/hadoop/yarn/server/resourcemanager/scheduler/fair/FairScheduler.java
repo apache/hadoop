@@ -495,15 +495,22 @@ public class FairScheduler extends
       applications.put(applicationId, application);
       queue.getMetrics().submitApp(user);
 
-        LOG.info("Accepted application " + applicationId + " from user: " + user
-            + ", in queue: " + queue.getName()
-            + ", currently num of applications: " + applications.size());
+      LOG.info("Accepted application " + applicationId + " from user: " + user
+          + ", in queue: " + queue.getName()
+          + ", currently num of applications: " + applications.size());
       if (isAppRecovering) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(applicationId
               + " is recovering. Skip notifying APP_ACCEPTED");
         }
-      } else{
+      } else {
+        // During tests we do not always have an application object, handle
+        // it here but we probably should fix the tests
+        if (rmApp != null && rmApp.getApplicationSubmissionContext() != null) {
+          // Before we send out the event that the app is accepted is
+          // to set the queue in the submissionContext (needed on restore etc)
+          rmApp.getApplicationSubmissionContext().setQueue(queue.getName());
+        }
         rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.APP_ACCEPTED));
       }
