@@ -171,11 +171,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     int GPUs = resourceCalculatorPlugin.getNumGPUs();    
     long GPUAttribute = resourceCalculatorPlugin.getGpuAttribute();
 
-    ValueRanges usedPorts = null;
-    if (enablePortsAsResource) {
-      usedPorts = ValueRanges.iniFromExpression(resourceCalculatorPlugin.getPortsUsage(), enablePortsBitSetStore);
-    }
-
     numOfRoundsToUpdatePorts =
         conf.getInt(YarnConfiguration.NM_PORTS_UPDATE_ROUNDS,
             YarnConfiguration.DEFAULT_NM_PORTS_UPDATE_ROUNDS);
@@ -189,9 +184,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             YarnConfiguration.DEFAULT_PORTS_BITSET_STORE_ENABLE);
 
     ValueRanges ports = null;
+    ValueRanges usedPorts = null;
     if (enablePortsAsResource) {
-      ports = ValueRanges.iniFromExpression(conf.get(YarnConfiguration.NM_PORTS,
-          YarnConfiguration.DEFAULT_NM_PORTS), enablePortsBitSetStore);
+      ports = ValueRanges.iniFromExpression(conf.get(YarnConfiguration.NM_PORTS, YarnConfiguration.DEFAULT_NM_PORTS), enablePortsBitSetStore);
+      usedPorts = ValueRanges.iniFromExpression(resourceCalculatorPlugin.getPortsUsage(), enablePortsBitSetStore);
     }
 
     this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs, GPUAttribute, ports.minusSelf(usedPorts));
