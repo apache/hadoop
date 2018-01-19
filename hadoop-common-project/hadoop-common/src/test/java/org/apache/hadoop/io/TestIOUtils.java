@@ -33,13 +33,16 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.CharacterCodingException;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FileUtils;;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -327,5 +330,25 @@ public class TestIOUtils {
       throw ex;
     }
 
+  }
+
+  @Test
+  public void testWrapException() throws Exception {
+    // Test for IOException with valid (String) constructor
+    LambdaTestUtils.intercept(EOFException.class,
+        "Failed with java.io.EOFException while processing file/directory "
+            + ":[/tmp/abc.txt] in method:[testWrapException]", () -> {
+          throw IOUtils.wrapException("/tmp/abc.txt", "testWrapException",
+              new EOFException("EOFException "));
+        });
+
+    // Test for IOException with  no (String) constructor
+    PathIOException returnedEx = LambdaTestUtils
+        .intercept(PathIOException.class, "Input/output error:",
+            () -> {
+              throw IOUtils.wrapException("/tmp/abc.txt", "testWrapEx",
+                  new CharacterCodingException());
+            });
+    assertEquals("/tmp/abc.txt", returnedEx.getPath().toString());
   }
 }
