@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -54,6 +55,7 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -1217,6 +1219,7 @@ public class MRAppMaster extends CompositeService {
     amInfos = new LinkedList<AMInfo>();
     completedTasksFromPreviousRun = new HashMap<TaskId, TaskInfo>();
     processRecovery();
+    cleanUpPreviousJobOutput();
 
     // Current an AMInfo for the current AM generation.
     AMInfo amInfo =
@@ -1393,6 +1396,26 @@ public class MRAppMaster extends CompositeService {
     }
 
     return true;
+  }
+
+  private void cleanUpPreviousJobOutput() {
+    // recovered application masters should not remove data from previous job
+    if (!recovered()) {
+      JobContext jobContext = getJobContextFromConf(getConfig());
+      try {
+        LOG.info("Starting to clean up previous job's temporary files");
+        this.committer.abortJob(jobContext, State.FAILED);
+        LOG.info("Finished cleaning up previous job temporary files");
+      } catch (FileNotFoundException e) {
+        LOG.info("Previous job temporary files do not exist, " +
+            "no clean up was necessary.");
+      } catch (Exception e) {
+        // the clean up of a previous attempt is not critical to the success
+        // of this job - only logging the error
+        LOG.error("Error while trying to clean up previous job's temporary " +
+            "files", e);
+      }
+    }
   }
 
   private static FSDataInputStream getPreviousJobHistoryStream(
