@@ -150,6 +150,18 @@
 #export YARN_ROUTER_OPTS=
 
 ###
+# Global Policy Generator specific parameters
+###
+
+# Specify the JVM options to be used when starting the GPG.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# See ResourceManager for some examples
+#
+#export YARN_GLOBALPOLICYGENERATOR_OPTS=
+
+###
 # Registry DNS specific parameters
 # This is deprecated and should be done in hadoop-env.sh
 ###

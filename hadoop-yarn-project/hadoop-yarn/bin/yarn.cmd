@@ -134,6 +134,10 @@ if "%1" == "--loglevel" (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-router\target\classes
   )
 
+  if exist %HADOOP_YARN_HOME%\yarn-server\yarn-server-globalpolicygenerator\target\classes (
+    set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-globalpolicygenerator\target\classes
+  )
+
   if exist %HADOOP_YARN_HOME%\build\test\classes (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\build\test\classes
   )
@@ -155,7 +159,7 @@ if "%1" == "--loglevel" (
 
   set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar ^
      application applicationattempt container node queue logs daemonlog historyserver ^
-     timelineserver timelinereader router classpath
+     timelineserver timelinereader router globalpolicygenerator classpath
   for %%i in ( %yarncommands% ) do (
     if %yarn-command% == %%i set yarncommand=true
   )
@@ -259,7 +263,13 @@ goto :eof
 :router
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\router-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.router.Router
-  set YARN_OPTS=%YARN_OPTS% %HADOOP_ROUTER_OPTS%
+  set YARN_OPTS=%YARN_OPTS% %YARN_ROUTER_OPTS%
+  goto :eof
+
+:globalpolicygenerator
+  set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\globalpolicygenerator-config\log4j.properties
+  set CLASS=org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator
+  set YARN_OPTS=%YARN_OPTS% %YARN_GLOBALPOLICYGENERATOR_OPTS%
   goto :eof
 
 :nodemanager
@@ -336,27 +346,28 @@ goto :eof
 :print_usage
   @echo Usage: yarn [--config confdir] [--loglevel loglevel] COMMAND
   @echo        where COMMAND is one of:
-  @echo   resourcemanager      run the ResourceManager
-  @echo   nodemanager          run a nodemanager on each slave
-  @echo   router               run the Router daemon
-  @echo   timelineserver       run the timeline server
-  @echo   timelinereader       run the timeline reader server
-  @echo   rmadmin              admin tools
-  @echo   version              print the version
-  @echo   jar ^<jar^>          run a jar file
-  @echo   application          prints application(s) report/kill application
-  @echo   applicationattempt   prints applicationattempt(s) report
-  @echo   cluster              prints cluster information
-  @echo   container            prints container(s) report
-  @echo   node                 prints node report(s)
-  @echo   queue                prints queue information
-  @echo   logs                 dump container logs
-  @echo   schedulerconf        updates scheduler configuration
-  @echo   classpath            prints the class path needed to get the
-  @echo                        Hadoop jar and the required libraries
-  @echo   daemonlog            get/set the log level for each daemon
+  @echo   resourcemanager        run the ResourceManager
+  @echo   nodemanager            run a nodemanager on each slave
+  @echo   router                 run the Router daemon
+  @echo   globalpolicygenerator  run the Global Policy Generator
+  @echo   timelineserver         run the timeline server
+  @echo   timelinereader         run the timeline reader server
+  @echo   rmadmin                admin tools
+  @echo   version                print the version
+  @echo   jar ^<jar^>            run a jar file
+  @echo   application            prints application(s) report/kill application
+  @echo   applicationattempt     prints applicationattempt(s) report
+  @echo   cluster                prints cluster information
+  @echo   container              prints container(s) report
+  @echo   node                   prints node report(s)
+  @echo   queue                  prints queue information
+  @echo   logs                   dump container logs
+  @echo   schedulerconf          updates scheduler configuration
+  @echo   classpath              prints the class path needed to get the
+  @echo                          Hadoop jar and the required libraries
+  @echo   daemonlog              get/set the log level for each daemon
   @echo   or
-  @echo   CLASSNAME            run the class named CLASSNAME
+  @echo   CLASSNAME              run the class named CLASSNAME
   @echo Most commands print help when invoked w/o parameters.
 
 endlocal
