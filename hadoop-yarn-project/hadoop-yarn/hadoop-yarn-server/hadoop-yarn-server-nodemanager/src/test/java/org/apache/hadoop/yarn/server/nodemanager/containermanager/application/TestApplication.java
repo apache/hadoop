@@ -262,7 +262,8 @@ public class TestApplication {
 
       verify(wa.localizerBus).handle(
           refEq(new ApplicationLocalizationEvent(
-              LocalizationEventType.DESTROY_APPLICATION_RESOURCES, wa.app)));
+              LocalizationEventType.DESTROY_APPLICATION_RESOURCES,
+              wa.app), "timestamp"));
 
       verify(wa.auxBus).handle(
           refEq(new AuxServicesEvent(
@@ -341,7 +342,8 @@ public class TestApplication {
 
       verify(wa.localizerBus).handle(
           refEq(new ApplicationLocalizationEvent(
-              LocalizationEventType.DESTROY_APPLICATION_RESOURCES, wa.app)));
+              LocalizationEventType.DESTROY_APPLICATION_RESOURCES, wa.app),
+              "timestamp"));
 
       wa.appResourcesCleanedup();
       for ( Container container : wa.containers) {
