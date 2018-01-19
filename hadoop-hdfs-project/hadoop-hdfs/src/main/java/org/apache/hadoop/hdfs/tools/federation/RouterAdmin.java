@@ -84,7 +84,8 @@ public class RouterAdmin extends Configured implements Tool {
         + "[-readonly] -owner <owner> -group <group> -mode <mode>]\n"
         + "\t[-rm <source>]\n"
         + "\t[-ls <path>]\n"
-        + "\t[-setQuota <path> -ns <nsQuota> -ss <ssQuota>]\n"
+        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
+        + "<quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>\n";
     System.out.println(usage);
   }
