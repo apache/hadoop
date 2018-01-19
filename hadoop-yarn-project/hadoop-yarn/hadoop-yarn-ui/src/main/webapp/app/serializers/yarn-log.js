@@ -43,6 +43,12 @@ export default DS.JSONAPISerializer.extend({
           payload.containerLogsInfo.containerId, payload.containerLogsInfo.nodeId);
       });
     }
+    if (payload && payload[0] && payload[0].containerLogInfo) {
+      normalizedArrayResponse.data = payload[0].containerLogInfo.map((paylog) => {
+        return this.internalNormalizeSingleResponse(store, primaryModelClass, paylog,
+          payload[0].containerId, payload[0].nodeId);
+      });
+    }
     return normalizedArrayResponse;
   }
 });
