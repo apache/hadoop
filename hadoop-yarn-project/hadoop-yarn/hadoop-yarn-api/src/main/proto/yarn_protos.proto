@@ -372,6 +372,17 @@ message NodeLabelProto {
   optional bool isExclusive = 2 [default = true]; 
 }
 
+enum NodeAttributeTypeProto {
+  STRING = 1;
+}
+
+message NodeAttributeProto {
+  optional string attributeName = 1;
+  optional NodeAttributeTypeProto attributeType = 2;
+  optional string attributeValue = 3;
+}
+
+
 enum ContainerTypeProto {
   APPLICATION_MASTER = 1;
   TASK = 2;

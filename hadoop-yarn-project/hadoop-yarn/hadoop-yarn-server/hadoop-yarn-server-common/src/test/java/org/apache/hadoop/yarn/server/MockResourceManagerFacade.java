@@ -164,6 +164,8 @@ import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 
 import com.google.common.base.Strings;
 
@@ -181,15 +183,15 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
 
   private HashSet<ApplicationId> applicationMap = new HashSet<>();
   private HashSet<ApplicationId> keepContainerOnUams = new HashSet<>();
-  private HashMap<ApplicationAttemptId, List<ContainerId>>
-      applicationContainerIdMap = new HashMap<>();
+  private HashMap<ApplicationAttemptId, List<ContainerId>> applicationContainerIdMap =
+      new HashMap<ApplicationAttemptId, List<ContainerId>>();
   private AtomicInteger containerIndex = new AtomicInteger(0);
   private Configuration conf;
   private int subClusterId;
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
 
   // True if the Mock RM is running, false otherwise.
-  // This property allows us to write tests for specific scenario as YARN RM
+  // This property allows us to write tests for specific scenario as Yarn RM
   // down e.g. network issue, failover.
   private boolean isRunning;
 
@@ -487,7 +489,7 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
     if (request.getApplicationSubmissionContext().getUnmanagedAM()
         || request.getApplicationSubmissionContext()
             .getKeepContainersAcrossApplicationAttempts()) {
-      keepContainerOnUams.add(appId);
+	keepContainerOnUams.add(appId);
     }
     return SubmitApplicationResponse.newInstance();
   }
@@ -505,7 +507,6 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
         throw new ApplicationNotFoundException(
             "Trying to kill an absent application: " + appId);
       }
-      keepContainerOnUams.remove(appId);
     }
     LOG.info("Force killing application: " + appId);
     return KillApplicationResponse.newInstance(true);
@@ -891,6 +892,12 @@ public class MockResourceManagerFacade implements ApplicationClientProtocol,
   @Override
   public GetAllResourceTypeInfoResponse getResourceTypeInfo(
       GetAllResourceTypeInfoRequest request) throws YarnException, IOException {
+    return null;
+  }
+
+  @Override
+  public NodesToAttributesMappingResponse mapAttributesToNodes(NodesToAttributesMappingRequest request)
+    throws YarnException, IOException {
     return null;
   }
 }
